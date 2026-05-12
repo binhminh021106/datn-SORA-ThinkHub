@@ -1,0 +1,7 @@
+language: "vi"
+reviews:
+  profile: "chill"
+  auto_review:
+    base_branches:
+      - "main"
+      - "dev"
