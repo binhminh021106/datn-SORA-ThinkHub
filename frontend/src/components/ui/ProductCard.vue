@@ -1,14 +1,13 @@
 <template>
   <div class="luxury-related-card bg-white d-flex flex-column group position-relative overflow-hidden border border-light-subtle h-100">
     
-    <!-- Image Section -->
     <div class="position-relative bg-light text-center border-bottom border-light-subtle sora-img-container" :class="{'has-hover-image': showHoverImage && hasHoverImage(product)}">
       
-      <!-- Compare Button -->
+      <!-- Compare Button (Gọi thẳng globalModalState) -->
       <button
         type="button"
         v-if="showCompare"
-        @click.stop="$emit('toggle-compare', product)"
+        @click.stop="handleCompareClick"
         class="compare-btn position-absolute top-0 start-0 m-3 z-index-2 border-0 bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center"
         style="width: 38px; height: 38px; z-index: 10;"
         :class="{ 'active': isInCompare }"
@@ -30,18 +29,15 @@
         <i :class="heartIconClass" class="fs-5 transition-colors" style="margin-top: 2px;"></i>
       </button>
 
-      <!-- Badges -->
       <div v-if="showBadges" class="position-absolute start-0 d-flex flex-column gap-2 z-index-2 pointer-events-none text-start" :style="{ top: showCompare ? '60px' : '15px', left: '15px' }">
         <span v-if="product.is_new" class="badge bg-white text-dark border border-light-subtle shadow-sm font-oswald tracking-widest px-2 py-1 rounded-0" style="font-size: 0.65rem;">MỚI</span>
         <span v-if="product.promotional_price" class="badge text-white shadow-sm font-oswald tracking-widest px-2 py-1 rounded-0" style="background-color: #cc1e2e; font-size: 0.65rem;">SALE</span>
       </div>
 
-      <!-- Product Image Link -->
       <router-link
         :to="{ name: 'productDetail', params: { shop_slug: product.category?.slug || 'all', slug: product.slug } }"
         class="d-block w-100 text-decoration-none"
       >
-        <!-- Đã thêm overflow-hidden vào khung ảnh -->
         <div class="ratio ratio-1x1 w-100 overflow-hidden">
           <img
             :src="getImageUrl(product.thumbnail_image)"
@@ -60,11 +56,9 @@
         </div>
       </router-link>
 
-      <!-- Theme Bar -->
       <div class="theme-bar position-absolute bottom-0 start-0 bg-sora-primary z-index-2"></div>
     </div>
 
-    <!-- Product Info Section -->
     <div class="position-relative flex-grow-1 bg-white d-flex flex-column">
       <div class="p-4 text-center d-flex flex-column flex-grow-1" style="padding-bottom: 64px !important;">
         <router-link
@@ -84,11 +78,11 @@
           </div>
         </div>
 
-        <!-- Add to Cart Button -->
+        <!-- Add to Cart Button (Gọi thẳng globalModalState) -->
         <div v-if="showAddToCart" :class="['related-btn-add', { 'hover-only': hoverAddToCart }]">
           <button
             type="button"
-            @click.stop="$emit('add-to-cart', product)"
+            @click.stop="handleQuickAddClick"
             class="btn luxury-btn-solid w-100 rounded-0 py-3 font-oswald tracking-widest text-uppercase fw-bold shadow-none fs-6"
           >
             Thêm vào giỏ
@@ -101,6 +95,7 @@
 
 <script setup>
 import { defineProps, defineEmits, computed } from 'vue';
+import { globalModalState } from '@/stores/modalState';
 
 const props = defineProps({
   product: { type: Object, required: true },
@@ -114,7 +109,7 @@ const props = defineProps({
   isInCompare: { type: Boolean, default: false } 
 });
 
-const emit = defineEmits(['add-to-cart', 'toggle-wishlist', 'toggle-compare']);
+const emit = defineEmits(['toggle-wishlist']);
 
 const heartIconClass = computed(() => {
   return props.isInWishlist
@@ -122,7 +117,15 @@ const heartIconClass = computed(() => {
     : 'bi bi-suit-heart text-muted hover-text-accent';
 });
 
-// Format Currency
+// Gọi trực tiếp đến Store Global
+const handleQuickAddClick = () => {
+  globalModalState.openQuickAdd(props.product);
+};
+
+const handleCompareClick = () => {
+  globalModalState.openCompare(props.product);
+};
+
 const formatCurrencyNoSymbol = (val) => {
   return new Intl.NumberFormat('vi-VN').format(val || 0);
 };
@@ -132,13 +135,15 @@ const formatCurrency = (val) => {
 };
 
 const getImageUrl = (path) => {
-  if (!path) return 'https://placehold.co/400x400/f5f5f5/cccccc?text=SORA';
+  if (!path) return '/Sora-placeholder.png';
   if (path.startsWith('http')) return path;
-  return `http://127.0.0.1:8000/storage/${path}`;
+  const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
+  let cleanPath = path.startsWith('/') ? path.substring(1) : path;
+  return `${baseUrl}/storage/${cleanPath}`;
 };
 
 const handleImageError = (e) => {
-  e.target.src = 'https://placehold.co/400x400/f5f5f5/cccccc?text=SORA';
+  e.target.src = '/Sora-placeholder.png';
 };
 
 const hasHoverImage = (product) => {
@@ -147,14 +152,10 @@ const hasHoverImage = (product) => {
 </script>
 
 <style scoped>
-/* SORA Luxury Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap');
 
-/* Colors */
 .text-sora-primary { color: #9f273b !important; }
 .bg-sora-primary { background-color: #9f273b !important; }
-
-/* Base & Typography */
 .font-serif { font-family: 'Playfair Display', serif; }
 .font-oswald { font-family: 'Oswald', sans-serif; }
 .tracking-widest { letter-spacing: 2px; }
@@ -172,36 +173,18 @@ const hasHoverImage = (product) => {
   border-color: #d1d5db !important;
 }
 
-/* ==========================================
-   Smooth Image Zoom & Crossfade Effect
-   ========================================== */
 .sora-main-img, .sora-hover-img {
-  /* Kết hợp transition cho cả Transform (phóng to) và Opacity (làm mờ) */
   transition: transform 1s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.5s ease-in-out !important;
 }
 
-/* Hover Scale (Phóng to ảnh) */
 .group:hover .sora-main-img,
 .group:hover .sora-hover-img {
   transform: scale(1.08);
 }
 
-/* Hover Image Switching (Chuyển mờ giữa 2 ảnh) */
-.sora-hover-img { 
-  opacity: 0; 
-  z-index: 2; /* Đảm bảo luôn nằm đè trên ảnh chính */
-}
+.sora-hover-img { opacity: 0; z-index: 2; }
+.has-hover-image:hover .sora-hover-img { opacity: 1; }
 
-/* ĐÃ XÓA/COMMENT: Không làm mờ ảnh chính nữa để tránh lộ nền trắng phía sau */
-/* .has-hover-image:hover .sora-main-img { opacity: 0; } */
-
-.has-hover-image:hover .sora-hover-img { 
-  opacity: 1; 
-}
-
-/* ========================================== */
-
-/* Theme Bar (Đáy ảnh) */
 .theme-bar {
   width: 30%;
   height: 3px;
@@ -214,7 +197,6 @@ const hasHoverImage = (product) => {
   opacity: 1;
 }
 
-/* Float Buttons (Yêu thích & So sánh) */
 .wishlist-btn, .compare-btn {
   opacity: 0;
   transition: all 0.25s ease;
@@ -229,15 +211,9 @@ const hasHoverImage = (product) => {
 .wishlist-btn:hover { color: #cc1e2e; transform: scale(1.1); }
 .compare-btn:hover { color: #9f273b; transform: scale(1.1); }
 
-/* Nút Active State */
-.compare-btn.active {
-  background-color: #9f273b !important;
-  color: #fff !important;
-  opacity: 1;
-}
+.compare-btn.active { background-color: #9f273b !important; color: #fff !important; opacity: 1; }
 .compare-btn.active i { color: #fff !important; }
 
-/* Nút Thêm vào giỏ trượt lên */
 .related-btn-add {
   position: absolute;
   bottom: 0;
@@ -273,5 +249,4 @@ const hasHoverImage = (product) => {
   overflow: hidden;
   min-height: 2.8rem;
 }
-.hover-primary:hover { color: #9f273b !important; }
 </style>

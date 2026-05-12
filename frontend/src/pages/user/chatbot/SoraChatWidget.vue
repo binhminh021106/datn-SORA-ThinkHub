@@ -2,6 +2,7 @@
   <div class="live-chat-wrapper z-index-max font-luxury">
     <!-- Nút Mở Live Chat, đặt lệch bên trái nút AI bot -->
     <button 
+      v-if="!isOpen && !hideFab"
       class="live-chat-fab btn rounded-circle shadow-lg d-flex align-items-center justify-content-center position-fixed transition-transform bg-primary"
       :class="isOpen ? 'scale-0' : 'scale-100'"
       @click="toggleChat"
@@ -17,6 +18,7 @@
     <div 
       class="live-chat-window position-fixed bg-white shadow-lg overflow-hidden d-flex flex-column transition-all"
       :class="isOpen ? 'chatbot-open' : 'chatbot-closed'"
+      style="width: 380px; height: 550px; border-radius: 16px; right: 25px; bottom: 25px; z-index: 999999;"
     >
       <!-- Header -->
       <div class="bg-primary p-3 position-relative d-flex align-items-center justify-content-between text-white">
@@ -186,8 +188,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue';
+import { ref, onMounted, onUnmounted, nextTick, computed, watch, defineProps, defineEmits } from 'vue';
 import axios from 'axios';
+
+const props = defineProps({
+  visible: { type: Boolean, default: false },
+  hideFab: { type: Boolean, default: false }
+});
+const emit = defineEmits(['update:visible']);
 
 const isOpen = ref(false);
 const inputText = ref('');
@@ -360,10 +368,20 @@ const toggleChat = () => {
   if (isOpen.value && messages.value.length === 0) {
     fetchHistory();
   }
-  if (!isOpen.value) {
+  if (isOpen.value) {
+    nextTick(scrollToBottom);
+  } else {
+    emit('update:visible', false);
     showEmojiPicker.value = false;
   }
 };
+
+watch(() => props.visible, (visible) => {
+  isOpen.value = visible;
+  if (visible) {
+    nextTick(scrollToBottom);
+  }
+});
 
 // ===== SEND MESSAGE =====
 const sendMessage = async () => {
@@ -511,9 +529,16 @@ onUnmounted(() => {
 .transition-all { transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1); }
 .transition-transform { transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 
+.live-chat-wrapper {
+  position: fixed;
+  z-index: 100000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  pointer-events: none;
+}
+
 .live-chat-fab {
-  bottom: 30px;
-  right: 110px; /* Cách mép để không đụng vào SORA Chatbot AI (nằm ở right: 30px) */
   width: 60px;
   height: 60px;
   z-index: 100001;
@@ -523,12 +548,6 @@ onUnmounted(() => {
 .scale-100 { transform: scale(1); opacity: 1; pointer-events: auto; }
 
 .live-chat-window {
-  bottom: 30px;
-  right: 110px;
-  width: 340px;
-  height: 540px;
-  max-height: 85vh;
-  border-radius: 14px;
   transform-origin: bottom right;
   z-index: 100001;
 }

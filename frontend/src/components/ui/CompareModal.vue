@@ -97,20 +97,17 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, defineProps, defineEmits, defineExpose } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
+import { globalModalState } from '@/stores/modalState';
 
 const props = defineProps({
-  shopSlug: { type: String, default: 'sora' },
-  baseProductId: { type: [Number, String], default: null }
+  shopSlug: { type: String, default: 'sora' }
 });
 
-const emit = defineEmits(['update-list']);
 const router = useRouter();
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
-const BACKEND_URL = API_BASE_URL.replace(/\/api\/?$/, '');
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
 
 const compareList = ref([]);
 const showComparePopup = ref(false);
@@ -123,22 +120,22 @@ const isLoadingFavourites = ref(false);
 let searchTimeout = null;
 
 const Toast = Swal.mixin({
-  toast: true,
-  position: 'top-end',
-  showConfirmButton: false,
-  timer: 3000,
-  timerProgressBar: true,
-  background: '#fffafa',
-  color: '#9f273b',
-  iconColor: '#9f273b'
+  toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true,
+  background: '#fffafa', color: '#9f273b', iconColor: '#9f273b'
+});
+
+// LẮNG NGHE TÍN HIỆU TỪ TRẠNG THÁI TOÀN CỤC
+watch(() => globalModalState.compareTrigger, () => {
+    if (globalModalState.compareProduct) {
+        toggleCompareItem(globalModalState.compareProduct);
+    }
 });
 
 const getImageUrl = (path) => {
     if (!path) return '/Sora-placeholder.png';
     if (path.startsWith('http') || path.startsWith('data:image')) return path;
     const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    if (cleanPath.startsWith('storage/')) return `${BACKEND_URL}/${cleanPath}`;
-    return `${BACKEND_URL}/storage/${cleanPath}`;
+    return `${API_BASE_URL}/storage/${cleanPath}`;
 };
 
 const handleImageError = (e) => { e.target.src = '/Sora-placeholder.png'; };
@@ -160,14 +157,12 @@ const loadCompareList = () => {
     const stored = localStorage.getItem(`compare_list_${props.shopSlug}`);
     if (stored) {
         compareList.value = JSON.parse(stored);
-        emit('update-list', compareList.value);
     }
   } catch (e) { compareList.value = []; }
 };
 
 watch(compareList, (newVal) => {
   localStorage.setItem(`compare_list_${props.shopSlug}`, JSON.stringify(newVal));
-  emit('update-list', newVal);
 }, { deep: true });
 
 onMounted(() => {
@@ -189,16 +184,15 @@ const filteredFavourites = computed(() => {
 const fetchCompareSuggestions = async (query = '') => {
   isLoadingCompareSuggestions.value = true;
   try {
-    let url = new URL(`${API_BASE_URL}/shop/${props.shopSlug}/products`);
+    let url = new URL(`${API_BASE_URL}/api/shop/${props.shopSlug}/products`);
     url.searchParams.append('per_page', query ? '20' : '10');
     url.searchParams.append('sort', 'new'); 
-    if (props.baseProductId) url.searchParams.append('exclude_id', props.baseProductId);
     if (query) url.searchParams.append('search', query);
 
     const response = await fetch(url.toString());
     const result = await response.json();
     if (result.success && result.data?.data) compareSuggestions.value = result.data.data;
-  } catch (error) { console.error("Lỗi tải sản phẩm gợi ý:", error); } 
+  } catch (error) {} 
   finally { isLoadingCompareSuggestions.value = false; }
 };
 
@@ -232,8 +226,7 @@ const clearCompare = () => compareList.value = [];
 const goToComparePage = () => {
   if (compareList.value.length < 2) return Toast.fire({ icon: 'info', title: 'Vui lòng chọn ít nhất 2 sản phẩm' });
   showComparePopup.value = false;
-  const spGocId = props.baseProductId || compareList.value[0].id;
-  router.push({ path: `/shop/${props.shopSlug}/compare`, query: { spGoc: spGocId } });
+  router.push({ path: `/shop/${props.shopSlug}/compare`, query: { spGoc: compareList.value[0].id } });
 };
 
 const openComparePopup = async () => {
@@ -249,24 +242,17 @@ const fetchFavouritesForCompare = async () => {
   isLoadingFavourites.value = true;
   try {
     const token = getToken();
-    const response = await fetch(`${API_BASE_URL}/client/favourites`, {
+    const response = await fetch(`${API_BASE_URL}/api/client/favourites`, {
       headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
     });
     const result = await response.json();
     if (result.status && result.data) favouriteProducts.value = result.data.map(item => item.product).filter(p => p !== null);
-  } catch (error) { console.error("Lỗi lấy danh sách yêu thích:", error); } 
+  } catch (error) {} 
   finally { isLoadingFavourites.value = false; }
 };
-
-// Expose để cha (Index.vue) có thể gọi hàm toggle từ Component con
-defineExpose({
-    toggleCompare: toggleCompareItem,
-    isInCompare
-});
 </script>
 
 <style scoped>
-/* CSS SO SÁNH BOTTOM BAR */
 .compare-bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: #fff; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); padding: 15px 20px; z-index: 9999; border-top: 2px solid rgb(159,39,59); }
 .compare-inner { max-width: 1300px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 20px; }
 .compare-info h4 { font-size: 15px; margin-bottom: 2px; color: #333; }
@@ -288,7 +274,6 @@ defineExpose({
   .btn-go-compare { flex: 1; margin-left: 15px; }
 }
 
-/* CSS POPUP SO SÁNH */
 .compare-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
 .compare-modal { background: #fff; border-radius: 12px; width: 90%; max-width: 800px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
 .compare-modal-header { padding: 20px 25px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap; }

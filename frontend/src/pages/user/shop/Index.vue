@@ -153,7 +153,7 @@
              </div>
           </div>
 
-          <!-- LƯỚI SẢN PHẨM THẬT SỬ DỤNG COMPONENT PRODUCTCARD ĐÃ NÂNG CẤP -->
+          <!-- LƯỚI SẢN PHẨM THẬT SỬ DỤNG COMPONENT PRODUCTCARD -->
           <div v-else class="product-grid fade-in">
             <template v-for="product in allProducts" :key="product.id">
               <ProductCard
@@ -165,7 +165,7 @@
                 :show-add-to-cart="true"
                 @toggle-wishlist="toggleWishlist"
                 @toggle-compare="handleToggleCompare"
-                @add-to-cart="openQuickAdd"
+                @add-to-cart="handleQuickAdd"
               />
             </template>
           </div>
@@ -213,74 +213,24 @@
       @update-list="compareList = $event" 
     />
 
-    <!-- MODAL QUICK ADD CHUẨN ĐỒNG BỘ 100% -->
-    <div class="modal fade" id="quickAddModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-0 border-0 shadow-lg">
-          <div class="modal-header bg-sora-primary text-white rounded-0 border-0 p-4">
-            <h5 class="modal-title font-serif fw-bold tracking-wider">Tùy chọn Sản phẩm</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body p-4" v-if="quickAddProduct">
-            <div class="d-flex gap-3 mb-4 pb-4 border-bottom border-light-subtle">
-               <img :src="quickAddDisplayImage" @error="handleImageError" class="object-fit-cover border shadow-sm" style="width: 80px; height: 80px; border-radius: 4px;">
-               <div class="d-flex flex-column justify-content-center">
-                  <small class="text-uppercase font-oswald tracking-widest text-gold fw-bold" style="font-size: 0.7rem;">{{ quickAddProduct.category?.name || 'Trang Sức SORA' }}</small>
-                  <h6 class="font-serif fw-bold mb-1 text-dark fs-5">{{ quickAddProduct.name }}</h6>
-                  <span class="text-sora-primary fw-bold font-serif fs-5">{{ formatCurrency(quickAddSelectedPrice) }}</span>
-               </div>
-            </div>
-
-            <div v-for="(values, attrName) in quickAddMatrix" :key="attrName" class="mb-4">
-               <p class="text-dark font-oswald tracking-wide text-uppercase mb-2 small fw-bold">
-                 {{ attrName }}: <span class="fw-normal text-sora-primary ms-1">{{ quickAddSelections[attrName] || '' }}</span>
-               </p>
-               <div class="d-flex flex-wrap gap-2">
-                 <label v-for="val in values" :key="val" class="attr-chip m-0 cursor-pointer transition-all" :class="{'selected': String(quickAddSelections[attrName]) === String(val)}">
-                   <input type="radio" class="d-none" :value="val" v-model="quickAddSelections[attrName]" @change="quickAddError = false">
-                   <div class="chip-inner px-3 py-2 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
-                     <span class="fw-bold font-oswald tracking-wide small">{{ val }}</span>
-                   </div>
-                 </label>
-               </div>
-            </div>
-            
-            <div class="text-danger small fst-italic mt-2 fw-bold bg-danger bg-opacity-10 p-2 rounded" v-if="quickAddError">
-               <i class="bi bi-exclamation-triangle-fill me-1"></i> Vui lòng chọn đầy đủ phân loại.
-            </div>
-            <div class="text-danger small fst-italic mt-2 fw-bold bg-danger bg-opacity-10 p-2 rounded" v-else-if="quickAddMatrix && Object.keys(quickAddMatrix).length > 0 && !quickAddSelectedVariant && isQuickAddAllSelected">
-               <i class="bi bi-x-circle-fill me-1"></i> Phiên bản này đã hết hàng hoặc không tồn tại.
-            </div>
-
-            <button @click="confirmQuickAdd" class="btn luxury-btn-solid w-100 py-3 mt-4 font-oswald tracking-widest text-uppercase fw-bold shadow-sm fs-6" style="background-color: #9f273b; color: white; border: none;">
-               <i class="bi bi-bag-plus-fill me-2"></i> Xác nhận thêm
-            </button>
-          </div>
-          <div v-else class="p-5 text-center">
-             <div class="spinner-border text-sora-primary" role="status"></div>
-             <p class="mt-3 text-muted font-oswald tracking-widest text-uppercase small">Đang nạp dữ liệu...</p>
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- TÍCH HỢP COMPONENT QUICK ADD MODAL (MỚI) -->
+    <QuickAddModal ref="quickAddModalRef" />
 
   </div>
 </template>
 
 <script setup>
-import { ref, shallowRef, onMounted, reactive, computed, onUnmounted } from 'vue';
+import { ref, shallowRef, onMounted, reactive, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import axios from 'axios';
 import Swal from 'sweetalert2';
 
 import ProductCard from '@/components/ui/ProductCard.vue';
 import CompareModal from '@/components/ui/CompareModal.vue'; 
+import QuickAddModal from '@/components/ui/QuickAddModal.vue'; 
 
 const route = useRoute();
 const router = useRouter();
 const shopSlug = ref(route.params.shop_slug || 'aurora-jewelry');
-
-// ĐÃ SỬA: Đảm bảo không có dư thừa `/api` trong base URL
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
 
 const soraAlert = Swal.mixin({
@@ -331,8 +281,6 @@ const getToken = () => {
 };
 
 // Utilities
-const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
-
 const getImageUrl = (path) => {
   if (!path) return '/Sora-placeholder.png';
   if (path.startsWith('http') || path.startsWith('data:image')) return path;
@@ -372,7 +320,6 @@ const isLightColor = (colorName) => {
 // LOGIC YÊU THÍCH (WISHLIST)
 // ==============================================
 const favourites = ref([]);
-const isTogglingFav = ref(null);
 
 const fetchFavorites = async () => {
   const token = getToken();
@@ -390,9 +337,7 @@ const fetchFavorites = async () => {
   }
 };
 
-const isInWishlist = (productId) => {
-  return favourites.value.includes(productId);
-};
+const isInWishlist = (productId) => favourites.value.includes(productId);
 
 const toggleWishlist = async (prod) => {
   if (!prod || !prod.id) return;
@@ -411,8 +356,6 @@ const toggleWishlist = async (prod) => {
     });
     return;
   }
-
-  isTogglingFav.value = prod.id; 
 
   try {
     const response = await fetch(`${API_BASE_URL}/api/client/favourites/toggle`, {
@@ -435,15 +378,11 @@ const toggleWishlist = async (prod) => {
         favourites.value = favourites.value.filter(id => id !== prod.id);
         Toast.fire({ icon: 'info', title: 'Đã bỏ yêu thích' });
       }
-    } else {
-      if (response.status === 401) {
-          Toast.fire({ icon: 'error', title: 'Phiên đăng nhập hết hạn.' });
-      }
+    } else if (response.status === 401) {
+        Toast.fire({ icon: 'error', title: 'Phiên đăng nhập hết hạn.' });
     }
   } catch (error) {
     Toast.fire({ icon: 'error', title: 'Có lỗi xảy ra, thử lại sau' });
-  } finally {
-    isTogglingFav.value = null; 
   }
 };
 
@@ -453,151 +392,21 @@ const toggleWishlist = async (prod) => {
 const compareModalRef = ref(null);
 const compareList = ref([]); 
 
-const isInCompare = (id) => {
-  return compareList.value.some(item => item.id === id);
-};
+const isInCompare = (id) => compareList.value.some(item => item.id === id);
 
 const handleToggleCompare = (prod) => {
-  if (compareModalRef.value) {
-    compareModalRef.value.toggleCompare(prod);
+  if (compareModalRef.value) compareModalRef.value.toggleCompare(prod);
+};
+
+// ==============================================
+// LOGIC QUICK ADD VỚI COMPONENT MỚI
+// ==============================================
+const quickAddModalRef = ref(null);
+
+const handleQuickAdd = (product) => {
+  if (quickAddModalRef.value) {
+    quickAddModalRef.value.openModal(product);
   }
-};
-
-// ==============================================
-// LOGIC QUICK ADD (ĐỒNG BỘ 100% TỪ HOME)
-// ==============================================
-const quickAddProduct = ref(null);
-const quickAddMatrix = ref({});
-const quickAddSelections = ref({});
-const quickAddError = ref(false);
-let quickAddModalInstance = null;
-
-const isQuickAddAllSelected = computed(() => {
-    const requiredAttrs = Object.keys(quickAddMatrix.value);
-    if (requiredAttrs.length === 0) return true;
-    return requiredAttrs.every(attr => quickAddSelections.value[attr]);
-});
-
-const quickAddSelectedVariant = computed(() => {
-    if (!quickAddProduct.value || !quickAddProduct.value.variants) return null;
-    const requiredAttrs = Object.keys(quickAddMatrix.value);
-    if (requiredAttrs.length === 0) return quickAddProduct.value.variants[0];
-    if (!isQuickAddAllSelected.value) return null;
-    return quickAddProduct.value.variants.find(v => {
-        return requiredAttrs.every(attr => v.formatted_attributes && String(v.formatted_attributes[attr]) === String(quickAddSelections.value[attr]));
-    });
-});
-
-const quickAddDisplayImage = computed(() => {
-    if (!quickAddProduct.value) return getImageUrl(null);
-    const selectedVar = quickAddSelectedVariant.value;
-    if (selectedVar && selectedVar.image_url) return getImageUrl(selectedVar.image_url);
-    if (quickAddProduct.value.thumbnail_image) return getImageUrl(quickAddProduct.value.thumbnail_image);
-    return getImageUrl(quickAddProduct.value.fallback_image);
-});
-
-const quickAddSelectedPrice = computed(() => {
-    if (!quickAddProduct.value) return 0;
-    const selectedVar = quickAddSelectedVariant.value;
-    if (selectedVar) return selectedVar.promotional_price || selectedVar.price;
-    return quickAddProduct.value.promotional_price || quickAddProduct.value.base_price || quickAddProduct.value.fallback_price || 0;
-});
-
-const openQuickAdd = async (prod) => {
-    quickAddProduct.value = null;
-    quickAddError.value = false;
-    quickAddSelections.value = {};
-    quickAddMatrix.value = {};
-
-    if (!quickAddModalInstance) {
-        quickAddModalInstance = new window.bootstrap.Modal(document.getElementById('quickAddModal'));
-    }
-    quickAddModalInstance.show();
-
-    try {
-        const res = await axios.get(`${API_BASE_URL}/api/shop/all/products/${prod.slug}`);
-        if (res.data && res.data.data) {
-            quickAddProduct.value = {
-                ...res.data.data,
-                fallback_image: prod.thumbnail_image,
-                fallback_price: prod.base_price 
-            };
-            
-            const matrix = {};
-            if (quickAddProduct.value.variants) {
-                quickAddProduct.value.variants.forEach(variant => {
-                    let attrs = {};
-                    let attrVals = variant.attribute_values || variant.attributeValues;
-                    if (attrVals) { 
-                        attrVals.forEach(av => { if (av.attribute) attrs[av.attribute.name] = av.value; });
-                    } else if (variant.attributes) {
-                        attrs = typeof variant.attributes === 'string' ? JSON.parse(variant.attributes) : variant.attributes;
-                    }
-                    variant.formatted_attributes = attrs;
-                    Object.entries(attrs).forEach(([attrName, attrValue]) => {
-                        if (!matrix[attrName]) matrix[attrName] = new Set();
-                        matrix[attrName].add(attrValue);
-                    });
-                });
-            }
-            
-            const finalMatrix = {};
-            Object.keys(matrix).forEach(key => { finalMatrix[key] = Array.from(matrix[key]); });
-            quickAddMatrix.value = finalMatrix;
-            
-            if (quickAddProduct.value.variants && quickAddProduct.value.variants.length === 1) {
-                const singleVariant = quickAddProduct.value.variants[0];
-                if (singleVariant.formatted_attributes) {
-                    Object.entries(singleVariant.formatted_attributes).forEach(([attrName, attrValue]) => {
-                        quickAddSelections.value[attrName] = attrValue;
-                    });
-                }
-            }
-        }
-    } catch (e) {
-        quickAddModalInstance.hide();
-        soraAlert.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể tải thông tin sản phẩm' });
-    }
-};
-
-const confirmQuickAdd = async () => {
-    if (!isQuickAddAllSelected.value) {
-        quickAddError.value = true;
-        return;
-    }
-    quickAddError.value = false;
-
-    const selectedVar = quickAddSelectedVariant.value;
-    if (!selectedVar) {
-         Toast.fire({icon: 'error', title: 'Phiên bản đã hết hàng!'});
-         return;
-    }
-
-    try {
-        const token = getToken();
-        let sessionId = localStorage.getItem('cart_session_id');
-        if (!sessionId && !token) { 
-            sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('cart_session_id', sessionId);
-        }
-        
-        const headers = { 'Accept': 'application/json', 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        if (sessionId) headers['X-Cart-Session-Id'] = sessionId;
-
-        const payload = { product_variant_id: selectedVar.id, quantity: 1 };
-        const res = await axios.post(`${API_BASE_URL}/api/client/cart`, payload, { headers });
-
-        if (res.data.session_id) {
-            localStorage.setItem('cart_session_id', res.data.session_id);
-        }
-        
-        quickAddModalInstance.hide();
-        Toast.fire({ icon: 'success', title: 'Đã thêm sản phẩm vào giỏ' });
-    } catch (error) {
-        const msg = error.response?.data?.message || 'Không thể thêm vào giỏ hàng!';
-        soraAlert.fire({icon: 'error', title: 'Lỗi', text: msg});
-    }
 };
 
 // ==============================================
@@ -654,21 +463,15 @@ const extractFiltersFromVariants = (products) => {
 
 const toggleColor = (color) => {
   const index = selectedColors.value.indexOf(color);
-  if (index > -1) {
-    selectedColors.value.splice(index, 1);
-  } else {
-    selectedColors.value.push(color);
-  }
+  if (index > -1) selectedColors.value.splice(index, 1);
+  else selectedColors.value.push(color);
   applyFilters();
 };
 
 const toggleAttribute = (val) => {
   const index = selectedAttributes.value.indexOf(val);
-  if (index > -1) {
-    selectedAttributes.value.splice(index, 1); 
-  } else {
-    selectedAttributes.value.push(val); 
-  }
+  if (index > -1) selectedAttributes.value.splice(index, 1); 
+  else selectedAttributes.value.push(val); 
   applyFilters();
 };
 
@@ -686,14 +489,8 @@ const fetchProducts = async (page = 1) => {
   try {
     const queryPayload = { page, sort: filters.sort };
     if (filters.categories) queryPayload.categories = filters.categories;
-    
-    if (selectedColors.value.length > 0) {
-      queryPayload.color = selectedColors.value.join(',');
-    }
-
-    if (selectedAttributes.value.length > 0) {
-      queryPayload.attribute_values = selectedAttributes.value.join(',');
-    }
+    if (selectedColors.value.length > 0) queryPayload.color = selectedColors.value.join(',');
+    if (selectedAttributes.value.length > 0) queryPayload.attribute_values = selectedAttributes.value.join(',');
 
     const params = new URLSearchParams(queryPayload);
     const response = await fetch(`${API_BASE_URL}/api/shop/${shopSlug.value}/products?${params.toString()}`);
@@ -702,7 +499,6 @@ const fetchProducts = async (page = 1) => {
     if(data?.success) {
       allProducts.value = data.data.data; 
       pagination.value = { current_page: data.data.current_page, last_page: data.data.last_page, total: data.data.total };
-      
       extractFiltersFromVariants(allProducts.value);
     }
   } catch (e) {
@@ -756,10 +552,6 @@ const changePage = (page) => {
 onMounted(() => { 
   fetchFavorites();
   Promise.all([fetchCategories(), fetchProducts(1)]).then(() => isPageLoading.value = false); 
-});
-
-onUnmounted(() => {
-  if (quickAddModalInstance) quickAddModalInstance.dispose();
 });
 </script>
 
@@ -843,13 +635,6 @@ onUnmounted(() => {
 }
 
 .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 2.5rem 1.5rem; }
-
-/* CSS QUICK ADD MODAL CHIP */
-.attr-chip { border-radius: 4px; overflow: hidden; min-width: 55px; }
-.attr-chip .chip-inner { border: 1px solid #dee2e6; background-color: #fff; color: #555; border-radius: 4px; transition: all 0.3s ease-in-out; padding: 6px 12px; }
-.attr-chip:hover .chip-inner { border-color: #e7ce7d; color: #9f273b; }
-.attr-chip.selected .chip-inner { background-color: #9f273b; border-color: #9f273b; color: #fff !important; box-shadow: 0 4px 10px rgba(159, 39, 59, 0.25); }
-.attr-chip.selected .chip-inner span { color: #fff !important; }
 
 /* HIỆU ỨNG SKELETON */
 .fade-in { animation: fadeIn 0.4s ease-in; }
