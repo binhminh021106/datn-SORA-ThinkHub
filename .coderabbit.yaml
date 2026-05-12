@@ -1,0 +1,8 @@
+# Phuc vu cho GitHub
+language: "vi"
+reviews:
+  profile: "chill"
+  auto_review:
+    base_branches:
+      - "main"
+      - "dev"
