@@ -113,58 +113,14 @@
 
         <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-4">
           <div class="col" v-for="product in data.products" :key="product.id">
-            <div class="luxury-related-card product-card bg-white d-flex flex-column group position-relative overflow-hidden border border-light-subtle h-100 cursor-pointer" @click="goToProductDetail(product.slug)">
-              
-              <div class="position-relative bg-light text-center border-bottom border-light-subtle sora-img-container" :class="{'has-hover-image': hasHoverImage(product)}">
-                
-                <button @click.stop="toggleWishlist(product)" class="wishlist-btn position-absolute top-0 end-0 m-3 z-index-2 border-0 bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; z-index: 10;">
-                  <i :class="isInWishlist(product.id) ? 'bi bi-suit-heart-fill text-danger' : 'bi bi-suit-heart text-muted hover-text-accent'" class="fs-5 transition-colors" style="margin-top: 2px;"></i>
-                </button>
-
-                <div class="position-absolute top-0 start-0 m-3 d-flex flex-column gap-2 z-index-2 pointer-events-none text-start">
-                  <span v-if="product.is_new" class="badge bg-white text-dark border border-light-subtle shadow-sm font-oswald tracking-widest px-2 py-1 rounded-0" style="font-size: 0.65rem;">MỚI</span>
-                  <span v-if="product.promotional_price" class="badge text-white shadow-sm font-oswald tracking-widest px-2 py-1 rounded-0" style="background-color: var(--color-accent); font-size: 0.65rem;">SALE</span>
-                </div>
-                
-                <div class="ratio ratio-1x1 w-100">
-                  <img :src="getImageUrl(product.thumbnail_image)" 
-                       :alt="product.name" 
-                       class="sora-main-img object-fit-cover w-100 h-100 transition-transform duration-700 group-hover-scale bg-white" 
-                       style="object-position: center;" 
-                       @error="handleImageError">
-                  <img v-if="hasHoverImage(product)"
-                       :src="getImageUrl(product.hover_image)" 
-                       :alt="product.name + ' hover'" 
-                       class="sora-hover-img position-absolute top-0 start-0 w-100 h-100 object-fit-cover transition-transform duration-700 group-hover-scale" 
-                       style="object-position: center;">
-                </div>
-                <div class="theme-bar position-absolute bottom-0 start-0 z-index-2"></div>
-              </div>
-              
-              <div class="position-relative flex-grow-1 bg-white d-flex flex-column">
-                <div class="p-4 text-center d-flex flex-column flex-grow-1" style="padding-bottom: 64px !important;">
-                  <h6 class="text-dark font-oswald text-uppercase tracking-widest fw-bold mb-2 text-truncate-2 fs-5 lh-base">{{ product.name }}</h6>
-                  <p class="font-serif fst-italic text-muted fs-6 mb-3">{{ product.category?.name || 'Trang sức SORA' }}</p>
-                  
-                  <div class="mt-auto">
-                    <div class="d-flex align-items-center justify-content-center gap-3">
-                      <p v-if="product.promotional_price" class="text-muted text-decoration-line-through mb-0 fw-light font-serif" style="font-size: 0.95rem;">
-                        {{ formatCurrency(product.base_price) }}
-                      </p>
-                      <span class="text-primary-luxury fw-bold font-serif fs-5">{{ formatCurrency(product.promotional_price || product.base_price) }}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="related-btn-add">
-                  <button class="btn luxury-btn-solid w-100 rounded-0 py-3 font-oswald tracking-widest text-uppercase fw-bold shadow-none fs-6" 
-                          @click.stop="goToProductDetail(product.slug)">
-                    <i class="bi bi-eye me-2"></i> Xem chi tiết
-                  </button>
-                </div>
-              </div>
-
-            </div>
+            <ProductCard
+              :product="product"
+              :is-in-wishlist="isInWishlist(product.id)"
+              :is-in-compare="isInCompare(product.id)"
+              @toggle-wishlist="toggleWishlist"
+              @toggle-compare="handleToggleCompare"
+              @add-to-cart="handleAddToCart"
+            />
           </div>
         </div>
       </section>
@@ -282,6 +238,7 @@
         </div>
       </section>
 
+      <!-- ÁP DỤNG COMPONENT MỚI: NEWS POST CARD -->
       <section class="blog-section py-5" style="background-color: #f9f9f9;">
         <div class="container py-4">
           <div class="text-center mb-5">
@@ -292,18 +249,7 @@
           
           <div class="row g-4" v-if="data.news && data.news.length > 0">
             <div class="col-md-4" v-for="article in data.news.slice(0, 3)" :key="article.id">
-              <div class="blog-card group cursor-pointer bg-white p-3 shadow-sm border border-light h-100 d-flex flex-column" @click="router.push(`/tin-tuc/${article.slug}`)">
-                <div class="ratio ratio-4x3 overflow-hidden mb-3">
-                  <img :src="getImageUrl(article.image_url)" loading="lazy" class="object-fit-cover transition-transform duration-700 group-hover-scale" :alt="article.title" @error="handleImageError">
-                </div>
-                <small class="text-gold tracking-widest text-uppercase fw-bold" style="font-style: italic;">{{ article.category || 'Mới Nhất' }}</small>
-                <h4 class="font-serif fw-bold text-primary-luxury mt-2 group-hover-text-accent transition-colors" style="line-height: 1.4;">
-                  {{ article.title }}
-                </h4>
-                <p class="text-dark fw-light mt-2 mb-0 text-truncate-3" style="font-size: 0.9rem;">
-                  {{ article.excerpt || (article.content ? article.content.replace(/(<([^>]+)>)/gi, "").substring(0, 100) + '...' : 'Khám phá những bí quyết độc quyền từ chuyên gia kim hoàn SORA...') }}
-                </p>
-              </div>
+              <NewsPostCard :post="article" />
             </div>
           </div>
 
@@ -337,6 +283,14 @@
           </router-link>
         </div>
       </section>
+
+      <!-- GỌI COMPONENT SO SÁNH -->
+      <CompareModal 
+        ref="compareModalRef" 
+        shop-slug="sora" 
+        @update-list="compareList = $event" 
+      />
+
     </div>
   </div>
 </template>
@@ -351,6 +305,10 @@ import { Pagination, Navigation, Autoplay } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
 import 'swiper/css/navigation';
+
+import ProductCard from '@/components/ui/ProductCard.vue';
+import CompareModal from '@/components/ui/CompareModal.vue';
+import NewsPostCard from '@/components/ui/NewsPostCard.vue';
 
 const swiperModules = [Pagination, Navigation, Autoplay];
 const isLoading = ref(true);
@@ -380,6 +338,19 @@ const prevCombo = () => {
 };
 
 const wishlistIds = ref([]);
+// State Compare
+const compareModalRef = ref(null);
+const compareList = ref([]);
+
+const isInCompare = (id) => {
+  return compareList.value.some(item => item.id === id);
+};
+
+const handleToggleCompare = (prod) => {
+  if (compareModalRef.value) {
+    compareModalRef.value.toggleCompare(prod);
+  }
+};
 
 const data = reactive({
   banners: [],
@@ -411,27 +382,20 @@ const displayGalleries = computed(() => {
   return arr;
 });
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'; 
-
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
 const soraPlaceholder = '/Sora-placeholder.png';
 
-// ĐÃ SỬA: Hàm getImageUrl dùng Regex cạo sạch url rác
 const getImageUrl = (path) => {
   if (!path) return soraPlaceholder;
   if (path.startsWith('http')) return path;
 
-  // 1. Dọn dẹp URL Backend (Cắt bỏ /api)
-  const baseUrl = API_BASE.replace(/\/api\/?$/, '');
-
-  // 2. Cạo sạch các phần thừa ở đầu chuỗi (Dấu /, chữ public, chữ storage)
   let cleanPath = path;
-  cleanPath = cleanPath.replace(/^\/+/, '');         // Xóa mọi dấu / ở đầu
-  cleanPath = cleanPath.replace(/^public\//, '');    // Xóa chữ public/ nếu có
-  cleanPath = cleanPath.replace(/^storage\//, '');   // Xóa chữ storage/ nếu có
-  cleanPath = cleanPath.replace(/^\/+/, '');         // Xóa dấu / một lần nữa cho chắc ăn
+  cleanPath = cleanPath.replace(/^\/+/, '');         
+  cleanPath = cleanPath.replace(/^public\//, '');    
+  cleanPath = cleanPath.replace(/^storage\//, '');   
+  cleanPath = cleanPath.replace(/^\/+/, '');         
 
-  // 3. Nối lại thành 1 đường link hoàn hảo duy nhất
-  return `${baseUrl}/storage/${cleanPath}`;
+  return `${API_BASE}/storage/${cleanPath}`;
 };
 
 const handleImageError = (e) => { 
@@ -445,34 +409,118 @@ const formatShortCurrency = (value) => {
   if (value >= 1000) return (value / 1000) + 'K';
   return value;
 };
-const hasHoverImage = (product) => product.hover_image && product.hover_image !== product.thumbnail_image;
 
-const goToProductDetail = (slug) => {
-  if (slug) router.push(`/shop/sora/product/${slug}`);
+const handleAddToCart = (product) => {
+  if (!product?.slug) return;
+  router.push({ name: 'productDetail', params: { shop_slug: product.category?.slug || 'all', slug: product.slug } });
 };
 
-const loadWishlist = () => {
-  const stored = localStorage.getItem('sora_wishlist');
-  if (stored) wishlistIds.value = JSON.parse(stored);
+const getToken = () => {
+  return (
+    localStorage.getItem('auth_token') ||
+    localStorage.getItem('token') ||
+    localStorage.getItem('access_token') ||
+    localStorage.getItem('userToken') ||
+    localStorage.getItem('user_token') ||
+    null
+  );
+};
+
+const loadWishlist = async () => {
+  const token = getToken();
+  if (!token) {
+    const stored = localStorage.getItem('sora_wishlist');
+    if (stored) wishlistIds.value = JSON.parse(stored);
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/api/client/favourites`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json'
+      }
+    });
+    const result = await response.json();
+
+    if (response.ok && result.status && Array.isArray(result.data)) {
+      wishlistIds.value = result.data
+        .map((item) => item.product?.id)
+        .filter(Boolean);
+      localStorage.setItem('sora_wishlist', JSON.stringify(wishlistIds.value));
+    } else {
+      const stored = localStorage.getItem('sora_wishlist');
+      if (stored) wishlistIds.value = JSON.parse(stored);
+    }
+  } catch (error) {
+    console.error('Lỗi tải danh sách yêu thích:', error);
+    const stored = localStorage.getItem('sora_wishlist');
+    if (stored) wishlistIds.value = JSON.parse(stored);
+  }
 };
 
 const isInWishlist = (productId) => wishlistIds.value.includes(productId);
 
-const toggleWishlist = (product) => {
-  const index = wishlistIds.value.indexOf(product.id);
-  if (index === -1) {
-    wishlistIds.value.push(product.id);
-    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã thêm vào danh sách yêu thích!', showConfirmButton: false, timer: 2000 });
-  } else {
-    wishlistIds.value.splice(index, 1);
-    Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Đã bỏ khỏi danh sách yêu thích', showConfirmButton: false, timer: 2000 });
+const toggleWishlist = async (product) => {
+  const token = getToken();
+  if (!token) {
+    const index = wishlistIds.value.indexOf(product.id);
+    if (index === -1) {
+      wishlistIds.value.push(product.id);
+      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã thêm vào danh sách yêu thích!', showConfirmButton: false, timer: 2000 });
+    } else {
+      wishlistIds.value.splice(index, 1);
+      Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Đã bỏ khỏi danh sách yêu thích', showConfirmButton: false, timer: 2000 });
+    }
+    localStorage.setItem('sora_wishlist', JSON.stringify(wishlistIds.value));
+    return;
   }
-  localStorage.setItem('sora_wishlist', JSON.stringify(wishlistIds.value));
+
+  try {
+    const response = await fetch(`${API_BASE}/api/client/favourites/toggle`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ product_id: product.id })
+    });
+
+    const result = await response.json();
+    if (!response.ok || !result.status) {
+      throw new Error(result.message || 'Không thể cập nhật yêu thích.');
+    }
+
+    if (result.action === 'added') {
+      if (!wishlistIds.value.includes(product.id)) {
+        wishlistIds.value.push(product.id);
+      }
+      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã thêm vào danh sách yêu thích!', showConfirmButton: false, timer: 2000 });
+    } else {
+      wishlistIds.value = wishlistIds.value.filter((id) => id !== product.id);
+      Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Đã bỏ khỏi danh sách yêu thích', showConfirmButton: false, timer: 2000 });
+    }
+
+    localStorage.setItem('sora_wishlist', JSON.stringify(wishlistIds.value));
+  } catch (error) {
+    console.error('Lỗi khi chuyển trạng thái yêu thích:', error);
+    if (error?.response?.status === 401) {
+      Swal.fire({ icon: 'warning', title: 'Vui lòng đăng nhập để sử dụng chức năng yêu thích', confirmButtonColor: '#9f273b' });
+      return;
+    }
+
+    Swal.fire({
+      icon: 'error',
+      title: 'Không thể cập nhật yêu thích',
+      text: error.message || 'Xin thử lại sau.'
+    });
+  }
 };
 
 const fetchHomepageData = async () => {
   try {
-    const response = await fetch(`${API_BASE}/client/home-data`, {
+    const response = await fetch(`${API_BASE}/api/client/home-data`, {
       headers: { 'Accept': 'application/json' }
     });
     
@@ -522,8 +570,6 @@ onMounted(() => {
 }
 </style>
 <style scoped>
-
-
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Montserrat:wght@300;400;500;600&family=Oswald:wght@400;500;600;700&display=swap');
 
 .font-luxury { font-family: 'Montserrat', sans-serif; }
@@ -577,44 +623,14 @@ onMounted(() => {
 .scale-0 { transform: scaleX(0); }
 .group:hover .group-hover-scale-100 { transform: scaleX(1); }
 .transition-colors { transition: background-color 0.5s ease, color 0.5s ease; }
-.transition-transform { transition: transform 0.6s cubic-bezier(0.165, 0.84, 0.44, 1); }
+.transition-transform { transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
 .hover-translate-up:hover { transform: translateY(-10px); }
 .filter-brightness { filter: brightness(0.95); transition: filter 0.5s; }
 .group:hover .filter-brightness { filter: brightness(1); }
 .opacity-0 { opacity: 0; }
 .group:hover .group-hover-opacity-100 { opacity: 1 !important; }
-.transition-all { transition: all 0.4s ease; }
+.transition-all { transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
 .hover-text-primary:hover { color: #9f273b !important; }
-
-/* ========================================== */
-/* PRODUCT CARD                               */
-/* ========================================== */
-.luxury-related-card { transition: all 0.4s ease; border-color: #eaeaea !important; }
-.luxury-related-card:hover { box-shadow: 0 15px 35px rgba(0,0,0,0.06); border-color: #d1d5db !important; }
-
-.sora-main-img, .sora-hover-img { transition: transform 0.8s cubic-bezier(0.165, 0.84, 0.44, 1), opacity 0.6s ease; }
-.sora-main-img { z-index: 1; }
-.sora-hover-img { z-index: 2; opacity: 0; }
-.group:hover .sora-img-container.has-hover-image .sora-main-img { opacity: 0; }
-.group:hover .sora-img-container.has-hover-image .sora-hover-img { opacity: 1; }
-.group:hover .sora-main-img, .group:hover .sora-hover-img { transform: scale(1.08); }
-
-.theme-bar { width: 30%; height: 3px; background-color: var(--sora-primary); opacity: 0; transition: opacity 0.3s ease; left: 0; }
-.luxury-related-card:hover .theme-bar { opacity: 1; }
-
-.related-btn-add {
-  position: absolute; bottom: 0; left: 0; width: 100%;
-  transform: translateY(101%); transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-  z-index: 10; background: rgb(112, 21, 21);
-}
-.group:hover .related-btn-add, .luxury-related-card:hover .related-btn-add { transform: translateY(0); }
-
-.luxury-btn-solid { background-color: var(--sora-primary); color: white; border: 1px solid var(--sora-primary); transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }
-.luxury-btn-solid:hover:not(:disabled) { background-color: #7a1c2d; border-color: #7a1c2d; color: white; box-shadow: 0 8px 20px rgba(159,39,59,0.3); transform: translateY(-2px); }
-
-.wishlist-btn { transition: all 0.3s ease; }
-.wishlist-btn:hover { transform: scale(1.1); }
-.text-danger { color: var(--color-accent) !important; }
 
 /* ========================================== */
 /* BỘ SƯU TẬP GIỚI HẠN                        */

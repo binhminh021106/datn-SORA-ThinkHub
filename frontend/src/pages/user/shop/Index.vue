@@ -4,7 +4,7 @@
     <!-- HEADER BREADCRUMB -->
     <div class="container-fluid px-4 py-3 border-bottom sora-border-light bg-light">
       <div class="d-flex align-items-center text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.15em;">
-        <a href=""> <span class="text-muted cursor-pointer hover-text-primary transition-colors">Trang chủ</span> </a>
+        <router-link to="/" class="text-muted text-decoration-none hover-text-primary transition-colors">Trang chủ</router-link>
         <span class="mx-2 text-muted">/</span>
         <span class="fw-medium text-dark">Cửa hàng trang sức</span>
       </div>
@@ -141,8 +141,7 @@
             </div>
           </div>
 
-          <!-- LƯỚI SẢN PHẨM -->
-          <!-- SKELETON: PRODUCTS GRID -->
+          <!-- LƯỚI SẢN PHẨM SKELETON -->
           <div v-if="isLoadingProducts" class="product-grid fade-in">
              <div v-for="i in 8" :key="'prod-skel-'+i" class="sora-luxury-card skeleton-card">
                 <div class="sora-card-image skeleton-box shimmer" style="aspect-ratio: 1/1;"></div>
@@ -154,42 +153,26 @@
              </div>
           </div>
 
+          <!-- LƯỚI SẢN PHẨM THẬT SỬ DỤNG COMPONENT PRODUCTCARD ĐÃ NÂNG CẤP -->
           <div v-else class="product-grid fade-in">
             <template v-for="product in allProducts" :key="product.id">
-              <div class="sora-luxury-card" @click="goToProductDetail(product.slug)">
-                  <div class="sora-card-image sora-img-container" :class="{'has-hover-image': hasHoverImage(product)}">
-                      <div class="sora-card-badges">
-                          <span v-if="product.is_new" class="sora-badge">MỚI</span>
-                          <span v-if="product.promotional_price" class="sora-badge sale-badge">SALE</span>
-                      </div>
-                      <img :src="getImageUrl(product.thumbnail_image)" loading="lazy" :alt="product.name" class="sora-main-img" @error="handleImageError">
-                      <img v-if="hasHoverImage(product)" :src="getImageUrl(product.hover_image)" loading="lazy" :alt="product.name + ' hover'" class="sora-hover-img" @error="handleImageError">
-                  </div>
-
-                  <div class="sora-card-info">
-                      <h3 class="sora-card-title" :title="product.name">{{ product.name }}</h3>
-                      <p class="sora-card-category">{{ product.category?.name || 'Trang sức SORA' }}</p>
-                      
-                      <div class="sora-card-price d-flex align-items-center justify-content-center flex-wrap gap-1">
-                          <span v-if="product.promotional_price" class="sora-card-price-old">
-                            {{ formatPrice(product.base_price) }}
-                          </span>
-                          <span>{{ formatPrice(product.promotional_price || product.base_price) }}</span>
-                      </div>
-                  </div>
-
-                  <div class="sora-card-action">
-                      <button class="sora-action-btn" @click.stop="openQuickAdd(product)">
-                          <i class="bi bi-eye"></i> THÊM VÀO GIỎ
-                      </button>
-                  </div>
-              </div>
+              <ProductCard
+                :product="product"
+                :is-in-wishlist="isInWishlist(product.id)"
+                :is-in-compare="isInCompare(product.id)"
+                :show-wishlist="true"
+                :show-compare="true"
+                :show-add-to-cart="true"
+                @toggle-wishlist="toggleWishlist"
+                @toggle-compare="handleToggleCompare"
+                @add-to-cart="openQuickAdd"
+              />
             </template>
           </div>
 
           <!-- Empty State -->
           <div v-if="allProducts.length === 0 && !isLoadingProducts" class="text-center py-5 my-5 bg-light sora-border-light border fade-in" style="border-radius: 12px;">
-            <i class="bi bi-gem fs-1 mb-3" style="color: var(--sora-secondary);"></i>
+            <i class="bi bi-gem fs-1 mb-3" style="color: #e7ce7d;"></i>
             <p class="text-dark playfair-font fs-4 mb-2">Không tìm thấy kiệt tác nào</p>
             <p class="text-muted mb-4 fw-light">Vui lòng thử thay đổi bộ lọc hoặc tìm kiếm khác.</p>
             <button @click="resetFilters" class="btn text-uppercase ls-widest px-5 py-3 transition-colors sora-btn-primary" style="font-size: 0.8rem; border-radius: 8px;">Xóa Bộ Lọc</button>
@@ -223,77 +206,60 @@
       </div>
     </div>
 
-    <!-- MODAL QUICK ADD -->
-    <div v-if="quickAddModal.isOpen" class="modal-overlay position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" @click.self="closeQuickAdd" style="z-index: 9999 !important; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(2px);">
-      <div class="bg-white rounded shadow-lg d-flex flex-column position-relative" style="width: 90%; max-width: 480px; max-height: 90vh; overflow: hidden; animation: slideUp 0.3s ease-out; border-radius: 12px !important;">
-        <div class="d-flex justify-content-between align-items-center px-4 py-3" style="background-color: #9f273b;">
-          <h5 class="mb-0 text-white fw-bold font-serif fs-5" style="letter-spacing: 0.5px;">Tùy chọn Sản phẩm</h5>
-          <button @click="closeQuickAdd" class="btn text-white p-0 m-0 border-0" style="opacity: 0.8;">
-            <i class="bi bi-x-lg fs-4"></i>
-          </button>
-        </div>
-        <div class="p-4 overflow-y-auto" style="flex-grow: 1;">
-          <div class="d-flex gap-3 mb-4 pb-4 border-bottom">
-            <div class="flex-shrink-0 border rounded" style="width: 90px; height: 90px; overflow: hidden; border-color: #eaeaea;">
-               <img :src="getImageUrl(currentVariant?.image_url || quickAddModal.product.thumbnail_image)" class="w-100 h-100 object-fit-cover bg-light" @error="handleImageError">
-            </div>
-            <div class="d-flex flex-column justify-content-center">
-              <span class="text-uppercase fw-bold mb-1" style="font-size: 0.7rem; color: #e7ce7d; letter-spacing: 2px;">{{ quickAddModal.product.category?.name || 'SẢN PHẨM' }}</span>
-              <h6 class="fs-5 mb-2 fw-bold text-dark font-serif">{{ quickAddModal.product.name }}</h6>
-              <div class="d-flex align-items-center flex-wrap gap-2">
-                <span class="fw-bold fs-5" style="color: #9f273b; font-family: 'Playfair Display', serif;">{{ displayPriceFormatted }}</span>
-                <span v-if="modalOldPrice" class="text-muted text-decoration-line-through" style="font-size: 0.95rem;">
-                  {{ formatPrice(modalOldPrice) }}
-                </span>
-                <span v-if="modalDiscount > 0" class="sora-discount-tag" style="padding: 2px 6px; font-size: 0.75rem;">
-                  -{{ modalDiscount }}%
-                </span>
-              </div>
-            </div>
+    <!-- TÍCH HỢP COMPONENT COMPARE MODAL -->
+    <CompareModal 
+      ref="compareModalRef" 
+      :shop-slug="shopSlug" 
+      @update-list="compareList = $event" 
+    />
+
+    <!-- MODAL QUICK ADD CHUẨN ĐỒNG BỘ 100% -->
+    <div class="modal fade" id="quickAddModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-0 border-0 shadow-lg">
+          <div class="modal-header bg-sora-primary text-white rounded-0 border-0 p-4">
+            <h5 class="modal-title font-serif fw-bold tracking-wider">Tùy chọn Sản phẩm</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
-          <div v-for="(options, attrName) in quickAddModal.attributes" :key="attrName" class="mb-4">
-            <label class="d-block text-uppercase fw-bold mb-2 text-dark font-oswald" style="font-size: 0.85rem; letter-spacing: 1px;">
-              {{ attrName }}:
-            </label>
-            <div class="d-flex flex-wrap gap-2">
-              <button 
-                v-for="opt in options" :key="opt"
-                @click="quickAddModal.selectedOptions[attrName] = opt"
-                class="btn variant-select-btn px-4 py-2 fw-medium border"
-                :class="{'selected': quickAddModal.selectedOptions[attrName] === opt}"
-              >
-                {{ opt }}
-              </button>
-            </div>
-          </div>
-          <div class="mb-4">
-            <label class="d-block text-uppercase fw-bold mb-2 text-dark font-oswald" style="font-size: 0.85rem; letter-spacing: 1px;">SỐ LƯỢNG:</label>
-            <div class="d-flex align-items-center gap-3">
-               <div class="input-group" style="width: 140px;">
-                 <button @click="updateQuickAddQty(-1)" class="btn btn-outline-secondary" type="button"><i class="bi bi-dash"></i></button>
-                 <input type="number" v-model.number="quickAddModal.quantity" @change="validateQuickAddQty" class="form-control text-center fw-bold text-dark" style="-moz-appearance: textfield;">
-                 <button @click="updateQuickAddQty(1)" class="btn btn-outline-secondary" type="button"><i class="bi bi-plus"></i></button>
+          <div class="modal-body p-4" v-if="quickAddProduct">
+            <div class="d-flex gap-3 mb-4 pb-4 border-bottom border-light-subtle">
+               <img :src="quickAddDisplayImage" @error="handleImageError" class="object-fit-cover border shadow-sm" style="width: 80px; height: 80px; border-radius: 4px;">
+               <div class="d-flex flex-column justify-content-center">
+                  <small class="text-uppercase font-oswald tracking-widest text-gold fw-bold" style="font-size: 0.7rem;">{{ quickAddProduct.category?.name || 'Trang Sức SORA' }}</small>
+                  <h6 class="font-serif fw-bold mb-1 text-dark fs-5">{{ quickAddProduct.name }}</h6>
+                  <span class="text-sora-primary fw-bold font-serif fs-5">{{ formatCurrency(quickAddSelectedPrice) }}</span>
                </div>
-               <span v-if="isAllAttributesSelected && currentVariant" class="text-muted small fw-medium">
-                 {{ currentVariant.stock_quantity > 0 ? `Còn ${currentVariant.stock_quantity} sản phẩm` : 'Hết hàng' }}
-               </span>
-               <span v-else class="text-muted small fw-medium fst-italic">Vui lòng chọn phân loại</span>
             </div>
+
+            <div v-for="(values, attrName) in quickAddMatrix" :key="attrName" class="mb-4">
+               <p class="text-dark font-oswald tracking-wide text-uppercase mb-2 small fw-bold">
+                 {{ attrName }}: <span class="fw-normal text-sora-primary ms-1">{{ quickAddSelections[attrName] || '' }}</span>
+               </p>
+               <div class="d-flex flex-wrap gap-2">
+                 <label v-for="val in values" :key="val" class="attr-chip m-0 cursor-pointer transition-all" :class="{'selected': String(quickAddSelections[attrName]) === String(val)}">
+                   <input type="radio" class="d-none" :value="val" v-model="quickAddSelections[attrName]" @change="quickAddError = false">
+                   <div class="chip-inner px-3 py-2 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
+                     <span class="fw-bold font-oswald tracking-wide small">{{ val }}</span>
+                   </div>
+                 </label>
+               </div>
+            </div>
+            
+            <div class="text-danger small fst-italic mt-2 fw-bold bg-danger bg-opacity-10 p-2 rounded" v-if="quickAddError">
+               <i class="bi bi-exclamation-triangle-fill me-1"></i> Vui lòng chọn đầy đủ phân loại.
+            </div>
+            <div class="text-danger small fst-italic mt-2 fw-bold bg-danger bg-opacity-10 p-2 rounded" v-else-if="quickAddMatrix && Object.keys(quickAddMatrix).length > 0 && !quickAddSelectedVariant && isQuickAddAllSelected">
+               <i class="bi bi-x-circle-fill me-1"></i> Phiên bản này đã hết hàng hoặc không tồn tại.
+            </div>
+
+            <button @click="confirmQuickAdd" class="btn luxury-btn-solid w-100 py-3 mt-4 font-oswald tracking-widest text-uppercase fw-bold shadow-sm fs-6" style="background-color: #9f273b; color: white; border: none;">
+               <i class="bi bi-bag-plus-fill me-2"></i> Xác nhận thêm
+            </button>
           </div>
-          <div v-if="!isAllAttributesSelected && Object.keys(quickAddModal.attributes).length > 0" class="alert alert-info py-2 small mb-0"><i class="bi bi-info-circle me-1"></i> Vui lòng chọn đầy đủ phân loại sản phẩm.</div>
-          <div v-else-if="!currentVariant && Object.keys(quickAddModal.attributes).length > 0" class="alert alert-warning py-2 small mb-0"><i class="bi bi-exclamation-triangle me-1"></i> Phân loại này tạm thời không khả dụng.</div>
-          <div v-else-if="currentVariant && currentVariant.stock_quantity <= 0" class="alert alert-danger py-2 small mb-0"><i class="bi bi-slash-circle me-1"></i> Sản phẩm này đã hết hàng trong kho.</div>
-        </div>
-        <div class="p-3 bg-light border-top">
-          <button 
-            @click="confirmAddToCart" 
-            :disabled="quickAddModal.isAdding || !isAllAttributesSelected || !currentVariant || currentVariant.stock_quantity <= 0"
-            class="btn w-100 py-3 text-uppercase fw-bold text-white d-flex justify-content-center align-items-center gap-2"
-            style="background-color: #9f273b; border-radius: 8px; font-family: 'Oswald', sans-serif; letter-spacing: 1px; border: none; font-size: 0.95rem;"
-          >
-            <span v-if="quickAddModal.isAdding" class="spinner-border spinner-border-sm" role="status"></span>
-            <template v-else><i class="bi bi-cart-plus me-1"></i> XÁC NHẬN THÊM</template>
-          </button>
+          <div v-else class="p-5 text-center">
+             <div class="spinner-border text-sora-primary" role="status"></div>
+             <p class="mt-3 text-muted font-oswald tracking-widest text-uppercase small">Đang nạp dữ liệu...</p>
+          </div>
         </div>
       </div>
     </div>
@@ -302,14 +268,20 @@
 </template>
 
 <script setup>
-import { ref, shallowRef, onMounted, reactive, computed } from 'vue';
+import { ref, shallowRef, onMounted, reactive, computed, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import axios from 'axios';
 import Swal from 'sweetalert2';
+
+import ProductCard from '@/components/ui/ProductCard.vue';
+import CompareModal from '@/components/ui/CompareModal.vue'; 
 
 const route = useRoute();
 const router = useRouter();
 const shopSlug = ref(route.params.shop_slug || 'aurora-jewelry');
-const API_BASE_URL = 'http://127.0.0.1:8000';
+
+// ĐÃ SỬA: Đảm bảo không có dư thừa `/api` trong base URL
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
 
 const soraAlert = Swal.mixin({
   buttonsStyling: true,
@@ -320,6 +292,7 @@ const soraAlert = Swal.mixin({
 
 const Toast = Swal.mixin({
   toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true,
+  background: '#fffafa', color: '#9f273b', iconColor: '#9f273b',
   didOpen: (toast) => { if (toast.parentElement) toast.parentElement.style.zIndex = '10005'; }
 });
 
@@ -357,49 +330,279 @@ const getToken = () => {
   return '';
 };
 
-const formatPrice = (price) => {
-  if (!price || isNaN(price)) return 'Liên Hệ';
-  return new Intl.NumberFormat('vi-VN').format(price) + ' đ';
+// Utilities
+const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
+
+const getImageUrl = (path) => {
+  if (!path) return '/Sora-placeholder.png';
+  if (path.startsWith('http') || path.startsWith('data:image')) return path;
+  let cleanPath = path.startsWith('/') ? path.substring(1) : path;
+  if (cleanPath.startsWith('storage/')) return `${API_BASE_URL}/${cleanPath}`;
+  return `${API_BASE_URL}/storage/${cleanPath}`;
 };
-const getImageUrl = (path) => path ? (path.startsWith('http') ? path : `${API_BASE_URL}/storage/${path}`) : 'https://placehold.co/500x500/f5f5f5/cccccc?text=No+Image';
-const handleImageError = (e) => { e.target.src = 'https://placehold.co/500x500/f5f5f5/cccccc?text=No+Image'; };
-const hasHoverImage = (product) => product.hover_image && product.hover_image !== product.thumbnail_image;
+
+const handleImageError = (e) => { e.target.src = '/Sora-placeholder.png'; };
 
 const isColorAttribute = (attrName) => {
   const name = attrName.toLowerCase();
   return name.includes('màu') || name.includes('color');
 };
 
-// Cập nhật bộ màu sắc Dictionary siêu khổng lồ bao quát mọi ngôn từ Admin có thể nhập
 const getColorCode = (colorName) => {
   if(!colorName) return '#e0e0e0';
   const map = {
-    // Sắc Đỏ
     'đỏ': '#cc1e2e', 'red': '#cc1e2e', 'đỏ đô': '#8b0000', 'đỏ mận': '#800000', 'đỏ tươi': '#ff0000', 'ruby': '#e0115f',
-    // Sắc Xanh
     'xanh': '#2e5b9f', 'blue': '#2e5b9f', 'xanh dương': '#007bff', 'xanh biển': '#1e90ff', 'xanh ngọc': '#009981', 'xanh lá': '#28a745', 'green': '#28a745', 'xanh lục': '#228b22', 'emerald': '#50c878',
-    // Sắc Vàng
     'vàng': '#e7ce7d', 'gold': '#e7ce7d', 'vàng 18k': '#d4af37', 'vàng 24k': '#ffd700', 'vàng chanh': '#fada5e', 'vàng kem': '#fdfd96',
-    // Sắc Trắng / Bạc
     'trắng': '#ffffff', 'white': '#ffffff', 'vàng trắng': '#f4f4f4', 'bạch kim': '#e5e4e2', 'bạc': '#c0c0c0', 'silver': '#c0c0c0', 'trong suốt': '#f0f8ff',
-    // Sắc Đen / Xám
     'đen': '#2c2c2c', 'black': '#2c2c2c', 'xám': '#808080', 'gray': '#808080', 'ghi': '#808080',
-    // Sắc Hồng / Tím
     'hồng': '#f4a4b4', 'pink': '#f4a4b4', 'vàng hồng': '#b76e79', 'rose gold': '#b76e79', 'tím': '#800080', 'purple': '#800080', 'thạch anh tím': '#9966cc',
-    // Sắc Nâu / Cam
     'nâu': '#8b4513', 'brown': '#8b4513', 'cam': '#fd7e14', 'orange': '#fd7e14'
   };
   return map[colorName.toLowerCase().trim()] || '#e0e0e0'; 
 };
 
-// Hàm kiểm tra màu sáng để hiển thị Icon Check màu ĐEN thay vì trắng
 const isLightColor = (colorName) => {
   const code = getColorCode(colorName);
   const lightCodes = ['#ffffff', '#fcfcfc', '#f4f4f4', '#e5e4e2', '#c0c0c0', '#e0e0e0', '#fada5e', '#fdfd96', '#f0f8ff', '#ffb6c1', '#f4a4b4'];
   return lightCodes.includes(code);
 };
 
-// ĐÃ CẬP NHẬT: Trích xuất Màu sắc và TẤT CẢ THUỘC TÍNH ĐỘNG khác (Size, Kích thước, Loại, Chất liệu...)
+// ==============================================
+// LOGIC YÊU THÍCH (WISHLIST)
+// ==============================================
+const favourites = ref([]);
+const isTogglingFav = ref(null);
+
+const fetchFavorites = async () => {
+  const token = getToken();
+  if (!token) return;
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/client/favourites`, {
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+    });
+    const data = await response.json();
+    if (data.status) {
+      favourites.value = data.data.map(fav => fav.product_id);
+    }
+  } catch (e) {
+    console.error('Lỗi tải danh sách yêu thích', e);
+  }
+};
+
+const isInWishlist = (productId) => {
+  return favourites.value.includes(productId);
+};
+
+const toggleWishlist = async (prod) => {
+  if (!prod || !prod.id) return;
+  const token = getToken();
+  
+  if (!token) {
+    soraAlert.fire({
+      icon: 'warning',
+      title: 'Bạn chưa đăng nhập!',
+      text: 'Vui lòng đăng nhập để lưu trữ bộ sưu tập yêu thích của mình.',
+      confirmButtonText: 'Đăng Nhập Ngay',
+      showCancelButton: true,
+      cancelButtonText: 'Đóng'
+    }).then((result) => {
+      if (result.isConfirmed) router.push('/login');
+    });
+    return;
+  }
+
+  isTogglingFav.value = prod.id; 
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/client/favourites/toggle`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ product_id: prod.id })
+    });
+    
+    const data = await response.json();
+
+    if (data.status) {
+      if (data.action === 'added') {
+        favourites.value.push(prod.id);
+        Toast.fire({ icon: 'success', title: 'Đã thêm vào yêu thích' });
+      } else if (data.action === 'removed') {
+        favourites.value = favourites.value.filter(id => id !== prod.id);
+        Toast.fire({ icon: 'info', title: 'Đã bỏ yêu thích' });
+      }
+    } else {
+      if (response.status === 401) {
+          Toast.fire({ icon: 'error', title: 'Phiên đăng nhập hết hạn.' });
+      }
+    }
+  } catch (error) {
+    Toast.fire({ icon: 'error', title: 'Có lỗi xảy ra, thử lại sau' });
+  } finally {
+    isTogglingFav.value = null; 
+  }
+};
+
+// ==============================================
+// LOGIC COMPARE VỚI COMPONENT MỚI 
+// ==============================================
+const compareModalRef = ref(null);
+const compareList = ref([]); 
+
+const isInCompare = (id) => {
+  return compareList.value.some(item => item.id === id);
+};
+
+const handleToggleCompare = (prod) => {
+  if (compareModalRef.value) {
+    compareModalRef.value.toggleCompare(prod);
+  }
+};
+
+// ==============================================
+// LOGIC QUICK ADD (ĐỒNG BỘ 100% TỪ HOME)
+// ==============================================
+const quickAddProduct = ref(null);
+const quickAddMatrix = ref({});
+const quickAddSelections = ref({});
+const quickAddError = ref(false);
+let quickAddModalInstance = null;
+
+const isQuickAddAllSelected = computed(() => {
+    const requiredAttrs = Object.keys(quickAddMatrix.value);
+    if (requiredAttrs.length === 0) return true;
+    return requiredAttrs.every(attr => quickAddSelections.value[attr]);
+});
+
+const quickAddSelectedVariant = computed(() => {
+    if (!quickAddProduct.value || !quickAddProduct.value.variants) return null;
+    const requiredAttrs = Object.keys(quickAddMatrix.value);
+    if (requiredAttrs.length === 0) return quickAddProduct.value.variants[0];
+    if (!isQuickAddAllSelected.value) return null;
+    return quickAddProduct.value.variants.find(v => {
+        return requiredAttrs.every(attr => v.formatted_attributes && String(v.formatted_attributes[attr]) === String(quickAddSelections.value[attr]));
+    });
+});
+
+const quickAddDisplayImage = computed(() => {
+    if (!quickAddProduct.value) return getImageUrl(null);
+    const selectedVar = quickAddSelectedVariant.value;
+    if (selectedVar && selectedVar.image_url) return getImageUrl(selectedVar.image_url);
+    if (quickAddProduct.value.thumbnail_image) return getImageUrl(quickAddProduct.value.thumbnail_image);
+    return getImageUrl(quickAddProduct.value.fallback_image);
+});
+
+const quickAddSelectedPrice = computed(() => {
+    if (!quickAddProduct.value) return 0;
+    const selectedVar = quickAddSelectedVariant.value;
+    if (selectedVar) return selectedVar.promotional_price || selectedVar.price;
+    return quickAddProduct.value.promotional_price || quickAddProduct.value.base_price || quickAddProduct.value.fallback_price || 0;
+});
+
+const openQuickAdd = async (prod) => {
+    quickAddProduct.value = null;
+    quickAddError.value = false;
+    quickAddSelections.value = {};
+    quickAddMatrix.value = {};
+
+    if (!quickAddModalInstance) {
+        quickAddModalInstance = new window.bootstrap.Modal(document.getElementById('quickAddModal'));
+    }
+    quickAddModalInstance.show();
+
+    try {
+        const res = await axios.get(`${API_BASE_URL}/api/shop/all/products/${prod.slug}`);
+        if (res.data && res.data.data) {
+            quickAddProduct.value = {
+                ...res.data.data,
+                fallback_image: prod.thumbnail_image,
+                fallback_price: prod.base_price 
+            };
+            
+            const matrix = {};
+            if (quickAddProduct.value.variants) {
+                quickAddProduct.value.variants.forEach(variant => {
+                    let attrs = {};
+                    let attrVals = variant.attribute_values || variant.attributeValues;
+                    if (attrVals) { 
+                        attrVals.forEach(av => { if (av.attribute) attrs[av.attribute.name] = av.value; });
+                    } else if (variant.attributes) {
+                        attrs = typeof variant.attributes === 'string' ? JSON.parse(variant.attributes) : variant.attributes;
+                    }
+                    variant.formatted_attributes = attrs;
+                    Object.entries(attrs).forEach(([attrName, attrValue]) => {
+                        if (!matrix[attrName]) matrix[attrName] = new Set();
+                        matrix[attrName].add(attrValue);
+                    });
+                });
+            }
+            
+            const finalMatrix = {};
+            Object.keys(matrix).forEach(key => { finalMatrix[key] = Array.from(matrix[key]); });
+            quickAddMatrix.value = finalMatrix;
+            
+            if (quickAddProduct.value.variants && quickAddProduct.value.variants.length === 1) {
+                const singleVariant = quickAddProduct.value.variants[0];
+                if (singleVariant.formatted_attributes) {
+                    Object.entries(singleVariant.formatted_attributes).forEach(([attrName, attrValue]) => {
+                        quickAddSelections.value[attrName] = attrValue;
+                    });
+                }
+            }
+        }
+    } catch (e) {
+        quickAddModalInstance.hide();
+        soraAlert.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể tải thông tin sản phẩm' });
+    }
+};
+
+const confirmQuickAdd = async () => {
+    if (!isQuickAddAllSelected.value) {
+        quickAddError.value = true;
+        return;
+    }
+    quickAddError.value = false;
+
+    const selectedVar = quickAddSelectedVariant.value;
+    if (!selectedVar) {
+         Toast.fire({icon: 'error', title: 'Phiên bản đã hết hàng!'});
+         return;
+    }
+
+    try {
+        const token = getToken();
+        let sessionId = localStorage.getItem('cart_session_id');
+        if (!sessionId && !token) { 
+            sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('cart_session_id', sessionId);
+        }
+        
+        const headers = { 'Accept': 'application/json', 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        if (sessionId) headers['X-Cart-Session-Id'] = sessionId;
+
+        const payload = { product_variant_id: selectedVar.id, quantity: 1 };
+        const res = await axios.post(`${API_BASE_URL}/api/client/cart`, payload, { headers });
+
+        if (res.data.session_id) {
+            localStorage.setItem('cart_session_id', res.data.session_id);
+        }
+        
+        quickAddModalInstance.hide();
+        Toast.fire({ icon: 'success', title: 'Đã thêm sản phẩm vào giỏ' });
+    } catch (error) {
+        const msg = error.response?.data?.message || 'Không thể thêm vào giỏ hàng!';
+        soraAlert.fire({icon: 'error', title: 'Lỗi', text: msg});
+    }
+};
+
+// ==============================================
+// FILTERS VÀ SẢN PHẨM 
+// ==============================================
 const extractFiltersFromVariants = (products) => {
   const attrsMap = {};
   const colorsSet = new Set(colorOptions.value); 
@@ -416,7 +619,6 @@ const extractFiltersFromVariants = (products) => {
             if (isColorAttribute(attrName)) {
               colorsSet.add(attrValue);
             } else { 
-              // Trích xuất TẤT CẢ thuộc tính khác thành bộ lọc
               if (!attrsMap[attrName]) {
                 attrsMap[attrName] = { id: av.attribute.id, name: attrName, values: new Set() };
               }
@@ -551,171 +753,13 @@ const changePage = (page) => {
   } 
 };
 
-const goToProductDetail = (slug) => { 
-  if (slug) router.push({ name: 'productDetail', params: { shop_slug: shopSlug.value, slug: slug } }); 
-};
-
-const quickAddModal = reactive({
-  isOpen: false, product: null, attributes: {}, selectedOptions: {}, quantity: 1, isAdding: false
-});
-
-const openQuickAdd = (productSummary) => {
-  quickAddModal.product = productSummary;
-  quickAddModal.selectedOptions = {}; 
-  quickAddModal.quantity = 1;
-  quickAddModal.isAdding = false;
-  
-  const attrs = {};
-  productSummary.variants?.forEach(variant => {
-    const attrVals = variant.attribute_values || variant.attributeValues || [];
-    attrVals.forEach(av => {
-      const attrName = av.attribute?.name;
-      if (attrName) {
-        if (!attrs[attrName]) attrs[attrName] = new Set();
-        attrs[attrName].add(av.value);
-      }
-    });
-  });
-  
-  quickAddModal.attributes = Object.fromEntries(
-    Object.entries(attrs).map(([key, valueSet]) => [key, Array.from(valueSet)])
-  );
-  
-  document.body.style.overflow = 'hidden';
-  quickAddModal.isOpen = true;
-};
-
-const closeQuickAdd = () => {
-  document.body.style.overflow = 'auto'; 
-  quickAddModal.isOpen = false;
-  quickAddModal.product = null;
-};
-
-const isAllAttributesSelected = computed(() => {
-  const requiredAttrs = Object.keys(quickAddModal.attributes || {});
-  if (requiredAttrs.length === 0) return true;
-  return requiredAttrs.every(attr => quickAddModal.selectedOptions[attr] != null);
-});
-
-const currentVariant = computed(() => {
-  const variants = quickAddModal.product?.variants;
-  if (!variants?.length) return null;
-  if (Object.keys(quickAddModal.attributes).length === 0) return variants[0];
-  if (!isAllAttributesSelected.value) return null;
-
-  return variants.find(v => {
-    const attrVals = v.attribute_values || v.attributeValues || [];
-    return Object.entries(quickAddModal.selectedOptions).every(([attrName, selectedVal]) => {
-      return attrVals.some(av => 
-        av.attribute?.name === attrName && String(av.value) === String(selectedVal)
-      );
-    });
-  });
-});
-
-const displayPriceFormatted = computed(() => {
-  if (currentVariant.value) {
-    return formatPrice(currentVariant.value.promotional_price || currentVariant.value.price);
-  }
-  if (quickAddModal.product) {
-    if (quickAddModal.product.variants?.length > 0) {
-      const prices = quickAddModal.product.variants.map(v => parseFloat(v.promotional_price || v.price));
-      const min = Math.min(...prices);
-      const max = Math.max(...prices);
-      if (min !== max && !isNaN(min) && !isNaN(max)) return `${formatPrice(min)} - ${formatPrice(max)}`;
-      return formatPrice(min);
-    }
-    return formatPrice(quickAddModal.product.promotional_price || quickAddModal.product.base_price);
-  }
-  return formatPrice(0);
-});
-
-const modalOldPrice = computed(() => {
-  if (currentVariant.value && currentVariant.value.promotional_price && currentVariant.value.price > currentVariant.value.promotional_price) {
-    return currentVariant.value.price;
-  }
-  if (!currentVariant.value && quickAddModal.product?.promotional_price && quickAddModal.product?.base_price > quickAddModal.product?.promotional_price) {
-    return quickAddModal.product.base_price;
-  }
-  return null;
-});
-
-const modalDiscount = computed(() => {
-  if (currentVariant.value && currentVariant.value.promotional_price && currentVariant.value.price > currentVariant.value.promotional_price) {
-    return Math.round(((currentVariant.value.price - currentVariant.value.promotional_price) / currentVariant.value.price) * 100);
-  }
-  if (!currentVariant.value && quickAddModal.product?.promotional_price && quickAddModal.product?.base_price > quickAddModal.product?.promotional_price) {
-    return Math.round(((quickAddModal.product.base_price - quickAddModal.product.promotional_price) / quickAddModal.product.base_price) * 100);
-  }
-  return 0;
-});
-
-const updateQuickAddQty = (delta) => {
-  if (!isAllAttributesSelected.value) { return Toast.fire({ icon: 'info', title: 'Vui lòng chọn đầy đủ phân loại.' }); }
-  const maxStock = currentVariant.value?.stock_quantity || 0;
-  let newQty = quickAddModal.quantity + delta;
-  
-  if (newQty < 1) newQty = 1;
-  if (newQty > maxStock) { 
-    Toast.fire({ icon: 'warning', title: `Chỉ còn tối đa ${maxStock} sản phẩm` }); 
-    newQty = maxStock; 
-  }
-  quickAddModal.quantity = newQty;
-};
-
-const validateQuickAddQty = () => {
-  if (!isAllAttributesSelected.value) { 
-    quickAddModal.quantity = 1; 
-    return Toast.fire({ icon: 'info', title: 'Vui lòng chọn đầy đủ phân loại.' }); 
-  }
-  const maxStock = currentVariant.value?.stock_quantity || 0;
-  let qty = parseInt(quickAddModal.quantity);
-  
-  if (isNaN(qty) || qty < 1) quickAddModal.quantity = 1;
-  else if (qty > maxStock) { 
-    Toast.fire({ icon: 'warning', title: `Chỉ còn tối đa ${maxStock} sản phẩm` }); 
-    quickAddModal.quantity = maxStock; 
-  }
-};
-
-const confirmAddToCart = async () => {
-  if (!isAllAttributesSelected.value || !currentVariant.value) {
-    return Toast.fire({ icon: 'warning', title: 'Vui lòng chọn đầy đủ phân loại.' });
-  }
-  const maxStock = currentVariant.value.stock_quantity || 0;
-  if (quickAddModal.quantity > maxStock) {
-    return soraAlert.fire({ icon: 'error', title: 'Vượt quá tồn kho', text: `Rất tiếc, cửa hàng chỉ còn ${maxStock} sản phẩm khả dụng.` });
-  }
-  
-  quickAddModal.isAdding = true;
-  try {
-    const token = getToken();
-    let sessionId = localStorage.getItem('cart_session_id');
-    if (!sessionId) {
-      sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
-      localStorage.setItem('cart_session_id', sessionId);
-    }
-
-    const headers = { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-Cart-Session-Id': sessionId };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    const response = await fetch(`${API_BASE_URL}/api/client/cart`, {
-      method: 'POST', headers,
-      body: JSON.stringify({ product_variant_id: currentVariant.value.id, quantity: quickAddModal.quantity })
-    });
-    
-    const data = await response.json();
-    if (data.success) { closeQuickAdd(); router.push('/cart'); } 
-    else { soraAlert.fire({ icon: 'error', title: 'Không thể thêm', text: data.message || "Đã có lỗi xảy ra." }); }
-  } catch (error) { 
-    soraAlert.fire({ icon: 'error', title: 'Lỗi', text: 'Lỗi kết nối tới máy chủ.' }); 
-  } finally { 
-    quickAddModal.isAdding = false; 
-  }
-};
-
 onMounted(() => { 
+  fetchFavorites();
   Promise.all([fetchCategories(), fetchProducts(1)]).then(() => isPageLoading.value = false); 
+});
+
+onUnmounted(() => {
+  if (quickAddModalInstance) quickAddModalInstance.dispose();
 });
 </script>
 
@@ -799,32 +843,13 @@ onMounted(() => {
 }
 
 .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 2.5rem 1.5rem; }
-.sora-luxury-card { background: #ffffff; border: 1px solid #f0f0f0; border-radius: 2px; position: relative; display: flex; flex-direction: column; overflow: hidden; transition: all 0.4s; cursor: pointer; height: 100%; }
-.sora-luxury-card:hover { box-shadow: 0 15px 35px rgba(0,0,0,0.08); border-color: #e5e5e5; transform: translateY(-5px); }
-.sora-card-image { position: relative; width: 100%; aspect-ratio: 1 / 1; overflow: hidden; background-color: #f9f9f9; }
-.sora-card-image img { width: 100%; height: 100%; object-fit: cover; object-position: center; transition: opacity 0.6s ease; }
-.sora-main-img { z-index: 1; }
-.sora-hover-img { position: absolute; top:0; left:0; z-index: 2; opacity: 0; }
-.sora-luxury-card:hover .sora-card-image.has-hover-image .sora-main-img { opacity: 0; }
-.sora-luxury-card:hover .sora-card-image.has-hover-image .sora-hover-img { opacity: 1; }
-.sora-card-badges { position: absolute; top: 15px; left: 15px; z-index: 10; display: flex; flex-direction: column; gap: 8px; }
-.sora-badge { background: #ffffff; color: #222; font-family: 'Oswald', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 2px; padding: 4px 10px; border-radius: 2px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-.sale-badge { background-color: #9f273b !important; color: white !important; }
-.sora-card-info { padding: 20px 15px 70px 15px; text-align: center; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
-.sora-card-title { font-family: 'Oswald', sans-serif; font-size: 1.1rem; font-weight: 600; color: #111; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.sora-card-category { font-family: 'Playfair Display', serif; font-style: italic; color: #666; font-size: 0.95rem; margin-bottom: 15px; }
-.sora-card-price { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: #9f273b; margin-top: auto; }
-.sora-card-price-old { font-size: 0.95rem; color: #999; text-decoration: line-through; margin-right: 10px; font-weight: 400; }
-.sora-card-action { position: absolute; bottom: 0; left: 0; width: 100%; transform: translateY(100%); transition: transform 0.4s; z-index: 10; }
-.sora-luxury-card:hover .sora-card-action { transform: translateY(0); }
-.sora-action-btn { width: 100%; padding: 14px 0; background: #731621; color: #ffffff; border: none; font-family: 'Oswald', sans-serif; font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: background 0.3s ease; }
-.sora-action-btn:hover { background: #500f17; color: #fff;}
 
-/* CSS QUICK ADD MODAL */
-@keyframes slideUp { from { transform: translateY(30px) scale(0.98); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
-.variant-select-btn:hover { border-color: #9f273b; color: #9f273b; }
-.variant-select-btn.selected { border-color: #9f273b; color: #9f273b; font-weight: 700; background-color: #fdf5f6; box-shadow: inset 0 0 0 1px #9f273b; }
-.sora-discount-tag { background-color: #cc1e2e; color: white; font-weight: bold; border-radius: 2px; }
+/* CSS QUICK ADD MODAL CHIP */
+.attr-chip { border-radius: 4px; overflow: hidden; min-width: 55px; }
+.attr-chip .chip-inner { border: 1px solid #dee2e6; background-color: #fff; color: #555; border-radius: 4px; transition: all 0.3s ease-in-out; padding: 6px 12px; }
+.attr-chip:hover .chip-inner { border-color: #e7ce7d; color: #9f273b; }
+.attr-chip.selected .chip-inner { background-color: #9f273b; border-color: #9f273b; color: #fff !important; box-shadow: 0 4px 10px rgba(159, 39, 59, 0.25); }
+.attr-chip.selected .chip-inner span { color: #fff !important; }
 
 /* HIỆU ỨNG SKELETON */
 .fade-in { animation: fadeIn 0.4s ease-in; }
@@ -843,4 +868,32 @@ onMounted(() => {
 .skeleton-text { height: 14px; border-radius: 4px; }
 .skeleton-title { height: 24px; border-radius: 4px; }
 .skeleton-card { pointer-events: none; border-color: #eee !important; box-shadow: none !important; }
+
+/* VÒNG TRÒN CATEGORY LỰA CHỌN LÝ TƯỞNG */
+.category-circle-item {
+  transition: transform 0.3s ease;
+}
+.circle-img-wrapper {
+  overflow: hidden;
+}
+.group-hover-scale-img {
+  transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.category-circle-item:hover .group-hover-scale-img {
+  transform: scale(1.15);
+}
+.category-name::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 1px;
+  bottom: -2px;
+  left: 50%;
+  background-color: #e7ce7d;
+  transition: all 0.3s ease;
+  transform: translateX(-50%);
+}
+.category-circle-item:hover .category-name::after {
+  width: 100%;
+}
 </style>
