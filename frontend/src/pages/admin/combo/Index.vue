@@ -283,6 +283,8 @@ import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const router = useRouter();
 const combos = ref([]);
 
@@ -321,7 +323,7 @@ const formatDateTime = (dateString) => {
     return `${d.toLocaleDateString('vi-VN')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 };
 
-const getThumbnail = (url) => url ? `http://127.0.0.1:8000/storage/${url}` : 'https://placehold.co/150x150/e0e0e0/6c757d?text=No+Image'; 
+const getThumbnail = (url) => url ? `${API_URL}/storage/${url}` : 'https://placehold.co/150x150/e0e0e0/6c757d?text=No+Image'; 
 
 const getGenderLabel = (val) => {
     const map = { 'male': 'Nam', 'female': 'Nữ', 'unisex': 'Unisex', 'couple': 'Cặp đôi' };
@@ -334,7 +336,7 @@ const cancelStatusChange = (combo) => { combo.localStatus = combo.status; combo.
 const saveComboStatus = async (combo) => {
   combo.isUpdatingStatus = true;
   try {
-    const res = await axios.patch(`http://127.0.0.1:8000/api/admin/combos/${combo.id}/status`, { status: combo.localStatus }, { headers: getHeaders() });
+    const res = await axios.patch(`${API_URL}/admin/combos/${combo.id}/status`, { status: combo.localStatus }, { headers: getHeaders() });
     combo.status = combo.localStatus; 
     combo.isStatusChanged = false;
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
@@ -359,7 +361,7 @@ const fetchData = async (silent = false) => {
   else if (!isFirstLoad.value) isTableLoading.value = true;
   
   try {
-    const res = await axios.get('http://127.0.0.1:8000/api/admin/combos', { headers: getHeaders() });
+    const res = await axios.get(`${API_URL}/admin/combos`, { headers: getHeaders() });
     if (isUnmounted) return;
     
     combos.value = res.data.data.map(c => ({
@@ -377,7 +379,7 @@ const fetchData = async (silent = false) => {
 
 const openQuickView = async (id) => {
   try {
-    const res = await axios.get(`http://127.0.0.1:8000/api/admin/combos/${id}`, { headers: getHeaders() });
+    const res = await axios.get(`${API_URL}/admin/combos/${id}`, { headers: getHeaders() });
     if(!isUnmounted) {
       selectedCombo.value = res.data.data;
       if(!quickViewModalInstance) quickViewModalInstance = new window.bootstrap.Modal(document.getElementById('quickViewComboModal'));
@@ -439,7 +441,7 @@ const confirmDelete = (id, name) => {
     if (result.isConfirmed) {
       isSilentLoading.value = true;
       try {
-        await axios.delete(`http://127.0.0.1:8000/api/admin/combos/${id}`, { headers: getHeaders() });
+        await axios.delete(`${API_URL}/admin/combos/${id}`, { headers: getHeaders() });
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa Combo', showConfirmButton: false, timer: 1500 });
         fetchData(true); 
       } catch(e) { Swal.fire('Lỗi', 'Không thể xóa', 'error'); isSilentLoading.value = false; }
@@ -452,7 +454,7 @@ const restoreCombo = (id) => {
     if (result.isConfirmed) {
       isSilentLoading.value = true;
       try {
-          await axios.post(`http://127.0.0.1:8000/api/admin/combos/${id}/restore`, {}, { headers: getHeaders() });
+          await axios.post(`${API_URL}/admin/combos/${id}/restore`, {}, { headers: getHeaders() });
           Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Khôi phục thành công', showConfirmButton: false, timer: 1500 });
           fetchData(true); 
       } catch(e) { Swal.fire('Lỗi', 'Không thể khôi phục', 'error'); isSilentLoading.value = false; }

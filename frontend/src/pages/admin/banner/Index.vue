@@ -134,6 +134,8 @@ const banners = ref([]);
 const isFirstLoad = ref(true);
 const isTableLoading = ref(false);
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const isReorderMode = ref(false);
 const isSavingOrder = ref(false);
 const draggedIndex = ref(null);
@@ -141,7 +143,7 @@ const dragOverIndex = ref(null);
 const reorderList = ref([]);
 
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
-const getImageUrl = (path) => path ? `http://127.0.0.1:8000/storage/${path}` : '/placeholder.png';
+const getImageUrl = (path) => path ? `${API_URL}/storage/${path}` : '/placeholder.png';
 
 const formatDate = (dateString) => {
   if (!dateString) return null;
@@ -152,7 +154,7 @@ const formatDate = (dateString) => {
 const fetchData = async () => {
   if(!isFirstLoad.value) isTableLoading.value = true;
   try {
-    const res = await fetch('http://127.0.0.1:8000/api/admin/banners', { headers: getHeaders() });
+    const res = await fetch(`${API_URL}/admin/banners`, { headers: getHeaders() });
     if (res.ok) banners.value = (await res.json()).data;
   } catch (err) {} finally { isFirstLoad.value = false; isTableLoading.value = false; }
 };
@@ -168,7 +170,7 @@ const updateStatus = async (banner) => {
   fd.append('status', banner.status);
   
   try {
-    const res = await fetch(`http://127.0.0.1:8000/api/admin/banners/${banner.id}`, { method: 'POST', headers: getHeaders(), body: fd });
+    const res = await fetch(`${API_URL}/admin/banners/${banner.id}`, { method: 'POST', headers: getHeaders(), body: fd });
     if(res.ok) {
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái', showConfirmButton: false, timer: 1500 });
         fetchData();
@@ -179,7 +181,7 @@ const updateStatus = async (banner) => {
 const confirmDelete = (id) => {
   Swal.fire({ title: 'Xóa Banner?', text: 'Banner sẽ được đưa vào thùng rác.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Xóa', confirmButtonColor: '#d33' }).then(async (res) => {
     if (res.isConfirmed) {
-      await fetch(`http://127.0.0.1:8000/api/admin/banners/${id}`, { method: 'DELETE', headers: getHeaders() });
+      await fetch(`${API_URL}/admin/banners/${id}`, { method: 'DELETE', headers: getHeaders() });
       Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa banner', showConfirmButton: false, timer: 1500 });
       fetchData();
     }
@@ -187,7 +189,7 @@ const confirmDelete = (id) => {
 };
 
 const restoreBanner = async (id) => {
-    const res = await fetch(`http://127.0.0.1:8000/api/admin/banners/${id}/restore`, { method: 'POST', headers: getHeaders() });
+    const res = await fetch(`${API_URL}/admin/banners/${id}/restore`, { method: 'POST', headers: getHeaders() });
     if(res.ok) {
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã khôi phục', showConfirmButton: false, timer: 1500 });
         fetchData();
@@ -216,7 +218,7 @@ const saveReorder = async () => {
   isSavingOrder.value = true;
   const payload = reorderList.value.map((b, idx) => ({ id: b.id, sort_order: idx + 1 }));
   try {
-    const res = await fetch('http://127.0.0.1:8000/api/admin/banners/reorder', { method: 'POST', headers: { ...getHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ items: payload }) });
+    const res = await fetch(`${API_URL}/admin/banners/reorder`, { method: 'POST', headers: { ...getHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ items: payload }) });
     if(res.ok) {
         Swal.fire({icon: 'success', title: 'Đã lưu thứ tự!', timer: 1500, showConfirmButton: false});
         isReorderMode.value = false; fetchData();

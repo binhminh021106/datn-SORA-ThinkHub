@@ -94,6 +94,8 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const route = useRoute();
 const router = useRouter();
 const tierId = route.params.id;
@@ -115,7 +117,7 @@ const fileIcon = ref(null);
 const previewIcon = ref(null);
 
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
-const getImageUrl = (path) => path ? `http://127.0.0.1:8000/storage/${path}` : '';
+const getImageUrl = (path) => path ? `${API_URL}/storage/${path}` : '';
 
 const handleUpload = (e) => {
   const f = e.target.files[0];
@@ -129,7 +131,7 @@ const handleUpload = (e) => {
 
 onMounted(async () => {
   try {
-    const res = await fetch(`http://127.0.0.1:8000/api/admin/tiers/${tierId}`, { headers: getHeaders() });
+    const res = await fetch(`${API_URL}/admin/tiers/${tierId}`, { headers: getHeaders() });
     if (res.ok) {
       const data = (await res.json()).data;
       form.value.name = data.name;
@@ -169,7 +171,7 @@ const updateTier = async () => {
   if(fileIcon.value) fd.append('icon', fileIcon.value);
 
   try {
-    const res = await fetch(`http://127.0.0.1:8000/api/admin/tiers/${tierId}`, { method: 'POST', headers: getHeaders(), body: fd });
+    const res = await fetch(`${API_URL}/admin/tiers/${tierId}`, { method: 'POST', headers: getHeaders(), body: fd });
     const data = await res.json();
     if (res.ok) {
       Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật thành công', showConfirmButton: false, timer: 1500 });

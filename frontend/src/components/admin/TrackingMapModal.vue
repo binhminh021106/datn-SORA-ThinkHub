@@ -43,6 +43,8 @@
 import { ref, onBeforeUnmount, nextTick } from 'vue';
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const modalRef = ref(null);
 let bsModal = null;
 
@@ -118,7 +120,7 @@ const initMap = async (isAutoTriggered = false) => {
   stopAnimation();
 
   try {
-    const res = await axios.get(`http://127.0.0.1:8000/api/admin/orders/${orderId.value}/simulation`, { 
+    const res = await axios.get(`${API_URL}/admin/orders/${orderId.value}/simulation`, { 
         headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` } 
     });
     mapData.value = res.data.data;

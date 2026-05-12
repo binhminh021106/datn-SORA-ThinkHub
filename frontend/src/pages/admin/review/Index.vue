@@ -382,6 +382,8 @@ import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const route = useRoute();
 const router = useRouter();
 const reviews = ref([]);
@@ -454,7 +456,7 @@ const formatCurrency = (val) => {
 };
 
 const getThumbnail = (url) => { 
-    if (url) return `http://127.0.0.1:8000/storage/${url}`; 
+    if (url) return `${API_URL}/storage/${url}`; 
     return 'https://placehold.co/150x150/e0e0e0/6c757d?text=No+Image'; 
 };
 
@@ -519,7 +521,7 @@ const getStatusBadgeClass = (status) => {
 
 const fetchAttributes = async () => {
     try {
-        const res = await axios.get('http://127.0.0.1:8000/api/admin/attributes', { headers: getHeaders() });
+        const res = await axios.get(`${API_URL}/admin/attributes`, { headers: getHeaders() });
         systemAttributes.value = Array.isArray(res.data.data) ? res.data.data : [];
     } catch(e) {}
 };
@@ -528,7 +530,7 @@ const fetchCounts = async () => {
     try {
         const statuses = ['all', 'pending', 'approved', 'hidden'];
         const requests = statuses.map(status => {
-            let url = `http://127.0.0.1:8000/api/admin/reviews?page=1`;
+            let url = `${API_URL}/admin/reviews?page=1`;
             if (status !== 'all') url += `&status=${status}`;
             return axios.get(url, { headers: getHeaders() }).then(res => res.data);
         });
@@ -560,8 +562,8 @@ const fetchData = async (page = 1, silent = false) => {
     if (filters.value.rating) queryParams.append('rating', filters.value.rating);
 
     const [resReviews, resModules] = await Promise.all([
-      axios.get(`http://127.0.0.1:8000/api/admin/reviews?${queryParams.toString()}`, { headers: getHeaders() }),
-      axios.get('http://127.0.0.1:8000/api/admin/modules', { headers: getHeaders() })
+      axios.get(`${API_URL}/admin/reviews?${queryParams.toString()}`, { headers: getHeaders() }),
+      axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() })
     ]);
     
     if (isUnmounted) return;
@@ -620,8 +622,8 @@ const openQuickView = async (review) => {
   isFetchingDetail.value = true;
   try {
       const endpoint = review.product 
-          ? `http://127.0.0.1:8000/api/admin/products/${review.product.id}`
-          : `http://127.0.0.1:8000/api/admin/combos/${review.combo.id}`;
+          ? `${API_URL}/admin/products/${review.product.id}`
+          : `${API_URL}/admin/combos/${review.combo.id}`;
       
       const res = await axios.get(endpoint, { headers: getHeaders() });
       
@@ -645,7 +647,7 @@ const openQuickView = async (review) => {
 const saveReviewStatus = async (review) => {
   review.isUpdatingStatus = true;
   try {
-    await axios.put(`http://127.0.0.1:8000/api/admin/reviews/${review.id}`, {
+    await axios.put(`${API_URL}/admin/reviews/${review.id}`, {
       status: review.localStatus,
       admin_reply: review.admin_reply
     }, { headers: getHeaders() });
@@ -673,7 +675,7 @@ const saveReviewReply = async () => {
   // Khi ở trong Modal (chỉnh sửa status từ dropdown của Modal nếu có, hoặc chỉ lưu reply)
   // Ở đây Modal không có chọn dropdown status, nên lấy từ selectedReview.status
   try {
-    await axios.put(`http://127.0.0.1:8000/api/admin/reviews/${selectedReview.value.id}`, {
+    await axios.put(`${API_URL}/admin/reviews/${selectedReview.value.id}`, {
       status: selectedReview.value.status,
       admin_reply: editForm.value.admin_reply
     }, { headers: getHeaders() });
@@ -699,7 +701,7 @@ const confirmDelete = (id) => {
     if (result.isConfirmed) {
       isSilentLoading.value = true;
       try {
-        await axios.delete(`http://127.0.0.1:8000/api/admin/reviews/${id}`, { headers: getHeaders() });
+        await axios.delete(`${API_URL}/admin/reviews/${id}`, { headers: getHeaders() });
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa đánh giá', showConfirmButton: false, timer: 1500 });
         
         tabCache.value = {};

@@ -72,6 +72,8 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const router = useRouter();
 const form = ref({ email: '', password: '', remember: false });
 const showPassword = ref(false);
@@ -80,7 +82,7 @@ const isLoading = ref(false);
 const handleLogin = async () => {
   isLoading.value = true;
   try {
-    const response = await fetch('http://127.0.0.1:8000/api/admin/login', {
+    const response = await fetch(`${API_URL}/admin/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({ email: form.value.email, password: form.value.password })

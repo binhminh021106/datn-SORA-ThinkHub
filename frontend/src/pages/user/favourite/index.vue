@@ -172,6 +172,8 @@
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 // State dữ liệu
 const favorites = ref([]);
 const allProducts = ref([]);
@@ -187,8 +189,8 @@ const showToast = (message, actionType) => {
   setTimeout(() => { toast.value = null; }, 3000);
 };
 
-const favApiUrl = 'http://localhost:8000/api/client/favourites'; 
-const shopApiUrl = 'http://localhost:8000/api/shop/sora/products';
+const favApiUrl = `${API_URL}/client/favourites`; 
+const shopApiUrl = `${API_URL}/shop/sora/products`;
 
 const getToken = () => {
   const commonKeys = ['access_token', 'token', 'auth_token', 'userToken', 'user_token'];

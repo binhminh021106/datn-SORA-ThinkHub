@@ -329,6 +329,8 @@ import Swal from 'sweetalert2';
 import axios from 'axios';
 import { io } from "socket.io-client";
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const route = useRoute();
 const isSuperAdmin = computed(() => localStorage.getItem('admin_role') == 1);
 const isPageLoading = ref(true);
@@ -443,7 +445,7 @@ const accessibleModulesPreview = computed(() => {
 const fetchRoles = async (silent = false) => {
   if (!silent) isLoadingRoles.value = true;
   try {
-    const res = await axios.get('http://127.0.0.1:8000/api/admin/roles', { headers: getHeaders() });
+    const res = await axios.get(`${API_URL}/admin/roles`, { headers: getHeaders() });
     roles.value = res.data.data;
   } catch (err) { 
       console.error('Lỗi tải roles', err); 
@@ -455,7 +457,7 @@ const fetchRoles = async (silent = false) => {
 const fetchModules = async (silent = false) => {
   if (!silent) isLoadingModules.value = true;
   try {
-    const res = await axios.get('http://127.0.0.1:8000/api/admin/modules', { headers: getHeaders() });
+    const res = await axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() });
     systemModules.value = res.data.data;
     
     const currentCode = route.meta.moduleCode;
@@ -486,7 +488,7 @@ const saveRole = async () => {
   isSaving.value = true;
   errors.value = {};
   
-  const url = modalMode.value === 'create' ? 'http://127.0.0.1:8000/api/admin/roles' : `http://127.0.0.1:8000/api/admin/roles/${roleForm.value.id}`;
+  const url = modalMode.value === 'create' ? `${API_URL}/admin/roles` : `${API_URL}/admin/roles/${roleForm.value.id}`;
   
   try {
     const payload = roleForm.value;
@@ -519,7 +521,7 @@ const confirmDeleteRole = (id, roleName) => {
   }).then(async (result) => {
     if (result.isConfirmed) {
       try {
-        const res = await axios.delete(`http://127.0.0.1:8000/api/admin/roles/${id}`, { headers: getHeaders() });
+        const res = await axios.delete(`${API_URL}/admin/roles/${id}`, { headers: getHeaders() });
         Swal.fire({ icon: 'success', title: 'Đã xóa', text: res.data.message, timer: 1500, showConfirmButton: false }); 
         fetchRoles();
       } catch (err) { 
@@ -540,7 +542,7 @@ const restoreRole = (id) => {
   }).then(async (result) => {
     if (result.isConfirmed) {
       try {
-        const res = await axios.post(`http://127.0.0.1:8000/api/admin/roles/${id}/restore`, {}, { headers: getHeaders() });
+        const res = await axios.post(`${API_URL}/admin/roles/${id}/restore`, {}, { headers: getHeaders() });
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Thành công', text: res.data.message, showConfirmButton: false, timer: 1500 });
         fetchRoles(); 
       } catch (err) { 
@@ -553,7 +555,7 @@ const restoreRole = (id) => {
 const syncModules = async () => {
   isSyncing.value = true;
   try {
-    const res = await axios.post('http://127.0.0.1:8000/api/admin/modules/sync', {}, { headers: getHeaders() });
+    const res = await axios.post(`${API_URL}/admin/modules/sync`, {}, { headers: getHeaders() });
     Swal.fire({ icon: 'success', title: 'Hoàn tất', text: res.data.message, timer: 2000, showConfirmButton: false });
     fetchModules(); 
   } catch (err) { 
@@ -572,7 +574,7 @@ const saveModuleLevel = async (moduleId) => {
   isSavingLevel.value = true;
   try {
     const payload = { required_level: editLevelValue.value };
-    await axios.put(`http://127.0.0.1:8000/api/admin/modules/${moduleId}/level`, payload, { headers: getHeaders() });
+    await axios.put(`${API_URL}/admin/modules/${moduleId}/level`, payload, { headers: getHeaders() });
     
     const target = systemModules.value.find(m => m.id === moduleId);
     if(target) target.required_level = editLevelValue.value;

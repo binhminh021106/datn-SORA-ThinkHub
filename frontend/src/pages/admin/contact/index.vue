@@ -144,7 +144,7 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 import { Modal } from 'bootstrap'; 
 
-const API_URL = 'http://localhost:8000/api/admin/contacts';
+const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 // --- QUẢN LÝ DỮ LIỆU ---
 const contacts = ref([]);

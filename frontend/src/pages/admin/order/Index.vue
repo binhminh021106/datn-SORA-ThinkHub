@@ -326,6 +326,8 @@ import { io } from "socket.io-client";
 import OrderQuickViewModal from './OrderQuickViewModal.vue';
 import TrackingMapModal from '@/components/admin/TrackingMapModal.vue';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const route = useRoute();
 const orders = ref([]);
 const systemModules = ref([]);
@@ -546,7 +548,7 @@ const savePaymentStatus = async (order) => {
 
 const sendUpdateRequest = async (order, payload, loadingFlag, targetField, newValue, changedFlag) => {
   try {
-    const res = await axios.put(`http://127.0.0.1:8000/api/admin/orders/${order.id}/status`, payload, { headers: getHeaders() });
+    const res = await axios.put(`${API_URL}/admin/orders/${order.id}/status`, payload, { headers: getHeaders() });
     order[targetField] = newValue; order[changedFlag] = false;
 
     if (targetField === 'status' && newValue === 'delivered') {
@@ -577,7 +579,7 @@ const sendUpdateRequest = async (order, payload, loadingFlag, targetField, newVa
 
 const openQuickView = async (id) => {
   try {
-    const res = await axios.get(`http://127.0.0.1:8000/api/admin/orders/${id}`, { headers: getHeaders() });
+    const res = await axios.get(`${API_URL}/admin/orders/${id}`, { headers: getHeaders() });
     if (!isUnmounted) {
       selectedOrder.value = res.data.data;
       if (quickViewModalRef.value) quickViewModalRef.value.show();
@@ -614,8 +616,8 @@ const fetchData = async (page = 1, silent = false) => {
 
   try {
     const [resOrders, resModules] = await Promise.all([
-      axios.get(`http://127.0.0.1:8000/api/admin/orders?${queryParams.toString()}`, { headers: getHeaders() }),
-      axios.get('http://127.0.0.1:8000/api/admin/modules', { headers: getHeaders() })
+      axios.get(`${API_URL}/admin/orders?${queryParams.toString()}`, { headers: getHeaders() }),
+      axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() })
     ]);
     if (isUnmounted) return;
 
