@@ -234,6 +234,8 @@ import Swal from 'sweetalert2';
 import axios from 'axios';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const router = useRouter();
 
 const props = defineProps({
@@ -451,7 +453,7 @@ const handleReturn = async () => {
     Swal.fire({ title: 'Đang gửi...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
     
     try {
-        await axios.post(`http://127.0.0.1:8000/api/client/orders/${props.order.order_code}/return`, {
+        await axios.post(`${API_URL}/client/orders/${props.order.order_code}/return`, {
             return_reason: noteText
         }, { headers: getHeaders() });
         
@@ -469,7 +471,7 @@ const handleReturn = async () => {
 const handleReorder = async () => {
   Swal.fire({ title: 'Đang xử lý...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
   try {
-    await axios.post(`http://127.0.0.1:8000/api/client/orders/${props.order.order_code}/reorder`, {}, { headers: getHeaders() });
+    await axios.post(`${API_URL}/client/orders/${props.order.order_code}/reorder`, {}, { headers: getHeaders() });
     Swal.fire({ 
         icon: 'success', title: 'Thành công', text: 'Sản phẩm đã được thêm vào Giỏ hàng!', 
         confirmButtonColor: '#9f273b', timer: 2000, showConfirmButton: false 
@@ -485,7 +487,7 @@ const handleReorder = async () => {
 const handleDownloadInvoice = async () => {
   Swal.fire({ title: 'Đang xuất PDF...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
   try {
-    const res = await axios.get(`http://127.0.0.1:8000/api/client/orders/${props.order.order_code}/invoice`, { 
+    const res = await axios.get(`${API_URL}/client/orders/${props.order.order_code}/invoice`, { 
       headers: getHeaders(), responseType: 'blob' 
     });
     

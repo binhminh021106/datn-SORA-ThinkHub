@@ -154,6 +154,8 @@ import Swal from 'sweetalert2';
 import axios from 'axios'; // ĐÃ THÊM AXIOS
 import defaultImage from '../../../assets/images/defaults/placeholder.png';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const router = useRouter();
 const route = useRoute();
 const isLoaded = ref(false);
@@ -191,7 +193,7 @@ const generateSlug = () => {
 
 const fetchTreeCategories = async () => {
     try {
-        const res = await axios.get('http://127.0.0.1:8000/api/admin/categories/tree', { headers: getHeaders() });
+        const res = await axios.get(`${API_URL}/admin/categories/tree`, { headers: getHeaders() });
         treeCategories.value = res.data.data;
     } catch (e) {
         console.error("Lỗi lấy danh mục cha:", e);
@@ -200,7 +202,7 @@ const fetchTreeCategories = async () => {
 
 const fetchCategory = async () => {
   try {
-    const res = await axios.get(`http://127.0.0.1:8000/api/admin/categories/${route.params.id}`, { headers: getHeaders() });
+    const res = await axios.get(`${API_URL}/admin/categories/${route.params.id}`, { headers: getHeaders() });
     const u = res.data.data;
     
     form.value = { 
@@ -210,7 +212,7 @@ const fetchCategory = async () => {
       attributes_schema: u.attributes_schema || [] 
     };
     
-    previewImage.value = u.thumbnail ? `http://127.0.0.1:8000/storage/${u.thumbnail}` : defaultImage;
+    previewImage.value = u.thumbnail ? `${API_URL}/storage/${u.thumbnail}` : defaultImage;
     isRemoveImage.value = false;
     selectedFile.value = null;
     errors.value = {};
@@ -287,7 +289,7 @@ const updateCategory = async () => {
     if (isRemoveImage.value) formData.append('remove_thumbnail', 'true');
 
     try {
-        const res = await axios.post(`http://127.0.0.1:8000/api/admin/categories/${route.params.id}`, formData, {
+        const res = await axios.post(`${API_URL}/admin/categories/${route.params.id}`, formData, {
             headers: getHeaders()
         });
         

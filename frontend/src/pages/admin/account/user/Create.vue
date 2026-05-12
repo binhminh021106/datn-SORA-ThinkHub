@@ -181,6 +181,8 @@ const previewAvatar = ref(defaultAvatar);
 const selectedFile = ref(null);
 const errors = ref({});
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const showPassword = ref(false);
 const showConfirmPassword = ref(false);
 
@@ -306,7 +308,7 @@ const saveUser = async () => {
     if (selectedFile.value) formData.append('avatar', selectedFile.value);
 
     try {
-        const res = await axios.post('http://127.0.0.1:8000/api/admin/users', formData, { headers: getHeaders() });
+        const res = await axios.post(`${API_URL}/admin/users`, formData, { headers: getHeaders() });
         Swal.fire({ icon: 'success', title: 'Thành công', text: res.data.message || 'Đã thêm khách hàng', timer: 1500, showConfirmButton: false });
         router.push({ name: 'admin-users' });
     } catch (err) { 

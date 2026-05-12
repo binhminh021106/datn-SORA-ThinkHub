@@ -7,7 +7,7 @@ import axios from 'axios';
 // ==========================================
 // 1. CONFIGURATION & SETUP
 // ==========================================
-const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+const apiUrl = import.meta.env.VITE_API_BASE_URL;
 const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || window.location.origin;
 const BACKEND_URL = apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) : apiUrl;
 

@@ -151,7 +151,7 @@ const form = ref({
 const isSubmitting = ref(false);
 
 // 2. Đường dẫn API trỏ vào Controller mình vừa tạo
-const API_URL = 'http://localhost:8000/api/client/contact';
+const API_URL = `${import.meta.env.VITE_API_BASE_URL}/client/contact`;
 
 // 3. Cấu hình SweetAlert2 đồng bộ với toàn hệ thống
 const soraAlert = Swal.mixin({

@@ -84,6 +84,8 @@ import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const route = useRoute();
 const router = useRouter();
 const brandId = route.params.id;
@@ -121,13 +123,13 @@ const handleLogoUpload = (e) => {
 
 const fetchData = async () => {
     try {
-        const res = await axios.get(`http://127.0.0.1:8000/api/admin/brands/${brandId}`, { headers: getHeaders() });
+        const res = await axios.get(`${API_URL}/admin/brands/${brandId}`, { headers: getHeaders() });
         const b = res.data.data;
         form.value.name = b.name;
         form.value.slug = b.slug;
         form.value.description = b.description || '';
         form.value.isActive = b.status === 'active';
-        if(b.logo) logoPreview.value = `http://127.0.0.1:8000/storage/${b.logo}`;
+        if(b.logo) logoPreview.value = `${API_URL}/storage/${b.logo}`;
     } catch(e){
         router.push({ name: 'admin-brands' });
     } finally { 
@@ -146,7 +148,7 @@ const updateBrand = async () => {
     if (form.value.description) formData.append('description', form.value.description);
     if (logoFile.value) formData.append('logo', logoFile.value);
 
-    const res = await axios.post(`http://127.0.0.1:8000/api/admin/brands/${brandId}`, formData, {
+    const res = await axios.post(`${API_URL}/admin/brands/${brandId}`, formData, {
       headers: getHeaders()
     });
 

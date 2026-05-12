@@ -605,7 +605,7 @@ const passwordForm = ref({
   current_password: '', password: '', password_confirmation: ''
 });
 
-const apiBase = 'http://localhost:8000/api/client/profile'; 
+const apiBase = `${import.meta.env.VITE_API_BASE_URL}/client/profile`; 
 
 const getToken = () => {
   const commonKeys = ['access_token', 'token', 'auth_token', 'userToken', 'user_token'];

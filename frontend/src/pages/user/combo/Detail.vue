@@ -442,6 +442,8 @@ import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 import { Swiper, SwiperSlide } from 'swiper/vue';
 import { Navigation } from 'swiper/modules';
 import 'swiper/css';
@@ -602,7 +604,7 @@ const openQuickAdd = async (product) => {
     quickAddModalInstance.show();
 
     try {
-        const res = await axios.get(`http://127.0.0.1:8000/api/shop/all/products/${product.slug}`);
+        const res = await axios.get(`${API_URL}/shop/all/products/${product.slug}`);
         if (res.data && res.data.data) {
             quickAddProduct.value = {
                 ...res.data.data,
@@ -681,7 +683,7 @@ const confirmQuickAdd = async () => {
         if (token) headers['Authorization'] = `Bearer ${token}`;
         if (sessionId) headers['X-Cart-Session-Id'] = sessionId;
 
-        const res = await axios.post('http://127.0.0.1:8000/api/client/cart', {
+        const res = await axios.post(`${API_URL}/client/cart`, {
             product_variant_id: selectedVar.id,
             quantity: 1
         }, { headers });
@@ -772,7 +774,7 @@ const fetchRelatedProducts = async () => {
     if (!combo.value || !combo.value.items) return;
     const categoryIds = [...new Set(combo.value.items.map(item => item.product?.category_id).filter(Boolean))];
     try {
-        let url = `http://127.0.0.1:8000/api/shop/all/products?per_page=7`;
+        let url = `${API_URL}/shop/all/products?per_page=7`;
         if (categoryIds.length > 0) {
             url += `&category_id=${categoryIds[0]}`;
         }
@@ -790,7 +792,7 @@ const fetchDetail = async (slug) => {
   isLoading.value = true;
   combo.value = null; 
   try {
-    const res = await axios.get(`http://127.0.0.1:8000/api/client/combos/${slug}`);
+    const res = await axios.get(`${API_URL}/client/combos/${slug}`);
     combo.value = res.data.data;
     
     userSelections.value = {}; validationErrors.value = {}; itemMatrices.value = {};
@@ -901,7 +903,7 @@ const addToCart = async () => {
       if (token) headers['Authorization'] = `Bearer ${token}`;
       if (sessionId) headers['X-Cart-Session-Id'] = sessionId;
 
-      const res = await axios.post('http://127.0.0.1:8000/api/client/cart/add-combo', payload, { headers });
+      const res = await axios.post(`${API_URL}/client/cart/add-combo`, payload, { headers });
       
       if (res.data.session_id) {
           setSafeStorage('cart_session_id', res.data.session_id);
