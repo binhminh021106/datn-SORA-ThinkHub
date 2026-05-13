@@ -239,6 +239,8 @@ import Swal from 'sweetalert2';
 import axios from 'axios';
 import defaultImage from '../../../assets/images/defaults/placeholder.png';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const route = useRoute();
 const brands = ref([]);
 
@@ -268,7 +270,7 @@ onBeforeUnmount(() => {
 });
 
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
-const getImageUrl = (path) => path ? `http://127.0.0.1:8000/storage/${path}` : defaultImage;
+const getImageUrl = (path) => path ? `${API_URL}/storage/${path}` : defaultImage;
 const handleImageError = (e) => { e.target.src = defaultImage; };
 
 const getLevelColor = (level) => {
@@ -288,8 +290,8 @@ const fetchData = async () => {
   if (!isFirstLoad.value) isTableLoading.value = true;
   try {
     const [resBrands, resModules] = await Promise.all([
-      axios.get('http://127.0.0.1:8000/api/admin/brands', { headers: getHeaders() }),
-      axios.get('http://127.0.0.1:8000/api/admin/modules', { headers: getHeaders() })
+      axios.get(`${API_URL}/admin/brands`, { headers: getHeaders() }),
+      axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() })
     ]);
     
     const rawBrands = Array.isArray(resBrands.data.data) ? resBrands.data.data : [];
@@ -365,7 +367,7 @@ const saveReorder = async () => {
   }));
 
   try {
-    await axios.post('http://127.0.0.1:8000/api/admin/brands/reorder', { items: payload }, { headers: getHeaders() });
+    await axios.post(`${API_URL}/admin/brands/reorder`, { items: payload }, { headers: getHeaders() });
     Swal.fire({icon: 'success', title: 'Đã lưu thứ tự!', timer: 1500, showConfirmButton: false});
     isReorderMode.value = false;
     await fetchData(); 
@@ -429,7 +431,7 @@ const saveBrandStatus = async (brand) => {
   formData.append('status', brand.localStatus); 
 
   try {
-    await axios.post(`http://127.0.0.1:8000/api/admin/brands/${brand.id}`, formData, { headers: getHeaders() });
+    await axios.post(`${API_URL}/admin/brands/${brand.id}`, formData, { headers: getHeaders() });
     brand.status = brand.localStatus; 
     brand.isStatusChanged = false;
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
@@ -469,7 +471,7 @@ const confirmDelete = (id, name) => {
     if (result.isConfirmed) {
       isTableLoading.value = true;
       try {
-        await axios.delete(`http://127.0.0.1:8000/api/admin/brands/${id}`, { headers: getHeaders() });
+        await axios.delete(`${API_URL}/admin/brands/${id}`, { headers: getHeaders() });
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã đưa vào thùng rác', showConfirmButton: false, timer: 1500 });
         fetchData(); 
       } catch(e) {
@@ -489,7 +491,7 @@ const restoreBrand = (id) => {
     if (result.isConfirmed) {
       isTableLoading.value = true;
       try {
-        await axios.post(`http://127.0.0.1:8000/api/admin/brands/${id}/restore`, {}, { headers: getHeaders() });
+        await axios.post(`${API_URL}/admin/brands/${id}/restore`, {}, { headers: getHeaders() });
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã khôi phục thành công', showConfirmButton: false, timer: 1500 });
         fetchData(); 
       } catch(e) {

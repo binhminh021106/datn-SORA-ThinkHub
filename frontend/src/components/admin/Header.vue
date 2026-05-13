@@ -64,6 +64,8 @@ import Swal from 'sweetalert2';
 
 import defaultAvatar from '../../assets/images/defaults/avatar1.png';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const router = useRouter();
 const isUserMenuActive = ref(false);
 const userMenuContainer = ref(null);
@@ -112,7 +114,7 @@ const getAdminData = () => {
     return {
       name: admin.fullname || 'Quản trị viên',
       roleName: roleId == 1 ? 'Super Admin' : 'Nhân viên',
-      avatar: admin.avatar_url ? `http://127.0.0.1:8000/storage/${admin.avatar_url}` : defaultAvatar
+      avatar: admin.avatar_url ? `${API_URL}/storage/${admin.avatar_url}` : defaultAvatar
     };
   }
   

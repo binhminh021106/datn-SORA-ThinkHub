@@ -80,6 +80,8 @@ import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const router = useRouter();
 const isSaving = ref(false);
 
@@ -122,7 +124,7 @@ const submitBrand = async () => {
     if (form.value.description) formData.append('description', form.value.description);
     if (logoFile.value) formData.append('logo', logoFile.value);
 
-    const res = await axios.post('http://127.0.0.1:8000/api/admin/brands', formData, {
+    const res = await axios.post(`${API_URL}/admin/brands`, formData, {
       headers: getHeaders()
     });
 

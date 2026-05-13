@@ -98,6 +98,8 @@ import Swal from 'sweetalert2';
 
 const router = useRouter();
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const form = ref({
   fullname: '',
   email: '',
@@ -126,7 +128,7 @@ const handleRegister = async () => {
   isLoading.value = true;
 
   try {
-    const response = await fetch('http://127.0.0.1:8000/api/admin/register', {
+    const response = await fetch(`${API_URL}/admin/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

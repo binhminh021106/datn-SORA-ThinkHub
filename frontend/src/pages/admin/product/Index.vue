@@ -310,6 +310,8 @@ import axios from 'axios';
 // Import file ảnh mặc định
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const route = useRoute();
 const router = useRouter();
 const products = ref([]);
@@ -348,7 +350,7 @@ const formatCurrency = (val) => { if (val === null || val === undefined || val =
 
 // Chỉnh lại hàm lấy ảnh để ưu tiên trả về placeholder cục bộ
 const getThumbnail = (url) => { 
-    if (url) return `http://127.0.0.1:8000/storage/${url}`; 
+    if (url) return `${API_URL}/storage/${url}`; 
     return defaultPlaceholder; 
 };
 
@@ -392,7 +394,7 @@ const saveProductStatus = async (product) => {
   formData.append('variants_data', '[]'); 
 
   try {
-    const res = await axios.post(`http://127.0.0.1:8000/api/admin/products/${product.id}`, formData, { 
+    const res = await axios.post(`${API_URL}/admin/products/${product.id}`, formData, { 
       headers: getHeaders() 
     });
     
@@ -436,7 +438,7 @@ const getAttributeValueName = (attrId, valId) => {
 
 const openQuickView = async (id) => {
   try {
-    const res = await axios.get(`http://127.0.0.1:8000/api/admin/products/${id}`, { headers: getHeaders() });
+    const res = await axios.get(`${API_URL}/admin/products/${id}`, { headers: getHeaders() });
     if(!isUnmounted) {
       selectedProduct.value = res.data.data;
       if(!quickViewModalInstance) quickViewModalInstance = new window.bootstrap.Modal(document.getElementById('quickViewProductModal'));
@@ -454,11 +456,11 @@ const fetchData = async (silent = false) => {
   
   try {
     const [resProd, resCats, resAttr, resModules, resBrands] = await Promise.all([
-      axios.get('http://127.0.0.1:8000/api/admin/products', { headers: getHeaders() }),
-      axios.get('http://127.0.0.1:8000/api/admin/categories', { headers: getHeaders() }),
-      axios.get('http://127.0.0.1:8000/api/admin/attributes', { headers: getHeaders() }),
-      axios.get('http://127.0.0.1:8000/api/admin/modules', { headers: getHeaders() }),
-      axios.get('http://127.0.0.1:8000/api/admin/brands', { headers: getHeaders() })
+      axios.get(`${API_URL}/admin/products`, { headers: getHeaders() }),
+      axios.get(`${API_URL}/admin/categories`, { headers: getHeaders() }),
+      axios.get(`${API_URL}/admin/attributes`, { headers: getHeaders() }),
+      axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() }),
+      axios.get(`${API_URL}/admin/brands`, { headers: getHeaders() })
     ]);
     
     if (isUnmounted) return;
@@ -527,7 +529,7 @@ const confirmDelete = (id, name) => {
     if (result.isConfirmed) {
       isSilentLoading.value = true;
       try {
-        await axios.delete(`http://127.0.0.1:8000/api/admin/products/${id}`, { headers: getHeaders() });
+        await axios.delete(`${API_URL}/admin/products/${id}`, { headers: getHeaders() });
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã đưa vào thùng rác', showConfirmButton: false, timer: 1500 });
         fetchData(true); 
       } catch(e) {
@@ -543,7 +545,7 @@ const restoreProduct = (id) => {
     if (result.isConfirmed) {
       isSilentLoading.value = true;
       try {
-          await axios.post(`http://127.0.0.1:8000/api/admin/products/${id}/restore`, {}, { headers: getHeaders() });
+          await axios.post(`${API_URL}/admin/products/${id}/restore`, {}, { headers: getHeaders() });
           Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã khôi phục thành công', showConfirmButton: false, timer: 1500 });
           fetchData(true); 
       } catch(e) {

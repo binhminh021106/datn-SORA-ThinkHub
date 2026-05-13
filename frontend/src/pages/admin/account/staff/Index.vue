@@ -266,6 +266,8 @@ const searchQuery = ref('');
 const activeTab = ref('all');
 const currentPageLevel = ref(null);
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const currentAdmin = JSON.parse(localStorage.getItem('admin_info') || '{}');
 const currentUserId = currentAdmin.id;
 
@@ -316,7 +318,7 @@ const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
   }
 };
 
-const getAvatarUrl = (path) => path ? `http://127.0.0.1:8000/storage/${path}` : defaultAvatar;
+const getAvatarUrl = (path) => path ? `${API_URL}/storage/${path}` : defaultAvatar;
 const handleImageError = (e) => { e.target.src = defaultAvatar; };
 
 const viewFullImage = (url) => {
@@ -359,9 +361,9 @@ const fetchData = async () => {
   isLoading.value = true;
   try {
     const [resStaff, resRole, resModules] = await Promise.all([
-      axios.get('http://127.0.0.1:8000/api/admin/staff', { headers: getHeaders() }),
-      axios.get('http://127.0.0.1:8000/api/admin/roles', { headers: getHeaders() }),
-      axios.get('http://127.0.0.1:8000/api/admin/modules', { headers: getHeaders() })
+      axios.get(`${API_URL}/admin/staff`, { headers: getHeaders() }),
+      axios.get(`${API_URL}/admin/roles`, { headers: getHeaders() }),
+      axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() })
     ]);
     
     const rawStaffs = resStaff.data.data;
@@ -448,7 +450,7 @@ const saveStaffStatus = async (staff) => {
   };
 
   try {
-    await axios.post(`http://127.0.0.1:8000/api/admin/staff/${staff.id}`, payload, { headers: getHeaders() });
+    await axios.post(`${API_URL}/admin/staff/${staff.id}`, payload, { headers: getHeaders() });
     staff.status = staff.localStatus; 
     staff.isStatusChanged = false;
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
@@ -509,7 +511,7 @@ const confirmDelete = (id, name) => {
   }).then(async (result) => {
     if (result.isConfirmed) {
       try {
-        const res = await axios.delete(`http://127.0.0.1:8000/api/admin/staff/${id}`, { headers: getHeaders() });
+        const res = await axios.delete(`${API_URL}/admin/staff/${id}`, { headers: getHeaders() });
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa', text: res.data.message, showConfirmButton: false, timer: 1500 });
         fetchData(); 
       } catch (err) { 
@@ -528,7 +530,7 @@ const restoreStaff = (id) => {
   }).then(async (result) => {
     if (result.isConfirmed) {
       try {
-        const res = await axios.post(`http://127.0.0.1:8000/api/admin/staff/${id}/restore`, {}, { headers: getHeaders() });
+        const res = await axios.post(`${API_URL}/admin/staff/${id}/restore`, {}, { headers: getHeaders() });
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Thành công', text: res.data.message, showConfirmButton: false, timer: 1500 });
         fetchData(); 
       } catch (err) { 

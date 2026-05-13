@@ -1,23 +1,29 @@
 <template>
   <div v-if="isCheckingAuth" class="vh-100 d-flex flex-column justify-content-center align-items-center bg-light">
-    
     <div class="logo-pulse-wrapper mb-4">
       <img src="@/assets/images/icon-logo.png" alt="SORA Logo" class="logo-pulse-img">
     </div>
-
   </div>
 
-  <router-view v-else></router-view>
+  <div v-else>
+    <router-view></router-view>
+
+    <!-- GLOBAL MODALS: Đặt ở đây để hoạt động trên TOÀN BỘ hệ thống -->
+    <QuickAddModal />
+    <CompareModal shop-slug="sora" />
+  </div>
 </template>
 
 <script setup>
 import { ref, onMounted, provide } from 'vue';
 import { useRouter } from 'vue-router';
 
+// Nhúng 2 Modal Global vào App
+import QuickAddModal from '@/components/ui/QuickAddModal.vue';
+import CompareModal from '@/components/ui/CompareModal.vue';
+
 const router = useRouter();
-
 const isCheckingAuth = ref(true);
-
 const currentUser = ref(null);
 
 provide('currentUser', currentUser);
@@ -30,8 +36,8 @@ const checkAuthentication = async () => {
     return;
   }
 
-  try {
-    const res = await fetch('http://127.0.0.1:8000/api/admin/me', {
+try {
+    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/me`, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -41,9 +47,7 @@ const checkAuthentication = async () => {
 
     if (res.ok) {
       const result = await res.json();
-      
       currentUser.value = result.data;
-      
       if (result.data.role) {
          localStorage.setItem('admin_level', result.data.role.level);
       }
@@ -55,7 +59,6 @@ const checkAuthentication = async () => {
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_level');
     currentUser.value = null;
-    
     router.push('/admin/login');
   } finally {
     isCheckingAuth.value = false;

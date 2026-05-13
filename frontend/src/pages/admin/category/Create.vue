@@ -145,6 +145,8 @@ import Swal from 'sweetalert2';
 import axios from 'axios';
 import defaultImage from '../../../assets/images/defaults/placeholder.png';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const router = useRouter();
 const isSaving = ref(false);
 const previewImage = ref(defaultImage);
@@ -163,7 +165,7 @@ const getHeaders = () => ({
 
 const fetchTreeCategories = async () => {
     try {
-        const res = await axios.get('http://127.0.0.1:8000/api/admin/categories/tree', { headers: getHeaders() });
+        const res = await axios.get(`${API_URL}/admin/categories/tree`, { headers: getHeaders() });
         treeCategories.value = res.data.data;
     } catch (e) {
         console.error("Lỗi lấy danh mục cha:", e);
@@ -220,7 +222,7 @@ const saveCategory = async () => {
     if (selectedFile.value) formData.append('thumbnail', selectedFile.value);
 
     try {
-        const res = await axios.post('http://127.0.0.1:8000/api/admin/categories', formData, {
+        const res = await axios.post(`${API_URL}/admin/categories`, formData, {
             headers: getHeaders()
         });
         

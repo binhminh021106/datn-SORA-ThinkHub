@@ -135,6 +135,8 @@ import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import defaultAvatar from '../../../../assets/images/defaults/avatar1.png';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const router = useRouter();
 const roles = ref([]);
 const isSaving = ref(false);
@@ -185,7 +187,7 @@ const onDistrictChange = async () => {
 const onWardChange = () => {};
 
 const fetchRoles = async () => {
-  const res = await fetch('http://127.0.0.1:8000/api/admin/roles', { headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` } });
+  const res = await fetch(`${API_URL}/admin/roles`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` } });
   const data = await res.json();
   if(res.ok) roles.value = data.data;
 };
@@ -216,7 +218,7 @@ const saveStaff = async () => {
   if (selectedFile.value) formData.append('avatar', selectedFile.value);
 
   try {
-    const res = await fetch('http://127.0.0.1:8000/api/admin/staff', {
+    const res = await fetch(`${API_URL}/admin/staff`, {
       method: 'POST',
       headers: { 
         'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,

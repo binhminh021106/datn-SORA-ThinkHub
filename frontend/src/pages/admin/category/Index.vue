@@ -277,6 +277,8 @@ import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 // Import fallback image
 import defaultImage from '../../../assets/images/defaults/placeholder.png'; 
 
@@ -324,7 +326,7 @@ const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
   }
 };
 
-const getImageUrl = (path) => path ? `http://127.0.0.1:8000/storage/${path}` : defaultImage;
+const getImageUrl = (path) => path ? `${API_URL}/storage/${path}` : defaultImage;
 const handleImageError = (e) => { e.target.src = defaultImage; };
 
 const getLevelColor = (level) => {
@@ -345,8 +347,8 @@ const fetchData = async () => {
   if (!isFirstLoad.value) isLoading.value = true;
   try {
     const [resCategories, resModules] = await Promise.all([
-      axios.get('http://127.0.0.1:8000/api/admin/categories', { headers: getHeaders() }),
-      axios.get('http://127.0.0.1:8000/api/admin/modules', { headers: getHeaders() })
+      axios.get(`${API_URL}/admin/categories`, { headers: getHeaders() }),
+      axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() })
     ]);
 
     const rawData = Array.isArray(resCategories.data.data) ? resCategories.data.data : (resCategories.data.data?.data || []);
@@ -413,7 +415,7 @@ const saveReorder = async () => {
   }));
 
   try {
-    await axios.post('http://127.0.0.1:8000/api/admin/categories/reorder', { categories: payload }, { headers: getHeaders() });
+    await axios.post(`${API_URL}/admin/categories/reorder`, { categories: payload }, { headers: getHeaders() });
     Swal.fire({icon: 'success', title: 'Đã lưu thứ tự!', timer: 1500, showConfirmButton: false});
     isReorderMode.value = false;
     await fetchData(); 
@@ -446,7 +448,7 @@ const saveCategoryStatus = async (cat) => {
   formData.append('status', cat.localStatus); 
 
   try {
-    await axios.post(`http://127.0.0.1:8000/api/admin/categories/${cat.id}`, formData, { headers: getHeaders() });
+    await axios.post(`${API_URL}/admin/categories/${cat.id}`, formData, { headers: getHeaders() });
     cat.status = cat.localStatus; 
     cat.isStatusChanged = false;
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
@@ -499,7 +501,7 @@ const confirmDelete = (id, name) => {
     if (result.isConfirmed) {
       isLoading.value = true;
       try {
-        await axios.delete(`http://127.0.0.1:8000/api/admin/categories/${id}`, { headers: getHeaders() });
+        await axios.delete(`${API_URL}/admin/categories/${id}`, { headers: getHeaders() });
         Swal.fire({icon: 'success', title: 'Đã xóa', timer: 1500, showConfirmButton: false});
         fetchData();
       } catch(e) {
@@ -516,7 +518,7 @@ const restoreCategory = (id) => {
     if (result.isConfirmed) {
       isLoading.value = true;
       try {
-        await axios.post(`http://127.0.0.1:8000/api/admin/categories/${id}/restore`, {}, { headers: getHeaders() });
+        await axios.post(`${API_URL}/admin/categories/${id}/restore`, {}, { headers: getHeaders() });
         Swal.fire({icon: 'success', title: 'Đã khôi phục', timer: 1500, showConfirmButton: false});
         fetchData();
       } catch(e) {

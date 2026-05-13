@@ -305,6 +305,8 @@ import Swal from 'sweetalert2';
 import axios from 'axios';
 import { io } from "socket.io-client";
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const route = useRoute();
 const orders = ref([]);
 const systemModules = ref([]); 
@@ -641,7 +643,7 @@ const processRefund = async (order) => {
   });
 
   try {
-    const res = await axios.post(`http://127.0.0.1:8000/api/admin/orders/${order.id}/refund-process`, payload, { 
+    const res = await axios.post(`${API_URL}/admin/orders/${order.id}/refund-process`, payload, { 
       headers: getHeaders() 
     });
     
@@ -663,7 +665,7 @@ const processRefund = async (order) => {
 
 const openQuickView = async (id) => {
   try {
-    const res = await axios.get(`http://127.0.0.1:8000/api/admin/orders/${id}`, { headers: getHeaders() });
+    const res = await axios.get(`${API_URL}/admin/orders/${id}`, { headers: getHeaders() });
     if(!isUnmounted) {
       selectedOrder.value = res.data.data;
       if(!quickViewModalInstance) quickViewModalInstance = new window.bootstrap.Modal(document.getElementById('quickViewOrderModal'));
@@ -693,8 +695,8 @@ const fetchData = async (page = 1, silent = false) => {
 
   try {
     const [resOrders, resModules] = await Promise.all([
-      axios.get(`http://127.0.0.1:8000/api/admin/orders?${queryParams.toString()}`, { headers: getHeaders() }),
-      axios.get('http://127.0.0.1:8000/api/admin/modules', { headers: getHeaders() })
+      axios.get(`${API_URL}/admin/orders?${queryParams.toString()}`, { headers: getHeaders() }),
+      axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() })
     ]);
 
     if (isUnmounted) return;

@@ -416,6 +416,8 @@ import { useRouter, useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const router = useRouter();
 const route = useRoute();
 const productId = route.params.id;
@@ -457,7 +459,7 @@ const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bear
 const getImageUrl = (path) => {
     if (!path) return '';
     if (path.startsWith('http')) return path;
-    return `http://127.0.0.1:8000/storage/${path}`;
+    return `${API_URL}/storage/${path}`;
 };
 
 const canProceedToStep2 = computed(() => {
@@ -506,7 +508,7 @@ const proceedToStep2 = async () => {
                 attrIdToAdd = existingAttr.id.toString();
             } else {
                 try {
-                    const res = await axios.post('http://127.0.0.1:8000/api/admin/attributes',
+                    const res = await axios.post(`${API_URL}/admin/attributes`,
                         { name: schemaName },
                         { headers: getHeaders() }
                     );
@@ -627,7 +629,7 @@ const hideModals = () => {
 const submitCreateAttribute = async () => {
     if (!newAttrForm.value.name) return;
     try {
-        const res = await axios.post('http://127.0.0.1:8000/api/admin/attributes',
+        const res = await axios.post(`${API_URL}/admin/attributes`,
             { name: newAttrForm.value.name },
             { headers: getHeaders() }
         );
@@ -659,7 +661,7 @@ const submitCreateValue = async () => {
     if (!newValueForm.value.value || !currentOperatingAttr.value) return;
     try {
         const payload = { attribute_id: currentOperatingAttr.value.id, value: newValueForm.value.value };
-        const res = await axios.post('http://127.0.0.1:8000/api/admin/attribute-values', payload, { headers: getHeaders() });
+        const res = await axios.post(`${API_URL}/admin/attribute-values`, payload, { headers: getHeaders() });
 
         const attrObj = systemAttributes.value.find(x => x.id == currentOperatingAttr.value.id);
         if (attrObj) {
@@ -689,7 +691,7 @@ watch(selectedAttrToManage, (newId) => {
 const updateAttribute = async (id) => {
     if (!manageAttrName.value || !id) return;
     try {
-        await axios.put(`http://127.0.0.1:8000/api/admin/attributes/${id}`,
+        await axios.put(`${API_URL}/admin/attributes/${id}`,
             { name: manageAttrName.value },
             { headers: getHeaders() }
         );
@@ -706,7 +708,7 @@ const deleteAttribute = async (id) => {
     Swal.fire({ title: 'Xóa thuộc tính?', text: "Thuộc tính này và các giá trị của nó sẽ bị xóa!", icon: 'warning', showCancelButton: true }).then(async (result) => {
         if (result.isConfirmed) {
             try {
-                await axios.delete(`http://127.0.0.1:8000/api/admin/attributes/${id}`, { headers: getHeaders() });
+                await axios.delete(`${API_URL}/admin/attributes/${id}`, { headers: getHeaders() });
                 systemAttributes.value = systemAttributes.value.filter(a => a.id !== parseInt(id));
                 selectedAttrToManage.value = '';
                 if (manageAttrModalObj) manageAttrModalObj.hide();
@@ -815,7 +817,7 @@ const submitProduct = async () => {
             if (v.imageFile) formData.append(`variant_image_${index}`, v.imageFile);
         });
 
-        const res = await axios.post(`http://127.0.0.1:8000/api/admin/products/${productId}`, formData, {
+        const res = await axios.post(`${API_URL}/admin/products/${productId}`, formData, {
             headers: getHeaders()
         });
 
@@ -852,10 +854,10 @@ const submitProduct = async () => {
 const fetchData = async () => {
     try {
         const [catRes, attrRes, brandRes, prodRes] = await Promise.all([
-            axios.get('http://127.0.0.1:8000/api/admin/categories?status=active', { headers: getHeaders() }),
-            axios.get('http://127.0.0.1:8000/api/admin/attributes', { headers: getHeaders() }),
-            axios.get('http://127.0.0.1:8000/api/admin/brands?status=active', { headers: getHeaders() }),
-            axios.get(`http://127.0.0.1:8000/api/admin/products/${productId}`, { headers: getHeaders() })
+            axios.get(`${API_URL}/admin/categories?status=active`, { headers: getHeaders() }),
+            axios.get(`${API_URL}/admin/attributes`, { headers: getHeaders() }),
+            axios.get(`${API_URL}/admin/brands?status=active`, { headers: getHeaders() }),
+            axios.get(`${API_URL}/admin/products/${productId}`, { headers: getHeaders() })
         ]);
 
         const catData = catRes.data;

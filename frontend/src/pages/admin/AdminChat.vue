@@ -324,7 +324,7 @@ const isDeletingConv = ref(false);
 // Lightbox
 const lightboxUrl = ref(null);
 
-const API_URL = 'http://localhost:8000/api/admin';
+const API_URL = import.meta.env.VITE_API_BASE_URL;
 const getToken = () => localStorage.getItem('admin_token') || localStorage.getItem('auth_token');
 const axiosConfig = () => ({
   headers: { Authorization: `Bearer ${getToken()}`, Accept: 'application/json' }
@@ -433,7 +433,7 @@ const removeSelectedFile = () => {
 const fetchContacts = async () => {
   isLoadingContacts.value = true;
   try {
-    const res = await axios.get(`${API_URL}/messages/conversations`, axiosConfig());
+    const res = await axios.get(`${API_URL}/admin/messages/conversations`, axiosConfig());
     if (res.data.status) {
       contacts.value = res.data.data;
     }
@@ -455,7 +455,7 @@ const selectUser = async (user) => {
   }
   isLoadingMessages.value = true;
   try {
-    const res = await axios.get(`${API_URL}/messages?partner_id=${user.id}`, axiosConfig());
+    const res = await axios.get(`${API_URL}/admin/messages?partner_id=${user.id}`, axiosConfig());
     if (res.data.status) {
       messages.value = res.data.data;
       messages.value.forEach(m => renderedIds.value.add(m.id));
@@ -500,7 +500,7 @@ const sendMessage = async () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('receiver_id', activeUserId.value);
-      const res = await axios.post(`${API_URL}/messages`, formData, {
+      const res = await axios.post(`${API_URL}/admin/messages`, formData, {
         headers: {
           Authorization: `Bearer ${getToken()}`,
           Accept: 'application/json',
@@ -545,7 +545,7 @@ const sendMessage = async () => {
     scrollToBottom();
 
     try {
-      const res = await axios.post(`${API_URL}/messages`, {
+      const res = await axios.post(`${API_URL}/admin/messages`, {
         receiver_id: activeUserId.value,
         content: text
       }, axiosConfig());
@@ -584,7 +584,7 @@ const deleteConversation = async () => {
   isDeletingConv.value = true;
   try {
     const res = await axios.delete(
-      `${API_URL}/messages/conversations/${activeUserId.value}`,
+      `${API_URL}/admin/messages/conversations/${activeUserId.value}`,
       axiosConfig()
     );
     if (res.data.status) {
