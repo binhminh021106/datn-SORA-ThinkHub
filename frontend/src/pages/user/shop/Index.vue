@@ -309,7 +309,7 @@ import Swal from 'sweetalert2';
 const route = useRoute();
 const router = useRouter();
 const shopSlug = ref(route.params.shop_slug || 'aurora-jewelry');
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const soraAlert = Swal.mixin({
   buttonsStyling: true,
@@ -473,7 +473,7 @@ const toggleAttribute = (val) => {
 const fetchCategories = async () => {
   isLoadingCategories.value = true;
   try {
-    const response = await fetch(`${API_BASE_URL}/api/shop/${shopSlug.value}/categories`);
+    const response = await fetch(`${API_BASE_URL}/shop/${shopSlug.value}/categories`);
     const data = await response.json();
     if(data?.success) categories.value = data.data; 
   } catch (e) {} finally { isLoadingCategories.value = false; }
@@ -494,7 +494,7 @@ const fetchProducts = async (page = 1) => {
     }
 
     const params = new URLSearchParams(queryPayload);
-    const response = await fetch(`${API_BASE_URL}/api/shop/${shopSlug.value}/products?${params.toString()}`);
+    const response = await fetch(`${API_BASE_URL}/shop/${shopSlug.value}/products?${params.toString()}`);
     const data = await response.json();
     
     if(data?.success) {
@@ -699,7 +699,7 @@ const confirmAddToCart = async () => {
     const headers = { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-Cart-Session-Id': sessionId };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const response = await fetch(`${API_BASE_URL}/api/client/cart`, {
+    const response = await fetch(`${API_BASE_URL}/client/cart`, {
       method: 'POST', headers,
       body: JSON.stringify({ product_variant_id: currentVariant.value.id, quantity: quickAddModal.quantity })
     });

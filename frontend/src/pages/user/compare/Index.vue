@@ -275,7 +275,7 @@ import Swal from 'sweetalert2';
 const route = useRoute();
 const router = useRouter();
 const shopSlug = route.params.shop_slug || 'aurora';
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const products = ref([]);
 const isLoading = ref(true);
@@ -353,7 +353,7 @@ const loadCompareData = async (isBackgroundRefresh = false) => {
 
     if(!isBackgroundRefresh) isLoading.value = true;
 
-    const response = await axios.post(`${API_BASE_URL}/api/shop/${shopSlug}/compare`, {
+    const response = await axios.post(`${API_BASE_URL}/shop/${shopSlug}/compare`, {
       product_ids: ids
     });
 
@@ -423,7 +423,7 @@ const filteredFavourites = computed(() => {
 const fetchCompareSuggestions = async (query = '') => {
   isLoadingCompareSuggestions.value = true;
   try {
-    let url = new URL(`${API_BASE_URL}/api/shop/${shopSlug}/products`);
+    let url = new URL(`${API_BASE_URL}/shop/${shopSlug}/products`);
     url.searchParams.append('per_page', query ? '20' : '10');
     url.searchParams.append('sort', 'new'); 
     
@@ -462,7 +462,7 @@ const fetchFavouritesForCompare = async () => {
   isLoadingFavourites.value = true;
   try {
     const token = localStorage.getItem('auth_token');
-    const response = await fetch(`${API_BASE_URL}/api/client/favourites`, {
+    const response = await fetch(`${API_BASE_URL}/client/favourites`, {
       headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
     });
     const result = await response.json();

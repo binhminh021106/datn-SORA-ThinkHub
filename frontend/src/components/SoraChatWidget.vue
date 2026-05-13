@@ -212,7 +212,7 @@ const activeCategory = ref('smileys');
 // Lightbox
 const lightboxUrl = ref(null);
 
-const API_URL = 'http://localhost:8000/api/client';
+const API_URL = import.meta.env.VITE_API_BASE_URL;
 const getToken = () => localStorage.getItem('auth_token') || localStorage.getItem('token');
 const axiosConfig = () => ({
   headers: { Authorization: `Bearer ${getToken()}`, Accept: 'application/json' }

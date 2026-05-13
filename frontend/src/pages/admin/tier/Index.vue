@@ -97,11 +97,13 @@
 import { ref, onMounted } from 'vue';
 import Swal from 'sweetalert2';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const tiers = ref([]);
 const isLoading = ref(true);
 
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
-const getImageUrl = (path) => path ? `http://127.0.0.1:8000/storage/${path}` : ''; 
+const getImageUrl = (path) => path ? `${API_URL}/storage/${path}` : ''; 
 const handleImageError = (e) => { e.target.style.display = 'none'; }; 
 
 const formatCurrency = (value) => {
@@ -111,7 +113,7 @@ const formatCurrency = (value) => {
 const fetchData = async () => {
   isLoading.value = true;
   try {
-    const res = await fetch('http://127.0.0.1:8000/api/admin/tiers', { headers: getHeaders() });
+    const res = await fetch(`${API_URL}/admin/tiers`, { headers: getHeaders() });
     if (res.ok) {
         tiers.value = (await res.json()).data;
     }
@@ -133,7 +135,7 @@ const confirmDelete = (id) => {
   }).then(async (res) => {
     if (res.isConfirmed) {
       try {
-        const response = await fetch(`http://127.0.0.1:8000/api/admin/tiers/${id}`, { method: 'DELETE', headers: getHeaders() });
+        const response = await fetch(`${API_URL}/admin/tiers/${id}`, { method: 'DELETE', headers: getHeaders() });
         const data = await response.json();
         
         if (response.ok) {

@@ -324,7 +324,7 @@ const isDeletingConv = ref(false);
 // Lightbox
 const lightboxUrl = ref(null);
 
-const API_URL = 'http://localhost:8000/api/admin';
+const API_URL = import.meta.env.VITE_API_BASE_URL;
 const getToken = () => localStorage.getItem('admin_token') || localStorage.getItem('auth_token');
 const axiosConfig = () => ({
   headers: { Authorization: `Bearer ${getToken()}`, Accept: 'application/json' }

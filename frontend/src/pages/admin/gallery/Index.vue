@@ -237,7 +237,7 @@ const selectedGallery = ref(null);
 let quickViewModalInstance = null;
 
 // SỬ DỤNG .ENV CHO API BASE URL NHƯ BẠN YÊU CẦU
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+const API_URL = import.meta.env.VITE_API_BASE_URL;
 // Lấy đường dẫn base (không có /api) để trỏ vào thư mục storage ảnh
 const BASE_URL = API_URL.replace('/api', '');
 
@@ -275,7 +275,6 @@ const handleImageError = (e) => {
 const fetchData = async () => {
   if (!isFirstLoad.value) isLoading.value = true;
   try {
-    // ĐÃ FIX LỖI Ở DÒNG DƯỚI ĐÂY: Thay http://127.0.0.1:8000 bằng endpoint API chính xác
     const [resGalleries, resModules] = await Promise.all([
       axios.get(`${API_URL}/admin/galleries`, { headers: getHeaders() }),
       axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() })

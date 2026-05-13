@@ -46,6 +46,8 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const route = useRoute();
 const router = useRouter();
 
@@ -80,7 +82,7 @@ const handleResetPassword = async () => {
 
   isLoading.value = true;
   try {
-    const response = await fetch('http://127.0.0.1:8000/api/admin/reset-password', {
+    const response = await fetch(`${API_URL}/admin/reset-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({

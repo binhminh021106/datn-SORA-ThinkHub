@@ -684,7 +684,7 @@ const sizeGuideData = [
   { size: '15', diameter: 24.4, circumference: 76.5 },
 ];
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const BACKEND_URL = API_BASE_URL.replace(/\/api\/?$/, '');
 const shopSlug = route.params.shop_slug || 'aurora';
 

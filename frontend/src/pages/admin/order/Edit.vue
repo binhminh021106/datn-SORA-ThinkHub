@@ -296,6 +296,8 @@ import Swal from 'sweetalert2';
 import TrackingMapModal from '@/components/admin/TrackingMapModal.vue';
 import { downloadAdminInvoice } from '@/utils/adminInvoice.js';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const route = useRoute();
 const router = useRouter();
 const orderId = route.params.id;
@@ -354,7 +356,7 @@ const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bear
 
 const formatCurrency = (val) => val != null ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val) : '---';
 const formatDateTime = (val) => val ? new Date(val).toLocaleString('vi-VN') : '';
-const getImageUrl = (path) => path ? `http://127.0.0.1:8000/storage/${path}` : 'https://placehold.co/50';
+const getImageUrl = (path) => path ? `${API_URL}/storage/${path}` : 'https://placehold.co/50';
 const handleImageError = (e) => { e.target.src = 'https://placehold.co/50'; };
 const parseAttributes = (attr) => { try { return typeof attr === 'object' ? attr : JSON.parse(attr); } catch { return {}; } };
 const parseCombo = (combo) => { try { return typeof combo === 'object' ? combo : JSON.parse(combo); } catch { return []; } };
@@ -384,7 +386,7 @@ const canPaymentTransitionTo = (target) => allowedPaymentTransitions[order.value
 const fetchOrderData = async (silent = false) => {
   if (!silent) isPageLoading.value = true;
   try {
-    const res = await axios.get(`http://127.0.0.1:8000/api/admin/orders/${orderId}`, { headers: getHeaders() });
+    const res = await axios.get(`${API_URL}/admin/orders/${orderId}`, { headers: getHeaders() });
     order.value = res.data.data;
     localStatus.value = order.value.status;
     localPaymentStatus.value = order.value.payment_status;
@@ -427,7 +429,7 @@ const submitStatusUpdate = async () => {
 
     isUpdatingStatus.value = true;
     try {
-        await axios.put(`http://127.0.0.1:8000/api/admin/orders/${orderId}/status`, {
+        await axios.put(`${API_URL}/admin/orders/${orderId}/status`, {
             status: localStatus.value,
             payment_status: order.value.payment_status,
             note: finalNote || defaultNotesDict[localStatus.value]
@@ -459,7 +461,7 @@ const submitStatusUpdate = async () => {
 const submitPaymentUpdate = async () => {
     isUpdatingPayment.value = true;
     try {
-        await axios.put(`http://127.0.0.1:8000/api/admin/orders/${orderId}/status`, {
+        await axios.put(`${API_URL}/admin/orders/${orderId}/status`, {
             status: order.value.status,
             payment_status: localPaymentStatus.value,
             note: `Cập nhật thanh toán: ${localPaymentStatus.value.toUpperCase()}`
@@ -533,7 +535,7 @@ const initInlineMap = async () => {
   stopAnimation();
 
   try {
-    const res = await axios.get(`http://127.0.0.1:8000/api/admin/orders/${orderId}/simulation`, { 
+    const res = await axios.get(`${API_URL}/admin/orders/${orderId}/simulation`, { 
         headers: getHeaders() 
     });
     mapData.value = res.data.data;

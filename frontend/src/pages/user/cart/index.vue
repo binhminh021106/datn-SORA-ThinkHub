@@ -174,7 +174,7 @@ const isLoading = ref(true);
 const cartItems = ref([]);
 const backendSummary = ref(null);
 
-const API_BASE_URL = 'http://127.0.0.1:8000/api/client/cart';
+const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/client/cart`;
 
 const soraAlert = Swal.mixin({
   buttonsStyling: true,

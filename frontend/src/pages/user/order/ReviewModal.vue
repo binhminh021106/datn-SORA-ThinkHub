@@ -130,7 +130,7 @@ const emit = defineEmits(['close', 'review-success']);
 const reviewForms = ref([]);
 const isSubmitting = ref(false);
 const isLoading = ref(false);
-const API_BASE_URL = 'http://127.0.0.1:8000/api/client/orders';
+const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/client/orders`;
 
 const ratingLabels = {
   0: "Vui lòng chọn sao",

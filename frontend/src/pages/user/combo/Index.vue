@@ -187,6 +187,8 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const router = useRouter();
 const combos = ref([]);
 const isLoading = ref(true);
@@ -274,7 +276,7 @@ const scrollSlider = (comboId, direction) => {
 const fetchCombos = async (gender = null) => {
   isLoading.value = true;
   try {
-    let url = 'http://127.0.0.1:8000/api/client/combos';
+    let url = `${API_URL}/client/combos`;
     if (gender && gender !== 'all') url += `?gender=${gender}`;
     const res = await axios.get(url);
     combos.value = res.data.data.data; 

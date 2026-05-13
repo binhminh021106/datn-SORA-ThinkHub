@@ -157,6 +157,8 @@ import Swal from 'sweetalert2';
 import moment from 'moment';
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const router = useRouter();
 const route = useRoute();
 
@@ -188,7 +190,7 @@ const formatCurrency = (val) => {
 
 const fetchCoupon = async () => {
   try {
-    const res = await axios.get(`http://127.0.0.1:8000/api/admin/coupons/${route.params.id}`, { headers: getHeaders() });
+    const res = await axios.get(`${API_URL}/admin/coupons/${route.params.id}`, { headers: getHeaders() });
     const u = res.data.data;
     
     // Cần format lại expires_at thành YYYY-MM-DDTHH:mm cho thẻ input type="datetime-local"
@@ -234,7 +236,7 @@ const updateCoupon = async () => {
     const payload = { ...form.value, expires_at: payloadDate };
 
     try {
-        const res = await axios.patch(`http://127.0.0.1:8000/api/admin/coupons/${route.params.id}`, payload, {
+        const res = await axios.patch(`${API_URL}/admin/coupons/${route.params.id}`, payload, {
             headers: getHeaders()
         });
         

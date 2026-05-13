@@ -95,6 +95,8 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const router = useRouter();
 const isSaving = ref(false);
 
@@ -136,7 +138,7 @@ const submitTier = async () => {
   if(fileIcon.value) fd.append('icon', fileIcon.value);
 
   try {
-    const res = await fetch('http://127.0.0.1:8000/api/admin/tiers', { method: 'POST', headers: getHeaders(), body: fd });
+    const res = await fetch(`${API_URL}/admin/tiers`, { method: 'POST', headers: getHeaders(), body: fd });
     const data = await res.json();
     if (res.ok) {
       Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã tạo hạng thành viên', showConfirmButton: false, timer: 1500 });
