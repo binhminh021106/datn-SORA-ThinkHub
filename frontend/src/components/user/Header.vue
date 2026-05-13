@@ -274,7 +274,7 @@ import Swal from 'sweetalert2';
 
 const route = useRoute();
 const router = useRouter();
-const BACKEND_URL = 'http://127.0.0.1:8000';
+const BACKEND_URL = import.meta.env.VITE_API_BASE_URL;
 
 const sysConfig = ref({ phone: '12345678910', email: 'SORA@GMAIL.COM', facebook: '#', instagram: '#', twitter: '#' });
 const user = ref(null);
@@ -385,7 +385,7 @@ const getHeaders = () => {
 
 const fetchHeaderData = async () => {
   try {
-    const res = await axios.get(`${BACKEND_URL}/api/client/header-data`, { headers: getHeaders() });
+    const res = await axios.get(`${BACKEND_URL}/client/header-data`, { headers: getHeaders() });
     if (res.data.success) {
       categories.value = res.data.data.categories;
       if (categories.value.length > 0) hoveredCategory.value = categories.value[0];
@@ -403,7 +403,7 @@ const fetchUserProfile = async () => {
   if (!token) return;
 
   try {
-    const res = await axios.get(`${BACKEND_URL}/api/user`, {
+    const res = await axios.get(`${BACKEND_URL}/user`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     user.value = res.data;
@@ -422,7 +422,7 @@ const performSearch = async (query) => {
   }
   isFetchingSearch.value = true;
   try {
-    const res = await axios.get(`${BACKEND_URL}/api/client/search`, { params: { keyword: query } });
+    const res = await axios.get(`${BACKEND_URL}/client/search`, { params: { keyword: query } });
     if (res.data.success) {
       searchResults.value = res.data.data.products;
       categoryResults.value = res.data.data.categories;

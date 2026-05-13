@@ -242,6 +242,8 @@ import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const router = useRouter();
 const isPageLoading = ref(true);
 const isSaving = ref(false);
@@ -330,7 +332,7 @@ const handleProductSelect = async (index) => {
   
   item.isLoadingVariants = true;
   try {
-    const res = await axios.get(`http://127.0.0.1:8000/api/admin/products/${item.product_id}`, { headers: getHeaders() });
+    const res = await axios.get(`${API_URL}/admin/products/${item.product_id}`, { headers: getHeaders() });
     if (res.data.success && res.data.data.variants) item.available_variants = res.data.data.variants;
   } catch (error) { console.error(error); } 
   finally { item.isLoadingVariants = false; }
@@ -373,7 +375,7 @@ const initPickers = () => {
 
 const fetchData = async () => {
   try {
-    const res = await axios.get('http://127.0.0.1:8000/api/admin/products', { headers: getHeaders() });
+    const res = await axios.get(`${API_URL}/admin/products`, { headers: getHeaders() });
     const pData = res.data.data;
     allProducts.value = Array.isArray(pData.data) ? pData.data : pData; 
   } catch (error) {
@@ -425,7 +427,7 @@ const submitCombo = async () => {
     }));
     formData.append('items_data', JSON.stringify(cleanItems));
 
-    await axios.post('http://127.0.0.1:8000/api/admin/combos', formData, { headers: getHeaders() });
+    await axios.post(`${API_URL}/admin/combos`, formData, { headers: getHeaders() });
     
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Hoàn tất Tạo Combo', showConfirmButton: false, timer: 1500 }).then(() => {
         router.push({ name: 'admin-combos' });

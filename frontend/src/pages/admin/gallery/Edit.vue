@@ -95,6 +95,8 @@ import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 defineOptions({ name: 'GalleryEdit' });
 
 const route = useRoute();
@@ -120,7 +122,7 @@ const getHeaders = () => ({
 const fetchGallery = async () => {
   try {
     const id = route.params.id;
-    const response = await axios.get(`http://127.0.0.1:8000/api/admin/galleries/${id}`, { headers: getHeaders() });
+    const response = await axios.get(`${API_URL}/admin/galleries/${id}`, { headers: getHeaders() });
     
     const data = response.data.data || response.data; 
     
@@ -169,7 +171,7 @@ const updateForm = async () => {
   formData.append('_method', 'PUT');
 
   try {
-    await axios.post(`http://127.0.0.1:8000/api/admin/galleries/${form.id}`, formData, {
+    await axios.post(`${API_URL}/admin/galleries/${form.id}`, formData, {
       headers: getHeaders()
     });
     

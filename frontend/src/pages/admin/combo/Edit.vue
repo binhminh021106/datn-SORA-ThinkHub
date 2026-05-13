@@ -250,6 +250,8 @@ import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const route = useRoute();
 const router = useRouter();
 const comboId = route.params.id;
@@ -343,7 +345,7 @@ const handleProductSelect = async (index, isInit = false) => {
   if (!item.product_id) return;
   item.isLoadingVariants = true;
   try {
-    const res = await axios.get(`http://127.0.0.1:8000/api/admin/products/${item.product_id}`, { headers: getHeaders() });
+    const res = await axios.get(`${API_URL}/admin/products/${item.product_id}`, { headers: getHeaders() });
     if (res.data.success && res.data.data.variants) {
        item.available_variants = res.data.data.variants;
     }
@@ -401,8 +403,8 @@ const formatToDBDate = (str) => {
 const fetchInitialData = async () => {
   try {
     const [resProducts, resCombo] = await Promise.all([
-        axios.get('http://127.0.0.1:8000/api/admin/products', { headers: getHeaders() }),
-        axios.get(`http://127.0.0.1:8000/api/admin/combos/${comboId}`, { headers: getHeaders() })
+        axios.get(`${API_URL}/admin/products`, { headers: getHeaders() }),
+        axios.get(`${API_URL}/admin/combos/${comboId}`, { headers: getHeaders() })
     ]);
     
     const pData = resProducts.data.data;
@@ -420,7 +422,7 @@ const fetchInitialData = async () => {
         
         isActive: c.status === 'active'
     };
-    thumbnailPreview.value = c.thumbnail_image ? `http://127.0.0.1:8000/storage/${c.thumbnail_image}` : null;
+    thumbnailPreview.value = c.thumbnail_image ? `${API_URL}/storage/${c.thumbnail_image}` : null;
 
     comboItems.value = c.items.map(i => ({
         product_id: i.product_id,
@@ -478,7 +480,7 @@ const submitCombo = async () => {
     }));
     formData.append('items_data', JSON.stringify(cleanItems));
 
-    await axios.post(`http://127.0.0.1:8000/api/admin/combos/${comboId}`, formData, { headers: getHeaders() });
+    await axios.post(`${API_URL}/admin/combos/${comboId}`, formData, { headers: getHeaders() });
     
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật thành công', showConfirmButton: false, timer: 1500 }).then(() => {
         router.push({ name: 'admin-combos' });

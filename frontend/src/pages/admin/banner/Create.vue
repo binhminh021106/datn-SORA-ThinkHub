@@ -115,6 +115,8 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const router = useRouter();
 const isSaving = ref(false);
 const form = ref({ title: '', brand_id: '', target_url: '', position: 'home_slider', start_date: '', end_date: '', isActive: true });
@@ -145,7 +147,7 @@ const handleUpload = (e, type) => {
 
 onMounted(async () => {
   try {
-    const res = await fetch('http://127.0.0.1:8000/api/admin/brands', { headers: getHeaders() });
+    const res = await fetch(`${API_URL}/admin/brands`, { headers: getHeaders() });
     if (res.ok) {
         const data = await res.json();
         // Lọc lấy brand đang active thôi
@@ -182,7 +184,7 @@ const submitBanner = async () => {
   if(fileMob.value) fd.append('image_mobile', fileMob.value);
 
   try {
-    const res = await fetch('http://127.0.0.1:8000/api/admin/banners', { method: 'POST', headers: getHeaders(), body: fd });
+    const res = await fetch(`${API_URL}/admin/banners`, { method: 'POST', headers: getHeaders(), body: fd });
     const data = await res.json();
     if (res.ok) {
       Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã tạo banner', showConfirmButton: false, timer: 1500 });

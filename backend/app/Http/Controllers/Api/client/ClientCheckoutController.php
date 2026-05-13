@@ -377,19 +377,19 @@ class ClientCheckoutController extends Controller
 
     private function generateMomoUrl($order)
     {
-        $endpoint = "https://test-payment.momo.vn/v2/gateway/api/create";
-
-        $partnerCode = 'MOMOBKUN20180529';
-        $accessKey   = 'klm05TvNBzhg7h7j';
-        $secretKey   = 'at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa';
+        // Lấy thông tin từ file .env
+        $endpoint = env('MOMO_ENDPOINT');
+        $partnerCode = env('MOMO_PARTNER_CODE');
+        $accessKey   = env('MOMO_ACCESS_KEY');
+        $secretKey   = env('MOMO_SECRET_KEY');
 
         $orderInfo = "Thanh toan don hang SORA " . $order->order_code;
-
         $amount = (string) round($order->total_amount);
         $orderId = $order->order_code . "_" . time();
 
-        $redirectUrl = 'http://127.0.0.1:8000/api/client/checkout/momo-return';
-        $ipnUrl = 'http://127.0.0.1:8000/api/client/checkout/momo-return';
+        // Sử dụng hàm url() của Laravel để tự động lấy domain hiện tại (APP_URL)
+        $redirectUrl = url('/api/client/checkout/momo-return');
+        $ipnUrl = url('/api/client/checkout/momo-return');
 
         $extraData = "";
         $requestId = time() . "";

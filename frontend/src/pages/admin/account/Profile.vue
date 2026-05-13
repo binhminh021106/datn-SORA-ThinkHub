@@ -235,6 +235,8 @@ import defaultAvatar from '../../../assets/images/defaults/avatar1.png';
 const activeTab = ref('info');
 const isLoading = ref(false);
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const showNewPassword = ref(false);
 const showConfirmPassword = ref(false);
 
@@ -326,7 +328,7 @@ onMounted(() => {
         const data = JSON.parse(savedInfo);
         adminData.value = {
             ...data,
-            avatar: data.avatar_url ? `http://127.0.0.1:8000/storage/${data.avatar_url}` : defaultAvatar
+            avatar: data.avatar_url ? `${API_URL}/storage/${data.avatar_url}` : defaultAvatar
         };
     }
 });
@@ -370,7 +372,7 @@ const updateProfile = async () => {
     if (isRemoveAvatar.value) formData.append('remove_avatar', true);
 
     try {
-        const res = await axios.post('http://127.0.0.1:8000/api/admin/profile', formData, { headers: getHeaders() });
+        const res = await axios.post(`${API_URL}/admin/profile`, formData, { headers: getHeaders() });
         const updatedData = res.data.data;
 
         localStorage.setItem('admin_info', JSON.stringify(updatedData));
@@ -379,7 +381,7 @@ const updateProfile = async () => {
             currentUser.value = updatedData;
         }
 
-        adminData.value.avatar = updatedData.avatar_url ? `http://127.0.0.1:8000/storage/${updatedData.avatar_url}` : defaultAvatar;
+        adminData.value.avatar = updatedData.avatar_url ? `${API_URL}/storage/${updatedData.avatar_url}` : defaultAvatar;
         adminData.value.address = updatedData.address;
 
         previewAvatar.value = null;
@@ -405,7 +407,7 @@ const updatePassword = async () => {
 
     isLoading.value = true;
     try {
-        const res = await axios.put('http://127.0.0.1:8000/api/admin/profile/password', passwordForm.value, { headers: getHeaders() });
+        const res = await axios.put(`${API_URL}/admin/profile/password`, passwordForm.value, { headers: getHeaders() });
 
         Swal.fire({ icon: 'success', title: 'Thành công', text: res.data.message || 'Mật khẩu đã được đổi. Vui lòng đăng nhập lại.', confirmButtonColor: '#009981' })
             .then(() => {
