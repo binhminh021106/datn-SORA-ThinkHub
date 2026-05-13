@@ -31,6 +31,8 @@ import { computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const route = useRoute();
 const orderCode = computed(() => route.query.order || 'N/A');
 
@@ -46,7 +48,7 @@ onMounted(async () => {
         if (sid) headers['X-Cart-Session-Id'] = sid;
         
         // Gọi API dọn dẹp giỏ hàng
-        await axios.post('http://127.0.0.1:8000/api/client/cart/clear', {}, { headers });
+        await axios.post(`${API_URL}/client/cart/clear`, {}, { headers });
         
         // Xóa Session ID lưu ở LocalStorage để hệ thống cấp Giỏ hàng mới cho lần mua sau
         localStorage.removeItem('cart_session_id');

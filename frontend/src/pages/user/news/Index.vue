@@ -4,7 +4,7 @@ import axios from 'axios';
 import NewsPostCard from '@/components/ui/NewsPostCard.vue';
 
 // --- CONFIG ---
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const BACKEND_URL = API_BASE_URL.replace(/\/api\/?$/, '');
 
 const ITEMS_PER_PAGE = 6;

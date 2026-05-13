@@ -180,6 +180,8 @@ const isSaving = ref(false);
 const isLoaded = ref(false);
 const currentPageLevel = ref(null);
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const previewAvatar = ref(defaultAvatar);
 const selectedFile = ref(null);
 const isRemoveAvatar = ref(false);
@@ -291,9 +293,9 @@ const fetchRolesAndStaff = async () => {
     await fetchProvinces();
 
     const [resRoles, resStaff, resModules] = await Promise.all([
-      fetch('http://127.0.0.1:8000/api/admin/roles', { headers }),
-      fetch(`http://127.0.0.1:8000/api/admin/staff/${route.params.id}`, { headers }),
-      fetch('http://127.0.0.1:8000/api/admin/modules', { headers })
+      fetch(`${API_URL}/admin/roles`, { headers }),
+      fetch(`${API_URL}/admin/staff/${route.params.id}`, { headers }),
+      fetch(`${API_URL}/admin/modules`, { headers })
     ]);
     
     if (resRoles.ok) roles.value = (await resRoles.json()).data;
@@ -301,7 +303,7 @@ const fetchRolesAndStaff = async () => {
     if (resStaff.ok) {
       const s = (await resStaff.json()).data;
       form.value = { fullname: s.fullname, email: s.email, phone: s.phone, address: s.address || '', role_id: s.role_id, status: s.status, password: '' };
-      previewAvatar.value = s.avatar_url ? `http://127.0.0.1:8000/storage/${s.avatar_url}` : defaultAvatar;
+      previewAvatar.value = s.avatar_url ? `${API_URL}/storage/${s.avatar_url}` : defaultAvatar;
       
       await parseAddressToDropdowns(s.address);
     } else {
@@ -366,7 +368,7 @@ const updateStaff = async () => {
   if (isRemoveAvatar.value) formData.append('remove_avatar', 'true');
 
   try {
-    const res = await fetch(`http://127.0.0.1:8000/api/admin/staff/${route.params.id}`, {
+    const res = await fetch(`${API_URL}/admin/staff/${route.params.id}`, {
       method: 'POST', 
       headers: { 
         'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,

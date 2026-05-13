@@ -111,6 +111,8 @@ import { ref, reactive, onMounted, inject, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 // Khai báo sự kiện để báo cho Layout (cha) biết trạng thái sidebar
 const emit = defineEmits(['toggle-collapse']);
 
@@ -223,7 +225,7 @@ const getHeaders = () => ({
 
 const fetchSidebarData = async () => {
   try {
-    const resMod = await fetch('http://127.0.0.1:8000/api/admin/modules', { headers: getHeaders() });
+    const resMod = await fetch(`${API_URL}/admin/modules`, { headers: getHeaders() });
     if (resMod.ok) {
       systemModules.value = (await resMod.json()).data;
     }

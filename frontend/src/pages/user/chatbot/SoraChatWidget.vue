@@ -1,6 +1,5 @@
 <template>
   <div class="live-chat-wrapper z-index-max font-luxury">
-    <!-- Nút Mở Live Chat, đặt lệch bên trái nút AI bot -->
     <button 
       v-if="!isOpen && !hideFab"
       class="live-chat-fab btn rounded-circle shadow-lg d-flex align-items-center justify-content-center position-fixed transition-transform bg-primary"
@@ -14,7 +13,6 @@
       </span>
     </button>
 
-    <!-- Cửa sổ Chat -->
     <div 
       class="live-chat-window position-fixed bg-white shadow-lg overflow-hidden d-flex flex-column transition-all"
       :class="isOpen ? 'chatbot-open' : 'chatbot-closed'"
@@ -220,7 +218,7 @@ const activeCategory = ref('smileys');
 // Lightbox
 const lightboxUrl = ref(null);
 
-const API_URL = 'http://localhost:8000/api/client';
+const API_URL = import.meta.env.VITE_API_BASE_URL;
 const getToken = () => localStorage.getItem('auth_token') || localStorage.getItem('token');
 const axiosConfig = () => ({
   headers: { Authorization: `Bearer ${getToken()}`, Accept: 'application/json' }
@@ -331,7 +329,7 @@ const fetchHistory = async () => {
     return;
   }
   try {
-    const res = await axios.get(`${API_URL}/messages`, axiosConfig());
+    const res = await axios.get(`${API_URL}/client/messages`, axiosConfig());
     if (res.data.status) {
       messages.value = res.data.data.map(m => {
         renderedIds.add(m.id);
@@ -412,7 +410,7 @@ const sendMessage = async () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('receiver_id', 1);
-      const res = await axios.post(`${API_URL}/messages`, formData, {
+      const res = await axios.post(`${API_URL}/client/messages`, formData, {
         headers: {
           Authorization: `Bearer ${getToken()}`,
           Accept: 'application/json',
@@ -458,7 +456,7 @@ const sendMessage = async () => {
     scrollToBottom();
 
     try {
-      const res = await axios.post(`${API_URL}/messages`, {
+      const res = await axios.post(`${API_URL}/client/messages`, {
         receiver_id: 1,
         content: userMessage
       }, axiosConfig());

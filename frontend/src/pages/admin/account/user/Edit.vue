@@ -283,6 +283,8 @@ import Swal from 'sweetalert2';
 import axios from 'axios';
 import defaultAvatar from '../../../../assets/images/defaults/avatar1.png';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const route = useRoute();
 const router = useRouter();
 const isLoaded = ref(false);
@@ -394,7 +396,7 @@ const onWardChange = () => {
 
 const fetchUser = async () => {
   try {
-    const res = await axios.get(`http://127.0.0.1:8000/api/admin/users/${route.params.id}`, { headers: getHeaders() });
+    const res = await axios.get(`${API_URL}/admin/users/${route.params.id}`, { headers: getHeaders() });
     const u = res.data.data;
     
     form.value = { 
@@ -402,7 +404,7 @@ const fetchUser = async () => {
         gender: u.gender || '', birthday: u.birthday || '', password: '', password_confirmation: '' 
     };
     
-    previewAvatar.value = u.avatar_url ? `http://127.0.0.1:8000/storage/${u.avatar_url}` : defaultAvatar;
+    previewAvatar.value = u.avatar_url ? `${API_URL}/storage/${u.avatar_url}` : defaultAvatar;
     userAddresses.value = (u.addresses || []).sort((a, b) => b.is_default - a.is_default);
   } catch (err) { 
       Swal.fire('Lỗi', 'Không thể tải dữ liệu khách hàng', 'error');
@@ -463,7 +465,7 @@ const updateUser = async () => {
   if (isRemoveAvatar.value) formData.append('remove_avatar', 'true');
 
   try {
-    const res = await axios.post(`http://127.0.0.1:8000/api/admin/users/${route.params.id}`, formData, { headers: getHeaders() });
+    const res = await axios.post(`${API_URL}/admin/users/${route.params.id}`, formData, { headers: getHeaders() });
     Swal.fire({ icon: 'success', title: 'Thành công', text: res.data.message, timer: 1500, showConfirmButton: false });
     fetchUser();
     form.value.password = '';
@@ -510,7 +512,7 @@ const openAddressModal = async (mode, addr = null) => {
 
 const saveAddress = async () => {
   isSavingAddr.value = true;
-  const url = addrModalMode.value === 'add' ? `http://127.0.0.1:8000/api/admin/users/${route.params.id}/addresses` : `http://127.0.0.1:8000/api/admin/addresses/${addrForm.value.id}`;
+  const url = addrModalMode.value === 'add' ? `${API_URL}/api/admin/users/${route.params.id}/addresses` : `${API_URL}/api/admin/addresses/${addrForm.value.id}`;
   
   const payload = { ...addrForm.value, is_default: addrForm.value.set_as_default ? 1 : addrForm.value.is_default };
   
@@ -543,7 +545,7 @@ const deleteAddress = (id) => {
   }).then(async (result) => {
     if (result.isConfirmed) {
       try {
-          await axios.delete(`http://127.0.0.1:8000/api/admin/addresses/${id}`, { headers: getHeaders() });
+          await axios.delete(`${API_URL}/api/admin/addresses/${id}`, { headers: getHeaders() });
           await fetchUser();
           Swal.fire({ icon: 'success', title: 'Đã xóa!', timer: 1500, showConfirmButton: false });
       } catch (err) {
@@ -556,7 +558,7 @@ const deleteAddress = (id) => {
 const setDefaultAddress = async (id) => {
   settingDefaultId.value = id;
   try {
-    await axios.put(`http://127.0.0.1:8000/api/admin/addresses/${id}/default`, {}, { headers: getHeaders() });
+    await axios.put(`${API_URL}/admin/addresses/${id}/default`, {}, { headers: getHeaders() });
     await fetchUser();
     Swal.fire({ icon: 'success', title: 'Thành công', text: 'Đã thay đổi địa chỉ mặc định', timer: 1500, showConfirmButton: false });
   } catch (err) {

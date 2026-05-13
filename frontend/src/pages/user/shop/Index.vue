@@ -478,7 +478,7 @@ const toggleAttribute = (val) => {
 const fetchCategories = async () => {
   isLoadingCategories.value = true;
   try {
-    const response = await fetch(`${API_BASE_URL}/api/shop/${shopSlug.value}/categories`);
+    const response = await fetch(`${API_BASE_URL}/shop/${shopSlug.value}/categories`);
     const data = await response.json();
     if(data?.success) categories.value = data.data; 
   } catch (e) {} finally { isLoadingCategories.value = false; }
@@ -493,7 +493,7 @@ const fetchProducts = async (page = 1) => {
     if (selectedAttributes.value.length > 0) queryPayload.attribute_values = selectedAttributes.value.join(',');
 
     const params = new URLSearchParams(queryPayload);
-    const response = await fetch(`${API_BASE_URL}/api/shop/${shopSlug.value}/products?${params.toString()}`);
+    const response = await fetch(`${API_BASE_URL}/shop/${shopSlug.value}/products?${params.toString()}`);
     const data = await response.json();
     
     if(data?.success) {

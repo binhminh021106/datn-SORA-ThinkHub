@@ -108,6 +108,8 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+
 const route = useRoute(); const router = useRouter();
 const bannerId = route.params.id;
 const isLoading = ref(true); const isSaving = ref(false);
@@ -120,7 +122,7 @@ const fileDesk = ref(null); const previewDesk = ref(null);
 const fileMob = ref(null); const previewMob = ref(null);
 
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
-const getImageUrl = (path) => path ? `http://127.0.0.1:8000/storage/${path}` : '/placeholder.png';
+const getImageUrl = (path) => path ? `${API_URL}/storage/${path}` : '/placeholder.png';
 
 const formatForInput = (dateString) => {
   if (!dateString) return '';
@@ -141,8 +143,8 @@ const handleUpload = (e, type) => {
 onMounted(async () => {
   try {
     const [resBrands, resBanner] = await Promise.all([
-      fetch('http://127.0.0.1:8000/api/admin/brands', { headers: getHeaders() }),
-      fetch(`http://127.0.0.1:8000/api/admin/banners/${bannerId}`, { headers: getHeaders() })
+      fetch(`${API_URL}/admin/brands`, { headers: getHeaders() }),
+      fetch(`${API_URL}/admin/banners/${bannerId}`, { headers: getHeaders() })
     ]);
     
     if (resBrands.ok) {
@@ -198,7 +200,7 @@ const updateBanner = async () => {
   if(fileMob.value) fd.append('image_mobile', fileMob.value);
 
   try {
-    const res = await fetch(`http://127.0.0.1:8000/api/admin/banners/${bannerId}`, { method: 'POST', headers: getHeaders(), body: fd });
+    const res = await fetch(`${API_URL}/admin/banners/${bannerId}`, { method: 'POST', headers: getHeaders(), body: fd });
     const data = await res.json();
     if (res.ok) {
       Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật thành công', showConfirmButton: false, timer: 1500 });
