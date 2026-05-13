@@ -1,7 +1,6 @@
 <template>
   <div class="shop-page min-vh-100 bg-white">
     
-    <!-- HEADER BREADCRUMB -->
     <div class="container-fluid px-4 py-3 border-bottom sora-border-light bg-light">
       <div class="d-flex align-items-center text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.15em;">
         <router-link to="/" class="text-muted text-decoration-none hover-text-primary transition-colors">Trang chủ</router-link>
@@ -10,7 +9,6 @@
       </div>
     </div>
 
-    <!-- LỰA CHỌN LÝ TƯỞNG (DANH MỤC) -->
     <section class="ideal-choices-section py-2 border-bottom sora-border-light" style="background-color: rgb(159,39,59);">
       <div class="container-fluid px-3 py-1 py-md-2">
         <div class="d-flex flex-column align-items-center text-center mb-2">
@@ -22,7 +20,6 @@
           </div>
         </div>
 
-        <!-- SKELETON: CATEGORY -->
         <div v-if="isLoadingCategories" class="row justify-content-center row-cols-2 row-cols-sm-3 row-cols-md-5 g-2 g-md-3 mb-3 pb-2 mx-auto fade-in" style="max-width: 900px;">
           <div class="col" v-for="i in 5" :key="'cat-skel-'+i">
             <div class="d-flex flex-column align-items-center">
@@ -47,14 +44,11 @@
       </div>
     </section>
 
-    <!-- MAIN CONTENT: BỘ LỌC VÀ LƯỚI SẢN PHẨM -->
     <div class="container-fluid px-4 py-4 mt-2 mx-auto" style="max-width: 1440px;">
       <div class="row">
         
-        <!-- SIDEBAR BỘ LỌC (LEFT) -->
         <div class="col-lg-2 col-md-3 d-none d-md-block sidebar-filter pe-4 border-end sora-border-light pt-2">
           
-          <!-- BỘ LỌC DANH MỤC -->
           <div class="filter-widget mb-5">
             <h5 class="filter-title playfair-font mb-4 fs-5 fw-normal text-dark border-bottom pb-3">Danh mục</h5>
             <ul class="list-unstyled mb-0 filter-list">
@@ -67,7 +61,6 @@
             </ul>
           </div>
 
-          <!-- BỘ LỌC MÀU SẮC (Trích xuất từ Biến thể) -->
           <div v-if="colorOptions.length > 0" class="filter-widget mb-5">
             <h5 class="filter-title playfair-font mb-4 fs-5 fw-normal text-dark border-bottom pb-3">Màu sắc</h5>
             <div class="d-flex flex-wrap gap-2">
@@ -79,13 +72,11 @@
                 @click="toggleColor(color)"
                 :title="color"
               >
-                <!-- Đổi màu dấu tick dựa trên độ sáng của nền để dễ nhìn -->
                 <i v-if="selectedColors.includes(color)" class="bi bi-check position-absolute fw-bold" :class="isLightColor(color) ? 'text-dark' : 'text-white'" style="top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.3rem;"></i>
               </div>
             </div>
           </div>
 
-          <!-- BỘ LỌC THUỘC TÍNH ĐỘNG KHÁC (Size, Chất liệu, ...) -->
           <div v-if="isLoadingAttributes" class="filter-widget mb-5 fade-in">
             <div v-for="i in 2" :key="'attr-skel-'+i" class="mb-5">
               <div class="skeleton-box skeleton-text shimmer mb-4 w-75" style="height: 24px;"></div>
@@ -117,7 +108,6 @@
 
         </div>
 
-        <!-- MAIN PRODUCT GRID (RIGHT) -->
         <div class="col-lg-10 col-md-9 ps-lg-5">
           
           <div class="shop-top-bar d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom sora-border-light">
@@ -141,7 +131,6 @@
             </div>
           </div>
 
-          <!-- LƯỚI SẢN PHẨM SKELETON -->
           <div v-if="isLoadingProducts" class="product-grid fade-in">
              <div v-for="i in 8" :key="'prod-skel-'+i" class="sora-luxury-card skeleton-card">
                 <div class="sora-card-image skeleton-box shimmer" style="aspect-ratio: 1/1;"></div>
@@ -153,7 +142,6 @@
              </div>
           </div>
 
-          <!-- LƯỚI SẢN PHẨM THẬT SỬ DỤNG COMPONENT PRODUCTCARD -->
           <div v-else class="product-grid fade-in">
             <template v-for="product in allProducts" :key="product.id">
               <ProductCard
@@ -165,12 +153,10 @@
                 :show-add-to-cart="true"
                 @toggle-wishlist="toggleWishlist"
                 @toggle-compare="handleToggleCompare"
-                @add-to-cart="handleQuickAdd"
               />
             </template>
           </div>
 
-          <!-- Empty State -->
           <div v-if="allProducts.length === 0 && !isLoadingProducts" class="text-center py-5 my-5 bg-light sora-border-light border fade-in" style="border-radius: 12px;">
             <i class="bi bi-gem fs-1 mb-3" style="color: #e7ce7d;"></i>
             <p class="text-dark playfair-font fs-4 mb-2">Không tìm thấy kiệt tác nào</p>
@@ -178,12 +164,11 @@
             <button @click="resetFilters" class="btn text-uppercase ls-widest px-5 py-3 transition-colors sora-btn-primary" style="font-size: 0.8rem; border-radius: 8px;">Xóa Bộ Lọc</button>
           </div>
 
-          <!-- PHÂN TRANG -->
           <div v-if="pagination.last_page > 1" class="d-flex justify-content-center align-items-center mt-5 pt-5 border-top sora-border-light fade-in">
             <nav aria-label="Page navigation">
               <ul class="pagination sora-custom-pagination gap-2 mb-0">
-                <li class="page-item" :class="{ 'disabled': Number(pagination.current_page) === 1 }">
-                  <button class="page-link shadow-sm" @click="changePage(Number(pagination.current_page) - 1)" :disabled="Number(pagination.current_page) === 1">
+                <li class="page-item" :class="{ 'disabled': isFirstPage }">
+                  <button class="page-link shadow-sm" @click="changePage(Number(pagination.current_page) - 1)" :disabled="isFirstPage">
                     <i class="bi bi-chevron-left"></i>
                   </button>
                 </li>
@@ -193,8 +178,8 @@
                   <button v-else class="page-link shadow-sm font-serif fw-bold" @click="changePage(page)">{{ page }}</button>
                 </li>
 
-                <li class="page-item" :class="{ 'disabled': Number(pagination.current_page) === Number(pagination.last_page) }">
-                  <button class="page-link shadow-sm" @click="changePage(Number(pagination.current_page) + 1)" :disabled="Number(pagination.current_page) === Number(pagination.last_page)">
+                <li class="page-item" :class="{ 'disabled': isLastPage }">
+                  <button class="page-link shadow-sm" @click="changePage(Number(pagination.current_page) + 1)" :disabled="isLastPage">
                     <i class="bi bi-chevron-right"></i>
                   </button>
                 </li>
@@ -206,15 +191,11 @@
       </div>
     </div>
 
-    <!-- TÍCH HỢP COMPONENT COMPARE MODAL -->
     <CompareModal 
       ref="compareModalRef" 
       :shop-slug="shopSlug" 
       @update-list="compareList = $event" 
     />
-
-    <!-- TÍCH HỢP COMPONENT QUICK ADD MODAL (MỚI) -->
-    <QuickAddModal ref="quickAddModalRef" />
 
   </div>
 </template>
@@ -226,19 +207,11 @@ import Swal from 'sweetalert2';
 
 import ProductCard from '@/components/ui/ProductCard.vue';
 import CompareModal from '@/components/ui/CompareModal.vue'; 
-import QuickAddModal from '@/components/ui/QuickAddModal.vue'; 
 
 const route = useRoute();
 const router = useRouter();
 const shopSlug = ref(route.params.shop_slug || 'aurora-jewelry');
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
-
-const soraAlert = Swal.mixin({
-  buttonsStyling: true,
-  confirmButtonColor: '#9f273b',
-  customClass: { confirmButton: 'px-4 py-2 mx-2 rounded shadow-sm fw-bold font-oswald tracking-widest text-uppercase' },
-  didOpen: (modal) => { if (modal.parentElement) modal.parentElement.style.zIndex = '10005'; }
-});
 
 const Toast = Swal.mixin({
   toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true,
@@ -260,6 +233,12 @@ const selectedAttributes = ref([]);
 const colorOptions = ref([]); 
 const selectedColors = ref([]); 
 const filters = reactive({ sort: 'recommended', categories: '' });
+const wishlistIds = ref([]);
+const compareModalRef = ref(null);
+const compareList = ref([]);
+
+const isFirstPage = computed(() => Number(pagination.value.current_page) === 1);
+const isLastPage = computed(() => Number(pagination.value.current_page) === Number(pagination.value.last_page));
 
 const getToken = () => {
   const possibleKeys = ['access_token', 'token', 'auth_token', 'userToken', 'user_token', 'user'];
@@ -280,7 +259,6 @@ const getToken = () => {
   return '';
 };
 
-// Utilities
 const getImageUrl = (path) => {
   if (!path) return '/Sora-placeholder.png';
   if (path.startsWith('http') || path.startsWith('data:image')) return path;
@@ -316,102 +294,89 @@ const isLightColor = (colorName) => {
   return lightCodes.includes(code);
 };
 
-// ==============================================
-// LOGIC YÊU THÍCH (WISHLIST)
-// ==============================================
-const favourites = ref([]);
+const isInWishlist = (productId) => wishlistIds.value.includes(productId);
 
-const fetchFavorites = async () => {
+const showWishlistNotification = (isAdded) => {
+  Toast.fire({
+    icon: isAdded ? 'success' : 'info',
+    title: isAdded ? 'Đã thêm vào danh sách yêu thích!' : 'Đã bỏ khỏi danh sách yêu thích'
+  });
+  localStorage.setItem('sora_wishlist', JSON.stringify(wishlistIds.value));
+};
+
+const loadWishlist = async () => {
   const token = getToken();
-  if (!token) return;
+  if (!token) {
+    const stored = localStorage.getItem('sora_wishlist');
+    if (stored) wishlistIds.value = JSON.parse(stored);
+    return;
+  }
   try {
-    const response = await fetch(`${API_BASE_URL}/api/client/favourites`, {
-      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-    });
-    const data = await response.json();
-    if (data.status) {
-      favourites.value = data.data.map(fav => fav.product_id);
+    const response = await fetch(`${API_BASE_URL}/api/client/favourites`, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } });
+    const result = await response.json();
+    if (response.ok && result.status && Array.isArray(result.data)) {
+      wishlistIds.value = result.data.map((item) => item.product?.id).filter(Boolean);
+      localStorage.setItem('sora_wishlist', JSON.stringify(wishlistIds.value));
+    } else {
+      const stored = localStorage.getItem('sora_wishlist');
+      if (stored) wishlistIds.value = JSON.parse(stored);
     }
-  } catch (e) {
-    console.error('Lỗi tải danh sách yêu thích', e);
+  } catch (error) {
+    const stored = localStorage.getItem('sora_wishlist');
+    if (stored) wishlistIds.value = JSON.parse(stored);
   }
 };
 
-const isInWishlist = (productId) => favourites.value.includes(productId);
-
-const toggleWishlist = async (prod) => {
-  if (!prod || !prod.id) return;
+const toggleWishlist = async (product) => {
+  if (!product || !product.id) return;
   const token = getToken();
   
   if (!token) {
-    soraAlert.fire({
-      icon: 'warning',
-      title: 'Bạn chưa đăng nhập!',
-      text: 'Vui lòng đăng nhập để lưu trữ bộ sưu tập yêu thích của mình.',
-      confirmButtonText: 'Đăng Nhập Ngay',
-      showCancelButton: true,
-      cancelButtonText: 'Đóng'
-    }).then((result) => {
-      if (result.isConfirmed) router.push('/login');
-    });
+    const index = wishlistIds.value.indexOf(product.id);
+    const isAdding = index === -1;
+    if (isAdding) wishlistIds.value.push(product.id);
+    else wishlistIds.value.splice(index, 1);
+    showWishlistNotification(isAdding);
     return;
   }
 
   try {
     const response = await fetch(`${API_BASE_URL}/api/client/favourites/toggle`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({ product_id: prod.id })
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+      body: JSON.stringify({ product_id: product.id })
     });
     
     const data = await response.json();
+    if (!response.ok || !data.status) throw new Error();
 
-    if (data.status) {
-      if (data.action === 'added') {
-        favourites.value.push(prod.id);
-        Toast.fire({ icon: 'success', title: 'Đã thêm vào yêu thích' });
-      } else if (data.action === 'removed') {
-        favourites.value = favourites.value.filter(id => id !== prod.id);
-        Toast.fire({ icon: 'info', title: 'Đã bỏ yêu thích' });
-      }
-    } else if (response.status === 401) {
-        Toast.fire({ icon: 'error', title: 'Phiên đăng nhập hết hạn.' });
-    }
+    const isAdded = data.action === 'added';
+    if (isAdded && !wishlistIds.value.includes(product.id)) wishlistIds.value.push(product.id);
+    else if (!isAdded) wishlistIds.value = wishlistIds.value.filter(id => id !== product.id);
+    
+    showWishlistNotification(isAdded);
   } catch (error) {
-    Toast.fire({ icon: 'error', title: 'Có lỗi xảy ra, thử lại sau' });
+    if (error?.response?.status === 401) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Bạn chưa đăng nhập!',
+        text: 'Vui lòng đăng nhập để lưu trữ bộ sưu tập yêu thích của mình.',
+        confirmButtonText: 'Đăng Nhập Ngay',
+        showCancelButton: true,
+        cancelButtonText: 'Đóng',
+        confirmButtonColor: '#9f273b'
+      }).then((result) => {
+        if (result.isConfirmed) router.push('/login');
+      });
+    } else {
+      Toast.fire({ icon: 'error', title: 'Có lỗi xảy ra, thử lại sau' });
+    }
   }
 };
-
-// ==============================================
-// LOGIC COMPARE VỚI COMPONENT MỚI 
-// ==============================================
-const compareModalRef = ref(null);
-const compareList = ref([]); 
 
 const isInCompare = (id) => compareList.value.some(item => item.id === id);
+const handleToggleCompare = (prod) => { if (compareModalRef.value) compareModalRef.value.toggleCompare(prod); };
 
-const handleToggleCompare = (prod) => {
-  if (compareModalRef.value) compareModalRef.value.toggleCompare(prod);
-};
-
-// ==============================================
-// LOGIC QUICK ADD VỚI COMPONENT MỚI
-// ==============================================
-const quickAddModalRef = ref(null);
-
-const handleQuickAdd = (product) => {
-  if (quickAddModalRef.value) {
-    quickAddModalRef.value.openModal(product);
-  }
-};
-
-// ==============================================
-// FILTERS VÀ SẢN PHẨM 
-// ==============================================
 const extractFiltersFromVariants = (products) => {
   const attrsMap = {};
   const colorsSet = new Set(colorOptions.value); 
@@ -461,24 +426,20 @@ const extractFiltersFromVariants = (products) => {
   isLoadingAttributes.value = false;
 };
 
-const toggleColor = (color) => {
-  const index = selectedColors.value.indexOf(color);
-  if (index > -1) selectedColors.value.splice(index, 1);
-  else selectedColors.value.push(color);
+const toggleFilterArray = (arrayRef, value) => {
+  const index = arrayRef.value.indexOf(value);
+  if (index > -1) arrayRef.value.splice(index, 1);
+  else arrayRef.value.push(value);
   applyFilters();
 };
 
-const toggleAttribute = (val) => {
-  const index = selectedAttributes.value.indexOf(val);
-  if (index > -1) selectedAttributes.value.splice(index, 1); 
-  else selectedAttributes.value.push(val); 
-  applyFilters();
-};
+const toggleColor = (color) => toggleFilterArray(selectedColors, color);
+const toggleAttribute = (val) => toggleFilterArray(selectedAttributes, val);
 
 const fetchCategories = async () => {
   isLoadingCategories.value = true;
   try {
-    const response = await fetch(`${API_BASE_URL}/shop/${shopSlug.value}/categories`);
+    const response = await fetch(`${API_BASE_URL}/api/shop/${shopSlug.value}/categories`);
     const data = await response.json();
     if(data?.success) categories.value = data.data; 
   } catch (e) {} finally { isLoadingCategories.value = false; }
@@ -493,7 +454,7 @@ const fetchProducts = async (page = 1) => {
     if (selectedAttributes.value.length > 0) queryPayload.attribute_values = selectedAttributes.value.join(',');
 
     const params = new URLSearchParams(queryPayload);
-    const response = await fetch(`${API_BASE_URL}/shop/${shopSlug.value}/products?${params.toString()}`);
+    const response = await fetch(`${API_BASE_URL}/api/shop/${shopSlug.value}/products?${params.toString()}`);
     const data = await response.json();
     
     if(data?.success) {
@@ -502,7 +463,6 @@ const fetchProducts = async (page = 1) => {
       extractFiltersFromVariants(allProducts.value);
     }
   } catch (e) {
-    console.error(e);
   } finally { 
     isLoadingProducts.value = false; 
   }
@@ -549,9 +509,15 @@ const changePage = (page) => {
   } 
 };
 
-onMounted(() => { 
-  fetchFavorites();
-  Promise.all([fetchCategories(), fetchProducts(1)]).then(() => isPageLoading.value = false); 
+onMounted(() => {
+  // Đọc query parameter category từ URL
+  const categoryFromQuery = route.query.category;
+  if (categoryFromQuery) {
+    filters.categories = categoryFromQuery;
+  }
+
+  loadWishlist();
+  Promise.all([fetchCategories(), fetchProducts(1)]).then(() => isPageLoading.value = false);
 });
 </script>
 
@@ -636,7 +602,6 @@ onMounted(() => {
 
 .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 2.5rem 1.5rem; }
 
-/* HIỆU ỨNG SKELETON */
 .fade-in { animation: fadeIn 0.4s ease-in; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
@@ -654,7 +619,6 @@ onMounted(() => {
 .skeleton-title { height: 24px; border-radius: 4px; }
 .skeleton-card { pointer-events: none; border-color: #eee !important; box-shadow: none !important; }
 
-/* VÒNG TRÒN CATEGORY LỰA CHỌN LÝ TƯỞNG */
 .category-circle-item {
   transition: transform 0.3s ease;
 }

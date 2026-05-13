@@ -1,3 +1,4 @@
+<!-- test -->
 <template>
   <div v-if="isCheckingAuth" class="vh-100 d-flex flex-column justify-content-center align-items-center bg-light">
     <div class="logo-pulse-wrapper mb-4">
