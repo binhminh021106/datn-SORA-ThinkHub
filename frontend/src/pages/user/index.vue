@@ -1,6 +1,6 @@
 <template>
   <div class="storefront-wrapper font-luxury bg-white">
-    <div >
+    <div>
       <section class="hero-carousel position-relative">
         <div id="homeBannerCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel">
           <div class="carousel-inner">
@@ -113,58 +113,14 @@
 
         <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-4">
           <div class="col" v-for="product in data.products" :key="product.id">
-            <div class="luxury-related-card product-card bg-white d-flex flex-column group position-relative overflow-hidden border border-light-subtle h-100 cursor-pointer" @click="goToProductDetail(product.slug)">
-              
-              <div class="position-relative bg-light text-center border-bottom border-light-subtle sora-img-container" :class="{'has-hover-image': hasHoverImage(product)}">
-                
-                <button @click.stop="toggleWishlist(product)" class="wishlist-btn position-absolute top-0 end-0 m-3 z-index-2 border-0 bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; z-index: 10;">
-                  <i :class="isInWishlist(product.id) ? 'bi bi-suit-heart-fill text-danger' : 'bi bi-suit-heart text-muted hover-text-accent'" class="fs-5 transition-colors" style="margin-top: 2px;"></i>
-                </button>
-
-                <div class="position-absolute top-0 start-0 m-3 d-flex flex-column gap-2 z-index-2 pointer-events-none text-start">
-                  <span v-if="product.is_new" class="badge bg-white text-dark border border-light-subtle shadow-sm font-oswald tracking-widest px-2 py-1 rounded-0" style="font-size: 0.65rem;">MỚI</span>
-                  <span v-if="product.promotional_price" class="badge text-white shadow-sm font-oswald tracking-widest px-2 py-1 rounded-0" style="background-color: var(--color-accent); font-size: 0.65rem;">SALE</span>
-                </div>
-                
-                <div class="ratio ratio-1x1 w-100">
-                  <img :src="getImageUrl(product.thumbnail_image)" 
-                       :alt="product.name" 
-                       class="sora-main-img object-fit-cover w-100 h-100 transition-transform duration-700 group-hover-scale bg-white" 
-                       style="object-position: center;" 
-                       @error="handleImageError">
-                  <img v-if="hasHoverImage(product)"
-                       :src="getImageUrl(product.hover_image)" 
-                       :alt="product.name + ' hover'" 
-                       class="sora-hover-img position-absolute top-0 start-0 w-100 h-100 object-fit-cover transition-transform duration-700 group-hover-scale" 
-                       style="object-position: center;">
-                </div>
-                <div class="theme-bar position-absolute bottom-0 start-0 z-index-2"></div>
-              </div>
-              
-              <div class="position-relative flex-grow-1 bg-white d-flex flex-column">
-                <div class="p-4 text-center d-flex flex-column flex-grow-1" style="padding-bottom: 64px !important;">
-                  <h6 class="text-dark font-oswald text-uppercase tracking-widest fw-bold mb-2 text-truncate-2 fs-5 lh-base">{{ product.name }}</h6>
-                  <p class="font-serif fst-italic text-muted fs-6 mb-3">{{ product.category?.name || 'Trang sức SORA' }}</p>
-                  
-                  <div class="mt-auto">
-                    <div class="d-flex align-items-center justify-content-center gap-3">
-                      <p v-if="product.promotional_price" class="text-muted text-decoration-line-through mb-0 fw-light font-serif" style="font-size: 0.95rem;">
-                        {{ formatCurrency(product.base_price) }}
-                      </p>
-                      <span class="text-primary-luxury fw-bold font-serif fs-5">{{ formatCurrency(product.promotional_price || product.base_price) }}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="related-btn-add">
-                  <button class="btn luxury-btn-solid w-100 rounded-0 py-3 font-oswald tracking-widest text-uppercase fw-bold shadow-none fs-6" 
-                          @click.stop="goToProductDetail(product.slug)">
-                    <i class="bi bi-eye me-2"></i> Xem chi tiết
-                  </button>
-                </div>
-              </div>
-
-            </div>
+            <ProductCard
+              :product="product"
+              :is-in-wishlist="isInWishlist(product.id)"
+              :is-in-compare="isInCompare(product.id)"
+              @toggle-wishlist="toggleWishlist"
+              @toggle-compare="handleToggleCompare"
+              @add-to-cart="handleAddToCart"
+            />
           </div>
         </div>
       </section>
@@ -196,12 +152,9 @@
             class="combo-swiper-luxury"
           >
             <swiper-slide v-for="combo in data.combos" :key="combo.id" class="combo-slide-luxury">
-              
               <div class="luxury-horizontal-card bg-white d-flex flex-column flex-md-row align-items-center p-4 p-lg-5 mx-auto">
-                
                 <div class="combo-img-wrapper position-relative flex-shrink-0 mb-4 mb-md-0 mx-auto" style="width: 100%; max-width: 320px;">
                   <div class="position-absolute bg-secondary bg-opacity-10 d-none d-md-block" style="top: 25px; bottom: -25px; left: -25px; right: 25px; z-index: 0;"></div>
-                  
                   <router-link :to="'/combos/' + combo.slug" class="d-block position-relative z-index-1 shadow-sm bg-white" style="aspect-ratio: 1/1; padding: 12px;">
                     <img :src="getImageUrl(combo.thumbnail_image || combo.image)" class="w-100 h-100 object-fit-cover" alt="Combo SORA" @error="handleImageError">
                   </router-link>
@@ -209,13 +162,10 @@
 
                 <div class="combo-content-container flex-grow-1 ps-md-5 ms-md-3 text-start text-center text-md-start">
                   <span class="text-gold tracking-widest text-uppercase mb-2 fw-bold font-oswald d-block" style="font-size: 0.75rem;">Sora Collection</span>
-                  
                   <router-link :to="'/combos/' + combo.slug" class="text-decoration-none">
                     <h3 class="font-serif fw-bold text-dark mb-3 hover-text-primary transition-colors fs-2">{{ combo.name }}</h3>
                   </router-link>
-                  
                   <div class="divider-gold mb-3 mx-auto mx-md-0" style="width: 40px; height: 2px;"></div>
-                  
                   <p class="text-muted fw-light mb-4 text-truncate-3" style="font-size: 1rem; line-height: 1.7;">
                     {{ combo.description || 'Sự kết hợp hoàn mỹ giữa nghệ thuật chế tác kim hoàn đỉnh cao và vẻ đẹp vượt thời gian.' }}
                   </p>
@@ -224,13 +174,11 @@
                     <span class="text-primary-luxury fw-bold fs-3 font-serif">{{ formatCurrency(combo.promotional_price || combo.price) }}</span>
                     <span v-if="combo.base_price || combo.old_price" class="text-muted text-decoration-line-through small fw-light font-serif">{{ formatCurrency(combo.base_price || combo.old_price) }}</span>
                   </div>
-                  
                   <router-link :to="'/combos/' + combo.slug" class="btn btn-outline-primary-luxury rounded-0 py-3 px-5 text-uppercase tracking-widest fw-bold font-oswald shadow-none" style="font-size: 0.85rem;">
                     Khám Phá Ngay
                   </router-link>
                 </div>
               </div>
-
             </swiper-slide>
           </swiper>
 
@@ -257,18 +205,9 @@
         <div class="container-fluid px-0 overflow-hidden">
           <div class="sora-marquee-wrapper">
             <div class="sora-marquee-track">
-              <div class="sora-marquee-group">
-                <div v-for="(img, index) in displayGalleries" :key="'g1-' + index" class="gallery-slide-item">
-                  <div class="gallery-img-wrapper position-relative group cursor-pointer bg-light">
-                     <img :src="img.image_path ? getImageUrl(img.image_path) : img" class="w-100 object-fit-cover" alt="Sora Customer" @error="handleImageError">
-                     <div class="gallery-overlay position-absolute inset-0 d-flex justify-content-center align-items-center opacity-0 transition-all duration-500 z-index-2">
-                        <i class="bi bi-instagram text-white fs-1"></i>
-                     </div>
-                  </div>
-                </div>
-              </div>
-              <div class="sora-marquee-group">
-                <div v-for="(img, index) in displayGalleries" :key="'g2-' + index" class="gallery-slide-item">
+              <!-- Vòng lặp thu gọn 2 khối sora-marquee-group -->
+              <div v-for="groupIndex in 2" :key="'group-' + groupIndex" class="sora-marquee-group">
+                <div v-for="(img, index) in displayGalleries" :key="'g' + groupIndex + '-' + index" class="gallery-slide-item">
                   <div class="gallery-img-wrapper position-relative group cursor-pointer bg-light">
                      <img :src="img.image_path ? getImageUrl(img.image_path) : img" class="w-100 object-fit-cover" alt="Sora Customer" @error="handleImageError">
                      <div class="gallery-overlay position-absolute inset-0 d-flex justify-content-center align-items-center opacity-0 transition-all duration-500 z-index-2">
@@ -292,21 +231,9 @@
           
           <div class="row g-4" v-if="data.news && data.news.length > 0">
             <div class="col-md-4" v-for="article in data.news.slice(0, 3)" :key="article.id">
-              <div class="blog-card group cursor-pointer bg-white p-3 shadow-sm border border-light h-100 d-flex flex-column" @click="router.push(`/tin-tuc/${article.slug}`)">
-                <div class="ratio ratio-4x3 overflow-hidden mb-3">
-                  <img :src="getImageUrl(article.image_url)" loading="lazy" class="object-fit-cover transition-transform duration-700 group-hover-scale" :alt="article.title" @error="handleImageError">
-                </div>
-                <small class="text-gold tracking-widest text-uppercase fw-bold" style="font-style: italic;">{{ article.category || 'Mới Nhất' }}</small>
-                <h4 class="font-serif fw-bold text-primary-luxury mt-2 group-hover-text-accent transition-colors" style="line-height: 1.4;">
-                  {{ article.title }}
-                </h4>
-                <p class="text-dark fw-light mt-2 mb-0 text-truncate-3" style="font-size: 0.9rem;">
-                  {{ article.excerpt || (article.content ? article.content.replace(/(<([^>]+)>)/gi, "").substring(0, 100) + '...' : 'Khám phá những bí quyết độc quyền từ chuyên gia kim hoàn SORA...') }}
-                </p>
-              </div>
+              <NewsPostCard :post="article" />
             </div>
           </div>
-
           <div v-else class="text-center text-muted fst-italic">
             Chưa có bài viết nào được xuất bản.
           </div>
@@ -337,6 +264,12 @@
           </router-link>
         </div>
       </section>
+
+      <CompareModal 
+        ref="compareModalRef" 
+        shop-slug="sora" 
+        @update-list="compareList = $event" 
+      />
     </div>
   </div>
 </template>
@@ -351,6 +284,10 @@ import { Pagination, Navigation, Autoplay } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
 import 'swiper/css/navigation';
+
+import ProductCard from '@/components/ui/ProductCard.vue';
+import CompareModal from '@/components/ui/CompareModal.vue';
+import NewsPostCard from '@/components/ui/NewsPostCard.vue';
 
 const swiperModules = [Pagination, Navigation, Autoplay];
 const isLoading = ref(true);
@@ -380,6 +317,8 @@ const prevCombo = () => {
 };
 
 const wishlistIds = ref([]);
+const compareModalRef = ref(null);
+const compareList = ref([]);
 
 const data = reactive({
   banners: [],
@@ -411,27 +350,14 @@ const displayGalleries = computed(() => {
   return arr;
 });
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL; 
-
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
 const soraPlaceholder = '/Sora-placeholder.png';
 
-// ĐÃ SỬA: Hàm getImageUrl dùng Regex cạo sạch url rác
 const getImageUrl = (path) => {
   if (!path) return soraPlaceholder;
   if (path.startsWith('http')) return path;
-
-  // 1. Dọn dẹp URL Backend (Cắt bỏ /api)
-  const baseUrl = API_BASE.replace(/\/api\/?$/, '');
-
-  // 2. Cạo sạch các phần thừa ở đầu chuỗi (Dấu /, chữ public, chữ storage)
-  let cleanPath = path;
-  cleanPath = cleanPath.replace(/^\/+/, '');         // Xóa mọi dấu / ở đầu
-  cleanPath = cleanPath.replace(/^public\//, '');    // Xóa chữ public/ nếu có
-  cleanPath = cleanPath.replace(/^storage\//, '');   // Xóa chữ storage/ nếu có
-  cleanPath = cleanPath.replace(/^\/+/, '');         // Xóa dấu / một lần nữa cho chắc ăn
-
-  // 3. Nối lại thành 1 đường link hoàn hảo duy nhất
-  return `${baseUrl}/storage/${cleanPath}`;
+  let cleanPath = path.replace(/^\/+/, '').replace(/^public\//, '').replace(/^storage\//, '').replace(/^\/+/, '');         
+  return `${API_BASE}/storage/${cleanPath}`;
 };
 
 const handleImageError = (e) => { 
@@ -445,39 +371,89 @@ const formatShortCurrency = (value) => {
   if (value >= 1000) return (value / 1000) + 'K';
   return value;
 };
-const hasHoverImage = (product) => product.hover_image && product.hover_image !== product.thumbnail_image;
 
-const goToProductDetail = (slug) => {
-  if (slug) router.push(`/shop/sora/product/${slug}`);
+const getToken = () => {
+  return localStorage.getItem('auth_token') || localStorage.getItem('token') || localStorage.getItem('access_token') || localStorage.getItem('userToken') || localStorage.getItem('user_token') || null;
 };
 
-const loadWishlist = () => {
-  const stored = localStorage.getItem('sora_wishlist');
-  if (stored) wishlistIds.value = JSON.parse(stored);
-};
-
+const isInCompare = (id) => compareList.value.some(item => item.id === id);
+const handleToggleCompare = (prod) => { if (compareModalRef.value) compareModalRef.value.toggleCompare(prod); };
+const handleAddToCart = (product) => { if (product?.slug) router.push({ name: 'productDetail', params: { shop_slug: product.category?.slug || 'all', slug: product.slug } }); };
 const isInWishlist = (productId) => wishlistIds.value.includes(productId);
 
-const toggleWishlist = (product) => {
-  const index = wishlistIds.value.indexOf(product.id);
-  if (index === -1) {
-    wishlistIds.value.push(product.id);
-    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã thêm vào danh sách yêu thích!', showConfirmButton: false, timer: 2000 });
-  } else {
-    wishlistIds.value.splice(index, 1);
-    Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Đã bỏ khỏi danh sách yêu thích', showConfirmButton: false, timer: 2000 });
-  }
+// Hàm Helper gom gọn logic hiển thị thông báo Yêu thích
+const showWishlistNotification = (isAdded) => {
+  Swal.fire({
+    toast: true, position: 'top-end', showConfirmButton: false, timer: 2000,
+    icon: isAdded ? 'success' : 'info',
+    title: isAdded ? 'Đã thêm vào danh sách yêu thích!' : 'Đã bỏ khỏi danh sách yêu thích'
+  });
   localStorage.setItem('sora_wishlist', JSON.stringify(wishlistIds.value));
+};
+
+const loadWishlist = async () => {
+  const token = getToken();
+  if (!token) {
+    const stored = localStorage.getItem('sora_wishlist');
+    if (stored) wishlistIds.value = JSON.parse(stored);
+    return;
+  }
+  try {
+    const response = await fetch(`${API_BASE}/api/client/favourites`, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } });
+    const result = await response.json();
+    if (response.ok && result.status && Array.isArray(result.data)) {
+      wishlistIds.value = result.data.map((item) => item.product?.id).filter(Boolean);
+      localStorage.setItem('sora_wishlist', JSON.stringify(wishlistIds.value));
+    } else {
+      const stored = localStorage.getItem('sora_wishlist');
+      if (stored) wishlistIds.value = JSON.parse(stored);
+    }
+  } catch (error) {
+    const stored = localStorage.getItem('sora_wishlist');
+    if (stored) wishlistIds.value = JSON.parse(stored);
+  }
+};
+
+const toggleWishlist = async (product) => {
+  const token = getToken();
+  if (!token) {
+    const index = wishlistIds.value.indexOf(product.id);
+    const isAdding = index === -1;
+    if (isAdding) wishlistIds.value.push(product.id);
+    else wishlistIds.value.splice(index, 1);
+    showWishlistNotification(isAdding);
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/api/client/favourites/toggle`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ product_id: product.id })
+    });
+    const result = await response.json();
+    if (!response.ok || !result.status) throw new Error(result.message || 'Không thể cập nhật yêu thích.');
+
+    const isAdded = result.action === 'added';
+    if (isAdded && !wishlistIds.value.includes(product.id)) {
+      wishlistIds.value.push(product.id);
+    } else if (!isAdded) {
+      wishlistIds.value = wishlistIds.value.filter((id) => id !== product.id);
+    }
+    showWishlistNotification(isAdded);
+  } catch (error) {
+    if (error?.response?.status === 401) {
+      Swal.fire({ icon: 'warning', title: 'Vui lòng đăng nhập để sử dụng chức năng yêu thích', confirmButtonColor: '#9f273b' });
+      return;
+    }
+    Swal.fire({ icon: 'error', title: 'Không thể cập nhật yêu thích', text: error.message || 'Xin thử lại sau.' });
+  }
 };
 
 const fetchHomepageData = async () => {
   try {
-    const response = await fetch(`${API_BASE}/client/home-data`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    
+    const response = await fetch(`${API_BASE}/api/client/home-data`, { headers: { 'Accept': 'application/json' } });
     const result = await response.json();
-
     if (result.success) {
       data.banners = result.data.banners || [];
       data.coupons = result.data.coupons || [];
@@ -486,23 +462,16 @@ const fetchHomepageData = async () => {
       data.combos = result.data.combos || [];
       data.tiers = result.data.tiers || [];
       if(result.data.galleries) data.galleries = result.data.galleries;
-
       data.news = result.data.news || [];
     }
   } catch (error) {
-    console.error("Lỗi tải trang chủ:", error);
   } finally {
     isLoading.value = false;
   }
 };
 
 const saveCoupon = (code) => {
-  Swal.fire({
-    icon: 'success',
-    title: 'Lưu mã thành công!',
-    text: `Mã ${code} đã được thêm vào ví voucher của bạn.`,
-    confirmButtonColor: '#9f273b'
-  });
+  Swal.fire({ icon: 'success', title: 'Lưu mã thành công!', text: `Mã ${code} đã được thêm vào ví voucher của bạn.`, confirmButtonColor: '#9f273b' });
 };
 
 onMounted(() => {
@@ -521,9 +490,8 @@ onMounted(() => {
   --sora-accent: #cc1e2e;
 }
 </style>
+
 <style scoped>
-
-
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Montserrat:wght@300;400;500;600&family=Oswald:wght@400;500;600;700&display=swap');
 
 .font-luxury { font-family: 'Montserrat', sans-serif; }
@@ -547,7 +515,6 @@ onMounted(() => {
 .border-gold { border-color: #e7ce7d !important; }
 .divider-gold { width: 40px; height: 2px; background-color: #e7ce7d; }
 
-/* Buttons General */
 .btn-primary-luxury { background-color: #9f273b; color: #fff; border: 1px solid #9f273b; transition: all 0.3s; }
 .btn-primary-luxury:hover { background-color: #111; border-color: #111; color: #fff; }
 .btn-outline-primary-luxury { background-color: transparent; color: #9f273b; border: 1px solid #9f273b; transition: all 0.3s; }
@@ -558,160 +525,59 @@ onMounted(() => {
 .btn-gold:hover { background-color: #d1b764; border-color: #d1b764; color: #000; transform: translateY(-2px); }
 .hover-gold-btn:hover { background-color: #e7ce7d !important; border-color: #e7ce7d !important; color: #111 !important; }
 
-/* Hero Section */
 .hero-carousel { height: 85vh; min-height: 600px; background: #111; }
 .hero-img { height: 85vh; min-height: 600px; opacity: 0.6; }
 .carousel-overlay { position: absolute; inset: 0; background: radial-gradient(circle, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.8) 100%); }
 .shadow-text { text-shadow: 2px 2px 8px rgba(0,0,0,0.7); }
 
-/* Coupons */
 .coupon-scroll-container { overflow-x: auto; scrollbar-width: none; }
 .coupon-scroll-container::-webkit-scrollbar { display: none; }
 .coupon-card { width: 320px; }
 .border-end-dashed { border-right: 1px dashed rgba(255,255,255,0.3); }
 
-/* Global Utilities */
 .group:hover .group-hover-scale { transform: scale(1.05); }
 .group:hover .group-hover-text-primary { color: #9f273b !important; }
 .group:hover .group-hover-text-accent { color: #cc1e2e !important; }
 .scale-0 { transform: scaleX(0); }
 .group:hover .group-hover-scale-100 { transform: scaleX(1); }
 .transition-colors { transition: background-color 0.5s ease, color 0.5s ease; }
-.transition-transform { transition: transform 0.6s cubic-bezier(0.165, 0.84, 0.44, 1); }
+.transition-transform { transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
 .hover-translate-up:hover { transform: translateY(-10px); }
 .filter-brightness { filter: brightness(0.95); transition: filter 0.5s; }
 .group:hover .filter-brightness { filter: brightness(1); }
 .opacity-0 { opacity: 0; }
 .group:hover .group-hover-opacity-100 { opacity: 1 !important; }
-.transition-all { transition: all 0.4s ease; }
+.transition-all { transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
 .hover-text-primary:hover { color: #9f273b !important; }
 
-/* ========================================== */
-/* PRODUCT CARD                               */
-/* ========================================== */
-.luxury-related-card { transition: all 0.4s ease; border-color: #eaeaea !important; }
-.luxury-related-card:hover { box-shadow: 0 15px 35px rgba(0,0,0,0.06); border-color: #d1d5db !important; }
-
-.sora-main-img, .sora-hover-img { transition: transform 0.8s cubic-bezier(0.165, 0.84, 0.44, 1), opacity 0.6s ease; }
-.sora-main-img { z-index: 1; }
-.sora-hover-img { z-index: 2; opacity: 0; }
-.group:hover .sora-img-container.has-hover-image .sora-main-img { opacity: 0; }
-.group:hover .sora-img-container.has-hover-image .sora-hover-img { opacity: 1; }
-.group:hover .sora-main-img, .group:hover .sora-hover-img { transform: scale(1.08); }
-
-.theme-bar { width: 30%; height: 3px; background-color: var(--sora-primary); opacity: 0; transition: opacity 0.3s ease; left: 0; }
-.luxury-related-card:hover .theme-bar { opacity: 1; }
-
-.related-btn-add {
-  position: absolute; bottom: 0; left: 0; width: 100%;
-  transform: translateY(101%); transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-  z-index: 10; background: rgb(112, 21, 21);
-}
-.group:hover .related-btn-add, .luxury-related-card:hover .related-btn-add { transform: translateY(0); }
-
-.luxury-btn-solid { background-color: var(--sora-primary); color: white; border: 1px solid var(--sora-primary); transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }
-.luxury-btn-solid:hover:not(:disabled) { background-color: #7a1c2d; border-color: #7a1c2d; color: white; box-shadow: 0 8px 20px rgba(159,39,59,0.3); transform: translateY(-2px); }
-
-.wishlist-btn { transition: all 0.3s ease; }
-.wishlist-btn:hover { transform: scale(1.1); }
-.text-danger { color: var(--color-accent) !important; }
-
-/* ========================================== */
-/* BỘ SƯU TẬP GIỚI HẠN                        */
-/* ========================================== */
 .combo-section { background-color: #fbf9f6; }
 .combo-swiper-luxury { padding: 40px 0 60px 0; overflow: hidden; } 
-.combo-slide-luxury { 
-  width: 90%; 
-  max-width: 850px; 
-  transition: all 0.6s cubic-bezier(0.25, 0.8, 0.25, 1); 
-  opacity: 0.4; 
-  transform: scale(0.85); 
-  z-index: 1;
-  position: relative;
-}
-.combo-slide-luxury.swiper-slide-active { 
-  opacity: 1; 
-  transform: scale(1); 
-  z-index: 10;
-}
-.combo-slide-luxury.swiper-slide-prev,
-.combo-slide-luxury.swiper-slide-next {
-  z-index: 5;
-}
+.combo-slide-luxury { width: 90%; max-width: 850px; transition: all 0.6s cubic-bezier(0.25, 0.8, 0.25, 1); opacity: 0.4; transform: scale(0.85); z-index: 1; position: relative; }
+.combo-slide-luxury.swiper-slide-active { opacity: 1; transform: scale(1); z-index: 10; }
+.combo-slide-luxury.swiper-slide-prev, .combo-slide-luxury.swiper-slide-next { z-index: 5; }
 
-.luxury-horizontal-card { 
-  border-radius: 6px; 
-  border: 1px solid rgba(0,0,0,0.03); 
-  box-shadow: 0 10px 30px rgba(0,0,0,0.03);
-}
-.combo-slide-luxury.swiper-slide-active .luxury-horizontal-card { 
-  box-shadow: 0 25px 50px rgba(0,0,0,0.1) !important; 
-}
+.luxury-horizontal-card { border-radius: 6px; border: 1px solid rgba(0,0,0,0.03); box-shadow: 0 10px 30px rgba(0,0,0,0.03); }
+.combo-slide-luxury.swiper-slide-active .luxury-horizontal-card { box-shadow: 0 25px 50px rgba(0,0,0,0.1) !important; }
 
 .combo-img-wrapper { z-index: 2; }
 .combo-content-container { z-index: 3; position: relative; }
 
-.custom-nav-btn {
-  color: #333;
-  transition: all 0.3s ease;
-}
-.custom-nav-btn:hover:not(:disabled) {
-  background-color: var(--color-primary) !important;
-  color: white !important;
-  border-color: var(--color-primary) !important;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(159, 39, 59, 0.2) !important;
-}
-.custom-nav-btn:disabled {
-  opacity: 0.35 !important;
-  cursor: not-allowed;
-  background-color: #f8f9fa !important;
-  border-color: #dee2e6 !important;
-  color: #adb5bd !important;
-  box-shadow: none !important;
-}
+.custom-nav-btn { color: #333; transition: all 0.3s ease; }
+.custom-nav-btn:hover:not(:disabled) { background-color: var(--color-primary) !important; color: white !important; border-color: var(--color-primary) !important; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(159, 39, 59, 0.2) !important; }
+.custom-nav-btn:disabled { opacity: 0.35 !important; cursor: not-allowed; background-color: #f8f9fa !important; border-color: #dee2e6 !important; color: #adb5bd !important; box-shadow: none !important; }
 
-/* ========================================== */
-/* CHÂN DUNG SORA                             */
-/* ========================================== */
-.sora-marquee-wrapper {
-  display: flex;
-  overflow: hidden;
-  width: 100%;
-}
+.sora-marquee-wrapper { display: flex; overflow: hidden; width: 100%; }
+.sora-marquee-track { display: flex; width: max-content; animation: soraMarquee 30s linear infinite; }
+.sora-marquee-track:hover { animation-play-state: paused; }
+.sora-marquee-group { display: flex; align-items: center; flex-shrink: 0; }
 
-.sora-marquee-track {
-  display: flex;
-  width: max-content;
-  animation: soraMarquee 30s linear infinite;
-}
-
-.sora-marquee-track:hover {
-  animation-play-state: paused; 
-}
-
-.sora-marquee-group {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.gallery-slide-item {
-  width: 50vw; 
-  flex-shrink: 0;
-  padding: 0;
-}
-
+.gallery-slide-item { width: 50vw; flex-shrink: 0; padding: 0; }
 @media (min-width: 576px) { .gallery-slide-item { width: 33.333vw; } }
 @media (min-width: 768px) { .gallery-slide-item { width: 25vw; } }
 @media (min-width: 1024px) { .gallery-slide-item { width: 20vw; } }
 @media (min-width: 1400px) { .gallery-slide-item { width: 16.666vw; } }
 
-@keyframes soraMarquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); } 
-}
+@keyframes soraMarquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
 .gallery-img-wrapper { width: 100%; overflow: hidden; }
 .gallery-slide-item:nth-child(odd) .gallery-img-wrapper { height: 320px; }

@@ -95,45 +95,18 @@
               </a>
 
               <transition name="mega-fade">
-                <div v-show="isMegaMenuOpen"
-                  class="mega-menu-wrapper shadow-lg border-top border-3 border-primary-custom position-absolute">
-                  
-                  <button type="button" class="btn-close position-absolute top-0 end-0 m-3 z-index-max" aria-label="Close" @click.prevent="isMegaMenuOpen = false"></button>
-
-                  <div class="d-flex text-start">
-                    <div class="mega-category-list p-4 bg-light border-end" style="width: 240px; flex-shrink: 0;">
-                      <h6 class="fw-bold mb-3 text-uppercase text-muted font-oswald" style="letter-spacing: 1px;">Danh Mục</h6>
-                      <ul class="list-unstyled m-0">
-                        <li v-for="cat in categories" :key="cat.id" class="mb-3" @mouseenter="hoveredCategory = cat">
-                          <a href="#" @click.prevent="safeNavigate('shop', { query: { category: cat.slug } })"
-                            class="mega-cat-link fw-semibold text-decoration-none"
-                            :class="{ 'active-cat text-primary-custom': hoveredCategory?.id === cat.id }">
-                            {{ cat.name }}
-                          </a>
-                        </li>
-                      </ul>
-                    </div>
-
-                    <div class="mega-products-preview p-4 flex-grow-1 bg-white">
-                      <h6 class="fw-bold mb-3 text-uppercase text-muted font-oswald" style="letter-spacing: 1px;">
-                        Nổi bật: {{ hoveredCategory ? hoveredCategory.name : 'Mới Nhất' }}
-                      </h6>
-                      <div class="row g-4" v-if="hoveredCategory && hoveredCategory.top_products">
-                        <div class="col-3" v-for="prod in hoveredCategory.top_products" :key="prod.id">
-                          <div class="mega-product-card" @click="goToProduct(prod.slug)">
-                            <div class="mega-img-wrap bg-light rounded-3 mb-2 border">
-                              <img :src="getImage(prod.thumbnail_image)" @error="handleImageError"
-                                class="w-100 h-100 object-fit-cover bg-white" alt="Product">
-                            </div>
-                            <h6 class="small fw-bold text-truncate mb-1 transition-color">{{ prod.name }}</h6>
-                            <div class="text-danger fw-bold small">{{ formatCurrency(prod.promotional_price || prod.base_price) }}</div>
-                          </div>
-                        </div>
-                      </div>
-                      <div v-else class="text-muted small fst-italic">Không có sản phẩm nổi bật.</div>
-                    </div>
-                  </div>
-                </div>
+                <MegaMenu
+                  :show="isMegaMenuOpen"
+                  :categories="categories"
+                  :hoveredCategory="hoveredCategory"
+                  :getImage="getImage"
+                  :handleImageError="handleImageError"
+                  :formatCurrency="formatCurrency"
+                  :safeNavigate="safeNavigate"
+                  :goToProduct="goToProduct"
+                  :onHoverCategory="(cat) => (hoveredCategory = cat)"
+                  :onClose="() => (isMegaMenuOpen = false)"
+                />
               </transition>
             </li>
 
@@ -271,10 +244,12 @@ import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import Swal from 'sweetalert2';
+import MegaMenu from '@/components/user/MegaMenu.vue';
 
 const route = useRoute();
 const router = useRouter();
 const BACKEND_URL = import.meta.env.VITE_API_BASE_URL;
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || BACKEND_URL.replace(/\/api\/?$/, '');
 
 const sysConfig = ref({ phone: '12345678910', email: 'SORA@GMAIL.COM', facebook: '#', instagram: '#', twitter: '#' });
 const user = ref(null);
@@ -363,7 +338,16 @@ const safeNavigate = (routeName, options = {}) => {
 };
 
 const soraPlaceholder = '/Sora-placeholder.png';
-const getImage = (path) => path ? `${BACKEND_URL}/storage/${path}` : soraPlaceholder;
+const getImage = (path) => {
+  if (!path) return soraPlaceholder;
+  const cleaned = path.trim();
+  if (cleaned.startsWith('http') || cleaned.startsWith('data:')) return cleaned;
+  let normalized = cleaned.replace(/^\//, '');
+  if (normalized.startsWith('storage/')) {
+    normalized = normalized.replace(/^storage\//, '');
+  }
+  return `${STORAGE_URL}/${normalized}`;
+};
 const handleImageError = (e) => { e.target.src = soraPlaceholder; };
 const handleLogoError = (e) => { e.target.outerHTML = '<h2 class="font-oswald fw-bold text-dark m-0 tracking-wide">S O R A</h2>'; };
 const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);

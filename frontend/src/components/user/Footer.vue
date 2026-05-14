@@ -122,7 +122,6 @@
       </div>
     </div>
     
-    <SoraChatWidget />
   </footer>
 </template>
 
@@ -130,7 +129,6 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
-import SoraChatWidget from '@/components/SoraChatWidget.vue';
 
 const router = useRouter();
 const email = ref('');

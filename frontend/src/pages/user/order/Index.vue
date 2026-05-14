@@ -446,7 +446,7 @@ const exportInvoice = async (order) => {
 
   try {
     const res = await axios.get(
-      `http://127.0.0.1:8000/api/client/orders/${order.order_code}/invoice`,
+      `${import.meta.env.VITE_API_BASE_URL}/client/orders/${order.order_code}/invoice`,
       {
         headers: {
           Authorization: token ? `Bearer ${token}` : '',
