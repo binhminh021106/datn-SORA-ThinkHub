@@ -186,6 +186,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
+import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener.js';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -285,6 +286,10 @@ const fetchCombos = async (gender = null) => {
     isLoading.value = false;
   }
 };
+
+usePublicRefreshListener({
+  combos: () => fetchCombos(activeFilter.value),
+});
 
 const filterCombo = (gender) => {
   activeFilter.value = gender;

@@ -268,7 +268,7 @@ const fetchFavouritesForCompare = async () => {
 .slide-up-enter-active, .slide-up-leave-active { transition: transform 0.3s ease, opacity 0.3s; }
 .slide-up-enter-from, .slide-up-leave-to { transform: translateY(100%); opacity: 0; }
 
-@media (max-width: 60px) {
+@media (max-width: 600px) {
   .compare-inner { flex-direction: column; gap: 15px; }
   .compare-actions { width: 100%; justify-content: space-between; }
   .btn-go-compare { flex: 1; margin-left: 15px; }

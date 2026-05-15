@@ -38,7 +38,7 @@
              <i class="bi bi-x-circle-fill me-1"></i> Phiên bản này đã hết hàng hoặc không tồn tại.
           </div>
 
-          <button @click="confirmQuickAdd" class="btn luxury-btn-solid w-100 py-3 mt-4 font-oswald tracking-widest text-uppercase fw-bold shadow-sm fs-6" style="background-color: #9f273b; color: white; border: none;">
+          <button @click="confirmQuickAdd" :disabled="isAdding" class="btn luxury-btn-solid w-100 py-3 mt-4 font-oswald tracking-widest text-uppercase fw-bold shadow-sm fs-6" style="background-color: #9f273b; color: white; border: none;">
              <span v-if="isAdding" class="spinner-border spinner-border-sm me-2"></span>
              <i v-else class="bi bi-bag-plus-fill me-2"></i> Xác nhận thêm
           </button>
@@ -200,6 +200,7 @@ const openModal = async (prod) => {
 };
 
 const confirmQuickAdd = async () => {
+    if (isAdding.value) return;
     if (!isQuickAddAllSelected.value) {
         quickAddError.value = true;
         return;

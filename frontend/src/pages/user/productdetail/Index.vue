@@ -565,6 +565,7 @@ import { useWishlist } from '@/composables/useWishlist';
 import { useProductVariants } from '@/composables/useProductVariants';
 import { isColorAttribute, isSizeAttribute } from '@/composables/useColorMapping';
 import { getToken, getHeaders, getFullImage, formatMoney } from '@/composables/useUtilities';
+import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener.js';
 
 const route = useRoute();
 const router = useRouter();

@@ -16,6 +16,16 @@ class Cors
      */
     public function handle(Request $request, Closure $next)
     {
+        // Handle preflight request first
+        if ($request->isMethod('options')) {
+            return response()->json(['method' => 'OPTIONS'], 200, [
+                'Access-Control-Allow-Origin' => '*',
+                'Access-Control-Allow-Methods' => 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
+                'Access-Control-Allow-Headers' => 'Origin, Content-Type, Authorization, X-Auth-Token, X-Requested-With',
+                'Access-Control-Max-Age' => '86400',
+            ]);
+        }
+
         $response = $next($request);
 
         $response->header('Access-Control-Allow-Origin', '*')
@@ -23,15 +33,6 @@ class Cors
                  ->header('Access-Control-Allow-Headers', 'Origin, Content-Type, Authorization, X-Auth-Token, X-Requested-With')
                  ->header('Access-Control-Expose-Headers', 'Content-Length, X-JSON-Response')
                  ->header('Access-Control-Max-Age', '86400');
-
-        // Handle preflight request
-        if ($request->isMethod('options')) {
-            return response()->json('{"method":"OPTIONS"}', 200, [
-                'Access-Control-Allow-Origin' => '*',
-                'Access-Control-Allow-Methods' => 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
-                'Access-Control-Allow-Headers' => 'Origin, Content-Type, Authorization, X-Auth-Token, X-Requested-With',
-            ]);
-        }
 
         return $response;
     }

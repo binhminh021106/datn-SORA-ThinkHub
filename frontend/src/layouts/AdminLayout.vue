@@ -1,11 +1,26 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import Sidebar from '../components/admin/Sidebar.vue';
 import Header from '../components/admin/Header.vue';
 import Footer from '../components/admin/Footer.vue';
 
 // Biến lưu trữ trạng thái thu/mở của Sidebar
 const isSidebarCollapsed = ref(false);
+
+onMounted(() => {
+  if (window.Echo) {
+    const adminChannel = window.Echo.private('admin');
+    adminChannel.listen('.AdminRefresh', (data) => {
+      window.dispatchEvent(new CustomEvent('admin-refresh', { detail: data }));
+    });
+  }
+});
+
+onBeforeUnmount(() => {
+  if (window.Echo) {
+    window.Echo.leave('admin');
+  }
+});
 </script>
 
 <template>

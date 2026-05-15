@@ -276,6 +276,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -434,6 +435,13 @@ const getStatusSelectClass = (status) => {
   }; 
   return map[status] || 'bg-light text-secondary'; 
 };
+
+useAdminRefreshListener((payload) => {
+  if (payload.module === 'categories') {
+    fetchData();
+    Swal.fire({ toast: true, position: 'bottom-end', icon: 'info', title: 'Danh mục đã được cập nhật', showConfirmButton: false, timer: 2000 });
+  }
+});
 
 const checkStatusChange = (cat) => { cat.isStatusChanged = (cat.localStatus !== cat.status); };
 const cancelStatusChange = (cat) => { cat.localStatus = cat.status; cat.isStatusChanged = false; };

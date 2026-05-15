@@ -322,9 +322,10 @@ import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
-import { io } from "socket.io-client";
 import OrderQuickViewModal from './OrderQuickViewModal.vue';
 import TrackingMapModal from '@/components/admin/TrackingMapModal.vue';
+
+let adminChannel = null;
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -349,7 +350,6 @@ let isUnmounted = false;
 
 const statusCounts = ref({ all: 0, pending: 0, confirmed: 0, processing: 0, shipping: 0, delivered: 0, cancelled: 0, returned: 0 });
 const tabCache = ref({});
-const socket = io("http://localhost:3000");
 
 const warehouses = [
   { id: 'bmt', name: 'Buôn Ma Thuột' },
@@ -384,7 +384,10 @@ onBeforeUnmount(() => {
   isUnmounted = true;
   document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
   document.body.className = ''; document.body.style = '';
-  if (socket) socket.disconnect();
+
+  if (window.Echo) {
+    window.Echo.leave('admin');
+  }
 });
 
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
@@ -652,16 +655,22 @@ const displayedOrders = computed(() => {
 
 onMounted(() => {
   fetchData(1);
-  socket.on("new_order_received", (data) => {
-    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'CÓ ĐƠN HÀNG MỚI!', html: `Mã đơn: <b>${data.orderCode}</b>`, showConfirmButton: false, timer: 5000 });
-    tabCache.value = {}; fetchData(1, true);
-  });
-  socket.on("refresh_admin_data", (data) => {
-    if (data.module === 'orders') {
-      Swal.fire({ toast: true, position: 'bottom-start', icon: 'info', title: 'Hệ thống tự động', text: data.message, showConfirmButton: false, timer: 4000 });
-      tabCache.value = {}; fetchData(pagination.value.currentPage, true);
-    }
-  });
+
+  if (window.Echo) {
+    adminChannel = window.Echo.private('admin');
+
+    adminChannel.listen('.NewOrderReceived', (data) => {
+      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'CÓ ĐƠN HÀNG MỚI!', html: `Mã đơn: <b>${data.orderCode}</b>`, showConfirmButton: false, timer: 5000 });
+      tabCache.value = {}; fetchData(1, true);
+    });
+
+    adminChannel.listen('.AdminRefresh', (data) => {
+      if (data.module === 'orders') {
+        Swal.fire({ toast: true, position: 'bottom-start', icon: 'info', title: 'Hệ thống tự động', text: data.message, showConfirmButton: false, timer: 4000 });
+        tabCache.value = {}; fetchData(pagination.value.currentPage, true);
+      }
+    });
+  }
 });
 </script>
 

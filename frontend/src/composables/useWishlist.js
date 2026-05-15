@@ -14,6 +14,10 @@ export const useWishlist = () => {
       const response = await fetch(`${API_BASE_URL}/client/favourites`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
       });
+      if (!response.ok) {
+        console.error('Lỗi khi tải danh sách yêu thích:', response.status);
+        return;
+      }
       const data = await response.json();
       if (data.status) {
         favourites.value = data.data.map(fav => fav.product_id);
@@ -59,6 +63,16 @@ export const useWishlist = () => {
         body: JSON.stringify({ product_id: prod.id })
       });
 
+      if (response.status === 401) {
+        Toast.fire({ icon: 'error', title: 'Phiên đăng nhập hết hạn. Vui lòng tải lại.' });
+        return;
+      }
+
+      if (!response.ok) {
+        Toast.fire({ icon: 'error', title: 'Có lỗi xảy ra, thử lại sau' });
+        return;
+      }
+
       const data = await response.json();
 
       if (data.status) {
@@ -68,10 +82,6 @@ export const useWishlist = () => {
         } else if (data.action === 'removed') {
           favourites.value = favourites.value.filter(id => id !== prod.id);
           Toast.fire({ icon: 'info', title: 'Đã bỏ yêu thích' });
-        }
-      } else {
-        if (response.status === 401) {
-          Toast.fire({ icon: 'error', title: 'Phiên đăng nhập hết hạn. Vui lòng tải lại.' });
         }
       }
     } catch (error) {
