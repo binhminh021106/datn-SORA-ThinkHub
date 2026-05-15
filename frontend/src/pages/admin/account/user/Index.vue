@@ -284,8 +284,10 @@ import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios'; 
 import defaultAvatar from '../../../../assets/images/defaults/avatar1.png';
+import { getFullImage } from '@/composables/useUtilities';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const route = useRoute();
 const router = useRouter();
@@ -340,7 +342,7 @@ const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
   }
 };
 
-const getAvatarUrl = (path) => path ? `${API_URL}/storage/${path}` : defaultAvatar;
+const getAvatarUrl = (path) => path ? getFullImage(path) : defaultAvatar;
 const handleImageError = (e) => { e.target.src = defaultAvatar; };
 
 const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('vi-VN') : 'Chưa cập nhật';

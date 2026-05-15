@@ -171,6 +171,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
+import { getFullImage } from '@/composables/useUtilities';
 import defaultAvatar from '../../../../assets/images/defaults/avatar1.png';
 
 const route = useRoute();
@@ -181,6 +182,7 @@ const isLoaded = ref(false);
 const currentPageLevel = ref(null);
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const previewAvatar = ref(defaultAvatar);
 const selectedFile = ref(null);
@@ -303,7 +305,7 @@ const fetchRolesAndStaff = async () => {
     if (resStaff.ok) {
       const s = (await resStaff.json()).data;
       form.value = { fullname: s.fullname, email: s.email, phone: s.phone, address: s.address || '', role_id: s.role_id, status: s.status, password: '' };
-      previewAvatar.value = s.avatar_url ? `${API_URL}/storage/${s.avatar_url}` : defaultAvatar;
+      previewAvatar.value = s.avatar_url ? getFullImage(s.avatar_url) : defaultAvatar;
       
       await parseAddressToDropdowns(s.address);
     } else {

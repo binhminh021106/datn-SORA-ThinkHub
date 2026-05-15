@@ -1,8 +1,10 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
+import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import { getFullImage } from '@/composables/useUtilities';
 
 // ==========================================
 // 1. CONFIGURATION & SETUP
@@ -327,6 +329,13 @@ onMounted(async () => {
         return;
     }
     fetchNews();
+});
+
+useAdminRefreshListener((payload) => {
+    if (!payload || !payload.module) return;
+    if (payload.module === 'news' || payload.module === 'all') {
+        fetchNews(true);
+    }
 });
 </script>
 

@@ -61,6 +61,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
+import { getFullImage } from '@/composables/useUtilities';
 
 import defaultAvatar from '../../assets/images/defaults/avatar1.png';
 
@@ -114,7 +115,7 @@ const getAdminData = () => {
     return {
       name: admin.fullname || 'Quản trị viên',
       roleName: roleId == 1 ? 'Super Admin' : 'Nhân viên',
-      avatar: admin.avatar_url ? `${API_URL}/storage/${admin.avatar_url}` : defaultAvatar
+      avatar: admin.avatar_url ? getFullImage(admin.avatar_url) : defaultAvatar
     };
   }
   

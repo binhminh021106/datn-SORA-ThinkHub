@@ -8,6 +8,7 @@ use App\Models\Combo;
 use App\Http\Requests\AdminUpdateInventoryRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Events\InventoryUpdated;
 
 class AdminInventoryController extends Controller
 {
@@ -55,8 +56,10 @@ class AdminInventoryController extends Controller
             $variant->stock_quantity += $quantity;
 
             $variant->save();
-
             DB::commit();
+
+            // Broadcast inventory update
+            event(new InventoryUpdated('variant', $variant->id, ['old_stock' => $oldStock, 'new_stock' => $variant->stock_quantity]));
 
             return response()->json([
                 'success' => true,
@@ -82,6 +85,9 @@ class AdminInventoryController extends Controller
         $combo = Combo::findOrFail($id);
         
         $combo->update(['usage_limit' => $request->input('usage_limit')]);
+
+        // Broadcast inventory update for combo limit
+        event(new InventoryUpdated('combo', $combo->id, ['usage_limit' => $combo->usage_limit]));
 
         return response()->json([
             'success' => true,

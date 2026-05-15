@@ -83,8 +83,10 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import { getFullImage } from '@/composables/useUtilities';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const route = useRoute();
 const router = useRouter();
@@ -129,7 +131,7 @@ const fetchData = async () => {
         form.value.slug = b.slug;
         form.value.description = b.description || '';
         form.value.isActive = b.status === 'active';
-        if(b.logo) logoPreview.value = `${API_URL}/storage/${b.logo}`;
+        if(b.logo) logoPreview.value = getFullImage(b.logo);
     } catch(e){
         router.push({ name: 'admin-brands' });
     } finally { 

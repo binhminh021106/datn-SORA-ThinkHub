@@ -130,12 +130,14 @@
 import { ref, onMounted, computed } from 'vue';
 import Swal from 'sweetalert2';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
+import { getFullImage } from '@/composables/useUtilities';
 
 const banners = ref([]);
 const isFirstLoad = ref(true);
 const isTableLoading = ref(false);
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const isReorderMode = ref(false);
 const isSavingOrder = ref(false);
@@ -144,7 +146,7 @@ const dragOverIndex = ref(null);
 const reorderList = ref([]);
 
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
-const getImageUrl = (path) => path ? `${API_URL}/storage/${path}` : '/placeholder.png';
+const getImageUrl = (path) => path ? getFullImage(path) : '/placeholder.png';
 
 const formatDate = (dateString) => {
   if (!dateString) return null;

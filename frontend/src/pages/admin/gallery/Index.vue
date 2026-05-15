@@ -239,6 +239,7 @@ let quickViewModalInstance = null;
 
 // SỬ DỤNG .ENV CHO API BASE URL NHƯ BẠN YÊU CẦU
 const API_URL = import.meta.env.VITE_API_BASE_URL;
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 // Lấy đường dẫn base (không có /api) để trỏ vào thư mục storage ảnh
 const BASE_URL = API_URL.replace('/api', '');
 

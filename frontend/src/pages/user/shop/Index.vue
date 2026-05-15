@@ -268,16 +268,11 @@ const getImageUrl = (path) => {
   return `${API_BASE_URL}/storage/${cleanPath}`;
 };
 
+const handleImageError = (e) => { e.target.src = '/Sora-placeholder.png'; };
+
 const isColorAttribute = (attrName) => {
-  const name = attrName.toLowerCase();
-  const handleImageError = (e) => { e.target.src = '/Sora-placeholder.png'; };
-
-  usePublicRefreshListener({
-    products: () => fetchProducts(Number(pagination.value.current_page) || 1),
-  });
-
-  const isColorAttribute = (attrName) => {
-    const name = attrName.toLowerCase();
+  if (!attrName) return false;
+  const name = String(attrName).toLowerCase();
   return name.includes('màu') || name.includes('color');
 };
 

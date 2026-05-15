@@ -295,8 +295,10 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 import TrackingMapModal from '@/components/admin/TrackingMapModal.vue';
 import { downloadAdminInvoice } from '@/utils/adminInvoice.js';
+import { getFullImage } from '@/composables/useUtilities';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const route = useRoute();
 const router = useRouter();
@@ -356,7 +358,7 @@ const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bear
 
 const formatCurrency = (val) => val != null ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val) : '---';
 const formatDateTime = (val) => val ? new Date(val).toLocaleString('vi-VN') : '';
-const getImageUrl = (path) => path ? `${API_URL}/storage/${path}` : 'https://placehold.co/50';
+const getImageUrl = (path) => path ? getFullImage(path) : 'https://placehold.co/50';
 const handleImageError = (e) => { e.target.src = 'https://placehold.co/50'; };
 const parseAttributes = (attr) => { try { return typeof attr === 'object' ? attr : JSON.parse(attr); } catch { return {}; } };
 const parseCombo = (combo) => { try { return typeof combo === 'object' ? combo : JSON.parse(combo); } catch { return []; } };
