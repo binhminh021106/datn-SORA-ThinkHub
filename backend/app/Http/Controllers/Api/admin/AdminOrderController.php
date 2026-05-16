@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\OrderRefundDealMail;
-use Illuminate\Support\Facades\Http;
+use App\Events\AdminRefresh;
 use Illuminate\Support\Facades\Log;
 
 class AdminOrderController extends Controller
@@ -26,13 +26,9 @@ class AdminOrderController extends Controller
     private function broadcastUpdate($message = 'Có cập nhật mới về đơn hàng!')
     {
         try {
-            Http::post('http://localhost:3000/api/admin-refresh', [
-                'module'  => 'orders',
-                'message' => $message,
-                'time'    => now()->toDateTimeString()
-            ]);
+            broadcast(new AdminRefresh('orders', $message, now()->toDateTimeString()));
         } catch (\Exception $e) {
-            Log::error("Trạm Node.js đang tắt: " . $e->getMessage());
+            Log::error("Broadcast Reverb thất bại: " . $e->getMessage());
         }
     }
 

@@ -307,6 +307,7 @@ import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 // Import file ảnh mặc định
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 
@@ -539,6 +540,13 @@ const confirmDelete = (id, name) => {
     }
   });
 };
+
+useAdminRefreshListener((payload) => {
+  if (payload.module === 'products') {
+    fetchData(true);
+    Swal.fire({ toast: true, position: 'bottom-end', icon: 'info', title: 'Sản phẩm đã được cập nhật', showConfirmButton: false, timer: 2000 });
+  }
+});
 
 const restoreProduct = (id) => {
   Swal.fire({ title: 'Khôi phục?', text: "Khôi phục sản phẩm này về danh sách bán?", icon: 'info', showCancelButton: true, confirmButtonColor: '#009981', confirmButtonText: 'Đồng ý' }).then(async (result) => {

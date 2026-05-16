@@ -382,6 +382,7 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import ProductCard from '@/components/ui/ProductCard.vue';
 import CompareModal from '@/components/ui/CompareModal.vue';
+import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener.js';
 
 const swiperModules = [Navigation];
 const route = useRoute();
@@ -833,6 +834,14 @@ const fetchDetail = async (slug) => {
     isLoading.value = false;
   }
 };
+
+usePublicRefreshListener({
+  combos: () => {
+    if (route.params.slug) {
+      fetchDetail(route.params.slug);
+    }
+  }
+});
 
 const validateSelections = () => {
   let isValid = true;

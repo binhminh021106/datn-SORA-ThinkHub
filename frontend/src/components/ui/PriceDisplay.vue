@@ -5,8 +5,8 @@
       <span v-if="currentVariant.promotional_price" class="price-old">
         {{ formatMoney(currentVariant.price) }}
       </span>
-      <span v-if="currentVariant.promotional_price" class="discount-badge">
-        -{{ Math.round((1 - currentVariant.promotional_price / currentVariant.price) * 100) }}%
+      <span v-if="currentVariant.promotional_price && discountPercentage > 0" class="discount-badge">
+        -{{ discountPercentage }}%
       </span>
     </template>
     <template v-else>
@@ -16,9 +16,10 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import { formatMoney } from '@/composables/useUtilities';
 
-defineProps({
+const props = defineProps({
   isAllAttributesSelected: {
     type: Boolean,
     required: true
@@ -31,6 +32,13 @@ defineProps({
     type: Number,
     default: 0
   }
+});
+
+const discountPercentage = computed(() => {
+  if (!props.currentVariant?.promotional_price || !props.currentVariant?.price) return 0;
+  if (props.currentVariant.price <= 0) return 0;
+  const discount = (1 - props.currentVariant.promotional_price / props.currentVariant.price) * 100;
+  return Math.max(0, Math.round(discount));
 });
 </script>
 

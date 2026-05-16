@@ -13,7 +13,11 @@ export const getHeaders = () => {
   if (token) headers['Authorization'] = `Bearer ${token}`;
   let sid = localStorage.getItem('cart_session_id');
   if (!sid && !token) {
-    sid = 'session_' + Math.random().toString(36).substr(2, 9);
+    try {
+      sid = 'session_' + (crypto.randomUUID ? crypto.randomUUID() : 'fallback_' + Date.now());
+    } catch {
+      sid = 'session_' + Date.now();
+    }
     localStorage.setItem('cart_session_id', sid);
   }
   if (sid) headers['X-Cart-Session-Id'] = sid;
@@ -21,6 +25,9 @@ export const getHeaders = () => {
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+if (!API_BASE_URL) {
+  throw new Error('VITE_API_BASE_URL is not defined in environment variables');
+}
 const BACKEND_URL = API_BASE_URL.replace(/\/api\/?$/, '');
 const soraPlaceholder = '/Sora-placeholder.png';
 

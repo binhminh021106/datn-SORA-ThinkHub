@@ -129,6 +129,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import Swal from 'sweetalert2';
+import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 
 const banners = ref([]);
 const isFirstLoad = ref(true);
@@ -225,6 +226,20 @@ const saveReorder = async () => {
     }
   } catch (e) {} finally { isSavingOrder.value = false; }
 };
+
+useAdminRefreshListener((payload) => {
+  if (payload.module === 'banners') {
+    fetchData();
+    Swal.fire({ toast: true, position: 'bottom-end', icon: 'info', title: 'Banner đã được cập nhật', showConfirmButton: false, timer: 2000 });
+  }
+});
+
+useAdminRefreshListener((payload) => {
+  if (payload.module === 'banners') {
+    fetchData();
+    Swal.fire({ toast: true, position: 'bottom-end', icon: 'info', title: 'Banner đã được cập nhật', showConfirmButton: false, timer: 2000 });
+  }
+});
 
 onMounted(() => fetchData());
 </script>

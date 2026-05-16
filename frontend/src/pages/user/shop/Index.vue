@@ -207,6 +207,7 @@ import Swal from 'sweetalert2';
 
 import ProductCard from '@/components/ui/ProductCard.vue';
 import CompareModal from '@/components/ui/CompareModal.vue'; 
+import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -267,10 +268,16 @@ const getImageUrl = (path) => {
   return `${API_BASE_URL}/storage/${cleanPath}`;
 };
 
-const handleImageError = (e) => { e.target.src = '/Sora-placeholder.png'; };
-
 const isColorAttribute = (attrName) => {
   const name = attrName.toLowerCase();
+  const handleImageError = (e) => { e.target.src = '/Sora-placeholder.png'; };
+
+  usePublicRefreshListener({
+    products: () => fetchProducts(Number(pagination.value.current_page) || 1),
+  });
+
+  const isColorAttribute = (attrName) => {
+    const name = attrName.toLowerCase();
   return name.includes('màu') || name.includes('color');
 };
 
@@ -467,6 +474,10 @@ const fetchProducts = async (page = 1) => {
     isLoadingProducts.value = false; 
   }
 };
+
+usePublicRefreshListener({
+  products: () => fetchProducts(Number(pagination.value.current_page) || 1),
+});
 
 const filterByCategory = (categorySlug) => {
   filters.categories = filters.categories === categorySlug ? '' : categorySlug; 

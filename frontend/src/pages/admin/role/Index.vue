@@ -323,13 +323,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, onUnmounted } from 'vue';
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
-import { io } from "socket.io-client";
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
+
+let adminChannel = null;
 
 const route = useRoute();
 const isSuperAdmin = computed(() => localStorage.getItem('admin_role') == 1);
@@ -359,8 +360,6 @@ const modalMode = ref('create');
 let bRoleModal = null;
 const roleForm = ref({ id: null, label: '', value: '', badgeClass: '', level: 5 });
 const errors = ref({}); 
-
-const socket = io("http://localhost:3000");
 
 const getHeaders = () => ({
   'Accept': 'application/json',
@@ -600,17 +599,20 @@ onMounted(async () => {
   await Promise.all([fetchRoles(), fetchModules()]);
   isPageLoading.value = false; 
 
-  socket.on("refresh_admin_data", (data) => {
-    if (data.module === 'roles') {
-      fetchRoles(true);
-      Swal.fire({ toast: true, position: 'bottom-end', icon: 'info', title: 'Có cập nhật mới!', showConfirmButton: false, timer: 2000 });
-    }
-  });
+  if (window.Echo) {
+    adminChannel = window.Echo.private('admin');
+    adminChannel.listen('.AdminRefresh', (data) => {
+      if (data.module === 'roles') {
+        fetchRoles(true);
+        Swal.fire({ toast: true, position: 'bottom-end', icon: 'info', title: 'Có cập nhật mới!', showConfirmButton: false, timer: 2000 });
+      }
+    });
+  }
 });
 
-onUnmounted(() => {
-  if (socket) {
-    socket.disconnect();
+onBeforeUnmount(() => {
+  if (window.Echo) {
+    window.Echo.leave('admin');
   }
 });
 </script>

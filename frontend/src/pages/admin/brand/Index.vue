@@ -237,6 +237,7 @@ import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 import defaultImage from '../../../assets/images/defaults/placeholder.png';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
@@ -418,6 +419,13 @@ const getStatusSelectClass = (status) => {
   const map = { 'active': 'text-success border-success bg-success bg-opacity-10', 'hidden': 'text-warning border-warning bg-warning bg-opacity-10' }; 
   return map[status] || 'bg-light text-secondary'; 
 };
+
+useAdminRefreshListener((payload) => {
+  if (payload.module === 'brands') {
+    fetchData(true);
+    Swal.fire({ toast: true, position: 'bottom-end', icon: 'info', title: 'Thương hiệu đã được cập nhật', showConfirmButton: false, timer: 2000 });
+  }
+});
 
 const checkStatusChange = (brand) => { brand.isStatusChanged = (brand.localStatus !== brand.status); };
 const cancelStatusChange = (brand) => { brand.localStatus = brand.status; brand.isStatusChanged = false; };

@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use App\Events\NewOrderReceived;
 use App\Mail\OrderPlacedMail;
 use App\Mail\AdminNewOrderMail;
 use Illuminate\Support\Facades\Log;
@@ -338,12 +339,9 @@ class ClientCheckoutController extends Controller
                 ]);
 
                 try {
-                    Http::post('http://localhost:3000/api/emit-order', [
-                        'orderCode' => $order->order_code,
-                        'totalAmount' => $order->total_amount
-                    ]);
+                    broadcast(new NewOrderReceived($order->order_code, (float) $order->total_amount));
                 } catch (\Exception $e) {
-                    Log::error("Node.js Server is down: " . $e->getMessage());
+                    Log::error("Broadcast Reverb thất bại: " . $e->getMessage());
                 }
 
                 if ($request->payment_method === 'cod') {
@@ -382,6 +380,17 @@ class ClientCheckoutController extends Controller
         $partnerCode = env('MOMO_PARTNER_CODE');
         $accessKey   = env('MOMO_ACCESS_KEY');
         $secretKey   = env('MOMO_SECRET_KEY');
+
+        // Validate required environment variables
+        $missing = [];
+        if (empty($endpoint)) $missing[] = 'MOMO_ENDPOINT';
+        if (empty($partnerCode)) $missing[] = 'MOMO_PARTNER_CODE';
+        if (empty($accessKey)) $missing[] = 'MOMO_ACCESS_KEY';
+        if (empty($secretKey)) $missing[] = 'MOMO_SECRET_KEY';
+        
+        if (!empty($missing)) {
+            throw new \Exception('Thiếu cấu hình MoMo: ' . implode(', ', $missing));
+        }
 
         $orderInfo = "Thanh toan don hang SORA " . $order->order_code;
         $amount = (string) round($order->total_amount);

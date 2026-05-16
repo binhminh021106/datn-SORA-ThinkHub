@@ -104,8 +104,8 @@
                   :formatCurrency="formatCurrency"
                   :safeNavigate="safeNavigate"
                   :goToProduct="goToProduct"
-                  :onHoverCategory="(cat) => (hoveredCategory = cat)"
-                  :onClose="() => (isMegaMenuOpen = false)"
+                  :onHoverCategory="(cat) => { hoveredCategory = cat }"
+                  :onClose="() => { isMegaMenuOpen = false }"
                 />
               </transition>
             </li>
