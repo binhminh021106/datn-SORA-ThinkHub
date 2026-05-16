@@ -253,8 +253,7 @@
 import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
-import axios from 'axios'; 
-import { getFullImage } from '@/composables/useUtilities';
+import { apiClient, getFullImage as getFullImageImported, API_BASE_URL, STORAGE_URL } from '@/utils/axios';
 import defaultAvatar from '../../../../assets/images/defaults/avatar1.png';
 
 const route = useRoute();
@@ -266,9 +265,6 @@ const isLoading = ref(true);
 const searchQuery = ref('');
 const activeTab = ref('all');
 const currentPageLevel = ref(null);
-
-const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const currentAdmin = JSON.parse(localStorage.getItem('admin_info') || '{}');
 const currentUserId = currentAdmin.id;
@@ -296,10 +292,15 @@ const goToEditStaff = (id) => {
   }, 300);
 }; 
 
-const getHeaders = () => ({
-  'Accept': 'application/json',
-  'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
-});
+const goToEditStaff = (id) => {
+  if (quickViewModalInstance) quickViewModalInstance.hide();
+  setTimeout(() => {
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    document.body.className = '';
+    document.body.style = '';
+    router.push({ name: 'admin-staff-edit', params: { id } });
+  }, 300);
+}; 
 
 const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
   if (e.response) {
@@ -320,7 +321,7 @@ const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
   }
 };
 
-const getAvatarUrl = (path) => path ? getFullImage(path) : defaultAvatar;
+const getAvatarUrl = (path) => path ? getFullImageImported(path) : defaultAvatar;
 const handleImageError = (e) => { e.target.src = defaultAvatar; };
 
 const viewFullImage = (url) => {
@@ -363,9 +364,9 @@ const fetchData = async () => {
   isLoading.value = true;
   try {
     const [resStaff, resRole, resModules] = await Promise.all([
-      axios.get(`${API_URL}/admin/staff`, { headers: getHeaders() }),
-      axios.get(`${API_URL}/admin/roles`, { headers: getHeaders() }),
-      axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() })
+      apiClient.get('/admin/staff'),
+      apiClient.get('/admin/roles'),
+      apiClient.get('/admin/modules')
     ]);
     
     const rawStaffs = resStaff.data.data;
@@ -452,7 +453,7 @@ const saveStaffStatus = async (staff) => {
   };
 
   try {
-    await axios.post(`${API_URL}/admin/staff/${staff.id}`, payload, { headers: getHeaders() });
+    await apiClient.post(`/admin/staff/${staff.id}`, payload);
     staff.status = staff.localStatus; 
     staff.isStatusChanged = false;
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
@@ -513,7 +514,7 @@ const confirmDelete = (id, name) => {
   }).then(async (result) => {
     if (result.isConfirmed) {
       try {
-        const res = await axios.delete(`${API_URL}/admin/staff/${id}`, { headers: getHeaders() });
+        const res = await apiClient.delete(`/admin/staff/${id}`);
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa', text: res.data.message, showConfirmButton: false, timer: 1500 });
         fetchData(); 
       } catch (err) { 
@@ -532,7 +533,7 @@ const restoreStaff = (id) => {
   }).then(async (result) => {
     if (result.isConfirmed) {
       try {
-        const res = await axios.post(`${API_URL}/admin/staff/${id}/restore`, {}, { headers: getHeaders() });
+        const res = await apiClient.post(`/admin/staff/${id}/restore`, {});
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Thành công', text: res.data.message, showConfirmButton: false, timer: 1500 });
         fetchData(); 
       } catch (err) { 

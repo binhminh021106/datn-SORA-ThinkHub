@@ -229,20 +229,11 @@
 <script setup>
 import { ref, onMounted, computed, watch, inject } from 'vue';
 import Swal from 'sweetalert2';
-import axios from 'axios';
-import { getFullImage } from '@/composables/useUtilities';
+import { apiClient, getFullImage as getFullImageImported, API_BASE_URL, STORAGE_URL } from '@/utils/axios';
 import defaultAvatar from '../../../assets/images/defaults/avatar1.png';
 
 const activeTab = ref('info');
 const isLoading = ref(false);
-
-const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
-
-const showNewPassword = ref(false);
-const showConfirmPassword = ref(false);
-
-const currentUser = inject('currentUser', null);
 
 const adminData = ref({
     fullname: '', phone: '', address: '', email: '', role_id: '', status: '', avatar: defaultAvatar
@@ -252,11 +243,6 @@ const passwordForm = ref({ new_password: '', new_password_confirmation: '' });
 const selectedFile = ref(null);
 const previewAvatar = ref(null);
 const isRemoveAvatar = ref(false);
-
-const getHeaders = () => ({
-    'Accept': 'application/json',
-    'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
-});
 
 const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
     if (e.response) {
@@ -330,7 +316,7 @@ onMounted(() => {
         const data = JSON.parse(savedInfo);
         adminData.value = {
             ...data,
-            avatar: data.avatar_url ? getFullImage(data.avatar_url) : defaultAvatar
+            avatar: data.avatar_url ? getFullImageImported(data.avatar_url) : defaultAvatar
         };
     }
 });
@@ -374,7 +360,7 @@ const updateProfile = async () => {
     if (isRemoveAvatar.value) formData.append('remove_avatar', true);
 
     try {
-        const res = await axios.post(`${API_URL}/admin/profile`, formData, { headers: getHeaders() });
+        const res = await apiClient.post('/admin/profile', formData);
         const updatedData = res.data.data;
 
         localStorage.setItem('admin_info', JSON.stringify(updatedData));
@@ -383,7 +369,7 @@ const updateProfile = async () => {
             currentUser.value = updatedData;
         }
 
-        adminData.value.avatar = updatedData.avatar_url ? getFullImage(updatedData.avatar_url) : defaultAvatar;
+        adminData.value.avatar = updatedData.avatar_url ? getFullImageImported(updatedData.avatar_url) : defaultAvatar;
         adminData.value.address = updatedData.address;
 
         previewAvatar.value = null;
@@ -409,7 +395,7 @@ const updatePassword = async () => {
 
     isLoading.value = true;
     try {
-        const res = await axios.put(`${API_URL}/admin/profile/password`, passwordForm.value, { headers: getHeaders() });
+        const res = await apiClient.put('/admin/profile/password', passwordForm.value);
 
         Swal.fire({ icon: 'success', title: 'Thành công', text: res.data.message || 'Mật khẩu đã được đổi. Vui lòng đăng nhập lại.', confirmButtonColor: '#009981' })
             .then(() => {

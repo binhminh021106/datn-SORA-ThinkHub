@@ -172,7 +172,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
-import axios from 'axios';
+import { apiClient } from '@/utils/axios';
 import defaultAvatar from '../../../../assets/images/defaults/avatar1.png';
 
 const router = useRouter();
@@ -180,8 +180,6 @@ const isSaving = ref(false);
 const previewAvatar = ref(defaultAvatar);
 const selectedFile = ref(null);
 const errors = ref({});
-
-const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 const showPassword = ref(false);
 const showConfirmPassword = ref(false);
@@ -197,8 +195,6 @@ const wards = ref([]);
 const selectedCityId = ref('');
 const selectedDistrictId = ref('');
 const selectedWardId = ref('');
-
-const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
 
 const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
   if (e.response) {
@@ -308,7 +304,7 @@ const saveUser = async () => {
     if (selectedFile.value) formData.append('avatar', selectedFile.value);
 
     try {
-        const res = await axios.post(`${API_URL}/admin/users`, formData, { headers: getHeaders() });
+        const res = await apiClient.post('/admin/users', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
         Swal.fire({ icon: 'success', title: 'Thành công', text: res.data.message || 'Đã thêm khách hàng', timer: 1500, showConfirmButton: false });
         router.push({ name: 'admin-users' });
     } catch (err) { 

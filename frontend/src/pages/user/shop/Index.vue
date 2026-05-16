@@ -260,13 +260,7 @@ const getToken = () => {
   return '';
 };
 
-const getImageUrl = (path) => {
-  if (!path) return '/Sora-placeholder.png';
-  if (path.startsWith('http') || path.startsWith('data:image')) return path;
-  let cleanPath = path.startsWith('/') ? path.substring(1) : path;
-  if (cleanPath.startsWith('storage/')) return `${API_BASE_URL}/${cleanPath}`;
-  return `${API_BASE_URL}/storage/${cleanPath}`;
-};
+const getImageUrl = (path) => getFullImage(path);
 
 const handleImageError = (e) => { e.target.src = '/Sora-placeholder.png'; };
 

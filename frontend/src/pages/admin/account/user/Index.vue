@@ -282,12 +282,8 @@
 import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
-import axios from 'axios'; 
+import { apiClient, getFullImage as getFullImageImported, API_BASE_URL, STORAGE_URL } from '@/utils/axios';
 import defaultAvatar from '../../../../assets/images/defaults/avatar1.png';
-import { getFullImage } from '@/composables/useUtilities';
-
-const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const route = useRoute();
 const router = useRouter();
@@ -296,7 +292,6 @@ const systemModules = ref([]);
 const isLoading = ref(true);
 const searchQuery = ref('');
 const activeTab = ref('all');
-const currentPageLevel = ref(null);
 
 const currentPage = ref(1);
 const itemsPerPage = 8; 
@@ -321,7 +316,8 @@ const goToEditUser = (id) => {
   }, 300);
 };
 
-const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
+const getAvatarUrl = (path) => path ? getFullImageImported(path) : defaultAvatar;
+const handleImageError = (e) => { e.target.src = defaultAvatar; };
 
 const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
   if (e.response) {
@@ -341,9 +337,6 @@ const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
     Swal.fire('Lỗi', 'Mất kết nối Server', 'error');
   }
 };
-
-const getAvatarUrl = (path) => path ? getFullImage(path) : defaultAvatar;
-const handleImageError = (e) => { e.target.src = defaultAvatar; };
 
 const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('vi-VN') : 'Chưa cập nhật';
 const formatDateTime = (dateString) => dateString ? `${new Date(dateString).toLocaleDateString('vi-VN')} ${new Date(dateString).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}` : '';
@@ -387,8 +380,8 @@ const fetchData = async () => {
   isLoading.value = true;
   try {
     const [resUsers, resModules] = await Promise.all([
-      axios.get(`${API_URL}/admin/users`, { headers: getHeaders() }),
-      axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() })
+      apiClient.get('/admin/users'),
+      apiClient.get('/admin/modules')
     ]);
     
     const rawUsers = Array.isArray(resUsers.data.data) ? resUsers.data.data : (resUsers.data.data?.data || []);
@@ -443,7 +436,7 @@ const saveUserStatus = async (user) => {
   };
 
   try {
-    await axios.post(`${API_URL}/admin/users/${user.id}`, payload, { headers: getHeaders() });
+    await apiClient.post(`/admin/users/${user.id}`, payload);
     user.status = user.localStatus; 
     user.isStatusChanged = false;
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
@@ -483,7 +476,7 @@ const confirmDelete = (id, name) => {
   }).then(async (result) => {
     if (result.isConfirmed) {
       try {
-        const res = await axios.delete(`${API_URL}/admin/users/${id}`, { headers: getHeaders() });
+        const res = await apiClient.delete(`/admin/users/${id}`);
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa', text: res.data.message, showConfirmButton: false, timer: 1500 }); 
         fetchData(); 
       } catch (err) {
@@ -503,7 +496,7 @@ const restoreUser = (id) => {
   }).then(async (result) => {
     if (result.isConfirmed) {
       try {
-        const res = await axios.post(`${API_URL}/admin/users/${id}/restore`, {}, { headers: getHeaders() });
+        const res = await apiClient.post(`/admin/users/${id}/restore`, {});
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Thành công', text: res.data.message, showConfirmButton: false, timer: 1500 }); 
         fetchData(); 
       } catch (err) {

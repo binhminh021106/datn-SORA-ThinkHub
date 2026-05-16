@@ -95,11 +95,7 @@
 
 <script setup>
 import { ref, reactive } from 'vue';
-import axios from 'axios';
-// import { useRouter } from 'vue-router';
-
-// const router = useRouter();
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { apiClient, API_BASE_URL } from '@/utils/axios';
 
 const isLoading = ref(false);
 const errorMessage = ref('');
@@ -123,13 +119,12 @@ const handleRegister = async () => {
   successMessage.value = '';
 
   try {
-    const response = await axios.post(`${API_BASE_URL}/register`, form);
+    const response = await apiClient.post('/register', form);
 
     successMessage.value = 'Đăng ký thành công! Đang tự động đăng nhập...';
 
     // Lưu Token
     localStorage.setItem('auth_token', response.data.access_token);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
 
     // CẬP NHẬT MỚI: Lưu thông tin User
     localStorage.setItem('userData', JSON.stringify(response.data.user));

@@ -38,8 +38,7 @@
 <script setup>
 import { ref } from 'vue';
 import Swal from 'sweetalert2';
-
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+import { apiClient } from '@/utils/axios';
 
 const email = ref('');
 const isLoading = ref(false);
@@ -47,32 +46,20 @@ const isLoading = ref(false);
 const handleForgotPassword = async () => {
     isLoading.value = true;
     try {
-        const response = await fetch(`${API_URL}/admin/forgot-password`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({ email: email.value })
+        const response = await apiClient.post('/admin/forgot-password', {
+            email: email.value
         });
 
-        const data = await response.json();
-
-        if (response.ok) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Đã gửi Email!',
-                text: 'Vui lòng kiểm tra hộp thư đến (hoặc thư rác) để đặt lại mật khẩu.',
-                confirmButtonColor: '#009981'
-            });
-            email.value = '';
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Lỗi',
-                text: data.message || 'Không tìm thấy tài khoản với email này!',
-                confirmButtonColor: '#009981'
-            });
-        }
+        Swal.fire({
+            icon: 'success',
+            title: 'Đã gửi Email!',
+            text: response.data.message || 'Vui lòng kiểm tra hộp thư đến (hoặc thư rác) để đặt lại mật khẩu.',
+            confirmButtonColor: '#009981'
+        });
+        email.value = '';
     } catch (error) {
-        Swal.fire({ icon: 'error', title: 'Lỗi hệ thống', text: 'Không thể kết nối máy chủ!', confirmButtonColor: '#009981' });
+        const message = error.response?.data?.message || 'Không thể kết nối máy chủ!';
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: message, confirmButtonColor: '#009981' });
     } finally {
         isLoading.value = false;
     }

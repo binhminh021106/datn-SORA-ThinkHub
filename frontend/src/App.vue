@@ -18,6 +18,7 @@
 <script setup>
 import { ref, onMounted, provide } from 'vue';
 import { useRouter } from 'vue-router';
+import { apiClient } from '@/utils/axios';
 
 // Nhúng 2 Modal Global vào App
 import QuickAddModal from '@/components/ui/QuickAddModal.vue';
@@ -37,20 +38,14 @@ const checkAuthentication = async () => {
     return;
   }
 
-try {
-    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/me`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
-    });
+  try {
+    const res = await apiClient.get('/admin/me');
 
-    if (res.ok) {
-      const result = await res.json();
-      currentUser.value = result.data;
-      if (result.data.role) {
-         localStorage.setItem('admin_level', result.data.role.level);
+    if (res.status === 200 && res.data?.data) {
+      currentUser.value = res.data.data;
+
+      if (res.data.data.role?.level) {
+        localStorage.setItem('admin_level', res.data.data.role.level);
       }
     } else {
       throw new Error('Unauthorized');

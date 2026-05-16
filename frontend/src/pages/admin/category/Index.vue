@@ -277,10 +277,9 @@ import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
-import { getFullImage } from '@/composables/useUtilities';
+import { getFullImage, STORAGE_URL } from '@/utils/axios';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 // Import fallback image
 import defaultImage from '../../../assets/images/defaults/placeholder.png'; 

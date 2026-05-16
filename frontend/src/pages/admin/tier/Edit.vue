@@ -93,10 +93,7 @@
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
-import { getFullImage } from '@/composables/useUtilities';
-
-const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
+import { getFullImage, STORAGE_URL, apiClient } from '@/utils/axios';
 
 const route = useRoute();
 const router = useRouter();
@@ -173,13 +170,12 @@ const updateTier = async () => {
   if(fileIcon.value) fd.append('icon', fileIcon.value);
 
   try {
-    const res = await fetch(`${API_URL}/admin/tiers/${tierId}`, { method: 'POST', headers: getHeaders(), body: fd });
-    const data = await res.json();
-    if (res.ok) {
+    const res = await apiClient.post(`/admin/tiers/${tierId}`, fd);
+    if (res.status === 200 || res.status === 201) {
       Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật thành công', showConfirmButton: false, timer: 1500 });
       router.push({ name: 'admin-tiers' });
     } else {
-      Swal.fire('Lỗi', data.message || 'Lỗi dữ liệu', 'error');
+      Swal.fire('Lỗi', res.data?.message || 'Lỗi dữ liệu', 'error');
     }
   } catch(e) { 
     Swal.fire('Lỗi', 'Mất kết nối server', 'error'); 

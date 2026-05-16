@@ -71,8 +71,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
-
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+import { apiClient } from '@/utils/axios';
 
 const router = useRouter();
 const form = ref({ email: '', password: '', remember: false });
@@ -82,23 +81,20 @@ const isLoading = ref(false);
 const handleLogin = async () => {
   isLoading.value = true;
   try {
-    const response = await fetch(`${API_URL}/admin/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({ email: form.value.email, password: form.value.password })
+    const response = await apiClient.post('/admin/login', {
+      email: form.value.email,
+      password: form.value.password
     });
 
-    const data = await response.json();
+    if (response.status === 200 && response.data.token) {
+      localStorage.setItem('admin_token', response.data.token);
+      localStorage.setItem('admin_role', response.data.admin.role_id);
 
-    if (response.ok) {
-      localStorage.setItem('admin_token', data.token);
-      localStorage.setItem('admin_role', data.admin.role_id);
-
-      if (data.admin.role && data.admin.role.level) {
-        localStorage.setItem('admin_level', data.admin.role.level);
+      if (response.data.admin.role && response.data.admin.role.level) {
+        localStorage.setItem('admin_level', response.data.admin.role.level);
       }
 
-      localStorage.setItem('admin_info', JSON.stringify(data.admin));
+      localStorage.setItem('admin_info', JSON.stringify(response.data.admin));
 
       Swal.fire({
         icon: 'success',
@@ -108,16 +104,15 @@ const handleLogin = async () => {
         timer: 1500,
         showConfirmButton: false
       }).then(() => router.push({ name: 'admin-dashboard' }));
-    } else {
-      Swal.fire({
-        icon: 'error',
-        title: 'Thất bại',
-        text: data.message || 'Thông tin đăng nhập không chính xác!',
-        confirmButtonColor: '#009981'
-      });
     }
   } catch (error) {
-    Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể kết nối máy chủ!', confirmButtonColor: '#009981' });
+    const errorMsg = error.response?.data?.message || 'Thông tin đăng nhập không chính xác!';
+    Swal.fire({ 
+      icon: 'error', 
+      title: 'Thất bại', 
+      text: errorMsg, 
+      confirmButtonColor: '#009981' 
+    });
   } finally {
     isLoading.value = false;
   }

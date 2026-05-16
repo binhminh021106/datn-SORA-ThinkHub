@@ -137,7 +137,7 @@ const isFirstLoad = ref(true);
 const isTableLoading = ref(false);
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
+import { getFullImage, STORAGE_URL } from '@/utils/axios';
 
 const isReorderMode = ref(false);
 const isSavingOrder = ref(false);

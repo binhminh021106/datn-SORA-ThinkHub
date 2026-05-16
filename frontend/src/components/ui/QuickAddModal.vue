@@ -55,11 +55,9 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
-import axios from 'axios';
 import Swal from 'sweetalert2';
 import { globalModalState } from '@/stores/modalState';
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
+import { apiClient, getFullImage } from '@/utils/axios';
 
 const quickAddProduct = ref(null);
 const quickAddMatrix = ref({});
@@ -92,13 +90,7 @@ onMounted(() => {
 
 const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
 
-const getImageUrl = (path) => {
-  if (!path) return '/Sora-placeholder.png';
-  if (path.startsWith('http') || path.startsWith('data:image')) return path;
-  let cleanPath = path.startsWith('/') ? path.substring(1) : path;
-  if (cleanPath.startsWith('storage/')) return `${API_BASE_URL}/${cleanPath}`;
-  return `${API_BASE_URL}/storage/${cleanPath}`;
-};
+const getImageUrl = (path) => getFullImage(path);
 
 const handleImageError = (e) => { e.target.src = '/Sora-placeholder.png'; };
 
@@ -154,7 +146,7 @@ const openModal = async (prod) => {
     quickAddModalInstance.show();
 
     try {
-        const res = await axios.get(`${API_BASE_URL}/api/shop/all/products/${prod.slug}`);
+        const res = await apiClient.get(`/shop/all/products/${prod.slug}`);
         if (res.data && res.data.data) {
             quickAddProduct.value = {
                 ...res.data.data,

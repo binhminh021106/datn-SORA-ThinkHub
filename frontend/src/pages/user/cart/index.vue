@@ -165,7 +165,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
+import { apiClient, getFullImage } from '@/utils/axios';
 import Swal from 'sweetalert2'; 
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 
@@ -225,7 +225,7 @@ const checkAndMergeCart = async () => {
   if (!token || !sessionId) return;
 
   try {
-    const response = await axios.post(`${API_BASE_URL}/merge`, {}, { 
+    const response = await apiClient.post(`/client/cart/merge`, {}, { 
       headers: getHeaders() 
     });
 
@@ -283,7 +283,7 @@ const summary = computed(() => {
 const getImageUrl = (path) => {
   if (!path) return defaultPlaceholder;
   if (path.startsWith('http')) return path;
-  return `${import.meta.env.VITE_STORAGE_URL}/${path}`;
+  return getFullImage(path);
 };
 
 const handleImageError = (e) => {
@@ -293,7 +293,7 @@ const handleImageError = (e) => {
 const fetchCart = async (isBackground = false) => {
   if (!isBackground) isLoading.value = true;
   try {
-    const response = await axios.get(API_BASE_URL, { headers: getHeaders() });
+    const response = await apiClient.get('/client/cart', { headers: getHeaders() });
     if (response.data && response.data.success) {
       cartItems.value = (response.data.data || []).map(item => ({ ...item, isUpdating: false }));
       if (response.data.summary) backendSummary.value = response.data.summary;
@@ -322,7 +322,7 @@ const updateQuantity = async (item, change) => {
   item.isUpdating = true;
   
   try {
-    const response = await axios.put(`${API_BASE_URL}/${item.id}`, 
+    const response = await apiClient.put(`/client/cart/${item.id}`, 
       { quantity: newQty }, 
       { headers: getHeaders() }
     );

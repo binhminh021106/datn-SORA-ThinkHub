@@ -96,10 +96,9 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import Swal from 'sweetalert2';
-import { getFullImage } from '@/composables/useUtilities';
+import { getFullImage } from '@/utils/axios';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const tiers = ref([]);
 const isLoading = ref(true);

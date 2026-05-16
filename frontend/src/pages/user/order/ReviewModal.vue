@@ -119,6 +119,7 @@ import { ref, watch } from 'vue';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
+import { getFullImage } from '@/utils/axios';
 
 const props = defineProps({
   isOpen: Boolean,
@@ -177,11 +178,7 @@ const getHeaders = () => {
   };
 };
 
-const getImageUrl = (path) => {
-  if (!path) return defaultPlaceholder;
-  if (path.startsWith('http')) return path;
-  return `${import.meta.env.VITE_STORAGE_URL}/${path}`;
-};
+const getImageUrl = (path) => getFullImage(path);
 const handleImageError = (e) => { e.target.src = defaultPlaceholder; };
 
 // Xử lý upload và tạo file preview

@@ -8,21 +8,24 @@ import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 import axios from 'axios';
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
+import { API_BASE_URL, REVERB_CONFIG, apiClient } from '@/utils/axios';
+
 window.Pusher = Pusher;
 
-// Cấu hình Axios mặc định
+// Cấu hình Axios mặc định (keep for backward compatibility)
 window.axios = axios;
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+// Sử dụng apiClient từ axios.js (tất cả config đã được setup)
+window.apiClient = apiClient;
 
 // Cấu hình bắt sóng Real-time
 window.Echo = new Echo({
     broadcaster: 'reverb',
-    key: 'sorajewelrykey123', // Khớp 100% với backend
-    wsHost: '127.0.0.1',
-    wsPort: 8080,
-    wssPort: 8080,
+    key: REVERB_CONFIG.appKey,
+    wsHost: REVERB_CONFIG.host,
+    wsPort: REVERB_CONFIG.port,
+    wssPort: REVERB_CONFIG.port,
     forceTLS: false,
     enabledTransports: ['ws', 'wss'],
     disableStats: true,
@@ -54,12 +57,13 @@ window.Echo = new Echo({
     },
 });
 
-// Khi Echo kết nối thành công, gán Socket ID vào Axios để sử dụng toOthers()
+// Khi Echo kết nối thành công, lưu Socket ID vào localStorage để sử dụng trong axios interceptor
 window.Echo.connector.pusher.connection.bind('connected', () => {
     const socketId = window.Echo.socketId();
     if (socketId) {
+        localStorage.setItem('socket_id', socketId);
         window.axios.defaults.headers.common['X-Socket-Id'] = socketId;
-        console.log('Echo connected. Socket ID synced to Axios:', socketId);
+        console.log('✅ Echo connected. Socket ID synced:', socketId);
     }
 });
 

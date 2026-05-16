@@ -101,13 +101,13 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import { globalModalState } from '@/stores/modalState';
+import { getFullImage } from '@/utils/axios';
 
 const props = defineProps({
   shopSlug: { type: String, default: 'sora' }
 });
 
 const router = useRouter();
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
 
 const compareList = ref([]);
 const showComparePopup = ref(false);
@@ -131,12 +131,7 @@ watch(() => globalModalState.compareTrigger, () => {
     }
 });
 
-const getImageUrl = (path) => {
-    if (!path) return '/Sora-placeholder.png';
-    if (path.startsWith('http') || path.startsWith('data:image')) return path;
-    const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    return `${API_BASE_URL}/storage/${cleanPath}`;
-};
+const getImageUrl = (path) => getFullImage(path);
 
 const handleImageError = (e) => { e.target.src = '/Sora-placeholder.png'; };
 const formatMoney = (amount) => amount ? new Intl.NumberFormat('vi-VN').format(amount) + ' ₫' : '0 ₫';
@@ -212,7 +207,7 @@ const toggleCompareItem = (prod) => {
     const item = {
         id: prod.id,
         name: prod.name,
-        image: prod.image || getImageUrl(prod.thumbnail_image)
+        image: getFullImage(prod.image || prod.thumbnail_image)
     };
     compareList.value.push(item);
     Toast.fire({ icon: 'success', title: 'Đã thêm vào danh sách so sánh' });

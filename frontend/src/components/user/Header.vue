@@ -245,11 +245,10 @@ import { RouterLink, useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import MegaMenu from '@/components/user/MegaMenu.vue';
+import { getFullImage } from '@/utils/axios';
 
 const route = useRoute();
 const router = useRouter();
-const BACKEND_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || BACKEND_URL.replace(/\/api\/?$/, '');
 
 const sysConfig = ref({ phone: '12345678910', email: 'SORA@GMAIL.COM', facebook: '#', instagram: '#', twitter: '#' });
 const user = ref(null);
@@ -337,17 +336,7 @@ const safeNavigate = (routeName, options = {}) => {
   }
 };
 
-const soraPlaceholder = '/Sora-placeholder.png';
-const getImage = (path) => {
-  if (!path) return soraPlaceholder;
-  const cleaned = path.trim();
-  if (cleaned.startsWith('http') || cleaned.startsWith('data:')) return cleaned;
-  let normalized = cleaned.replace(/^\//, '');
-  if (normalized.startsWith('storage/')) {
-    normalized = normalized.replace(/^storage\//, '');
-  }
-  return `${STORAGE_URL}/${normalized}`;
-};
+const getImage = (path) => getFullImage(path);
 const handleImageError = (e) => { e.target.src = soraPlaceholder; };
 const handleLogoError = (e) => { e.target.outerHTML = '<h2 class="font-oswald fw-bold text-dark m-0 tracking-wide">S O R A</h2>'; };
 const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);

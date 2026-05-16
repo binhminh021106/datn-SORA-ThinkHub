@@ -141,13 +141,12 @@
 <script setup>
 import { ref, onMounted, computed, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
 import Swal from 'sweetalert2';
 import ProductCard from '@/components/ui/ProductCard.vue';
 import CompareModal from '@/components/ui/CompareModal.vue';
+import { apiClient, getFullImage } from '@/utils/axios';
 
 const router = useRouter();
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
 
 const favorites = ref([]);
 const isLoading = ref(true);
@@ -186,13 +185,7 @@ const getToken = () => {
   return '';
 };
 
-const getImageUrl = (path) => {
-  if (!path) return '/Sora-placeholder.png';
-  if (path.startsWith('http') || path.startsWith('data:image')) return path;
-  let cleanPath = path.startsWith('/') ? path.substring(1) : path;
-  if (cleanPath.startsWith('storage/')) return `${API_BASE_URL}/${cleanPath}`;
-  return `${API_BASE_URL}/storage/${cleanPath}`;
-};
+const getImageUrl = (path) => getFullImage(path);
 
 const handleImageError = (e) => { e.target.src = '/Sora-placeholder.png'; };
 const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
@@ -203,9 +196,7 @@ const fetchFavorites = async () => {
     return;
   }
   try {
-    const response = await axios.get(`${API_BASE_URL}/api/client/favourites`, {
-      headers: { Authorization: `Bearer ${getToken()}`, Accept: 'application/json' }
-    });
+    const response = await apiClient.get('/client/favourites');
     if (response.data.status) {
       favorites.value = response.data.data;
     }
@@ -229,10 +220,8 @@ const toggleFavorite = async (product) => {
 
   isToggling.value = product.id;
   try {
-    const response = await axios.post(`${API_BASE_URL}/api/client/favourites/toggle`, {
+    const response = await apiClient.post('/client/favourites/toggle', {
       product_id: product.id
-    }, {
-      headers: { Authorization: `Bearer ${currentToken}`, Accept: 'application/json' }
     });
 
     if (response.data.status) {

@@ -233,6 +233,7 @@ import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
+import { getFullImage } from '@/utils/axios';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -309,7 +310,7 @@ const parseCombo = (combo) => {
 const getImageUrl = (path) => {
   if (!path) return defaultPlaceholder;
   if (path.startsWith('http')) return path;
-  return `${import.meta.env.VITE_STORAGE_URL}/${path}`;
+  return getFullImage(path);
 };
 
 const handleImageError = (e) => { e.target.src = defaultPlaceholder; };

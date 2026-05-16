@@ -96,7 +96,7 @@ import Swal from 'sweetalert2';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
+import { getFullImage, STORAGE_URL } from '@/utils/axios';
 
 defineOptions({ name: 'GalleryEdit' });
 

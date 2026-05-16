@@ -113,6 +113,7 @@
 
 <script setup>
 import { ref, watch } from 'vue';
+import { getFullImage } from '@/utils/axios';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 
 const props = defineProps({
@@ -145,7 +146,7 @@ const getHeaders = () => {
 const getImageUrl = (path) => {
   if (!path) return defaultPlaceholder;
   if (path.startsWith('http')) return path;
-  return `${import.meta.env.VITE_STORAGE_URL}/${path}`;
+  return getFullImage(path);
 };
 
 const getProductImage = (product) => {

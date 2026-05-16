@@ -75,9 +75,7 @@
 
 <script setup>
 import { ref, reactive } from 'vue';
-import axios from 'axios';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { apiClient, API_BASE_URL } from '@/utils/axios';
 
 const LoginWithGoogle = () => {
   window.location.href = `${API_BASE_URL}/auth/google/redirect`;
@@ -98,13 +96,12 @@ const handleLogin = async () => {
   successMessage.value = '';
 
   try {
-    const response = await axios.post(`${API_BASE_URL}/login`, form);
+    const response = await apiClient.post('/login', form);
     
     successMessage.value = 'Đăng nhập thành công!';
     
     // Lưu Token
     localStorage.setItem('auth_token', response.data.access_token);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
     
     // CẬP NHẬT MỚI: Lưu thông tin User vào localStorage để Header nhận diện
     localStorage.setItem('userData', JSON.stringify(response.data.user));

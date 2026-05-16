@@ -308,12 +308,11 @@ import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
-import { getFullImage } from '@/composables/useUtilities';
+import { getFullImage } from '@/utils/axios';
 // Import file ảnh mặc định
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const route = useRoute();
 const router = useRouter();

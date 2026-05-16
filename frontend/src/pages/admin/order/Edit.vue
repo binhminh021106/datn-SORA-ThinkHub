@@ -295,10 +295,9 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 import TrackingMapModal from '@/components/admin/TrackingMapModal.vue';
 import { downloadAdminInvoice } from '@/utils/adminInvoice.js';
-import { getFullImage } from '@/composables/useUtilities';
+import { getFullImage, STORAGE_URL, MAPBOX_TOKEN } from '@/utils/axios';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const route = useRoute();
 const router = useRouter();

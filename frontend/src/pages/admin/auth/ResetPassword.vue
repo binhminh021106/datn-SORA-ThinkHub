@@ -45,8 +45,7 @@
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
-
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+import { apiClient } from '@/utils/axios';
 
 const route = useRoute();
 const router = useRouter();
@@ -82,38 +81,24 @@ const handleResetPassword = async () => {
 
   isLoading.value = true;
   try {
-    const response = await fetch(`${API_URL}/admin/reset-password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({
-        token: token.value,
-        email: email.value,
-        password: form.value.password,
-        password_confirmation: form.value.password_confirmation
-      })
+    const response = await apiClient.post('/admin/reset-password', {
+      token: token.value,
+      email: email.value,
+      password: form.value.password,
+      password_confirmation: form.value.password_confirmation
     });
 
-    const data = await response.json();
-
-    if (response.ok) {
-      Swal.fire({
-        icon: 'success',
-        title: 'Thành công!',
-        text: 'Mật khẩu đã được đặt lại thành công. Vui lòng đăng nhập bằng mật khẩu mới.',
-        confirmButtonColor: '#009981'
-      }).then(() => {
-        router.push({ name: 'admin-login' });
-      });
-    } else {
-      Swal.fire({
-        icon: 'error',
-        title: 'Thất bại',
-        text: data.message || 'Token đã hết hạn hoặc không hợp lệ!',
-        confirmButtonColor: '#009981'
-      });
-    }
+    Swal.fire({
+      icon: 'success',
+      title: 'Thành công!',
+      text: response.data.message || 'Mật khẩu đã được đặt lại thành công. Vui lòng đăng nhập bằng mật khẩu mới.',
+      confirmButtonColor: '#009981'
+    }).then(() => {
+      router.push({ name: 'admin-login' });
+    });
   } catch (error) {
-    Swal.fire({ icon: error, title: 'Lỗi', text: 'Không thể kết nối máy chủ!', confirmButtonColor: '#009981' });
+    const message = error.response?.data?.message || 'Không thể kết nối máy chủ!';
+    Swal.fire({ icon: 'error', title: 'Lỗi', text: message, confirmButtonColor: '#009981' });
   } finally {
     isLoading.value = false;
   }

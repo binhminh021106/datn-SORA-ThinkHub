@@ -95,10 +95,9 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
+import { apiClient } from '@/utils/axios';
 
 const router = useRouter();
-
-const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 const form = ref({
   fullname: '',
@@ -128,18 +127,9 @@ const handleRegister = async () => {
   isLoading.value = true;
 
   try {
-    const response = await fetch(`${API_URL}/admin/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify(form.value)
-    });
+    const response = await apiClient.post('/admin/register', form.value);
 
-    const data = await response.json();
-
-    if (response.ok) {
+    if (response.status === 201 || response.status === 200) {
       Swal.fire({
         icon: 'success',
         title: 'Thành công!',
@@ -148,25 +138,17 @@ const handleRegister = async () => {
       }).then(() => {
         router.push({ name: 'admin-login' });
       });
-    } else {
-      let errorMessage = data.message || 'Có lỗi xảy ra khi đăng ký!';
-      if (data.errors) {
-        errorMessage = Object.values(data.errors).flat().join('\n');
-      }
-
-      Swal.fire({
-        icon: 'error',
-        title: 'Đăng ký thất bại',
-        text: errorMessage,
-        confirmButtonColor: '#009981'
-      });
     }
   } catch (error) {
-    console.error('Lỗi:', error);
+    let errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi đăng ký!';
+    if (error.response?.data?.errors) {
+      errorMessage = Object.values(error.response.data.errors).flat().join('\n');
+    }
+
     Swal.fire({
       icon: 'error',
-      title: 'Lỗi hệ thống',
-      text: 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại!',
+      title: 'Đăng ký thất bại',
+      text: errorMessage,
       confirmButtonColor: '#009981'
     });
   } finally {
