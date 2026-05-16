@@ -279,11 +279,14 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
+import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import { getFullImage } from '@/composables/useUtilities';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const router = useRouter();
 const combos = ref([]);
@@ -323,7 +326,7 @@ const formatDateTime = (dateString) => {
     return `${d.toLocaleDateString('vi-VN')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 };
 
-const getThumbnail = (url) => url ? `${API_URL}/storage/${url}` : 'https://placehold.co/150x150/e0e0e0/6c757d?text=No+Image'; 
+const getThumbnail = (url) => url ? getFullImage(url) : 'https://placehold.co/150x150/e0e0e0/6c757d?text=No+Image'; 
 
 const getGenderLabel = (val) => {
     const map = { 'male': 'Nam', 'female': 'Nữ', 'unisex': 'Unisex', 'couple': 'Cặp đôi' };
@@ -461,6 +464,13 @@ const restoreCombo = (id) => {
     }
   });
 };
+
+useAdminRefreshListener((payload) => {
+  if (!payload || !payload.module) return;
+  if (payload.module === 'combos' || payload.module === 'products' || payload.module === 'all') {
+    fetchData(1, true);
+  }
+});
 
 onMounted(() => fetchData());
 </script>

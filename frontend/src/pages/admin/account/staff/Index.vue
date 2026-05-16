@@ -254,6 +254,7 @@ import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios'; 
+import { getFullImage } from '@/composables/useUtilities';
 import defaultAvatar from '../../../../assets/images/defaults/avatar1.png';
 
 const route = useRoute();
@@ -267,6 +268,7 @@ const activeTab = ref('all');
 const currentPageLevel = ref(null);
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const currentAdmin = JSON.parse(localStorage.getItem('admin_info') || '{}');
 const currentUserId = currentAdmin.id;
@@ -318,7 +320,7 @@ const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
   }
 };
 
-const getAvatarUrl = (path) => path ? `${API_URL}/storage/${path}` : defaultAvatar;
+const getAvatarUrl = (path) => path ? getFullImage(path) : defaultAvatar;
 const handleImageError = (e) => { e.target.src = defaultAvatar; };
 
 const viewFullImage = (url) => {

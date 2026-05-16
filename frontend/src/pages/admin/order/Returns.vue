@@ -211,7 +211,7 @@
                                   <tr v-for="item in selectedOrder.items" :key="item.id">
                                       <td class="ps-3 py-3">
                                           <div class="d-flex align-items-center gap-2">
-                                              <img :src="item.variant_image ? `http://127.0.0.1:8000/storage/${item.variant_image}` : 'https://placehold.co/40'" class="rounded border" style="width: 40px; height: 40px; object-fit: cover;">
+                                              <img :src="item.variant_image ? getFullImage(item.variant_image) : 'https://placehold.co/40'" class="rounded border" style="width: 40px; height: 40px; object-fit: cover;">
                                               <div>
                                                   <div class="fw-bold text-dark text-wrap" style="max-width: 250px;">{{ item.product_name }}</div>
                                                   <div class="text-muted" style="font-size: 0.7rem;">SKU: {{ item.variant_sku }}</div>
@@ -303,8 +303,10 @@ import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import { getFullImage } from '@/composables/useUtilities';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 let adminChannel = null;
 

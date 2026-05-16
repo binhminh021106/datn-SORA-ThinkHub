@@ -308,10 +308,12 @@ import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
+import { getFullImage } from '@/composables/useUtilities';
 // Import file ảnh mặc định
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const route = useRoute();
 const router = useRouter();
@@ -351,7 +353,7 @@ const formatCurrency = (val) => { if (val === null || val === undefined || val =
 
 // Chỉnh lại hàm lấy ảnh để ưu tiên trả về placeholder cục bộ
 const getThumbnail = (url) => { 
-    if (url) return `${API_URL}/storage/${url}`; 
+    if (url) return getFullImage(url); 
     return defaultPlaceholder; 
 };
 

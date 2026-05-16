@@ -14,6 +14,8 @@ window.Pusher = Pusher;
 window.axios = axios;
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+
 // Cấu hình bắt sóng Real-time
 window.Echo = new Echo({
     broadcaster: 'reverb',
@@ -28,12 +30,12 @@ window.Echo = new Echo({
         return {
             authorize: (socketId, callback) => {
                 const token = localStorage.getItem('admin_token') || localStorage.getItem('auth_token') || localStorage.getItem('token');
-                fetch('http://localhost:8000/api/broadcasting/auth', {
+                fetch(`${API_BASE_URL}/broadcasting/auth`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
-                        'Authorization': `Bearer ${token}`
+                        'Authorization': token ? `Bearer ${token}` : ''
                     },
                     body: JSON.stringify({
                         socket_id: socketId,
@@ -60,6 +62,34 @@ window.Echo.connector.pusher.connection.bind('connected', () => {
         console.log('Echo connected. Socket ID synced to Axios:', socketId);
     }
 });
+
+// Auto-subscribe user-specific private channel if user info exists in localStorage
+const tryGetStoredUser = () => {
+    const keys = ['adminData', 'userData', 'user_info'];
+    for (const k of keys) {
+        const raw = localStorage.getItem(k);
+        if (!raw) continue;
+        try {
+            const obj = JSON.parse(raw);
+            if (obj && (obj.id || obj.user_id)) return obj;
+        } catch (e) {
+            // ignore parse errors
+        }
+    }
+    return null;
+};
+
+const storedUser = tryGetStoredUser();
+if (window.Echo && storedUser && storedUser.id) {
+    try {
+        const userId = storedUser.id;
+        window.Echo.private(`App.Models.User.${userId}`).listen('.UserAccountUpdated', (data) => {
+            window.dispatchEvent(new CustomEvent('user-account-updated', { detail: data }));
+        });
+    } catch (err) {
+        console.warn('Failed to subscribe to user private channel', err);
+    }
+}
 
 const app = createApp(App)
 app.use(createPinia())

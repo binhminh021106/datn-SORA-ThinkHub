@@ -9,6 +9,7 @@ use App\Http\Requests\AdminStoreProductRequest;
 use App\Http\Requests\AdminUpdateProductRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use App\Events\ProductUpdated;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -98,6 +99,7 @@ class AdminProductController extends Controller
             }
 
             DB::commit();
+            event(new ProductUpdated($product->id, ['action' => 'created']));
             return response()->json(['success' => true, 'message' => 'Xuất bản sản phẩm thành công']);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -163,6 +165,7 @@ class AdminProductController extends Controller
             }
 
             DB::commit();
+            event(new ProductUpdated($product->id, ['action' => 'updated']));
             return response()->json(['success' => true, 'message' => 'Cập nhật sản phẩm thành công']);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -179,6 +182,7 @@ class AdminProductController extends Controller
             $product->delete();
 
             DB::commit();
+            event(new ProductUpdated($product->id, ['action' => 'deleted']));
             return response()->json(['success' => true, 'message' => 'Sản phẩm và Biến thể đã vào thùng rác']);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -195,6 +199,7 @@ class AdminProductController extends Controller
             $product->variants()->withTrashed()->restore();
 
             DB::commit();
+            event(new ProductUpdated($product->id, ['action' => 'restored']));
             return response()->json(['success' => true, 'message' => 'Sản phẩm và Biến thể đã được khôi phục']);
         } catch (\Exception $e) {
             DB::rollBack();

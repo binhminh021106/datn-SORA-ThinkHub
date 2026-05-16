@@ -381,8 +381,10 @@ import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import { getFullImage } from '@/composables/useUtilities';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const route = useRoute();
 const router = useRouter();
@@ -456,7 +458,7 @@ const formatCurrency = (val) => {
 };
 
 const getThumbnail = (url) => { 
-    if (url) return `${API_URL}/storage/${url}`; 
+    if (url) return getFullImage(url); 
     return 'https://placehold.co/150x150/e0e0e0/6c757d?text=No+Image'; 
 };
 

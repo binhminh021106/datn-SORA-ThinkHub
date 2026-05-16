@@ -152,9 +152,11 @@ import { ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios'; // ĐÃ THÊM AXIOS
+import { getFullImage } from '@/composables/useUtilities';
 import defaultImage from '../../../assets/images/defaults/placeholder.png';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const router = useRouter();
 const route = useRoute();
@@ -212,7 +214,7 @@ const fetchCategory = async () => {
       attributes_schema: u.attributes_schema || [] 
     };
     
-    previewImage.value = u.thumbnail ? `${API_URL}/storage/${u.thumbnail}` : defaultImage;
+    previewImage.value = u.thumbnail ? getFullImage(u.thumbnail) : defaultImage;
     isRemoveImage.value = false;
     selectedFile.value = null;
     errors.value = {};

@@ -9,6 +9,7 @@ use App\Http\Requests\AdminStoreComboRequest;
 use App\Http\Requests\AdminUpdateComboRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use App\Events\ComboUpdated;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -59,6 +60,7 @@ class AdminComboController extends Controller
             }
 
             DB::commit();
+            event(new ComboUpdated($combo->id, ['action' => 'created']));
             return response()->json(['success' => true, 'message' => 'Tạo Combo thành công!']);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -99,6 +101,7 @@ class AdminComboController extends Controller
             }
 
             DB::commit();
+            event(new ComboUpdated($combo->id, ['action' => 'updated']));
             return response()->json(['success' => true, 'message' => 'Cập nhật Combo thành công!']);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -120,6 +123,7 @@ class AdminComboController extends Controller
     {
         $combo = Combo::findOrFail($id);
         $combo->delete();
+        event(new ComboUpdated($combo->id, ['action' => 'deleted']));
         return response()->json(['success' => true, 'message' => 'Đã đưa Combo vào thùng rác.']);
     }
 
@@ -127,6 +131,7 @@ class AdminComboController extends Controller
     {
         $combo = Combo::withTrashed()->findOrFail($id);
         $combo->restore();
+        event(new ComboUpdated($combo->id, ['action' => 'restored']));
         return response()->json(['success' => true, 'message' => 'Đã khôi phục Combo.']);
     }
 }
