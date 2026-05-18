@@ -100,6 +100,7 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
+import apiClient from '@/utils/apiClient';
 import { globalModalState } from '@/stores/modalState';
 
 const props = defineProps({
@@ -184,14 +185,14 @@ const filteredFavourites = computed(() => {
 const fetchCompareSuggestions = async (query = '') => {
   isLoadingCompareSuggestions.value = true;
   try {
-    let url = new URL(`${API_BASE_URL}/api/shop/${props.shopSlug}/products`);
-    url.searchParams.append('per_page', query ? '20' : '10');
-    url.searchParams.append('sort', 'new'); 
-    if (query) url.searchParams.append('search', query);
+    const params = {
+      per_page: query ? 20 : 10,
+      sort: 'new'
+    };
+    if (query) params.search = query;
 
-    const response = await fetch(url.toString());
-    const result = await response.json();
-    if (result.success && result.data?.data) compareSuggestions.value = result.data.data;
+    const data = await apiClient.get(`/shop/${props.shopSlug}/products`, { params });
+    if (data.data?.success && data.data?.data?.data) compareSuggestions.value = data.data.data.data;
   } catch (error) {} 
   finally { isLoadingCompareSuggestions.value = false; }
 };
@@ -241,12 +242,8 @@ const fetchFavouritesForCompare = async () => {
   if(!isLoggedIn.value || favouriteProducts.value.length > 0) return;
   isLoadingFavourites.value = true;
   try {
-    const token = getToken();
-    const response = await fetch(`${API_BASE_URL}/api/client/favourites`, {
-      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-    });
-    const result = await response.json();
-    if (result.status && result.data) favouriteProducts.value = result.data.map(item => item.product).filter(p => p !== null);
+    const result = await apiClient.get('/client/favourites');
+    if (result.data?.status && result.data?.data) favouriteProducts.value = result.data.data.map(item => item.product).filter(p => p !== null);
   } catch (error) {} 
   finally { isLoadingFavourites.value = false; }
 };

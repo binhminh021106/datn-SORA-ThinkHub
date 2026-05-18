@@ -514,7 +514,7 @@ const openAddressModal = async (mode, addr = null) => {
 
 const saveAddress = async () => {
   isSavingAddr.value = true;
-  const url = addrModalMode.value === 'add' ? `${API_URL}/api/admin/users/${route.params.id}/addresses` : `${API_URL}/api/admin/addresses/${addrForm.value.id}`;
+  const url = addrModalMode.value === 'add' ? `${API_URL}/admin/users/${route.params.id}/addresses` : `${API_URL}/admin/addresses/${addrForm.value.id}`;
   
   const payload = { ...addrForm.value, is_default: addrForm.value.set_as_default ? 1 : addrForm.value.is_default };
   
@@ -547,7 +547,7 @@ const deleteAddress = (id) => {
   }).then(async (result) => {
     if (result.isConfirmed) {
       try {
-          await axios.delete(`${API_URL}/api/admin/addresses/${id}`, { headers: getHeaders() });
+          await axios.delete(`${API_URL}/admin/addresses/${id}`, { headers: getHeaders() });
           await fetchUser();
           Swal.fire({ icon: 'success', title: 'Đã xóa!', timer: 1500, showConfirmButton: false });
       } catch (err) {

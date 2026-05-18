@@ -204,6 +204,7 @@
 import { ref, shallowRef, onMounted, reactive, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
+import apiClient from '@/utils/apiClient';
 
 import ProductCard from '@/components/ui/ProductCard.vue';
 import CompareModal from '@/components/ui/CompareModal.vue'; 
@@ -314,10 +315,9 @@ const loadWishlist = async () => {
     return;
   }
   try {
-    const response = await fetch(`${API_BASE_URL}/api/client/favourites`, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } });
-    const result = await response.json();
-    if (response.ok && result.status && Array.isArray(result.data)) {
-      wishlistIds.value = result.data.map((item) => item.product?.id).filter(Boolean);
+    const result = await apiClient.get('/client/favourites');
+    if (result.data?.status && Array.isArray(result.data.data)) {
+      wishlistIds.value = result.data.data.map((item) => item.product?.id).filter(Boolean);
       localStorage.setItem('sora_wishlist', JSON.stringify(wishlistIds.value));
     } else {
       const stored = localStorage.getItem('sora_wishlist');
@@ -343,16 +343,11 @@ const toggleWishlist = async (product) => {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/client/favourites/toggle`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
-      body: JSON.stringify({ product_id: product.id })
-    });
-    
-    const data = await response.json();
-    if (!response.ok || !data.status) throw new Error();
+    const data = await apiClient.post('/client/favourites/toggle', { product_id: product.id });
 
-    const isAdded = data.action === 'added';
+    if (!data.data?.status) throw new Error();
+
+    const isAdded = data.data?.action === 'added';
     if (isAdded && !wishlistIds.value.includes(product.id)) wishlistIds.value.push(product.id);
     else if (!isAdded) wishlistIds.value = wishlistIds.value.filter(id => id !== product.id);
     
@@ -441,9 +436,8 @@ const toggleAttribute = (val) => toggleFilterArray(selectedAttributes, val);
 const fetchCategories = async () => {
   isLoadingCategories.value = true;
   try {
-    const response = await fetch(`${API_BASE_URL}/api/shop/${shopSlug.value}/categories`);
-    const data = await response.json();
-    if(data?.success) categories.value = data.data; 
+    const data = await apiClient.get(`/shop/${shopSlug.value}/categories`);
+    if(data?.data?.success) categories.value = data.data.data; 
   } catch (e) {} finally { isLoadingCategories.value = false; }
 };
 
@@ -455,13 +449,11 @@ const fetchProducts = async (page = 1) => {
     if (selectedColors.value.length > 0) queryPayload.color = selectedColors.value.join(',');
     if (selectedAttributes.value.length > 0) queryPayload.attribute_values = selectedAttributes.value.join(',');
 
-    const params = new URLSearchParams(queryPayload);
-    const response = await fetch(`${API_BASE_URL}/api/shop/${shopSlug.value}/products?${params.toString()}`);
-    const data = await response.json();
+    const data = await apiClient.get(`/shop/${shopSlug.value}/products`, { params: queryPayload });
     
-    if(data?.success) {
-      allProducts.value = data.data.data; 
-      pagination.value = { current_page: data.data.current_page, last_page: data.data.last_page, total: data.data.total };
+    if(data?.data?.success) {
+      allProducts.value = data.data.data.data; 
+      pagination.value = { current_page: data.data.data.current_page, last_page: data.data.data.last_page, total: data.data.data.total };
       extractFiltersFromVariants(allProducts.value);
     }
   } catch (e) {

@@ -434,8 +434,8 @@ const getHeaders = () => {
   return headers;
 };
 
-const rawBaseUrl = import.meta.env.VITE_API_BASE_URL;
-const apiBaseUrl = rawBaseUrl.replace(/\/api\/?$/, '');
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'http://127.0.0.1:8000/storage';
 
 const fetchProvinces = async () => {
     try {
@@ -627,7 +627,21 @@ const parseAttributes = (attr) => {
 };
 
 const formatPrice = (value) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value || 0);
-const getImageUrl = (path) => path ? (path.startsWith('http') ? path : `${apiBaseUrl}/storage/${path}`) : defaultPlaceholder;
+
+// CẬP NHẬT LẠI HÀM GET_IMAGE_URL CHO GỌN GÀNG VÀ CHUẨN XÁC HƠN
+const getImageUrl = (path) => {
+    if (!path) return defaultPlaceholder;
+    if (path.startsWith('http') || path.startsWith('data:image')) return path;
+    
+    let cleanPath = path.startsWith('/') ? path.substring(1) : path;
+    
+    if (cleanPath.startsWith('storage/')) {
+        cleanPath = cleanPath.substring(8);
+    }
+    
+    return `${STORAGE_URL}/${cleanPath}`;
+};
+
 const handleImageError = (e) => { e.target.src = defaultPlaceholder; };
 
 const totalQuantity = computed(() => cartItems.value.reduce((sum, item) => sum + item.quantity, 0));
@@ -659,7 +673,7 @@ const totalAmount = computed(() => Math.max(subTotal.value - discountAmount.valu
 
 const fetchInitData = async () => {
     try {
-        const res = await axios.get(`${apiBaseUrl}/api/client/checkout/init`, { headers: getHeaders() });
+        const res = await axios.get(`${API_BASE_URL}/client/checkout/init`, { headers: getHeaders() });
         if (res.data && res.data.success) {
             cartItems.value = res.data.cart_items || [];
             addresses.value = res.data.addresses || [];
@@ -745,7 +759,7 @@ const updateQuantity = async (item, delta) => {
     item.isUpdating = true;
     isUpdatingCart.value = true;
     try {
-        const res = await axios.put(`${apiBaseUrl}/api/client/cart/${item.id}`, { quantity: newQty }, { headers: getHeaders() });
+        const res = await axios.put(`${API_BASE_URL}/client/cart/${item.id}`, { quantity: newQty }, { headers: getHeaders() });
         if (res.data.success) {
             item.quantity = newQty;
             if (selectedCoupon.value && subTotal.value < selectedCoupon.value.min_spend) {
@@ -774,7 +788,7 @@ const removeItem = async (itemId) => {
     if (result.isConfirmed) {
       isUpdatingCart.value = true;
       try {
-        const response = await axios.delete(`${apiBaseUrl}/api/client/cart/${itemId}`, { headers: getHeaders() });
+        const response = await axios.delete(`${API_BASE_URL}/client/cart/${itemId}`, { headers: getHeaders() });
         if (response.data.success) {
           cartItems.value = cartItems.value.filter(i => i.id !== itemId);
           if (selectedCoupon.value && subTotal.value < selectedCoupon.value.min_spend) {
@@ -811,7 +825,7 @@ const checkDirectBuy = async () => {
     if (directComboStr) {
         try {
             const payload = JSON.parse(directComboStr);
-            const res = await axios.post(`${apiBaseUrl}/api/client/cart/add-combo`, payload, { headers: getHeaders() });
+            const res = await axios.post(`${API_BASE_URL}/client/cart/add-combo`, payload, { headers: getHeaders() });
             if (res.data && res.data.session_id && !getSafeStorage('auth_token')) {
                 try { localStorage.setItem('cart_session_id', res.data.session_id); } catch(e){}
             }
@@ -853,7 +867,7 @@ const submitOrder = async () => {
 
     isSubmitting.value = true;
     try {
-        const res = await axios.post(`${apiBaseUrl}/api/client/checkout`, payload, { headers: getHeaders() });
+        const res = await axios.post(`${API_BASE_URL}/client/checkout`, payload, { headers: getHeaders() });
         
         if (res.data.success) {
             if (res.data.payment_url) {
