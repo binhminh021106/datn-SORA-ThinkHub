@@ -1,7 +1,6 @@
 import { ref } from 'vue';
 import { getToken } from './useUtilities';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import apiClient from '@/utils/apiClient';
 
 export const useWishlist = () => {
   const favourites = ref([]);
@@ -11,16 +10,9 @@ export const useWishlist = () => {
     const token = getToken();
     if (!token) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/client/favourites`, {
-        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-      });
-      if (!response.ok) {
-        console.error('Lỗi khi tải danh sách yêu thích:', response.status);
-        return;
-      }
-      const data = await response.json();
-      if (data.status) {
-        favourites.value = data.data.map(fav => fav.product_id);
+      const data = await apiClient.get('/client/favourites');
+      if (data.data?.status) {
+        favourites.value = data.data.data.map(fav => fav.product_id);
       }
     } catch (e) {
       console.error('Không thể tải danh sách yêu thích', e);
@@ -53,33 +45,13 @@ export const useWishlist = () => {
     isTogglingFav.value = prod.id;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/client/favourites/toggle`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ product_id: prod.id })
-      });
+      const response = await apiClient.post('/client/favourites/toggle', { product_id: prod.id });
 
-      if (response.status === 401) {
-        Toast.fire({ icon: 'error', title: 'Phiên đăng nhập hết hạn. Vui lòng tải lại.' });
-        return;
-      }
-
-      if (!response.ok) {
-        Toast.fire({ icon: 'error', title: 'Có lỗi xảy ra, thử lại sau' });
-        return;
-      }
-
-      const data = await response.json();
-
-      if (data.status) {
-        if (data.action === 'added') {
+      if (response.data?.status) {
+        if (response.data?.action === 'added') {
           favourites.value.push(prod.id);
           Toast.fire({ icon: 'success', title: 'Đã thêm vào yêu thích' });
-        } else if (data.action === 'removed') {
+        } else if (response.data?.action === 'removed') {
           favourites.value = favourites.value.filter(id => id !== prod.id);
           Toast.fire({ icon: 'info', title: 'Đã bỏ yêu thích' });
         }

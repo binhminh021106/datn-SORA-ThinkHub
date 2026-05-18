@@ -110,6 +110,7 @@
 import { ref, reactive, onMounted, inject, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
+import apiClient from '@/utils/apiClient';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -225,9 +226,9 @@ const getHeaders = () => ({
 
 const fetchSidebarData = async () => {
   try {
-    const resMod = await fetch(`${API_URL}/admin/modules`, { headers: getHeaders() });
-    if (resMod.ok) {
-      systemModules.value = (await resMod.json()).data;
+    const data = await apiClient.get('/admin/modules');
+    if (data.data?.data) {
+      systemModules.value = data.data.data;
     }
   } catch (err) {
     console.error("Lỗi tải dữ liệu Sidebar", err);

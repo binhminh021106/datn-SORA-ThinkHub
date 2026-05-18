@@ -22,12 +22,18 @@
                {{ attrName }}: <span class="fw-normal text-sora-primary ms-1">{{ quickAddSelections[attrName] || '' }}</span>
              </p>
              <div class="d-flex flex-wrap gap-2">
-               <label v-for="val in values" :key="val" class="attr-chip m-0 cursor-pointer transition-all" :class="{'selected': String(quickAddSelections[attrName]) === String(val)}">
-                 <input type="radio" class="d-none" :value="val" v-model="quickAddSelections[attrName]" @change="quickAddError = false">
+               <!-- Thay thế radio bằng div để kiểm soát hoàn toàn click event và CSS -->
+               <div v-for="val in values" :key="val" 
+                    class="attr-chip m-0 transition-all cursor-pointer" 
+                    :class="{
+                      'selected': String(quickAddSelections[attrName]) === String(val),
+                      'disabled-option': !isOptionAvailable(attrName, val) && String(quickAddSelections[attrName]) !== String(val)
+                    }"
+                    @click="handleSelect(attrName, val)">
                  <div class="chip-inner px-3 py-2 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
                    <span class="fw-bold font-oswald tracking-wide small">{{ val }}</span>
                  </div>
-               </label>
+               </div>
              </div>
           </div>
           
@@ -79,7 +85,6 @@ const Toast = Swal.mixin({
   background: '#fffafa', color: '#9f273b', iconColor: '#9f273b'
 });
 
-// LẮNG NGHE TÍN HIỆU TỪ TRẠNG THÁI TOÀN CỤC
 watch(() => globalModalState.quickAddTrigger, () => {
     if (globalModalState.quickAddProduct) {
         openModal(globalModalState.quickAddProduct);
@@ -120,6 +125,52 @@ const isQuickAddAllSelected = computed(() => {
     return requiredAttrs.every(attr => quickAddSelections.value[attr]);
 });
 
+const isOptionAvailable = (attrName, attrValue) => {
+    if (!quickAddProduct.value || !quickAddProduct.value.variants) return false;
+
+    const testSelections = { ...quickAddSelections.value, [attrName]: attrValue };
+
+    return quickAddProduct.value.variants.some(variant => {
+        const vAttrs = variant.formatted_attributes;
+        if (!vAttrs) return false;
+
+        return Object.entries(testSelections).every(([key, value]) => {
+            if (!value) return true; 
+            return String(vAttrs[key]) === String(value);
+        });
+    });
+};
+
+// Hàm xử lý chọn biến thể tích hợp Auto-Resolve Conflict (Tự gỡ xung đột)
+const handleSelect = (attrName, val) => {
+    if (isOptionAvailable(attrName, val)) {
+        quickAddSelections.value = { ...quickAddSelections.value, [attrName]: val };
+    } else {
+        // Option bị mờ (hết hàng do xung đột) nhưng User vẫn bấm.
+        // Ta vẫn set nó làm active, và tự động bỏ chọn Option gây xung đột để User không bị kẹt cứng.
+        const newSelections = { [attrName]: val };
+        
+        Object.keys(quickAddMatrix.value).forEach(key => {
+            if (key !== attrName && quickAddSelections.value[key]) {
+                const testValid = quickAddProduct.value.variants.some(variant => {
+                    const vAttrs = variant.formatted_attributes;
+                    if (!vAttrs) return false;
+                    return String(vAttrs[attrName]) === String(val) && String(vAttrs[key]) === String(quickAddSelections.value[key]);
+                });
+                if (testValid) {
+                    newSelections[key] = quickAddSelections.value[key];
+                } else {
+                    newSelections[key] = ''; // Bỏ chọn phần xung đột
+                }
+            } else if (key !== attrName) {
+                 newSelections[key] = '';
+            }
+        });
+        quickAddSelections.value = newSelections;
+    }
+    quickAddError.value = false;
+};
+
 const quickAddSelectedVariant = computed(() => {
     if (!quickAddProduct.value || !quickAddProduct.value.variants) return null;
     const requiredAttrs = Object.keys(quickAddMatrix.value);
@@ -154,7 +205,7 @@ const openModal = async (prod) => {
     quickAddModalInstance.show();
 
     try {
-        const res = await axios.get(`${API_BASE_URL}/api/shop/all/products/${prod.slug}`);
+        const res = await axios.get(`${API_BASE_URL}/shop/all/products/${prod.slug}`);
         if (res.data && res.data.data) {
             quickAddProduct.value = {
                 ...res.data.data,
@@ -181,8 +232,13 @@ const openModal = async (prod) => {
             }
             
             const finalMatrix = {};
-            Object.keys(matrix).forEach(key => { finalMatrix[key] = Array.from(matrix[key]); });
+            const initialSelections = {};
+            Object.keys(matrix).forEach(key => { 
+                finalMatrix[key] = Array.from(matrix[key]); 
+                initialSelections[key] = ''; // Khởi tạo rỗng để Vue theo dõi Reactivity
+            });
             quickAddMatrix.value = finalMatrix;
+            quickAddSelections.value = initialSelections;
             
             if (quickAddProduct.value.variants && quickAddProduct.value.variants.length === 1) {
                 const singleVariant = quickAddProduct.value.variants[0];
@@ -227,7 +283,7 @@ const confirmQuickAdd = async () => {
         if (sessionId) headers['X-Cart-Session-Id'] = sessionId;
 
         const payload = { product_variant_id: selectedVar.id, quantity: 1 };
-        const res = await axios.post(`${API_BASE_URL}/api/client/cart`, payload, { headers });
+        const res = await axios.post(`${API_BASE_URL}/client/cart`, payload, { headers });
 
         if (res.data.session_id) {
             setSafeStorage('cart_session_id', res.data.session_id);
@@ -259,8 +315,24 @@ const confirmQuickAdd = async () => {
 .attr-chip { border-radius: 4px; overflow: hidden; min-width: 55px; }
 .attr-chip .chip-inner { border: 1px solid #dee2e6; background-color: #fff; color: #555; border-radius: 4px; transition: all 0.3s ease-in-out; padding: 6px 12px; }
 .attr-chip:hover .chip-inner { border-color: #e7ce7d; color: #9f273b; }
-.attr-chip.selected .chip-inner { background-color: #9f273b; border-color: #9f273b; color: #fff !important; box-shadow: 0 4px 10px rgba(159, 39, 59, 0.25); }
+
+/* Bắt buộc phải có !important để không bị đè bởi class mờ phía dưới */
+.attr-chip.selected .chip-inner { 
+    background-color: #9f273b !important; 
+    border-color: #9f273b !important; 
+    color: #fff !important; 
+    box-shadow: 0 4px 10px rgba(159, 39, 59, 0.25) !important; 
+}
 .attr-chip.selected .chip-inner span { color: #fff !important; }
+
+/* Hiệu ứng gạch bỏ khi option bị hết hàng do xung đột */
+.attr-chip.disabled-option .chip-inner {
+  opacity: 0.4;
+  background-color: #f8f9fa !important;
+  border-color: #e9ecef !important;
+  color: #adb5bd !important;
+  text-decoration: line-through;
+}
 
 .luxury-btn-solid { background-color: #9f273b; color: white; border: 1px solid #9f273b; transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }
 .luxury-btn-solid:hover { background-color: #7a1c2d; border-color: #7a1c2d; color: white; box-shadow: 0 8px 20px rgba(159,39,59,0.3); transform: translateY(-2px); }
