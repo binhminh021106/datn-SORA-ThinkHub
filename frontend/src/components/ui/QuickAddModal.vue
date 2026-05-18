@@ -65,7 +65,9 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 import { globalModalState } from '@/stores/modalState';
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
+// CẬP NHẬT: Không dùng hàm replace() xóa /api nữa, khai báo tương tự Index.vue và Detail.vue
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'http://127.0.0.1:8000/storage';
 
 const quickAddProduct = ref(null);
 const quickAddMatrix = ref({});
@@ -97,12 +99,16 @@ onMounted(() => {
 
 const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
 
+// CẬP NHẬT: Hàm lấy URL ảnh sử dụng biến STORAGE_URL
 const getImageUrl = (path) => {
   if (!path) return '/Sora-placeholder.png';
   if (path.startsWith('http') || path.startsWith('data:image')) return path;
+  
   let cleanPath = path.startsWith('/') ? path.substring(1) : path;
-  if (cleanPath.startsWith('storage/')) return `${API_BASE_URL}/${cleanPath}`;
-  return `${API_BASE_URL}/storage/${cleanPath}`;
+  if (cleanPath.startsWith('storage/')) {
+      cleanPath = cleanPath.substring(8);
+  }
+  return `${STORAGE_URL}/${cleanPath}`;
 };
 
 const handleImageError = (e) => { e.target.src = '/Sora-placeholder.png'; };
@@ -184,7 +190,7 @@ const quickAddSelectedVariant = computed(() => {
 const quickAddDisplayImage = computed(() => {
     if (!quickAddProduct.value) return getImageUrl(null);
     const selectedVar = quickAddSelectedVariant.value;
-    if (selectedVar && selectedVar.image_url) return getImageUrl(selectedVar.image_url);
+    if (selectedVar && selectedVar.image) return getImageUrl(selectedVar.image);
     if (quickAddProduct.value.thumbnail_image) return getImageUrl(quickAddProduct.value.thumbnail_image);
     return getImageUrl(quickAddProduct.value.fallback_image);
 });
@@ -217,11 +223,14 @@ const openModal = async (prod) => {
             if (quickAddProduct.value.variants) {
                 quickAddProduct.value.variants.forEach(variant => {
                     let attrs = {};
-                    let attrVals = variant.attribute_values || variant.attributeValues;
-                    if (attrVals) { 
-                        attrVals.forEach(av => { if (av.attribute) attrs[av.attribute.name] = av.value; });
-                    } else if (variant.attributes) {
-                        attrs = typeof variant.attributes === 'string' ? JSON.parse(variant.attributes) : variant.attributes;
+                    let attrVals = variant.attributes;
+                    // Fix: ProductDetailController API map properties dưới dạng array attributes
+                    if (attrVals && typeof attrVals === 'object') {
+                        Object.entries(attrVals).forEach(([attrName, attrValId]) => {
+                            // API trả ID, nhưng QuickAddMatrix cần Tên, vì vậy ta map qua grouped attributes
+                            const foundAttr = quickAddProduct.value.attributes?.[attrName]?.find(a => a.id === attrValId);
+                            if (foundAttr) attrs[attrName] = foundAttr.name;
+                        });
                     }
                     variant.formatted_attributes = attrs;
                     Object.entries(attrs).forEach(([attrName, attrValue]) => {
