@@ -19,15 +19,18 @@ class ClientHeaderController extends Controller
                 ->select('id', 'name', 'slug')
                 ->get();
 
-            $categories->map(function ($category) {
-                $category->top_products = Product::where('category_id', $category->id)
-                    ->where('status', 'published')
-                    ->orderBy('is_featured', 'desc')
-                    ->orderBy('id', 'desc')
-                    ->take(4)
-                    ->select('id', 'name', 'slug', 'thumbnail_image', 'base_price', 'promotional_price')
-                    ->get();
-                
+            // FIX: Tối ưu N+1 query - Lấy tất cả top products của các category cùng lúc
+            $categoryIds = $categories->pluck('id');
+            $allTopProducts = Product::whereIn('category_id', $categoryIds)
+                ->where('status', 'published')
+                ->orderBy('is_featured', 'desc')
+                ->orderBy('id', 'desc')
+                ->select('id', 'name', 'slug', 'thumbnail_image', 'base_price', 'promotional_price', 'category_id')
+                ->get()
+                ->groupBy('category_id');
+
+            $categories->map(function ($category) use ($allTopProducts) {
+                $category->top_products = $allTopProducts->get($category->id, collect())->take(4)->values();
                 return $category;
             });
 

@@ -119,7 +119,8 @@ class ProductDetailController extends Controller
                     'attributes' => $groupedAttributes, 
                     'variants' => $mappedVariants,
                     'images' => $formattedImages,
-                    'reviews' => \App\Models\Review::with('user:id,fullName,avatar_url')->where('product_id', $product->id)->orderBy('created_at', 'desc')->get()->map(function($review) {
+                    // FIX: Giới hạn số lượng review lấy ra (VD: 10) để tránh treo RAM nếu sản phẩm có hàng ngàn đánh giá
+                    'reviews' => \App\Models\Review::with('user:id,fullName,avatar_url')->where('product_id', $product->id)->orderBy('created_at', 'desc')->take(10)->get()->map(function($review) {
                         if ($review->images) {
                             $review->images = array_map(function($img) {
                                 return asset('storage/' . $img);
