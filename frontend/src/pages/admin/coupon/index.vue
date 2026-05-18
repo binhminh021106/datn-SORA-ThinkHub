@@ -260,6 +260,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios'; // Bỏ moment đi
+import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -283,6 +284,13 @@ const selectedCoupon = ref(null);
 let quickViewModalInstance = null;
 
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
+
+useAdminRefreshListener((payload) => {
+  if (payload.module === 'coupons') {
+    fetchData();
+    Swal.fire({ toast: true, position: 'bottom-end', icon: 'info', title: 'Danh sách mã giảm giá đã được cập nhật', showConfirmButton: false, timer: 2000 });
+  }
+});
 
 // Formatters
 const formatCurrency = (value) => {

@@ -281,9 +281,11 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import { getFullImage } from '@/composables/useUtilities';
 import defaultAvatar from '../../../../assets/images/defaults/avatar1.png';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const route = useRoute();
 const router = useRouter();
@@ -404,7 +406,7 @@ const fetchUser = async () => {
         gender: u.gender || '', birthday: u.birthday || '', password: '', password_confirmation: '' 
     };
     
-    previewAvatar.value = u.avatar_url ? `${API_URL}/storage/${u.avatar_url}` : defaultAvatar;
+    previewAvatar.value = u.avatar_url ? getFullImage(u.avatar_url) : defaultAvatar;
     userAddresses.value = (u.addresses || []).sort((a, b) => b.is_default - a.is_default);
   } catch (err) { 
       Swal.fire('Lỗi', 'Không thể tải dữ liệu khách hàng', 'error');

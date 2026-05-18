@@ -9,6 +9,7 @@ use App\Http\Requests\AdminUpdateUserRequest;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use App\Events\UserAccountUpdated;
 
 class AdminUserController extends Controller
 {
@@ -48,6 +49,7 @@ class AdminUserController extends Controller
                 return $newUser;
             });
 
+            event(new UserAccountUpdated($user->id, ['action' => 'created']));
             return response()->json(['success' => true, 'message' => 'Tạo tài khoản khách hàng thành công!', 'data' => $user], 201);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Lỗi hệ thống: ' . $e->getMessage()], 500);
@@ -109,6 +111,7 @@ class AdminUserController extends Controller
                 }
             });
 
+            event(new UserAccountUpdated($user->id, ['action' => 'updated']));
             return response()->json(['success' => true, 'message' => 'Cập nhật thông tin thành công!']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Lỗi hệ thống: ' . $e->getMessage()], 500);
@@ -119,7 +122,7 @@ class AdminUserController extends Controller
     {
         $user = User::findOrFail($id);
         $user->delete(); 
-        
+        event(new UserAccountUpdated($user->id, ['action' => 'deleted']));
         return response()->json(['success' => true, 'message' => 'Đã chuyển khách hàng vào thùng rác!']);
     }
 
@@ -143,7 +146,7 @@ class AdminUserController extends Controller
         }
 
         $user->restore();
-        
+        event(new UserAccountUpdated($user->id, ['action' => 'restored']));
         return response()->json(['success' => true, 'message' => 'Đã khôi phục tài khoản thành công!']);
     }
 }

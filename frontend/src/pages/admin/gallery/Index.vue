@@ -219,6 +219,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 
 defineOptions({ name: 'GalleryIndex' });
 
@@ -238,6 +239,7 @@ let quickViewModalInstance = null;
 
 // SỬ DỤNG .ENV CHO API BASE URL NHƯ BẠN YÊU CẦU
 const API_URL = import.meta.env.VITE_API_BASE_URL;
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 // Lấy đường dẫn base (không có /api) để trỏ vào thư mục storage ảnh
 const BASE_URL = API_URL.replace('/api', '');
 
@@ -329,6 +331,13 @@ const getStatusSelectClass = (status) => {
   }; 
   return map[status] || 'bg-light text-secondary'; 
 };
+
+useAdminRefreshListener((payload) => {
+  if (payload.module === 'galleries') {
+    fetchData();
+    Swal.fire({ toast: true, position: 'bottom-end', icon: 'info', title: 'Kho ảnh đã được cập nhật', showConfirmButton: false, timer: 2000 });
+  }
+});
 
 const checkStatusChange = (item) => { item.isStatusChanged = (item.localStatus !== item.mappedStatus); };
 const cancelStatusChange = (item) => { item.localStatus = item.mappedStatus; item.isStatusChanged = false; };

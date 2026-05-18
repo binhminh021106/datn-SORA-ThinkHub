@@ -417,6 +417,7 @@ import Swal from 'sweetalert2';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const router = useRouter();
 const route = useRoute();
@@ -454,12 +455,14 @@ const newValueInputRef = ref(null);
 const selectedAttrToManage = ref('');
 const manageAttrName = ref('');
 
+import { getFullImage } from '@/composables/useUtilities';
+
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
 
 const getImageUrl = (path) => {
     if (!path) return '';
     if (path.startsWith('http')) return path;
-    return `${API_URL}/storage/${path}`;
+    return getFullImage(path);
 };
 
 const canProceedToStep2 = computed(() => {

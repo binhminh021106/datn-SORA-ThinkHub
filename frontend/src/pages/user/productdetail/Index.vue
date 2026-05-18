@@ -1,7 +1,7 @@
 <template>
   <div class="product-page">
     
-    <!-- LOADING STATE SKELETON (ĐÃ ĐƯỢC NÂNG CẤP) -->
+    <!-- LOADING STATE SKELETON -->
     <div v-if="isLoading" class="container py-4 fade-in" style="max-width: 1300px; margin: 0 auto;">
        <!-- Breadcrumb Skeleton -->
        <div class="skeleton-box skeleton-text w-25 mb-4 shimmer py-2"></div>
@@ -103,18 +103,19 @@
 
             <h1 class="product-title">{{ product.name }}</h1>
             
-            <div class="product-price mb-3">
+            <!-- PRICE DISPLAY - giữ nguyên cấu trúc cũ -->
+            <div class="product-price mb-3" style="display: flex; align-items: center; gap: 15px;">
               <template v-if="isAllAttributesSelected && currentVariant">
-                <span class="price-current">{{ formatMoney(currentVariant.promotional_price || currentVariant.price) }}</span>
-                <span v-if="currentVariant.promotional_price" class="price-old">
+                <span class="price-current" style="font-size: 24px; font-weight: 700; color: rgb(159,39,59);">{{ formatMoney(currentVariant.promotional_price || currentVariant.price) }}</span>
+                <span v-if="currentVariant.promotional_price" class="price-old" style="font-size: 16px; color: #999; text-decoration: line-through;">
                   {{ formatMoney(currentVariant.price) }}
                 </span>
-                <span v-if="currentVariant.promotional_price" class="discount-badge">
+                <span v-if="currentVariant.promotional_price" class="discount-badge" style="background: #fff0f2; color: rgb(159,39,59); padding: 3px 8px; font-size: 12px; font-weight: 600; border-radius: 4px;">
                   -{{ Math.round((1 - currentVariant.promotional_price / currentVariant.price) * 100) }}%
                 </span>
               </template>
               <template v-else>
-                <span class="price-current">{{ formatMoney(product.promotional_price || product.base_price || product.variants?.[0]?.price) }}</span>
+                <span class="price-current" style="font-size: 24px; font-weight: 700; color: rgb(159,39,59);">{{ formatMoney(product.promotional_price || product.base_price || product.variants?.[0]?.price) }}</span>
               </template>
             </div>
 
@@ -128,70 +129,98 @@
               </div>
             </div>
 
-            <div class="product-variants">
-              <div v-for="(options, attrName) in product.attributes" :key="attrName" class="variant-group">
-                <div class="variant-label-wrapper">
-                  <h3 class="variant-label">
+            <!-- VARIANT SELECTION - giữ nguyên cấu trúc cũ -->
+            <div v-if="product.attributes" class="product-variants mb-4">
+              <div v-for="(options, attrName) in product.attributes" :key="attrName" class="variant-group mb-3">
+                <div class="variant-label-wrapper d-flex justify-content-between align-items-center gap-2 mb-2">
+                  <h3 class="variant-label mb-0" style="font-size: 16px; font-weight: 600; color: #333;">
                     {{ attrName }}
-                    <span v-if="selectedAttributes[attrName]" style="color: #333; font-weight: 600; text-transform: none; font-size: 15px;">
+                    <span v-if="selectedAttributes[attrName]" style="color: #666; font-weight: 500; text-transform: none; font-size: 14px;">
                       : {{ getOptionName(attrName, selectedAttributes[attrName]) }}
                     </span>
                   </h3>
                   <button
                     v-if="isSizeAttribute(attrName)"
-                    @click="openSizeGuide"
-                    class="size-guide-btn"
+                    @click="showSizeGuideModal = true"
+                    class="size-guide-btn-compact"
+                    type="button"
                     title="Xem hướng dẫn kích cỡ"
+                    style="background: none; border: none; color: #9f273b; font-size: 14px; cursor: pointer;"
                   >
-                    <i class="bi bi-rulers"></i> Hướng dẫn size
+                    <i class="bi bi-rulers"></i>
                   </button>
                 </div>
                 
-                <div v-if="isColorAttribute(attrName)" class="variant-options color-options">
+                <!-- Color Options -->
+                <div v-if="isColorAttribute(attrName)" class="variant-options color-options d-flex gap-2 flex-wrap">
                   <button 
                     v-for="option in options" 
                     :key="option.id"
-                    @click="selectAttribute(attrName, option.id)"
+                    @click="!isOptionDisabled(attrName, option.id) && selectAttribute(attrName, option.id)"
                     class="color-swatch-btn d-flex justify-content-center align-items-center"
-                    :class="{ 'active': selectedAttributes[attrName] === option.id }"
+                    :class="{ 
+                      'active': selectedAttributes[attrName] === option.id,
+                      'disabled': isOptionDisabled(attrName, option.id)
+                    }"
                     :title="option.name"
-                    :style="{ backgroundColor: getColorCode(option.name) }"
+                    :style="{ 
+                      width: '36px', height: '36px', borderRadius: '50%', border: selectedAttributes[attrName] === option.id ? '2px solid #9f273b' : '1px solid #ddd',
+                      backgroundColor: getColorCode(option.name),
+                      opacity: isOptionDisabled(attrName, option.id) ? 0.4 : 1,
+                      cursor: isOptionDisabled(attrName, option.id) ? 'not-allowed' : 'pointer'
+                    }"
+                    :disabled="isOptionDisabled(attrName, option.id)"
                   >
                     <i v-if="selectedAttributes[attrName] === option.id" class="bi bi-check fw-bold" :class="isLightColor(option.name) ? 'text-dark' : 'text-white'" style="font-size: 1.3rem;"></i>
+                    <i v-else-if="isOptionDisabled(attrName, option.id)" class="bi bi-slash-circle text-secondary" style="font-size: 1rem;"></i>
                   </button>
                 </div>
                 
-                <div v-else class="variant-options">
+                <!-- Text/Size Options -->
+                <div v-else class="variant-options d-flex gap-2 flex-wrap">
                   <button 
                     v-for="option in options" 
                     :key="option.id"
-                    @click="selectAttribute(attrName, option.id)"
+                    @click="!isOptionDisabled(attrName, option.id) && selectAttribute(attrName, option.id)"
                     class="variant-btn"
-                    :class="{ 'active': selectedAttributes[attrName] === option.id }"
+                    :class="{ 
+                      'active': selectedAttributes[attrName] === option.id,
+                      'disabled': isOptionDisabled(attrName, option.id)
+                    }"
+                    :disabled="isOptionDisabled(attrName, option.id)"
+                    :style="{ 
+                      padding: '8px 16px', border: selectedAttributes[attrName] === option.id ? '2px solid #9f273b' : '1px solid #ddd',
+                      backgroundColor: selectedAttributes[attrName] === option.id ? '#fff0f2' : '#fff',
+                      color: selectedAttributes[attrName] === option.id ? '#9f273b' : '#333',
+                      borderRadius: '6px', fontSize: '14px', cursor: isOptionDisabled(attrName, option.id) ? 'not-allowed' : 'pointer',
+                      opacity: isOptionDisabled(attrName, option.id) ? 0.4 : 1
+                    }"
                   >
                     {{ option.name }}
+                    <i v-if="isOptionDisabled(attrName, option.id)" class="bi bi-slash-circle ms-1" style="font-size: 0.8rem;"></i>
                   </button>
                 </div>
               </div>
             </div>
 
+            <!-- STOCK STATUS - giữ nguyên cấu trúc cũ -->
             <div class="stock-progress-wrapper mb-4">
               <template v-if="isAllAttributesSelected && currentVariant">
-                <div v-if="currentStock > 0 && currentStock < 10" class="stock-alert critical">
-                  <p class="stock-text">Only <strong>{{ currentStock }}</strong> item(s) left in stock! (Chỉ còn {{ currentStock }} sản phẩm)</p>
-                  <div class="progress-bar-bg">
-                    <div class="progress-bar-fill red-fill" :style="{ width: stockProgressWidth + '%' }"></div>
+                <div v-if="currentStock > 0 && currentStock < 10" class="stock-alert critical" style="background: #fff0f2; border: 1px solid #f8d7da; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+                  <p class="stock-text" style="color: #721c24; margin: 0; font-size: 14px;">Only <strong>{{ currentStock }}</strong> item(s) left in stock! (Chỉ còn {{ currentStock }} sản phẩm)</p>
+                  <div class="progress-bar-bg" style="height: 6px; background: #f8d7da; border-radius: 3px; margin-top: 8px;">
+                    <div class="progress-bar-fill red-fill" :style="{ width: stockProgressWidth + '%', height: '100%', background: '#dc3545', borderRadius: '3px' }"></div>
                   </div>
                 </div>
                 
-                <div v-else-if="currentStock >= 10 && currentStock < 15" class="stock-alert warning">
-                  <p class="stock-text">Sắp hết hàng (Còn {{ currentStock }} sản phẩm)</p>
-                  <div class="progress-bar-bg">
-                    <div class="progress-bar-fill orange-fill" :style="{ width: stockProgressWidth + '%' }"></div>
+                <div v-else-if="currentStock >= 10 && currentStock < 15" class="stock-alert warning" style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+                  <p class="stock-text" style="color: #856404; margin: 0; font-size: 14px;">Sắp hết hàng (Còn {{ currentStock }} sản phẩm)</p>
+                  <div class="progress-bar-bg" style="height: 6px; background: #ffeaa7; border-radius: 3px; margin-top: 8px;">
+                    <div class="progress-bar-fill orange-fill" :style="{ width: stockProgressWidth + '%', height: '100%', background: '#fd7e14', borderRadius: '3px' }"></div>
                   </div>
                 </div>
 
-                <div v-else class="stock-status-luxury">
+                <div v-else class="stock-status-luxury" style="font-size: 14px; color: #28a745; font-weight: 500;">
                   <span :class="currentStock > 0 ? 'in-stock' : 'out-of-stock'">
                     <i class="bi" :class="currentStock > 0 ? 'bi-box-seam-fill' : 'bi-box-seam'"></i> 
                     {{ currentStock > 0 ? `Còn ${currentStock} sản phẩm` : 'Pre-Order (Đặt trước / Hết hàng)' }}
@@ -232,7 +261,7 @@
               <button 
                 class="btn-action-sub" 
                 style="flex: 1;"
-                @click="toggleCompare({ id: product.id, name: product.name, image: mainImage })"
+                @click="handleToggleCompare({ id: product.id, name: product.name, image: mainImage })"
                 :class="{ 'active': isInCompare(product.id) }"
               >
                 <i class="bi bi-arrow-left-right me-1"></i>
@@ -353,55 +382,26 @@
           <div class="spinner small-spinner"></div>
         </div>
 
+        <!-- LIST SẢN PHẨM GỢI Ý - SỬ DỤNG COMPONENT PRODUCTCARD ĐÃ TÍCH HỢP ĐẦY ĐỦ -->
         <div v-else class="rec-slider-container" ref="recSliderRef">
-          
           <div 
             v-for="item in recommendedProducts" 
             :key="item.id" 
-            class="sora-luxury-card"
+            class="position-relative"
             style="min-width: 250px; max-width: 250px; flex-shrink: 0;"
-            @click="goToProduct(item.slug || item.id)"
           >
-            <!-- Nút So Sánh (Floating) -->
-            <button class="compare-float-btn" 
-                    :class="{ 'active': isInCompare(item.id) }"
-                    title="So sánh" 
-                    @click.stop="toggleCompare({ id: item.id, name: item.name, image: getImageUrl(item.thumbnail_image) })">
-              <i class="bi bi-arrow-left-right"></i>
-            </button>
-
-            <!-- Vùng hình ảnh -->
-            <div class="sora-card-image">
-                <div class="sora-card-badges">
-                    <!-- <span v-if="item.is_new" class="sora-badge">MỚI</span> -->
-                </div>
-
-                <button class="sora-wishlist-btn" :class="{ 'active': isFavourited(item.id) }" @click.stop="toggleFavourite(item)" :title="isFavourited(item.id) ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'" :disabled="isTogglingFav === item.id">
-                    <span v-if="isTogglingFav === item.id" class="spinner-border spinner-border-sm text-danger" style="width: 1rem; height: 1rem;"></span>
-                    <i v-else :class="isFavourited(item.id) ? 'bi bi-suit-heart-fill text-danger' : 'bi bi-suit-heart'"></i>
-                </button>
-
-                <!-- Ảnh -->
-                <img :src="getImageUrl(item.thumbnail_image)" :alt="item.name" @error="handleImageError">
-            </div>
-
-            <!-- Vùng thông tin -->
-            <div class="sora-card-info">
-                <h3 class="sora-card-title" :title="item.name">{{ item.name }}</h3>
-                <p class="sora-card-category">{{ item.category?.name || item.brand?.name || 'Trang sức SORA' }}</p>
-                
-                <div class="sora-card-price">
-                    <span v-if="item.promotional_price" class="sora-card-price-old">{{ formatMoney(item.base_price) }}</span>
-                    <span>{{ formatMoney(item.promotional_price || item.base_price) }}</span>
-                </div>
-            </div>
-
-            <!-- Vùng nút hover hiện lên -->
-            <div class="sora-card-action">
-                <button class="sora-action-btn" @click.stop="goToProduct(item.slug || item.id)">
-                    <i class="bi bi-eye me-1"></i> XEM CHI TIẾT
-                </button>
-            </div>
+            <!-- Sử dụng ProductCard Đã Được Nâng Cấp -->
+            <ProductCard
+              :product="item"
+              :is-in-wishlist="isFavourited(item.id)"
+              :is-in-compare="isInCompare(item.id)"
+              :show-wishlist="true"
+              :show-compare="true"
+              :show-add-to-cart="true"
+              @toggle-wishlist="toggleFavourite"
+              @toggle-compare="handleToggleCompare"
+              @add-to-cart="openQuickAdd"
+            />
           </div>
           
           <div v-if="recommendedProducts.length === 0" class="rec-empty">
@@ -415,7 +415,7 @@
         <div class="description-content" v-html="product.description"></div>
       </section>
 
-      <!-- PRODUCT REVIEWS SECTION (ĐÃ NÂNG CẤP GIAO DIỆN XỊN XÒ VÀ HIỂN THỊ ĐÚNG ẢNH/SỐ SAO) -->
+      <!-- PRODUCT REVIEWS SECTION -->
       <section class="product-reviews-section fade-in">
         <h2 class="section-title text-center font-serif text-sora-primary mb-5"><i class="bi bi-star-fill text-gold me-2"></i>ĐÁNH GIÁ SẢN PHẨM</h2>
         
@@ -482,175 +482,67 @@
 
     </template>
     
-    <!-- MODAL HƯỚNG DẪN SIZE -->
-    <transition name="fade">
-      <div v-if="showSizeGuideModal" class="size-guide-modal-overlay" @click.self="closeSizeGuide">
-        <div class="size-guide-modal">
-          <div class="size-guide-modal-header">
-            <h3>Hướng Dẫn Kích Cỡ</h3>
-            <button class="close-btn" @click="closeSizeGuide">
-              <i class="bi bi-x-lg"></i>
+    <!-- SIZE GUIDE MODAL COMPONENT -->
+    <SizeGuideModal :show="showSizeGuideModal" @close="showSizeGuideModal = false" />
+
+    <!-- GỌI COMPONENT SO SÁNH VÀ CHUYỀN DỮ LIỆU TỪ TRONG PAGE VÀO -->
+    <CompareModal 
+      ref="compareModalRef" 
+      :shop-slug="shopSlug" 
+      :base-product-id="product?.id" 
+      @update-list="compareList = $event" 
+    />
+
+    <!-- POPUP QUICK ADD TỪ COMPONENT PRODUCT CARD -->
+    <div class="modal fade" id="quickAddModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-0 border-0 shadow-lg">
+          <div class="modal-header bg-sora-primary text-white rounded-0 border-0 p-4">
+            <h5 class="modal-title font-serif fw-bold tracking-wider">Tùy chọn Sản phẩm</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body p-4" v-if="quickAddProduct">
+            <div class="d-flex gap-3 mb-4 pb-4 border-bottom border-light-subtle">
+               <img :src="quickAddDisplayImage" @error="handleImageError" class="object-fit-cover border shadow-sm" style="width: 80px; height: 80px; border-radius: 4px;">
+               <div class="d-flex flex-column justify-content-center">
+                  <small class="text-uppercase font-oswald tracking-widest text-gold fw-bold" style="font-size: 0.7rem;">{{ quickAddProduct.category?.name || 'Trang Sức SORA' }}</small>
+                  <h6 class="font-serif fw-bold mb-1 text-dark fs-5">{{ quickAddProduct.name }}</h6>
+                  <span class="text-sora-primary fw-bold font-serif fs-5">{{ formatMoney(quickAddSelectedPrice) }}</span>
+               </div>
+            </div>
+
+            <div v-for="(values, attrName) in quickAddMatrix" :key="attrName" class="mb-4">
+               <p class="text-dark font-oswald tracking-wide text-uppercase mb-2 small fw-bold">
+                 {{ attrName }}: <span class="fw-normal text-sora-primary ms-1">{{ quickAddSelections[attrName] || '' }}</span>
+               </p>
+               <div class="d-flex flex-wrap gap-2">
+                 <label v-for="val in values" :key="val" class="attr-chip m-0 cursor-pointer transition-all" :class="{'selected': String(quickAddSelections[attrName]) === String(val)}">
+                   <input type="radio" class="d-none" :value="val" v-model="quickAddSelections[attrName]" @change="quickAddError = false">
+                   <div class="chip-inner px-3 py-2 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
+                     <span class="fw-bold font-oswald tracking-wide small">{{ val }}</span>
+                   </div>
+                 </label>
+               </div>
+            </div>
+            
+            <div class="text-danger small fst-italic mt-2 fw-bold bg-danger bg-opacity-10 p-2 rounded" v-if="quickAddError">
+               <i class="bi bi-exclamation-triangle-fill me-1"></i> Vui lòng chọn đầy đủ phân loại.
+            </div>
+            <div class="text-danger small fst-italic mt-2 fw-bold bg-danger bg-opacity-10 p-2 rounded" v-else-if="quickAddMatrix && Object.keys(quickAddMatrix).length > 0 && !quickAddSelectedVariant && isQuickAddAllSelected">
+               <i class="bi bi-x-circle-fill me-1"></i> Phiên bản này đã hết hàng hoặc không tồn tại.
+            </div>
+
+            <button @click="confirmQuickAdd" class="btn luxury-btn-solid w-100 py-3 mt-4 font-oswald tracking-widest text-uppercase fw-bold shadow-sm fs-6" style="background-color: #9f273b; color: white; border: none;">
+               <i class="bi bi-bag-plus-fill me-2"></i> Xác nhận thêm
             </button>
           </div>
-
-          <div class="size-guide-modal-body">
-            <div class="size-chart-section">
-              <h4 class="section-title">Bảng Kích Cỡ Tiêu Chuẩn</h4>
-              <p class="section-desc">Những kích cỡ bên dưới là những thông số tiêu chuẩn cho nhẫn nữ. Kích cỡ có thể thay đổi tùy theo yêu cầu riêng của từng khách hàng.</p>
-
-              <div class="size-table">
-                <div class="table-header">
-                  <div class="table-cell">Kích Cỡ Nhẫn</div>
-                  <div class="table-cell">Đường Kính (mm)</div>
-                  <div class="table-cell">Chu Vi (mm)</div>
-                </div>
-                <div v-for="size in sizeGuideData" :key="size.size" class="table-row">
-                  <div class="table-cell">{{ size.size }}</div>
-                  <div class="table-cell">{{ size.diameter }} mm</div>
-                  <div class="table-cell">{{ size.circumference }} mm</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="measurement-guide-section mt-5">
-              <h4 class="section-title">Cách Đo Kích Cỡ Nhẫn</h4>
-              <ul class="measurement-steps">
-                <li>
-                  <span class="step-number">1</span>
-                  <div class="step-content">
-                    <strong>Sử dụng một sợi dây mềm hoặc giấy</strong> - Quấn xung quanh ngón tay của bạn, vị trí mà bạn sẽ đeo nhẫn
-                  </div>
-                </li>
-                <li>
-                  <span class="step-number">2</span>
-                  <div class="step-content">
-                    <strong>Đánh dấu vị trí giao nhau</strong> - Ghi dấu ở điểm hai đầu sợi dây/giấy gặp nhau
-                  </div>
-                </li>
-                <li>
-                  <span class="step-number">3</span>
-                  <div class="step-content">
-                    <strong>Đo chu vi</strong> - Dùng thước đo chu vi của sợi dây từ điểm đầu đến điểm cuối (tính bằng mm)
-                  </div>
-                </li>
-                <li>
-                  <span class="step-number">4</span>
-                  <div class="step-content">
-                    <strong>Đối chiếu với bảng</strong> - Tìm chu vi gần nhất trong bảng kích cỡ phía trên để xác định size nhẫn của bạn
-                  </div>
-                </li>
-              </ul>
-            </div>
-
-            <div class="tips-section mt-5 p-4" style="background-color: #f8f9fa; border-left: 4px solid rgb(159,39,59); border-radius: 4px;">
-              <h4 class="section-title mb-3" style="margin-top: 0;"><i class="bi bi-lightbulb-fill text-warning me-2"></i> Lưu Ý Quan Trọng</h4>
-              <ul class="tips-list">
-                <li>Đo kích cỡ khi tay bạn ở nhiệt độ bình thường (không lạnh)</li>
-                <li>Đeo nhẫn vào ngón tay ít nhất 30 phút trước khi mua để chắc chắn kích cỡ phù hợp</li>
-                <li>Nếu bạn không chắc chắn, hãy liên hệ với đội hỗ trợ của chúng tôi để được tư vấn</li>
-                <li>Sau khi mua, bạn có thể thay đổi kích cỡ nhẫn miễn phí trong 30 ngày đầu</li>
-              </ul>
-            </div>
-          </div>
-
-          <div class="size-guide-modal-footer">
-            <button class="btn-close-guide" @click="closeSizeGuide">Đóng</button>
+          <div v-else class="p-5 text-center">
+             <div class="spinner-border text-sora-primary" role="status"></div>
+             <p class="mt-3 text-muted font-oswald tracking-widest text-uppercase small">Đang nạp dữ liệu...</p>
           </div>
         </div>
       </div>
-    </transition>
-    <transition name="slide-up">
-      <div v-if="compareList.length > 0" class="compare-bottom-bar">
-        <div class="compare-inner">
-          <div class="compare-info">
-            <h4>So sánh sản phẩm ({{ compareList.length }}/4)</h4>
-          </div>
-          <div class="compare-items">
-            <div v-for="n in 4" :key="n" class="compare-item" :class="{ empty: !compareList[n-1] }">
-              <template v-if="compareList[n-1]">
-                <img :src="compareList[n-1].image || getImageUrl(compareList[n-1].thumbnail_image)" :alt="compareList[n-1].name">
-                <button class="remove-compare" @click="removeFromCompare(compareList[n-1].id)">
-                  <i class="bi bi-x"></i>
-                </button>
-              </template>
-              <span v-else><i class="bi bi-plus text-muted"></i></span>
-            </div>
-          </div>
-          <div class="compare-actions">
-            <button class="btn-clear-compare" @click="clearCompare">Xóa tất cả</button>
-            <button class="btn-go-compare" :disabled="compareList.length < 2" @click="goToComparePage">So sánh ngay</button>
-          </div>
-        </div>
-      </div>
-    </transition>
-
-    <!-- POPUP THÊM SO SÁNH -->
-    <transition name="fade">
-      <div v-if="showComparePopup" class="compare-modal-overlay" @click.self="closeComparePopup">
-        <div class="compare-modal">
-          <div class="compare-modal-header">
-            <h3>Thêm sản phẩm so sánh</h3>
-            <div class="header-search-wrap">
-              <input type="text" v-model="searchQuery" @input="handleSearchInput" placeholder="Tìm tên sản phẩm..." class="modal-search-input">
-            </div>
-            <button class="close-btn" @click="closeComparePopup"><i class="bi bi-x-lg"></i></button>
-          </div>
-
-          <div class="compare-modal-tabs">
-            <button :class="{ active: comparePopupTab === 'suggestions' }" @click="comparePopupTab = 'suggestions'">Gợi ý</button>
-            <button :class="{ active: comparePopupTab === 'favourites' }" @click="fetchFavouritesForCompare">Yêu thích</button>
-          </div>
-
-          <div class="compare-modal-body">
-            <!-- TAB GỢI Ý -->
-            <div v-if="comparePopupTab === 'suggestions'">
-              <div v-if="isLoadingCompareSuggestions" class="text-center py-4">
-                <div class="spinner small-spinner mx-auto" style="margin: 0 auto;"></div>
-              </div>
-              <div v-else-if="filteredSuggestions.length > 0" class="compare-suggestions-grid">
-                <div v-for="item in filteredSuggestions" :key="item.id" class="suggestion-card">
-                  <img :src="getImageUrl(item.thumbnail_image)" :alt="item.name" class="suggestion-img" @error="handleImageError">
-                  <div class="suggestion-info">
-                    <div class="suggestion-name" :title="item.name">{{ item.name }}</div>
-                    <div class="suggestion-price">{{ formatMoney(item.promotional_price || item.base_price) }}</div>
-                    <button class="btn-add-suggestion" :class="{ 'is-added': isInCompare(item.id) }" @click="toggleCompare({ id: item.id, name: item.name, image: getImageUrl(item.thumbnail_image) })">
-                      {{ isInCompare(item.id) ? 'Đã thêm' : 'Thêm' }}
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div v-else class="empty-msg">Không tìm thấy sản phẩm gợi ý.</div>
-            </div>
-
-            <!-- TAB YÊU THÍCH -->
-            <div v-if="comparePopupTab === 'favourites'">
-              <div v-if="!isLoggedIn" class="not-logged-in-msg">Vui lòng đăng nhập để xem danh sách yêu thích.</div>
-              <div v-else-if="isLoadingFavourites" class="text-center py-4">
-                <div class="spinner small-spinner mx-auto" style="margin: 0 auto;"></div>
-              </div>
-              <div v-else-if="filteredFavourites.length > 0" class="compare-suggestions-grid">
-                <div v-for="item in filteredFavourites" :key="item.id" class="suggestion-card">
-                  <img :src="getImageUrl(item.thumbnail_image)" :alt="item.name" class="suggestion-img" @error="handleImageError">
-                  <div class="suggestion-info">
-                    <div class="suggestion-name" :title="item.name">{{ item.name }}</div>
-                    <div class="suggestion-price">{{ formatMoney(item.promotional_price || item.base_price) }}</div>
-                    <button class="btn-add-suggestion" :class="{ 'is-added': isInCompare(item.id) }" @click="toggleCompare({ id: item.id, name: item.name, image: getImageUrl(item.thumbnail_image) })">
-                      {{ isInCompare(item.id) ? 'Đã thêm' : 'Thêm' }}
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div v-else class="empty-msg">Danh sách yêu thích đang trống.</div>
-            </div>
-          </div>
-
-          <div class="compare-modal-footer">
-            <button class="btn-outline" @click="closeComparePopup">Đóng</button>
-            <button class="btn-primary" :disabled="compareList.length < 2" @click="goToComparePage">Xem so sánh ({{ compareList.length }})</button>
-          </div>
-        </div>
-      </div>
-    </transition>
+    </div>
 
   </div>
 </template>
@@ -661,118 +553,224 @@ import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 
+import ProductCard from '@/components/ui/ProductCard.vue';
+import CompareModal from '@/components/ui/CompareModal.vue';
+import SizeGuideModal from '@/components/ui/SizeGuideModal.vue';
+import VariantSelector from '@/components/ui/VariantSelector.vue';
+import StockStatusBar from '@/components/ui/StockStatusBar.vue';
+import PriceDisplay from '@/components/ui/PriceDisplay.vue';
+
+// Composables
+import { useWishlist } from '@/composables/useWishlist';
+import { useProductVariants } from '@/composables/useProductVariants';
+import { isColorAttribute, isSizeAttribute } from '@/composables/useColorMapping';
+import { getToken, getHeaders, getFullImage, formatMoney } from '@/composables/useUtilities';
+import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener.js';
+
 const route = useRoute();
 const router = useRouter();
 const product = ref(null);
 const mainImage = ref('');
-const selectedAttributes = ref({});
-const selectedQuantity = ref(1);
 const isLoading = ref(true);
 const showSizeGuideModal = ref(false);
-
-const sizeGuideData = [
-  { size: '5', diameter: 15.7, circumference: 50 },
-  { size: '6', diameter: 16.5, circumference: 52 },
-  { size: '7', diameter: 17.4, circumference: 54 },
-  { size: '8', diameter: 18.3, circumference: 57 },
-  { size: '9', diameter: 19.1, circumference: 60 },
-  { size: '10', diameter: 20.0, circumference: 62.5 },
-  { size: '11', diameter: 20.9, circumference: 65 },
-  { size: '12', diameter: 21.8, circumference: 68 },
-  { size: '13', diameter: 22.6, circumference: 71 },
-  { size: '14', diameter: 23.5, circumference: 74 },
-  { size: '15', diameter: 24.4, circumference: 76.5 },
-];
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const BACKEND_URL = API_BASE_URL.replace(/\/api\/?$/, '');
 const shopSlug = route.params.shop_slug || 'aurora';
+const soraPlaceholder = '/Sora-placeholder.png';
 
-const soraPlaceholder = '/Sora-placeholder.png'; 
+// Wishlist composable
+const { favourites, isTogglingFav, fetchFavorites, isFavourited, toggleFavourite: toggleFav } = useWishlist();
 
-const isColorAttribute = (name) => {
-  const lowerName = name.toLowerCase();
-  return lowerName.includes('màu') || lowerName.includes('color');
+// Variants composable - need to pass product ref
+let variantsComposable;
+
+const getVariantsComposable = () => {
+  if (!variantsComposable && product.value) {
+    variantsComposable = useProductVariants({ value: product.value });
+  }
+  return variantsComposable || useProductVariants({ value: null });
 };
 
-const isSizeAttribute = (name) => {
-  const lowerName = name.toLowerCase();
-  return lowerName.includes('size') || lowerName.includes('kích cỡ') || lowerName.includes('cỡ') || lowerName.includes('ni tay');
-};
+// Computed refs from variants composable
+const selectedAttributes = computed(() => {
+  const comp = getVariantsComposable();
+  return comp ? comp.selectedAttributes.value : {};
+});
+const selectedQuantity = computed({
+  get: () => {
+    const comp = getVariantsComposable();
+    return comp ? comp.selectedQuantity.value : 1;
+  },
+  set: (value) => {
+    const comp = getVariantsComposable();
+    if (comp) {
+      comp.selectedQuantity.value = value;
+    }
+  }
+});
+const isAllAttributesSelected = computed(() => {
+  const comp = getVariantsComposable();
+  return comp ? comp.isAllAttributesSelected.value : false;
+});
+const currentVariant = computed(() => {
+  const comp = getVariantsComposable();
+  return comp ? comp.currentVariant.value : null;
+});
+const currentStock = computed(() => {
+  const comp = getVariantsComposable();
+  return comp ? comp.currentStock.value : null;
+});
+const stockProgressWidth = computed(() => {
+  const comp = getVariantsComposable();
+  return comp ? comp.stockProgressWidth.value : 0;
+});
 
-const getColorCode = (colorName) => {
-  if(!colorName) return '#e0e0e0';
-  const map = {
-    'đỏ': '#cc1e2e', 'red': '#cc1e2e', 'đỏ đô': '#8b0000', 'đỏ mận': '#800000', 'đỏ tươi': '#ff0000', 'ruby': '#e0115f',
-    'xanh': '#2e5b9f', 'blue': '#2e5b9f', 'xanh dương': '#007bff', 'xanh biển': '#1e90ff', 'xanh ngọc': '#009981', 'xanh lá': '#28a745', 'green': '#28a745', 'xanh lục': '#228b22', 'emerald': '#50c878',
-    'vàng': '#e7ce7d', 'gold': '#e7ce7d', 'vàng 18k': '#d4af37', 'vàng 24k': '#ffd700', 'vàng chanh': '#fada5e', 'vàng kem': '#fdfd96',
-    'trắng': '#ffffff', 'white': '#ffffff', 'vàng trắng': '#f4f4f4', 'bạch kim': '#e5e4e2', 'bạc': '#c0c0c0', 'silver': '#c0c0c0', 'trong suốt': '#f0f8ff',
-    'đen': '#2c2c2c', 'black': '#2c2c2c', 'xám': '#808080', 'gray': '#808080', 'ghi': '#808080',
-    'hồng': '#f4a4b4', 'pink': '#f4a4b4', 'vàng hồng': '#b76e79', 'rose gold': '#b76e79', 'tím': '#800080', 'purple': '#800080', 'thạch anh tím': '#9966cc',
-    'nâu': '#8b4513', 'brown': '#8b4513', 'cam': '#fd7e14', 'orange': '#fd7e14'
-  };
-  return map[colorName.toLowerCase().trim()] || '#e0e0e0'; 
-};
-
-const isLightColor = (colorName) => {
-  const code = getColorCode(colorName);
-  const lightCodes = ['#ffffff', '#fcfcfc', '#f4f4f4', '#e5e4e2', '#c0c0c0', '#e0e0e0', '#fada5e', '#fdfd96', '#f0f8ff', '#ffb6c1', '#f4a4b4'];
-  return lightCodes.includes(code);
-};
-
-const getOptionName = (attrName, optionId) => {
-  if (!product.value || !product.value.attributes) return '';
-  const options = product.value.attributes[attrName];
-  if (!options) return '';
-  const opt = options.find(o => o.id === optionId);
-  return opt ? opt.name : '';
-};
-
+// Countdown & Recommendations
 const countdown = ref({ days: '00', hours: '00', minutes: '00', seconds: '00' });
 let timerInterval = null;
-
 const activeTab = ref('related_category');
 const recommendedProducts = ref([]);
 const isLoadingRecs = ref(false);
 const recSliderRef = ref(null);
+const shopBrands = ref([]);
 
-const shopBrands = ref([]); 
-
+// Compare & Quick Add
+const compareModalRef = ref(null);
 const compareList = ref([]);
-const showComparePopup = ref(false);
-const compareSuggestions = ref([]);
-const isLoadingCompareSuggestions = ref(false);
+const quickAddProduct = ref(null);
+const quickAddMatrix = ref({});
+const quickAddSelections = ref({});
+const quickAddError = ref(false);
+let quickAddModalInstance = null;
 
-const comparePopupTab = ref('suggestions');
-const favouriteProducts = ref([]);
-const isLoadingFavourites = ref(false);
+// Helper functions
+const isInCompare = (id) => compareList.value.some(item => item.id === id);
 
-// Hàm getToken dùng chung cho toàn page
-const getToken = () => {
-  const commonKeys = ['access_token', 'token', 'auth_token', 'userToken', 'user_token'];
-  for (const k of commonKeys) {
-    const val = localStorage.getItem(k) || sessionStorage.getItem(k);
-    if (val && val.length > 15) return val; 
-  }
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    try {
-      const parsed = JSON.parse(localStorage.getItem(key));
-      if (parsed && typeof parsed === 'object') {
-        if (parsed.access_token) return parsed.access_token;
-        if (parsed.token) return parsed.token;
-        if (parsed.user && parsed.user.token) return parsed.user.token;
-      }
-    } catch(e) {}
-  }
-  return '';
+const handleToggleCompare = (prod) => {
+  if (compareModalRef.value) compareModalRef.value.toggleCompare(prod);
 };
 
-const isLoggedIn = computed(() => !!getToken());
+// Quick Add computed properties
+const isQuickAddAllSelected = computed(() => {
+  const requiredAttrs = Object.keys(quickAddMatrix.value);
+  if (requiredAttrs.length === 0) return true;
+  return requiredAttrs.every(attr => quickAddSelections.value[attr]);
+});
 
-const searchQuery = ref('');
-let searchTimeout = null;
+const quickAddSelectedVariant = computed(() => {
+  if (!quickAddProduct.value || !quickAddProduct.value.variants) return null;
+  const requiredAttrs = Object.keys(quickAddMatrix.value);
+  if (requiredAttrs.length === 0) return quickAddProduct.value.variants[0];
+  if (!isQuickAddAllSelected.value) return null;
+  return quickAddProduct.value.variants.find(v => {
+    return requiredAttrs.every(attr => v.formatted_attributes && String(v.formatted_attributes[attr]) === String(quickAddSelections.value[attr]));
+  });
+});
 
+const quickAddDisplayImage = computed(() => {
+  if (!quickAddProduct.value) return getFullImage(null);
+  const selectedVar = quickAddSelectedVariant.value;
+  if (selectedVar && selectedVar.image_url) return getFullImage(selectedVar.image_url);
+  if (quickAddProduct.value.thumbnail_image) return getFullImage(quickAddProduct.value.thumbnail_image);
+  return getFullImage(quickAddProduct.value.fallback_image);
+});
+
+const quickAddSelectedPrice = computed(() => {
+  if (!quickAddProduct.value) return 0;
+  const selectedVar = quickAddSelectedVariant.value;
+  if (selectedVar) return selectedVar.promotional_price || selectedVar.price;
+  return quickAddProduct.value.promotional_price || quickAddProduct.value.base_price || quickAddProduct.value.fallback_price || 0;
+});
+
+// Quick Add functions
+const openQuickAdd = async (prod) => {
+  quickAddProduct.value = null;
+  quickAddError.value = false;
+  quickAddSelections.value = {};
+  quickAddMatrix.value = {};
+
+  if (!quickAddModalInstance) {
+    quickAddModalInstance = new window.bootstrap.Modal(document.getElementById('quickAddModal'));
+  }
+  quickAddModalInstance.show();
+
+  try {
+    const res = await axios.get(`${API_BASE_URL}/shop/all/products/${prod.slug}`);
+    if (res.data && res.data.data) {
+      quickAddProduct.value = {
+        ...res.data.data,
+        fallback_image: prod.thumbnail_image,
+        fallback_price: prod.base_price
+      };
+
+      const matrix = {};
+      if (quickAddProduct.value.variants) {
+        quickAddProduct.value.variants.forEach(variant => {
+          let attrs = {};
+          let attrVals = variant.attributeValues || variant.attribute_values;
+          if (attrVals) {
+            attrVals.forEach(av => { if (av.attribute) attrs[av.attribute.name] = av.value; });
+          } else if (variant.attributes) {
+            attrs = typeof variant.attributes === 'string' ? JSON.parse(variant.attributes) : variant.attributes;
+          }
+          variant.formatted_attributes = attrs;
+          Object.entries(attrs).forEach(([attrName, attrValue]) => {
+            if (!matrix[attrName]) matrix[attrName] = new Set();
+            matrix[attrName].add(attrValue);
+          });
+        });
+      }
+
+      const finalMatrix = {};
+      Object.keys(matrix).forEach(key => { finalMatrix[key] = Array.from(matrix[key]); });
+      quickAddMatrix.value = finalMatrix;
+
+      if (quickAddProduct.value.variants && quickAddProduct.value.variants.length === 1) {
+        const singleVariant = quickAddProduct.value.variants[0];
+        if (singleVariant.formatted_attributes) {
+          Object.entries(singleVariant.formatted_attributes).forEach(([attrName, attrValue]) => {
+            quickAddSelections.value[attrName] = attrValue;
+          });
+        }
+      }
+    }
+  } catch (e) {
+    quickAddModalInstance.hide();
+    soraAlert.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể tải thông tin sản phẩm' });
+  }
+};
+
+const confirmQuickAdd = async () => {
+  if (!isQuickAddAllSelected.value) {
+    quickAddError.value = true;
+    return;
+  }
+  quickAddError.value = false;
+
+  const selectedVar = quickAddSelectedVariant.value;
+  if (!selectedVar) {
+    Toast.fire({ icon: 'error', title: 'Phiên bản đã hết hàng!' });
+    return;
+  }
+
+  try {
+    const payload = { product_variant_id: selectedVar.id, quantity: 1 };
+    const res = await axios.post(`${API_BASE_URL}/client/cart`, payload, { headers: getHeaders() });
+
+    if (res.data.session_id) {
+      localStorage.setItem('cart_session_id', res.data.session_id);
+    }
+
+    quickAddModalInstance.hide();
+    Toast.fire({ icon: 'success', title: 'Đã thêm sản phẩm vào giỏ' });
+  } catch (error) {
+    const msg = error.response?.data?.message || 'Không thể thêm vào giỏ hàng!';
+    soraAlert.fire({ icon: 'error', title: 'Lỗi', text: msg });
+  }
+};
+
+// Swal utilities
 const soraAlert = Swal.mixin({
   buttonsStyling: true,
   confirmButtonColor: '#9f273b',
@@ -791,90 +789,14 @@ const Toast = Swal.mixin({
   iconColor: '#9f273b'
 });
 
-// ==========================================
-// LOGIC WISHLIST (YÊU THÍCH) - ĐỒNG BỘ API MỚI
-// ==========================================
-const favourites = ref([]);
-const isTogglingFav = ref(null);
-
-const fetchFavorites = async () => {
-  const token = getToken();
-  if (!token) return;
-  try {
-    const response = await fetch(`${API_BASE_URL}/client/favourites`, {
-      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-    });
-    const data = await response.json();
-    if (data.status) {
-      favourites.value = data.data.map(fav => fav.product_id);
-    }
-  } catch (e) {
-    console.error('Không thể tải danh sách yêu thích', e);
-  }
-};
-
-const isFavourited = (productId) => {
-  if (!productId) return false;
-  return favourites.value.includes(productId);
-};
-
+// Wishlist wrapper with Toast & soraAlert
 const toggleFavourite = async (prod) => {
-  if (!prod || !prod.id) return;
-  const token = getToken();
-  
-  if (!token) {
-    soraAlert.fire({
-      icon: 'warning',
-      title: 'Bạn chưa đăng nhập!',
-      text: 'Vui lòng đăng nhập để lưu trữ bộ sưu tập yêu thích của mình.',
-      confirmButtonText: 'Đăng Nhập Ngay',
-      showCancelButton: true,
-      cancelButtonText: 'Đóng'
-    }).then((result) => {
-      if (result.isConfirmed) router.push('/login');
-    });
-    return;
-  }
-
-  isTogglingFav.value = prod.id; 
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/client/favourites/toggle`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({ product_id: prod.id })
-    });
-    
-    const data = await response.json();
-
-    if (data.status) {
-      if (data.action === 'added') {
-        favourites.value.push(prod.id);
-        Toast.fire({ icon: 'success', title: 'Đã thêm vào yêu thích' });
-      } else if (data.action === 'removed') {
-        favourites.value = favourites.value.filter(id => id !== prod.id);
-        Toast.fire({ icon: 'info', title: 'Đã bỏ yêu thích' });
-      }
-    } else {
-      if (response.status === 401) {
-          Toast.fire({ icon: 'error', title: 'Phiên đăng nhập hết hạn. Vui lòng tải lại.' });
-      }
-    }
-  } catch (error) {
-    Toast.fire({ icon: 'error', title: 'Có lỗi xảy ra, thử lại sau' });
-  } finally {
-    isTogglingFav.value = null; 
-  }
+  await toggleFav(prod, Toast, soraAlert, router);
 };
-// ==========================================
 
+// Countdown
 const startCountdown = () => {
   const targetTime = new Date().getTime() + (5 * 60 * 60 * 1000 + 59 * 60 * 1000 + 47 * 1000);
-
   const updateTime = () => {
     const now = new Date().getTime();
     const distance = targetTime - now;
@@ -887,7 +809,6 @@ const startCountdown = () => {
     const h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
     const s = Math.floor((distance % (1000 * 60)) / 1000);
-
     countdown.value = {
       days: d < 10 ? '0' + d : d.toString(),
       hours: h < 10 ? '0' + h : h.toString(),
@@ -895,175 +816,38 @@ const startCountdown = () => {
       seconds: s < 10 ? '0' + s : s.toString()
     };
   };
-
   updateTime();
   timerInterval = setInterval(updateTime, 1000);
 };
 
 onUnmounted(() => {
   if (timerInterval) clearInterval(timerInterval);
-});
-
-const getStock = (variant) => {
-  if(!variant) return 0;
-  return variant.stock_quantity ?? variant.stock ?? 0;
-};
-
-const currentStock = computed(() => {
-  if (!isAllAttributesSelected.value || !currentVariant.value) return null;
-  return getStock(currentVariant.value);
-});
-
-const stockProgressWidth = computed(() => {
-  const stock = currentStock.value;
-  if (!stock) return 0;
-  const percent = (stock / 15) * 100;
-  return percent > 100 ? 100 : percent;
-});
-
-const loadCompareList = () => {
-  try {
-    const stored = localStorage.getItem(`compare_list_${shopSlug}`);
-    if (stored) compareList.value = JSON.parse(stored);
-  } catch (e) { compareList.value = []; }
-};
-
-watch(compareList, (newVal) => {
-  localStorage.setItem(`compare_list_${shopSlug}`, JSON.stringify(newVal));
-}, { deep: true });
-
-const filteredSuggestions = computed(() => {
-  if (!searchQuery.value) return compareSuggestions.value;
-  const lowerQ = searchQuery.value.toLowerCase();
-  return compareSuggestions.value.filter(p => p.name.toLowerCase().includes(lowerQ));
-});
-
-const filteredFavourites = computed(() => {
-  if (!searchQuery.value) return favouriteProducts.value;
-  const lowerQ = searchQuery.value.toLowerCase();
-  return favouriteProducts.value.filter(p => p.name.toLowerCase().includes(lowerQ));
-});
-
-const fetchCompareSuggestions = async (query = '') => {
-  isLoadingCompareSuggestions.value = true;
-  try {
-    let url = new URL(`${API_BASE_URL}/shop/${shopSlug}/products`);
-    url.searchParams.append('per_page', query ? '20' : '10');
-    url.searchParams.append('sort', 'new'); 
-    if (product.value?.id) url.searchParams.append('exclude_id', product.value.id);
-    if (query) url.searchParams.append('search', query);
-
-    const response = await fetch(url.toString());
-    const result = await response.json();
-    if (result.success && result.data?.data) compareSuggestions.value = result.data.data;
-  } catch (error) { console.error("Lỗi tải sản phẩm gợi ý:", error); } 
-  finally { isLoadingCompareSuggestions.value = false; }
-};
-
-const handleSearchInput = () => {
-  if (comparePopupTab.value === 'suggestions') {
-    if (searchTimeout) clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => { fetchCompareSuggestions(searchQuery.value); }, 500); 
-  }
-};
-
-const isInCompare = (id) => compareList.value.some(item => item.id === id);
-
-const toggleCompare = (prod) => {
-  if (isInCompare(prod.id)) removeFromCompare(prod.id);
-  else {
-    if (compareList.value.length >= 4) return Toast.fire({ icon: 'warning', title: 'Chỉ được so sánh tối đa 4 sản phẩm' });
-    compareList.value.push(prod);
-    Toast.fire({ icon: 'success', title: 'Đã thêm vào danh sách so sánh' });
-    if (!showComparePopup.value) openComparePopup();
-  }
-};
-
-const removeFromCompare = (id) => compareList.value = compareList.value.filter(item => item.id !== id);
-const clearCompare = () => compareList.value = [];
-
-const goToComparePage = () => {
-  if (compareList.value.length < 2) return Toast.fire({ icon: 'info', title: 'Vui lòng chọn ít nhất 2 sản phẩm' });
-  showComparePopup.value = false;
-  const baseProductId = product.value ? product.value.id : compareList.value[0].id;
-  router.push({ path: `/shop/${shopSlug}/compare`, query: { spGoc: baseProductId } });
-};
-
-const openComparePopup = async () => {
-  showComparePopup.value = true; comparePopupTab.value = 'suggestions'; searchQuery.value = '';
-  if (compareSuggestions.value.length === 0) await fetchCompareSuggestions();
-};
-const closeComparePopup = () => showComparePopup.value = false;
-
-const openSizeGuide = () => showSizeGuideModal.value = true;
-const closeSizeGuide = () => showSizeGuideModal.value = false;
-
-const fetchFavouritesForCompare = async () => {
-  comparePopupTab.value = 'favourites';
-  if(!isLoggedIn.value || favouriteProducts.value.length > 0) return;
-  isLoadingFavourites.value = true;
-  try {
-    const token = getToken();
-    const response = await fetch(`${API_BASE_URL}/client/favourites`, {
-      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-    });
-    const result = await response.json();
-    if (result.status && result.data) favouriteProducts.value = result.data.map(item => item.product).filter(p => p !== null);
-  } catch (error) { console.error("Lỗi lấy danh sách yêu thích:", error); } 
-  finally { isLoadingFavourites.value = false; }
-};
-
-const isAllAttributesSelected = computed(() => {
-  if (!product.value || !product.value.attributes) return false;
-  const requiredAttrs = Object.keys(product.value.attributes);
-  if (requiredAttrs.length === 0) return true; 
-  return requiredAttrs.every(attr => selectedAttributes.value[attr] !== undefined);
-});
-
-const currentVariant = computed(() => {
-  if (!product.value || !product.value.variants) return null;
-  return product.value.variants.find((variant) => {
-    const attrs = variant.attributes || {};
-    for (const [attrName, selectedOptionId] of Object.entries(selectedAttributes.value)) {
-      if (String(attrs[attrName]) !== String(selectedOptionId)) return false;
-    }
-    return true;
-  });
-});
-
-// ĐÃ FIX: Hàm xử lý Url Ảnh (tự động nối /storage/ chuẩn)
-const getFullImage = (path) => {
-    if (!path) return soraPlaceholder;
-    if (path.startsWith('http') || path.startsWith('data:image')) return path;
-    const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    if (cleanPath.startsWith('storage/')) return `${BACKEND_URL}/${cleanPath}`;
-    return `${BACKEND_URL}/storage/${cleanPath}`;
-};
-
-const getImageUrl = getFullImage; 
+  if (quickAddModalInstance) quickAddModalInstance.dispose();
+}); 
 
 const viewFullImage = (url) => {
   Swal.fire({
-    imageUrl: url, 
-    imageAlt: 'Product Image', 
-    width: 600, 
-    imageHeight: 600, 
-    padding: 0, 
+    imageUrl: url,
+    imageAlt: 'Product Image',
+    width: 600,
+    imageHeight: 600,
+    padding: 0,
     background: 'transparent',
-    backdrop: 'rgba(0,0,0,0.85)', 
-    showConfirmButton: false, 
+    backdrop: 'rgba(0,0,0,0.85)',
+    showConfirmButton: false,
     showCloseButton: true,
-    customClass: { 
-        image: 'rounded-3 shadow-lg object-fit-contain bg-white',
-        popup: 'p-0 bg-transparent'
+    customClass: {
+      image: 'rounded-3 shadow-lg object-fit-contain bg-white',
+      popup: 'p-0 bg-transparent'
     }
   });
 };
 
+// API & Data functions
 const fetchProductData = async () => {
-  const productSlug = route.params.slug || route.params.product_slug; 
+  const productSlug = route.params.slug || route.params.product_slug;
   if (!productSlug) return isLoading.value = false;
-  
+
   isLoading.value = true;
   try {
     const response = await fetch(`${API_BASE_URL}/shop/${shopSlug}/products/${productSlug}`);
@@ -1071,93 +855,119 @@ const fetchProductData = async () => {
 
     if (result.success && result.data) {
       product.value = result.data;
-      
+
+      // Re-initialize variantsComposable with new product
+      variantsComposable = null;
+
       if (product.value.variants) {
         product.value.variants.forEach(v => {
           if (typeof v.attributes === 'string') {
-            try { v.attributes = JSON.parse(v.attributes); } catch(e) {}
+            try { v.attributes = JSON.parse(v.attributes); } catch (e) { }
           }
         });
       }
 
       if (product.value.images) {
-        product.value.images = product.value.images.map(img => getImageUrl(img));
+        product.value.images = product.value.images.map(img => getFullImage(img));
         if (product.value.images.length > 0) mainImage.value = product.value.images[0];
       }
-      
-      selectedAttributes.value = {}; selectedQuantity.value = 1;
-      
+
       saveToRecentlyViewed(product.value);
       fetchRecommendations('related_category');
       startCountdown();
-    } 
-  } catch (error) { console.error("Lỗi kết nối API:", error); } 
-  finally { isLoading.value = false; }
-};
-
-const fetchBrands = async () => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/shop/${shopSlug}/brands`);
-    const result = await response.json();
-    if (result.success && result.data) shopBrands.value = result.data.slice(0, 10);
-  } catch (error) { console.error("Lỗi tải thương hiệu:", error); }
-};
-
-onMounted(() => {
-  loadCompareList(); 
-  fetchFavorites(); 
-  fetchProductData();
-  fetchBrands();
-});
-
-watch(() => route.params.slug, (newSlug, oldSlug) => {
-  if (newSlug && newSlug !== oldSlug) {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    if(timerInterval) clearInterval(timerInterval); 
-    fetchProductData();
+    }
+  } catch (error) {
+    console.error("Lỗi kết nối API:", error);
+  } finally {
+    isLoading.value = false;
   }
-});
+};
 
+const saveToRecentlyViewed = (prod) => {
+  try {
+    let viewed = JSON.parse(localStorage.getItem('viewed_products') || '[]');
+    viewed = viewed.filter(p => p.id !== prod.id);
+    viewed.unshift({
+      id: prod.id, slug: route.params.slug || route.params.product_slug, name: prod.name,
+      thumbnail_image: prod.images && prod.images.length > 0 ? prod.images[0] : '',
+      brand: prod.brand, base_price: prod.variants && prod.variants.length > 0 ? prod.variants[0].price : 0,
+      promotional_price: prod.variants && prod.variants.length > 0 ? prod.variants[0].promotional_price : null
+    });
+    if (viewed.length > 12) viewed.pop();
+    localStorage.setItem('viewed_products', JSON.stringify(viewed));
+  } catch (error) {
+    console.error("Lỗi lưu sản phẩm đã xem:", error);
+  }
+};
+
+const fetchRecommendations = async (tab) => {
+  activeTab.value = tab;
+  isLoadingRecs.value = true;
+  recommendedProducts.value = [];
+
+  if (tab === 'viewed') {
+    try {
+      const viewed = JSON.parse(localStorage.getItem('viewed_products') || '[]');
+      recommendedProducts.value = viewed.filter(p => p.id !== product.value?.id);
+    } catch (error) { } finally {
+      isLoadingRecs.value = false;
+    }
+    return;
+  }
+
+  try {
+    let url = new URL(`${API_BASE_URL}/shop/${shopSlug}/products`);
+    url.searchParams.append('per_page', '8');
+    if (product.value?.id) url.searchParams.append('exclude_id', product.value.id);
+    if (tab === 'related_category' && product.value?.category?.slug) url.searchParams.append('categories', product.value.category.slug);
+    else if (tab === 'new') url.searchParams.append('sort', 'new');
+
+    const response = await fetch(url.toString());
+    const result = await response.json();
+    if (result.success && result.data?.data) recommendedProducts.value = result.data.data;
+  } catch (error) { } finally {
+    isLoadingRecs.value = false;
+  }
+};
+
+// Variants methods wrapper using composable
 const selectAttribute = (attrName, optionId) => {
-  if (selectedAttributes.value[attrName] === optionId) delete selectedAttributes.value[attrName];
-  else selectedAttributes.value[attrName] = optionId;
-  selectedQuantity.value = 1; 
-  if (isAllAttributesSelected.value && currentVariant.value) {
-    const variantImage = currentVariant.value.image || currentVariant.value.image_url;
-    if (variantImage) {
-      setMainImage(getImageUrl(variantImage));
+  const comp = getVariantsComposable();
+  if (comp) {
+    comp.selectAttribute(attrName, optionId);
+    if (comp.isAllAttributesSelected.value && comp.currentVariant.value) {
+      const variantImage = comp.currentVariant.value.image || comp.currentVariant.value.image_url;
+      if (variantImage) {
+        setMainImage(getFullImage(variantImage));
+      }
     }
   }
 };
 
 const updateQuantity = (delta) => {
-  if (!isAllAttributesSelected.value || !currentVariant.value) return Toast.fire({ icon: 'info', title: 'Vui lòng chọn phân loại' });
-  let newQty = selectedQuantity.value + delta;
-  const stock = currentStock.value;
-  if (newQty < 1) newQty = 1;
-  if (newQty > stock) { Toast.fire({ icon: 'warning', title: 'Đã quá số lượng trong kho' }); newQty = stock; }
-  selectedQuantity.value = newQty;
+  const comp = getVariantsComposable();
+  if (comp) {
+    comp.updateQuantity(delta, Toast);
+  }
 };
 
 const validateQuantity = () => {
-  if (!isAllAttributesSelected.value || !currentVariant.value) { Toast.fire({ icon: 'info', title: 'Vui lòng chọn phân loại' }); return selectedQuantity.value = 1; }
-  let qty = parseInt(selectedQuantity.value);
-  const stock = currentStock.value;
-  if (isNaN(qty) || qty < 1) return selectedQuantity.value = 1;
-  if (qty > stock) { Toast.fire({ icon: 'warning', title: 'Đã quá số lượng trong kho' }); selectedQuantity.value = stock; }
+  const comp = getVariantsComposable();
+  if (comp) {
+    comp.validateQuantity(Toast);
+  }
 };
 
-const getHeaders = () => {
-  const headers = { 'Accept': 'application/json', 'Content-Type': 'application/json' };
-  const token = getToken();
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  let sid = localStorage.getItem('cart_session_id');
-  if (!sid && !token) { 
-    sid = 'session_' + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem('cart_session_id', sid);
-  }
-  if (sid) headers['X-Cart-Session-Id'] = sid;
-  return headers;
+// Helper functions for template
+const isOptionDisabled = (attrName, optionId) => {
+  const comp = getVariantsComposable();
+  return comp ? !comp.isOptionAvailable(attrName, optionId) : false;
+};
+
+const getOptionName = (attrName, optionId) => {
+  if (!product.value?.attributes?.[attrName]) return '';
+  const option = product.value.attributes[attrName].find(opt => opt.id === optionId);
+  return option ? option.name : '';
 };
 
 const addToCart = async () => {
@@ -1188,61 +998,34 @@ const goToShopWithBrand = (brandId) => {
   router.push({ path: `/shop/${shopSlug}`, query: { brand: brandId } }).catch(() => window.location.href = `/shop/${shopSlug}?brand=${brandId}`);
 };
 
-const saveToRecentlyViewed = (prod) => {
-  try {
-    let viewed = JSON.parse(localStorage.getItem('viewed_products') || '[]');
-    viewed = viewed.filter(p => p.id !== prod.id); 
-    viewed.unshift({
-      id: prod.id, slug: route.params.slug || route.params.product_slug, name: prod.name,
-      thumbnail_image: prod.images && prod.images.length > 0 ? prod.images[0] : '',
-      brand: prod.brand, base_price: prod.variants && prod.variants.length > 0 ? prod.variants[0].price : 0,
-      promotional_price: prod.variants && prod.variants.length > 0 ? prod.variants[0].promotional_price : null
-    });
-    if (viewed.length > 12) viewed.pop(); 
-    localStorage.setItem('viewed_products', JSON.stringify(viewed));
-  } catch (error) { console.error("Lỗi lưu sản phẩm đã xem:", error); }
+const changeRecTab = (tab) => {
+  if (activeTab.value !== tab) fetchRecommendations(tab);
 };
 
-const fetchRecommendations = async (tab) => {
-  activeTab.value = tab;
-  isLoadingRecs.value = true;
-  recommendedProducts.value = []; 
-  
-  if (tab === 'viewed') {
-    try {
-      const viewed = JSON.parse(localStorage.getItem('viewed_products') || '[]');
-      recommendedProducts.value = viewed.filter(p => p.id !== product.value?.id);
-    } catch (error) {} finally { isLoadingRecs.value = false; }
-    return;
-  }
-
-  try {
-    let url = new URL(`${API_BASE_URL}/shop/${shopSlug}/products`);
-    url.searchParams.append('per_page', '8');
-    if (product.value?.id) url.searchParams.append('exclude_id', product.value.id);
-    if (tab === 'related_category' && product.value?.category?.slug) url.searchParams.append('categories', product.value.category.slug);
-    else if (tab === 'new') url.searchParams.append('sort', 'new');
-
-    const response = await fetch(url.toString());
-    const result = await response.json();
-    if (result.success && result.data?.data) recommendedProducts.value = result.data.data;
-  } catch (error) {} finally { isLoadingRecs.value = false; }
-};
-
-const changeRecTab = (tab) => { if (activeTab.value !== tab) fetchRecommendations(tab); };
 const scrollRecSlider = (direction) => {
   if (recSliderRef.value) recSliderRef.value.scrollBy({ left: direction === 'left' ? -280 : 280, behavior: 'smooth' });
 };
-const goToProduct = (slug) => {
-  if (!slug) return;
-  router.push({ params: { ...route.params, slug: slug } }).catch(() => window.location.href = `/shop/${shopSlug}/productdetail/${slug}`);
-};
 
-const formatMoney = (amount) => amount ? new Intl.NumberFormat('vi-VN').format(amount) + ' ₫' : '0 ₫';
 const setMainImage = (url) => mainImage.value = url;
+
 const handleImageError = (e) => e.target.src = soraPlaceholder;
 
+// Lifecycle hooks
+onMounted(() => {
+  fetchFavorites();
+  fetchProductData();
+});
+
+watch(() => route.params.slug, (newSlug, oldSlug) => {
+  if (newSlug && newSlug !== oldSlug) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (timerInterval) clearInterval(timerInterval);
+    fetchProductData();
+  }
+});
+
 </script>
+
 <style>
 :root {
   --sora-primary: rgb(159,39,59);
@@ -1253,9 +1036,6 @@ const handleImageError = (e) => e.target.src = soraPlaceholder;
 }
 </style>
 
-<style>
-
-</style>
 <style scoped>
 /* =========================================
    LUXURY UI & PURE CSS LAYOUT 
@@ -1365,7 +1145,7 @@ input[type=number] { -moz-appearance: textfield; }
 /* =========================================
    ĐỒNG BỘ NÚT YÊU THÍCH VỚI TRANG CHỦ
    ========================================= */
-.main-wishlist-btn, .sora-wishlist-btn {
+.main-wishlist-btn {
     width: 38px;
     height: 38px;
     background: #ffffff;
@@ -1379,17 +1159,15 @@ input[type=number] { -moz-appearance: textfield; }
     cursor: pointer;
     transition: all 0.3s ease;
     color: #6c757d; 
+    position: absolute; top: 20px; right: 20px;
 }
-.main-wishlist-btn { position: absolute; top: 20px; right: 20px; }
-.sora-wishlist-btn { position: absolute; top: 15px; right: 15px; }
-
-.main-wishlist-btn:hover, .sora-wishlist-btn:hover {
+.main-wishlist-btn:hover {
     transform: scale(1.1);
     color: #cc1e2e;
 }
-.main-wishlist-btn.active, .sora-wishlist-btn.active { color: #dc3545; }
-.main-wishlist-btn.active i, .sora-wishlist-btn.active i { color: #dc3545 !important; }
-.main-wishlist-btn i, .sora-wishlist-btn i { font-size: 1.15rem; margin-top: 2px; }
+.main-wishlist-btn.active { color: #dc3545; }
+.main-wishlist-btn.active i { color: #dc3545 !important; }
+.main-wishlist-btn i { font-size: 1.15rem; margin-top: 2px; }
 
 .btn-wishlist-action {
     width: 48px;
@@ -1458,29 +1236,6 @@ input[type=number] { -moz-appearance: textfield; }
 .rec-slider-container { display: flex; gap: 20px; overflow-x: auto; scroll-behavior: smooth; padding-bottom: 20px; -ms-overflow-style: none; scrollbar-width: none; }
 .rec-slider-container::-webkit-scrollbar { display: none; }
 
-/* =========================================
-   SORA LUXURY PRODUCT CARD
-   ========================================= */
-.sora-luxury-card { background: #ffffff; border: 1px solid #f0f0f0; position: relative; display: flex; flex-direction: column; overflow: hidden; transition: all 0.4s ease; cursor: pointer; height: 100%; }
-.sora-luxury-card:hover { box-shadow: 0 10px 30px rgba(0,0,0,0.06); border-color: #e5e5e5; }
-.sora-card-image { position: relative; aspect-ratio: 1/1; overflow: hidden; background-color: #fcfcfc; }
-.sora-card-image img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
-.sora-luxury-card:hover .sora-card-image img { transform: scale(1.08); }
-.compare-float-btn { position: absolute; top: 15px; left: 15px; background: rgba(255,255,255,0.8); border: none; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: #777; cursor: pointer; z-index: 20; transition: all 0.2s; border-radius: 50%; }
-.compare-float-btn:hover, .compare-float-btn.active { color: #fff; background: rgb(159,39,59); }
-.sora-card-badges { position: absolute; top: 15px; left: 15px; z-index: 10; display: flex; flex-direction: column; gap: 8px; }
-.compare-float-btn ~ .sora-card-badges { top: 55px; } 
-.sora-badge { background: #ffffff; color: #222; font-family: 'Oswald', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 2px; padding: 4px 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-.sora-card-info { padding: 20px 15px 70px 15px; text-align: center; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
-.sora-card-title { font-family: 'Oswald', sans-serif; font-size: 1.1rem; font-weight: 600; color: #111; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.sora-card-category { font-family: 'Playfair Display', serif; font-style: italic; color: #666; font-size: 0.95rem; margin-bottom: 15px; }
-.sora-card-price { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: #9f273b; margin-top: auto; }
-.sora-card-price-old { font-size: 0.95rem; color: #999; text-decoration: line-through; margin-right: 10px; font-weight: 400; }
-.sora-card-action { position: absolute; bottom: 0; left: 0; width: 100%; transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1); z-index: 10; }
-.sora-luxury-card:hover .sora-card-action { transform: translateY(0); }
-.sora-action-btn { width: 100%; padding: 14px 0; background: #731621; color: #ffffff; border: none; font-family: 'Oswald', sans-serif; font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: background 0.3s ease; }
-.sora-action-btn:hover { background: #500f17; }
-
 .product-description-section { padding-top: 40px; border-top: 1px solid #eee; margin-top: 20px;}
 .section-title { font-size: 18px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 25px; }
 .description-content { line-height: 1.8; color: #555; font-size: 15px; }
@@ -1504,6 +1259,37 @@ input[type=number] { -moz-appearance: textfield; }
 .review-images .cursor-zoom-in { cursor: zoom-in; }
 .group-hover-scale:hover { transform: scale(1.08); }
 
+/* SIZE GUIDE BUTTON STYLING */
+.variant-label-wrapper { position: relative; }
+
+.size-guide-btn-compact {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1.5px solid #ddd;
+  background: white;
+  color: #9f273b;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+}
+
+.size-guide-btn-compact:hover {
+  border-color: #9f273b;
+  background: #fdf5f6;
+  transform: scale(1.08);
+  box-shadow: 0 2px 8px rgba(159, 39, 59, 0.15);
+}
+
+.size-guide-btn-compact:active {
+  transform: scale(0.95);
+}
+
 @media (max-width: 1024px) {
   .product-grid { flex-wrap: wrap; }
   .product-gallery { width: 100%; }
@@ -1523,62 +1309,6 @@ input[type=number] { -moz-appearance: textfield; }
   .flash-sale-countdown { flex-direction: column; align-items: flex-start; gap: 8px; }
 }
 
-/* CSS SO SÁNH */
-.compare-bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: #fff; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); padding: 15px 20px; z-index: 9999; border-top: 2px solid rgb(159,39,59); }
-.compare-inner { max-width: 1300px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 20px; }
-.compare-info h4 { font-size: 15px; margin-bottom: 2px; color: #333; }
-.compare-items { display: flex; gap: 15px; }
-.compare-item { width: 60px; height: 60px; border: 1px solid #ddd; border-radius: 6px; position: relative; background: #f8f9fa; display: flex; align-items: center; justify-content: center; }
-.compare-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
-.compare-item.empty span { font-size: 24px; color: #ccc; }
-.remove-compare { position: absolute; top: -8px; right: -8px; background: red; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.compare-actions { display: flex; gap: 15px; }
-.btn-clear-compare { background: transparent; border: none; text-decoration: underline; color: #777; cursor: pointer; }
-.btn-go-compare { background: rgb(159,39,59); color: #fff; border: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; cursor: pointer; }
-.btn-go-compare:disabled { background: #ccc; cursor: not-allowed; }
-.slide-up-enter-active, .slide-up-leave-active { transition: transform 0.3s ease, opacity 0.3s; }
-.slide-up-enter-from, .slide-up-leave-to { transform: translateY(100%); opacity: 0; }
-
-@media (max-width: 60px) {
-  .compare-inner { flex-direction: column; gap: 15px; }
-  .compare-actions { width: 100%; justify-content: space-between; }
-  .btn-go-compare { flex: 1; margin-left: 15px; }
-}
-
-.compare-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
-.compare-modal { background: #fff; border-radius: 12px; width: 90%; max-width: 800px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
-.compare-modal-header { padding: 20px 25px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap; }
-.compare-modal-header h3 { font-size: 18px; margin: 0; color: #222; font-weight: 600; white-space: nowrap;}
-.header-search-wrap { display: flex; align-items: center; gap: 15px; flex: 1; justify-content: flex-end; }
-.modal-search-input { padding: 8px 16px; border: 1px solid #ddd; border-radius: 20px; outline: none; font-size: 13px; width: 100%; max-width: 250px; transition: border-color 0.3s, box-shadow 0.3s; }
-.modal-search-input:focus { border-color: rgb(159,39,59); box-shadow: 0 0 5px rgba(159,39,59,0.2); }
-.close-btn { background: transparent; border: none; font-size: 20px; cursor: pointer; color: #888; transition: color 0.2s;}
-.close-btn:hover { color: rgb(159,39,59); }
-.compare-modal-body { padding: 20px 25px; overflow-y: auto; flex: 1; }
-.compare-modal-subtitle { font-size: 14px; color: #666; margin-bottom: 20px; }
-.compare-suggestions-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
-.suggestion-card { border: 1px solid #eee; border-radius: 8px; padding: 10px; text-align: center; display: flex; flex-direction: column; transition: transform 0.2s, border-color 0.2s; }
-.suggestion-card:hover { border-color: rgb(159,39,59); transform: translateY(-3px); }
-.suggestion-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 6px; margin-bottom: 10px; background: #f9f9f9;}
-.suggestion-info { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; }
-.suggestion-name { font-size: 13px; font-weight: 500; margin-bottom: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #333; line-height: 1.4;}
-.suggestion-price { font-size: 14px; font-weight: 600; color: rgb(159,39,59); margin-bottom: 10px; }
-.btn-add-suggestion { background: transparent; border: 1px solid rgb(159,39,59); color: rgb(159,39,59); padding: 6px; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: 600; transition: all 0.2s; width: 100%; }
-.btn-add-suggestion:hover { background: rgb(159,39,59); color: #fff; }
-.btn-add-suggestion.is-added { background: rgb(159,39,59); color: #fff; }
-.compare-modal-footer { padding: 15px 25px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 15px; background: #fdfdfd; border-radius: 0 0 12px 12px; }
-.btn-outline { background: transparent; border: 1px solid #ccc; padding: 10px 20px; border-radius: 6px; cursor: pointer; color: #555; font-weight: 600; transition: background 0.2s; }
-.btn-outline:hover { background: #eee; }
-.btn-primary { background: rgb(159,39,59); border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; color: #fff; font-weight: 600; transition: opacity 0.2s; }
-.btn-primary:disabled { background: #ccc; cursor: not-allowed; }
-
-/* ĐÃ THÊM: CSS phục hồi cho Tab Gợi ý & Yêu thích Modal So Sánh */
-.compare-modal-tabs { display: flex; border-bottom: 1px solid #eee; background: #fafafa; }
-.compare-modal-tabs button { flex: 1; padding: 12px 15px; background: transparent; border: none; font-size: 14px; font-weight: 600; color: #666; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.3s; }
-.compare-modal-tabs button.active { color: #9f273b; border-bottom-color: #9f273b; background: #fff; }
-.compare-modal-tabs button:hover:not(.active) { background: #f0f0f0; }
-.not-logged-in-msg, .empty-msg { text-align: center; padding: 40px 20px; color: #888; font-style: italic; }
-
 /* SKELETON LOADING CSS */
 .fade-in { animation: fadeIn 0.4s ease-in; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -1595,4 +1325,11 @@ input[type=number] { -moz-appearance: textfield; }
 .skeleton-box { background-color: #eee; border-radius: 4px; }
 .skeleton-text { height: 16px; border-radius: 4px; }
 .skeleton-title { height: 28px; border-radius: 4px; }
+
+/* CSS QUICK ADD MODAL CHIP */
+.attr-chip { border-radius: 4px; overflow: hidden; min-width: 55px; }
+.attr-chip .chip-inner { border: 1px solid #dee2e6; background-color: #fff; color: #555; border-radius: 4px; transition: all 0.3s ease-in-out; padding: 6px 12px; }
+.attr-chip:hover .chip-inner { border-color: #e7ce7d; color: #9f273b; }
+.attr-chip.selected .chip-inner { background-color: #9f273b; border-color: #9f273b; color: #fff !important; box-shadow: 0 4px 10px rgba(159, 39, 59, 0.25); }
+.attr-chip.selected .chip-inner span { color: #fff !important; }
 </style>

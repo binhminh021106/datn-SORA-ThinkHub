@@ -1,36 +1,21 @@
 <template>
   <div class="combo-detail-page bg-light-custom pb-5">
     
-    <!-- HIỆU ỨNG SKELETON KHI ĐANG TẢI TRANG -->
     <div v-if="isLoading" class="container pt-4 pb-5 fade-in">
-      <!-- Breadcrumb Skeleton -->
       <div class="skeleton-box skeleton-text w-25 mb-4 shimmer py-2"></div>
-
       <div class="row g-0 g-lg-5 mb-5 pb-5 border-bottom border-light-subtle">
-        <!-- Cột Trái (Ảnh) Skeleton -->
         <div class="col-lg-6 mb-4 mb-lg-0">
           <div class="skeleton-box w-100 shimmer rounded" style="min-height: 600px;"></div>
         </div>
-
-        <!-- Cột Phải (Chi tiết) Skeleton -->
         <div class="col-lg-6">
           <div class="ps-lg-4 pt-2">
-            
             <div class="skeleton-box skeleton-text w-50 mb-3 shimmer"></div>
             <div class="skeleton-box skeleton-title w-100 mb-4 shimmer" style="height: 48px;"></div>
-            
-            <!-- Description Skeleton -->
             <div class="skeleton-box skeleton-text w-100 mb-2 shimmer"></div>
             <div class="skeleton-box skeleton-text w-100 mb-2 shimmer"></div>
             <div class="skeleton-box skeleton-text w-75 mb-5 shimmer"></div>
-
-            <!-- Timer Box Skeleton -->
             <div class="skeleton-box w-100 mb-5 shimmer rounded border border-light-subtle" style="height: 80px;"></div>
-
-            <!-- Editorial Title Skeleton -->
             <div class="skeleton-box skeleton-title w-50 mb-4 shimmer"></div>
-
-            <!-- Editorial Items Skeleton -->
             <div v-for="i in 2" :key="i" class="card border border-light-subtle shadow-sm rounded-0 mb-4 overflow-hidden skeleton-card">
               <div class="row g-0">
                 <div class="col-4 bg-light p-3">
@@ -44,30 +29,21 @@
                 </div>
               </div>
             </div>
-
-            <!-- Summary Box Skeleton -->
             <div class="skeleton-box w-100 mb-5 shimmer rounded" style="height: 120px;"></div>
-
-            <!-- Buttons Skeleton -->
             <div class="row g-3">
               <div class="col-sm-6"><div class="skeleton-box w-100 shimmer" style="height: 50px;"></div></div>
               <div class="col-sm-6"><div class="skeleton-box w-100 shimmer" style="height: 50px;"></div></div>
             </div>
-            
-            <!-- Benefits Footer Skeleton -->
             <div class="d-flex justify-content-between mt-5 pt-4 border-top border-light-subtle">
                <div v-for="j in 4" :key="j" class="skeleton-box w-100 mx-2 shimmer" style="height: 40px;"></div>
             </div>
           </div>
         </div>
       </div>
-
-      <!-- Related Section Skeleton -->
       <div class="text-center mb-5">
         <div class="skeleton-box skeleton-title w-25 mx-auto mb-3 shimmer" style="height: 36px;"></div>
         <div class="skeleton-box mx-auto shimmer" style="width: 50px; height: 2px;"></div>
       </div>
-
       <div class="row px-md-4">
         <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4" v-for="k in 4" :key="k">
           <div class="skeleton-box w-100 shimmer mb-3" style="height: 250px;"></div>
@@ -77,14 +53,12 @@
       </div>
     </div>
 
-    <!-- TRẠNG THÁI KHÔNG TÌM THẤY LỖI / HẾT HẠN -->
     <div v-else-if="!combo" class="vh-100 d-flex flex-column justify-content-center align-items-center text-center fade-in">
         <i class="bi bi-box2-heart fs-1 d-block mb-3 text-gold opacity-50"></i>
         <h5 class="font-serif text-muted mb-4">Gói ưu đãi này không tồn tại hoặc đã khép lại.</h5>
         <router-link :to="{ name: 'client-combos' }" class="btn luxury-btn-outline font-oswald px-4 py-2 tracking-widest text-uppercase">Quay lại Bộ sưu tập</router-link>
     </div>
 
-    <!-- DỮ LIỆU THẬT -->
     <div v-else class="fade-in">
       <div class="bg-transparent pt-4 pb-2">
         <div class="container">
@@ -104,19 +78,18 @@
           <div class="col-lg-6 mb-4 mb-lg-0">
             <div class="sticky-top" style="top: 100px; z-index: 1;">
               <div class="luxury-image-wrapper position-relative overflow-hidden cursor-zoom-in" @click="viewFullImage(getImage(combo.thumbnail_image))">
-                
                 <div class="position-absolute top-0 start-0 z-index-2 mt-4 ms-4">
                   <div class="luxury-badge bg-sora-primary text-white font-oswald tracking-widest px-3 py-2 text-uppercase shadow-sm">
                     Giảm {{ combo.discount_type === 'percentage' ? combo.discount_value + '%' : formatCurrency(combo.discount_value) }}
                   </div>
                 </div>
 
-                <div v-if="getTimerData(combo).isEnded" class="ended-overlay d-flex align-items-center justify-content-center flex-column text-center p-4">
-                    <h3 class="text-white font-oswald tracking-widest m-0 text-uppercase" style="letter-spacing: 4px;">{{ getTimerData(combo).title }}</h3>
+                <div v-if="timerInfo.isEnded" class="ended-overlay d-flex align-items-center justify-content-center flex-column text-center p-4">
+                    <h3 class="text-white font-oswald tracking-widest m-0 text-uppercase" style="letter-spacing: 4px;">{{ timerInfo.title }}</h3>
                     <div class="mt-3 bg-white" style="width: 40px; height: 1px;"></div>
                 </div>
 
-                <img :src="getImage(combo.thumbnail_image)" class="w-100 object-fit-cover img-zoom-hover bg-white" style="height: auto; min-height: 600px; max-height: 80vh;" :class="{'opacity-75 grayscale': getTimerData(combo).isEnded}">
+                <img :src="getImage(combo.thumbnail_image)" class="w-100 object-fit-cover img-zoom-hover bg-white" style="height: auto; min-height: 600px; max-height: 80vh;" :class="{'opacity-75 grayscale': timerInfo.isEnded}" @error="handleImageError">
                 
                 <div class="position-absolute bottom-0 end-0 m-4 z-index-2 text-muted small fw-light fst-italic bg-white px-3 py-2 rounded-pill shadow-sm" style="opacity: 0.8; font-size: 0.75rem;">
                   <i class="bi bi-arrows-fullscreen me-1"></i> Nhấp để xem chi tiết
@@ -127,7 +100,6 @@
 
           <div class="col-lg-6">
             <div class="ps-lg-4 pt-2">
-              
               <div class="d-flex align-items-center gap-3 mb-3 text-uppercase font-oswald tracking-widest small">
                 <span class="text-gold fw-medium"><i class="bi bi-stars me-1"></i> Bộ Sưu Tập {{ combo.items.length }} Món</span>
                 <span v-if="combo.theme" class="text-muted border-start ps-3 border-secondary-subtle">{{ combo.theme }}</span>
@@ -136,23 +108,23 @@
               <h1 class="display-4 fw-bold text-dark mb-4 font-serif" style="line-height: 1.15; letter-spacing: -0.5px;">{{ combo.name }}</h1>
               <p class="text-muted fs-6 mb-5 lh-lg fw-light" style="font-family: 'Arial', sans-serif;">{{ combo.description }}</p>
 
-              <div class="luxury-timer-section mb-5 py-3 border-top border-bottom border-gold-light" v-if="getTimerData(combo).type !== 'forever'">
+              <div class="luxury-timer-section mb-5 py-3 border-top border-bottom border-gold-light" v-if="timerInfo.type !== 'forever'">
                   <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
                     <div class="d-flex align-items-center gap-2">
-                      <div class="pulsing-dot" :class="getTimerData(combo).type === 'active' ? 'bg-sora-red' : 'bg-warning'" v-if="!getTimerData(combo).isEnded"></div>
+                      <div class="pulsing-dot" :class="timerInfo.type === 'active' ? 'bg-sora-red' : 'bg-warning'" v-if="!timerInfo.isEnded"></div>
                       <span class="text-muted font-oswald tracking-wide text-uppercase small fw-medium">
-                        {{ getTimerData(combo).title }}
+                        {{ timerInfo.title }}
                       </span>
                     </div>
                     
-                    <div v-if="!getTimerData(combo).isEnded" class="d-flex gap-2 align-items-baseline font-oswald text-dark fs-4">
-                        <span>{{ getTimerData(combo).d }}</span><span class="fs-6 text-muted mx-1 fw-light">Ngày</span>
+                    <div v-if="!timerInfo.isEnded" class="d-flex gap-2 align-items-baseline font-oswald text-dark fs-4">
+                        <span>{{ timerInfo.d }}</span><span class="fs-6 text-muted mx-1 fw-light">Ngày</span>
                         <span class="text-gold fw-light mx-1">:</span>
-                        <span>{{ getTimerData(combo).h }}</span><span class="fs-6 text-muted mx-1 fw-light">Giờ</span>
+                        <span>{{ timerInfo.h }}</span><span class="fs-6 text-muted mx-1 fw-light">Giờ</span>
                         <span class="text-gold fw-light mx-1">:</span>
-                        <span>{{ getTimerData(combo).m }}</span><span class="fs-6 text-muted mx-1 fw-light">Phút</span>
+                        <span>{{ timerInfo.m }}</span><span class="fs-6 text-muted mx-1 fw-light">Phút</span>
                         <span class="text-gold fw-light mx-1">:</span>
-                        <span class="text-sora-red">{{ getTimerData(combo).s }}</span><span class="fs-6 text-sora-red mx-1 fw-light">Giây</span>
+                        <span class="text-sora-red">{{ timerInfo.s }}</span><span class="fs-6 text-sora-red mx-1 fw-light">Giây</span>
                     </div>
                   </div>
               </div>
@@ -171,7 +143,7 @@
                              <span class="badge bg-dark text-gold font-oswald px-2 py-1 shadow-sm">Món {{ index + 1 }}</span>
                          </div>
                          <div class="position-relative w-100 ratio ratio-1x1 cursor-zoom-in mt-3" @click="viewFullImage(getDisplayImage(item))">
-                            <img :src="getDisplayImage(item)" class="object-fit-contain mix-blend-multiply transition-all img-zoom-hover drop-shadow">
+                            <img :src="getDisplayImage(item)" class="object-fit-contain mix-blend-multiply transition-all img-zoom-hover drop-shadow" @error="handleImageError">
                          </div>
                       </div>
 
@@ -193,7 +165,6 @@
                          </div>
 
                          <div class="flex-grow-1 border-top border-light-subtle pt-3 mt-1">
-                             
                              <div v-if="item.product_variant_id" class="bg-light p-3 border rounded small">
                                  <p class="text-muted font-oswald tracking-wide text-uppercase mb-2" style="font-size: 0.75rem;"><i class="bi bi-pin-angle-fill text-sora-primary me-1"></i>Phiên bản cấu hình sẵn</p>
                                  <div class="d-flex flex-wrap gap-2">
@@ -258,20 +229,13 @@
                   <span class="fw-bold text-dark font-oswald text-uppercase tracking-wide fs-5">Mức Giá Ưu Đãi</span>
                   <span class="fw-bold text-sora-primary display-5 ">{{ formatCurrency(finalPrice) }}</span>
                 </div>
-                
             </div>
 
             <div v-if="!canBuyCombo" class="text-center py-4 bg-light border">
               <span class="font-oswald tracking-widest text-uppercase text-muted fs-5">
-                <template v-if="getTimerData(combo).type === 'upcoming'">
-                   Gói ưu đãi chưa mở bán
-                </template>
-                <template v-else-if="getTimerData(combo).type === 'soldout'">
-                   Đã bán hết số lượng
-                </template>
-                <template v-else>
-                   Gói ưu đãi đã khép lại
-                </template>
+                <template v-if="timerInfo.type === 'upcoming'">Gói ưu đãi chưa mở bán</template>
+                <template v-else-if="timerInfo.type === 'soldout'">Đã bán hết số lượng</template>
+                <template v-else>Gói ưu đãi đã khép lại</template>
               </span>
             </div>
             
@@ -290,21 +254,9 @@
             </div>
 
             <div class="d-flex justify-content-between mt-5 pt-4 border-top border-light-subtle opacity-75">
-              <div class="text-center">
-                <i class="bi bi-truck fs-4 text-dark mb-1 d-block"></i>
-                <span class="font-oswald text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">Giao Hàng<br>Miễn Phí</span>
-              </div>
-              <div class="text-center">
-                <i class="bi bi-arrow-repeat fs-4 text-dark mb-1 d-block"></i>
-                <span class="font-oswald text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">Đổi Trả<br>Dễ Dàng</span>
-              </div>
-              <div class="text-center">
-                <i class="bi bi-shield-check fs-4 text-dark mb-1 d-block"></i>
-                <span class="font-oswald text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">Bảo Hành<br>Trọn Đời</span>
-              </div>
-              <div class="text-center">
-                <i class="bi bi-gem fs-4 text-dark mb-1 d-block"></i>
-                <span class="font-oswald text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">Chất Lượng<br>Đỉnh Cao</span>
+              <div v-for="(feat, index) in shopFeatures" :key="index" class="text-center">
+                <i :class="['bi', feat.icon, 'fs-4 text-dark mb-1 d-block']"></i>
+                <span class="font-oswald text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;" v-html="feat.text"></span>
               </div>
             </div>
 
@@ -312,73 +264,57 @@
         </div>
       </div>
       
-      <div class="related-products-section" v-if="relatedProducts.length > 0">
-        <div class="text-center mb-5">
-          <h3 class="font-serif fw-bold text-dark display-6 mb-3">Có Thể Bạn Sẽ Thích</h3>
-          <div class="divider-gold mx-auto"></div>
-        </div>
+      <div class="related-products-section py-5 bg-white border-top border-light-subtle" v-if="relatedProducts.length > 0">
+        <div class="container">
+          <div class="text-center mb-5">
+            <h3 class="font-serif fw-bold text-dark display-6 mb-3">Có Thể Bạn Sẽ Thích</h3>
+            <div class="divider-gold mx-auto"></div>
+          </div>
 
-        <div class="position-relative px-md-4">
-          <swiper
-            :modules="swiperModules"
-            :slides-per-view="1"
-            :space-between="20"
-            :navigation="{ nextEl: '.related-next', prevEl: '.related-prev' }"
-            :breakpoints="{
-              '576': { slidesPerView: 2 },
-              '768': { slidesPerView: 3 },
-              '992': { slidesPerView: 4 }
-            }"
-            class="related-swiper py-2"
-          >
-            <swiper-slide v-for="product in relatedProducts" :key="product.id" class="h-auto pb-4">
-              <div class="luxury-related-card bg-white d-flex flex-column group position-relative overflow-hidden border border-light-subtle h-100">
-                
-                <div class="position-relative bg-light text-center border-bottom border-light-subtle">
-                  <button class="position-absolute top-0 end-0 m-3 border-0 bg-transparent text-dark hover-primary transition-all z-index-2 p-0" style="width: auto; height: auto;">
-                    <i class="bi bi-suit-heart fs-5"></i>
-                  </button>
-                  
-                  <router-link :to="{ name: 'productDetail', params: { shop_slug: product.category?.slug || 'all', slug: product.slug } }" class="d-block w-100 text-decoration-none">
-                    <div class="ratio ratio-1x1 w-100">
-                      <img :src="getImageUrl(product.thumbnail_image)" class="object-fit-cover w-100 h-100 transition-transform duration-700 group-hover-scale" style="object-position: center;" @error="handleImageError">
-                    </div>
-                  </router-link>
-                  
-                  <div class="theme-bar position-absolute bottom-0 start-0 bg-sora-primary z-index-2"></div>
-                </div>
+          <div class="position-relative">
+            <swiper
+              :modules="swiperModules"
+              :slides-per-view="1"
+              :space-between="20"
+              :navigation="{ nextEl: '.related-next', prevEl: '.related-prev' }"
+              :breakpoints="{
+                '576': { slidesPerView: 2 },
+                '768': { slidesPerView: 3 },
+                '992': { slidesPerView: 4 }
+              }"
+              class="related-swiper py-2"
+            >
+              <swiper-slide v-for="product in relatedProducts" :key="product.id" class="h-auto pb-4">
+                <ProductCard
+                  :product="product"
+                  :is-in-wishlist="isInWishlist(product.id)"
+                  :is-in-compare="isInCompare(product.id)"
+                  :show-wishlist="true"
+                  :show-compare="true"
+                  :show-add-to-cart="true"
+                  :hover-add-to-cart="true"
+                  @toggle-wishlist="toggleWishlist"
+                  @toggle-compare="handleToggleCompare"
+                  @add-to-cart="openQuickAdd"
+                />
+              </swiper-slide>
+            </swiper>
 
-                <div class="position-relative flex-grow-1 bg-white d-flex flex-column">
-                  <div class="p-4 text-center d-flex flex-column flex-grow-1" style="padding-bottom: 64px !important;">
-                    <router-link :to="{ name: 'productDetail', params: { shop_slug: product.category?.slug || 'all', slug: product.slug } }" class="text-decoration-none flex-grow-1 d-flex flex-column justify-content-center">
-                      <h6 class="text-dark font-oswald text-uppercase tracking-widest fw-bold mb-2 text-truncate-2 fs-5 lh-base">{{ product.name }}</h6>
-                      <p class="font-serif fst-italic text-muted fs-6 mb-3">{{ product.category?.name || 'Trang sức SORA' }}</p>
-                    </router-link>
-                    
-                    <div class="mt-auto">
-                      <span class="text-sora-primary fw-bold font-serif fs-5">VND {{ formatCurrencyNoSymbol(product.base_price) }}</span>
-                    </div>
-                  </div>
-
-                  <div class="related-btn-add">
-                    <button @click.prevent="openQuickAdd(product)" class="btn luxury-btn-solid w-100 rounded-0 py-3 font-oswald tracking-widest text-uppercase fw-bold shadow-none fs-6">
-                      Thêm vào giỏ
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-            </swiper-slide>
-          </swiper>
-
-          <button class="related-prev position-absolute top-50 start-0 translate-middle-y z-index-2 border border-light-subtle rounded-circle bg-white shadow-sm d-none d-md-flex align-items-center justify-content-center text-dark hover-primary transition-all" style="width: 40px; height: 40px; margin-left: -10px;">
-            <i class="bi bi-chevron-left"></i>
-          </button>
-          <button class="related-next position-absolute top-50 end-0 translate-middle-y z-index-2 border border-light-subtle rounded-circle bg-white shadow-sm d-none d-md-flex align-items-center justify-content-center text-dark hover-primary transition-all" style="width: 40px; height: 40px; margin-right: -10px;">
-            <i class="bi bi-chevron-right"></i>
-          </button>
+            <button class="related-prev position-absolute top-50 start-0 translate-middle-y z-index-2 border border-light-subtle rounded-circle bg-white shadow-sm d-none d-md-flex align-items-center justify-content-center text-dark hover-primary transition-all" style="width: 40px; height: 40px; margin-left: -10px;">
+              <i class="bi bi-chevron-left"></i>
+            </button>
+            <button class="related-next position-absolute top-50 end-0 translate-middle-y z-index-2 border border-light-subtle rounded-circle bg-white shadow-sm d-none d-md-flex align-items-center justify-content-center text-dark hover-primary transition-all" style="width: 40px; height: 40px; margin-right: -10px;">
+              <i class="bi bi-chevron-right"></i>
+            </button>
+          </div>
         </div>
       </div>
+
+      <CompareModal 
+        ref="compareModalRef" 
+        shop-slug="sora" 
+        @update-list="compareList = $event" 
+      />
 
       <div class="modal fade" id="quickAddModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -388,7 +324,6 @@
               <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4" v-if="quickAddProduct">
-              
               <div class="d-flex gap-3 mb-4 pb-4 border-bottom border-light-subtle">
                  <img :src="quickAddDisplayImage" @error="handleImageError" class="object-fit-cover border shadow-sm" style="width: 80px; height: 80px; border-radius: 4px;">
                  <div class="d-flex flex-column justify-content-center">
@@ -441,26 +376,24 @@ import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_BASE_URL;
-
 import { Swiper, SwiperSlide } from 'swiper/vue';
 import { Navigation } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
+import ProductCard from '@/components/ui/ProductCard.vue';
+import CompareModal from '@/components/ui/CompareModal.vue';
+import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener.js';
 
 const swiperModules = [Navigation];
-
 const route = useRoute();
 const router = useRouter();
+
 const combo = ref(null);
 const isLoading = ref(true);
-
 const itemMatrices = ref({}); 
 const userSelections = ref({}); 
 const validationErrors = ref({}); 
 const isAddingToCart = ref(false);
-
 const relatedProducts = ref([]); 
 
 const quickAddProduct = ref(null);
@@ -472,28 +405,173 @@ let quickAddModalInstance = null;
 const currentTime = ref(new Date());
 let timerInterval = null;
 
-const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val || 0);
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
 
-const formatCurrencyNoSymbol = (val) => {
-    return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(Math.round(val || 0));
-};
+const shopFeatures = [
+  { icon: 'bi-truck', text: 'Giao Hàng<br>Miễn Phí' },
+  { icon: 'bi-arrow-repeat', text: 'Đổi Trả<br>Dễ Dàng' },
+  { icon: 'bi-shield-check', text: 'Bảo Hành<br>Trọn Đời' },
+  { icon: 'bi-gem', text: 'Chất Lượng<br>Đỉnh Cao' }
+];
+
+const Toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 2000,
+  background: '#fffafa',
+  color: '#9f273b',
+  iconColor: '#9f273b'
+});
+
+const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val || 0);
 
 const getSafeStorage = (key) => {
     try { return localStorage.getItem(key); } catch(e) { return null; }
 };
+
 const setSafeStorage = (key, val) => {
-    try { localStorage.setItem(key, val); } catch(e) { console.warn('Trình duyệt đã chặn truy cập LocalStorage.'); }
+    try { localStorage.setItem(key, val); } catch(e) { console.warn('LocalStorage bị chặn.'); }
 };
 
-const getImage = (path) => path ? `http://127.0.0.1:8000/storage/${path}` : 'https://placehold.co/400x300';
+const getImage = (path) => {
+    if (!path) return '/Sora-placeholder.png';
+    if (path.startsWith('http') || path.startsWith('data:image')) return path;
+    let cleanPath = path.startsWith('/') ? path.substring(1) : path;
+    if (cleanPath.startsWith('storage/')) return `${API_BASE_URL}/${cleanPath}`;
+    return `${API_BASE_URL}/storage/${cleanPath}`;
+};
+
 const getImageUrl = getImage;
 
 const handleImageError = (e) => {
-  e.target.src = 'https://placehold.co/400x300';
+  e.target.src = '/Sora-placeholder.png';
 };
 
 const isValidImage = (url) => {
     return url && typeof url === 'string' && url.trim() !== '';
+};
+
+const getToken = () => {
+  const possibleKeys = ['access_token', 'token', 'auth_token', 'userToken', 'user_token', 'user'];
+  for (const k of possibleKeys) {
+    const rawVal = localStorage.getItem(k) || sessionStorage.getItem(k);
+    if (!rawVal) continue;
+    if (rawVal.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(rawVal);
+        if (parsed?.access_token) return parsed.access_token;
+        if (parsed?.token) return parsed.token;
+        if (parsed?.user?.token) return parsed.user.token;
+      } catch(e) { }
+    } else if (rawVal.length > 15) {
+      return rawVal;
+    }
+  }
+  return '';
+};
+
+const getCartHeaders = () => {
+    const token = getToken(); 
+    let sessionId = getSafeStorage('cart_session_id'); 
+    if (!sessionId && !token) { 
+        sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
+        setSafeStorage('cart_session_id', sessionId);
+    }
+    const headers = { 'Accept': 'application/json', 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (sessionId) headers['X-Cart-Session-Id'] = sessionId;
+    return headers;
+};
+
+const buildVariantMatrix = (variants) => {
+    const matrix = {};
+    if (!variants) return matrix;
+    
+    variants.forEach(variant => {
+        let attrs = {};
+        let attrVals = variant.attributeValues || variant.attribute_values;
+        if (attrVals) { 
+            attrVals.forEach(av => { if (av.attribute) attrs[av.attribute.name] = av.value; });
+        } else if (variant.attributes) {
+            attrs = typeof variant.attributes === 'string' ? JSON.parse(variant.attributes) : variant.attributes;
+        }
+        variant.formatted_attributes = attrs;
+        
+        Object.entries(attrs).forEach(([attrName, attrValue]) => {
+            if (!matrix[attrName]) matrix[attrName] = new Set();
+            matrix[attrName].add(attrValue);
+        });
+    });
+    
+    const finalMatrix = {};
+    Object.keys(matrix).forEach(key => { finalMatrix[key] = Array.from(matrix[key]); });
+    return finalMatrix;
+};
+
+const favourites = ref([]);
+const isTogglingFav = ref(null);
+
+const fetchFavorites = async () => {
+  const token = getToken();
+  if (!token) return;
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/client/favourites`, {
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+    });
+    const data = await response.json();
+    if (data.status) {
+      favourites.value = data.data.map(fav => fav.product_id);
+    }
+  } catch (e) {}
+};
+
+const isInWishlist = (productId) => favourites.value.includes(productId);
+
+const toggleWishlist = async (prod) => {
+  if (!prod || !prod.id) return;
+  const token = getToken();
+  
+  if (!token) {
+    Swal.fire({
+      icon: 'warning', title: 'Bạn chưa đăng nhập!', text: 'Vui lòng đăng nhập để lưu trữ bộ sưu tập yêu thích của mình.',
+      confirmButtonText: 'Đăng Nhập Ngay', showCancelButton: true, cancelButtonText: 'Đóng', confirmButtonColor: '#9f273b'
+    }).then((result) => {
+      if (result.isConfirmed) router.push('/login');
+    });
+    return;
+  }
+
+  isTogglingFav.value = prod.id; 
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/client/favourites/toggle`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+      body: JSON.stringify({ product_id: prod.id })
+    });
+    const data = await response.json();
+    if (data.status) {
+      if (data.action === 'added') {
+        favourites.value.push(prod.id);
+        Toast.fire({ icon: 'success', title: 'Đã thêm vào yêu thích' });
+      } else if (data.action === 'removed') {
+        favourites.value = favourites.value.filter(id => id !== prod.id);
+        Toast.fire({ icon: 'info', title: 'Đã bỏ yêu thích' });
+      }
+    }
+  } catch (error) {
+  } finally {
+    isTogglingFav.value = null; 
+  }
+};
+
+const compareModalRef = ref(null);
+const compareList = ref([]); 
+
+const isInCompare = (id) => compareList.value.some(item => item.id === id);
+
+const handleToggleCompare = (prod) => {
+  if (compareModalRef.value) compareModalRef.value.toggleCompare(prod);
 };
 
 const getSelectedVariant = (itemId) => {
@@ -520,28 +598,16 @@ const getDisplayImage = (item) => {
     }
     if (!item.product_variant_id) {
         const selectedVar = getSelectedVariant(item.id);
-        if (selectedVar && isValidImage(selectedVar.image_url)) {
-            return getImage(selectedVar.image_url);
-        }
+        if (selectedVar && isValidImage(selectedVar.image_url)) return getImage(selectedVar.image_url);
     }
     return getImage(item.product?.thumbnail_image);
 };
 
 const viewFullImage = (url) => {
   Swal.fire({
-    imageUrl: url, 
-    imageAlt: 'Product Image', 
-    width: 600, 
-    imageHeight: 600, 
-    padding: 0, 
-    background: 'transparent',
-    backdrop: 'rgba(0,0,0,0.85)', 
-    showConfirmButton: false, 
-    showCloseButton: true,
-    customClass: { 
-        image: 'rounded-3 shadow-lg object-fit-contain bg-white',
-        popup: 'p-0 bg-transparent'
-    }
+    imageUrl: url, imageAlt: 'Product Image', width: 600, imageHeight: 600, padding: 0, 
+    background: 'transparent', backdrop: 'rgba(0,0,0,0.85)', showConfirmButton: false, showCloseButton: true,
+    customClass: { image: 'rounded-3 shadow-lg object-fit-contain bg-white', popup: 'p-0 bg-transparent' }
   });
 };
 
@@ -562,7 +628,6 @@ const quickAddSelectedVariant = computed(() => {
     if (!quickAddProduct.value || !quickAddProduct.value.variants) return null;
     const requiredAttrs = Object.keys(quickAddMatrix.value);
     if (requiredAttrs.length === 0) return quickAddProduct.value.variants[0];
-    
     if (!isQuickAddAllSelected.value) return null;
 
     return quickAddProduct.value.variants.find(v => {
@@ -572,16 +637,9 @@ const quickAddSelectedVariant = computed(() => {
 
 const quickAddDisplayImage = computed(() => {
     if (!quickAddProduct.value) return getImageUrl(null);
-    
     const selectedVar = quickAddSelectedVariant.value;
-    if (selectedVar && isValidImage(selectedVar.image_url)) {
-        return getImageUrl(selectedVar.image_url);
-    }
-    
-    if (isValidImage(quickAddProduct.value.thumbnail_image)) {
-        return getImageUrl(quickAddProduct.value.thumbnail_image);
-    }
-
+    if (selectedVar && isValidImage(selectedVar.image_url)) return getImageUrl(selectedVar.image_url);
+    if (isValidImage(quickAddProduct.value.thumbnail_image)) return getImageUrl(quickAddProduct.value.thumbnail_image);
     return getImageUrl(quickAddProduct.value.fallback_image);
 });
 
@@ -604,7 +662,7 @@ const openQuickAdd = async (product) => {
     quickAddModalInstance.show();
 
     try {
-        const res = await axios.get(`${API_URL}/shop/all/products/${product.slug}`);
+        const res = await axios.get(`${API_BASE_URL}/api/shop/all/products/${product.slug}`);
         if (res.data && res.data.data) {
             quickAddProduct.value = {
                 ...res.data.data,
@@ -612,34 +670,7 @@ const openQuickAdd = async (product) => {
                 fallback_price: product.base_price 
             };
             
-            const matrix = {};
-            if (quickAddProduct.value.variants) {
-                quickAddProduct.value.variants.forEach(variant => {
-                    let attrs = {};
-                    let attrVals = variant.attributeValues || variant.attribute_values;
-                    
-                    if (attrVals) { 
-                        attrVals.forEach(av => {
-                            if (av.attribute) attrs[av.attribute.name] = av.value;
-                        });
-                    } else if (variant.attributes) {
-                        attrs = typeof variant.attributes === 'string' ? JSON.parse(variant.attributes) : variant.attributes;
-                    }
-                    
-                    variant.formatted_attributes = attrs;
-                    
-                    Object.entries(attrs).forEach(([attrName, attrValue]) => {
-                        if (!matrix[attrName]) matrix[attrName] = new Set();
-                        matrix[attrName].add(attrValue);
-                    });
-                });
-            }
-            
-            const finalMatrix = {};
-            Object.keys(matrix).forEach(key => {
-                finalMatrix[key] = Array.from(matrix[key]);
-            });
-            quickAddMatrix.value = finalMatrix;
+            quickAddMatrix.value = buildVariantMatrix(quickAddProduct.value.variants);
             
             if (quickAddProduct.value.variants && quickAddProduct.value.variants.length === 1) {
                 const singleVariant = quickAddProduct.value.variants[0];
@@ -652,10 +683,7 @@ const openQuickAdd = async (product) => {
         }
     } catch (e) {
         quickAddModalInstance.hide();
-        Swal.fire({
-          icon: 'error', title: 'Lỗi', text: 'Không thể tải thông tin sản phẩm',
-          confirmButtonColor: '#9f273b', background: '#fffafa', color: '#9f273b'
-        });
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể tải thông tin sản phẩm', confirmButtonColor: '#9f273b', background: '#fffafa', color: '#9f273b' });
     }
 };
 
@@ -668,22 +696,13 @@ const confirmQuickAdd = async () => {
 
     const selectedVar = quickAddSelectedVariant.value;
     if (!selectedVar) {
-         Swal.fire({toast: true, position: 'top-end', icon: 'error', title: 'Phiên bản đã hết hàng!', showConfirmButton: false, timer: 2000});
+         Toast.fire({ icon: 'error', title: 'Phiên bản đã hết hàng!' });
          return;
     }
 
     try {
-        const token = getSafeStorage('auth_token'); 
-        let sessionId = getSafeStorage('cart_session_id'); 
-        if (!sessionId && !token) { 
-            sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
-            setSafeStorage('cart_session_id', sessionId);
-        }
-        const headers = { 'Accept': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        if (sessionId) headers['X-Cart-Session-Id'] = sessionId;
-
-        const res = await axios.post(`${API_URL}/client/cart`, {
+        const headers = getCartHeaders();
+        const res = await axios.post(`${API_BASE_URL}/api/client/cart`, {
             product_variant_id: selectedVar.id,
             quantity: 1
         }, { headers });
@@ -693,11 +712,7 @@ const confirmQuickAdd = async () => {
         }
         
         quickAddModalInstance.hide();
-        Swal.fire({
-            toast: true, position: 'top-end', icon: 'success', 
-            title: 'Đã thêm sản phẩm vào giỏ', showConfirmButton: false, timer: 2000,
-            background: '#fffafa', color: '#9f273b', iconColor: '#9f273b'
-        });
+        Toast.fire({ icon: 'success', title: 'Đã thêm sản phẩm vào giỏ' });
     } catch (error) {
         const msg = error.response?.data?.message || 'Không thể thêm vào giỏ hàng!';
         Swal.fire({icon: 'error', title: 'Lỗi', text: msg, confirmButtonColor: '#9f273b', background: '#fffafa', color: '#9f273b'});
@@ -748,14 +763,14 @@ const calculateTimeParts = (diff) => {
   };
 };
 
-const getTimerData = (combo) => {
-    if (!combo) return { type: 'forever', title: '', isEnded: false };
+const getTimerData = (comboObj) => {
+    if (!comboObj) return { type: 'forever', title: '', isEnded: false };
     const now = currentTime.value.getTime();
     
-    if (combo.usage_limit !== null && combo.usage_limit <= 0) return { type: 'soldout', title: 'ĐÃ BÁN HẾT SỐ LƯỢNG', isEnded: true };
+    if (comboObj.usage_limit !== null && comboObj.usage_limit <= 0) return { type: 'soldout', title: 'ĐÃ BÁN HẾT SỐ LƯỢNG', isEnded: true };
 
-    const startTime = parseDBDate(combo.start_date);
-    const endTime = parseDBDate(combo.end_date);
+    const startTime = parseDBDate(comboObj.start_date);
+    const endTime = parseDBDate(comboObj.end_date);
 
     if (endTime && endTime < now) return { type: 'ended', title: 'ƯU ĐÃI ĐÃ KẾT THÚC', isEnded: true };
     if (startTime && startTime > now) return { type: 'upcoming', title: 'MỞ BÁN SAU', isEnded: false, ...calculateTimeParts(startTime - now) };
@@ -763,6 +778,8 @@ const getTimerData = (combo) => {
     
     return { type: 'forever', title: '', isEnded: false };
 };
+
+const timerInfo = computed(() => getTimerData(combo.value));
 
 const canBuyCombo = computed(() => {
     if (!combo.value) return false;
@@ -774,25 +791,21 @@ const fetchRelatedProducts = async () => {
     if (!combo.value || !combo.value.items) return;
     const categoryIds = [...new Set(combo.value.items.map(item => item.product?.category_id).filter(Boolean))];
     try {
-        let url = `${API_URL}/shop/all/products?per_page=7`;
-        if (categoryIds.length > 0) {
-            url += `&category_id=${categoryIds[0]}`;
-        }
+        let url = `${API_BASE_URL}/api/shop/all/products?per_page=7`;
+        if (categoryIds.length > 0) url += `&category_id=${categoryIds[0]}`;
         const res = await axios.get(url);
         if (res.data && res.data.success) {
             let items = res.data.data.data ? res.data.data.data : res.data.data;
             relatedProducts.value = items.slice(0, 7);
         }
-    } catch (error) {
-        console.error("Lỗi khi tải sản phẩm gợi ý:", error);
-    }
+    } catch (error) {}
 };
 
 const fetchDetail = async (slug) => {
   isLoading.value = true;
   combo.value = null; 
   try {
-    const res = await axios.get(`${API_URL}/client/combos/${slug}`);
+    const res = await axios.get(`${API_BASE_URL}/api/client/combos/${slug}`);
     combo.value = res.data.data;
     
     userSelections.value = {}; validationErrors.value = {}; itemMatrices.value = {};
@@ -801,24 +814,7 @@ const fetchDetail = async (slug) => {
       if (!item.product_variant_id) {
         userSelections.value[item.id] = {}; 
         
-        const matrix = {};
-        if (item.product?.variants) {
-          item.product.variants.forEach(variant => {
-            if (variant.formatted_attributes) {
-              Object.entries(variant.formatted_attributes).forEach(([attrName, attrValue]) => {
-                if (!matrix[attrName]) matrix[attrName] = new Set();
-                matrix[attrName].add(attrValue);
-              });
-            }
-          });
-        }
-        
-        const finalMatrix = {};
-        Object.keys(matrix).forEach(key => {
-          finalMatrix[key] = Array.from(matrix[key]);
-        });
-        
-        itemMatrices.value[item.id] = finalMatrix;
+        itemMatrices.value[item.id] = buildVariantMatrix(item.product?.variants);
 
         if (item.product?.variants && item.product.variants.length === 1) {
             const singleVariant = item.product.variants[0];
@@ -839,6 +835,14 @@ const fetchDetail = async (slug) => {
   }
 };
 
+usePublicRefreshListener({
+  combos: () => {
+    if (route.params.slug) {
+      fetchDetail(route.params.slug);
+    }
+  }
+});
+
 const validateSelections = () => {
   let isValid = true;
   validationErrors.value = {};
@@ -857,6 +861,17 @@ const validateSelections = () => {
   return isValid;
 };
 
+const checkValidationAndWarn = () => {
+  if (!validateSelections()) {
+    Swal.fire({
+      icon: 'warning', title: 'Thiếu tùy chọn!', text: 'Vui lòng định hình thiết kế cho tất cả các món trong bộ sưu tập.',
+      confirmButtonColor: '#9f273b', confirmButtonText: 'Chọn ngay', background: '#fffafa', color: '#9f273b'
+    });
+    return false;
+  }
+  return true;
+};
+
 const preparePayload = () => {
   const customSelections = combo.value.items.filter(i => !i.product_variant_id).map(item => {
     const selectedVar = getSelectedVariant(item.id);
@@ -866,105 +881,40 @@ const preparePayload = () => {
     };
   });
   
-  return { 
-      combo_id: combo.value.id, 
-      quantity: 1, 
-      combo_selections: customSelections 
-  };
+  return { combo_id: combo.value.id, quantity: 1, combo_selections: customSelections };
 };
 
 const addToCart = async () => {
-  if (!validateSelections()) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Thiếu tùy chọn!',
-      text: 'Vui lòng định hình thiết kế cho tất cả các món trong bộ sưu tập.',
-      confirmButtonColor: '#9f273b',
-      confirmButtonText: 'Chọn ngay',
-      background: '#fffafa',
-      color: '#9f273b'
-    });
-    return;
-  }
+  if (!checkValidationAndWarn()) return;
   
   isAddingToCart.value = true;
   const payload = preparePayload();
   
   try {
-      const token = getSafeStorage('auth_token'); 
-      let sessionId = getSafeStorage('cart_session_id'); 
-      
-      if (!sessionId && !token) { 
-        sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
-        setSafeStorage('cart_session_id', sessionId);
-      }
-      
-      const headers = { 'Accept': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-      if (sessionId) headers['X-Cart-Session-Id'] = sessionId;
-
-      const res = await axios.post(`${API_URL}/client/cart/add-combo`, payload, { headers });
+      const headers = getCartHeaders();
+      const res = await axios.post(`${API_BASE_URL}/api/client/cart/add-combo`, payload, { headers });
       
       if (res.data.session_id) {
           setSafeStorage('cart_session_id', res.data.session_id);
       }
 
-      Swal.fire({
-        toast: true,
-        position: 'top-end',
-        icon: 'success',
-        title: 'Đã thêm Combo vào Túi mua sắm',
-        showConfirmButton: false,
-        timer: 2000,
-        iconColor: '#9f273b',
-        color: '#9f273b',
-        background: '#fffafa'
-      });
+      Toast.fire({ icon: 'success', title: 'Đã thêm Combo vào Túi mua sắm' });
       
   } catch (error) {
-      console.error(error);
       const msg = error.response?.data?.message || 'Không thể thêm vào giỏ hàng. Vui lòng thử lại!';
-      Swal.fire({
-        icon: 'error',
-        title: 'Lỗi giỏ hàng',
-        text: msg,
-        confirmButtonColor: '#9f273b',
-        background: '#fffafa',
-        color: '#9f273b'
-      });
+      Swal.fire({ icon: 'error', title: 'Lỗi giỏ hàng', text: msg, confirmButtonColor: '#9f273b', background: '#fffafa', color: '#9f273b' });
   } finally {
       isAddingToCart.value = false;
   }
 };
 
 const buyNow = () => {
-  if (!validateSelections()) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Thiếu tùy chọn!',
-      text: 'Vui lòng định hình thiết kế cho tất cả các món trong bộ sưu tập.',
-      confirmButtonColor: '#9f273b',
-      confirmButtonText: 'Chọn ngay',
-      background: '#fffafa',
-      color: '#9f273b'
-    });
-    return;
-  }
+  if (!checkValidationAndWarn()) return;
   
   const payload = preparePayload();
   setSafeStorage('checkout_combo_direct', JSON.stringify(payload));
   
-  Swal.fire({
-    toast: true,
-    position: 'top-end',
-    icon: 'success',
-    title: 'Chuyển hướng đến Thanh toán...',
-    showConfirmButton: false,
-    timer: 1000,
-    iconColor: '#9f273b',
-    color: '#9f273b',
-    background: '#fffafa'
-  }).then(() => {
+  Toast.fire({ icon: 'success', title: 'Chuyển hướng đến Thanh toán...', timer: 1000 }).then(() => {
      router.push('/checkout').catch(()=>{});
   });
 };
@@ -974,6 +924,7 @@ watch(() => route.params.slug, (newSlug) => {
 });
 
 onMounted(() => {
+    fetchFavorites();
     fetchDetail(route.params.slug);
     timerInterval = setInterval(() => { currentTime.value = new Date(); }, 1000);
 });
@@ -1018,38 +969,12 @@ onUnmounted(() => {
 .pulsing-dot { width: 8px; height: 8px; border-radius: 50%; animation: pulse 1.5s infinite; }
 @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(204, 30, 46, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(204, 30, 46, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(204, 30, 46, 0); } }
 
-.attr-chip {
-    border-radius: 4px;
-    overflow: hidden;
-    min-width: 55px;
-}
-.attr-chip .chip-inner {
-    border: 1px solid #dee2e6;
-    background-color: #fff;
-    color: #555;
-    border-radius: 4px;
-    transition: all 0.3s ease-in-out;
-    padding: 6px 12px;
-}
-.attr-chip:hover .chip-inner {
-    border-color: #e7ce7d; 
-    color: #9f273b;
-}
-.attr-chip.selected .chip-inner {
-    background-color: #9f273b; 
-    border-color: #9f273b;
-    color: #fff !important;
-    box-shadow: 0 4px 10px rgba(159, 39, 59, 0.25);
-}
-.attr-chip.selected .chip-inner span {
-    color: #fff !important;
-}
-.attr-chip.error .chip-inner {
-    border-color: #dc3545;
-    color: #dc3545;
-    background-color: rgba(220, 53, 69, 0.05);
-    animation: shake 0.4s;
-}
+.attr-chip { border-radius: 4px; overflow: hidden; min-width: 55px; }
+.attr-chip .chip-inner { border: 1px solid #dee2e6; background-color: #fff; color: #555; border-radius: 4px; transition: all 0.3s ease-in-out; padding: 6px 12px; }
+.attr-chip:hover .chip-inner { border-color: #e7ce7d; color: #9f273b; }
+.attr-chip.selected .chip-inner { background-color: #9f273b; border-color: #9f273b; color: #fff !important; box-shadow: 0 4px 10px rgba(159, 39, 59, 0.25); }
+.attr-chip.selected .chip-inner span { color: #fff !important; }
+.attr-chip.error .chip-inner { border-color: #dc3545; color: #dc3545; background-color: rgba(220, 53, 69, 0.05); animation: shake 0.4s; }
 
 @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 50% { transform: translateX(4px); } 75% { transform: translateX(-4px); } }
 
@@ -1058,70 +983,12 @@ onUnmounted(() => {
 .luxury-btn-outline { border: 1px solid #9f273b; color: #9f273b; background: transparent; transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }
 .luxury-btn-outline:hover { background: #9f273b; color: white; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(159,39,59,0.2); }
 
-.luxury-related-card {
-    transition: all 0.4s ease;
-}
-.luxury-related-card:hover {
-    box-shadow: 0 15px 35px rgba(0,0,0,0.06);
-    border-color: #d1d5db !important;
-}
+.related-prev:hover, .related-next:hover { background-color: #9f273b !important; color: white !important; border-color: #9f273b !important; }
 
-.text-truncate-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.related-btn-add {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    transform: translateY(100%);
-    transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-    z-index: 3;
-    background: white;
-}
-.luxury-related-card:hover .related-btn-add {
-    transform: translateY(0);
-}
-
-.luxury-related-card .group-hover-scale {
-    transition: transform 0.8s cubic-bezier(0.165, 0.84, 0.44, 1);
-}
-.luxury-related-card:hover .group-hover-scale {
-    transform: scale(1.08);
-}
-
-.theme-bar {
-    width: 30%;
-    height: 3px;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    left: 0;
-}
-.luxury-related-card:hover .theme-bar {
-    opacity: 1;
-}
-
-.related-prev:hover, .related-next:hover {
-    background-color: #9f273b !important;
-    color: white !important;
-    border-color: #9f273b !important;
-}
-
-/* HIỆU ỨNG SKELETON */
 .fade-in { animation: fadeIn 0.4s ease-in; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-.shimmer { 
-    background: #f6f7f8; 
-    background-image: linear-gradient(to right, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%); 
-    background-repeat: no-repeat; 
-    background-size: 800px 100%; 
-    animation: placeholderShimmer 1.5s linear infinite forwards; 
-}
+.shimmer { background: #f6f7f8; background-image: linear-gradient(to right, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%); background-repeat: no-repeat; background-size: 800px 100%; animation: placeholderShimmer 1.5s linear infinite forwards; }
 @keyframes placeholderShimmer { 0% { background-position: -468px 0; } 100% { background-position: 468px 0; } }
 
 .skeleton-box { background-color: #eee; border-radius: 4px; }

@@ -17,3 +17,7 @@ Broadcast::channel('chat.{id}', function ($user, $id) {
     // Hoặc kiểm tra qua guard/class nếu bạn phân tách model Admin
     return \App\Models\Admin::where('id', $user->id)->exists() || (int) $user->id === 1;
 });
+
+Broadcast::channel('admin', function ($user) {
+    return \App\Models\Admin::where('id', $user->id)->exists() || (int) $user->id === 1;
+});

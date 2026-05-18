@@ -72,7 +72,7 @@
                               <tr v-for="item in order.items" :key="item.id">
                                   <td class="ps-3 py-3">
                                       <div class="d-flex align-items-center gap-2">
-                                          <img :src="item.variant_image ? `http://127.0.0.1:8000/storage/${item.variant_image}` : 'https://placehold.co/40'" class="rounded border shadow-sm" style="width: 45px; height: 45px; object-fit: cover;">
+                                          <img :src="item.variant_image ? getFullImage(item.variant_image) : 'https://placehold.co/40'" class="rounded border shadow-sm" style="width: 45px; height: 45px; object-fit: cover;">
                                           <div>
                                               <div class="fw-bold text-dark text-wrap" style="max-width: 250px;">{{ item.product_name }}</div>
                                               <div class="text-muted" style="font-size: 0.7rem;">SKU: {{ item.variant_sku }}</div>
@@ -161,6 +161,7 @@
 
 <script setup>
 import { ref, watch, onMounted, onUnmounted } from 'vue';
+import { getFullImage } from '@/composables/useUtilities';
 import { downloadAdminInvoice } from '@/utils/adminInvoice.js';
 
 const props = defineProps({

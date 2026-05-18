@@ -93,8 +93,10 @@
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
+import { getFullImage } from '@/composables/useUtilities';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const route = useRoute();
 const router = useRouter();
@@ -117,7 +119,7 @@ const fileIcon = ref(null);
 const previewIcon = ref(null);
 
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
-const getImageUrl = (path) => path ? `${API_URL}/storage/${path}` : '';
+const getImageUrl = (path) => path ? getFullImage(path) : '';
 
 const handleUpload = (e) => {
   const f = e.target.files[0];
