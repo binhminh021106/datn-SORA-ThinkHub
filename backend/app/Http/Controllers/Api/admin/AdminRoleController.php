@@ -5,10 +5,8 @@ namespace App\Http\Controllers\Api\admin;
 use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Http\Requests\AdminStoreRoleRequest;
+use App\Events\AdminRefresh;
 use App\Http\Requests\AdminUpdateRoleRequest;
-
-// Thêm các use statements cần thiết
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class AdminRoleController extends Controller
@@ -16,12 +14,9 @@ class AdminRoleController extends Controller
     private function broadcastUpdate()
     {
         try {
-            Http::post('http://localhost:3000/api/admin-refresh', [
-                'module' => 'roles', 
-                'time'   => now()->toDateTimeString()
-            ]);
+            broadcast(new AdminRefresh('roles', 'Có cập nhật mới về vai trò', now()->toDateTimeString()));
         } catch (\Exception $e) {
-            Log::error("Trạm Node.js đang tắt: " . $e->getMessage());
+            Log::error("Broadcast Reverb thất bại: " . $e->getMessage());
         }
     }
 

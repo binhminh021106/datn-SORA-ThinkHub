@@ -283,7 +283,7 @@ const summary = computed(() => {
 const getImageUrl = (path) => {
   if (!path) return defaultPlaceholder;
   if (path.startsWith('http')) return path;
-  return `http://127.0.0.1:8000/storage/${path}`;
+  return `${import.meta.env.VITE_STORAGE_URL}/${path}`;
 };
 
 const handleImageError = (e) => {

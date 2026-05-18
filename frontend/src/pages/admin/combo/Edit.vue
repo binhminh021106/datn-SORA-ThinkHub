@@ -249,8 +249,10 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import { getFullImage } from '@/composables/useUtilities';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const route = useRoute();
 const router = useRouter();
@@ -422,7 +424,7 @@ const fetchInitialData = async () => {
         
         isActive: c.status === 'active'
     };
-    thumbnailPreview.value = c.thumbnail_image ? `${API_URL}/storage/${c.thumbnail_image}` : null;
+    thumbnailPreview.value = c.thumbnail_image ? getFullImage(c.thumbnail_image) : null;
 
     comboItems.value = c.items.map(i => ({
         product_id: i.product_id,

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\News;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use App\Events\NewsUpdated;
 
 class AdminNewController extends Controller
 {
@@ -56,7 +57,7 @@ class AdminNewController extends Controller
             }
 
             $news = News::create($validated);
-            
+            event(new NewsUpdated($news->id, ['action' => 'created']));
             return response()->json([
                 'status' => 'success',
                 'message' => 'Tạo bài viết thành công', 
@@ -104,7 +105,7 @@ class AdminNewController extends Controller
             }
 
             $news->update($validated);
-
+            event(new NewsUpdated($news->id, ['action' => 'updated']));
             return response()->json([
                 'status' => 'success',
                 'message' => 'Cập nhật thành công', 
@@ -136,7 +137,7 @@ class AdminNewController extends Controller
 
             // Gọi hàm delete() sẽ đánh dấu deleted_at thay vì xóa hẳn khỏi DB
             $news->delete(); 
-            
+            event(new NewsUpdated($news->id, ['action' => 'deleted']));
             return response()->json([
                 'status' => 'success',
                 'message' => 'Đã đưa bài viết vào thùng rác'
@@ -160,7 +161,7 @@ class AdminNewController extends Controller
             
             // Hàm khôi phục bài viết
             $news->restore(); 
-
+            event(new NewsUpdated($news->id, ['action' => 'restored']));
             return response()->json([
                 'status' => 'success',
                 'message' => 'Khôi phục bài viết thành công'
@@ -185,7 +186,7 @@ class AdminNewController extends Controller
             $news = News::withTrashed()->findOrFail($id);
             $news->status = $request->status;
             $news->save();
-
+            event(new NewsUpdated($news->id, ['action' => 'status_updated', 'status' => $news->status]));
             return response()->json([
                 'status' => 'success',
                 'message' => 'Cập nhật trạng thái thành công'

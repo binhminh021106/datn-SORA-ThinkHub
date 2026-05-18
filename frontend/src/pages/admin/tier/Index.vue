@@ -96,14 +96,16 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import Swal from 'sweetalert2';
+import { getFullImage } from '@/composables/useUtilities';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const tiers = ref([]);
 const isLoading = ref(true);
 
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
-const getImageUrl = (path) => path ? `${API_URL}/storage/${path}` : ''; 
+const getImageUrl = (path) => path ? getFullImage(path) : ''; 
 const handleImageError = (e) => { e.target.style.display = 'none'; }; 
 
 const formatCurrency = (value) => {

@@ -317,6 +317,8 @@
 import { ref, onMounted, computed, watch } from 'vue';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
+import { getFullImage } from '@/composables/useUtilities';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 
 const apiBase = import.meta.env.VITE_API_BASE_URL;
@@ -349,8 +351,7 @@ const formatDateTime = (dateString) => {
 
 const getThumbnail = (url) => {
   if (!url) return defaultPlaceholder;
-  const storageBaseUrl = apiBase.replace(/\/api\/?$/, '');
-  return `${storageBaseUrl}/storage/${url}`;
+  return getFullImage(url);
 };
 
 const handleImageError = (e) => {
@@ -678,6 +679,13 @@ const visiblePages = computed(() => {
 
 onMounted(() => {
   fetchData();
+});
+
+useAdminRefreshListener((payload) => {
+  if (!payload || !payload.module) return;
+  if (['products', 'combos', 'inventory', 'all'].includes(payload.module)) {
+    fetchData(1, true);
+  }
 });
 </script>
 

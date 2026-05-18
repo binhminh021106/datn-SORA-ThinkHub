@@ -186,6 +186,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
+import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener.js';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -198,7 +199,7 @@ const currentTime = ref(new Date());
 let timerInterval = null;
 
 const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val || 0);
-const getImage = (path) => path ? `http://127.0.0.1:8000/storage/${path}` : 'https://placehold.co/400x400?text=No+Image';
+const getImage = (path) => path ? `${import.meta.env.VITE_STORAGE_URL}/${path}` : 'https://placehold.co/400x400?text=No+Image';
 
 const getItemPrice = (item) => {
     if (item.product_variant_id && item.variant) return parseFloat(item.variant.price);
@@ -285,6 +286,10 @@ const fetchCombos = async (gender = null) => {
     isLoading.value = false;
   }
 };
+
+usePublicRefreshListener({
+  combos: () => fetchCombos(activeFilter.value),
+});
 
 const filterCombo = (gender) => {
   activeFilter.value = gender;

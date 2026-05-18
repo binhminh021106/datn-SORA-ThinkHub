@@ -1,7 +1,7 @@
 <template>
   <div class="sora-chatbot-wrapper">
     <transition name="bounce">
-      <button v-if="!isOpen" @click="toggleChat" class="btn-chatbot-trigger shadow-lg d-flex justify-content-center align-items-center">
+      <button v-if="!isOpen && !hideFab" @click="toggleChat" class="btn-chatbot-trigger shadow-lg d-flex justify-content-center align-items-center">
         <i class="bi bi-robot fs-2 text-white"></i><span class="notification-dot"></span>
       </button>
     </transition>
@@ -61,15 +61,29 @@
 </template>
 
 <script setup>
-import { ref, nextTick } from 'vue';
+import { ref, nextTick, watch, defineProps, defineEmits } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
 
+const props = defineProps({
+  visible: { type: Boolean, default: false },
+  hideFab: { type: Boolean, default: false }
+});
+const emit = defineEmits(['update:visible']);
 const router = useRouter(); 
 const isOpen = ref(false);
 const isLoading = ref(false);
 const userInput = ref('');
 const chatBody = ref(null);
+
+watch(() => props.visible, (visible) => {
+  isOpen.value = visible;
+  if (visible) {
+    nextTick(() => {
+      if (chatBody.value) chatBody.value.scrollTop = chatBody.value.scrollHeight;
+    });
+  }
+});
 
 const messages = ref([
   {
@@ -84,7 +98,14 @@ const messages = ref([
   }
 ]);
 
-const toggleChat = () => { isOpen.value = !isOpen.value; if (isOpen.value) scrollToBottom(); };
+const toggleChat = () => {
+  isOpen.value = !isOpen.value;
+  if (isOpen.value) {
+    scrollToBottom();
+  } else {
+    emit('update:visible', false);
+  }
+};
 const scrollToBottom = async () => { await nextTick(); if (chatBody.value) chatBody.value.scrollTop = chatBody.value.scrollHeight; };
 
 // XỬ LÝ KHI KHÁCH BẤM NÚT

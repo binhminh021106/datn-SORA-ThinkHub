@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use App\Events\NewOrderReceived;
 use App\Mail\OrderPlacedMail;
 use App\Mail\AdminNewOrderMail;
 use Illuminate\Support\Facades\Log;
@@ -338,12 +339,9 @@ class ClientCheckoutController extends Controller
                 ]);
 
                 try {
-                    Http::post('http://localhost:3000/api/emit-order', [
-                        'orderCode' => $order->order_code,
-                        'totalAmount' => $order->total_amount
-                    ]);
+                    broadcast(new NewOrderReceived($order->order_code, (float) $order->total_amount));
                 } catch (\Exception $e) {
-                    Log::error("Node.js Server is down: " . $e->getMessage());
+                    Log::error("Broadcast Reverb thất bại: " . $e->getMessage());
                 }
 
                 if ($request->payment_method === 'cod') {
@@ -377,19 +375,30 @@ class ClientCheckoutController extends Controller
 
     private function generateMomoUrl($order)
     {
-        $endpoint = "https://test-payment.momo.vn/v2/gateway/api/create";
+        // Lấy thông tin từ file .env
+        $endpoint = env('MOMO_ENDPOINT');
+        $partnerCode = env('MOMO_PARTNER_CODE');
+        $accessKey   = env('MOMO_ACCESS_KEY');
+        $secretKey   = env('MOMO_SECRET_KEY');
 
-        $partnerCode = 'MOMOBKUN20180529';
-        $accessKey   = 'klm05TvNBzhg7h7j';
-        $secretKey   = 'at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa';
+        // Validate required environment variables
+        $missing = [];
+        if (empty($endpoint)) $missing[] = 'MOMO_ENDPOINT';
+        if (empty($partnerCode)) $missing[] = 'MOMO_PARTNER_CODE';
+        if (empty($accessKey)) $missing[] = 'MOMO_ACCESS_KEY';
+        if (empty($secretKey)) $missing[] = 'MOMO_SECRET_KEY';
+        
+        if (!empty($missing)) {
+            throw new \Exception('Thiếu cấu hình MoMo: ' . implode(', ', $missing));
+        }
 
         $orderInfo = "Thanh toan don hang SORA " . $order->order_code;
-
         $amount = (string) round($order->total_amount);
         $orderId = $order->order_code . "_" . time();
 
-        $redirectUrl = 'http://127.0.0.1:8000/api/client/checkout/momo-return';
-        $ipnUrl = 'http://127.0.0.1:8000/api/client/checkout/momo-return';
+        // Sử dụng hàm url() của Laravel để tự động lấy domain hiện tại (APP_URL)
+        $redirectUrl = url('/api/client/checkout/momo-return');
+        $ipnUrl = url('/api/client/checkout/momo-return');
 
         $extraData = "";
         $requestId = time() . "";

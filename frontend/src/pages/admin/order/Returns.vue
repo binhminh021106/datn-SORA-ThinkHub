@@ -211,7 +211,7 @@
                                   <tr v-for="item in selectedOrder.items" :key="item.id">
                                       <td class="ps-3 py-3">
                                           <div class="d-flex align-items-center gap-2">
-                                              <img :src="item.variant_image ? `http://127.0.0.1:8000/storage/${item.variant_image}` : 'https://placehold.co/40'" class="rounded border" style="width: 40px; height: 40px; object-fit: cover;">
+                                              <img :src="item.variant_image ? getFullImage(item.variant_image) : 'https://placehold.co/40'" class="rounded border" style="width: 40px; height: 40px; object-fit: cover;">
                                               <div>
                                                   <div class="fw-bold text-dark text-wrap" style="max-width: 250px;">{{ item.product_name }}</div>
                                                   <div class="text-muted" style="font-size: 0.7rem;">SKU: {{ item.variant_sku }}</div>
@@ -303,9 +303,12 @@ import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
-import { io } from "socket.io-client";
+import { getFullImage } from '@/composables/useUtilities';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
+
+let adminChannel = null;
 
 const route = useRoute();
 const orders = ref([]);
@@ -335,8 +338,6 @@ const statusCounts = ref({
 
 const tabCache = ref({});
 
-const socket = io("http://localhost:3000");
-
 // =======================================================
 // BỘ TỪ ĐIỂN CÂU TRẢ LỜI NHANH CHO TỪNG TRẠNG THÁI
 // =======================================================
@@ -364,8 +365,8 @@ onBeforeUnmount(() => {
   document.body.className = '';
   document.body.style = '';
 
-  if (socket) {
-      socket.disconnect();
+  if (window.Echo) {
+    window.Echo.leave('admin');
   }
 });
 
@@ -759,23 +760,25 @@ const displayedOrders = computed(() => {
 onMounted(() => {
     fetchData(1);
 
-    // ĐÃ BỔ SUNG: Vểnh tai nghe sóng tự động từ Node.js
-    socket.on("refresh_admin_data", (data) => {
-      // Vì Return là 1 phần của module Orders nên nghe chung sóng 'orders'
-      if (data.module === 'orders') {
-        Swal.fire({
-          toast: true,
-          position: 'bottom-start',
-          icon: 'info',
-          title: 'Hệ thống tự động',
-          text: data.message || 'Có cập nhật mới từ nhân viên khác.',
-          showConfirmButton: false,
-          timer: 4000
-        });
-        tabCache.value = {};
-        fetchData(pagination.value.currentPage, true);
-      }
-    });
+    if (window.Echo) {
+      adminChannel = window.Echo.private('admin');
+
+      adminChannel.listen('.AdminRefresh', (data) => {
+        if (data.module === 'orders') {
+          Swal.fire({
+            toast: true,
+            position: 'bottom-start',
+            icon: 'info',
+            title: 'Hệ thống tự động',
+            text: data.message || 'Có cập nhật mới từ nhân viên khác.',
+            showConfirmButton: false,
+            timer: 4000
+          });
+          tabCache.value = {};
+          fetchData(pagination.value.currentPage, true);
+        }
+      });
+    }
 });
 </script>
 
