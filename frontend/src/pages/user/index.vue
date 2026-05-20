@@ -101,7 +101,7 @@
               <div class="ps-xl-4">
                 <div class="d-flex align-items-center justify-content-center justify-content-lg-start gap-3 mb-3">
                   <span class="divider-gold" style="width: 30px;"></span>
-                  <h6 class="text-gold tracking-widest text-uppercase fw-bold mb-0 font-oswald" style="font-size: 0.85rem;">Nghệ Thuật Chế Tác</h6>
+                  <h6 class="text-gold tracking-widest text-uppercase fw-bold mb-0 font-oswald" style="font-size: 0.85rem;">Nghệ Thuật Chế Tác</h6> //hmm
                 </div>
                 
                 <h2 class="font-serif fw-bold text-dark display-4 mb-4 lh-sm">
