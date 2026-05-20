@@ -77,25 +77,52 @@
         </div>
       </section>
 
-      <section class="brand-story-section py-5" style="background-color: #fcfaf8;">
-        <div class="container py-5">
-          <div class="row align-items-center g-5">
-            <div class="col-lg-6">
-              <div class="position-relative p-3">
-                <div class="border border-gold position-absolute w-100 h-100 top-0 start-0 translate-middle-x ms-4 mt-4 z-index-1"></div>
-                <img src="https://images.unsplash.com/photo-1617038220319-276d3cfab638?q=80&w=800&auto=format&fit=crop" class="w-100 position-relative z-index-2 shadow-sm" alt="Craftsmanship" loading="lazy">
+      <section class="brand-story-section py-6 position-relative bg-white overflow-hidden" style="padding-top: 6rem; padding-bottom: 6rem;">
+        <div class="position-absolute font-serif fst-italic" style="font-size: clamp(15rem, 25vw, 30rem); top: -5%; left: -2%; z-index: 0; line-height: 1; user-select: none; color: #f5f5f5;">S</div>
+        <div class="position-absolute font-serif fst-italic" style="font-size: clamp(15rem, 25vw, 30rem); bottom: -10%; right: -2%; z-index: 0; line-height: 1; user-select: none; color: #f5f5f5;">R</div>
+        <div class="container position-relative z-index-2">
+          <div class="row align-items-center g-0">
+            
+            <div class="col-lg-6 position-relative mb-5 mb-lg-0 pe-lg-5">
+              <div class="story-image-wrapper position-relative mx-auto ms-lg-0" style="max-width: 500px;">
+                <div class="position-absolute border border-1 border-gold" style="top: -20px; left: -20px; right: 20px; bottom: 20px; z-index: 1;"></div>
+                
+                <div class="position-relative z-index-2 overflow-hidden bg-light shadow-lg">
+                  <img src="https://images.unsplash.com/photo-1589674781759-c21c37956a44?q=80&w=1000&auto=format&fit=crop" class="w-100 object-fit-cover transition-transform duration-700 story-img-hover" style="height: 600px; filter: contrast(1.05) saturate(1.1);" alt="SORA Craftsmanship" loading="lazy">
+                </div>
+                
+                <div class="position-absolute bg-white p-2 shadow-lg z-index-3 d-none d-md-block" style="bottom: -40px; right: -40px; width: 220px;">
+                  <img src="https://images.unsplash.com/photo-1617038220319-276d3cfab638?q=80&w=400&auto=format&fit=crop" class="w-100 object-fit-cover" style="height: 250px;" alt="SORA Details" loading="lazy">
+                </div>
               </div>
             </div>
-            <div class="col-lg-6 ps-lg-5">
-              <h6 class="text-gold tracking-widest text-uppercase fw-bold mb-2">Nghệ Thuật Chế Tác</h6>
-              <h2 class="font-serif fw-bold text-primary-luxury display-5 mb-4">Tinh Hoa Hội Tụ<br>Trong Từng Giọt Vàng</h2>
-              <p class="text-dark fw-light mb-4 lh-lg" style="font-size: 1.1rem;">
-                Tại SORA, mỗi món trang sức không chỉ là vật trang điểm, mà là một tác phẩm nghệ thuật mang đậm dấu ấn cá nhân. Bằng đôi bàn tay tài hoa của những nghệ nhân kim hoàn hàng đầu, chúng tôi biến những viên đá thô ráp thành biểu tượng của sự sang trọng, quyền quý và trường tồn cùng thời gian.
-              </p>
-              <router-link to="/about" class="btn btn-outline-primary-luxury px-4 py-3 text-uppercase tracking-widest fw-bold rounded-0 border-2">
-                Khám Phá Câu Chuyện
-              </router-link>
+
+            <div class="col-lg-6 ps-lg-5 mt-5 mt-lg-0 text-center text-lg-start">
+              <div class="ps-xl-4">
+                <div class="d-flex align-items-center justify-content-center justify-content-lg-start gap-3 mb-3">
+                  <span class="divider-gold" style="width: 30px;"></span>
+                  <h6 class="text-gold tracking-widest text-uppercase fw-bold mb-0 font-oswald" style="font-size: 0.85rem;">Nghệ Thuật Chế Tác</h6> //hmm
+                </div>
+                
+                <h2 class="font-serif fw-bold text-dark display-4 mb-4 lh-sm">
+                  Tinh Hoa Hội Tụ<br>
+                  <span class="text-primary-luxury fst-italic">Trong Từng Giọt Vàng</span>
+                </h2>
+                
+                <p class="text-muted fw-light mb-4 lh-lg" style="font-size: 1.15rem; max-width: 500px; margin-left: auto; margin-right: auto; margin-left: lg-0;">
+                  Tại SORA, mỗi món trang sức không đơn thuần là vật điểm xuyết, mà là một di sản mang đậm dấu ấn cá nhân. Bằng đôi bàn tay tài hoa và khối óc tinh tế của những nghệ nhân kim hoàn bậc thầy, chúng tôi gọt giũa những viên đá thô ráp thành biểu tượng của sự sang trọng, quyền quý và vẻ đẹp vượt thời gian.
+                </p>
+                <p class="text-dark fw-medium font-serif fst-italic mb-5" style="font-size: 1.2rem;">
+                  "Trang sức SORA - Nơi khoảnh khắc hóa vĩnh cửu."
+                </p>
+                
+                <router-link to="/about" class="btn-luxury-slide rounded-4 d-inline-block position-relative text-uppercase tracking-widest fw-bold text-decoration-none px-5 py-3 border border-1 border-primary-luxury overflow-hidden font-oswald" style="font-size: 0.9rem;">
+                  <span class="position-relative z-index-2 text-primary-luxury transition-colors duration-500">Khám Phá Di Sản</span>
+                  <div class="position-absolute inset-0 bg-primary-luxury slide-bg transition-transform duration-500" style="transform: translateX(-101%);"></div>
+                </router-link>
+              </div>
             </div>
+
           </div>
         </div>
       </section>
@@ -574,6 +601,16 @@ onMounted(() => {
 .sora-marquee-track { display: flex; width: max-content; animation: soraMarquee 30s linear infinite; }
 .sora-marquee-track:hover { animation-play-state: paused; }
 .sora-marquee-group { display: flex; align-items: center; flex-shrink: 0; }
+
+/* --- SORA LUXURY STORY SECTION CSS --- */
+.story-image-wrapper { perspective: 1000px; }
+.story-img-hover:hover { transform: scale(1.05); }
+
+/* Nút bấm hiệu ứng trượt màu (Slide Fill) */
+.btn-luxury-slide { background-color: transparent; }
+.btn-luxury-slide:hover .slide-bg { transform: translateX(0) !important; }
+.btn-luxury-slide:hover span { color: #fff !important; }
+.slide-bg { z-index: 1; }
 
 .gallery-slide-item { width: 50vw; flex-shrink: 0; padding: 0; }
 @media (min-width: 576px) { .gallery-slide-item { width: 33.333vw; } }
