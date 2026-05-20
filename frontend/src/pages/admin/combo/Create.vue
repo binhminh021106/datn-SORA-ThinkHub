@@ -38,7 +38,7 @@
 
                   <div class="col-md-4">
                     <label class="form-label fw-bold">Đối tượng <span class="text-danger">*</span></label>
-                    <select class="form-select" v-model="form.target_gender" required>
+                    <select class="form-select fw-semibold" v-model="form.target_gender" required>
                       <option value="unisex">Unisex (Chung)</option>
                       <option value="male">Nam giới</option>
                       <option value="female">Nữ giới</option>
@@ -66,14 +66,14 @@
                 </button>
               </div>
               <div class="card-body p-0">
-                <div class="table-responsive">
+                <div class="table-responsive" style="overflow: visible;">
                   <table class="table table-bordered mb-0 align-middle">
-                    <thead class="bg-light">
+                    <thead class="bg-light text-muted small text-center text-uppercase">
                       <tr>
-                        <th class="ps-4" style="width: 40%;">Sản phẩm (Bản gốc)</th>
-                        <th style="width: 35%;">Ép buộc Biến thể (Tùy chọn)</th>
-                        <th class="text-center" style="width: 15%;">Số lượng</th>
-                        <th class="text-center" style="width: 10%;">Xóa</th>
+                        <th style="width: 45%;">Sản phẩm (Bản gốc)</th>
+                        <th style="width: 30%;">Ép buộc Biến thể (Tùy chọn)</th>
+                        <th style="width: 15%;">Số lượng</th>
+                        <th style="width: 10%;">Xóa</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -81,14 +81,76 @@
                         <td colspan="4" class="text-center py-4 text-muted fst-italic">Vui lòng thêm ít nhất 2 mặt hàng vào Combo.</td>
                       </tr>
                       <tr v-for="(item, index) in comboItems" :key="index">
-                        <td class="ps-4 p-2">
-                          <select class="form-select fw-semibold" v-model="item.product_id" @change="handleProductSelect(index)" required>
-                            <option value="">-- Chọn sản phẩm --</option>
-                            <option v-for="p in eligibleProducts" :key="p.id" :value="p.id" :disabled="isProductAlreadySelected(p.id, index)">
-                              {{ p.name }} ({{ formatCurrency(p.base_price) }})
-                            </option>
-                          </select>
+                        <td class="p-2 position-relative">
+                          <!-- CUSTOM SELECT DROPDOWN (VUE-DRIVEN) -->
+                          <div class="custom-select-wrapper w-100 position-relative">
+                              <button class="btn btn-light bg-white border w-100 text-start d-flex justify-content-between align-items-center shadow-sm"
+                                      type="button" @click="item.isDropdownOpen = !item.isDropdownOpen" style="min-height: 38px;">
+                                  <span class="text-truncate fw-semibold text-dark" style="max-width: 90%;">{{ getProductName(item.product_id) }}</span>
+                                  <i class="bi bi-chevron-down text-muted small"></i>
+                              </button>
+                              
+                              <div v-if="item.isDropdownOpen" class="position-fixed top-0 start-0 w-100 h-100" style="z-index: 1050; cursor: default;" @click="item.isDropdownOpen = false"></div>
+                              
+                              <div v-if="item.isDropdownOpen" class="dropdown-menu show p-0 shadow-lg border-0 rounded-3 overflow-hidden position-absolute mt-1" style="width: 360px; z-index: 1060; top: 100%; left: 0;">
+                                  <div class="p-3 border-bottom bg-light">
+                                      <div class="input-group input-group-sm mb-2 shadow-sm">
+                                          <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                                          <input type="text" class="form-control border-start-0 ps-0 fw-semibold" v-model="item.searchQuery" placeholder="Tìm kiếm nhanh (VD: suc, vàng)...">
+                                      </div>
+                                      <select class="form-select form-select-sm fw-semibold text-brand shadow-sm border-0" v-model="item.priceFilter">
+                                          <option value="all">Tất cả mức giá</option>
+                                          <option value="under_1m">Dưới 1.000.000 đ</option>
+                                          <option value="1m_to_5m">1.000.000 đ - 5.000.000 đ</option>
+                                          <option value="over_5m">Trên 5.000.000 đ</option>
+                                      </select>
+                                  </div>
+                                  
+                                  <div class="product-list-scroll bg-white custom-scrollbar" style="max-height: 280px; overflow-y: auto;">
+                                      <template v-for="(group, catName) in getFilteredAndGroupedProducts(item, index)" :key="catName">
+                                          <div class="bg-light fw-bold text-secondary px-3 py-2 small sticky-top border-bottom border-top d-flex justify-content-between align-items-center" style="z-index: 2; top: 0;">
+                                              <div class="cursor-pointer d-flex align-items-center flex-grow-1" @click="toggleCategory(item, catName, group)">
+                                                  <i class="bi bi-tags-fill me-1 text-brand"></i> 
+                                                  <span class="me-2">{{ catName }} ({{ group.length }})</span>
+                                                  <i class="bi" :class="isCollapsed(item, catName, group) ? 'bi-chevron-down' : 'bi-chevron-up'"></i>
+                                              </div>
+                                              
+                                              <div class="d-flex align-items-center bg-white border rounded shadow-sm">
+                                                  <button type="button" class="btn btn-sm px-2 py-0 border-end hover-brand" 
+                                                          @click.stop="sortCategory(item, catName, 'asc')" 
+                                                          :class="{'text-white bg-brand': item.categorySorts[catName] === 'asc', 'text-muted': item.categorySorts[catName] !== 'asc'}" 
+                                                          title="Giá tăng dần">
+                                                      <i class="bi bi-sort-numeric-down"></i>
+                                                  </button>
+                                                  <button type="button" class="btn btn-sm px-2 py-0 hover-brand" 
+                                                          @click.stop="sortCategory(item, catName, 'desc')" 
+                                                          :class="{'text-white bg-brand': item.categorySorts[catName] === 'desc', 'text-muted': item.categorySorts[catName] !== 'desc'}" 
+                                                          title="Giá giảm dần">
+                                                      <i class="bi bi-sort-numeric-up-alt"></i>
+                                                  </button>
+                                              </div>
+                                          </div>
+                                          
+                                          <template v-if="!isCollapsed(item, catName, group)">
+                                            <button v-for="p in group" :key="p.id"
+                                                    type="button"
+                                                    class="dropdown-item text-wrap px-3 py-2 border-bottom d-flex justify-content-between align-items-center dropdown-hover"
+                                                    :class="{ 'bg-brand text-white fw-bold': item.product_id === p.id, 'disabled opacity-50': isProductAlreadySelected(p.id, index) }"
+                                                    @click.prevent="selectProduct(index, p.id)">
+                                                <span class="small pe-2" style="flex: 1; line-height: 1.4;">{{ p.name }}</span>
+                                                <span class="fw-bold small text-nowrap" :class="item.product_id === p.id ? 'text-white' : 'text-danger'">{{ formatCurrency(p.base_price) }}</span>
+                                            </button>
+                                          </template>
+                                      </template>
+                                      <div v-if="Object.keys(getFilteredAndGroupedProducts(item, index)).length === 0" class="text-center py-4 text-muted small bg-light">
+                                          <i class="bi bi-inbox fs-3 d-block mb-2 opacity-50"></i>
+                                          Không tìm thấy sản phẩm phù hợp
+                                      </div>
+                                  </div>
+                              </div>
+                          </div>
                         </td>
+                        
                         <td class="p-2 text-center">
                           <div v-if="item.isLoadingVariants" class="spinner-border spinner-border-sm text-brand"></div>
                           <span v-else-if="!item.product_id" class="text-muted small fst-italic">---</span>
@@ -99,6 +161,7 @@
                             </option>
                           </select>
                         </td>
+                        
                         <td class="p-2">
                           <input type="number" class="form-control form-control-sm text-center fw-bold" v-model.number="item.quantity" min="1" required>
                         </td>
@@ -140,7 +203,7 @@
                 
                 <div class="mb-3">
                   <label class="form-label fw-bold text-dark small">Hình thức Giảm giá</label>
-                  <select class="form-select fw-semibold" v-model="form.discount_type">
+                  <select class="form-select fw-semibold bg-white" v-model="form.discount_type">
                     <option value="percentage">Giảm theo Phần trăm (%)</option>
                     <option value="fixed_amount">Trừ thẳng tiền mặt (VNĐ)</option>
                   </select>
@@ -165,7 +228,7 @@
                   <span class="fw-bold fs-5 text-brand">{{ formatCurrency(finalEstimatedPrice) }}</span>
                 </div>
                 <div class="text-center mt-3">
-                    <div class="badge bg-success px-3 py-2 rounded-pill shadow-sm w-100">
+                    <div class="badge bg-success text-white px-3 py-2 rounded-pill shadow-sm w-100">
                         <i class="bi bi-piggy-bank-fill me-1"></i> Khách tiết kiệm được: {{ savingsPercentage }}%
                     </div>
                 </div>
@@ -182,7 +245,6 @@
                   <input type="number" class="form-control form-control-sm" v-model.number="form.usage_limit" min="1" placeholder="Để trống nếu không giới hạn">
                 </div>
 
-                <!-- ĐÃ SỬA THÀNH NATIVE DATETIME-LOCAL DỄ DÙNG & TƯƠNG THÍCH MỌI THIẾT BỊ -->
                 <div class="mb-3">
                   <label class="form-label fw-bold text-dark small">Bắt đầu bán từ</label>
                   <div class="input-group shadow-sm">
@@ -201,8 +263,8 @@
                 <hr class="opacity-25 border-secondary my-3">
 
                 <div class="form-check form-switch mb-3">
-                  <input class="form-check-input cursor-pointer" type="checkbox" id="stackable" v-model="form.is_discount_stackable">
-                  <label class="form-check-label fw-semibold cursor-pointer" for="stackable">Cho phép áp Voucher ngoài</label>
+                  <input class="form-check-input cursor-pointer border-secondary" type="checkbox" id="stackable" v-model="form.is_discount_stackable">
+                  <label class="form-check-label fw-semibold cursor-pointer text-dark" for="stackable">Cho phép áp Voucher ngoài</label>
                 </div>
 
                 <div class="mb-2">
@@ -218,10 +280,10 @@
           </div>
         </div>
         
-        <div class="border-top pt-4 text-end">
+        <div class="border-top pt-4 text-end mt-2">
           <router-link :to="{ name: 'admin-combos' }" class="btn btn-light px-4 me-2 border fw-semibold">Hủy bỏ</router-link>
-          <button type="submit" class="btn btn-brand px-5 py-2 fw-bold text-white shadow-sm rounded-pill" :disabled="isSaving || comboItems.length < 2">
-            <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>
+          <button type="submit" class="btn btn-brand px-5 py-2 fw-bold text-white shadow-sm rounded-pill" :disabled="createMutation.isPending.value || comboItems.length < 2">
+            <span v-if="createMutation.isPending.value" class="spinner-border spinner-border-sm me-2"></span>
             TẠO COMBO NGAY
           </button>
         </div>
@@ -237,18 +299,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'; 
 import Swal from 'sweetalert2';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 const router = useRouter();
-const isPageLoading = ref(true);
-const isSaving = ref(false);
+const queryClient = useQueryClient();
 
-const allProducts = ref([]);
 const thumbnailFile = ref(null);
 const thumbnailPreview = ref(null);
 
@@ -258,16 +319,166 @@ const form = ref({
   usage_limit: null, start_date: '', end_date: '', isActive: true
 });
 
+// Khởi tạo 2 dòng trống mặc định với state cho dropdown custom
 const comboItems = ref([
-  { product_id: '', product_variant_id: null, quantity: 1, available_variants: [], isLoadingVariants: false },
-  { product_id: '', product_variant_id: null, quantity: 1, available_variants: [], isLoadingVariants: false }
+  { product_id: '', product_variant_id: null, quantity: 1, available_variants: [], isLoadingVariants: false, searchQuery: '', priceFilter: 'all', isDropdownOpen: false, collapsedCategories: {}, categorySorts: {} },
+  { product_id: '', product_variant_id: null, quantity: 1, available_variants: [], isLoadingVariants: false, searchQuery: '', priceFilter: 'all', isDropdownOpen: false, collapsedCategories: {}, categorySorts: {} }
 ]);
 
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
 
+// ============================================================================
+// TANSTACK QUERY: LẤY DANH SÁCH SẢN PHẨM 
+// ============================================================================
+const { data: allProducts, isLoading: isPageLoading } = useQuery({
+  queryKey: ['admin-products'],
+  queryFn: async () => {
+    try {
+      const res = await axios.get(`${API_URL}/admin/products`, { headers: getHeaders() });
+      const pData = res.data?.data;
+      return Array.isArray(pData?.data) ? pData.data : pData || [];
+    } catch (error) {
+      console.error('Lỗi lấy danh sách sản phẩm:', error);
+      Swal.fire('Lỗi', 'Không thể tải danh sách sản phẩm', 'error');
+      return []; 
+    }
+  },
+  staleTime: 5 * 60 * 1000, 
+});
+
+// ============================================================================
+// LOGIC CHO CUSTOM DROPDOWN TƯƠNG TỰ EDIT.VUE
+// ============================================================================
+const removeAccents = (str) => {
+    if (!str) return '';
+    return str.normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+              .toLowerCase();
+};
+
 const eligibleProducts = computed(() => {
+    if (!allProducts.value) return [];
     return allProducts.value.filter(p => p.deleted_at === null && p.status === 'published' && p.variants_count > 0);
 });
+
+const getProductName = (productId) => {
+    if (!productId) return '-- Vui lòng chọn sản phẩm --';
+    const p = eligibleProducts.value.find(x => x.id === productId);
+    return p ? `${p.name} (${formatCurrency(p.base_price)})` : 'Sản phẩm không tồn tại';
+};
+
+const isCollapsed = (item, catName, groupProducts) => {
+    if (item.searchQuery) return false; 
+    if (item.collapsedCategories[catName] !== undefined) {
+        return item.collapsedCategories[catName];
+    }
+    if (item.product_id && groupProducts.some(p => p.id === item.product_id)) {
+        return false;
+    }
+    return true; 
+};
+
+const toggleCategory = (item, catName, groupProducts) => {
+    const currentState = isCollapsed(item, catName, groupProducts);
+    item.collapsedCategories[catName] = !currentState;
+};
+
+const sortCategory = (item, catName, direction) => {
+    if (item.categorySorts[catName] === direction) {
+        item.categorySorts[catName] = null; 
+    } else {
+        item.categorySorts[catName] = direction;
+        item.collapsedCategories[catName] = false; 
+    }
+};
+
+const getFilteredAndGroupedProducts = (item, currentIndex) => {
+    let filtered = eligibleProducts.value || [];
+
+    if (item.searchQuery) {
+        const q = removeAccents(item.searchQuery);
+        filtered = filtered.filter(p => removeAccents(p.name).includes(q));
+    }
+
+    if (item.priceFilter !== 'all') {
+        filtered = filtered.filter(p => {
+            const price = parseFloat(p.base_price);
+            if (item.priceFilter === 'under_1m') return price < 1000000;
+            if (item.priceFilter === '1m_to_5m') return price >= 1000000 && price <= 5000000;
+            if (item.priceFilter === 'over_5m') return price > 5000000;
+            return true;
+        });
+    }
+
+    const limited = filtered.slice(0, 100);
+    
+    if (item.product_id) {
+        const selectedProd = eligibleProducts.value.find(p => p.id === item.product_id);
+        if (selectedProd && !limited.some(p => p.id === selectedProd.id)) {
+            limited.unshift(selectedProd);
+        }
+    }
+
+    const grouped = {};
+    limited.forEach(p => {
+        const catName = p.category?.name || p.category_name || 'Khác';
+        if (!grouped[catName]) grouped[catName] = [];
+        grouped[catName].push(p);
+    });
+    
+    for (const cat in grouped) {
+        const sortDir = item.categorySorts[cat];
+        if (sortDir === 'asc') {
+            grouped[cat].sort((a, b) => parseFloat(a.base_price) - parseFloat(b.base_price));
+        } else if (sortDir === 'desc') {
+            grouped[cat].sort((a, b) => parseFloat(b.base_price) - parseFloat(a.base_price));
+        }
+    }
+
+    return grouped;
+};
+
+const selectProduct = async (index, productId) => {
+    if (isProductAlreadySelected(productId, index)) return;
+    
+    comboItems.value[index].product_id = productId;
+    comboItems.value[index].isDropdownOpen = false;
+    
+    await handleProductSelect(index, false);
+};
+
+// ============================================================================
+// HÀM XỬ LÝ LẤY BIẾN THỂ TỪ CACHE TANSTACK
+// ============================================================================
+const handleProductSelect = async (index, isInit = false) => {
+  const item = comboItems.value[index];
+
+  if (!isInit) item.product_variant_id = null; 
+  item.available_variants = [];
+  
+  if (!item.product_id) return;
+  item.isLoadingVariants = true;
+  
+  try {
+    const productData = await queryClient.ensureQueryData({
+      queryKey: ['admin-product-detail', item.product_id],
+      queryFn: async () => {
+        const res = await axios.get(`${API_URL}/admin/products/${item.product_id}`, { headers: getHeaders() });
+        return res.data?.data || null;
+      },
+      staleTime: 10 * 60 * 1000 // Cache variants 10 phút
+    });
+
+    if (productData && productData.variants) {
+       item.available_variants = productData.variants;
+    }
+  } catch (error) { 
+    console.error('Lỗi API lấy biến thể sản phẩm:', error); 
+  } finally { 
+    item.isLoadingVariants = false; 
+  }
+};
 
 const isProductAlreadySelected = (productId, currentIndex) => {
     return comboItems.value.some((item, index) => item.product_id === productId && index !== currentIndex);
@@ -276,7 +487,7 @@ const isProductAlreadySelected = (productId, currentIndex) => {
 const originalTotal = computed(() => {
   let total = 0;
   comboItems.value.forEach(item => {
-    if (item.product_id) {
+    if (item.product_id && eligibleProducts.value) {
       if (item.product_variant_id && item.available_variants.length > 0) {
         const variant = item.available_variants.find(v => v.id === item.product_variant_id);
         if (variant) { total += parseFloat(variant.price) * item.quantity; return; }
@@ -292,23 +503,30 @@ const finalEstimatedPrice = computed(() => {
   let final = originalTotal.value;
   let discountVal = parseFloat(form.value.discount_value) || 0;
   if (form.value.discount_type === 'percentage') {
-    final = final - (final * (Math.min(discountVal, 100) / 100));
+    if (discountVal > 100) discountVal = 100;
+    final = final - (final * (discountVal / 100));
   } else {
-    final = Math.max(0, final - discountVal);
+    final = final - discountVal;
+    if (final < 0) final = 0;
   }
   return final;
 });
 
 const savingsPercentage = computed(() => {
   if (originalTotal.value === 0) return 0;
-  return Math.round(((originalTotal.value - finalEstimatedPrice.value) / originalTotal.value) * 100);
+  const savings = originalTotal.value - finalEstimatedPrice.value;
+  return Math.round((savings / originalTotal.value) * 100);
 });
 
-const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val || 0);
+// Format tiền tệ
+const formatCurrency = (val) => {
+    if (val === null || val === undefined) return '0 VNĐ';
+    return new Intl.NumberFormat('vi-VN').format(val) + ' VNĐ';
+};
 
 const generateSlug = () => {
   let s = form.value.name.toLowerCase();
-  s = s.replace(/á|à|ả|ạ|ã|ă|ắ|ằ|ẳ|ẵ|ặ|â|ấ|ầ|ẩ|ẫ|ậ/gi, 'a').replace(/é|è|ẻ|ẽ|ẹ|ê|ế|ề|ể|ễ|ệ/gi, 'e').replace(/i|í|ì|ỉ|ĩ|ị/gi, 'i').replace(/ó|ò|ỏ|õ|ọ|ô|ố|ồ|ổ|ỗ|ộ|ơ|ớ|ờ|ở|ỡ|ợ/gi, 'o').replace(/ú|ù|ủ|ũ|ụ|ư|ứ|ừ|ử|ữ|ự/gi, 'u').replace(/ý|ỳ|ỷ|ỹ|ỵ/gi, 'y').replace(/đ/gi, 'd');
+  s = removeAccents(s);
   form.value.slug = s.replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '').replace(/\-\-+/g, '-');
 };
 
@@ -321,22 +539,14 @@ const handleThumbnailUpload = (e) => {
   }
 };
 
-const addItemRow = () => comboItems.value.push({ product_id: '', product_variant_id: null, quantity: 1, available_variants: [], isLoadingVariants: false });
-const removeItemRow = (index) => { if (comboItems.value.length <= 2) Swal.fire('Chú ý', 'Combo phải chứa ít nhất 2 sản phẩm!', 'warning'); else comboItems.value.splice(index, 1); };
+const addItemRow = () => comboItems.value.push({ 
+    product_id: '', product_variant_id: null, quantity: 1, 
+    available_variants: [], isLoadingVariants: false,
+    searchQuery: '', priceFilter: 'all', isDropdownOpen: false,
+    collapsedCategories: {}, categorySorts: {} 
+});
 
-const handleProductSelect = async (index) => {
-  const item = comboItems.value[index];
-  item.product_variant_id = null; 
-  item.available_variants = [];
-  if (!item.product_id) return;
-  
-  item.isLoadingVariants = true;
-  try {
-    const res = await axios.get(`${API_URL}/admin/products/${item.product_id}`, { headers: getHeaders() });
-    if (res.data.success && res.data.data.variants) item.available_variants = res.data.data.variants;
-  } catch (error) { console.error(error); } 
-  finally { item.isLoadingVariants = false; }
-};
+const removeItemRow = (index) => { if (comboItems.value.length <= 2) Swal.fire('Chú ý', 'Combo phải chứa ít nhất 2 sản phẩm!', 'warning'); else comboItems.value.splice(index, 1); };
 
 const loadFlatpickr = () => {
   if (!document.querySelector('#fp-css')) {
@@ -364,25 +574,11 @@ const initPickers = () => {
     dateFormat: "Y-m-d H:i",
     disableMobile: true,
   };
-
   try {
     window.flatpickr("#start_date", { ...config, onChange: (dates, str) => form.value.start_date = str });
     window.flatpickr("#end_date", { ...config, onChange: (dates, str) => form.value.end_date = str });
   } catch (e) {
     console.warn("Flatpickr failed to init, fallback to native datetime-local");
-  }
-};
-
-const fetchData = async () => {
-  try {
-    const res = await axios.get(`${API_URL}/admin/products`, { headers: getHeaders() });
-    const pData = res.data.data;
-    allProducts.value = Array.isArray(pData.data) ? pData.data : pData; 
-  } catch (error) {
-    Swal.fire('Lỗi', 'Không thể tải danh sách sản phẩm', 'error');
-  } finally {
-    isPageLoading.value = false;
-    setTimeout(() => loadFlatpickr(), 500); 
   }
 };
 
@@ -393,59 +589,70 @@ const formatToDBDate = (str) => {
     return cleanStr;
 };
 
-const submitCombo = async () => {
-  if (!thumbnailFile.value) { Swal.fire('Lỗi', 'Vui lòng tải ảnh đại diện', 'error'); return; }
-  const hasEmptyProduct = comboItems.value.some(item => item.product_id === '');
-  if (hasEmptyProduct) { Swal.fire('Lỗi', 'Vui lòng chọn đầy đủ Sản phẩm', 'error'); return; }
-  if (form.value.discount_type === 'percentage' && form.value.discount_value > 100) { Swal.fire('Lỗi', 'Giảm giá tối đa 100%', 'error'); return; }
+// ============================================================================
+// TANSTACK MUTATION: XỬ LÝ TẠO MỚI COMBO
+// ============================================================================
+const createMutation = useMutation({
+  mutationFn: async (formData) => {
+    return axios.post(`${API_URL}/admin/combos`, formData, { headers: getHeaders() });
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['admin-combos'] });
 
-  isSaving.value = true;
-  try {
-    const formData = new FormData();
-    formData.append('name', form.value.name);
-    formData.append('slug', form.value.slug);
-    if(form.value.description) formData.append('description', form.value.description);
-    formData.append('target_gender', form.value.target_gender);
-    if(form.value.target_age_group) formData.append('target_age_group', form.value.target_age_group);
-    if(form.value.theme) formData.append('theme', form.value.theme);
-    formData.append('discount_type', form.value.discount_type);
-    formData.append('discount_value', form.value.discount_value);
-    formData.append('is_discount_stackable', form.value.is_discount_stackable ? 1 : 0);
-    
-    if (form.value.usage_limit) formData.append('usage_limit', form.value.usage_limit);
-    
-    if (form.value.start_date) formData.append('start_date', formatToDBDate(form.value.start_date));
-    if (form.value.end_date) formData.append('end_date', formatToDBDate(form.value.end_date));
-
-    formData.append('status', form.value.isActive ? 'active' : 'hidden');
-    formData.append('thumbnail_image', thumbnailFile.value);
-    
-    const cleanItems = comboItems.value.map(i => ({
-        product_id: i.product_id,
-        product_variant_id: i.product_variant_id,
-        quantity: i.quantity
-    }));
-    formData.append('items_data', JSON.stringify(cleanItems));
-
-    await axios.post(`${API_URL}/admin/combos`, formData, { headers: getHeaders() });
-    
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Hoàn tất Tạo Combo', showConfirmButton: false, timer: 1500 }).then(() => {
-        router.push({ name: 'admin-combos' });
+        router.push({ name: 'admin-combos' }).catch(() => {});
     });
-
-  } catch (error) {
+  },
+  onError: (error) => {
     if (error.response) {
       const errorMsg = error.response.data.errors ? Object.values(error.response.data.errors).flat().join('\n') : error.response.data.message;
       Swal.fire('Lỗi Dữ liệu', errorMsg, 'error');
     } else {
       Swal.fire('Lỗi', 'Mất kết nối Server', 'error');
     }
-  } finally {
-    isSaving.value = false;
   }
+});
+
+const submitCombo = () => {
+  if (!thumbnailFile.value) { Swal.fire('Lỗi', 'Vui lòng tải ảnh đại diện', 'error'); return; }
+  const hasEmptyProduct = comboItems.value.some(item => !item.product_id);
+  if (hasEmptyProduct) { Swal.fire('Lỗi', 'Vui lòng chọn đầy đủ Sản phẩm', 'error'); return; }
+  if (form.value.discount_type === 'percentage' && form.value.discount_value > 100) { Swal.fire('Lỗi', 'Giảm giá tối đa 100%', 'error'); return; }
+
+  const formData = new FormData();
+  formData.append('name', form.value.name);
+  formData.append('slug', form.value.slug);
+  if(form.value.description) formData.append('description', form.value.description);
+  formData.append('target_gender', form.value.target_gender);
+  if(form.value.target_age_group) formData.append('target_age_group', form.value.target_age_group);
+  if(form.value.theme) formData.append('theme', form.value.theme);
+  formData.append('discount_type', form.value.discount_type);
+  formData.append('discount_value', form.value.discount_value);
+  formData.append('is_discount_stackable', form.value.is_discount_stackable ? 1 : 0);
+  
+  if (form.value.usage_limit) formData.append('usage_limit', form.value.usage_limit);
+  
+  if (form.value.start_date) formData.append('start_date', formatToDBDate(form.value.start_date));
+  if (form.value.end_date) formData.append('end_date', formatToDBDate(form.value.end_date));
+
+  formData.append('status', form.value.isActive ? 'active' : 'hidden');
+  formData.append('thumbnail_image', thumbnailFile.value);
+  
+  const cleanItems = comboItems.value.map(i => ({
+      product_id: i.product_id,
+      product_variant_id: i.product_variant_id,
+      quantity: i.quantity
+  }));
+  formData.append('items_data', JSON.stringify(cleanItems));
+
+  createMutation.mutate(formData);
 };
 
-onMounted(() => fetchData());
+// Gọi Flatpickr khi UI load xong nếu đang không loading query
+watch(isPageLoading, (loading) => {
+    if (!loading) setTimeout(() => loadFlatpickr(), 500);
+});
+
 </script>
 
 <style scoped>
@@ -453,22 +660,31 @@ onMounted(() => fetchData());
 .text-brand { color: #009981 !important; }
 .border-brand { border-color: #009981 !important; }
 
-.btn-brand { background-color: #009981; border: none; transition: 0.2s; }
-.btn-brand:hover { background-color: #007a67; color: white; }
+/* FIX HIỂN THỊ CHỮ TRONG NỀN TỐI TOÀN CỤC */
+.btn-brand { background-color: #009981; color: white !important; border: none; transition: 0.2s; }
+.btn-brand:hover { background-color: #007a67; color: white !important; }
 .btn-outline-brand { color: #009981; border-color: #009981; transition: 0.2s; background: transparent; }
 .btn-outline-brand:hover { background-color: #009981; color: white; }
 
 .form-control:focus, .form-select:focus { border-color: #009981; box-shadow: 0 0 0 0.25rem rgba(0, 153, 129, 0.25); }
 .cursor-pointer { cursor: pointer; }
 .hover-bg-danger:hover { color: #dc3545 !important; background-color: #fff5f5; border-radius: 4px; }
+.hover-brand:hover { color: #009981 !important; }
 
-/* GHI ĐÈ MÀU XANH CHO LỊCH FLATPICKR ĐỂ ĐỒNG BỘ THEME THINKHUB */
+/* CSS CHI TIẾT CHO CUSTOM SELECT DROPDOWN */
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #009981; }
+.dropdown-hover:hover { background-color: #f8f9fa; cursor: pointer; }
+
+/* GHI ĐÈ MÀU XANH & ÉP MÀU CHỮ TRẮNG CHO LỊCH FLATPICKR ĐỂ ĐỒNG BỘ THEME THINKHUB */
 :deep(.flatpickr-calendar) { box-shadow: 0 15px 30px rgba(0,0,0,0.1); border: none; border-radius: 12px; font-family: inherit; }
 :deep(.flatpickr-day.selected),
 :deep(.flatpickr-day.startRange),
 :deep(.flatpickr-day.endRange),
 :deep(.flatpickr-day.selected:focus),
-:deep(.flatpickr-day.selected:hover) { background: #009981 !important; border-color: #009981 !important; }
+:deep(.flatpickr-day.selected:hover) { background: #009981 !important; border-color: #009981 !important; color: white !important; }
 :deep(.flatpickr-time input:hover),
 :deep(.flatpickr-time input:focus) { background: #e6f5f2; }
 

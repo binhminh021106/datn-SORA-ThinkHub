@@ -376,6 +376,7 @@ import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import Toast from '@/utils/toastConfig';
 import { Swiper, SwiperSlide } from 'swiper/vue';
 import { Navigation } from 'swiper/modules';
 import 'swiper/css';
@@ -416,16 +417,6 @@ const shopFeatures = [
   { icon: 'bi-shield-check', text: 'Bảo Hành<br>Trọn Đời' },
   { icon: 'bi-gem', text: 'Chất Lượng<br>Đỉnh Cao' }
 ];
-
-const Toast = Swal.mixin({
-  toast: true,
-  position: 'top-end',
-  showConfirmButton: false,
-  timer: 2000,
-  background: '#fffafa',
-  color: '#9f273b',
-  iconColor: '#9f273b'
-});
 
 const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val || 0);
 

@@ -101,6 +101,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import apiClient from '@/utils/apiClient';
+import Toast from '@/utils/toastConfig';
 import { globalModalState } from '@/stores/modalState';
 
 const props = defineProps({
@@ -119,11 +120,6 @@ const isLoadingCompareSuggestions = ref(false);
 const favouriteProducts = ref([]);
 const isLoadingFavourites = ref(false);
 let searchTimeout = null;
-
-const Toast = Swal.mixin({
-  toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true,
-  background: '#fffafa', color: '#9f273b', iconColor: '#9f273b'
-});
 
 // LẮNG NGHE TÍN HIỆU TỪ TRẠNG THÁI TOÀN CỤC
 watch(() => globalModalState.compareTrigger, () => {
