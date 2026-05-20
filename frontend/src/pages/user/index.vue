@@ -278,6 +278,7 @@
 import { reactive, onMounted, ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
+import Toast from '@/utils/toastConfig';
 
 import { Swiper, SwiperSlide } from 'swiper/vue';
 import { Pagination, Navigation, Autoplay } from 'swiper/modules';
@@ -383,8 +384,7 @@ const isInWishlist = (productId) => wishlistIds.value.includes(productId);
 
 // Hàm Helper gom gọn logic hiển thị thông báo Yêu thích
 const showWishlistNotification = (isAdded) => {
-  Swal.fire({
-    toast: true, position: 'top-end', showConfirmButton: false, timer: 2000,
+  Toast.fire({
     icon: isAdded ? 'success' : 'info',
     title: isAdded ? 'Đã thêm vào danh sách yêu thích!' : 'Đã bỏ khỏi danh sách yêu thích'
   });
@@ -471,7 +471,11 @@ const fetchHomepageData = async () => {
 };
 
 const saveCoupon = (code) => {
-  Swal.fire({ icon: 'success', title: 'Lưu mã thành công!', text: `Mã ${code} đã được thêm vào ví voucher của bạn.`, confirmButtonColor: '#9f273b' });
+  Toast.fire({ 
+    icon: 'success', 
+    title: 'Lưu mã thành công!',
+    text: `Mã ${code} đã được thêm vào ví voucher của bạn.`
+  });
 };
 
 onMounted(() => {

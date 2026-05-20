@@ -1,6 +1,7 @@
 <template>
   <div class="gallery-index-wrapper pb-5 mb-5">
     
+    <!-- HIỂU ỨNG LOGO SHIMMER CHỈ XUẤT HIỆN DUY NHẤT LẦN ĐẦU TẢI TRANG -->
     <div v-if="isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
       <h1 class="logo-shimmer mb-3">ThinkHub</h1>
       <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ liệu...</p>
@@ -17,6 +18,10 @@
             Trang yêu cầu: <span class="badge" :class="getLevelColor(currentPageLevel)">Cấp {{ currentPageLevel }}</span>
           </div>
 
+          <button class="btn btn-light border shadow-sm fw-bold text-dark px-3 py-2" @click="handleRefresh">
+            <i class="bi bi-arrow-clockwise me-1"></i> Làm mới
+          </button>
+
           <router-link :to="{ name: 'admin-gallery-create' }" class="btn btn-brand btn-brand-solid px-4 py-2 fw-bold shadow-sm">
             <i class="bi bi-plus-circle-fill me-1"></i> Thêm Ảnh Mới
           </router-link>
@@ -28,25 +33,19 @@
           <li class="nav-item">
             <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#" :class="{ 'active-tab': activeTab === 'all' }" @click.prevent="switchTab('all')">
               <i class="bi bi-grid-fill me-2"></i> Tất cả
-              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'all'}">{{ galleries.filter(g => !g.deleted_at).length }}</span>
+              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'all'}">{{ countByTab('all') }}</span>
             </a>
           </li>
           <li class="nav-item">
             <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#" :class="{ 'active-tab': activeTab === 'active' }" @click.prevent="switchTab('active')">
               <i class="bi bi-check-circle-fill me-2 text-success"></i> Hiển thị
-              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'active'}">{{ galleries.filter(g => g.mappedStatus === 'active' && !g.deleted_at).length }}</span>
+              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'active'}">{{ countByTab('active') }}</span>
             </a>
           </li>
           <li class="nav-item">
             <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#" :class="{ 'active-tab': activeTab === 'inactive' }" @click.prevent="switchTab('inactive')">
               <i class="bi bi-eye-slash-fill me-2 text-warning"></i> Đã ẩn
-              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'inactive'}">{{ galleries.filter(g => g.mappedStatus === 'inactive' && !g.deleted_at).length }}</span>
-            </a>
-          </li>
-          <li class="nav-item ms-auto">
-            <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab text-danger" href="#" :class="{ 'active-tab': activeTab === 'deleted' }" @click.prevent="switchTab('deleted')">
-              <i class="bi bi-trash3-fill me-2 text-danger"></i> Đã xóa
-              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'deleted'}">{{ galleries.filter(g => g.deleted_at).length }}</span>
+              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'inactive'}">{{ countByTab('inactive') }}</span>
             </a>
           </li>
         </ul>
@@ -54,8 +53,10 @@
 
       <div class="card border-0 shadow-sm rounded-4 mb-4">
         <div class="card-header bg-white border-bottom-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
-          <h6 class="fw-bold mb-0 text-dark">
-            <i class="bi bi-images text-brand me-1"></i> Thư viện ảnh
+          <h6 class="fw-bold mb-0 text-dark d-flex align-items-center">
+            <i class="bi bi-images text-brand me-2"></i> Thư viện ảnh
+            <!-- SPINNER THÔNG MINH CHO CÁC LẦN FETCH NGẦM -->
+            <div v-if="isFetching" class="spinner-border spinner-border-sm text-brand ms-2" role="status" title="Đang đồng bộ dữ liệu..."></div>
           </h6>
           
           <div class="d-flex align-items-center gap-2">
@@ -78,20 +79,16 @@
                   <th class="py-3 px-4 text-secondary text-center border-0" style="width: 15%;">Thao tác</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr v-if="isLoading">
-                  <td colspan="5" class="text-center py-5 text-muted">
-                    <div class="spinner-border spinner-border-sm text-brand mb-2" role="status"></div>
-                    <div class="small fw-semibold">Đang tải dữ liệu...</div>
-                  </td>
-                </tr>
-                <tr v-else-if="displayGalleries.length === 0">
+              <!-- Mờ bảng khi đang fetch dữ liệu ngầm -->
+              <tbody :class="{'opacity-50 pe-none': isFetching}" style="transition: opacity 0.2s;">
+                <tr v-if="displayGalleries.length === 0 && !isFetching">
                   <td colspan="5" class="text-center py-5 text-muted">
                     <i class="bi bi-images fs-1 d-block mb-2 opacity-25"></i>Không có hình ảnh nào.
                   </td>
                 </tr>
+
                 <tr v-else v-for="item in displayGalleries" :key="item.id" 
-                    :class="{'bg-light opacity-75': item.deleted_at || item.mappedStatus === 'inactive'}">
+                    :class="{'bg-light opacity-75': item.mappedStatus === 'inactive'}">
                   
                   <td class="px-4 py-3">
                     <div class="gallery-thumbnail shadow-sm border position-relative overflow-hidden" 
@@ -115,40 +112,27 @@
                   </td>
 
                   <td class="px-4 text-center">
-                    <span v-if="item.deleted_at" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary"><i class="bi bi-trash3-fill"></i> Đã xóa</span>
-                    <div v-else class="d-flex align-items-center justify-content-center gap-1">
-                      <select class="form-select form-select-sm border shadow-sm fw-semibold" 
-                              style="width: 110px; font-size: 0.8rem;"
-                              :class="getStatusSelectClass(item.localStatus)"
-                              v-model="item.localStatus"
-                              @change="checkStatusChange(item)"
-                              :disabled="item.isUpdatingStatus">
-                        <option value="active">Hiển thị</option>
-                        <option value="inactive">Đã ẩn</option>
-                      </select>
-                      
-                      <button v-if="item.isStatusChanged && !item.isUpdatingStatus" @click="saveGalleryStatus(item)" class="btn btn-sm btn-success rounded-circle shadow-sm px-2 py-1" title="Lưu">
-                        <i class="bi bi-check-lg fw-bold"></i>
-                      </button>
-                      <button v-if="item.isStatusChanged && !item.isUpdatingStatus" @click="cancelStatusChange(item)" class="btn btn-sm btn-light rounded-circle shadow-sm px-2 py-1 text-danger border" title="Hủy">
-                        <i class="bi bi-x-lg fw-bold"></i>
-                      </button>
-                      <span v-if="item.isUpdatingStatus" class="spinner-border spinner-border-sm text-brand ms-1"></span>
-                    </div>
+                    <select class="form-select form-select-sm border shadow-sm fw-semibold mx-auto cursor-pointer" 
+                            style="width: 110px; font-size: 0.8rem;"
+                            :class="getStatusSelectClass(item.mappedStatus)"
+                            :value="item.mappedStatus"
+                            @change="(e) => onStatusChange(item, e.target.value)"
+                            :disabled="isMutating">
+                      <option value="active">Hiển thị</option>
+                      <option value="inactive">Đã ẩn</option>
+                    </select>
                   </td>
 
                   <td class="px-4 text-center">
-                    <button class="btn btn-sm btn-light text-info me-1 shadow-sm border" title="Xem ảnh lớn" @click="openQuickView(item)">
+                    <button class="btn btn-sm btn-light text-info me-1 shadow-sm border action-btn-hover" title="Xem ảnh lớn" @click="openQuickView(item)">
                       <i class="bi bi-arrows-fullscreen"></i>
                     </button>
-                    <template v-if="!item.deleted_at">
-                      <router-link :to="{ name: 'admin-gallery-edit', params: { id: item.id } }" class="btn btn-sm btn-light text-primary me-1 shadow-sm border" title="Chỉnh sửa">
-                        <i class="bi bi-pencil-square"></i>
-                      </router-link>
-                      <button class="btn btn-sm btn-light text-danger shadow-sm border" @click="confirmDelete(item.id, item.mappedTitle)" title="Xóa">
-                        <i class="bi bi-trash"></i>
-                      </button>
-                    </template>
+                    <router-link :to="{ name: 'admin-gallery-edit', params: { id: item.id } }" class="btn btn-sm btn-light text-primary me-1 shadow-sm border action-btn-hover" title="Chỉnh sửa">
+                      <i class="bi bi-pencil-square"></i>
+                    </router-link>
+                    <button class="btn btn-sm btn-light text-danger shadow-sm border action-btn-hover" @click="confirmDelete(item.id, item.mappedTitle)" title="Xóa" :disabled="isMutating">
+                      <i class="bi bi-trash"></i>
+                    </button>
                   </td>
                 </tr>
               </tbody>
@@ -169,11 +153,12 @@
       </div>
     </div>
 
+    <!-- MODAL QUICK VIEW -->
     <div class="modal fade" id="quickViewModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content rounded-4 border-0 shadow">
           <div class="modal-header border-bottom-0 pb-0 position-absolute w-100 z-3" style="top: 0;">
-            <button type="button" class="btn-close bg-white rounded-circle p-2 shadow-sm ms-auto mt-2 me-2" data-bs-dismiss="modal" aria-label="Close"></button>
+            <button type="button" class="btn-close bg-white rounded-circle p-2 shadow-sm ms-auto mt-2 me-2 action-btn-hover" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body p-0" v-if="selectedGallery">
             
@@ -198,7 +183,7 @@
                   </div>
                   <div class="row">
                     <div class="col-12 mt-2">
-                      <button class="btn btn-outline-brand w-100 btn-sm" @click="copyToClipboard(selectedGallery.mappedImageUrl)">
+                      <button class="btn btn-outline-brand w-100 btn-sm fw-bold action-btn-hover" @click="copyToClipboard(selectedGallery.mappedImageUrl)">
                         <i class="bi bi-link-45deg me-1"></i> Sao chép Link Ảnh
                       </button>
                     </div>
@@ -215,35 +200,69 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
-import axios from 'axios';
+import axios from 'axios'; 
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 
 defineOptions({ name: 'GalleryIndex' });
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = API_URL.replace('/api', '');
+const queryClient = useQueryClient();
 const route = useRoute();
-const galleries = ref([]);
-const systemModules = ref([]);
+
 const currentPageLevel = ref(null);
-const isLoading = ref(true);
-const isFirstLoad = ref(true); 
 const searchQuery = ref('');
-const activeTab = ref('active');
+const activeTab = ref('all');
 const currentPage = ref(1);
 const itemsPerPage = 8; 
+const isMutating = ref(false);
 
 const selectedGallery = ref(null);
 let quickViewModalInstance = null;
 
-// SỬ DỤNG .ENV CHO API BASE URL NHƯ BẠN YÊU CẦU
-const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
-// Lấy đường dẫn base (không có /api) để trỏ vào thư mục storage ảnh
-const BASE_URL = API_URL.replace('/api', '');
-
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
+
+// Khai báo biến kiểm soát First Load
+const isFirstLoad = ref(true);
+
+// --- TANSTACK QUERY KẾT HỢP AXIOS ---
+const fetchGalleries = async () => {
+  const res = await axios.get(`${API_URL}/admin/galleries`, { headers: getHeaders() });
+  return res.data.data || res.data; 
+};
+
+const { data: rawGalleries, isFetching, refetch } = useQuery({
+  queryKey: ['admin', 'galleries'],
+  queryFn: fetchGalleries,
+  staleTime: 5 * 60 * 1000, 
+  select: (data) => {
+    return data.map(g => {
+      const mappedTitle = g.title || `Ảnh chân dung #${g.id}`;
+      let mappedImageUrl = g.image_path || '';
+      if (mappedImageUrl && !mappedImageUrl.startsWith('http') && !mappedImageUrl.startsWith('data:image')) {
+          mappedImageUrl = `${BASE_URL}/storage/${mappedImageUrl}`;
+      }
+      const mappedStatus = (g.is_active === 1 || g.is_active === true || String(g.is_active) === '1') ? 'active' : 'inactive';
+      
+      return { ...g, mappedTitle, mappedImageUrl, mappedStatus };
+    });
+  }
+});
+
+// Tắt Shimmer khi dữ liệu về lần đầu
+watch(rawGalleries, (newData) => {
+  if (newData) {
+    isFirstLoad.value = false;
+  }
+}, { immediate: true });
+
+const handleRefresh = () => {
+    refetch();
+};
 
 const formatDate = (dateString) => {
   if (!dateString) return '';
@@ -253,6 +272,10 @@ const formatDate = (dateString) => {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const year = d.getFullYear();
   return `${day}/${month}/${year}`;
+};
+
+const getStatusSelectClass = (status) => {
+  return status === 'active' ? 'text-success border-success bg-success bg-opacity-10' : 'text-warning border-warning bg-warning bg-opacity-10';
 };
 
 const getLevelColor = (level) => {
@@ -268,108 +291,12 @@ const getLevelColor = (level) => {
   }
 };
 
-// Hàm xử lý ảnh lỗi an toàn, không gọi ra nguồn ngoài chống vòng lặp vô hạn
 const handleImageError = (e) => {
   e.target.onerror = null; 
   e.target.src = 'data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22150%22%20height%3D%22150%22%20viewBox%3D%220%200%20150%20150%22%3E%3Crect%20fill%3D%22%23ddd%22%20width%3D%22150%22%20height%3D%22150%22%2F%3E%3Ctext%20fill%3D%22%23888%22%20font-family%3D%22sans-serif%22%20font-size%3D%2216%22%20dy%3D%2210.5%22%20font-weight%3D%22bold%22%20x%3D%2250%25%22%20y%3D%2250%25%22%20text-anchor%3D%22middle%22%3Eno%20image%3C%2Ftext%3E%3C%2Fsvg%3E';
 };
 
-const fetchData = async () => {
-  if (!isFirstLoad.value) isLoading.value = true;
-  try {
-    const [resGalleries, resModules] = await Promise.all([
-      axios.get(`${API_URL}/admin/galleries`, { headers: getHeaders() }),
-      axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() })
-    ]);
-
-    if (resGalleries.data) {
-        let rawData = Array.isArray(resGalleries.data) ? resGalleries.data : (resGalleries.data.data || []);
-        
-        galleries.value = rawData.map(g => {
-          
-          // MAP 1: Lấy cột title mới tạo, nếu rỗng thì hiện ID cho đỡ trống
-          const mappedTitle = g.title || `Ảnh chân dung #${g.id}`;
-          
-          // MAP 2: Xử lý đường dẫn ảnh (áp dụng BASE_URL)
-          let mappedImageUrl = g.image_path || '';
-          if (mappedImageUrl && !mappedImageUrl.startsWith('http') && !mappedImageUrl.startsWith('data:image')) {
-              mappedImageUrl = `${BASE_URL}/storage/${mappedImageUrl}`;
-          }
-
-          // MAP 3: Bắt đúng cột is_active của Backend
-          let mappedStatus = (g.is_active === 1 || g.is_active === true || g.is_active === '1') ? 'active' : 'inactive';
-
-          return {
-            ...g,
-            mappedTitle: mappedTitle,
-            mappedImageUrl: mappedImageUrl,
-            mappedStatus: mappedStatus,
-            localStatus: mappedStatus,
-            isStatusChanged: false,
-            isUpdatingStatus: false
-          };
-        });
-    }
-    
-    if (resModules.data) {
-      systemModules.value = resModules.data.data;
-      const currentModule = systemModules.value.find(m => m.module_code === (route.meta?.moduleCode || 'admin_gallery'));
-      if (currentModule) currentPageLevel.value = currentModule.required_level;
-    }
-  } catch (err) { 
-      console.error('Lỗi khi tải dữ liệu:', err); 
-  } finally { 
-    isLoading.value = false;
-    isFirstLoad.value = false;
-  }
-};
-
-const getStatusSelectClass = (status) => {
-  const map = { 
-    'active': 'text-success border-success bg-success bg-opacity-10', 
-    'inactive': 'text-warning border-warning bg-warning bg-opacity-10'
-  }; 
-  return map[status] || 'bg-light text-secondary'; 
-};
-
-useAdminRefreshListener((payload) => {
-  if (payload.module === 'galleries') {
-    fetchData();
-    Swal.fire({ toast: true, position: 'bottom-end', icon: 'info', title: 'Kho ảnh đã được cập nhật', showConfirmButton: false, timer: 2000 });
-  }
-});
-
-const checkStatusChange = (item) => { item.isStatusChanged = (item.localStatus !== item.mappedStatus); };
-const cancelStatusChange = (item) => { item.localStatus = item.mappedStatus; item.isStatusChanged = false; };
-
-const saveGalleryStatus = async (item) => {
-  item.isUpdatingStatus = true;
-  
-  // Trả ngược data về chuẩn is_active của Backend
-  const payload = { 
-    is_active: item.localStatus === 'active' ? 1 : 0 
-  };
-
-  try {
-    // Đã thay thế bằng API_URL
-    await axios.put(`${API_URL}/admin/galleries/${item.id}`, payload, { headers: getHeaders() });
-    
-    item.mappedStatus = item.localStatus; 
-    item.isStatusChanged = false;
-    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
-  } catch (err) { 
-    console.error('Lỗi cập nhật:', err);
-    cancelStatusChange(item); 
-    Swal.fire('Lỗi', err.response?.data?.message || 'Không thể cập nhật trạng thái', 'error'); 
-  } finally { 
-    item.isUpdatingStatus = false; 
-  }
-};
-
-const switchTab = (tabId) => { 
-  activeTab.value = tabId; 
-  currentPage.value = 1; 
-};
+const switchTab = (tabId) => { activeTab.value = tabId; currentPage.value = 1; };
 
 const openQuickView = (item) => {
   selectedGallery.value = item;
@@ -383,12 +310,16 @@ const copyToClipboard = (text) => {
   });
 };
 
+const countByTab = (tab) => {
+  const data = rawGalleries.value || [];
+  if (tab === 'all') return data.length;
+  return data.filter(g => g.mappedStatus === tab).length;
+};
+
 const processedGalleries = computed(() => {
-  let result = galleries.value;
-  if (activeTab.value === 'deleted') { result = result.filter(g => g.deleted_at); } 
-  else {
-    result = result.filter(g => !g.deleted_at);
-    if (activeTab.value !== 'all') result = result.filter(g => g.mappedStatus === activeTab.value);
+  let result = rawGalleries.value || [];
+  if (activeTab.value !== 'all') {
+    result = result.filter(g => g.mappedStatus === activeTab.value);
   }
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase();
@@ -398,31 +329,72 @@ const processedGalleries = computed(() => {
 });
 
 const totalPages = computed(() => Math.ceil(processedGalleries.value.length / itemsPerPage) || 1);
-
 const displayGalleries = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage; 
   return processedGalleries.value.slice(start, start + itemsPerPage);
 });
 
+// --- MUTATIONS SỬ DỤNG LẠI AXIOS ---
+const statusMutation = useMutation({
+  mutationFn: async ({ id, status }) => {
+    const is_active = status === 'active' ? 1 : 0;
+    const fd = new FormData(); fd.append('_method', 'PUT'); fd.append('is_active', is_active);
+    await axios.post(`${API_URL}/admin/galleries/${id}`, fd, { headers: getHeaders() });
+  },
+  onMutate: async ({ id, status }) => {
+    isMutating.value = true;
+    await queryClient.cancelQueries(['admin', 'galleries']);
+    const prev = queryClient.getQueryData(['admin', 'galleries']);
+    if (prev) {
+        queryClient.setQueryData(['admin', 'galleries'], old => old.map(g => g.id === id ? { ...g, is_active: status === 'active' ? 1 : 0 } : g));
+    }
+    return { prev };
+  },
+  onError: (err, variables, ctx) => {
+    if (ctx?.prev) queryClient.setQueryData(['admin', 'galleries'], ctx.prev);
+    Swal.fire('Lỗi', err.response?.data?.message || err.message, 'error');
+  },
+  onSettled: () => { isMutating.value = false; queryClient.invalidateQueries(['admin', 'galleries']); }
+});
+
+const onStatusChange = (item, newStatus) => {
+  statusMutation.mutate({ id: item.id, status: newStatus });
+  Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã lưu trạng thái', showConfirmButton: false, timer: 1000 });
+};
+
+const deleteMutation = useMutation({
+  mutationFn: async (id) => {
+    await axios.delete(`${API_URL}/admin/galleries/${id}`, { headers: getHeaders() });
+  },
+  onMutate: async (id) => {
+    isMutating.value = true;
+    await queryClient.cancelQueries(['admin', 'galleries']);
+    const prev = queryClient.getQueryData(['admin', 'galleries']);
+    if (prev) queryClient.setQueryData(['admin', 'galleries'], old => old.filter(g => g.id !== id));
+    return { prev };
+  },
+  onError: (err, id, ctx) => { 
+    if (ctx?.prev) queryClient.setQueryData(['admin', 'galleries'], ctx.prev); 
+    Swal.fire('Lỗi', err.response?.data?.message || err.message, 'error');
+  },
+  onSettled: () => { isMutating.value = false; queryClient.invalidateQueries(['admin', 'galleries']); }
+});
+
 const confirmDelete = (id, title) => {
-  Swal.fire({ title: 'Xóa hình ảnh?', text: `Ảnh "${title}" sẽ bị xóa khỏi hệ thống!`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Đồng ý xóa' }).then(async (result) => {
+  Swal.fire({ title: 'Xóa hình ảnh?', text: `Ảnh "${title}" sẽ bị xóa khỏi hệ thống!`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Đồng ý xóa' }).then((result) => {
     if (result.isConfirmed) {
-      isLoading.value = true;
-      try {
-        // Đã thay thế bằng API_URL
-        await axios.delete(`${API_URL}/admin/galleries/${id}`, { headers: getHeaders() });
-        Swal.fire({icon: 'success', title: 'Đã xóa', timer: 1500, showConfirmButton: false});
-        fetchData();
-      } catch (err) {
-        console.error('Lỗi khi xóa:', err);
-        isLoading.value = false;
-        Swal.fire('Lỗi', err.response?.data?.message || 'Không thể xóa', 'error');
-      }
+      deleteMutation.mutate(id);
+      Swal.fire({icon: 'success', title: 'Đã xóa hoàn toàn', timer: 1500, showConfirmButton: false, toast: true, position: 'top-end'});
     }
   });
 };
 
-onMounted(() => fetchData());
+useAdminRefreshListener((payload) => {
+  if (payload.module === 'galleries') {
+    queryClient.invalidateQueries(['admin', 'galleries']);
+    Swal.fire({ toast: true, position: 'bottom-end', icon: 'info', title: 'Kho ảnh đã được cập nhật', showConfirmButton: false, timer: 2000 });
+  }
+});
 </script>
 
 <style scoped>
@@ -449,6 +421,10 @@ onMounted(() => fetchData());
 .btn-brand-solid:hover { background-color: #007a67 !important; color: white !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
 .btn-outline-brand { color: #009981; border: 1px solid #009981; background: transparent; transition: all 0.2s ease; }
 .btn-outline-brand:hover { background: #009981; color: white; }
+
+.action-btn-hover { transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1); }
+.action-btn-hover:hover:not(:disabled) { transform: translateY(-3px) !important; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1) !important; }
+.cursor-pointer { cursor: pointer; }
 
 .custom-scrollbar-x::-webkit-scrollbar { height: 4px; }
 .custom-scrollbar-x::-webkit-scrollbar-track { background: transparent; }

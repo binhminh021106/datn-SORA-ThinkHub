@@ -1,6 +1,6 @@
 <template>
   <div class="brand-edit-wrapper pb-5 mb-5">
-    <div class="container-fluid py-4" v-if="!isPageLoading">
+    <div class="container-fluid py-4" v-if="isLoaded">
       
       <div class="row mb-4 align-items-center">
         <div class="col-md-6 d-flex align-items-center">
@@ -50,11 +50,13 @@
                 <div class="p-4 bg-light rounded-4 border text-center h-100">
                   <h6 class="fw-bold mb-3 text-start form-section-title"><i class="bi bi-image me-2"></i>Logo Thương hiệu</h6>
                   <div class="mb-3 position-relative border rounded-4 overflow-hidden bg-white shadow-sm" style="height: 250px; padding: 1rem;">
-                    <img v-if="logoPreview" :src="logoPreview" class="w-100 h-100 object-fit-contain">
-                    <div v-else class="d-flex flex-column justify-content-center align-items-center h-100 text-muted">
-                      <i class="bi bi-building fs-1 mb-2 opacity-50"></i>
-                      <span class="small fw-semibold text-secondary">Chưa có Logo</span>
-                    </div>
+                    <!-- SỬ DỤNG SORAIMAGE THAY CHO IMG THƯỜNG TRÁNH LỖI PHÁT SINH 404 VÀ CORS -->
+                    <SoraImage 
+                      :src="logoPreview" 
+                      :placeholder="defaultImage" 
+                      imgClass="w-100 h-100 object-fit-contain" 
+                      alt="Logo Preview"
+                    />
                   </div>
                   <input type="file" class="d-none" id="logoUpload" accept="image/*" @change="handleLogoUpload">
                   <label for="logoUpload" class="btn btn-outline-brand rounded-pill w-100 fw-semibold cursor-pointer"><i class="bi bi-upload me-1"></i> Thay đổi Logo</label>
@@ -74,31 +76,35 @@
     
     <div v-else class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
       <h1 class="logo-shimmer mb-3">ThinkHub</h1>
+      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang nạp dữ liệu...</p>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { getFullImage } from '@/composables/useUtilities';
 
+import SoraImage from '@/components/ui/SoraImage.vue';
+import defaultImage from '@/assets/images/defaults/placeholder.png';
+
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const route = useRoute();
 const router = useRouter();
+const queryClient = useQueryClient();
 const brandId = route.params.id;
-const isPageLoading = ref(true);
 const isSaving = ref(false);
 
 const form = ref({
   name: '', slug: '', description: '', isActive: true
 });
 const logoFile = ref(null);
-const logoPreview = ref(null);
+const logoPreview = ref(defaultImage);
 
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
 
@@ -123,62 +129,91 @@ const handleLogoUpload = (e) => {
   }
 };
 
-const fetchData = async () => {
-    try {
-        const res = await axios.get(`${API_URL}/admin/brands/${brandId}`, { headers: getHeaders() });
-        const b = res.data.data;
-        form.value.name = b.name;
-        form.value.slug = b.slug;
-        form.value.description = b.description || '';
-        form.value.isActive = b.status === 'active';
-        if(b.logo) logoPreview.value = getFullImage(b.logo);
-    } catch(e){
-        router.push({ name: 'admin-brands' });
-    } finally { 
-        isPageLoading.value = false; 
-    }
-};
-
-const updateBrand = async () => {
-  isSaving.value = true;
-  try {
-    const formData = new FormData();
-    formData.append('_method', 'PUT');
-    formData.append('name', form.value.name);
-    formData.append('slug', form.value.slug);
-    formData.append('status', form.value.isActive ? 'active' : 'hidden');
-    if (form.value.description) formData.append('description', form.value.description);
-    if (logoFile.value) formData.append('logo', logoFile.value);
-
-    const res = await axios.post(`${API_URL}/admin/brands/${brandId}`, formData, {
-      headers: getHeaders()
-    });
-
-    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật thành công', showConfirmButton: false, timer: 1500 }).then(() => {
-      router.push({ name: 'admin-brands' });
-    });
-  } catch(e) { 
-    if (e.response) {
-        let errorHtml = '';
-        if (e.response.data.errors) {
-            errorHtml = '<ul class="text-start text-danger small mt-2" style="max-height: 200px; overflow-y: auto; padding-left: 20px;">';
-            Object.values(e.response.data.errors).flat().forEach(msg => {
-                errorHtml += `<li class="mb-1">${msg}</li>`;
-            });
-            errorHtml += '</ul>';
-        } else {
-            errorHtml = `<p class="text-danger">${e.response.data.message}</p>`;
-        }
-        Swal.fire({ title: 'Dữ liệu không hợp lệ', html: errorHtml, icon: 'error', confirmButtonColor: '#dc3545' });
+const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
+  if (e.response) {
+    let errorHtml = '';
+    if (e.response.data && e.response.data.errors) {
+        errorHtml = '<ul class="text-start text-danger small mt-2" style="max-height: 200px; overflow-y: auto; padding-left: 20px;">';
+        Object.values(e.response.data.errors).flat().forEach(msg => {
+            errorHtml += `<li class="mb-1">${msg}</li>`;
+        });
+        errorHtml += '</ul>';
     } else {
-        Swal.fire('Lỗi', 'Mất kết nối Server', 'error');
+        errorHtml = `<p class="text-danger">${e.response.data.message || defaultMsg}</p>`;
     }
-  } finally { 
-    isSaving.value = false; 
+    Swal.fire({ title: 'Dữ liệu không hợp lệ', html: errorHtml, icon: 'error', confirmButtonColor: '#dc3545' });
+  } else {
+    Swal.fire('Lỗi', 'Mất kết nối Server', 'error');
   }
 };
 
-onMounted(() => fetchData());
+// ==========================================
+// TANSTACK VUE QUERY - FETCH DATA
+// ==========================================
+const { data: brandResponse, isLoading: isBrandLoading, isError } = useQuery({
+  queryKey: ['adminBrand', brandId],
+  queryFn: async () => {
+    const response = await axios.get(`${API_URL}/admin/brands/${brandId}`, { headers: getHeaders() });
+    return response.data;
+  },
+  staleTime: 2 * 60 * 1000
+});
+
+const isLoaded = computed(() => !isBrandLoading.value);
+const rawBrandData = computed(() => brandResponse.value?.data);
+
+watch(isError, (hasError) => {
+    if (hasError) {
+        Swal.fire('Lỗi', 'Không tìm thấy dữ liệu thương hiệu', 'error');
+        router.push({ name: 'admin-brands' });
+    }
+});
+
+watch(rawBrandData, (b) => {
+  if (b) {
+    form.value.name = b.name;
+    form.value.slug = b.slug;
+    form.value.description = b.description || '';
+    form.value.isActive = b.status === 'active';
+    logoPreview.value = b.logo ? getFullImage(b.logo) : defaultImage;
+  }
+}, { immediate: true });
+
+// ==========================================
+// TANSTACK VUE QUERY - MUTATIONS
+// ==========================================
+const updateBrandMutation = useMutation({
+  mutationFn: async (formData) => {
+    const res = await axios.post(`${API_URL}/admin/brands/${brandId}`, formData, {
+      headers: {
+        ...getHeaders(),
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return res.data;
+  },
+  onMutate: () => { isSaving.value = true; },
+  onSuccess: (data) => {
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật thành công', showConfirmButton: false, timer: 1500 });
+    queryClient.invalidateQueries({ queryKey: ['adminBrand', brandId] });
+    queryClient.invalidateQueries({ queryKey: ['adminBrands'] }); // Cập nhật lại list
+    router.push({ name: 'admin-brands' });
+  },
+  onError: (err) => handleAxiosError(err, 'Không thể cập nhật thương hiệu'),
+  onSettled: () => { isSaving.value = false; }
+});
+
+const updateBrand = () => {
+  const formData = new FormData();
+  formData.append('_method', 'PUT');
+  formData.append('name', form.value.name);
+  formData.append('slug', form.value.slug);
+  formData.append('status', form.value.isActive ? 'active' : 'hidden');
+  if (form.value.description) formData.append('description', form.value.description);
+  if (logoFile.value) formData.append('logo', logoFile.value);
+
+  updateBrandMutation.mutate(formData);
+};
 </script>
 
 <style scoped>

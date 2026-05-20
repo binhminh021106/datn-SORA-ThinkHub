@@ -8,17 +8,30 @@ use App\Http\Requests\AdminStoreAdminRequest;
 use App\Http\Requests\AdminUpdateAdminRequest;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Auth; 
+use Illuminate\Support\Facades\Auth;
 
 class AdminStaffController extends Controller
 {
+    /**
+     * Lấy danh sách toàn bộ nhân sự (bao gồm cả tài khoản đã xóa mềm) kèm chức vụ.
+     */
     public function index()
     {
-        $staffs = Admin::withTrashed()->with('role')->orderBy('id', 'desc')->get();
-        return response()->json(['success' => true, 'data' => $staffs]);
+        // Sử dụng Eloquent ORM tải eagers-load quan hệ 'role' và sắp xếp tối ưu
+        $staffs = Admin::withTrashed()
+            ->with('role')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $staffs
+        ]);
     }
 
-    // Thêm mới tài khoản
+    /**
+     * Thêm mới tài khoản nhân viên.
+     */
     public function store(AdminStoreAdminRequest $request)
     {
         $data = $request->except(['password', 'avatar']);
@@ -30,24 +43,41 @@ class AdminStaffController extends Controller
         }
 
         $admin = Admin::create($data);
+        
+        // Tải thông tin chức vụ kèm theo để phản hồi ngay lập tức cho Frontend cache
+        $admin->load('role');
 
-        return response()->json(['success' => true, 'message' => 'Tạo tài khoản thành công!', 'data' => $admin], 201);
+        return response()->json([
+            'success' => true,
+            'message' => 'Tạo tài khoản thành công!',
+            'data' => $admin
+        ], 201);
     }
 
-    // Lấy thông tin 1 nhân viên
+    /**
+     * Lấy thông tin chi tiết một nhân sự.
+     */
     public function show($id)
     {
         $admin = Admin::withTrashed()->with('role')->findOrFail($id);
-        return response()->json(['success' => true, 'data' => $admin]);
+        return response()->json([
+            'success' => true,
+            'data' => $admin
+        ]);
     }
 
-    // Cập nhật thông tin
+    /**
+     * Cập nhật thông tin nhân viên (Hỗ trợ cập nhật nhanh trạng thái qua API).
+     */
     public function update(AdminUpdateAdminRequest $request, $id)
     {
         $admin = Admin::findOrFail($id);
 
         if ($admin->id == 1 && Auth::id() != 1) {
-            return response()->json(['success' => false, 'message' => 'Bạn không có quyền sửa tài khoản Super Admin gốc!'], 403);
+            return response()->json([
+                'success' => false,
+                'message' => 'Bạn không có quyền sửa tài khoản Super Admin gốc!'
+            ], 403);
         }
 
         $data = $request->except(['password', 'avatar', '_method', 'remove_avatar']);
@@ -70,33 +100,58 @@ class AdminStaffController extends Controller
         }
 
         $admin->update($data);
+        $admin->load('role'); // Đồng bộ lại role sau khi cập nhật dữ liệu
 
-        return response()->json(['success' => true, 'message' => 'Cập nhật tài khoản thành công!']);
+        return response()->json([
+            'success' => true,
+            'message' => 'Cập nhật tài khoản thành công!',
+            'data' => $admin
+        ]);
     }
 
-    // Xóa tài khoản (Chỉ là xóa mềm - Soft Delete)
+    /**
+     * Đưa tài khoản vào thùng rác (Xóa mềm - Soft Delete).
+     */
     public function destroy($id)
     {
         $admin = Admin::findOrFail($id);
 
         if ($admin->id == 1) {
-            return response()->json(['success' => false, 'message' => 'Không thể xóa Super Admin gốc!'], 403);
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể xóa Super Admin gốc!'
+            ], 403);
         }
 
         if ($admin->id == Auth::id()) {
-            return response()->json(['success' => false, 'message' => 'Bạn không thể tự xóa chính mình!'], 400);
+            return response()->json([
+                'success' => false,
+                'message' => 'Bạn không thể tự xóa chính mình!'
+            ], 400);
         }
 
         $admin->delete();
-        return response()->json(['success' => true, 'message' => 'Đã chuyển tài khoản vào thùng rác!']);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã chuyển tài khoản vào thùng rác!',
+            'id' => $id
+        ]);
     }
 
-    // Khôi phục tài khoản từ Thùng rác (Restore)
+    /**
+     * Khôi phục tài khoản nhân viên từ trạng thái xóa mềm.
+     */
     public function restore($id)
     {
         $admin = Admin::withTrashed()->findOrFail($id);
         $admin->restore();
+        $admin->load('role');
 
-        return response()->json(['success' => true, 'message' => 'Đã khôi phục tài khoản nhân viên thành công!']);
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã khôi phục tài khoản nhân viên thành công!',
+            'data' => $admin
+        ]);
     }
 }

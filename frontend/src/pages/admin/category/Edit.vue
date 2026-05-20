@@ -21,6 +21,7 @@
                             <label class="form-label fw-bold mb-3">Ảnh đại diện</label>
                             <div class="position-relative d-inline-block mx-auto mb-3 w-100">
                                 <img :src="previewImage"
+                                    @error="handleImageError"
                                     class="rounded-4 shadow-sm border border-2 border-light object-fit-cover w-100"
                                     style="height: 200px;" alt="Thumbnail">
                                 <label for="imageUpload"
@@ -148,20 +149,21 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
-import axios from 'axios'; // ĐÃ THÊM AXIOS
+import axios from 'axios';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { getFullImage } from '@/composables/useUtilities';
 import defaultImage from '../../../assets/images/defaults/placeholder.png';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const router = useRouter();
 const route = useRoute();
+const queryClient = useQueryClient();
+
 const isLoaded = ref(false);
-const isSaving = ref(false);
 const isRestoring = ref(false);
 
 const previewImage = ref(defaultImage);
@@ -174,11 +176,57 @@ const form = ref({
     name: '', slug: '', parent_id: null, description: '', status: '', sort_order: 0, attributes_schema: []
 });
 
-// Cấu hình headers cho Axios
 const getHeaders = () => ({ 
     'Accept': 'application/json', 
     'Authorization': `Bearer ${localStorage.getItem('admin_token')}` 
 });
+
+const handleImageError = (e) => { e.target.src = defaultImage; };
+
+// TANSTACK QUERY: Lấy thông tin cây danh mục hoạt động
+const { data: treeData } = useQuery({
+  queryKey: ['admin-categories-tree'],
+  queryFn: async () => {
+    const res = await axios.get(`${API_URL}/admin/categories/tree`, { headers: getHeaders() });
+    return res.data.data || [];
+  },
+  staleTime: 5 * 60 * 1000
+});
+
+// TANSTACK QUERY: Lấy chi tiết danh mục cần sửa
+const { data: categoryData, isFetching: isCategoryFetching, refetch: refetchCategory } = useQuery({
+  queryKey: ['admin-category-detail', route.params.id],
+  queryFn: async () => {
+    const res = await axios.get(`${API_URL}/admin/categories/${route.params.id}`, { headers: getHeaders() });
+    return res.data.data;
+  },
+  staleTime: 5 * 60 * 1000
+});
+
+// Tự động đồng bộ hóa cây thư mục cha
+watch(treeData, (newTree) => {
+  if (newTree) {
+    treeCategories.value = newTree;
+  }
+}, { immediate: true });
+
+// Tự động đồng bộ hóa thông tin chi tiết danh mục vào Form
+watch(categoryData, (u) => {
+  if (u) {
+    form.value = { 
+      name: u.name, slug: u.slug, parent_id: u.parent_id, 
+      description: u.description || '', status: u.status,
+      sort_order: u.sort_order || 0,
+      attributes_schema: u.attributes_schema || [] 
+    };
+    
+    previewImage.value = u.thumbnail ? getFullImage(u.thumbnail) : defaultImage;
+    isRemoveImage.value = false;
+    selectedFile.value = null;
+    errors.value = {};
+    isLoaded.value = true;
+  }
+}, { immediate: true });
 
 const generateSlug = () => {
     let slug = form.value.name.toLowerCase();
@@ -193,42 +241,9 @@ const generateSlug = () => {
     form.value.slug = slug;
 };
 
-const fetchTreeCategories = async () => {
-    try {
-        const res = await axios.get(`${API_URL}/admin/categories/tree`, { headers: getHeaders() });
-        treeCategories.value = res.data.data;
-    } catch (e) {
-        console.error("Lỗi lấy danh mục cha:", e);
-    }
-};
-
-const fetchCategory = async () => {
-  try {
-    const res = await axios.get(`${API_URL}/admin/categories/${route.params.id}`, { headers: getHeaders() });
-    const u = res.data.data;
-    
-    form.value = { 
-      name: u.name, slug: u.slug, parent_id: u.parent_id, 
-      description: u.description || '', status: u.status,
-      sort_order: u.sort_order || 0,
-      attributes_schema: u.attributes_schema || [] 
-    };
-    
-    previewImage.value = u.thumbnail ? getFullImage(u.thumbnail) : defaultImage;
-    isRemoveImage.value = false;
-    selectedFile.value = null;
-    errors.value = {};
-  } catch (err) {
-    Swal.fire('Lỗi', 'Không thể tải dữ liệu danh mục', 'error');
-    router.push({ name: 'admin-categories' });
-  } finally { 
-    isLoaded.value = true; 
-  }
-};
-
 const handleRestore = async () => {
   isRestoring.value = true;
-  await fetchCategory();
+  await refetchCategory();
   setTimeout(() => {
     isRestoring.value = false;
     Swal.fire({ icon: 'success', title: 'Đã khôi phục dữ liệu gốc', timer: 1500, showConfirmButton: false });
@@ -263,15 +278,52 @@ const removeAttribute = (index) => {
     form.value.attributes_schema.splice(index, 1);
 };
 
-// ĐÃ NÂNG CẤP AXIOS VÀ BẮT LỖI CAO CẤP
-const updateCategory = async () => {
+// TANSTACK MUTATION: Thực thi lưu thay đổi danh mục
+const { mutate: mutateUpdate, isPending: isSaving } = useMutation({
+  mutationFn: async (formData) => {
+    return axios.post(`${API_URL}/admin/categories/${route.params.id}`, formData, { headers: getHeaders() });
+  },
+  onSuccess: (res) => {
+    Swal.fire({ icon: 'success', title: 'Thành công', text: res.data.message || 'Cập nhật thành công', timer: 1500, showConfirmButton: false });
+    // Invalidate caches để đồng bộ dữ liệu ngay lập tức khi quay lại list hoặc load lại trang
+    queryClient.invalidateQueries({ queryKey: ['admin-categories-all'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-categories-tree'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-category-detail', route.params.id] });
+  },
+  onError: (err) => {
+    if (err.response) {
+        if (err.response.status === 422) {
+            errors.value = err.response.data.errors || {};
+            
+            let errorHtml = '<ul class="text-start text-danger small mt-2" style="max-height: 200px; overflow-y: auto; padding-left: 20px;">';
+            Object.values(errors.value).flat().forEach(msg => {
+                errorHtml += `<li class="mb-1">${msg}</li>`;
+            });
+            errorHtml += '</ul>';
+
+            Swal.fire({ 
+                title: 'Dữ liệu không hợp lệ', 
+                html: errorHtml, 
+                icon: 'error', 
+                confirmButtonColor: '#dc3545' 
+            });
+        } else if (err.response.status === 401) {
+            Swal.fire('Lỗi xác thực', 'Phiên đăng nhập đã hết hạn!', 'error');
+        } else {
+            Swal.fire('Lỗi', err.response.data.message || 'Có lỗi xảy ra', 'error');
+        }
+    } else {
+        Swal.fire('Lỗi', 'Mất kết nối server', 'error'); 
+    }
+  }
+});
+
+const updateCategory = () => {
     if (form.value.attributes_schema) {
         form.value.attributes_schema = form.value.attributes_schema.filter(attr => attr.trim() !== '');
     }
 
-    isSaving.value = true;
     errors.value = {}; 
-    
     const formData = new FormData();
     formData.append('_method', 'PUT'); 
 
@@ -290,49 +342,8 @@ const updateCategory = async () => {
     if (selectedFile.value) formData.append('thumbnail', selectedFile.value);
     if (isRemoveImage.value) formData.append('remove_thumbnail', 'true');
 
-    try {
-        const res = await axios.post(`${API_URL}/admin/categories/${route.params.id}`, formData, {
-            headers: getHeaders()
-        });
-        
-        Swal.fire({ icon: 'success', title: 'Thành công', text: res.data.message || 'Cập nhật thành công', timer: 1500, showConfirmButton: false });
-        fetchCategory();
-        
-    } catch (err) { 
-        if (err.response) {
-            if (err.response.status === 422) {
-                errors.value = err.response.data.errors || {};
-                
-                // Hiển thị list lỗi đỏ đẹp mắt
-                let errorHtml = '<ul class="text-start text-danger small mt-2" style="max-height: 200px; overflow-y: auto; padding-left: 20px;">';
-                Object.values(errors.value).flat().forEach(msg => {
-                    errorHtml += `<li class="mb-1">${msg}</li>`;
-                });
-                errorHtml += '</ul>';
-
-                Swal.fire({ 
-                    title: 'Dữ liệu không hợp lệ', 
-                    html: errorHtml, 
-                    icon: 'error', 
-                    confirmButtonColor: '#dc3545' 
-                });
-            } else if (err.response.status === 401) {
-                Swal.fire('Lỗi xác thực', 'Phiên đăng nhập đã hết hạn!', 'error');
-            } else {
-                Swal.fire('Lỗi', err.response.data.message || 'Có lỗi xảy ra', 'error');
-            }
-        } else {
-            Swal.fire('Lỗi', 'Mất kết nối server', 'error'); 
-        }
-    } finally { 
-        isSaving.value = false; 
-    }
+    mutateUpdate(formData);
 };
-
-onMounted(() => {
-    fetchTreeCategories();
-    fetchCategory();
-});
 </script>
 
 <style scoped>

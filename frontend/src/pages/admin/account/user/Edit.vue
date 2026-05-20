@@ -17,8 +17,15 @@
       <div class="row g-4">
         <div class="col-md-4 col-lg-3">
           <div class="card border-0 shadow-sm rounded-4 text-center p-4 h-100 mb-4">
-            <div class="position-relative d-inline-block mx-auto mb-3">
-              <img :src="previewAvatar" class="rounded-circle shadow-sm border border-3 border-white object-fit-cover" style="width: 140px; height: 140px;" alt="Avatar" @error="handleImageError">
+            <div class="position-relative d-inline-block mx-auto mb-3" style="width: 140px; height: 140px;">
+              <!-- Thay thế bằng SoraImage -->
+              <SoraImage 
+                :src="previewAvatar" 
+                :placeholder="placeholderImg"
+                imgClass="rounded-circle shadow-sm border border-3 border-white object-fit-cover" 
+                style="width: 140px; height: 140px;"
+                alt="Avatar"
+              />
               <label for="avatarUpload" class="position-absolute bottom-0 end-0 bg-brand rounded-circle shadow-sm p-2 text-white cursor-pointer" title="Đổi ảnh đại diện">
                 <i class="bi bi-camera-fill fs-6"></i>
               </label>
@@ -31,7 +38,7 @@
               {{ form.status === 'active' ? 'Đang hoạt động' : 'Đã bị khóa' }}
             </span>
             
-            <div class="mb-3" v-if="previewAvatar && !previewAvatar.includes('avatar1.png') && !selectedFile">
+            <div class="mb-3" v-if="previewAvatar && !previewAvatar.includes('placeholder.png') && !selectedFile">
               <button type="button" @click="removeAvatar" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold w-100 shadow-sm">
                 <i class="bi bi-trash me-1"></i> Xóa ảnh hiện tại
               </button>
@@ -73,7 +80,7 @@
 
             <div class="card-body p-4 pt-2">
               
-              <!-- ================= TAB 1: THÔNG TIN CHUNG (ĐÃ FIX GRID CÂN ĐỐI) ================= -->
+              <!-- ================= TAB 1: THÔNG TIN CHUNG ================= -->
               <form v-if="activeTab === 'info'" @submit.prevent="updateUser">
                 <div class="row">
                   <div class="col-md-6 mb-4">
@@ -111,7 +118,6 @@
                     <input type="date" class="form-control form-control-lg bg-white border-secondary-subtle" v-model="form.birthday">
                   </div>
                   
-                  <!-- Phần Đổi Mật Khẩu (Trải ngang 2 cột hoàn hảo) -->
                   <div class="col-12 mt-2 mb-3">
                     <h6 class="fw-bold text-dark border-bottom pb-2"><i class="bi bi-shield-lock me-2"></i>Đổi mật khẩu <span class="text-muted fw-normal small">(Bỏ trống nếu không đổi)</span></h6>
                   </div>
@@ -207,7 +213,7 @@
       <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ liệu...</p>
     </div>
 
-    <!-- MODAL ĐỊA CHỈ (DÙNG AXIOS) -->
+    <!-- MODAL ĐỊA CHỈ (ĐÃ SỬA LỖI CORS - SỬ DỤNG FETCH NATIVE) -->
     <div class="modal fade" id="addressModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content rounded-4 border-0 shadow">
@@ -277,27 +283,29 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { getFullImage } from '@/composables/useUtilities';
-import defaultAvatar from '../../../../assets/images/defaults/avatar1.png';
+
+import SoraImage from '@/components/ui/SoraImage.vue';
+import placeholderImg from '@/assets/images/defaults/placeholder.png';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const route = useRoute();
 const router = useRouter();
-const isLoaded = ref(false);
+const queryClient = useQueryClient();
+
 const isSavingUser = ref(false);
 const isRestoring = ref(false);
 const settingDefaultId = ref(null);
 const errors = ref({});
-
 const activeTab = ref('info'); 
 
-const previewAvatar = ref(defaultAvatar);
+const previewAvatar = ref(placeholderImg);
 const selectedFile = ref(null);
 const isRemoveAvatar = ref(false);
 
@@ -313,14 +321,12 @@ const selectedCityId = ref('');
 const selectedDistrictId = ref('');
 const selectedWardId = ref('');
 
-const userAddresses = ref([]);
 const isSavingAddr = ref(false);
 const addrModalMode = ref('add');
 let addressModalInstance = null;
 const addrForm = ref({ id: null, customer_name: '', customer_phone: '', shipping_address: '', city: '', district: '', ward: '', is_default: 0, set_as_default: false });
 
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
-const handleImageError = (e) => { e.target.src = defaultAvatar; };
 
 const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
   if (e.response) {
@@ -347,16 +353,17 @@ const findLocationByName = (list, name) => {
   return list.find(item => item.full_name === name || item.name === name || name.includes(item.name));
 };
 
+// ==========================================
+// TỈNH THÀNH API (SỬ DỤNG FETCH NATIVE ĐỂ TRÁNH CORS)
+// ==========================================
 const fetchProvinces = async () => {
   try {
-    // Dùng fetch thay vì axios
     const res = await fetch('https://esgoo.net/api-tinhthanh/1/0.htm');
-    if (!res.ok) throw new Error('Network response was not ok');
-    const data = await res.json();
-    if (data.error === 0) provinces.value = data.data;
-  } catch (e) {
-    console.error("Lỗi lấy Tỉnh/Thành:", e);
-  }
+    if (res.ok) {
+      const data = await res.json();
+      if (data.error === 0) provinces.value = data.data;
+    }
+  } catch (e) { console.error("Lỗi lấy Tỉnh/Thành:", e); }
 };
 
 const onCityChange = async () => {
@@ -365,14 +372,12 @@ const onCityChange = async () => {
   addrForm.value.city = provinces.value.find(p => p.id === selectedCityId.value)?.full_name || '';
   if (selectedCityId.value) {
     try {
-      // Dùng fetch thay vì axios
       const res = await fetch(`https://esgoo.net/api-tinhthanh/2/${selectedCityId.value}.htm`);
-      if (!res.ok) throw new Error('Network response was not ok');
-      const data = await res.json();
-      if (data.error === 0) districts.value = data.data;
-    } catch (e) {
-      console.error("Lỗi lấy Quận/Huyện:", e);
-    }
+      if (res.ok) {
+        const data = await res.json();
+        if (data.error === 0) districts.value = data.data;
+      }
+    } catch (e) { console.error("Lỗi lấy Quận/Huyện:", e); }
   }
 };
 
@@ -381,14 +386,12 @@ const onDistrictChange = async () => {
   addrForm.value.district = districts.value.find(d => d.id === selectedDistrictId.value)?.full_name || '';
   if (selectedDistrictId.value) {
     try {
-      // Dùng fetch thay vì axios
       const res = await fetch(`https://esgoo.net/api-tinhthanh/3/${selectedDistrictId.value}.htm`);
-      if (!res.ok) throw new Error('Network response was not ok');
-      const data = await res.json();
-      if (data.error === 0) wards.value = data.data;
-    } catch (e) {
-      console.error("Lỗi lấy Phường/Xã:", e);
-    }
+      if (res.ok) {
+        const data = await res.json();
+        if (data.error === 0) wards.value = data.data;
+      }
+    } catch (e) { console.error("Lỗi lấy Phường/Xã:", e); }
   }
 };
 
@@ -396,29 +399,39 @@ const onWardChange = () => {
   addrForm.value.ward = wards.value.find(w => w.id === selectedWardId.value)?.full_name || '';
 };
 
-const fetchUser = async () => {
-  try {
-    const res = await axios.get(`${API_URL}/admin/users/${route.params.id}`, { headers: getHeaders() });
-    const u = res.data.data;
-    
+// ==========================================
+// TANSTACK VUE QUERY - FETCH DATA
+// ==========================================
+
+const { data: userResponse, isLoading: isUserLoading } = useQuery({
+  queryKey: ['adminUser', route.params.id],
+  queryFn: async () => {
+    const response = await axios.get(`${API_URL}/admin/users/${route.params.id}`, { headers: getHeaders() });
+    return response.data;
+  },
+  staleTime: 2 * 60 * 1000
+});
+
+const isLoaded = computed(() => !isUserLoading.value);
+const rawUserData = computed(() => userResponse.value?.data);
+
+const userAddresses = computed(() => {
+  return rawUserData.value?.addresses ? [...rawUserData.value.addresses].sort((a, b) => b.is_default - a.is_default) : [];
+});
+
+watch(rawUserData, (u) => {
+  if (u) {
     form.value = { 
         fullName: u.fullName, email: u.email, phone: u.phone, status: u.status, 
         gender: u.gender || '', birthday: u.birthday || '', password: '', password_confirmation: '' 
     };
-    
-    previewAvatar.value = u.avatar_url ? getFullImage(u.avatar_url) : defaultAvatar;
-    userAddresses.value = (u.addresses || []).sort((a, b) => b.is_default - a.is_default);
-  } catch (err) { 
-      Swal.fire('Lỗi', 'Không thể tải dữ liệu khách hàng', 'error');
-      router.push({ name: 'admin-users' });
-  } finally { 
-      isLoaded.value = true; 
+    previewAvatar.value = u.avatar_url ? getFullImage(u.avatar_url) : placeholderImg;
   }
-};
+}, { immediate: true });
 
-const handleRestore = async () => {
+const handleRestore = () => {
   isRestoring.value = true;
-  await fetchUser();
+  queryClient.invalidateQueries({ queryKey: ['adminUser', route.params.id] });
   setTimeout(() => {
     isRestoring.value = false;
     Swal.fire({ icon: 'success', title: 'Khôi phục thành công', text: 'Dữ liệu đã được tải lại như ban đầu', timer: 1500, showConfirmButton: false });
@@ -440,23 +453,38 @@ const handleAvatarChange = (e) => {
   }
 };
 
-const removeAvatar = () => { selectedFile.value = null; previewAvatar.value = defaultAvatar; isRemoveAvatar.value = true; document.getElementById('avatarUpload').value = ''; };
+const removeAvatar = () => { selectedFile.value = null; previewAvatar.value = placeholderImg; isRemoveAvatar.value = true; document.getElementById('avatarUpload').value = ''; };
 
 const validatePhone = (e) => {
     form.value.phone = e.target.value.replace(/\D/g, '').slice(0, 11);
 };
 
-const updateUser = async () => {
-  isSavingUser.value = true;
-  errors.value = {};
-  
+// ==========================================
+// TANSTACK VUE QUERY - MUTATIONS
+// ==========================================
+
+const updateUserMutation = useMutation({
+  mutationFn: async (formData) => {
+    const res = await axios.post(`${API_URL}/admin/users/${route.params.id}`, formData, { headers: getHeaders() });
+    return res.data;
+  },
+  onMutate: () => { isSavingUser.value = true; errors.value = {}; },
+  onSuccess: (data) => {
+    Swal.fire({ icon: 'success', title: 'Thành công', text: data.message, timer: 1500, showConfirmButton: false });
+    queryClient.invalidateQueries({ queryKey: ['adminUser', route.params.id] });
+    queryClient.invalidateQueries({ queryKey: ['adminUsers'] }); // Update list
+    form.value.password = ''; form.value.password_confirmation = '';
+  },
+  onError: (err) => handleAxiosError(err, 'Không thể cập nhật hồ sơ'),
+  onSettled: () => { isSavingUser.value = false; }
+});
+
+const updateUser = () => {
   if (form.value.password && form.value.password !== form.value.password_confirmation) {
-      isSavingUser.value = false;
       errors.value = { password: ['Mật khẩu xác nhận không khớp!'] };
       Swal.fire('Lỗi', 'Mật khẩu xác nhận không khớp!', 'warning');
       return;
   }
-
   const formData = new FormData();
   formData.append('_method', 'PUT'); 
   Object.keys(form.value).forEach(key => {
@@ -466,17 +494,30 @@ const updateUser = async () => {
   if (selectedFile.value) formData.append('avatar', selectedFile.value);
   if (isRemoveAvatar.value) formData.append('remove_avatar', 'true');
 
-  try {
-    const res = await axios.post(`${API_URL}/admin/users/${route.params.id}`, formData, { headers: getHeaders() });
-    Swal.fire({ icon: 'success', title: 'Thành công', text: res.data.message, timer: 1500, showConfirmButton: false });
-    fetchUser();
-    form.value.password = '';
-    form.value.password_confirmation = '';
-  } catch (err) { 
-      handleAxiosError(err, 'Không thể cập nhật hồ sơ');
-  } finally { 
-      isSavingUser.value = false; 
-  }
+  updateUserMutation.mutate(formData);
+};
+
+// MUTATIONS ADDRESS
+const saveAddressMutation = useMutation({
+  mutationFn: async ({ url, payload, isAdd }) => {
+    if (isAdd) return await axios.post(url, payload, { headers: getHeaders() });
+    return await axios.put(url, payload, { headers: getHeaders() });
+  },
+  onMutate: () => { isSavingAddr.value = true; },
+  onSuccess: () => {
+    addressModalInstance.hide();
+    queryClient.invalidateQueries({ queryKey: ['adminUser', route.params.id] });
+    Swal.fire({ icon: 'success', title: 'Thành công', timer: 1500, showConfirmButton: false }); 
+  },
+  onError: (err) => handleAxiosError(err, 'Lỗi khi lưu địa chỉ'),
+  onSettled: () => { isSavingAddr.value = false; }
+});
+
+const saveAddress = () => {
+  const isAdd = addrModalMode.value === 'add';
+  const url = isAdd ? `${API_URL}/admin/users/${route.params.id}/addresses` : `${API_URL}/admin/addresses/${addrForm.value.id}`;
+  const payload = { ...addrForm.value, is_default: addrForm.value.set_as_default ? 1 : addrForm.value.is_default };
+  saveAddressMutation.mutate({ url, payload, isAdd });
 };
 
 const openAddressModal = async (mode, addr = null) => {
@@ -491,20 +532,24 @@ const openAddressModal = async (mode, addr = null) => {
       const cityObj = findLocationByName(provinces.value, addr.city);
       if (cityObj) {
         selectedCityId.value = cityObj.id;
-        const res = await axios.get(`https://esgoo.net/api-tinhthanh/2/${selectedCityId.value}.htm`);
-        if(res.data.error === 0) {
-          districts.value = res.data.data;
-          const distObj = findLocationByName(districts.value, addr.district);
-          if (distObj) {
-            selectedDistrictId.value = distObj.id;
-            const wRes = await axios.get(`https://esgoo.net/api-tinhthanh/3/${selectedDistrictId.value}.htm`);
-            if(wRes.data.error === 0) {
-              wards.value = wRes.data.data;
-              const wardObj = findLocationByName(wards.value, addr.ward);
-              if (wardObj) selectedWardId.value = wardObj.id;
+        try {
+          const res = await fetch(`https://esgoo.net/api-tinhthanh/2/${selectedCityId.value}.htm`);
+          const data = await res.json();
+          if(data.error === 0) {
+            districts.value = data.data;
+            const distObj = findLocationByName(districts.value, addr.district);
+            if (distObj) {
+              selectedDistrictId.value = distObj.id;
+              const wRes = await fetch(`https://esgoo.net/api-tinhthanh/3/${selectedDistrictId.value}.htm`);
+              const wData = await wRes.json();
+              if(wData.error === 0) {
+                wards.value = wData.data;
+                const wardObj = findLocationByName(wards.value, addr.ward);
+                if (wardObj) selectedWardId.value = wardObj.id;
+              }
             }
           }
-        }
+        } catch(e){}
       }
     }
   }
@@ -512,65 +557,38 @@ const openAddressModal = async (mode, addr = null) => {
   addressModalInstance.show();
 };
 
-const saveAddress = async () => {
-  isSavingAddr.value = true;
-  const url = addrModalMode.value === 'add' ? `${API_URL}/admin/users/${route.params.id}/addresses` : `${API_URL}/admin/addresses/${addrForm.value.id}`;
-  
-  const payload = { ...addrForm.value, is_default: addrForm.value.set_as_default ? 1 : addrForm.value.is_default };
-  
-  try {
-    if (addrModalMode.value === 'add') {
-        await axios.post(url, payload, { headers: getHeaders() });
-    } else {
-        await axios.put(url, payload, { headers: getHeaders() });
-    }
-    
-    addressModalInstance.hide(); 
-    fetchUser(); 
-    Swal.fire({ icon: 'success', title: 'Thành công', timer: 1500, showConfirmButton: false }); 
-  } catch (err) { 
-      handleAxiosError(err, 'Lỗi khi lưu địa chỉ');
-  } finally { 
-      isSavingAddr.value = false; 
-  }
-};
+const deleteAddressMutation = useMutation({
+  mutationFn: async (id) => { return await axios.delete(`${API_URL}/admin/addresses/${id}`, { headers: getHeaders() }); },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['adminUser', route.params.id] });
+    Swal.fire({ icon: 'success', title: 'Đã xóa!', timer: 1500, showConfirmButton: false });
+  },
+  onError: (err) => handleAxiosError(err, 'Không thể xóa địa chỉ này')
+});
 
 const deleteAddress = (id) => {
   Swal.fire({ 
-    title: 'Xóa địa chỉ?', 
-    text: 'Hành động này không thể hoàn tác!',
-    icon: 'warning', 
-    showCancelButton: true,
-    confirmButtonColor: '#d33',
-    cancelButtonColor: '#6c757d',
-    confirmButtonText: 'Đồng ý xóa',
-  }).then(async (result) => {
-    if (result.isConfirmed) {
-      try {
-          await axios.delete(`${API_URL}/admin/addresses/${id}`, { headers: getHeaders() });
-          await fetchUser();
-          Swal.fire({ icon: 'success', title: 'Đã xóa!', timer: 1500, showConfirmButton: false });
-      } catch (err) {
-          handleAxiosError(err, 'Không thể xóa địa chỉ này');
-      }
-    }
+    title: 'Xóa địa chỉ?', text: 'Hành động này không thể hoàn tác!', icon: 'warning', 
+    showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#6c757d', confirmButtonText: 'Đồng ý xóa',
+  }).then((result) => {
+    if (result.isConfirmed) deleteAddressMutation.mutate(id);
   });
 };
 
-const setDefaultAddress = async (id) => {
-  settingDefaultId.value = id;
-  try {
-    await axios.put(`${API_URL}/admin/addresses/${id}/default`, {}, { headers: getHeaders() });
-    await fetchUser();
+const setDefaultAddressMutation = useMutation({
+  mutationFn: async (id) => { return await axios.put(`${API_URL}/admin/addresses/${id}/default`, {}, { headers: getHeaders() }); },
+  onMutate: (id) => { settingDefaultId.value = id; },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['adminUser', route.params.id] });
     Swal.fire({ icon: 'success', title: 'Thành công', text: 'Đã thay đổi địa chỉ mặc định', timer: 1500, showConfirmButton: false });
-  } catch (err) {
-      handleAxiosError(err, 'Lỗi cập nhật địa chỉ mặc định');
-  } finally {
-    settingDefaultId.value = null;
-  }
-};
+  },
+  onError: (err) => handleAxiosError(err, 'Lỗi cập nhật địa chỉ mặc định'),
+  onSettled: () => { settingDefaultId.value = null; }
+});
 
-onMounted(() => { fetchProvinces(); fetchUser(); });
+const setDefaultAddress = (id) => { setDefaultAddressMutation.mutate(id); };
+
+onMounted(() => { fetchProvinces(); });
 </script>
 
 <style scoped>

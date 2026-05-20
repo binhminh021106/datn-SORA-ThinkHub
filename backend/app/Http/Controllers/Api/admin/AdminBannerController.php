@@ -18,6 +18,9 @@ class AdminBannerController extends Controller
         return is_numeric($max) ? $max + 1 : 1;
     }
 
+    /**
+     * Lấy danh sách tối ưu ORM
+     */
     public function index()
     {
         $banners = Banner::withTrashed()
@@ -29,10 +32,12 @@ class AdminBannerController extends Controller
         return response()->json(['success' => true, 'data' => $banners]);
     }
 
+    /**
+     * Tạo mới - Load kèm brand để FE nhét vào cache không bị mồ côi data
+     */
     public function store(AdminStoreBannerRequest $request)
     {
         $data = $request->validated();
-
         $data['sort_order'] = ($data['status'] === 'active') ? $this->getNextSortOrder() : null;
 
         if ($request->hasFile('image_desktop')) {
@@ -48,15 +53,23 @@ class AdminBannerController extends Controller
         }
 
         $banner = Banner::create($data);
+        $banner->load('brand:id,name,slug'); // Eager load trả về cho FE
+
         return response()->json(['success' => true, 'message' => 'Tạo banner thành công', 'data' => $banner]);
     }
 
+    /**
+     * Chi tiết
+     */
     public function show($id)
     {
-        $banner = Banner::findOrFail($id);
+        $banner = Banner::with('brand:id,name,slug')->findOrFail($id);
         return response()->json(['success' => true, 'data' => $banner]);
     }
 
+    /**
+     * Cập nhật
+     */
     public function update(AdminUpdateBannerRequest $request, $id)
     {
         $banner = Banner::findOrFail($id);
@@ -85,18 +98,26 @@ class AdminBannerController extends Controller
         }
 
         $banner->update($data);
+        $banner->load('brand:id,name,slug'); // Load lại quan hệ để FE update cache
+
         return response()->json(['success' => true, 'message' => 'Cập nhật thành công', 'data' => $banner]);
     }
 
+    /**
+     * Xóa mềm
+     */
     public function destroy($id)
     {
         $banner = Banner::findOrFail($id);
         $banner->update(['sort_order' => null]);
         $banner->delete();
 
-        return response()->json(['success' => true, 'message' => 'Đã đưa banner vào thùng rác']);
+        return response()->json(['success' => true, 'message' => 'Đã đưa banner vào thùng rác', 'id' => $id]);
     }
 
+    /**
+     * Khôi phục
+     */
     public function restore($id)
     {
         $banner = Banner::withTrashed()->findOrFail($id);
@@ -105,10 +126,14 @@ class AdminBannerController extends Controller
         if ($banner->status === 'active') {
             $banner->update(['sort_order' => $this->getNextSortOrder()]);
         }
+        $banner->load('brand:id,name,slug'); // Load lại data cho cache FE
 
-        return response()->json(['success' => true, 'message' => 'Đã khôi phục banner']);
+        return response()->json(['success' => true, 'message' => 'Đã khôi phục banner', 'data' => $banner]);
     }
 
+    /**
+     * Kéo thả Reorder
+     */
     public function reorder(Request $request)
     {
         $items = $request->items;
