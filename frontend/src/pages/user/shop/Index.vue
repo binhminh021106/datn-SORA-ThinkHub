@@ -205,6 +205,7 @@ import { ref, shallowRef, onMounted, reactive, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import apiClient from '@/utils/apiClient';
+import Toast from '@/utils/toastConfig';
 
 import ProductCard from '@/components/ui/ProductCard.vue';
 import CompareModal from '@/components/ui/CompareModal.vue'; 
@@ -214,12 +215,6 @@ const route = useRoute();
 const router = useRouter();
 const shopSlug = ref(route.params.shop_slug || 'aurora-jewelry');
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
-
-const Toast = Swal.mixin({
-  toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true,
-  background: '#fffafa', color: '#9f273b', iconColor: '#9f273b',
-  didOpen: (toast) => { if (toast.parentElement) toast.parentElement.style.zIndex = '10005'; }
-});
 
 const isLoadingCategories = ref(true);
 const isLoadingProducts = ref(true);

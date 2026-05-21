@@ -63,6 +63,7 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import axios from 'axios';
 import Swal from 'sweetalert2';
+import Toast from '@/utils/toastConfig';
 import { globalModalState } from '@/stores/modalState';
 
 // CẬP NHẬT: Không dùng hàm replace() xóa /api nữa, khai báo tương tự Index.vue và Detail.vue
@@ -80,11 +81,6 @@ const soraAlert = Swal.mixin({
   buttonsStyling: true,
   confirmButtonColor: '#9f273b',
   customClass: { confirmButton: 'px-4 py-2 mx-2 rounded shadow-sm fw-bold font-oswald tracking-widest text-uppercase' }
-});
-
-const Toast = Swal.mixin({
-  toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true,
-  background: '#fffafa', color: '#9f273b', iconColor: '#9f273b'
 });
 
 watch(() => globalModalState.quickAddTrigger, () => {

@@ -1,7 +1,7 @@
 <template>
   <div class="user-index-wrapper pb-5 mb-5">
     
-    <div v-if="isLoading" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
+    <div v-if="isPageLoading" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
       <h1 class="logo-shimmer mb-3">ThinkHub</h1>
       <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ liệu khách hàng...</p>
     </div>
@@ -13,7 +13,6 @@
           <h3 class="fw-bold text-dark mb-0">Quản lý Khách Hàng</h3>
         </div>
         
-        <!-- ĐÃ FIX RESPONSIVE: Thêm flex-wrap -->
         <div class="col-md-6 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end align-items-center gap-3 flex-wrap">
           <div class="border rounded px-3 py-1 bg-white shadow-sm text-muted small" v-if="currentPageLevel">
             <i class="bi bi-shield-check text-success me-1"></i>
@@ -25,31 +24,31 @@
         </div>
       </div>
 
-      <!-- TABS PHÂN LOẠI (ĐÃ FIX RESPONSIVE) -->
+      <!-- TABS PHÂN LOẠI -->
       <div class="mb-4">
         <ul class="nav nav-underline border-bottom mb-2 pb-1" style="flex-wrap: wrap !important; gap: 8px;">
           <li class="nav-item">
             <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#" :class="{ 'active-tab': activeTab === 'all' }" @click.prevent="switchTab('all')">
               <i class="bi bi-people-fill me-2"></i> Tất cả
-              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'all'}">{{ users.filter(u => !u.deleted_at).length }}</span>
+              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'all'}">{{ localUsers.filter(u => !u.deleted_at).length }}</span>
             </a>
           </li>
           <li class="nav-item">
             <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#" :class="{ 'active-tab': activeTab === 'active' }" @click.prevent="switchTab('active')">
               <i class="bi bi-check-circle-fill me-2 text-success"></i> Đang hoạt động
-              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'active'}">{{ users.filter(u => u.status === 'active' && !u.deleted_at).length }}</span>
+              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'active'}">{{ localUsers.filter(u => u.status === 'active' && !u.deleted_at).length }}</span>
             </a>
           </li>
           <li class="nav-item">
             <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#" :class="{ 'active-tab': activeTab === 'locked' }" @click.prevent="switchTab('locked')">
               <i class="bi bi-lock-fill me-2 text-warning"></i> Bị khóa
-              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'locked'}">{{ users.filter(u => u.status === 'locked' && !u.deleted_at).length }}</span>
+              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'locked'}">{{ localUsers.filter(u => u.status === 'locked' && !u.deleted_at).length }}</span>
             </a>
           </li>
           <li class="nav-item ms-auto">
             <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab text-danger" href="#" :class="{ 'active-tab': activeTab === 'deleted', 'text-danger': true }" @click.prevent="switchTab('deleted')">
               <i class="bi bi-trash3-fill me-2"></i> Đã xóa
-              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'deleted', 'bg-danger text-white border-danger': activeTab !== 'deleted'}">{{ users.filter(u => u.deleted_at).length }}</span>
+              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'deleted', 'bg-danger text-white border-danger': activeTab !== 'deleted'}">{{ localUsers.filter(u => u.deleted_at).length }}</span>
             </a>
           </li>
         </ul>
@@ -78,99 +77,115 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-if="paginatedUsers.length === 0">
-                  <td colspan="5" class="text-center py-5 text-muted">
-                    <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
-                    Không có dữ liệu trong danh sách này.
-                  </td>
-                </tr>
-                <tr v-else v-for="user in paginatedUsers" :key="user.id" :class="{'bg-light opacity-75': user.deleted_at}">
-                  <td class="px-4 py-3">
-                    <div class="d-flex align-items-center">
-                      <!-- ẢNH CLICK ĐỂ PHÓNG TO -->
-                      <img :src="getAvatarUrl(user.avatar_url)" 
-                           @error="handleImageError"
-                           @click="viewFullImage(getAvatarUrl(user.avatar_url))"
-                           class="rounded-circle object-fit-cover me-3 border shadow-sm flex-shrink-0 cursor-pointer hover-zoom" 
-                           style="width: 45px; height: 45px;">
-                      
-                      <div class="overflow-hidden">
-                        <h6 class="mb-0 fw-bold text-dark text-truncate" :title="user.fullName">{{ user.fullName }}</h6>
-                        <small class="text-muted d-block mt-1 text-truncate">
-                          <i class="bi bi-calendar-event me-1"></i> Sinh: {{ formatDate(user.birthday) }}
-                        </small>
+                <!-- Hiệu ứng chuyển Tab Skeleton -->
+                <template v-if="isTableLoading">
+                  <tr v-for="i in 5" :key="'skeleton-'+i">
+                    <td class="px-4 py-3"><div class="placeholder-glow"><span class="placeholder col-8 rounded py-3"></span></div></td>
+                    <td class="px-4"><div class="placeholder-glow"><span class="placeholder col-10 rounded py-2"></span></div></td>
+                    <td class="px-4"><div class="placeholder-glow"><span class="placeholder col-12 rounded py-2"></span></div></td>
+                    <td class="px-2 text-center"><div class="placeholder-glow"><span class="placeholder col-8 rounded py-2"></span></div></td>
+                    <td class="px-4 text-center"><div class="placeholder-glow"><span class="placeholder col-8 rounded py-2"></span></div></td>
+                  </tr>
+                </template>
+                
+                <template v-else>
+                  <tr v-if="paginatedUsers.length === 0">
+                    <td colspan="5" class="text-center py-5 text-muted">
+                      <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
+                      Không có dữ liệu trong danh sách này.
+                    </td>
+                  </tr>
+                  <tr v-else v-for="user in paginatedUsers" :key="user.id" :class="{'bg-light opacity-75': user.deleted_at}">
+                    <td class="px-4 py-3">
+                      <div class="d-flex align-items-center">
+                        <div class="position-relative flex-shrink-0 cursor-pointer hover-zoom me-3" style="width: 45px; height: 45px;">
+                          <!-- Sử dụng SoraImage -->
+                          <SoraImage 
+                            :src="user.avatar_url" 
+                            :placeholder="placeholderImg"
+                            imgClass="rounded-circle object-fit-cover border shadow-sm" 
+                            style="width: 45px; height: 45px;"
+                            alt="Avatar"
+                            @click="viewFullImage(getAvatarUrl(user.avatar_url))"
+                          />
+                        </div>
+                        
+                        <div class="overflow-hidden">
+                          <h6 class="mb-0 fw-bold text-dark text-truncate" :title="user.fullName">{{ user.fullName }}</h6>
+                          <small class="text-muted d-block mt-1 text-truncate">
+                            <i class="bi bi-calendar-event me-1"></i> Sinh: {{ formatDate(user.birthday) }}
+                          </small>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td class="px-4 overflow-hidden">
-                    <div class="text-dark fw-medium text-truncate mb-1" :title="user.phone"><i class="bi bi-telephone text-brand me-1"></i> {{ user.phone || 'Chưa cập nhật' }}</div>
-                    <div class="text-muted small text-truncate font-monospace" :title="user.email"><i class="bi bi-envelope me-1"></i> {{ user.email }}</div>
-                  </td>
-                  <td class="px-4">
-                    <template v-if="user.default_address">
-                      <div class="text-dark small text-truncate" style="max-width: 250px;" :title="formatFullAddress(user.default_address)">
-                        {{ user.default_address.shipping_address }}
+                    </td>
+                    <td class="px-4 overflow-hidden">
+                      <div class="text-dark fw-medium text-truncate mb-1" :title="user.phone"><i class="bi bi-telephone text-brand me-1"></i> {{ user.phone || 'Chưa cập nhật' }}</div>
+                      <div class="text-muted small text-truncate font-monospace" :title="user.email"><i class="bi bi-envelope me-1"></i> {{ user.email }}</div>
+                    </td>
+                    <td class="px-4">
+                      <template v-if="user.default_address">
+                        <div class="text-dark small text-truncate" style="max-width: 250px;" :title="formatFullAddress(user.default_address)">
+                          {{ user.default_address.shipping_address }}
+                        </div>
+                        <div class="text-muted small mt-1 text-truncate" style="font-size: 0.75rem;">
+                          {{ [user.default_address.ward, user.default_address.district, user.default_address.city].filter(Boolean).join(', ') }}
+                        </div>
+                      </template>
+                      <span v-else class="text-muted small fst-italic">Chưa có địa chỉ</span>
+                    </td>
+                    
+                    <!-- CỘT SỬA TRẠNG THÁI NHANH (OPTIMISTIC UPDATES) -->
+                    <td class="px-2 text-center">
+                      <span v-if="user.deleted_at" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary" title="Đã chuyển vào thùng rác">
+                        <i class="bi bi-trash3-fill"></i> Đã xóa
+                      </span>
+                      <div v-else class="d-flex align-items-center justify-content-center gap-1 flex-nowrap w-100">
+                        <select class="form-select form-select-sm border shadow-sm fw-semibold flex-shrink-0" 
+                                style="width: 110px; font-size: 0.8rem; border-color: #ced4da !important;"
+                                :class="getStatusSelectClass(user.localStatus || user.status)"
+                                v-model="user.localStatus"
+                                @change="checkStatusChange(user)"
+                                :disabled="isUpdatingStatusId === user.id">
+                          <option value="active">Hoạt động</option>
+                          <option value="locked">Bị Khóa</option>
+                        </select>
+                        
+                        <div class="d-flex align-items-center justify-content-start flex-shrink-0" style="min-width: 55px; height: 28px;">
+                          <div v-if="isUpdatingStatusId === user.id" class="spinner-border text-brand ms-1" style="width: 1.25rem; height: 1.25rem; border-width: 0.15em;" role="status"></div>
+                          <template v-else-if="user.isStatusChanged">
+                            <button @click="saveUserStatus(user)" class="btn btn-sm btn-success rounded-circle shadow-sm d-flex align-items-center justify-content-center ms-1" style="width: 24px; height: 24px; padding: 0;" title="Lưu">
+                              <i class="bi bi-check-lg fw-bold" style="font-size: 0.7rem;"></i>
+                            </button>
+                            <button @click="cancelStatusChange(user)" class="btn btn-sm btn-light rounded-circle shadow-sm text-danger border d-flex align-items-center justify-content-center ms-1" style="width: 24px; height: 24px; padding: 0;" title="Hủy">
+                              <i class="bi bi-x-lg fw-bold" style="font-size: 0.7rem;"></i>
+                            </button>
+                          </template>
+                        </div>
                       </div>
-                      <div class="text-muted small mt-1 text-truncate" style="font-size: 0.75rem;">
-                        {{ [user.default_address.ward, user.default_address.district, user.default_address.city].filter(Boolean).join(', ') }}
-                      </div>
-                    </template>
-                    <span v-else class="text-muted small fst-italic">Chưa có địa chỉ</span>
-                  </td>
-                  
-                  <!-- CỘT SỬA TRẠNG THÁI NHANH -->
-                  <td class="px-2 text-center">
-                    <span v-if="user.deleted_at" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary" title="Đã chuyển vào thùng rác">
-                      <i class="bi bi-trash3-fill"></i> Đã xóa
-                    </span>
-                    <div v-else class="d-flex align-items-center justify-content-center gap-1 flex-nowrap w-100">
-                      <select class="form-select form-select-sm border shadow-sm fw-semibold flex-shrink-0" 
-                              style="width: 110px; font-size: 0.8rem; border-color: #ced4da !important;"
-                              :class="getStatusSelectClass(user.localStatus || user.status)"
-                              v-model="user.localStatus"
-                              @change="checkStatusChange(user)"
-                              :disabled="user.isUpdatingStatus">
-                        <option value="active">Hoạt động</option>
-                        <option value="locked">Bị Khóa</option>
-                      </select>
-                      
-                      <!-- Khung cố định chống nhảy -->
-                      <div class="d-flex align-items-center justify-content-start flex-shrink-0" style="min-width: 55px; height: 28px;">
-                        <div v-if="user.isUpdatingStatus" class="spinner-border text-brand ms-1" style="width: 1.25rem; height: 1.25rem; border-width: 0.15em;" role="status"></div>
-                        <template v-else-if="user.isStatusChanged">
-                          <button @click="saveUserStatus(user)" class="btn btn-sm btn-success rounded-circle shadow-sm d-flex align-items-center justify-content-center ms-1" style="width: 24px; height: 24px; padding: 0;" title="Lưu">
-                            <i class="bi bi-check-lg fw-bold" style="font-size: 0.7rem;"></i>
+                    </td>
+  
+                    <td class="px-4 text-center">
+                      <div class="d-flex justify-content-center align-items-center gap-1 flex-nowrap">
+                        <button class="btn btn-sm btn-light text-info shadow-sm border" title="Xem chi tiết" @click="openQuickView(user)">
+                          <i class="bi bi-eye"></i>
+                        </button>
+                        <template v-if="!user.deleted_at">
+                          <router-link :to="{ name: 'admin-user-edit', params: { id: user.id } }" class="btn btn-sm btn-light text-primary shadow-sm border" title="Chỉnh sửa">
+                            <i class="bi bi-pencil-square"></i>
+                          </router-link>
+                          <button class="btn btn-sm btn-light text-danger shadow-sm border" @click="confirmDelete(user.id, user.fullName)" title="Đưa vào thùng rác">
+                            <i class="bi bi-trash"></i>
                           </button>
-                          <button @click="cancelStatusChange(user)" class="btn btn-sm btn-light rounded-circle shadow-sm text-danger border d-flex align-items-center justify-content-center ms-1" style="width: 24px; height: 24px; padding: 0;" title="Hủy">
-                            <i class="bi bi-x-lg fw-bold" style="font-size: 0.7rem;"></i>
+                        </template>
+                        <template v-else>
+                          <button class="btn btn-sm btn-light text-success shadow-sm border w-100" @click="restoreUser(user.id)" title="Khôi phục tài khoản">
+                            <i class="bi bi-arrow-counterclockwise"></i>
                           </button>
                         </template>
                       </div>
-                    </div>
-                  </td>
-
-                  <!-- ĐÃ CĂN CHỈNH LẠI: NÚT THAO TÁC LUÔN NẰM TRÊN 1 HÀNG -->
-                  <td class="px-4 text-center">
-                    <div class="d-flex justify-content-center align-items-center gap-1 flex-nowrap">
-                      <button class="btn btn-sm btn-light text-info shadow-sm border" title="Xem chi tiết" @click="openQuickView(user)">
-                        <i class="bi bi-eye"></i>
-                      </button>
-                      <template v-if="!user.deleted_at">
-                        <router-link :to="{ name: 'admin-user-edit', params: { id: user.id } }" class="btn btn-sm btn-light text-primary shadow-sm border" title="Chỉnh sửa">
-                          <i class="bi bi-pencil-square"></i>
-                        </router-link>
-                        <button class="btn btn-sm btn-light text-danger shadow-sm border" @click="confirmDelete(user.id, user.fullName)" title="Đưa vào thùng rác">
-                          <i class="bi bi-trash"></i>
-                        </button>
-                      </template>
-                      <template v-else>
-                        <button class="btn btn-sm btn-light text-success shadow-sm border w-100" @click="restoreUser(user.id)" title="Khôi phục tài khoản">
-                          <i class="bi bi-arrow-counterclockwise"></i>
-                        </button>
-                      </template>
-                    </div>
-                  </td>
-                </tr>
+                    </td>
+                  </tr>
+                </template>
               </tbody>
             </table>
           </div>
@@ -192,7 +207,7 @@
       </div>
     </div>
 
-    <!-- POPUP XEM CHI TIẾT (QUICK VIEW) BAO GỒM TẤT CẢ ĐỊA CHỈ -->
+    <!-- POPUP XEM CHI TIẾT (QUICK VIEW) -->
     <div class="modal fade" id="quickViewModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content rounded-4 border-0 shadow">
@@ -202,14 +217,16 @@
           </div>
           <div class="modal-body p-4" v-if="selectedUser">
             <div class="row">
-              <!-- Cột thông tin cơ bản -->
               <div class="col-md-5 text-center border-end mb-4 mb-md-0">
-                <div class="position-relative d-inline-block mb-3">
-                  <img :src="getAvatarUrl(selectedUser.avatar_url)" 
-                       @error="handleImageError"
-                       @click="viewFullImage(getAvatarUrl(selectedUser.avatar_url))"
-                       class="rounded-circle shadow-sm border border-3 border-white object-fit-cover cursor-pointer hover-zoom" 
-                       style="width: 130px; height: 130px;">
+                <div class="position-relative d-inline-block mb-3" style="width: 130px; height: 130px;">
+                  <SoraImage 
+                    :src="selectedUser.avatar_url" 
+                    :placeholder="placeholderImg"
+                    imgClass="rounded-circle shadow-sm border border-3 border-white object-fit-cover cursor-pointer hover-zoom" 
+                    style="width: 130px; height: 130px;"
+                    alt="Avatar"
+                    @click="viewFullImage(getAvatarUrl(selectedUser.avatar_url))"
+                  />
                   <span v-if="!selectedUser.deleted_at" class="position-absolute bottom-0 end-0 p-2 border border-light rounded-circle" :class="selectedUser.status === 'active' ? 'bg-success' : 'bg-warning'" style="width: 18px; height: 18px;"></span>
                   <span v-else class="position-absolute bottom-0 end-0 p-2 border border-light rounded-circle bg-secondary" style="width: 18px; height: 18px;"></span>
                 </div>
@@ -242,7 +259,6 @@
                 </div>
               </div>
               
-              <!-- Cột Sổ địa chỉ -->
               <div class="col-md-7">
                 <h6 class="fw-bold mb-3 d-flex justify-content-between align-items-center">
                   <span><i class="bi bi-journal-bookmark text-brand me-2"></i>Sổ địa chỉ đã lưu</span>
@@ -279,24 +295,27 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
+import { ref, computed, onBeforeUnmount, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios'; 
-import defaultAvatar from '../../../../assets/images/defaults/avatar1.png';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { getFullImage } from '@/composables/useUtilities';
 
+import SoraImage from '@/components/ui/SoraImage.vue';
+import placeholderImg from '@/assets/images/defaults/placeholder.png';
+
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const route = useRoute();
 const router = useRouter();
-const users = ref([]);
-const systemModules = ref([]);
-const isLoading = ref(true);
+const queryClient = useQueryClient();
+
 const searchQuery = ref('');
 const activeTab = ref('all');
 const currentPageLevel = ref(null);
+const isUpdatingStatusId = ref(null);
+const isTableLoading = ref(false); 
 
 const currentPage = ref(1);
 const itemsPerPage = 8; 
@@ -342,12 +361,9 @@ const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
   }
 };
 
-const getAvatarUrl = (path) => path ? getFullImage(path) : defaultAvatar;
-const handleImageError = (e) => { e.target.src = defaultAvatar; };
+const getAvatarUrl = (path) => path ? getFullImage(path) : placeholderImg;
 
 const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('vi-VN') : 'Chưa cập nhật';
-const formatDateTime = (dateString) => dateString ? `${new Date(dateString).toLocaleDateString('vi-VN')} ${new Date(dateString).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}` : '';
-
 const formatFullAddress = (addr) => {
   if (!addr) return '';
   return `${addr.shipping_address}, ${[addr.ward, addr.district, addr.city].filter(Boolean).join(', ')}`;
@@ -383,31 +399,69 @@ const viewFullImage = (url) => {
   });
 };
 
-const fetchData = async () => {
-  isLoading.value = true;
-  try {
-    const [resUsers, resModules] = await Promise.all([
-      axios.get(`${API_URL}/admin/users`, { headers: getHeaders() }),
-      axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() })
-    ]);
-    
-    const rawUsers = Array.isArray(resUsers.data.data) ? resUsers.data.data : (resUsers.data.data?.data || []);
-    users.value = rawUsers.map(u => ({
-        ...u, localStatus: u.status, isStatusChanged: false, isUpdatingStatus: false
-    }));
+// ==========================================
+// TANSTACK VUE QUERY - FETCH DATA
+// ==========================================
 
-    systemModules.value = resModules.data.data;
-    const currentModule = systemModules.value.find(m => m.module_code === (route.meta?.moduleCode || 'admin_users'));
-    if (currentModule) currentPageLevel.value = currentModule.required_level;
-    
-  } catch (err) { 
-      console.error('Lỗi khi tải dữ liệu: ', err); 
-  } finally { 
-      isLoading.value = false; 
-  }
+const { data: usersResponse, isLoading: isUsersLoading } = useQuery({
+  queryKey: ['adminUsers'],
+  queryFn: async () => {
+    const response = await axios.get(`${API_URL}/admin/users`, { headers: getHeaders() });
+    return response.data;
+  },
+  staleTime: 5 * 60 * 1000
+});
+
+const { data: modulesResponse } = useQuery({
+  queryKey: ['adminModules'],
+  queryFn: async () => {
+    const response = await axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() });
+    return response.data;
+  },
+  staleTime: 30 * 60 * 1000
+});
+
+const isPageLoading = computed(() => isUsersLoading.value);
+
+const localUsers = ref([]);
+const rawUsersList = computed(() => usersResponse.value?.data || []);
+
+// Hàm định nghĩa trước để tránh lỗi reference
+const syncLocalUsers = () => {
+  localUsers.value = rawUsersList.value.map(u => {
+    const existing = localUsers.value.find(lu => lu.id === u.id);
+    return {
+      ...u,
+      localStatus: existing ? existing.localStatus : u.status,
+      isStatusChanged: existing ? existing.isStatusChanged : false
+    };
+  });
 };
 
-const switchTab = (tabId) => { activeTab.value = tabId; currentPage.value = 1; };
+watch(rawUsersList, (newList) => {
+  if (newList && newList.length > 0) {
+    syncLocalUsers();
+  }
+}, { immediate: true });
+
+computed(() => {
+  const modules = modulesResponse.value?.data || [];
+  const currentCode = route.meta.moduleCode;
+  if (currentCode && modules.length > 0) {
+    const currentModule = modules.find(m => m.module_code === currentCode);
+    if (currentModule) currentPageLevel.value = currentModule.required_level;
+  }
+  return modules;
+});
+
+
+const switchTab = (tabId) => { 
+  if (activeTab.value === tabId) return;
+  isTableLoading.value = true;
+  activeTab.value = tabId; 
+  currentPage.value = 1; 
+  setTimeout(() => isTableLoading.value = false, 350);
+};
 
 const openQuickView = (user) => {
   if (user.addresses) {
@@ -429,9 +483,35 @@ const getStatusSelectClass = (status) => {
 const checkStatusChange = (user) => { user.isStatusChanged = (user.localStatus !== user.status); };
 const cancelStatusChange = (user) => { user.localStatus = user.status; user.isStatusChanged = false; };
 
-const saveUserStatus = async (user) => {
-  user.isUpdatingStatus = true;
-  
+// ==========================================
+// TANSTACK VUE QUERY - MUTATIONS
+// ==========================================
+
+const updateStatusMutation = useMutation({
+  mutationFn: async ({ id, payload }) => {
+    const response = await axios.post(`${API_URL}/admin/users/${id}`, payload, { headers: getHeaders() });
+    return response.data;
+  },
+  onMutate: async ({ id }) => { isUpdatingStatusId.value = id; },
+  onSuccess: (data, variables) => {
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
+    queryClient.setQueryData(['adminUsers'], (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        data: old.data.map(u => u.id === variables.id ? { ...u, status: variables.payload.status } : u)
+      };
+    });
+  },
+  onError: (error, variables) => {
+    const user = localUsers.value.find(u => u.id === variables.id);
+    if (user) cancelStatusChange(user);
+    handleAxiosError(error, 'Không thể cập nhật trạng thái');
+  },
+  onSettled: () => { isUpdatingStatusId.value = null; }
+});
+
+const saveUserStatus = (user) => {
   const payload = {
       _method: 'PUT',
       fullName: user.fullName,
@@ -441,22 +521,64 @@ const saveUserStatus = async (user) => {
       birthday: user.birthday || '',
       status: user.localStatus
   };
-
-  try {
-    await axios.post(`${API_URL}/admin/users/${user.id}`, payload, { headers: getHeaders() });
-    user.status = user.localStatus; 
-    user.isStatusChanged = false;
-    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
-  } catch (error) { 
-    cancelStatusChange(user); 
-    handleAxiosError(error, 'Không thể cập nhật trạng thái');
-  } finally { 
-    user.isUpdatingStatus = false; 
-  }
+  updateStatusMutation.mutate({ id: user.id, payload });
 };
 
+const deleteUserMutation = useMutation({
+  mutationFn: async (id) => {
+    const response = await axios.delete(`${API_URL}/admin/users/${id}`, { headers: getHeaders() });
+    return response.data;
+  },
+  onSuccess: (data, id) => {
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa', text: data.message, showConfirmButton: false, timer: 1500 });
+    queryClient.setQueryData(['adminUsers'], (old) => {
+      if (!old) return old;
+      return { ...old, data: old.data.map(u => u.id === id ? { ...u, deleted_at: new Date().toISOString() } : u) };
+    });
+  },
+  onError: (err) => handleAxiosError(err, 'Không thể xóa khách hàng này')
+});
+
+const confirmDelete = (id, name) => {
+  Swal.fire({ 
+    title: 'Xóa tài khoản này?', 
+    text: `Khách hàng "${name}" sẽ bị đưa vào thùng rác!`, 
+    icon: 'warning', 
+    showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Đồng ý xóa' 
+  }).then((result) => {
+    if (result.isConfirmed) deleteUserMutation.mutate(id);
+  });
+};
+
+const restoreUserMutation = useMutation({
+  mutationFn: async (id) => {
+    const response = await axios.post(`${API_URL}/admin/users/${id}/restore`, {}, { headers: getHeaders() });
+    return response.data;
+  },
+  onSuccess: (data, id) => {
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Thành công', text: data.message, showConfirmButton: false, timer: 1500 });
+    queryClient.setQueryData(['adminUsers'], (old) => {
+      if (!old) return old;
+      return { ...old, data: old.data.map(u => u.id === id ? { ...u, deleted_at: null } : u) };
+    });
+  },
+  onError: (err) => handleAxiosError(err, 'Không thể khôi phục tài khoản')
+});
+
+const restoreUser = (id) => {
+  Swal.fire({ 
+    title: 'Khôi phục tài khoản?', icon: 'info', 
+    showCancelButton: true, confirmButtonColor: '#009981', confirmButtonText: 'Khôi phục' 
+  }).then((result) => {
+    if (result.isConfirmed) restoreUserMutation.mutate(id);
+  });
+};
+
+// ==========================================
+// FILTERS & PAGINATION LOGIC
+// ==========================================
 const processedUsers = computed(() => {
-  let result = users.value;
+  let result = localUsers.value;
   if (activeTab.value === 'deleted') { result = result.filter(u => u.deleted_at); } 
   else {
     result = result.filter(u => !u.deleted_at);
@@ -472,48 +594,6 @@ const processedUsers = computed(() => {
 const totalPages = computed(() => Math.ceil(processedUsers.value.length / itemsPerPage) || 1);
 const paginatedUsers = computed(() => { const start = (currentPage.value - 1) * itemsPerPage; return processedUsers.value.slice(start, start + itemsPerPage); });
 
-const confirmDelete = (id, name) => {
-  Swal.fire({ 
-    title: 'Xóa tài khoản này?', 
-    text: `Khách hàng "${name}" sẽ bị đưa vào thùng rác!`, 
-    icon: 'warning', 
-    showCancelButton: true, 
-    confirmButtonColor: '#d33', 
-    confirmButtonText: 'Đồng ý xóa' 
-  }).then(async (result) => {
-    if (result.isConfirmed) {
-      try {
-        const res = await axios.delete(`${API_URL}/admin/users/${id}`, { headers: getHeaders() });
-        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa', text: res.data.message, showConfirmButton: false, timer: 1500 }); 
-        fetchData(); 
-      } catch (err) {
-        handleAxiosError(err, 'Không thể xóa khách hàng này');
-      }
-    }
-  });
-};
-
-const restoreUser = (id) => {
-  Swal.fire({ 
-    title: 'Khôi phục tài khoản?', 
-    icon: 'info', 
-    showCancelButton: true, 
-    confirmButtonColor: '#009981', 
-    confirmButtonText: 'Khôi phục' 
-  }).then(async (result) => {
-    if (result.isConfirmed) {
-      try {
-        const res = await axios.post(`${API_URL}/admin/users/${id}/restore`, {}, { headers: getHeaders() });
-        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Thành công', text: res.data.message, showConfirmButton: false, timer: 1500 }); 
-        fetchData(); 
-      } catch (err) {
-        handleAxiosError(err, 'Không thể khôi phục tài khoản');
-      }
-    }
-  });
-};
-
-onMounted(() => fetchData());
 </script>
 
 <style scoped>
