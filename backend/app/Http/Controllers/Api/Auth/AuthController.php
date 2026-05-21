@@ -12,11 +12,11 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
-        // Theo đúng yêu cầu: Họ tên, email, SĐT, mật khẩu, xác nhận mật khẩu
+        // Web app: Họ tên, email, SĐT, mật khẩu, xác nhận mật khẩu
         $request->validate([
             'fullName' => 'required|string|max:150',
-            'email' => 'required|string|email|max:150|unique:users',
-            'phone' => 'nullable|string|max:20|unique:users,phone',
+            'email'    => 'required|string|email|max:150|unique:users',
+            'phone'    => 'nullable|string|max:20|unique:users,phone',
             'password' => 'required|string|min:6|confirmed',
         ], [
             'phone.unique' => 'Số điện thoại này đã được sử dụng.',
@@ -25,18 +25,18 @@ class AuthController extends Controller
 
         $user = User::create([
             'fullName' => $request->fullName,
-            'email' => $request->email,
-            'phone' => $request->phone,
+            'email'    => $request->email,
+            'phone'    => $request->phone,
             'password' => Hash::make($request->password),
-            'status' => 'active',
+            'status'   => 'active',
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'message' => 'Đăng ký thành công!',
+            'message'      => 'Đăng ký thành công!',
             'access_token' => $token,
-            'user' => $user
+            'user'         => $user
         ], 201);
     }
 
