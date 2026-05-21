@@ -168,6 +168,8 @@ Route::prefix('shop/{shop_slug}')->group(function () {
     Route::post('/compare', [ClientCompareController::class, 'getCompareData']);
 });
 Route::get('shop/{shop_slug}/categories', [App\Http\Controllers\Api\client\ShopController::class, 'categories']);
+Route::get('shop/{shop_slug}/colors', [App\Http\Controllers\Api\client\ShopController::class, 'colors']);
+Route::get('shop/{shop_slug}/attributes', [App\Http\Controllers\Api\client\ShopController::class, 'attributes']);
 
 Route::get('/user', function (Request $request) {
     return $request->user();

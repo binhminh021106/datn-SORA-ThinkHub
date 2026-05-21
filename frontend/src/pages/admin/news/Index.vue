@@ -219,18 +219,7 @@ watch([searchQuery, currentTab, sortOption], () => {
     currentPage.value = 1;
 });
 
-// ==========================================
-// 5. HELPER FUNCTIONS
-// ==========================================
-const getFullImageWithFallback = (path) => {
-    if (!path) return defaultImage;
-    if (path.startsWith('blob:') || path.startsWith('http')) return path;
-    return `${BACKEND_URL}${path.startsWith('/') ? '' : '/'}${path}`;
-};
 
-const handleImageError = (e) => {
-    e.target.src = defaultImage;
-};
 
 const getFormattedDate = (dateString) => {
     if (!dateString) return 'N/A';
