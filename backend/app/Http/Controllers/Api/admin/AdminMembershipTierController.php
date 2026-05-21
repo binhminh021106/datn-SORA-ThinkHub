@@ -12,6 +12,7 @@ class AdminMembershipTierController extends Controller
 {
     public function index()
     {
+        // Sử dụng ORM withCount để đếm số user tối ưu
         $tiers = MembershipTier::withCount('users')
                     ->orderBy('min_spent', 'asc')
                     ->get();
@@ -35,7 +36,7 @@ class AdminMembershipTierController extends Controller
         $tier = MembershipTier::create($data);
 
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'message' => 'Đã tạo hạng thành viên thành công.',
             'data' => $tier
         ], 201);
@@ -45,11 +46,11 @@ class AdminMembershipTierController extends Controller
     {
         $tier = MembershipTier::find($id);
         if (!$tier) {
-            return response()->json(['status' => 'error', 'message' => 'Không tìm thấy hạng này'], 404);
+            return response()->json(['success' => false, 'message' => 'Không tìm thấy hạng này'], 404);
         }
 
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'data' => $tier
         ]);
     }
@@ -58,7 +59,7 @@ class AdminMembershipTierController extends Controller
     {
         $tier = MembershipTier::find($id);
         if (!$tier) {
-            return response()->json(['status' => 'error', 'message' => 'Không tìm thấy hạng này'], 404);
+            return response()->json(['success' => false, 'message' => 'Không tìm thấy hạng này'], 404);
         }
 
         $data = $request->validated();
@@ -75,7 +76,7 @@ class AdminMembershipTierController extends Controller
         $tier->update($data);
 
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'message' => 'Cập nhật thành công.',
             'data' => $tier
         ]);
@@ -86,16 +87,16 @@ class AdminMembershipTierController extends Controller
         $tier = MembershipTier::withCount('users')->find($id);
         
         if (!$tier) {
-            return response()->json(['status' => 'error', 'message' => 'Không tìm thấy hạng này'], 404);
+            return response()->json(['success' => false, 'message' => 'Không tìm thấy hạng này'], 404);
         }
 
         if ($tier->min_spent == 0) {
-            return response()->json(['status' => 'error', 'message' => 'Không thể xóa Hạng Mặc định (0 đồng) của hệ thống!'], 403);
+            return response()->json(['success' => false, 'message' => 'Không thể xóa Hạng Mặc định (0 đồng) của hệ thống!'], 403);
         }
 
         if ($tier->users_count > 0) {
             return response()->json([
-                'status' => 'error', 
+                'success' => false, 
                 'message' => "Không thể xóa! Đang có {$tier->users_count} khách hàng thuộc hạng này. Vui lòng hạ hạng của họ trước."
             ], 403);
         }
@@ -107,7 +108,7 @@ class AdminMembershipTierController extends Controller
         $tier->delete();
 
         return response()->json([
-            'status' => 'success',
+            'success' => true,
             'message' => 'Đã xóa hạng thành viên.'
         ]);
     }

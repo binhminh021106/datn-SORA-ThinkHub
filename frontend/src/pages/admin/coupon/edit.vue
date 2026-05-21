@@ -1,6 +1,15 @@
 <template>
     <div class="coupon-edit-wrapper">
-        <div class="container-fluid py-4" v-if="isLoaded">
+        <!-- SKELETON CHỜ KHI KHÔNG CÓ CACHE (F5) -->
+        <div v-if="isLoading" class="container-fluid py-4">
+            <div class="row mb-4"><div class="col-6"><span class="placeholder col-8 rounded" style="height: 40px;"></span></div></div>
+            <div class="row g-4">
+                <div class="col-md-4 col-lg-3"><div class="card border-0 shadow-sm rounded-4 placeholder-glow p-4"><span class="placeholder col-12 rounded mb-3" style="height: 200px;"></span></div></div>
+                <div class="col-md-8 col-lg-9"><div class="card border-0 shadow-sm rounded-4 placeholder-glow p-4"><span class="placeholder col-12 rounded mb-3" style="height: 400px;"></span></div></div>
+            </div>
+        </div>
+        
+        <div class="container-fluid py-4" v-else>
             <div class="d-flex align-items-center mb-4">
                 <router-link :to="{ name: 'admin-coupons' }"
                     class="btn btn-light shadow-sm me-3 rounded-circle d-flex align-items-center justify-content-center"
@@ -9,11 +18,14 @@
                 </router-link>
                 <div>
                     <h3 class="fw-bold text-dark mb-0">Cập Nhật Mã Giảm Giá</h3>
-                    <p class="text-muted mb-0 small">Mã: <span class="fw-bold text-brand">{{ form.code }}</span></p>
+                    <p class="text-muted mb-0 small">
+                        Mã: <span class="fw-bold text-brand">{{ form.code }}</span>
+                        <span v-if="isFetching" class="spinner-border spinner-border-sm text-brand ms-2" title="Đang đồng bộ ngầm"></span>
+                    </p>
                 </div>
             </div>
 
-            <form @submit.prevent="updateCoupon" autocomplete="off">
+            <form @submit.prevent="submitForm" autocomplete="off">
                 <div class="row g-4">
                     <!-- Cột Trái: Preview Coupon & Trạng thái -->
                     <div class="col-md-4 col-lg-3">
@@ -45,7 +57,7 @@
                                     <option value="active" class="text-success fw-bold">Hoạt động (Active)</option>
                                     <option value="inactive" class="text-danger fw-bold">Tạm dừng (Inactive)</option>
                                 </select>
-                                <div class="invalid-feedback">{{ errors.status?.[0] }}</div>
+                                <div class="invalid-feedback d-block" v-if="errors.status">{{ errors.status?.[0] }}</div>
                             </div>
                         </div>
                     </div>
@@ -127,13 +139,13 @@
 
                                 <hr class="text-muted opacity-25 my-4">
                                 <div class="text-end">
-                                    <button type="button" class="btn btn-light me-2 px-4 shadow-sm fw-bold" @click="handleRestore" :disabled="isRestoring">
+                                    <button type="button" class="btn btn-light me-2 px-4 shadow-sm fw-bold" @click="handleRestore" :disabled="isRestoring || isUpdating">
                                       <span v-if="isRestoring" class="spinner-border spinner-border-sm me-2"></span>Khôi phục gốc
                                     </button>
                                     <button type="submit" class="btn btn-brand btn-brand-solid px-5 fw-bold shadow-sm"
-                                        :disabled="isSaving">
-                                        <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span> 
-                                        {{ isSaving ? 'ĐANG LƯU...' : 'LƯU THAY ĐỔI' }}
+                                        :disabled="isUpdating">
+                                        <span v-if="isUpdating" class="spinner-border spinner-border-sm me-2"></span> 
+                                        {{ isUpdating ? 'ĐANG LƯU...' : 'LƯU THAY ĐỔI' }}
                                     </button>
                                 </div>
                             </div>
@@ -142,126 +154,130 @@
                 </div>
             </form>
         </div>
-        
-        <div v-else class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
-          <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-          <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ liệu...</p>
-        </div>
     </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, watchEffect } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
-import moment from 'moment';
-import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-
+const queryClient = useQueryClient();
 const router = useRouter();
 const route = useRoute();
+const couponId = route.params.id;
 
-const isLoaded = ref(false);
-const isSaving = ref(false);
 const isRestoring = ref(false);
 const errors = ref({});
-
-const usage_count = ref(0); // Chỉ để show, không edit
+const usage_count = ref(0);
 
 const form = ref({
-    name: '', 
-    code: '', 
-    type: '', 
-    value: 0,
-    min_spend: 0,
-    usage_limit: 0,
-    usage_limit_per_user: 0,
-    expires_at: '',
-    status: ''
+    name: '', code: '', type: '', value: 0, min_spend: 0, usage_limit: 0, usage_limit_per_user: 0, expires_at: '', status: ''
 });
 
-const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
+const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}`, 'Content-Type': 'application/json' });
 
-const formatCurrency = (val) => {
-    if (!val) return '0 VNĐ';
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
+const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
+
+const formatForInput = (dateString) => {
+  if (!dateString) return '';
+  const d = new Date(dateString);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n) => n.toString().padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-const fetchCoupon = async () => {
-  try {
-    const res = await axios.get(`${API_URL}/admin/coupons/${route.params.id}`, { headers: getHeaders() });
-    const u = res.data.data;
-    
-    // Cần format lại expires_at thành YYYY-MM-DDTHH:mm cho thẻ input type="datetime-local"
-    const formattedExpireDate = moment(u.expires_at).format('YYYY-MM-DDTHH:mm');
+const formatForPayload = (dateLocal) => {
+    if (!dateLocal) return '';
+    return dateLocal.replace('T', ' ') + ':00'; // Parse lại format SQL Backend hiểu nếu dùng datetime-local
+};
 
+// 1. Fetch/Lấy Cache Coupon Detail (Triệt tiêu mồ côi)
+const fetchCouponDetail = async () => {
+  const res = await fetch(`${API_URL}/admin/coupons/${couponId}`, { headers: getHeaders() });
+  if (!res.ok) throw new Error('Không thể tải coupon');
+  const json = await res.json();
+  return json.data;
+};
+
+const { data: couponData, isLoading, isFetching, refetch } = useQuery({
+  queryKey: ['admin', 'coupon', couponId],
+  queryFn: fetchCouponDetail,
+  initialData: () => {
+    return queryClient.getQueryData(['admin', 'coupons'])?.find(d => d.id == couponId);
+  },
+  staleTime: 1000 * 60 * 5,
+});
+
+// Map Cache sang Local State
+watchEffect(() => {
+  if (couponData.value) {
+    const u = couponData.value;
     form.value = { 
-      name: u.name, 
-      code: u.code, 
-      type: u.type, 
-      value: u.value,
-      min_spend: u.min_spend,
-      usage_limit: u.usage_limit,
-      usage_limit_per_user: u.usage_limit_per_user,
-      expires_at: formattedExpireDate,
-      status: u.status
+      name: u.name, code: u.code, type: u.type, value: u.value, min_spend: u.min_spend,
+      usage_limit: u.usage_limit, usage_limit_per_user: u.usage_limit_per_user,
+      expires_at: formatForInput(u.expires_at), status: u.status
     };
-    
     usage_count.value = u.usage_count || 0;
-
-  } catch (err) {
-    console.error('Lỗi khi fetch chi tiết coupon:', err); 
-    router.push({ name: 'admin-coupons' });
-  } finally { 
-    isLoaded.value = true; 
   }
-};
+});
 
 const handleRestore = async () => {
   isRestoring.value = true;
-  await fetchCoupon();
+  await refetch();
+  errors.value = {};
   setTimeout(() => {
     isRestoring.value = false;
-    Swal.fire({ icon: 'success', title: 'Khôi phục thành công', timer: 1500, showConfirmButton: false });
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Khôi phục form thành công', timer: 1500, showConfirmButton: false });
   }, 400); 
 };
 
-const updateCoupon = async () => {
-    isSaving.value = true;
-    errors.value = {}; 
-
-    // Convert lại format ngày trước khi gửi nếu cần (để Backend dễ parse)
-    const payloadDate = moment(form.value.expires_at).format('YYYY-MM-DD HH:mm:ss');
-    const payload = { ...form.value, expires_at: payloadDate };
-
-    try {
-        const res = await axios.patch(`${API_URL}/admin/coupons/${route.params.id}`, payload, {
-            headers: getHeaders()
-        });
-        
-        Swal.fire({ icon: 'success', title: 'Thành công', text: res.data.message, timer: 1500, showConfirmButton: false });
-        fetchCoupon();
-    } catch (err) { 
-        if (err.response && err.response.status === 422) {
-            errors.value = err.response.data.errors;
-            Swal.fire('Chú ý', 'Vui lòng kiểm tra lại thông tin.', 'warning');
-        } else { 
-            Swal.fire('Lỗi', err.response?.data?.message || 'Có lỗi xảy ra', 'error'); 
-        }
-    } finally { 
-        isSaving.value = false; 
+// 2. Mutation Cập nhật API (Cập nhật Cache danh sách khi thành công)
+const { mutate: updateCoupon, isLoading: isUpdating } = useMutation({
+  mutationFn: async (payload) => {
+    const res = await fetch(`${API_URL}/admin/coupons/${couponId}`, { 
+        method: 'PUT', // Route AdminUpdateCouponRequest thường map vào PUT/PATCH
+        headers: getHeaders(), 
+        body: JSON.stringify(payload) 
+    });
+    
+    const json = await res.json();
+    if (!res.ok) {
+        if (res.status === 422) throw { isValidation: true, errors: json.errors };
+        throw new Error(json.message || 'Lỗi hệ thống');
     }
-};
-
-onMounted(() => {
-    fetchCoupon();
+    return json.data;
+  },
+  onSuccess: (updatedData) => {
+    queryClient.setQueryData(['admin', 'coupon', couponId], updatedData);
+    queryClient.setQueryData(['admin', 'coupons'], (oldList) => {
+      if(!oldList) return oldList;
+      return oldList.map(c => c.id == couponId ? updatedData : c);
+    });
+    
+    Swal.fire({ icon: 'success', title: 'Thành công', text: 'Cập nhật mã giảm giá thành công!', timer: 1500, showConfirmButton: false });
+    router.push({ name: 'admin-coupons' });
+  },
+  onError: (err) => {
+    if (err.isValidation) {
+        errors.value = err.errors;
+        Swal.fire('Chú ý', 'Vui lòng kiểm tra lại thông tin.', 'warning');
+    } else {
+        Swal.fire('Lỗi', err.message || 'Mất kết nối', 'error');
+    }
+  }
 });
+
+const submitForm = () => {
+    errors.value = {}; 
+    const payload = { ...form.value, expires_at: formatForPayload(form.value.expires_at) };
+    updateCoupon(payload);
+};
 </script>
 
 <style scoped>
-.logo-shimmer { font-size: 3.5rem; font-weight: 900; letter-spacing: -1.5px; background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%); background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text; animation: shine 1.5s linear infinite; }
-@keyframes shine { to { background-position: 200% center; } }
 .bg-brand { background-color: #009981 !important; }
 .text-brand { color: #009981 !important; }
 .btn-brand-solid { background-color: #009981 !important; color: white !important; transition: all 0.2s ease; border: none; }

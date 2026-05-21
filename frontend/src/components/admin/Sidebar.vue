@@ -21,14 +21,15 @@
 
     <div class="sidebar flex-grow-1 overflow-auto custom-scrollbar" :class="isCollapsed ? 'p-2' : 'p-3'">
 
-      <div v-if="isLoading" class="text-center text-white-50 mt-4">
-        <div class="spinner-border spinner-border-sm mb-2" role="status"></div>
-        <p class="small" v-show="!isCollapsed">Đang tải...</p>
+      <div v-if="isLoading" class="mt-2 px-1">
+        <div v-for="i in 7" :key="'skel-' + i" class="d-flex align-items-center py-2 mb-2 rounded skeleton-item" :class="isCollapsed ? 'justify-content-center' : 'px-3'">
+          <div class="skeleton-icon rounded flex-shrink-0" :class="isCollapsed ? '' : 'me-3'"></div>
+          <div class="skeleton-text rounded" v-show="!isCollapsed"></div>
+        </div>
       </div>
 
       <nav class="mt-2" v-else>
         <ul class="nav nav-pills nav-sidebar flex-column gap-2" data-widget="treeview" role="menu">
-
           <template v-for="(item, index) in menuItems" :key="index">
 
             <li class="nav-item position-relative" v-if="!item.children">
@@ -110,6 +111,7 @@
 import { ref, reactive, onMounted, inject, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
+import apiClient from '@/utils/apiClient';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -225,9 +227,9 @@ const getHeaders = () => ({
 
 const fetchSidebarData = async () => {
   try {
-    const resMod = await fetch(`${API_URL}/admin/modules`, { headers: getHeaders() });
-    if (resMod.ok) {
-      systemModules.value = (await resMod.json()).data;
+    const data = await apiClient.get('/admin/modules');
+    if (data.data?.data) {
+      systemModules.value = data.data.data;
     }
   } catch (err) {
     console.error("Lỗi tải dữ liệu Sidebar", err);
@@ -404,6 +406,40 @@ onMounted(() => {
 
 .rotate-180 {
   transform: rotate(-90deg);
+}
+
+ .transition-all {
+  transition: all 0.3s ease;
+}
+
+/* Skeleton Loading cho Sidebar Dark Theme */
+.skeleton-item {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+.skeleton-icon {
+  width: 20px;
+  height: 20px;
+  background-color: rgba(255, 255, 255, 0.1);
+  animation: pulse-dark 1.5s infinite ease-in-out;
+}
+.skeleton-text {
+  height: 14px;
+  background-color: rgba(255, 255, 255, 0.1);
+  animation: pulse-dark 1.5s infinite ease-in-out;
+  width: 100%;
+}
+.skeleton-item:nth-child(1) .skeleton-text { width: 70%; }
+.skeleton-item:nth-child(2) .skeleton-text { width: 50%; }
+.skeleton-item:nth-child(3) .skeleton-text { width: 80%; }
+.skeleton-item:nth-child(4) .skeleton-text { width: 45%; }
+.skeleton-item:nth-child(5) .skeleton-text { width: 65%; }
+.skeleton-item:nth-child(6) .skeleton-text { width: 55%; }
+.skeleton-item:nth-child(7) .skeleton-text { width: 75%; }
+
+@keyframes pulse-dark {
+  0% { background-color: rgba(255, 255, 255, 0.05); }
+  50% { background-color: rgba(255, 255, 255, 0.15); }
+  100% { background-color: rgba(255, 255, 255, 0.05); }
 }
 
 .transition-all {

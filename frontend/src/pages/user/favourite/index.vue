@@ -143,6 +143,7 @@ import { ref, onMounted, computed, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 import Swal from 'sweetalert2';
+import Toast from '@/utils/toastConfig';
 import ProductCard from '@/components/ui/ProductCard.vue';
 import CompareModal from '@/components/ui/CompareModal.vue';
 
@@ -159,12 +160,6 @@ const soraAlert = Swal.mixin({
   confirmButtonColor: '#9f273b',
   customClass: { confirmButton: 'px-4 py-2 mx-2 rounded shadow-sm fw-bold font-oswald tracking-widest text-uppercase' },
   didOpen: (modal) => { if (modal.parentElement) modal.parentElement.style.zIndex = '10005'; }
-});
-
-const Toast = Swal.mixin({
-  toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true,
-  background: '#fffafa', color: '#9f273b', iconColor: '#9f273b',
-  didOpen: (toast) => { if (toast.parentElement) toast.parentElement.style.zIndex = '10005'; }
 });
 
 const getToken = () => {
