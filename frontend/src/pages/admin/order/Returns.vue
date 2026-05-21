@@ -1,6 +1,7 @@
 <template>
   <div class="order-returns-wrapper pb-5 mb-5">
     
+    <!-- HIỂU ỨNG LOGO SHIMMER CHO LẦN ĐẦU TẢI TRANG DUY NHẤT -->
     <div v-if="isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
       <h1 class="logo-shimmer mb-3">ThinkHub</h1>
       <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Tải dữ liệu hoàn trả...</p>
@@ -12,7 +13,7 @@
           <h3 class="fw-bold text-dark mb-0">Xử lý Hàng Hoàn / Trả</h3>
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
-          <button class="btn btn-light border shadow-sm fw-bold text-dark px-4 py-2" style="border-radius: 8px;" @click="fetchData(1, true)">
+          <button class="btn btn-light border shadow-sm fw-bold text-dark px-4 py-2" style="border-radius: 8px;" @click="handleRefresh">
             <i class="bi bi-arrow-clockwise me-1"></i> Làm mới
           </button>
         </div>
@@ -61,11 +62,11 @@
           <div class="d-flex flex-wrap gap-2">
             <div class="d-flex align-items-center bg-white px-3 py-2 rounded-pill border shadow-sm">
               <span class="text-muted small fw-semibold me-2">Từ:</span>
-              <input type="date" class="form-control form-control-sm border-0 bg-transparent fw-bold p-0" style="box-shadow: none; width: 115px;" v-model="filters.start_date" @change="fetchData(1, true)">
+              <input type="date" class="form-control form-control-sm border-0 bg-transparent fw-bold p-0" style="box-shadow: none; width: 115px;" v-model="filters.start_date">
             </div>
             <div class="d-flex align-items-center bg-white px-3 py-2 rounded-pill border shadow-sm">
               <span class="text-muted small fw-semibold me-2">Đến:</span>
-              <input type="date" class="form-control form-control-sm border-0 bg-transparent fw-bold p-0" style="box-shadow: none; width: 115px;" v-model="filters.end_date" @change="fetchData(1, true)">
+              <input type="date" class="form-control form-control-sm border-0 bg-transparent fw-bold p-0" style="box-shadow: none; width: 115px;" v-model="filters.end_date">
             </div>
           </div>
         </div>
@@ -76,12 +77,12 @@
         <div class="card-header bg-white border-bottom-0 pt-4 pb-3 px-4 d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center gap-3">
           <h6 class="fw-bold mb-0 text-dark d-flex align-items-center">
             <i class="bi bi-arrow-return-left text-danger me-2"></i>Danh sách Đơn hoàn trả
-            <div v-if="isSilentLoading" class="spinner-border spinner-border-sm text-brand ms-2" role="status"></div>
+            <div v-if="isFetching" class="spinner-border spinner-border-sm text-brand ms-2" role="status"></div>
           </h6>
           
           <div class="search-box position-relative w-100" style="max-width: 350px;">
-            <input type="text" class="form-control rounded-pill pe-5 shadow-sm bg-light border-0 py-2 w-100" v-model="searchQuery" @keyup.enter="fetchData(1, true)" placeholder="Tìm Mã đơn, Tên KH, SĐT...">
-            <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-3 text-muted cursor-pointer" @click="fetchData(1, true)"></i>
+            <input type="text" class="form-control rounded-pill pe-5 shadow-sm bg-light border-0 py-2 w-100" v-model="searchQuery" @keyup.enter="handleSearch" placeholder="Tìm Mã đơn, Tên KH, SĐT...">
+            <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-3 text-muted cursor-pointer" @click="handleSearch"></i>
           </div>
         </div>
         
@@ -97,8 +98,8 @@
                   <th class="py-3 px-2 px-md-3 text-secondary text-center border-0" style="width: 27%;">Thao tác</th>
                 </tr>
               </thead>
-              <tbody :class="{'opacity-50 pe-none': isSilentLoading}" style="transition: opacity 0.2s;">
-                <tr v-if="orders.length === 0 && !isSilentLoading">
+              <tbody :class="{'opacity-50 pe-none': isFetching}" style="transition: opacity 0.2s;">
+                <tr v-if="displayedOrders.length === 0 && !isFetching">
                   <td colspan="5" class="text-center py-5 text-muted">
                     <i class="bi bi-shield-check fs-1 d-block mb-2 text-success opacity-50"></i>Tuyệt vời! Không tìm thấy yêu cầu hoàn trả nào.
                   </td>
@@ -129,12 +130,12 @@
 
                   <td data-label="Thao tác" class="px-2 px-md-3 text-center">
                     <div class="d-flex gap-2 justify-content-center">
-                      <button class="btn btn-sm btn-light text-brand shadow-sm border" @click="openQuickView(order.id)" title="Xem chi tiết đơn hoàn">
+                      <button class="btn btn-sm btn-light text-brand shadow-sm border action-btn-hover" @click="openQuickView(order.id)" title="Xem chi tiết đơn hoàn">
                           <i class="bi bi-eye-fill"></i>
                       </button>
                       
                       <button v-if="['pending', 'proposing', 'rejected'].includes(getReturnStatusUi(order).statusCode)" 
-                              class="btn btn-sm shadow-sm fw-bold flex-grow-1"
+                              class="btn btn-sm shadow-sm fw-bold flex-grow-1 action-btn-hover"
                               :class="getReturnStatusUi(order).statusCode === 'rejected' ? 'btn-outline-danger' : (getReturnStatusUi(order).statusCode === 'pending' ? 'btn-primary' : 'btn-info text-white')" 
                               @click="processRefund(order)">
                           <i class="bi" :class="getReturnStatusUi(order).statusCode === 'rejected' ? 'bi-arrow-counterclockwise' : (getReturnStatusUi(order).statusCode === 'pending' ? 'bi-shield-exclamation' : 'bi-envelope-paper')"></i> 
@@ -153,23 +154,27 @@
         </div>
       </div>
 
-      <div class="d-flex flex-column flex-md-row justify-content-between align-items-center p-3 border-top gap-3" v-if="pagination.lastPage > 1 && !isTableLoading">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-center p-3 border-top gap-3" v-if="pagination.lastPage > 1">
         <span class="text-muted small text-center">Hiển thị trang {{ pagination.currentPage }} / {{ pagination.lastPage }} (Tổng: {{ pagination.total }} đơn)</span>
         <nav>
           <ul class="pagination pagination-sm mb-0 shadow-sm">
-            <li class="page-item" :class="{ disabled: pagination.currentPage === 1 }"><button class="page-link text-brand" @click="fetchData(pagination.currentPage - 1, true)"><i class="bi bi-chevron-left"></i></button></li>
-            <li class="page-item" v-for="page in pagination.lastPage" :key="page" :class="{ active: pagination.currentPage === page }"><button class="page-link" :class="pagination.currentPage === page ? 'bg-brand border-brand text-white' : 'text-dark'" @click="fetchData(page, true)">{{ page }}</button></li>
-            <li class="page-item" :class="{ disabled: pagination.currentPage === pagination.lastPage }"><button class="page-link text-brand" @click="fetchData(pagination.currentPage + 1, true)"><i class="bi bi-chevron-right"></i></button></li>
+            <li class="page-item" :class="{ disabled: pagination.currentPage === 1 }"><button class="page-link text-brand" @click="changePage(pagination.currentPage - 1)"><i class="bi bi-chevron-left"></i></button></li>
+            <li class="page-item" v-for="page in pagination.lastPage" :key="page" :class="{ active: pagination.currentPage === page }"><button class="page-link" :class="pagination.currentPage === page ? 'bg-brand border-brand text-white' : 'text-dark'" @click="changePage(page)">{{ page }}</button></li>
+            <li class="page-item" :class="{ disabled: pagination.currentPage === pagination.lastPage }"><button class="page-link text-brand" @click="changePage(pagination.currentPage + 1)"><i class="bi bi-chevron-right"></i></button></li>
           </ul>
         </nav>
       </div>
       
-      <!-- MODAL CHI TIẾT -->
+      <!-- MODAL CHI TIẾT (QUICK VIEW CHO RETURNS) -->
       <div class="modal fade" id="quickViewOrderModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
         <div class="modal-dialog modal-dialog-centered modal-xl">
           <div class="modal-content rounded-4 border-0 shadow">
             <div class="modal-header border-bottom pb-3 bg-light rounded-top-4">
-              <h5 class="fw-bold text-dark mb-0"><i class="bi bi-receipt text-danger me-2"></i>Chi Tiết Yêu Cầu Hoàn Trả <span class="text-danger font-monospace">{{ selectedOrder?.order_code }}</span></h5>
+              <h5 class="fw-bold text-dark mb-0 d-flex align-items-center">
+                <i class="bi bi-receipt text-danger me-2"></i>Chi Tiết Yêu Cầu Hoàn Trả 
+                <span class="text-danger font-monospace ms-1" v-if="selectedOrder">{{ selectedOrder.order_code }}</span>
+                <div v-if="isFetchingDetail" class="spinner-border spinner-border-sm text-brand ms-3" role="status"></div>
+              </h5>
               <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             
@@ -211,7 +216,7 @@
                                   <tr v-for="item in selectedOrder.items" :key="item.id">
                                       <td class="ps-3 py-3">
                                           <div class="d-flex align-items-center gap-2">
-                                              <img :src="item.variant_image ? getFullImage(item.variant_image) : 'https://placehold.co/40'" class="rounded border" style="width: 40px; height: 40px; object-fit: cover;">
+                                              <img :src="item.variant_image ? getFullImage(item.variant_image) : defaultPlaceholder" @error="handleImageError" class="rounded border" style="width: 40px; height: 40px; object-fit: cover;">
                                               <div>
                                                   <div class="fw-bold text-dark text-wrap" style="max-width: 250px;">{{ item.product_name }}</div>
                                                   <div class="text-muted" style="font-size: 0.7rem;">SKU: {{ item.variant_sku }}</div>
@@ -287,9 +292,14 @@
                   </div>
               </div>
             </div>
+            
+            <div class="modal-body p-5 text-center bg-white" v-else-if="isFetchingDetail">
+                <div class="spinner-border text-brand" style="width: 3rem; height: 3rem; border-width: 0.25em;" role="status"></div>
+                <p class="text-muted mt-3 fw-semibold">Đang truy xuất dữ liệu hoàn trả...</p>
+            </div>
 
             <div class="modal-footer bg-light border-top-0 rounded-bottom-4 mt-3">
-               <button type="button" class="btn btn-outline-brand rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Đóng</button>
+               <button type="button" class="btn btn-outline-brand rounded-pill px-4 fw-bold action-btn-hover" data-bs-dismiss="modal">Đóng</button>
             </div>
           </div>
         </div>
@@ -299,48 +309,30 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import { getFullImage } from '@/composables/useUtilities';
+import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
-
 let adminChannel = null;
 
 const route = useRoute();
-const orders = ref([]);
-const systemModules = ref([]); 
+const queryClient = useQueryClient();
 
-const isFirstLoad = ref(true);
-const isTableLoading = ref(false);
-const isSilentLoading = ref(false);
-
-const searchQuery = ref('');
 const activeTab = ref('all');
-const filters = ref({ 
-    start_date: '',
-    end_date: ''
-});
+const currentPage = ref(1);
+const searchQuery = ref('');
+const serverSearch = ref('');
+const filters = ref({ start_date: '', end_date: '' });
 
-const pagination = ref({ currentPage: 1, lastPage: 1, total: 0 });
-const currentPageLevel = ref(null);
-
-const selectedOrder = ref(null);
 let quickViewModalInstance = null;
 let isUnmounted = false;
 
-const statusCounts = ref({
-    all: 0, pending: 0, proposing: 0, refunded: 0, rejected: 0
-});
-
-const tabCache = ref({});
-
-// =======================================================
-// BỘ TỪ ĐIỂN CÂU TRẢ LỜI NHANH CHO TỪNG TRẠNG THÁI
-// =======================================================
+// Cấu hình từ điển SweetAlert (Được giữ nguyên theo thiết kế)
 const quickRefundNotes = {
     propose: [
         'SORA xin phép khấu trừ 10% phí làm mới sản phẩm.',
@@ -358,22 +350,10 @@ const quickRefundNotes = {
     ]
 };
 
-onBeforeUnmount(() => {
-  isUnmounted = true;
-  if (quickViewModalInstance) quickViewModalInstance.hide();
-  document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-  document.body.className = '';
-  document.body.style = '';
-
-  if (window.Echo) {
-    window.Echo.leave('admin');
-  }
-});
-
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
 const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val || 0);
-const formatDate = (dateString) => { if (!dateString) return ''; const d = new Date(dateString); return d.toLocaleDateString('vi-VN'); };
 const formatDateTime = (dateString) => { if (!dateString) return ''; const d = new Date(dateString); return d.toLocaleString('vi-VN'); };
+const handleImageError = (e) => { e.target.src = defaultPlaceholder; };
 
 const parseAttributes = (attr) => {
   if (!attr) return {};
@@ -387,15 +367,9 @@ const parseCombo = (combo) => {
   try { return JSON.parse(combo); } catch { return []; }
 };
 
-// Phân tích trạng thái UI
 const getReturnStatusUi = (order) => {
     if (order.status === 'return_requested') {
-        return { 
-            text: 'Chờ Xử Lý', 
-            class: 'bg-warning text-dark border-warning', 
-            icon: 'bi-inbox-fill', 
-            statusCode: 'pending' 
-        };
+        return { text: 'Chờ Xử Lý', class: 'bg-warning text-dark border-warning', icon: 'bi-inbox-fill', statusCode: 'pending' };
     }
     if (order.payment_status === 'refunded') {
         return { text: 'Đã Hoàn Tiền', class: 'bg-success text-white border-success', icon: 'bi-check-circle-fill', statusCode: 'refunded' };
@@ -409,9 +383,108 @@ const getReturnStatusUi = (order) => {
     return { text: 'Chờ Xử Lý', class: 'bg-warning text-dark border-warning', icon: 'bi-inbox-fill', statusCode: 'pending' };
 };
 
-// =======================================================
-// KHỞI TẠO MODAL XỬ LÝ VỚI TRẢ LỜI NHANH
-// =======================================================
+// ==========================================
+// TANSTACK QUERY LẤY DANH SÁCH HOÀN TRẢ
+// ==========================================
+const { data: queryData, isFetching, refetch } = useQuery({
+  queryKey: ['admin-returns', activeTab, currentPage, filters, serverSearch],
+  queryFn: async () => {
+    let queryParams = new URLSearchParams({ page: currentPage.value, is_return_page: '1' });
+    if (activeTab.value !== 'all') queryParams.append('return_tab', activeTab.value);
+    if (filters.value.start_date) queryParams.append('start_date', filters.value.start_date);
+    if (filters.value.end_date) queryParams.append('end_date', filters.value.end_date);
+    if (serverSearch.value) queryParams.append('search', serverSearch.value);
+
+    const res = await axios.get(`${API_URL}/admin/orders?${queryParams.toString()}`, { headers: getHeaders() });
+    return res.data;
+  },
+  keepPreviousData: true,
+  staleTime: 30000
+});
+
+// Chuyển isLoading của useQuery thành biến check First Load thực tế
+const isFirstLoad = ref(true);
+
+watch(queryData, (newData) => {
+  if (newData) {
+    isFirstLoad.value = false;
+  }
+}, { immediate: true });
+
+const localOrders = computed(() => {
+    return queryData.value?.data?.data || queryData.value?.data || [];
+});
+
+const statusCounts = computed(() => queryData.value?.counts || { all: 0, pending: 0, proposing: 0, refunded: 0, rejected: 0 });
+
+const pagination = computed(() => {
+  const result = queryData.value?.data;
+  return result?.last_page 
+    ? { currentPage: result.current_page, lastPage: result.last_page, total: result.total }
+    : { currentPage: 1, lastPage: 1, total: 0 };
+});
+
+const displayedOrders = computed(() => {
+    let result = localOrders.value;
+    if (searchQuery.value && searchQuery.value !== serverSearch.value) {
+        const q = searchQuery.value.toLowerCase();
+        result = result.filter(o => 
+            (o.order_code && o.order_code.toLowerCase().includes(q)) || 
+            (o.customer_name && o.customer_name.toLowerCase().includes(q)) || 
+            (o.customer_phone && o.customer_phone.includes(q))
+        );
+    }
+    return result;
+});
+
+// ==========================================
+// TANSTACK QUERY LẤY CHI TIẾT MODAL
+// ==========================================
+const activeOrderId = ref(null);
+const { data: fetchedOrder, isFetching: isFetchingDetail } = useQuery({
+    queryKey: ['admin-order-detail-return', activeOrderId],
+    queryFn: async () => {
+        const res = await axios.get(`${API_URL}/admin/orders/${activeOrderId.value}`, { headers: getHeaders() });
+        return res.data.data;
+    },
+    enabled: computed(() => !!activeOrderId.value),
+    staleTime: 5 * 60 * 1000
+});
+
+const selectedOrder = computed(() => fetchedOrder.value);
+
+const openQuickView = (id) => {
+    activeOrderId.value = id;
+    if(!quickViewModalInstance) {
+        quickViewModalInstance = new window.bootstrap.Modal(document.getElementById('quickViewOrderModal'));
+    }
+    quickViewModalInstance.show();
+};
+
+// ==========================================
+// TANSTACK MUTATION CHO THẨM ĐỊNH HOÀN TIỀN
+// ==========================================
+const processRefundMutation = useMutation({
+    mutationFn: async ({ id, payload }) => {
+        return axios.post(`${API_URL}/admin/orders/${id}/refund-process`, payload, { headers: getHeaders() });
+    },
+    onSuccess: () => {
+        queryClient.invalidateQueries(['admin-returns']);
+        queryClient.invalidateQueries(['admin-orders']); 
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xử lý hoàn tất!', showConfirmButton: false, timer: 1500 });
+    },
+    onError: (error) => {
+        if (error.response?.status === 401) {
+            Swal.fire('Lỗi xác thực', 'Phiên đăng nhập đã hết hạn!', 'error');
+        } else if (error.response?.status === 422) {
+            let errStr = Object.values(error.response.data.errors)[0][0];
+            Swal.fire('Dữ liệu không hợp lệ', errStr, 'error');
+        } else {
+            Swal.fire('Lỗi', 'Không thể cập nhật hệ thống', 'error');
+        }
+    }
+});
+
 const processRefund = async (order) => {
   const currentStatus = getReturnStatusUi(order).statusCode;
   
@@ -529,7 +602,6 @@ const processRefund = async (order) => {
       const origAmt = parseFloat(order.total_amount);
       const fmt = (v) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(v || 0);
 
-      // --- LOGIC GHI CHÚ NHANH (QUICK NOTES) ---
       const renderChips = (action) => {
           const notesList = quickRefundNotes[action] || [];
           if(notesList.length === 0) {
@@ -557,7 +629,6 @@ const processRefund = async (order) => {
           });
       };
 
-      // Khởi tạo Quick Notes dựa vào Action đang chọn
       const currentAction = document.querySelector('input[name="refund_action"]:checked').value;
       renderChips(currentAction);
 
@@ -601,7 +672,7 @@ const processRefund = async (order) => {
       input.addEventListener('input', calc);
 
       actionRadios.forEach(r => r.addEventListener('change', (e) => {
-         renderChips(e.target.value); // Thay đổi Ghi chú nhanh khi đổi Hướng xử lý
+         renderChips(e.target.value); 
          
          if (e.target.value === 'reject') {
              display.innerText = fmt(0);
@@ -643,123 +714,43 @@ const processRefund = async (order) => {
       didOpen: () => { Swal.showLoading(); }
   });
 
-  try {
-    const res = await axios.post(`${API_URL}/admin/orders/${order.id}/refund-process`, payload, { 
-      headers: getHeaders() 
-    });
-    
-    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xử lý hoàn tất!', showConfirmButton: false, timer: 1500 });
-    tabCache.value = {}; 
-    fetchData(pagination.value.currentPage, true); 
-    
-  } catch (error) { 
-    if (error.response && error.response.status === 401) {
-        Swal.fire('Lỗi xác thực', 'Phiên đăng nhập đã hết hạn!', 'error');
-    } else if (error.response && error.response.status === 422) {
-        let errStr = Object.values(error.response.data.errors)[0][0];
-        Swal.fire('Dữ liệu không hợp lệ', errStr, 'error');
-    } else {
-        Swal.fire('Lỗi', 'Không thể cập nhật hệ thống', 'error');
-    }
-  }
+  processRefundMutation.mutate({ id: order.id, payload });
 };
 
-const openQuickView = async (id) => {
-  try {
-    const res = await axios.get(`${API_URL}/admin/orders/${id}`, { headers: getHeaders() });
-    if(!isUnmounted) {
-      selectedOrder.value = res.data.data;
-      if(!quickViewModalInstance) quickViewModalInstance = new window.bootstrap.Modal(document.getElementById('quickViewOrderModal'));
-      quickViewModalInstance.show();
-    }
-  } catch(e){}
-};
-
-// Lấy dữ liệu danh sách (Backend đã lo việc đếm và lọc trang)
-const fetchData = async (page = 1, silent = false) => {
-  const cacheKey = `${activeTab.value}_${page}_${filters.value.start_date}_${filters.value.end_date}`;
-
-  if (tabCache.value[cacheKey]) {
-      orders.value = tabCache.value[cacheKey].data;
-      pagination.value = tabCache.value[cacheKey].pagination;
-      isSilentLoading.value = true;
-  } else {
-      if (silent) isSilentLoading.value = true;
-      else if (!isFirstLoad.value) isTableLoading.value = true;
-  }
-  
-  let queryParams = new URLSearchParams({ page, is_return_page: '1' });
-  if (activeTab.value !== 'all') queryParams.append('return_tab', activeTab.value);
-  if (filters.value.start_date) queryParams.append('start_date', filters.value.start_date);
-  if (filters.value.end_date) queryParams.append('end_date', filters.value.end_date);
-  if (searchQuery.value) queryParams.append('search', searchQuery.value);
-
-  try {
-    const [resOrders, resModules] = await Promise.all([
-      axios.get(`${API_URL}/admin/orders?${queryParams.toString()}`, { headers: getHeaders() }),
-      axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() })
-    ]);
-
-    if (isUnmounted) return;
-
-    const sysModules = resModules.data.data;
-    const currentModule = sysModules.find(m => m.module_code === (route.meta.moduleCode || 'admin_orders'));
-    if (currentModule) currentPageLevel.value = currentModule.required_level;
-
-    const result = resOrders.data;
-    const dataPayload = result.data.data ? result.data.data : result.data; 
-    
-    // Cập nhật số lượng Tabs
-    if (result.counts) {
-      statusCounts.value = result.counts;
-    }
-
-    const newPagination = result.data.last_page ? {
-        currentPage: result.data.current_page,
-        lastPage: result.data.last_page,
-        total: result.data.total
-    } : pagination.value;
-
-    orders.value = dataPayload;
-    pagination.value = newPagination;
-    tabCache.value[cacheKey] = { data: dataPayload, pagination: newPagination };
-
-  } catch (err) { 
-      console.error(err);
-  } finally { 
-    if(!isUnmounted) {
-      isFirstLoad.value = false;
-      isTableLoading.value = false;
-      isSilentLoading.value = false;
-    }
-  }
-};
-
+// ==========================================
+// ĐIỀU KHIỂN & SỰ KIỆN
+// ==========================================
 const switchTab = (tabId) => { 
     activeTab.value = tabId; 
-    fetchData(1, true); 
+    currentPage.value = 1; 
 };
 
-// =======================================================
-// FIX TỬ HUYỆT: Để Backend lọc, Frontend chỉ làm bộ search nhanh
-// =======================================================
-const displayedOrders = computed(() => {
-    let result = orders.value;
+const changePage = (page) => { 
+    currentPage.value = page; 
+};
 
-    if (searchQuery.value) {
-        const q = searchQuery.value.toLowerCase();
-        result = result.filter(o => 
-            (o.order_code && o.order_code.toLowerCase().includes(q)) || 
-            (o.customer_name && o.customer_name.toLowerCase().includes(q)) || 
-            (o.customer_phone && o.customer_phone.includes(q))
-        );
-    }
-    return result;
+const handleSearch = () => { 
+    serverSearch.value = searchQuery.value; 
+    currentPage.value = 1; 
+};
+
+const handleRefresh = () => { 
+    refetch(); 
+};
+
+onBeforeUnmount(() => {
+  isUnmounted = true;
+  if (quickViewModalInstance) quickViewModalInstance.hide();
+  document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+  document.body.className = '';
+  document.body.style = '';
+
+  if (window.Echo) {
+    window.Echo.leave('admin');
+  }
 });
 
 onMounted(() => {
-    fetchData(1);
-
     if (window.Echo) {
       adminChannel = window.Echo.private('admin');
 
@@ -774,8 +765,7 @@ onMounted(() => {
             showConfirmButton: false,
             timer: 4000
           });
-          tabCache.value = {};
-          fetchData(pagination.value.currentPage, true);
+          queryClient.invalidateQueries(['admin-returns']);
         }
       });
     }
@@ -792,6 +782,11 @@ onMounted(() => {
 .logo-shimmer { font-size: 3.5rem; font-weight: 900; letter-spacing: -1.5px; background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%); background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text; animation: shine 1.5s linear infinite; }
 @keyframes shine { to { background-position: 200% center; } }
 .bg-brand { background-color: #009981 !important; } .text-brand { color: #009981 !important; } .border-brand { border-color: #009981 !important; }
+
+/* Nút Action Hover Mượt Mà */
+.action-btn-hover { transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1); }
+.action-btn-hover:hover { transform: translateY(-3px) !important; box-shadow: 0 5px 15px rgba(0, 153, 129, 0.25) !important; filter: brightness(1.1) !important; }
+
 .cursor-pointer { cursor: pointer; }
 .custom-scrollbar-y::-webkit-scrollbar { width: 4px; }
 .custom-scrollbar-y::-webkit-scrollbar-track { background: transparent; }

@@ -166,7 +166,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
-import Swal from 'sweetalert2'; 
+import Swal from 'sweetalert2';
+import Toast from '@/utils/toastConfig';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 
 const router = useRouter();
@@ -183,22 +184,6 @@ const soraAlert = Swal.mixin({
   customClass: {
     confirmButton: 'px-4 py-2 mx-2 rounded-pill shadow-sm fw-bold',
     cancelButton: 'px-4 py-2 mx-2 rounded-pill fw-bold'
-  }
-});
-
-const Toast = Swal.mixin({
-  toast: true,
-  position: 'top-end',
-  showConfirmButton: false,
-  timer: 3000,
-  timerProgressBar: true,
-  background: '#fffafa',
-  color: '#9f273b',
-  iconColor: '#9f273b',
-  customClass: { timerProgressBar: 'swal2-progress-sora' },
-  didOpen: (toast) => {
-    toast.addEventListener('mouseenter', Swal.stopTimer);
-    toast.addEventListener('mouseleave', Swal.resumeTimer);
   }
 });
 

@@ -3,11 +3,15 @@
     <div class="modal-dialog modal-dialog-centered modal-xl">
       <div id="invoice-printable" class="modal-content rounded-4 border-0 shadow">
         <div class="modal-header border-bottom pb-3 bg-light rounded-top-4 d-flex justify-content-between align-items-center">
-          <h5 class="fw-bold text-dark mb-0 flex-grow-1"><i class="bi bi-receipt text-brand me-2"></i>Đơn Hàng <span class="text-brand font-monospace">{{ order?.order_code }}</span></h5>
+          <h5 class="fw-bold text-dark mb-0 flex-grow-1 d-flex align-items-center">
+            <i class="bi bi-receipt text-brand me-2"></i>Đơn Hàng 
+            <span class="text-brand font-monospace ms-1" v-if="currentOrder">{{ currentOrder.order_code }}</span>
+            <div v-if="isFetching" class="spinner-border spinner-border-sm text-brand ms-3" role="status"></div>
+          </h5>
           
           <div class="d-flex align-items-center gap-2 gap-md-3 no-print">
-             <!-- ĐÃ FIX: Nút này luôn luôn hiện dù đơn bị hủy -->
-             <select v-if="order"
+             <!-- Nút này luôn luôn hiện dù đơn bị hủy -->
+             <select v-if="currentOrder"
                      class="form-select form-select-sm border-brand text-brand fw-bold shadow-sm cursor-pointer bg-white"
                      style="width: auto; min-width: 140px; border-width: 2px;"
                      v-model="localSelectedWarehouseId"
@@ -17,9 +21,9 @@
                 </option>
              </select>
 
-             <button v-if="order" 
+             <button v-if="currentOrder" 
                      type="button" 
-                     class="btn btn-sm btn-brand  action-btn-hover fw-bold shadow-sm d-flex align-items-center border-0 px-3 py-1.5" 
+                     class="btn btn-sm btn-brand action-btn-hover fw-bold shadow-sm d-flex align-items-center border-0 px-3 py-1.5" 
                      @click="triggerTracking">
                 <i class="bi bi-geo-alt-fill me-2"></i> Tracking Bản Đồ
              </button>
@@ -30,29 +34,29 @@
           </button>
         </div>
         
-        <div class="modal-body p-4 bg-white" v-if="order">
+        <div class="modal-body p-4 bg-white" v-if="currentOrder">
           <div class="row g-4">
               <div class="col-lg-4 border-end">
                   <h6 class="fw-bold text-muted text-uppercase mb-3"><i class="bi bi-person-badge me-2 text-brand"></i>Người nhận</h6>
-                  <div class="mb-2"><span class="text-muted fw-semibold">Họ tên:</span> <strong class="text-dark float-end">{{ order.customer_name }}</strong></div>
-                  <div class="mb-2"><span class="text-muted fw-semibold">Điện thoại:</span> <strong class="text-dark float-end">{{ order.customer_phone }}</strong></div>
+                  <div class="mb-2"><span class="text-muted fw-semibold">Họ tên:</span> <strong class="text-dark float-end">{{ currentOrder.customer_name }}</strong></div>
+                  <div class="mb-2"><span class="text-muted fw-semibold">Điện thoại:</span> <strong class="text-dark float-end">{{ currentOrder.customer_phone }}</strong></div>
                   <div class="mb-3">
                       <span class="text-muted fw-semibold d-block mb-1">Địa chỉ giao hàng:</span> 
-                      <div class="p-2 bg-light border rounded small fw-medium">{{ order.customer_address }}</div>
+                      <div class="p-2 bg-light border rounded small fw-medium">{{ currentOrder.customer_address }}</div>
                   </div>
                   <div class="mb-4">
                       <span class="text-muted fw-semibold d-block mb-1">Ghi chú của khách:</span> 
-                      <div class="p-2 bg-warning bg-opacity-10 text-dark fw-medium border border-warning rounded small fst-italic">{{ order.order_note || 'Không có ghi chú' }}</div>
+                      <div class="p-2 bg-warning bg-opacity-10 text-dark fw-medium border border-warning rounded small fst-italic">{{ currentOrder.order_note || 'Không có ghi chú' }}</div>
                   </div>
 
                   <h6 class="fw-bold text-muted text-uppercase mb-3 border-top pt-4"><i class="bi bi-credit-card me-2 text-brand"></i>Thanh toán</h6>
                   <div class="mb-2 d-flex justify-content-between align-items-center">
                       <span class="text-muted fw-semibold">Phương thức:</span> 
-                      <span class="badge bg-secondary text-uppercase">{{ order.payment_method }}</span>
+                      <span class="badge bg-secondary text-uppercase">{{ currentOrder.payment_method }}</span>
                   </div>
                   <div class="mb-2 d-flex justify-content-between align-items-center">
                       <span class="text-muted fw-semibold">Trạng thái TT:</span> 
-                      <span class="badge shadow-sm border" :class="getPaymentBadge(order.payment_status)">{{ formatPaymentStatus(order.payment_status) }}</span>
+                      <span class="badge shadow-sm border" :class="getPaymentBadge(currentOrder.payment_status)">{{ formatPaymentStatus(currentOrder.payment_status) }}</span>
                   </div>
               </div>
 
@@ -69,10 +73,10 @@
                               </tr>
                           </thead>
                           <tbody>
-                              <tr v-for="item in order.items" :key="item.id">
+                              <tr v-for="item in currentOrder.items" :key="item.id">
                                   <td class="ps-3 py-3">
                                       <div class="d-flex align-items-center gap-2">
-                                          <img :src="item.variant_image ? getFullImage(item.variant_image) : 'https://placehold.co/40'" class="rounded border shadow-sm" style="width: 45px; height: 45px; object-fit: cover;">
+                                          <img :src="item.variant_image ? getFullImage(item.variant_image) : defaultPlaceholder" @error="handleImageError" class="rounded border shadow-sm" style="width: 45px; height: 45px; object-fit: cover;">
                                           <div>
                                               <div class="fw-bold text-dark text-wrap" style="max-width: 250px;">{{ item.product_name }}</div>
                                               <div class="text-muted" style="font-size: 0.7rem;">SKU: {{ item.variant_sku }}</div>
@@ -101,26 +105,26 @@
                           <div class="bg-light p-3 rounded border">
                               <div class="d-flex justify-content-between mb-2 small">
                                 <span class="text-muted fw-medium">Tạm tính:</span> 
-                                <strong>{{ formatCurrency(order.sub_total) }}</strong>
+                                <strong>{{ formatCurrency(currentOrder.sub_total) }}</strong>
                               </div>
                               <div class="d-flex justify-content-between mb-2 small">
                                 <span class="text-muted fw-medium">Phí giao hàng:</span> 
-                                <strong>{{ formatCurrency(order.shipping_fee) }}</strong>
+                                <strong>{{ formatCurrency(currentOrder.shipping_fee) }}</strong>
                               </div>
 
-                              <div class="d-flex justify-content-between mb-2 small text-danger" v-if="order.discount_amount > 0">
-                                <span class="text-muted fw-medium">Giảm giá Coupon <span v-if="order.coupon_code">({{ order.coupon_code }})</span>:</span> 
-                                <strong>- {{ formatCurrency(order.discount_amount) }}</strong>
+                              <div class="d-flex justify-content-between mb-2 small text-danger" v-if="currentOrder.discount_amount > 0">
+                                <span class="text-muted fw-medium">Giảm giá Coupon <span v-if="currentOrder.coupon_code">({{ currentOrder.coupon_code }})</span>:</span> 
+                                <strong>- {{ formatCurrency(currentOrder.discount_amount) }}</strong>
                               </div>
 
-                              <div class="d-flex justify-content-between mb-2 small text-success" v-if="order.tier_discount_amount > 0">
+                              <div class="d-flex justify-content-between mb-2 small text-success" v-if="currentOrder.tier_discount_amount > 0">
                                 <span class="text-muted fw-medium"><i class="bi bi-star-fill text-warning me-1"></i>Ưu đãi hạng TV:</span> 
-                                <strong>- {{ formatCurrency(order.tier_discount_amount) }}</strong>
+                                <strong>- {{ formatCurrency(currentOrder.tier_discount_amount) }}</strong>
                               </div>
 
                               <div class="d-flex justify-content-between mt-3 pt-2 border-top border-2 border-dark align-items-center">
                                 <span class="fw-bold text-dark text-uppercase tracking-wide">TỔNG CỘNG:</span> 
-                                <strong class="fs-4 text-brand font-oswald">{{ formatCurrency(order.total_amount) }}</strong>
+                                <strong class="fs-4 text-brand font-oswald">{{ formatCurrency(currentOrder.total_amount) }}</strong>
                               </div>
                           </div>
                       </div>
@@ -129,7 +133,7 @@
                   <div class="mt-4">
                       <h6 class="fw-bold text-muted text-uppercase mb-3"><i class="bi bi-clock-history me-2 text-brand"></i>Lịch sử cập nhật</h6>
                       <ul class="list-group list-group-flush border rounded custom-scrollbar-y" style="max-height: 200px; overflow-y: auto;">
-                          <li class="list-group-item d-flex justify-content-between align-items-start p-3" v-for="(history, index) in order.histories" :key="history.id" :class="{'bg-light': index % 2 === 0}">
+                          <li class="list-group-item d-flex justify-content-between align-items-start p-3" v-for="(history, index) in currentOrder.histories" :key="history.id" :class="{'bg-light': index % 2 === 0}">
                               <div class="ms-2 me-auto w-100">
                                   <div class="d-flex justify-content-between align-items-center w-100 mb-1">
                                       <div class="fw-bold text-dark small">
@@ -150,9 +154,14 @@
           </div>
         </div>
 
+        <div class="modal-body p-5 text-center bg-white" v-else-if="isFetching">
+            <div class="spinner-border text-brand" style="width: 3rem; height: 3rem; border-width: 0.25em;" role="status"></div>
+            <p class="text-muted mt-3 fw-semibold">Đang truy xuất dữ liệu đơn hàng...</p>
+        </div>
+
         <div class="modal-footer bg-light border-top-0 rounded-bottom-4 gap-2 no-print">
            <button type="button" class="btn btn-outline-dark rounded-pill px-4 fw-bold action-btn-hover" @click="hide">Đóng</button>
-           <button type="button" class="btn btn-dark text-white rounded-pill px-4 fw-bold action-btn-hover" @click="printInvoice"><i class="bi bi-printer me-2"></i> In Hóa Đơn</button>
+           <button type="button" class="btn btn-dark text-white rounded-pill px-4 fw-bold action-btn-hover" @click="printInvoice" :disabled="!currentOrder"><i class="bi bi-printer me-2"></i> In Hóa Đơn</button>
         </div>
       </div>
     </div>
@@ -160,12 +169,15 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue';
+import { ref, watch, onMounted, onUnmounted, computed } from 'vue';
+import { useQuery } from '@tanstack/vue-query';
+import axios from 'axios';
 import { getFullImage } from '@/composables/useUtilities';
 import { downloadAdminInvoice } from '@/utils/adminInvoice.js';
+import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 
 const props = defineProps({
-    order: {
+    order: { // Hỗ trợ fallback truyền từ Index.vue để tương thích ngược
         type: Object,
         default: null
     },
@@ -181,9 +193,16 @@ const props = defineProps({
 
 const emit = defineEmits(['open-tracking', 'print']);
 
+const API_URL = import.meta.env.VITE_API_BASE_URL;
+const getHeaders = () => ({
+    'Accept': 'application/json',
+    'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+});
+
 const modalRef = ref(null);
 let bsModal = null;
 const localSelectedWarehouseId = ref(props.defaultWarehouseId);
+const activeOrderId = ref(null);
 
 onMounted(() => {
     if (modalRef.value) {
@@ -204,7 +223,33 @@ watch(() => props.defaultWarehouseId, (newVal) => {
     localSelectedWarehouseId.value = newVal;
 });
 
-const show = () => {
+// [TANSTACK QUERY] - Quản lý Fetch & Caching độc lập bên trong Modal
+const { data: fetchedOrder, isFetching } = useQuery({
+    queryKey: ['admin-order-detail', activeOrderId],
+    queryFn: async () => {
+        const res = await axios.get(`${API_URL}/admin/orders/${activeOrderId.value}`, { headers: getHeaders() });
+        return res.data.data;
+    },
+    // Chỉ kích hoạt call API khi có activeOrderId hợp lệ
+    enabled: computed(() => !!activeOrderId.value),
+    // Lưu lại bộ đệm trong 5 phút. Nếu click lại cùng order sẽ lấy ngay Data từ Cache mà ko load lại API
+    staleTime: 5 * 60 * 1000, 
+    cacheTime: 10 * 60 * 1000
+});
+
+// Linh hoạt kết hợp Cache và Dữ liệu được push từ ngoài vào để tránh bị mồ côi
+const currentOrder = computed(() => {
+    if (fetchedOrder.value) return fetchedOrder.value;
+    if (props.order && props.order.id === activeOrderId.value) return props.order;
+    return null;
+});
+
+const show = (id = null) => {
+    if (id) {
+        activeOrderId.value = id;
+    } else if (props.order?.id) {
+        activeOrderId.value = props.order.id;
+    }
     if (bsModal) bsModal.show();
 };
 
@@ -214,12 +259,14 @@ const hide = () => {
 
 const triggerTracking = () => {
     hide();
-    emit('open-tracking', props.order.id, localSelectedWarehouseId.value);
+    if (currentOrder.value) {
+        emit('open-tracking', currentOrder.value.id, localSelectedWarehouseId.value);
+    }
 };
 
 const printInvoice = () => {
-    if (!props.order) return;
-    downloadAdminInvoice({ orderId: props.order.id, orderCode: props.order.order_code });
+    if (!currentOrder.value) return;
+    downloadAdminInvoice({ orderId: currentOrder.value.id, orderCode: currentOrder.value.order_code });
 };
 
 const formatCurrency = (val) => {
@@ -231,6 +278,10 @@ const formatDateTime = (dateString) => {
     if (!dateString) return ''; 
     const d = new Date(dateString); 
     return d.toLocaleString('vi-VN'); 
+};
+
+const handleImageError = (e) => {
+    e.target.src = defaultPlaceholder;
 };
 
 const parseAttributes = (attr) => {

@@ -547,6 +547,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import Swal from 'sweetalert2';
+import Toast from '@/utils/toastConfig';
 
 import ProductCard from '@/components/ui/ProductCard.vue';
 import CompareModal from '@/components/ui/CompareModal.vue';
@@ -570,7 +571,7 @@ const isLoading = ref(true);
 const showSizeGuideModal = ref(false);
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const BACKEND_URL = API_BASE_URL.replace(/\/api\/?$/, '');
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || API_BASE_URL.replace(/\/api\/?$/, '');
 const shopSlug = route.params.shop_slug || 'aurora';
 const soraPlaceholder = '/Sora-placeholder.png';
 
@@ -771,17 +772,6 @@ const soraAlert = Swal.mixin({
   confirmButtonColor: '#9f273b',
   cancelButtonColor: '#6c757d',
   customClass: { confirmButton: 'px-4 py-2 mx-2 rounded-pill shadow-sm fw-bold', cancelButton: 'px-4 py-2 mx-2 rounded-pill fw-bold' }
-});
-
-const Toast = Swal.mixin({
-  toast: true,
-  position: 'top-end',
-  showConfirmButton: false,
-  timer: 3000,
-  timerProgressBar: true,
-  background: '#fffafa',
-  color: '#9f273b',
-  iconColor: '#9f273b'
 });
 
 // Wishlist wrapper with Toast & soraAlert

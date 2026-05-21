@@ -36,9 +36,16 @@
           <div class="col-md-4 col-lg-3">
             <div class="card border-0 shadow-sm rounded-4 text-center p-4 h-100">
               <label class="form-label fw-bold mb-3 text-dark">Ảnh đại diện</label>
-              <div class="position-relative d-inline-block mx-auto mb-3">
-                <img :src="previewAvatar" class="rounded-circle shadow-sm border border-3 border-white object-fit-cover" style="width: 140px; height: 140px;" alt="Avatar">
-                <label for="avatarUpload" class="position-absolute bottom-0 end-0 bg-brand rounded-circle shadow-sm p-2 text-white cursor-pointer" title="Đổi ảnh đại diện">
+              <div class="position-relative d-inline-block mx-auto mb-3" style="width: 140px; height: 140px;">
+                <!-- Sử dụng SoraImage thay cho img thường để xử lý lỗi ảnh mượt mà -->
+                <SoraImage 
+                  :src="previewAvatar" 
+                  :placeholder="defaultAvatar"
+                  imgClass="rounded-circle shadow-sm border border-3 border-white object-fit-cover" 
+                  style="width: 140px; height: 140px;"
+                  alt="Avatar"
+                />
+                <label for="avatarUpload" class="position-absolute bottom-0 end-0 bg-brand rounded-circle shadow-sm p-2 text-white cursor-pointer" style="line-height: 1;" title="Đổi ảnh đại diện">
                   <i class="bi bi-camera-fill fs-6"></i>
                 </label>
                 <input type="file" id="avatarUpload" class="d-none" accept="image/png, image/jpeg" @change="handleAvatarChange">
@@ -50,7 +57,7 @@
                 {{ form.status === 'active' ? 'Đang hoạt động' : 'Đã bị khóa' }}
               </span>
 
-              <div class="mb-3" v-if="previewAvatar && !previewAvatar.includes('avatar1.png') && !selectedFile">
+              <div class="mb-3" v-if="previewAvatar && previewAvatar !== defaultAvatar && !selectedFile">
                 <button type="button" @click="removeAvatar" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold w-100 shadow-sm">
                   <i class="bi bi-trash me-1"></i> Xóa ảnh hiện tại
                 </button>
@@ -168,21 +175,25 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
+import axios from 'axios';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { getFullImage } from '@/composables/useUtilities';
-import defaultAvatar from '../../../../assets/images/defaults/avatar1.png';
+
+// Tái sử dụng SoraImage và defaultAvatar đồng bộ thống nhất
+import SoraImage from '@/components/ui/SoraImage.vue';
+import defaultAvatar from '@/assets/images/defaults/avatar1.png';
 
 const route = useRoute();
 const router = useRouter();
-const roles = ref([]);
+const queryClient = useQueryClient();
+
 const isSaving = ref(false);
-const isLoaded = ref(false);
 const currentPageLevel = ref(null);
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const previewAvatar = ref(defaultAvatar);
 const selectedFile = ref(null);
@@ -205,6 +216,11 @@ const isCurrentUser = computed(() => {
   return Number(route.params.id) === currentUserId;
 });
 
+const getHeaders = () => ({
+  'Accept': 'application/json',
+  'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+});
+
 const getLevelColor = (level) => {
   if(!level) return 'bg-secondary';
   const l = parseInt(level);
@@ -223,12 +239,18 @@ const findLocationByName = (list, name) => {
   return list.find(item => item.full_name === name || item.name === name || name.includes(item.name));
 };
 
+/* =========================================================
+   FIX LỖI CORS: Bắt buộc dùng native fetch() cho esgoo.net
+   (Không dùng axios vì nó sẽ tự động thêm 'X-Requested-With' gây lỗi)
+========================================================= */
 const fetchProvinces = async () => {
   try {
     const res = await fetch('https://esgoo.net/api-tinhthanh/1/0.htm');
-    const data = await res.json();
-    if(data.error === 0) provinces.value = data.data;
-  } catch(e) {}
+    if (res.ok) {
+      const data = await res.json();
+      if(data.error === 0) provinces.value = data.data;
+    }
+  } catch(e) { console.error("Lỗi lấy Tỉnh/Thành phố:", e); }
 };
 
 const onCityChange = async () => {
@@ -237,9 +259,11 @@ const onCityChange = async () => {
   if (selectedCityId.value) {
     try {
       const res = await fetch(`https://esgoo.net/api-tinhthanh/2/${selectedCityId.value}.htm`);
-      const data = await res.json();
-      if(data.error === 0) districts.value = data.data;
-    } catch(e) {}
+      if (res.ok) {
+        const data = await res.json();
+        if(data.error === 0) districts.value = data.data;
+      }
+    } catch(e) { console.error("Lỗi lấy Quận/Huyện:", e); }
   }
 };
 
@@ -248,9 +272,11 @@ const onDistrictChange = async () => {
   if (selectedDistrictId.value) {
     try {
       const res = await fetch(`https://esgoo.net/api-tinhthanh/3/${selectedDistrictId.value}.htm`);
-      const data = await res.json();
-      if(data.error === 0) wards.value = data.data;
-    } catch(e) {}
+      if (res.ok) {
+        const data = await res.json();
+        if(data.error === 0) wards.value = data.data;
+      }
+    } catch(e) { console.error("Lỗi lấy Phường/Xã:", e); }
   }
 };
 
@@ -288,44 +314,77 @@ const parseAddressToDropdowns = async (fullAddress) => {
   }
 };
 
-const fetchRolesAndStaff = async () => {
-  try {
-    const headers = { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` };
-    
-    await fetchProvinces();
+// ==========================================
+// TANSTACK VUE QUERY - FETCH DATA
+// ==========================================
 
-    const [resRoles, resStaff, resModules] = await Promise.all([
-      fetch(`${API_URL}/admin/roles`, { headers }),
-      fetch(`${API_URL}/admin/staff/${route.params.id}`, { headers }),
-      fetch(`${API_URL}/admin/modules`, { headers })
-    ]);
-    
-    if (resRoles.ok) roles.value = (await resRoles.json()).data;
-    
-    if (resStaff.ok) {
-      const s = (await resStaff.json()).data;
-      form.value = { fullname: s.fullname, email: s.email, phone: s.phone, address: s.address || '', role_id: s.role_id, status: s.status, password: '' };
-      previewAvatar.value = s.avatar_url ? getFullImage(s.avatar_url) : defaultAvatar;
-      
-      await parseAddressToDropdowns(s.address);
-    } else {
-      router.push({ name: 'admin-staff-index' });
-    }
+// 1. Dùng chung danh sách roles đã lưu trong cache Tanstack của Index.vue
+const { data: rolesResponse } = useQuery({
+  queryKey: ['adminRoles'],
+  queryFn: async () => {
+    const response = await axios.get(`${API_URL}/admin/roles`, { headers: getHeaders() });
+    return response.data;
+  },
+  staleTime: 30 * 60 * 1000
+});
 
-    if (resModules.ok) {
-      const modules = (await resModules.json()).data;
-      const currentCode = route.meta.moduleCode;
-      if (currentCode) {
-        const currentModule = modules.find(m => m.module_code === currentCode);
-        if (currentModule) currentPageLevel.value = currentModule.required_level;
-      }
-    }
-  } catch (err) { 
-    console.error(err); 
-  } finally { 
-    isLoaded.value = true; 
+const roles = computed(() => rolesResponse.value?.data || []);
+
+// 2. Dùng chung danh sách modules đã lưu trong cache
+const { data: modulesResponse } = useQuery({
+  queryKey: ['adminModules'],
+  queryFn: async () => {
+    const response = await axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() });
+    return response.data;
+  },
+  staleTime: 30 * 60 * 1000
+});
+
+// Thiết lập quyền hạn cấp trang từ dữ liệu modules
+computed(() => {
+  const modules = modulesResponse.value?.data || [];
+  const currentCode = route.meta.moduleCode;
+  if (currentCode && modules.length > 0) {
+    const currentModule = modules.find(m => m.module_code === currentCode);
+    if (currentModule) currentPageLevel.value = currentModule.required_level;
   }
-};
+  return modules;
+});
+
+// 3. Tải thông tin chi tiết của nhân viên cần chỉnh sửa
+const { data: staffResponse, isLoading: isStaffLoading } = useQuery({
+  queryKey: ['adminStaff_id', route.params.id],
+  queryFn: async () => {
+    const response = await axios.get(`${API_URL}/admin/staff/${route.params.id}`, { headers: getHeaders() });
+    return response.data;
+  },
+  staleTime: 2 * 60 * 1000 // Cache cục bộ 2 phút
+});
+
+const rawStaffData = computed(() => staffResponse.value?.data);
+
+// Thiết lập trạng thái load màn hình hoàn thành
+const isLoaded = computed(() => !isStaffLoading.value && provinces.value.length > 0);
+
+// Đồng bộ hóa thông tin nhân viên từ TanStack Query vào Form an toàn sau khi load xong các danh mục tỉnh thành
+watch(rawStaffData, async (newVal) => {
+  if (newVal) {
+    form.value = { 
+      fullname: newVal.fullname, 
+      email: newVal.email, 
+      phone: newVal.phone, 
+      address: newVal.address || '', 
+      role_id: newVal.role_id, 
+      status: newVal.status, 
+      password: '' 
+    };
+    
+    // Đồng bộ preview avatar của SoraImage
+    previewAvatar.value = newVal.avatar_url ? getFullImage(newVal.avatar_url) : defaultAvatar;
+    
+    await parseAddressToDropdowns(newVal.address);
+  }
+}, { immediate: true });
 
 const handleAvatarChange = (e) => {
   const file = e.target.files[0];
@@ -342,9 +401,54 @@ const removeAvatar = () => {
   isRemoveAvatar.value = true;
 };
 
-const updateStaff = async () => {
-  isSaving.value = true;
+// ==========================================
+// TANSTACK VUE QUERY - MUTATION (LƯU THAY ĐỔI)
+// ==========================================
 
+const updateStaffMutation = useMutation({
+  mutationFn: async (formData) => {
+    const response = await axios.post(`${API_URL}/admin/staff/${route.params.id}`, formData, {
+      headers: {
+        ...getHeaders(),
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response.data;
+  },
+  onMutate: () => {
+    isSaving.value = true;
+  },
+  onSuccess: (data) => {
+    Swal.fire({ icon: 'success', title: 'Thành công', text: data.message, timer: 1500, showConfirmButton: false });
+    
+    // Nếu cập nhật chính tài khoản của bạn, tự động cập nhật cả LocalStorage và cache Header
+    if(isCurrentUser.value) {
+      const updatedAdmin = { ...currentAdmin, fullname: form.value.fullname, phone: form.value.phone };
+      if (data.data && data.data.avatar_url) updatedAdmin.avatar_url = data.data.avatar_url;
+      localStorage.setItem('admin_info', JSON.stringify(updatedAdmin));
+      
+      // Đồng bộ làm tươi profile ở Header ngay lập tức
+      queryClient.invalidateQueries({ queryKey: ['adminProfile'] });
+    }
+
+    // Làm tươi danh sách nhân viên ở trang index
+    queryClient.invalidateQueries({ queryKey: ['adminStaffs'] });
+    
+    router.push({ name: 'admin-staff-index' });
+  },
+  onError: (err) => {
+    if (err.response && err.response.data) {
+      Swal.fire('Lỗi', err.response.data.message || Object.values(err.response.data.errors).flat().join('\n'), 'error');
+    } else {
+      Swal.fire('Lỗi', 'Không thể kết nối máy chủ để cập nhật dữ liệu.', 'error');
+    }
+  },
+  onSettled: () => {
+    isSaving.value = false;
+  }
+});
+
+const updateStaff = async () => {
   let finalAddress = specificAddress.value;
   const cityName = provinces.value.find(p => p.id === selectedCityId.value)?.full_name || '';
   const distName = districts.value.find(d => d.id === selectedDistrictId.value)?.full_name || '';
@@ -369,33 +473,13 @@ const updateStaff = async () => {
   if (selectedFile.value) formData.append('avatar', selectedFile.value);
   if (isRemoveAvatar.value) formData.append('remove_avatar', 'true');
 
-  try {
-    const res = await fetch(`${API_URL}/admin/staff/${route.params.id}`, {
-      method: 'POST', 
-      headers: { 
-        'Authorization': `Bearer ${localStorage.getItem('admin_token')}`,
-        'Accept': 'application/json' 
-      },
-      body: formData 
-    });
-    const data = await res.json();
-    if (res.ok) {
-      Swal.fire({ icon: 'success', title: 'Thành công', text: data.message, timer: 1500, showConfirmButton: false });
-      
-      if(isCurrentUser.value) {
-        const updatedAdmin = { ...currentAdmin, fullname: form.value.fullname, phone: form.value.phone };
-        if(data.data && data.data.avatar_url) updatedAdmin.avatar_url = data.data.avatar_url;
-        localStorage.setItem('admin_info', JSON.stringify(updatedAdmin));
-      }
-
-      router.push({ name: 'admin-staff-index' });
-    } else {
-      Swal.fire('Lỗi', data.message || Object.values(data.errors).flat().join('\n'), 'error');
-    }
-  } catch (err) { Swal.fire('Lỗi', 'Mất kết nối', 'error'); } finally { isSaving.value = false; }
+  updateStaffMutation.mutate(formData);
 };
 
-onMounted(() => fetchRolesAndStaff());
+// Khởi chạy nạp danh mục tỉnh thành lúc hiển thị màn hình
+onMounted(() => {
+  fetchProvinces();
+});
 </script>
 
 <style scoped>

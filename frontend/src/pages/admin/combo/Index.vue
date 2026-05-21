@@ -67,7 +67,7 @@
         <div class="card-header bg-white border-bottom-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
           <h6 class="fw-bold mb-0 text-dark d-flex align-items-center">
             <i class="bi bi-list-ul me-2"></i>Danh sách Combo
-            <div v-if="isSilentLoading" class="spinner-border spinner-border-sm text-brand ms-2" role="status"></div>
+            <div v-if="isSilentLoading || isTableLoading" class="spinner-border spinner-border-sm text-brand ms-2" role="status"></div>
           </h6>
           <div class="search-box position-relative" style="width: 300px; max-width: 100%;">
             <input type="text" class="form-control rounded-pill pe-5 shadow-sm bg-light border-0" v-model="searchQuery" @input="currentPage = 1" placeholder="Tìm tên Combo, chủ đề...">
@@ -97,7 +97,12 @@
                   <td class="px-4 py-3">
                     <div class="d-flex align-items-center">
                       <div class="position-relative d-inline-block me-3 shadow-sm border rounded-3 overflow-hidden bg-white flex-shrink-0" style="width: 60px; height: 60px;">
-                        <img :src="getThumbnail(combo.thumbnail_image)" class="w-100 h-100 object-fit-cover">
+                        <!-- SỬ DỤNG SORA IMAGE Ở ĐÂY -->
+                        <SoraImage 
+                          :src="combo.thumbnail_image" 
+                          imgClass="w-100 h-100 object-fit-cover" 
+                          :placeholder="defaultPlaceholder"
+                        />
                       </div>
                       <div class="overflow-hidden">
                         <div class="fw-bold text-dark fs-6 mb-1 text-truncate" :title="combo.name">{{ combo.name }}</div>
@@ -181,7 +186,7 @@
       </div>
     </div>
 
-    <!-- MODAL QUICK VIEW COMBO (ĐÃ THÊM GIÁ TỔNG VÀ BẢNG TÍNH) -->
+    <!-- MODAL QUICK VIEW COMBO -->
     <div class="modal fade" id="quickViewComboModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content rounded-4 border-0 shadow">
@@ -192,11 +197,23 @@
           
           <div class="modal-body p-0" v-if="selectedCombo">
             <!-- Header Modal -->
-            <div class="p-3 bg-white border-bottom d-flex align-items-center gap-3">
-              <img :src="getThumbnail(selectedCombo.thumbnail_image)" class="rounded border object-fit-cover shadow-sm" style="width: 80px; height: 80px;">
+            <div class="p-3 bg-white border-bottom d-flex align-items-center gap-3 position-relative">
+              
+              <!-- THÊM: Indicator báo hiệu đang fetch API ngầm -->
+              <div v-if="isFetchingDetail" class="position-absolute top-0 end-0 m-3 text-brand small fw-bold d-flex align-items-center bg-white px-2 py-1 rounded shadow-sm border">
+                 <div class="spinner-border spinner-border-sm me-2" role="status"></div> Đang tải chi tiết...
+              </div>
+
+              <!-- SỬ DỤNG SORA IMAGE Ở ĐÂY -->
+              <SoraImage 
+                :src="selectedCombo.thumbnail_image" 
+                imgClass="rounded border object-fit-cover shadow-sm" 
+                style="width: 80px; height: 80px;" 
+                :placeholder="defaultPlaceholder"
+              />
               <div class="flex-grow-1">
                  <h5 class="mb-1 fw-bold text-dark">{{ selectedCombo.name }}</h5>
-                 <div class="text-muted small mb-2">{{ selectedCombo.description || 'Không có mô tả' }}</div>
+                 <div class="text-muted small mb-2">{{ selectedCombo.description || 'Chưa có thông tin mô tả...' }}</div>
                  
                  <!-- Tags Giới hạn & Thời gian -->
                  <div class="d-flex flex-wrap gap-2">
@@ -214,57 +231,71 @@
             </div>
             
             <div class="p-3 bg-light">
-              <h6 class="fw-bold text-dark mb-3">Sản phẩm có trong gói ({{ selectedCombo.items?.length || 0 }} món):</h6>
-              <div class="table-responsive">
-                <table class="table table-bordered bg-white shadow-sm mb-0 align-middle small">
-                  <thead class="table-light">
-                    <tr>
-                      <th class="px-3">Sản phẩm (Bản gốc)</th>
-                      <th class="px-3 text-center">Biến thể áp dụng</th>
-                      <th class="px-3 text-center">SL</th>
-                      <!-- THÊM CỘT GIÁ Ở ĐÂY -->
-                      <th class="px-3 text-end">Đơn giá (Gốc)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="item in selectedCombo.items" :key="item.id">
-                      <td class="px-3">
-                        <div class="d-flex align-items-center gap-2">
-                          <img :src="getThumbnail(item.product?.thumbnail_image)" class="rounded border" style="width: 40px; height: 40px; object-fit: cover;">
-                          <div class="fw-semibold">{{ item.product?.name }}</div>
-                        </div>
-                      </td>
-                      <td class="px-3 text-center">
-                        <span v-if="item.product_variant_id" class="badge bg-light text-dark border">
-                          SKU: {{ item.variant?.sku }}
-                        </span>
-                        <span v-else class="badge bg-success bg-opacity-10 text-success border border-success">
-                          Khách tự chọn
-                        </span>
-                      </td>
-                      <td class="px-3 text-center fw-bold">{{ item.quantity }}</td>
-                      <td class="px-3 text-end fw-bold text-secondary">{{ formatCurrency(getItemPrice(item)) }}</td>
-                    </tr>
-                  </tbody>
-                </table>
+              <h6 class="fw-bold text-dark mb-3">Sản phẩm có trong gói ({{ selectedCombo.items?.length || selectedCombo.items_count || 0 }} món):</h6>
+              
+              <!-- THÊM: Nếu chỉ mới có dữ liệu mồi (isPartial), hiển thị bảng Loading mượt mà -->
+              <div v-if="selectedCombo.isPartial && isFetchingDetail" class="text-center py-5 bg-white border rounded-3 shadow-sm">
+                 <div class="spinner-border text-brand mb-3" style="width: 2.5rem; height: 2.5rem;" role="status"></div>
+                 <div class="text-muted small fw-semibold text-uppercase tracking-widest">Đang đồng bộ danh sách sản phẩm...</div>
               </div>
 
-              <!-- BẢNG TÍNH TỔNG GIÁ COMBO -->
-              <div class="bg-white border rounded-3 p-3 mt-3 shadow-sm ms-auto" style="max-width: 350px;">
-                  <div class="d-flex justify-content-between mb-2">
-                      <span class="text-muted fw-semibold">Tổng giá gốc ước tính:</span>
-                      <strong class="text-dark">{{ formatCurrency(quickViewOriginalTotal) }}</strong>
-                  </div>
-                  <div class="d-flex justify-content-between mb-2 text-danger">
-                      <span class="fw-semibold">Trừ khuyến mãi Combo:</span>
-                      <strong>- {{ formatCurrency(quickViewDiscountAmount) }}</strong>
-                  </div>
-                  <div class="d-flex justify-content-between pt-2 border-top mt-2">
-                      <span class="fw-bold text-dark">Giá Combo xuất bán:</span>
-                      <strong class="fs-5 text-brand">{{ formatCurrency(quickViewFinalPrice) }}</strong>
-                  </div>
-              </div>
+              <!-- Nếu đã lấy đủ data từ API -->
+              <div v-else>
+                <div class="table-responsive">
+                  <table class="table table-bordered bg-white shadow-sm mb-0 align-middle small">
+                    <thead class="table-light">
+                      <tr>
+                        <th class="px-3">Sản phẩm (Bản gốc)</th>
+                        <th class="px-3 text-center">Biến thể áp dụng</th>
+                        <th class="px-3 text-center">SL</th>
+                        <th class="px-3 text-end">Đơn giá (Gốc)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="item in selectedCombo.items" :key="item.id">
+                        <td class="px-3">
+                          <div class="d-flex align-items-center gap-2">
+                            <!-- SỬ DỤNG SORA IMAGE Ở ĐÂY -->
+                            <SoraImage 
+                              :src="item.product?.thumbnail_image" 
+                              imgClass="rounded border" 
+                              style="width: 40px; height: 40px; object-fit: cover;" 
+                              :placeholder="defaultPlaceholder"
+                            />
+                            <div class="fw-semibold">{{ item.product?.name }}</div>
+                          </div>
+                        </td>
+                        <td class="px-3 text-center">
+                          <span v-if="item.product_variant_id" class="badge bg-light text-dark border">
+                            SKU: {{ item.variant?.sku }}
+                          </span>
+                          <span v-else class="badge bg-success bg-opacity-10 text-success border border-success">
+                            Khách tự chọn
+                          </span>
+                        </td>
+                        <td class="px-3 text-center fw-bold">{{ item.quantity }}</td>
+                        <td class="px-3 text-end fw-bold text-secondary">{{ formatCurrency(getItemPrice(item)) }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
 
+                <!-- BẢNG TÍNH TỔNG GIÁ COMBO -->
+                <div class="bg-white border rounded-3 p-3 mt-3 shadow-sm ms-auto" style="max-width: 350px;">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted fw-semibold">Tổng giá gốc ước tính:</span>
+                        <strong class="text-dark">{{ formatCurrency(quickViewOriginalTotal) }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2 text-danger">
+                        <span class="fw-semibold">Trừ khuyến mãi Combo:</span>
+                        <strong>- {{ formatCurrency(quickViewDiscountAmount) }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between pt-2 border-top mt-2">
+                        <span class="fw-bold text-dark">Giá Combo xuất bán:</span>
+                        <strong class="fs-5 text-brand">{{ formatCurrency(quickViewFinalPrice) }}</strong>
+                    </div>
+                </div>
+              </div>
             </div>
           </div>
           <div class="modal-footer bg-light border-top-0 rounded-bottom-4">
@@ -283,10 +314,12 @@ import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
-import { getFullImage } from '@/composables/useUtilities';
+
+// 1. Import Component SoraImage và Ảnh Placeholder
+import SoraImage from '@/components/ui/SoraImage.vue';
+import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const router = useRouter();
 const combos = ref([]);
@@ -294,6 +327,7 @@ const combos = ref([]);
 const isFirstLoad = ref(true);
 const isTableLoading = ref(false);
 const isSilentLoading = ref(false);
+const isFetchingDetail = ref(false); // Cờ kiểm soát việc load ngầm chi tiết Combo
 
 const searchQuery = ref('');
 const activeTab = ref('all');
@@ -326,8 +360,6 @@ const formatDateTime = (dateString) => {
     return `${d.toLocaleDateString('vi-VN')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 };
 
-const getThumbnail = (url) => url ? getFullImage(url) : 'https://placehold.co/150x150/e0e0e0/6c757d?text=No+Image'; 
-
 const getGenderLabel = (val) => {
     const map = { 'male': 'Nam', 'female': 'Nữ', 'unisex': 'Unisex', 'couple': 'Cặp đôi' };
     return map[val] || val;
@@ -359,6 +391,7 @@ const getStatusSelectClass = (status) => {
   return map[status] || 'bg-light text-secondary'; 
 };
 
+// FETCH DATA DÙNG LẠI CHUẨN AXIOS GỐC
 const fetchData = async (silent = false) => {
   if (silent) isSilentLoading.value = true;
   else if (!isFirstLoad.value) isTableLoading.value = true;
@@ -380,15 +413,34 @@ const fetchData = async (silent = false) => {
   }
 };
 
+// KỸ THUẬT: TÁI SỬ DỤNG CACHE CỤC BỘ TỪ DANH SÁCH (ZERO-LOADING)
 const openQuickView = async (id) => {
+  // 1. Chụp dữ liệu mồi từ danh sách có sẵn để Modal hiện ngay lập tức
+  const cachedCombo = combos.value.find(c => c.id === id);
+  if (cachedCombo) {
+     selectedCombo.value = { ...cachedCombo, isPartial: true }; // Gắn cờ báo hiệu thiếu danh sách sản phẩm
+     if(!quickViewModalInstance) quickViewModalInstance = new window.bootstrap.Modal(document.getElementById('quickViewComboModal'));
+     quickViewModalInstance.show();
+  }
+
+  // 2. Fetch API dưới nền để cập nhật đầy đủ chi tiết
+  isFetchingDetail.value = true;
   try {
     const res = await axios.get(`${API_URL}/admin/combos/${id}`, { headers: getHeaders() });
     if(!isUnmounted) {
       selectedCombo.value = res.data.data;
-      if(!quickViewModalInstance) quickViewModalInstance = new window.bootstrap.Modal(document.getElementById('quickViewComboModal'));
-      quickViewModalInstance.show();
+      
+      // Nếu cực kỳ hiếm trường hợp mảng danh sách trống, Modal sẽ tự bật khi API gọi xong
+      if (!cachedCombo) {
+        if(!quickViewModalInstance) quickViewModalInstance = new window.bootstrap.Modal(document.getElementById('quickViewComboModal'));
+        quickViewModalInstance.show();
+      }
     }
-  } catch(e) {}
+  } catch(e) {
+    Swal.fire('Lỗi', 'Không thể tải chi tiết Combo', 'error');
+  } finally {
+    isFetchingDetail.value = false;
+  }
 };
 
 const getItemPrice = (item) => {
