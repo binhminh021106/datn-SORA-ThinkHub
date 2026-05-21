@@ -33,7 +33,6 @@
             <label>Số điện thoại</label>
             <input v-model="form.phone" type="text" placeholder="Nhập số điện thoại" />
           </div>
-
           <div class="form-group">
             <label>Mật khẩu</label>
             <input v-model="form.password" type="password" placeholder="Tạo mật khẩu (ít nhất 6 ký tự)" required />
