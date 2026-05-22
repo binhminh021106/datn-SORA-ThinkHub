@@ -151,7 +151,7 @@
                     :class="{'bg-light opacity-75': cat.deleted_at || cat.status === 'hidden', 'drag-item': isReorderMode, 'dragging': draggedIndex === index, 'drag-over': dragOverIndex === index}"
                     :draggable="isReorderMode"
                     @dragstart="onDragStart(index, $event)"
-                    @dragover.prevent="onDragOver(index)"
+                    @dragover.prevent="onDragOver(index, $event)"
                     @dragenter.prevent="onDragEnter(index)"
                     @dragleave="onDragLeave(index)"
                     @drop="onDrop(index)"
@@ -444,7 +444,7 @@ const onDragStart = (index, event) => {
   event.dataTransfer.dropEffect = 'move';
   setTimeout(() => event.target.classList.add('opacity-50'), 0);
 };
-const onDragOver = (index) => { event.dataTransfer.dropEffect = 'move'; };
+const onDragOver = (index, event) => { event.dataTransfer.dropEffect = 'move'; };
 const onDragEnter = (index) => { if (draggedIndex.value !== index) dragOverIndex.value = index; };
 const onDragLeave = (index) => { if (dragOverIndex.value === index) dragOverIndex.value = null; };
 const onDrop = (index) => {

@@ -68,10 +68,13 @@ class AdminCustomerGalleryController extends Controller
         }
 
         if ($request->hasFile('image')) {
-            if ($gallery->image_path && Storage::disk('public')->exists($gallery->image_path)) {
-                Storage::disk('public')->delete($gallery->image_path);
+            $newImagePath = $request->file('image')->store('customer_galleries', 'public');
+            if ($newImagePath) {
+                if ($gallery->image_path && Storage::disk('public')->exists($gallery->image_path)) {
+                    Storage::disk('public')->delete($gallery->image_path);
+                }
+                $gallery->image_path = $newImagePath;
             }
-            $gallery->image_path = $request->file('image')->store('customer_galleries', 'public');
         }
 
         if ($request->has('sort_order')) {

@@ -373,6 +373,9 @@ const statusMutation = useMutation({
     if (prev) queryClient.setQueryData(['admin', 'coupons'], old => old.map(c => c.id === id ? { ...c, status } : c));
     return { prev };
   },
+  onSuccess: () => {
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã lưu trạng thái', showConfirmButton: false, timer: 1000 });
+  },
   onError: (err, variables, ctx) => {
     if (ctx?.prev) queryClient.setQueryData(['admin', 'coupons'], ctx.prev);
     Swal.fire('Lỗi', err.message, 'error');
@@ -382,7 +385,6 @@ const statusMutation = useMutation({
 
 const onStatusChange = (coupon, newStatus) => {
   statusMutation.mutate({ id: coupon.id, status: newStatus });
-  Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã lưu trạng thái', showConfirmButton: false, timer: 1000 });
 };
 
 const deleteMutation = useMutation({
@@ -398,6 +400,9 @@ const deleteMutation = useMutation({
     return { prev };
   },
   onError: (err, id, ctx) => { if (ctx?.prev) queryClient.setQueryData(['admin', 'coupons'], ctx.prev); },
+  onSuccess: () => {
+    Swal.fire({icon: 'success', title: 'Đã đưa vào thùng rác', timer: 1500, showConfirmButton: false, toast: true, position: 'top-end'});
+  },
   onSettled: () => { isMutating.value = false; queryClient.invalidateQueries(['admin', 'coupons']); }
 });
 
@@ -405,7 +410,6 @@ const confirmDelete = (id, code) => {
   Swal.fire({ title: 'Xóa mã giảm giá?', text: `Mã "${code}" sẽ bị xóa khỏi hệ thống!`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Đồng ý xóa' }).then((result) => {
     if (result.isConfirmed) {
       deleteMutation.mutate(id);
-      Swal.fire({icon: 'success', title: 'Đã đưa vào thùng rác', timer: 1500, showConfirmButton: false, toast: true, position: 'top-end'});
     }
   });
 };

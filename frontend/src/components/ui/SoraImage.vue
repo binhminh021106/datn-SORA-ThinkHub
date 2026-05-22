@@ -41,7 +41,11 @@ const computedSrc = computed(() => {
   return `${STORAGE_URL}/${clean}`;
 });
 
-const imgStyle = computed(() => ({ objectFit: props.fit }));
+const imgStyle = computed(() => ({
+  objectFit: props.fit,
+  width: props.width != null ? (typeof props.width === 'number' ? `${props.width}px` : props.width) : '100%',
+  height: props.height != null ? (typeof props.height === 'number' ? `${props.height}px` : props.height) : '100%'
+}));
 
 function onError(e) {
   const el = e?.target;
@@ -53,5 +57,5 @@ function onError(e) {
 </script>
 
 <style scoped>
-img { display: block; width: 100%; height: 100%; }
+img { display: block; }
 </style>

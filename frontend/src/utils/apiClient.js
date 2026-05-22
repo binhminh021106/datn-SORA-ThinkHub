@@ -36,11 +36,16 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Unauthorized - xóa token và redirect
+      // Unauthorized - xóa token và redirect phù hợp cho admin hoặc client
       localStorage.removeItem('admin_token');
       localStorage.removeItem('auth_token');
       localStorage.removeItem('token');
-      window.location.href = '/login';
+
+      const requestUrl = error.config?.url || '';
+      const currentPath = window.location.pathname || '';
+      const isAdminRequest = requestUrl.includes('/admin/') || currentPath.startsWith('/admin');
+      const redirectPath = isAdminRequest ? '/admin/login' : '/login';
+      window.location.href = redirectPath;
     }
     
     return Promise.reject(error);
