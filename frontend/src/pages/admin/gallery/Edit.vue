@@ -1,7 +1,15 @@
 <template>
   <div class="gallery-edit-wrapper pb-5 mb-5">
-    <div class="container-fluid py-4">
-      
+    
+    <!-- SKELETON CHỜ KHI KHÔNG CÓ CACHE -->
+    <div v-if="isLoading" class="container-fluid py-4">
+        <div class="row mb-4"><div class="col-6"><span class="placeholder col-8 rounded" style="height: 40px;"></span></div></div>
+        <div class="card border-0 shadow-sm rounded-4 max-w-800 mx-auto placeholder-glow p-4">
+            <span class="placeholder col-12 rounded mb-3" style="height: 300px;"></span>
+        </div>
+    </div>
+
+    <div class="container-fluid py-4" v-else>
       <div class="row mb-4 align-items-center">
         <div class="col-md-8">
           <div class="d-flex align-items-center gap-3">
@@ -10,18 +18,16 @@
             </router-link>
             <div>
               <h3 class="fw-bold text-dark mb-0">Cập Nhật Chân Dung SORA</h3>
-              <p class="text-muted small mb-0 mt-1">Chỉnh sửa thông tin hình ảnh</p>
+              <p class="text-muted small mb-0 mt-1">
+                Chỉnh sửa thông tin hình ảnh
+                <span v-if="isFetching" class="spinner-border spinner-border-sm text-brand ms-2" title="Đang đồng bộ ngầm"></span>
+              </p>
             </div>
           </div>
         </div>
       </div>
 
-      <div v-if="isLoading" class="text-center py-5">
-        <div class="spinner-border text-brand mb-2" role="status"></div>
-        <p class="text-muted">Đang tải dữ liệu...</p>
-      </div>
-
-      <div v-else class="card border-0 shadow-sm rounded-4 max-w-800 mx-auto">
+      <div class="card border-0 shadow-sm rounded-4 max-w-800 mx-auto">
         <div class="card-body p-4 p-md-5">
           <form @submit.prevent="updateForm">
             
@@ -29,7 +35,7 @@
               <div class="col-md-5">
                 <label class="form-label fw-bold text-dark">
                   <i class="bi bi-image text-brand me-1"></i> Hình ảnh 
-                  <span class="text-muted fw-normal small ms-1">(Nhấn để đổi ảnh mới)</span>
+                  <span class="text-muted fw-normal small ms-1">(Nhấn để đổi)</span>
                 </label>
                 
                 <div class="upload-box bg-light border border-2 border-dashed rounded-4 d-flex flex-column align-items-center justify-content-center position-relative overflow-hidden cursor-pointer border-brand" 
@@ -71,9 +77,9 @@
             </div>
 
             <div class="border-top mt-5 pt-4 d-flex justify-content-end gap-3">
-              <router-link :to="{ name: 'admin-gallery' }" class="btn btn-light border px-4 py-2 fw-semibold text-muted shadow-sm">
-                Hủy bỏ
-              </router-link>
+              <button type="button" class="btn btn-light me-2 px-4 shadow-sm fw-bold border" @click="handleRestore" :disabled="isRestoring || isSubmitting">
+                <span v-if="isRestoring" class="spinner-border spinner-border-sm me-2"></span>Khôi phục gốc
+              </button>
               <button type="submit" class="btn btn-brand btn-brand-solid px-4 py-2 fw-bold shadow-sm d-flex align-items-center" :disabled="isSubmitting">
                 <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2" role="status"></span>
                 <i v-else class="bi bi-save me-2"></i>
@@ -90,23 +96,26 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, watchEffect } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
-import axios from 'axios';
+import axios from 'axios'; // Phục hồi Axios 100% để đảm bảo hoạt động cực nhanh trên interceptors gốc
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
+const BASE_URL = API_URL.replace('/api', '');
 
 defineOptions({ name: 'GalleryEdit' });
 
 const route = useRoute();
 const router = useRouter();
+const queryClient = useQueryClient();
+const galleryId = route.params.id;
+
 const fileInput = ref(null);
-const isLoading = ref(true);
-const isSubmitting = ref(false);
 const previewUrl = ref(null);
 const errors = ref({});
+const isRestoring = ref(false);
 
 const form = reactive({
   id: null,
@@ -116,51 +125,99 @@ const form = reactive({
   newImageFile: null
 });
 
-const getHeaders = () => ({ 
-  'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+const getHeaders = () => ({ 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
+
+// 1. LẤY DATA VÀ TẬN DỤNG CACHE TỐI ĐA (DÙNG AXIOS TRỞ LẠI)
+const fetchGalleryDetail = async () => {
+  const res = await axios.get(`${API_URL}/admin/galleries/${galleryId}`, { headers: getHeaders() });
+  return res.data.data;
+};
+
+const { data: galleryData, isLoading, isFetching, refetch } = useQuery({
+  queryKey: ['admin', 'gallery', galleryId],
+  queryFn: fetchGalleryDetail,
+  initialData: () => {
+    return queryClient.getQueryData(['admin', 'galleries'])?.find(d => d.id == galleryId);
+  },
+  staleTime: 1000 * 60 * 5,
 });
 
-const fetchGallery = async () => {
-  try {
-    const id = route.params.id;
-    const response = await axios.get(`${API_URL}/admin/galleries/${id}`, { headers: getHeaders() });
-    
-    const data = response.data.data || response.data; 
-    
+watchEffect(() => {
+  if (galleryData.value) {
+    const data = galleryData.value;
     form.id = data.id;
     form.title = data.title || '';
-    form.status = data.is_active === 1 ? 'active' : 'inactive';
+    form.status = (data.is_active === 1 || data.is_active === true || String(data.is_active) === '1') ? 'active' : 'inactive';
     
-    // Tự động lấy tên miền Backend để nối link ảnh
-    const backendUrl = import.meta.env.VITE_API_BASE_URL.replace('/api', '');
-    form.old_image_url = data.image_path ? `${backendUrl}/storage/${data.image_path}` : '';
+    let imgUrl = data.image_path || '';
+    if (imgUrl && !imgUrl.startsWith('http') && !imgUrl.startsWith('data:image')) {
+        imgUrl = `${BASE_URL}/storage/${imgUrl}`;
+    }
     
-  } catch (error) {
-    console.error(error);
-    Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể tải thông tin hình ảnh.' });
-    router.push({ name: 'admin-gallery' });
-  } finally {
-    isLoading.value = false;
+    if (!form.newImageFile && !previewUrl.value) {
+        form.old_image_url = imgUrl;
+    }
   }
+});
+
+const handleRestore = async () => {
+  isRestoring.value = true;
+  await refetch();
+  
+  form.newImageFile = null;
+  previewUrl.value = null;
+  if(fileInput.value) fileInput.value.value = '';
+  errors.value = {};
+  
+  setTimeout(() => {
+    isRestoring.value = false;
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Khôi phục form thành công', timer: 1500, showConfirmButton: false });
+  }, 400); 
 };
 
-const triggerFileInput = () => {
-  if (fileInput.value) fileInput.value.click();
-};
+const triggerFileInput = () => { if (fileInput.value) fileInput.value.click(); };
 
 const handleFileChange = (event) => {
   const file = event.target.files[0];
   if (file) {
+    if (file.size > 5 * 1024 * 1024) {
+      Swal.fire('Lỗi', 'Ảnh tối đa 5MB', 'error');
+      return;
+    }
     form.newImageFile = file;
     previewUrl.value = URL.createObjectURL(file);
     if (errors.value.image) delete errors.value.image;
   }
 };
 
-const updateForm = async () => {
-  isSubmitting.value = true;
-  errors.value = {};
+// 3. MUTATION CẬP NHẬT (SỬ DỤNG AXIOS ĐỂ TƯƠNG THÍCH MỌI INTERCEPTORS)
+const { mutate: updateGallery, isPending: isSubmitting } = useMutation({
+  mutationFn: async (formData) => {
+    const res = await axios.post(`${API_URL}/admin/galleries/${form.id}`, formData, { headers: getHeaders() });
+    return res.data.data;
+  },
+  onSuccess: (updatedData) => {
+    queryClient.setQueryData(['admin', 'gallery', galleryId], updatedData);
+    queryClient.setQueryData(['admin', 'galleries'], (oldList) => {
+      if(!oldList) return oldList;
+      return oldList.map(g => g.id == galleryId ? updatedData : g);
+    });
+    
+    Swal.fire({ icon: 'success', title: 'Thành công!', text: 'Đã cập nhật hình ảnh.', timer: 1500, showConfirmButton: false });
+    router.push({ name: 'admin-gallery' });
+  },
+  onError: (error) => {
+    if (error.response?.status === 422) {
+      errors.value = error.response.data.errors;
+      Swal.fire({ icon: 'error', title: 'Lỗi dữ liệu', text: 'Vui lòng kiểm tra lại thông tin nhập vào.' });
+    } else {
+      Swal.fire({ icon: 'error', title: 'Lỗi server', text: error.response?.data?.message || 'Có lỗi xảy ra.' });
+    }
+  }
+});
 
+const updateForm = () => {
+  errors.value = {};
   const formData = new FormData();
   formData.append('title', form.title);
   formData.append('is_active', form.status === 'active' ? 1 : 0);
@@ -168,31 +225,10 @@ const updateForm = async () => {
   if (form.newImageFile) {
     formData.append('image', form.newImageFile);
   }
-
   formData.append('_method', 'PUT');
 
-  try {
-    await axios.post(`${API_URL}/admin/galleries/${form.id}`, formData, {
-      headers: getHeaders()
-    });
-    
-    Swal.fire({ icon: 'success', title: 'Thành công!', text: 'Đã cập nhật hình ảnh.', timer: 1500, showConfirmButton: false });
-    router.push({ name: 'admin-gallery' });
-  } catch (error) {
-    if (error.response?.status === 422) {
-      errors.value = error.response.data.errors;
-      Swal.fire({ icon: 'error', title: 'Lỗi dữ liệu', text: 'Vui lòng kiểm tra lại thông tin nhập vào.' });
-    } else {
-      Swal.fire({ icon: 'error', title: 'Lỗi server', text: error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật.' });
-    }
-  } finally {
-    isSubmitting.value = false;
-  }
+  updateGallery(formData);
 };
-
-onMounted(() => {
-  fetchGallery();
-});
 </script>
 
 <style scoped>

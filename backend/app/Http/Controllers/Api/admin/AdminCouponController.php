@@ -11,23 +11,25 @@ use App\Models\Coupon;
 class AdminCouponController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Lấy danh sách Coupon (Tối ưu trả về chuẩn format)
      */
     public function index()
     {
-        $coupon = Coupon::withTrashed()->orderBy('id', 'desc')->get();
-
-        return response()->json($coupon);
+        $coupons = Coupon::withTrashed()->orderBy('id', 'desc')->get();
+        
+        return response()->json([
+            'success' => true, 
+            'data' => $coupons
+        ]);
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Tạo mới
      */
     public function store(AdminStoreCouponRequest $request)
     {
         try {
             $data = $request->validated();
-
             $coupon = Coupon::create($data);
 
             return response()->json([
@@ -41,25 +43,29 @@ class AdminCouponController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * Chi tiết
      */
     public function show(string $id)
     {
-        $coupon = Coupon::findOrFail($id);
-
+        $coupon = Coupon::withTrashed()->findOrFail($id);
         return response()->json(['success' => true, 'data' => $coupon]);
     }
 
     /**
-     * Update the specified resource in storage.
+     * Cập nhật
      */
     public function update(AdminUpdateCouponRequest $request, string $id)
     {
-        $coupon = Coupon::findOrFail($id);
+        $coupon = Coupon::withTrashed()->findOrFail($id);
 
         try {
-            $data = $request->validated();
-            $coupon->update($data);
+            // Hỗ trợ cập nhật nhanh duy nhất trạng thái (status)
+            if ($request->has('status') && count($request->all()) == 1) {
+                $coupon->update(['status' => $request->status]);
+            } else {
+                $data = $request->validated();
+                $coupon->update($data);
+            }
 
             return response()->json([
                 'success' => true,
@@ -72,18 +78,38 @@ class AdminCouponController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Xóa mềm
      */
     public function destroy(string $id)
     {
         $coupon = Coupon::findOrFail($id);
 
         try {
-            $coupon->delete($coupon);
+            $coupon->delete(); // Fixed bug: ->delete($coupon)
 
             return response()->json([
                 'success' => true,
                 'message' => 'Xoá mã giảm giá thành công!',
+                'id' => $id
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Khôi phục từ thùng rác
+     */
+    public function restore(string $id)
+    {
+        $coupon = Coupon::withTrashed()->findOrFail($id);
+        
+        try {
+            $coupon->restore();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Đã khôi phục mã giảm giá',
                 'data' => $coupon
             ], 200);
         } catch (\Exception $e) {

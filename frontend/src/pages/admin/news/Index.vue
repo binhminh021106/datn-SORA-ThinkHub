@@ -4,16 +4,18 @@ import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
-import { getFullImage } from '@/composables/useUtilities';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
+import defaultImage from '@/assets/images/defaults/placeholder.png';
 
 // ==========================================
 // 1. CONFIGURATION & SETUP
 // ==========================================
 const apiUrl = import.meta.env.VITE_API_BASE_URL;
 const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || window.location.origin;
-const BACKEND_URL = apiUrl.endsWith('/api') ? apiUrl.slice(0, -4) : apiUrl;
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || apiUrl?.replace(/\/api\/?$/, '');
 
 const router = useRouter();
+const queryClient = useQueryClient();
 
 // ==========================================
 // 2. AUTHENTICATION & HEADERS
@@ -85,17 +87,77 @@ const requireLogin = () => {
 };
 
 // ==========================================
-// 3. STATE MANAGEMENT
+// 3. TANSTACK QUERY & MUTATIONS
 // ==========================================
 const isFirstLoad = ref(true);
-const isLoading = ref(true);
-const isSilentLoading = ref(false);
-const news = ref([]);
 const searchQuery = ref('');
 const currentTab = ref('all');
 const sortOption = ref('newest');
 const currentPage = ref(1);
-const itemsPerPage = ref(10); 
+const itemsPerPage = ref(10);
+
+// Fetch danh sách News qua TanStack Query
+const { data: newsData, isLoading, isFetching, refetch } = useQuery({
+    queryKey: ['admin-news-all'],
+    queryFn: async () => {
+        const response = await axios.get(`${apiUrl}/admin/news`, { headers: getHeaders() });
+        return response.data?.data || response.data || [];
+    },
+    staleTime: 5 * 60 * 1000, // Cache dữ liệu trong 5 phút
+    keepPreviousData: true
+});
+
+const news = ref([]);
+
+// Đồng bộ local state khi cache query được cập nhật
+watch(newsData, (newVal) => {
+    if (newVal) {
+        news.value = newVal;
+        isFirstLoad.value = false;
+    }
+}, { immediate: true });
+
+// Mutation cập nhật nhanh trạng thái
+const toggleStatusMutation = useMutation({
+    mutationFn: async ({ id, status }) => {
+        return axios.patch(`${apiUrl}/admin/news/${id}`, { status }, { headers: getHeaders() });
+    },
+    onSuccess: () => {
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
+        queryClient.invalidateQueries({ queryKey: ['admin-news-all'] });
+    },
+    onError: () => {
+        Swal.fire('Lỗi', 'Không thể cập nhật trạng thái.', 'error');
+    }
+});
+
+// Mutation xóa mềm bài viết
+const deleteMutation = useMutation({
+    mutationFn: async (id) => {
+        return axios.delete(`${apiUrl}/admin/news/${id}`, { headers: getHeaders() });
+    },
+    onSuccess: () => {
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã đưa vào thùng rác', showConfirmButton: false, timer: 1500 });
+        queryClient.invalidateQueries({ queryKey: ['admin-news-all'] });
+    },
+    onError: () => {
+        Swal.fire('Lỗi', 'Không thể xóa bài viết.', 'error');
+    }
+});
+
+// Mutation khôi phục bài viết
+const restoreMutation = useMutation({
+    mutationFn: async (id) => {
+        return axios.post(`${apiUrl}/admin/news/${id}/restore`, {}, { headers: getHeaders() });
+    },
+    onSuccess: () => {
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã khôi phục thành công', showConfirmButton: false, timer: 1500 });
+        queryClient.invalidateQueries({ queryKey: ['admin-news-all'] });
+    },
+    onError: () => {
+        Swal.fire('Lỗi', 'Không thể khôi phục bài viết.', 'error');
+    }
+});
 
 // ==========================================
 // 4. COMPUTED & WATCHERS
@@ -103,12 +165,10 @@ const itemsPerPage = ref(10);
 const statusCounts = computed(() => {
     const list = news.value || [];
     return {
-        // Chỉ đếm những bài chưa bị xóa (deleted_at == null)
         all: list.filter(i => !i.deleted_at).length,
         pending: list.filter(i => i.status === 'pending' && !i.deleted_at).length,
         published: list.filter(i => i.status === 'published' && !i.deleted_at).length,
         draft: list.filter(i => i.status === 'draft' && !i.deleted_at).length,
-        // Đếm bài đã xóa
         deleted: list.filter(i => i.deleted_at).length
     };
 });
@@ -162,10 +222,14 @@ watch([searchQuery, currentTab, sortOption], () => {
 // ==========================================
 // 5. HELPER FUNCTIONS
 // ==========================================
-const getFullImage = (path) => {
-    if (!path) return 'https://placehold.co/800x400?text=No+Image';
+const getFullImageWithFallback = (path) => {
+    if (!path) return defaultImage;
     if (path.startsWith('blob:') || path.startsWith('http')) return path;
     return `${BACKEND_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+};
+
+const handleImageError = (e) => {
+    e.target.src = defaultImage;
 };
 
 const getFormattedDate = (dateString) => {
@@ -202,26 +266,6 @@ const viewOnFrontend = (slug) => {
     else Swal.fire('Lỗi', 'Bài viết chưa có đường dẫn.', 'error');
 };
 
-async function fetchNews(silent = false) {
-    if (silent) isSilentLoading.value = true;
-    else isLoading.value = true;
-
-    try {
-        const response = await axios.get(`${apiUrl}/admin/news`, { headers: getHeaders() });
-        news.value = response.data?.data || response.data || [];
-    } catch (error) {
-        if (error.response?.status === 401) {
-            Swal.fire('Hết phiên', 'Vui lòng đăng nhập lại.', 'warning');
-        } else {
-            Swal.fire('Lỗi', 'Không thể tải danh sách tin tức.', 'error');
-        }
-    } finally {
-        isLoading.value = false;
-        isSilentLoading.value = false;
-        isFirstLoad.value = false;
-    }
-}
-
 async function handleToggleStatus(newsItem) {
     if (!requireLogin()) return;
     
@@ -243,16 +287,7 @@ async function handleToggleStatus(newsItem) {
     });
 
     if (result.isConfirmed) {
-        isSilentLoading.value = true;
-        try {
-            await axios.patch(`${apiUrl}/admin/news/${newsItem.id}`, { status: newStatus }, { headers: getHeaders() });
-            newsItem.status = newStatus;
-            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật thành công', timer: 1500, showConfirmButton: false });
-        } catch (e) { 
-            Swal.fire('Lỗi', 'Không thể cập nhật trạng thái.', 'error'); 
-        } finally {
-            isSilentLoading.value = false;
-        }
+        toggleStatusMutation.mutate({ id: newsItem.id, status: newStatus });
     }
 }
 
@@ -275,15 +310,7 @@ async function handleDelete(newsItem) {
     });
 
     if (result.isConfirmed) {
-        isSilentLoading.value = true;
-        try {
-            await axios.delete(`${apiUrl}/admin/news/${newsItem.id}`, { headers: getHeaders() });
-            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã đưa vào thùng rác', showConfirmButton: false, timer: 1500 });
-            fetchNews(true); // Cập nhật lại list sau khi xóa (bài viết sẽ chuyển sang tab Đã xóa)
-        } catch (e) { 
-            Swal.fire('Lỗi', 'Không thể xóa bài viết.', 'error'); 
-            isSilentLoading.value = false;
-        }
+        deleteMutation.mutate(newsItem.id);
     }
 }
 
@@ -305,15 +332,7 @@ async function handleRestore(newsItem) {
     });
 
     if (result.isConfirmed) {
-        isSilentLoading.value = true;
-        try {
-            await axios.post(`${apiUrl}/admin/news/${newsItem.id}/restore`, {}, { headers: getHeaders() });
-            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã khôi phục thành công', showConfirmButton: false, timer: 1500 });
-            fetchNews(true);
-        } catch (e) { 
-            Swal.fire('Lỗi', 'Không thể khôi phục bài viết.', 'error'); 
-            isSilentLoading.value = false;
-        }
+        restoreMutation.mutate(newsItem.id);
     }
 }
 
@@ -324,17 +343,15 @@ onMounted(async () => {
     const isAuthenticated = await checkAuthState();
     if (!isAuthenticated) {
         isFirstLoad.value = false;
-        isLoading.value = false;
         requireLogin(); 
         return;
     }
-    fetchNews();
 });
 
 useAdminRefreshListener((payload) => {
     if (!payload || !payload.module) return;
     if (payload.module === 'news' || payload.module === 'all') {
-        fetchNews(true);
+        queryClient.invalidateQueries({ queryKey: ['admin-news-all'] });
     }
 });
 </script>
@@ -353,7 +370,7 @@ useAdminRefreshListener((payload) => {
                     <h3 class="fw-bold text-dark mb-0">Quản lý Tin tức</h3>
                 </div>
                 <div class="col-md-6 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end align-items-center gap-3">
-                    <button class="btn btn-light border shadow-sm fw-bold text-dark px-4 py-2" @click="fetchNews(true)">
+                    <button class="btn btn-light border shadow-sm fw-bold text-dark px-4 py-2" @click="refetch">
                         <i class="bi bi-arrow-clockwise me-1"></i> Làm mới
                     </button>
                     <button @click="goToCreate" class="btn btn-brand px-4 py-2 fw-bold shadow-sm text-white rounded-pill">
@@ -362,7 +379,7 @@ useAdminRefreshListener((payload) => {
                 </div>
             </div>
 
-            <!-- Tabs Navigation Đồng Bộ (Cho phép rớt dòng & Thêm tab Đã xóa) -->
+            <!-- Tabs Navigation -->
             <div class="mb-3">
                 <ul class="nav nav-underline border-bottom mb-2 pb-1" style="flex-wrap: wrap !important; gap: 8px;">
                     <li class="nav-item">
@@ -390,7 +407,6 @@ useAdminRefreshListener((payload) => {
                         </a>
                     </li>
                     
-                    <!-- TAB ĐÃ XÓA nằm góc phải giống hệt màn hình Trang sức -->
                     <li class="nav-item ms-auto">
                         <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab text-danger" href="#" :class="{ 'active-tab': currentTab === 'deleted' }" @click.prevent="switchTab('deleted')">
                             <i class="bi bi-trash3-fill me-2"></i> Đã xóa
@@ -418,7 +434,7 @@ useAdminRefreshListener((payload) => {
                 <div class="card-header bg-white border-bottom-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <h6 class="fw-bold mb-0 text-dark d-flex align-items-center">
                         <i class="bi bi-newspaper me-2"></i>Danh sách Bài viết
-                        <div v-if="isSilentLoading || isLoading" class="spinner-border spinner-border-sm text-brand ms-2" role="status"></div>
+                        <div v-if="isFetching && !isLoading" class="spinner-border spinner-border-sm text-brand ms-2" role="status"></div>
                     </h6>
                     <div class="search-box position-relative" style="width: 300px; max-width: 100%;">
                         <input type="text" class="form-control rounded-pill pe-5 shadow-sm bg-light border-0" v-model="searchQuery" @input="currentPage = 1" placeholder="Tìm tên bài viết...">
@@ -439,21 +455,53 @@ useAdminRefreshListener((payload) => {
                                     <th class="py-3 px-4 text-secondary text-end border-0" style="width: 18%;">Thao tác</th>
                                 </tr>
                             </thead>
-                            <tbody :class="{'pe-none': isSilentLoading}">
-                                <tr v-if="paginatedNews.length === 0 && !isSilentLoading && !isLoading">
+                            <tbody>
+                                <!-- HIỆU ỨNG SKELETON INLINE TRỰC TIẾP -->
+                                <template v-if="isLoading">
+                                    <tr v-for="n in 5" :key="'skeleton-row-' + n" class="skeleton-row-item">
+                                        <td class="px-4 py-3">
+                                            <div class="d-flex align-items-center">
+                                                <div class="skeleton-shimmer me-3" style="width: 80px; height: 50px; border-radius: 8px;"></div>
+                                                <div class="flex-grow-1 overflow-hidden" style="max-width: 180px;">
+                                                    <div class="skeleton-shimmer mb-2" style="width: 90%; height: 16px;"></div>
+                                                    <div class="skeleton-shimmer" style="width: 50%; height: 12px;"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-4">
+                                            <div class="d-flex align-items-center">
+                                                <div class="skeleton-shimmer me-2 rounded-circle" style="width: 30px; height: 30px;"></div>
+                                                <div class="skeleton-shimmer" style="width: 80px; height: 14px;"></div>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 text-center">
+                                            <div class="skeleton-shimmer mx-auto" style="width: 40px; height: 16px;"></div>
+                                        </td>
+                                        <td class="px-4 text-center">
+                                            <div class="skeleton-shimmer mx-auto" style="width: 90px; height: 26px; border-radius: 20px;"></div>
+                                        </td>
+                                        <td class="px-4 text-center">
+                                            <div class="skeleton-shimmer mx-auto" style="width: 80px; height: 14px;"></div>
+                                        </td>
+                                        <td class="px-4 text-end">
+                                            <div class="skeleton-shimmer ms-auto" style="width: 100px; height: 30px; border-radius: 6px;"></div>
+                                        </td>
+                                    </tr>
+                                </template>
+
+                                <tr v-else-if="paginatedNews.length === 0">
                                     <td colspan="6" class="text-center py-5 text-muted">
                                         <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>Không có dữ liệu.
                                     </td>
                                 </tr>
                                 
-                                <!-- Làm mờ dòng nếu bị xóa mềm (deleted_at) -->
                                 <tr v-else v-for="item in paginatedNews" :key="item.id" 
                                     :class="{'bg-warning bg-opacity-10': item.status === 'pending' && !item.deleted_at, 'bg-light opacity-75': item.deleted_at}">
                                     
                                     <td class="px-4 py-3">
                                         <div class="d-flex align-items-center">
                                             <div class="position-relative d-inline-block me-3 shadow-sm border rounded-3 overflow-hidden bg-white flex-shrink-0" style="width: 80px; height: 50px;">
-                                                <img :src="getFullImage(item.image_url)" class="w-100 h-100 object-fit-cover" :alt="item.title" onerror="this.src='https://placehold.co/80x50?text=Img'">
+                                                <img :src="getFullImageWithFallback(item.image_url)" @error="handleImageError" class="w-100 h-100 object-fit-cover" :alt="item.title">
                                             </div>
                                             <div class="overflow-hidden">
                                                 <div class="d-flex align-items-center gap-2 mb-1">
@@ -481,7 +529,6 @@ useAdminRefreshListener((payload) => {
                                     </td>
 
                                     <td class="px-4 text-center">
-                                        <!-- Hiển thị badge Đã Xóa thay vì trạng thái bình thường -->
                                         <span v-if="item.deleted_at" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary px-3 py-2 rounded-pill fw-medium">
                                             <i class="bi bi-trash3-fill me-1"></i> Đã xóa
                                         </span>
@@ -496,7 +543,6 @@ useAdminRefreshListener((payload) => {
 
                                     <td class="px-4 text-end">
                                         <div class="d-flex justify-content-end align-items-center gap-2">
-                                            <!-- Thao tác hiển thị khi BÀI VIẾT BÌNH THƯỜNG -->
                                             <template v-if="!item.deleted_at">
                                                 <div class="form-check form-switch m-0 d-flex align-items-center me-1" v-if="hasRole(['admin'])" title="Đổi trạng thái xuất bản/ẩn">
                                                     <input class="form-check-input custom-switch" type="checkbox" role="switch" :checked="item.status === 'published'" @click.prevent="handleToggleStatus(item)">
@@ -513,7 +559,6 @@ useAdminRefreshListener((payload) => {
                                                 </button>
                                             </template>
 
-                                            <!-- Thao tác hiển thị khi BÀI VIẾT ĐÃ XÓA MỀM (Thùng rác) -->
                                             <template v-else>
                                                 <button class="btn btn-sm btn-light text-info shadow-sm border" @click="viewOnFrontend(item.slug)" title="Xem bài viết đã xóa">
                                                     <i class="bi bi-eye"></i>
@@ -554,14 +599,12 @@ useAdminRefreshListener((payload) => {
 </template>
 
 <style scoped>
-/* Đồng bộ màu sắc chủ đạo */
 .bg-brand { background-color: #009981 !important; } 
 .text-brand { color: #009981 !important; } 
 .border-brand { border-color: #009981 !important; }
 .btn-brand { background-color: #009981; border: none; transition: 0.2s; } 
 .btn-brand:hover { background-color: #007a67; color: white; }
 
-/* Tabs đồng bộ */
 .custom-tab { font-weight: 600 !important; color: #6c757d; border-bottom: 2px solid transparent !important; margin-bottom: -1px; transition: color 0.2s ease; }
 .custom-tab:hover { color: #009981; }
 .custom-tab.active-tab { color: #009981 !important; border-bottom: 2px solid #009981 !important; }
@@ -569,11 +612,9 @@ useAdminRefreshListener((payload) => {
 .tab-badge { font-size: 0.75rem; font-weight: 600; background-color: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6; transition: all 0.2s ease; }
 .active-badge { background-color: #e6f5f2 !important; color: #009981 !important; border-color: #009981 !important; }
 
-/* Switch của Admin */
 .custom-switch { cursor: pointer; width: 2.5em; height: 1.25em; }
 .custom-switch:checked { background-color: #009981; border-color: #009981; }
 
-/* Avatar tác giả */
 .avatar-circle {
     width: 30px; 
     height: 30px; 
@@ -584,7 +625,6 @@ useAdminRefreshListener((payload) => {
     font-size: 0.8rem; 
 }
 
-/* Hiệu ứng loading shimmer */
 .logo-shimmer { 
     font-size: 3.5rem; 
     font-weight: 900; 
@@ -597,4 +637,25 @@ useAdminRefreshListener((payload) => {
     animation: shine 1.5s linear infinite; 
 }
 @keyframes shine { to { background-position: 200% center; } }
+
+/* INLINE SKELETON PLACEHOLDER EFFECT */
+.skeleton-row-item {
+  animation: skeletonPulse 1.5s infinite ease-in-out;
+}
+.skeleton-shimmer {
+  background: #e9ecef;
+  background: linear-gradient(90deg, #f1f3f5 25%, #e9ecef 50%, #f1f3f5 75%);
+  background-size: 200% 100%;
+  animation: shimmerMove 1.5s infinite linear;
+  border-radius: 4px;
+}
+@keyframes skeletonPulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+@keyframes shimmerMove {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
 </style>

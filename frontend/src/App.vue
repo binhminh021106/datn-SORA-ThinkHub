@@ -18,6 +18,7 @@
 <script setup>
 import { ref, onMounted, provide } from 'vue';
 import { useRouter } from 'vue-router';
+import apiClient from '@/utils/apiClient';
 
 // Nhúng 2 Modal Global vào App
 import QuickAddModal from '@/components/ui/QuickAddModal.vue';
@@ -37,23 +38,11 @@ const checkAuthentication = async () => {
     return;
   }
 
-try {
-    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/admin/me`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
-    });
-
-    if (res.ok) {
-      const result = await res.json();
-      currentUser.value = result.data;
-      if (result.data.role) {
-         localStorage.setItem('admin_level', result.data.role.level);
-      }
-    } else {
-      throw new Error('Unauthorized');
+  try {
+    const result = await apiClient.get('/admin/me');
+    currentUser.value = result.data?.data;
+    if (result.data?.data?.role) {
+       localStorage.setItem('admin_level', result.data.data.role.level);
     }
   } catch (err) {
     console.error('Lỗi xác thực:', err);

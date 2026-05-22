@@ -8,16 +8,18 @@ use App\Models\News;
 
 class ClientNewController extends Controller
 {
-    // Lấy danh sách bài viết (Có lọc)
+    // Lấy danh sách bài viết (Đã tối ưu ORM Select & Pagination)
     public function index(Request $request)
     {
-        $query = News::where('status', 'published');
+        // TỐI ƯU 1: Chỉ select các cột cần dùng cho giao diện danh sách (BỎ cột `content` nặng nề)
+        $query = News::select('id', 'title', 'slug', 'excerpt', 'image_url', 'author_name', 'category', 'created_at', 'views')
+                     ->where('status', 'published');
 
         // Tìm kiếm theo từ khóa
         if ($request->has('q') && $request->q != '') {
             $query->where(function($q) use ($request) {
                 $q->where('title', 'like', '%' . $request->q . '%')
-                  ->orWhere('content', 'like', '%' . $request->q . '%');
+                  ->orWhere('excerpt', 'like', '%' . $request->q . '%'); // Tìm trong excerpt thay vì content cho nhẹ
             });
         }
 
@@ -31,7 +33,9 @@ class ClientNewController extends Controller
             $query->where('category', $request->category);
         }
 
-        $news = $query->orderBy('created_at', 'desc')->get(); 
+        // TỐI ƯU 2: Dùng Paginate thay vì Get để Backend chỉ trả về đúng số lượng cần thiết
+        $perPage = $request->input('per_page', 6);
+        $news = $query->orderBy('created_at', 'desc')->paginate($perPage); 
 
         return response()->json([
             'status' => 'success',
@@ -39,10 +43,11 @@ class ClientNewController extends Controller
         ]);
     }
 
-    // Lấy bài viết phổ biến (Sidebar)
+    // Lấy bài viết phổ biến (Sidebar) - Đã tối ưu Select
     public function popular()
     {
-        $popular = News::where('status', 'published')
+        $popular = News::select('id', 'title', 'slug', 'image_url', 'views', 'created_at')
+            ->where('status', 'published')
             ->orderBy('views', 'desc')
             ->take(5)
             ->get();
@@ -53,7 +58,7 @@ class ClientNewController extends Controller
         ]);
     }
 
-    // Lấy danh sách danh mục động (Dựa trên dữ liệu Admin đã nhập)
+    // Lấy danh sách danh mục động
     public function categories()
     {
         $categories = News::where('status', 'published')
@@ -69,7 +74,7 @@ class ClientNewController extends Controller
         ]);
     }
 
-    // Chi tiết bài viết
+    // Chi tiết bài viết (Giữ nguyên vì cần load toàn bộ content)
     public function show($slug)
     {
         $news = News::where('slug', $slug)

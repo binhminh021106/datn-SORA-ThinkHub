@@ -80,14 +80,15 @@
       </div>
 
       <!-- KẾT QUẢ DANH SÁCH THỰC TẾ -->
-      <div class="combo-list-container fade-in" v-else-if="displayCombos.length > 0">
+      <div class="combo-list-container fade-in" v-else-if="processedCombos.length > 0">
+        <!-- Render danh sách theo displayLimit -->
         <div class="combo-row-card card border-0 shadow-sm rounded-4 overflow-hidden mb-5 bg-white" v-for="combo in displayCombos" :key="combo.id">
           
           <div class="row g-0 h-100">
             <div class="col-lg-4 position-relative p-0 border-end border-gold-light d-flex flex-column">
-              <div v-if="getTimerData(combo).isEnded" class="ended-overlay d-flex align-items-center justify-content-center flex-column text-center p-4">
+              <div v-if="combo.timerData.isEnded" class="ended-overlay d-flex align-items-center justify-content-center flex-column text-center p-4">
                   <i class="bi bi-x-circle fs-1 text-white opacity-75 mb-2"></i>
-                  <h3 class="text-white font-oswald tracking-widest m-0">{{ getTimerData(combo).title }}</h3>
+                  <h3 class="text-white font-oswald tracking-widest m-0">{{ combo.timerData.title }}</h3>
               </div>
 
               <div class="combo-bg-img" :style="`background-image: url(${getImage(combo.thumbnail_image)})`"></div>
@@ -105,25 +106,25 @@
                 <p class="text-muted small mb-4 line-clamp-2">{{ combo.description }}</p>
 
                 <div class="timer-section mb-4 mt-auto">
-                    <h6 class="text-dark fw-bold font-oswald mb-3 tracking-wide text-uppercase" :class="getTimerData(combo).type === 'active' ? 'text-sora-red' : ''">
-                      <i class="bi bi-clock-history me-1"></i> {{ getTimerData(combo).title }}
+                    <h6 class="text-dark fw-bold font-oswald mb-3 tracking-wide text-uppercase" :class="combo.timerData.type === 'active' ? 'text-sora-red' : ''">
+                      <i class="bi bi-clock-history me-1"></i> {{ combo.timerData.title }}
                     </h6>
                     
-                    <div v-if="!getTimerData(combo).isEnded && getTimerData(combo).type !== 'forever'" class="d-flex justify-content-center justify-content-md-start gap-2">
+                    <div v-if="!combo.timerData.isEnded && combo.timerData.type !== 'forever'" class="d-flex justify-content-center justify-content-md-start gap-2">
                         <div class="time-box shadow-sm">
-                            <span class="num font-oswald">{{ getTimerData(combo).d }}</span>
+                            <span class="num font-oswald">{{ combo.timerData.d }}</span>
                             <span class="label">Days</span>
                         </div>
                         <div class="time-box shadow-sm">
-                            <span class="num font-oswald">{{ getTimerData(combo).h }}</span>
+                            <span class="num font-oswald">{{ combo.timerData.h }}</span>
                             <span class="label">Hr</span>
                         </div>
                         <div class="time-box shadow-sm">
-                            <span class="num font-oswald">{{ getTimerData(combo).m }}</span>
+                            <span class="num font-oswald">{{ combo.timerData.m }}</span>
                             <span class="label">Mins</span>
                         </div>
                         <div class="time-box shadow-sm">
-                            <span class="num font-oswald text-sora-red">{{ getTimerData(combo).s }}</span>
+                            <span class="num font-oswald text-sora-red">{{ combo.timerData.s }}</span>
                             <span class="label text-sora-red">Sec</span>
                         </div>
                     </div>
@@ -131,8 +132,8 @@
 
                 <div class="d-flex align-items-end justify-content-center justify-content-md-between flex-wrap gap-3 mt-2">
                   <div>
-                    <div class="text-muted text-decoration-line-through small fw-medium">{{ formatCurrency(calculateOriginal(combo)) }}</div>
-                    <div class="fs-3 fw-bold text-sora-red font-oswald tracking-wide">{{ formatCurrency(calculateFinal(combo)) }}</div>
+                    <div class="text-muted text-decoration-line-through small fw-medium">{{ formatCurrency(combo.originalPrice) }}</div>
+                    <div class="fs-3 fw-bold text-sora-red font-oswald tracking-wide">{{ formatCurrency(combo.finalPrice) }}</div>
                   </div>
                   <button class="btn btn-sora-primary rounded-0 fw-bold font-oswald tracking-wide px-4 py-2" @click="goToDetail(combo.slug)">
                     XEM CHI TIẾT
@@ -163,13 +164,24 @@
                       <span v-if="item.product_variant_id" class="badge bg-light text-secondary border me-1"><i class="bi bi-tag-fill me-1"></i>{{ item.variant?.sku }}</span>
                       <span v-else class="text-sora-primary fw-semibold"><i class="bi bi-sliders me-1"></i>Được chọn phân loại</span>
                   </div>
-                  <div class="fw-bold font-oswald text-sora-red">{{ formatCurrency(getItemPrice(item)) }}</div>
+                  <div class="fw-bold font-oswald text-sora-red">{{ formatCurrency(item.computedPrice) }}</div>
                 </div>
               </div>
             </div>
 
           </div>
         </div>
+
+        <!-- PHẦN XEM THÊM & XEM TẤT CẢ (LAZY LOAD THEO SỐ LƯỢNG) -->
+        <div class="text-center mt-4 mb-5 fade-in" v-if="processedCombos.length > displayLimit">
+           <button class="btn btn-outline-dark px-4 py-2 me-2 me-md-3 font-oswald tracking-widest text-uppercase fw-bold rounded-0" @click="loadMore">
+              <i class="bi bi-arrow-down-circle me-1"></i> Xem Thêm
+           </button>
+           <button class="btn btn-sora-primary px-4 py-2 font-oswald tracking-widest text-uppercase fw-bold rounded-0" @click="loadAll">
+              <i class="bi bi-grid-fill me-1"></i> Xem Tất Cả ({{ processedCombos.length }})
+           </button>
+        </div>
+
       </div>
 
       <!-- TRẠNG THÁI KHÔNG TÌM THẤY COMBO -->
@@ -195,7 +207,10 @@ const combos = ref([]);
 const isLoading = ref(true);
 const activeFilter = ref('all');
 
-const currentTime = ref(new Date());
+// THÊM: Biến giới hạn số lượng hiển thị (Mặc định 2)
+const displayLimit = ref(2);
+
+const currentTime = ref(new Date().getTime());
 let timerInterval = null;
 
 const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val || 0);
@@ -206,21 +221,20 @@ const getItemPrice = (item) => {
     return item.product ? parseFloat(item.product.base_price) : 0;
 };
 
-const calculateOriginal = (combo) => {
+const calculateOriginal = (comboItems) => {
   let total = 0;
-  combo.items.forEach(item => {
-    total += getItemPrice(item) * item.quantity;
+  comboItems.forEach(item => {
+    total += item.computedPrice * item.quantity;
   });
   return total;
 };
 
-const calculateFinal = (combo) => {
-  let total = calculateOriginal(combo);
-  let discount = parseFloat(combo.discount_value);
-  if (combo.discount_type === 'percentage') {
-    return total - (total * (Math.min(discount, 100) / 100));
+const calculateFinal = (originalTotal, discountType, discountValue) => {
+  let discount = parseFloat(discountValue);
+  if (discountType === 'percentage') {
+    return originalTotal - (originalTotal * (Math.min(discount, 100) / 100));
   }
-  return Math.max(0, total - discount);
+  return Math.max(0, originalTotal - discount);
 };
 
 const parseDBDate = (dateStr) => {
@@ -243,15 +257,13 @@ const calculateTimeParts = (diff) => {
   };
 };
 
-const getTimerData = (combo) => {
-    const now = currentTime.value.getTime();
-    
+const computeTimerData = (combo, now) => {
     if (combo.usage_limit !== null && combo.usage_limit <= 0) {
         return { type: 'soldout', title: 'ĐÃ BÁN HẾT SỐ LƯỢNG', isEnded: true };
     }
 
-    const startTime = parseDBDate(combo.start_date);
-    const endTime = parseDBDate(combo.end_date);
+    const startTime = combo.parsed_start_date;
+    const endTime = combo.parsed_end_date;
 
     if (endTime && endTime < now) return { type: 'ended', title: 'ƯU ĐÃI ĐÃ KẾT THÚC', isEnded: true };
     if (startTime && startTime > now) {
@@ -280,7 +292,26 @@ const fetchCombos = async (gender = null) => {
     let url = `${API_URL}/client/combos`;
     if (gender && gender !== 'all') url += `?gender=${gender}`;
     const res = await axios.get(url);
-    combos.value = res.data.data.data; 
+    
+    // TIỀN XỬ LÝ (PRE-CALCULATE) DATA NGAY KHI VỪA FETCH XONG
+    combos.value = res.data.data.data.map(combo => {
+        // 1. Parse dates 1 lần duy nhất
+        combo.parsed_start_date = parseDBDate(combo.start_date);
+        combo.parsed_end_date = parseDBDate(combo.end_date);
+        
+        // 2. Tính giá tiền của các items
+        combo.items = combo.items.map(item => ({
+            ...item,
+            computedPrice: getItemPrice(item)
+        }));
+        
+        // 3. Tính toán trước Giá gốc và Giá sau giảm
+        combo.originalPrice = calculateOriginal(combo.items);
+        combo.finalPrice = calculateFinal(combo.originalPrice, combo.discount_type, combo.discount_value);
+        
+        return combo;
+    });
+
   } catch (error) {
   } finally {
     isLoading.value = false;
@@ -293,6 +324,7 @@ usePublicRefreshListener({
 
 const filterCombo = (gender) => {
   activeFilter.value = gender;
+  displayLimit.value = 2; // THÊM: Reset lại số lượng hiển thị khi đổi bộ lọc
   fetchCombos(gender);
 };
 
@@ -301,33 +333,51 @@ const goToDetail = (slug) => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-const displayCombos = computed(() => {
-    const now = currentTime.value.getTime();
+// CÁC HÀM XỬ LÝ NÚT XEM THÊM VÀ XEM TẤT CẢ
+const loadMore = () => {
+    displayLimit.value += 2; // Tải thêm 2 combo nữa mỗi lần ấn
+};
+
+const loadAll = () => {
+    displayLimit.value = processedCombos.value.length; // Hiện toàn bộ
+};
+
+// Computed xử lý danh sách gốc (sắp xếp và cập nhật timer)
+const processedCombos = computed(() => {
+    const now = currentTime.value;
     const oneDayMs = 24 * 60 * 60 * 1000;
 
     let result = combos.value.filter(combo => {
-        if (!combo.end_date) return true;
-        const endTime = parseDBDate(combo.end_date);
-        return now - endTime <= oneDayMs;
+        if (!combo.parsed_end_date) return true;
+        return now - combo.parsed_end_date <= oneDayMs;
     });
 
     result.sort((a, b) => {
-        const aEnded = a.end_date && parseDBDate(a.end_date) < now;
-        const bEnded = b.end_date && parseDBDate(b.end_date) < now;
+        const aEnded = a.parsed_end_date && a.parsed_end_date < now;
+        const bEnded = b.parsed_end_date && b.parsed_end_date < now;
 
         if (aEnded && !bEnded) return 1; 
         if (!aEnded && bEnded) return -1; 
         return 0;
     });
 
-    return result;
+    // Cập nhật lại chuỗi thời gian dựa vào 'now'
+    return result.map(combo => ({
+        ...combo,
+        timerData: computeTimerData(combo, now)
+    }));
+});
+
+// Computed trả về mảng con theo Limit để hiển thị (LAZY RENDER)
+const displayCombos = computed(() => {
+    return processedCombos.value.slice(0, displayLimit.value);
 });
 
 onMounted(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     fetchCombos();
     timerInterval = setInterval(() => {
-        currentTime.value = new Date();
+        currentTime.value = new Date().getTime();
     }, 1000);
 });
 

@@ -8,6 +8,10 @@ import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 import axios from 'axios';
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
+
+// 1. IMPORT VUE QUERY VÀO ĐÂY
+import { VueQueryPlugin } from '@tanstack/vue-query';
+
 window.Pusher = Pusher;
 
 // Cấu hình Axios mặc định
@@ -29,13 +33,24 @@ window.Echo = new Echo({
     authorizer: (channel, options) => {
         return {
             authorize: (socketId, callback) => {
-                const token = localStorage.getItem('admin_token') || localStorage.getItem('auth_token') || localStorage.getItem('token');
+                const token = localStorage.getItem('admin_token') ||
+                              localStorage.getItem('adminToken') ||
+                              localStorage.getItem('auth_token') ||
+                              localStorage.getItem('access_token') ||
+                              localStorage.getItem('userToken') ||
+                              localStorage.getItem('user_token') ||
+                              localStorage.getItem('token');
+                if (!token) {
+                    callback(true, { message: 'Missing auth token' });
+                    return;
+                }
+
                 fetch(`${API_BASE_URL}/broadcasting/auth`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
-                        'Authorization': token ? `Bearer ${token}` : ''
+                        'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({
                         socket_id: socketId,
@@ -65,7 +80,7 @@ window.Echo.connector.pusher.connection.bind('connected', () => {
 
 // Auto-subscribe user-specific private channel if user info exists in localStorage
 const tryGetStoredUser = () => {
-    const keys = ['adminData', 'userData', 'user_info'];
+    const keys = ['userData', 'user_info'];
     for (const k of keys) {
         const raw = localStorage.getItem(k);
         if (!raw) continue;
@@ -79,8 +94,19 @@ const tryGetStoredUser = () => {
     return null;
 };
 
+const getAuthToken = () => {
+    return localStorage.getItem('admin_token') ||
+           localStorage.getItem('adminToken') ||
+           localStorage.getItem('auth_token') ||
+           localStorage.getItem('access_token') ||
+           localStorage.getItem('userToken') ||
+           localStorage.getItem('user_token') ||
+           localStorage.getItem('token');
+};
+
 const storedUser = tryGetStoredUser();
-if (window.Echo && storedUser && storedUser.id) {
+const authToken = getAuthToken();
+if (window.Echo && storedUser && storedUser.id && authToken) {
     try {
         const userId = storedUser.id;
         window.Echo.private(`App.Models.User.${userId}`).listen('.UserAccountUpdated', (data) => {
@@ -89,9 +115,15 @@ if (window.Echo && storedUser && storedUser.id) {
     } catch (err) {
         console.warn('Failed to subscribe to user private channel', err);
     }
+} else if (storedUser && storedUser.id && !authToken) {
+    console.warn('Skipping Echo subscribe because auth token is missing');
 }
 
 const app = createApp(App)
+
 app.use(createPinia())
 app.use(router)
+
+app.use(VueQueryPlugin)
+
 app.mount('#app')

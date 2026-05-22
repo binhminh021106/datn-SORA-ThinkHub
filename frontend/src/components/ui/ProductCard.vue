@@ -96,6 +96,8 @@
 <script setup>
 import { defineProps, defineEmits, computed } from 'vue';
 import { globalModalState } from '@/stores/modalState';
+import Toast from '@/utils/toastConfig';
+
 
 const props = defineProps({
   product: { type: Object, required: true },

@@ -271,6 +271,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import Swal from 'sweetalert2';
+import Toast from '@/utils/toastConfig';
 
 const route = useRoute();
 const router = useRouter();
@@ -280,18 +281,6 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const products = ref([]);
 const isLoading = ref(true);
 const showDiffOnly = ref(false);
-
-// Cấu hình Toast Notification
-const Toast = Swal.mixin({
-  toast: true,
-  position: 'top-end',
-  showConfirmButton: false,
-  timer: 3000,
-  timerProgressBar: true,
-  background: '#fffafa',
-  color: '#9f273b',
-  iconColor: '#9f273b'
-});
 
 // ==========================================
 // THÊM: STATE CHO POPUP SO SÁNH
