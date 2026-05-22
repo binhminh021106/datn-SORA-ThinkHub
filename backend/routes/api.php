@@ -107,6 +107,7 @@ Route::prefix('client')->group(function () {
         Route::post('/add-combo', 'addCombo');
         Route::post('/merge', 'mergeCart');
         Route::post('/clear', 'clear');
+        Route::post('/apply-birthday-coupon', 'applyBirthdayCoupon'); // Thêm route này
 
         Route::get('/', 'index');
         Route::post('/', 'store');
@@ -184,6 +185,8 @@ Route::prefix('shop/{shop_slug}')->group(function () {
     Route::post('/compare', [ClientCompareController::class, 'getCompareData']);
 });
 Route::get('shop/{shop_slug}/categories', [App\Http\Controllers\Api\client\ShopController::class, 'categories']);
+Route::get('shop/{shop_slug}/colors', [App\Http\Controllers\Api\client\ShopController::class, 'colors']);
+Route::get('shop/{shop_slug}/attributes', [App\Http\Controllers\Api\client\ShopController::class, 'attributes']);
 
 Route::get('/user', function (Request $request) {
     return $request->user();

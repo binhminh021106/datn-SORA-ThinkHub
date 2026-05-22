@@ -11,5 +11,4 @@ Artisan::command('inspire', function () {
 Schedule::command('sora:crawl-gold')->everyFiveMinutes();
 
 Schedule::command('sora:daily-campaigns')->dailyAt('08:00');
-
-Schedule::command('sora:send-birthday-emails')->dailyAt('08:00');
+Schedule::command('emails:send-birthday')->dailyAt('07:00');
