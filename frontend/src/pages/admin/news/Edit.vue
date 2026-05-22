@@ -190,6 +190,7 @@ const CATEGORIES = [
 const isFirstLoad = ref(true);
 const fileInput = ref(null);
 const selectedFile = ref(null);
+const isRemoveImage = ref(false);
 const previewImage = ref(defaultImage);
 const hasPreviewImage = computed(() => previewImage.value && previewImage.value !== defaultImage);
 
@@ -267,6 +268,7 @@ const handleFileChange = (e) => {
             return;
         }
         selectedFile.value = file;
+        isRemoveImage.value = false;
         previewImage.value = URL.createObjectURL(file);
     }
 };
@@ -275,6 +277,7 @@ const removeImage = () => {
     selectedFile.value = null;
     previewImage.value = defaultImage;
     if (fileInput.value) fileInput.value.value = '';
+    isRemoveImage.value = true;
 };
 
 // TANSTACK MUTATION: Thực thi lưu bài viết
@@ -318,6 +321,7 @@ const handleSave = () => {
     });
 
     if (selectedFile.value) submitData.append('image', selectedFile.value);
+    if (!selectedFile.value && isRemoveImage.value) submitData.append('remove_image', '1');
     
     // Yêu cầu của Laravel khi gửi file qua form edit
     submitData.append('_method', 'PUT');
