@@ -113,8 +113,7 @@ const user = [
         name: 'profile',
         component: () => import('../pages/user/profile/index.vue')
       },
-      //tin tứvvvvv
-
+      
       {
         path: 'news',
         name: 'news',

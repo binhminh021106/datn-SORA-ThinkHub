@@ -65,6 +65,22 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect']);
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback']);
 
+// ── MOBILE APP AUTH ROUTES ─────────────────────────────────────────────────────
+// Route riêng cho Mobile App: đăng ký không yêu cầu số điện thoại
+use App\Http\Controllers\Api\Auth\MobileAuthController;
+
+Route::prefix('mobile')->group(function () {
+    Route::post('/register', [MobileAuthController::class, 'register']);
+    Route::post('/login',    [MobileAuthController::class, 'login']);
+
+    // Routes cần xác thực
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/logout', [MobileAuthController::class, 'logout']);
+        Route::get('/me',      [MobileAuthController::class, 'me']);
+    });
+});
+
+
 // CLIENT API ROUTES
 Route::prefix('client')->group(function () {
 

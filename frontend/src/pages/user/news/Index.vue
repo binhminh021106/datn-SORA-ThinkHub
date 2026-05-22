@@ -1,229 +1,3 @@
-<script setup>
-import { ref, computed, onMounted, watch } from 'vue';
-import axios from 'axios';
-import NewsPostCard from '@/components/ui/NewsPostCard.vue';
-
-// --- CONFIG ---
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const BACKEND_URL = API_BASE_URL.replace(/\/api\/?$/, '');
-
-const ITEMS_PER_PAGE = 6;
-const SITE_NAME = 'SORA Jewelry';
-
-// DANH SÁCH CATEGORY 
-const CATEGORIES = [
-    { name: 'Xu hướng trang sức', icon: 'bi-star' },
-    { name: 'Bí quyết chọn trang sức', icon: 'bi-cpu' },
-    { name: 'Trang sức theo dịp', icon: 'bi-tools' },
-    { name: 'Kiến thức đá quý & kim loại', icon: 'bi-gift' }
-];
-
-// --- STATE ---
-const posts = ref([]);
-const popularPosts = ref([]);
-const isLoading = ref(true);
-const searchQuery = ref('');
-const authorQuery = ref('');
-const categoryQuery = ref('');
-const currentPage = ref(1);
-
-// --- HELPER METHODS ---
-const soraPlaceholder = '/Sora-placeholder.png';
-
-const toSlug = (str) => {
-    if (!str) return '';
-    str = str.toLowerCase();
-    str = str.replace(/(à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ)/g, 'a');
-    str = str.replace(/(è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ)/g, 'e');
-    str = str.replace(/(ì|í|ị|ỉ|ĩ)/g, 'i');
-    str = str.replace(/(ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ)/g, 'o');
-    str = str.replace(/(ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ)/g, 'u');
-    str = str.replace(/(ỳ|ý|ỵ|ỷ|ỹ)/g, 'y');
-    str = str.replace(/(đ)/g, 'd');
-    str = str.replace(/([^0-9a-z-\s])/g, '');
-    str = str.replace(/(\s+)/g, '-');
-    str = str.replace(/^-+/g, '');
-    str = str.replace(/-+$/g, '');
-    return str;
-};
-
-const formatViews = (count) => {
-    if (!count) return 0;
-    if (count >= 1000000) return (count / 1000000).toFixed(1) + 'M';
-    if (count >= 1000) return (count / 1000).toFixed(1) + 'K';
-    return count.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-};
-
-const updateListingSeo = () => {
-    document.title = `Tin tức & Xu hướng trang sức - ${SITE_NAME}`;
-    const desc = "Cập nhật xu hướng trang sức mới nhất, bí quyết làm đẹp, kiến thức đá quý và mẹo hay từ đội ngũ chuyên gia SORA.";
-    const url = window.location.href;
-    const image = 'https://placehold.co/1200x630?text=SORA+News';
-
-    const setMetaName = (name, content) => {
-        let element = document.querySelector(`meta[name="${name}"]`);
-        if (!element) {
-            element = document.createElement('meta');
-            element.setAttribute('name', name);
-            document.head.appendChild(element);
-        }
-        element.setAttribute('content', content);
-    };
-
-    const setMetaProperty = (property, content) => {
-        let element = document.querySelector(`meta[property="${property}"]`);
-        if (!element) {
-            element = document.createElement('meta');
-            element.setAttribute('property', property);
-            document.head.appendChild(element);
-        }
-        element.setAttribute('content', content);
-    };
-
-    let canonical = document.querySelector('link[rel="canonical"]');
-    if (!canonical) {
-        canonical = document.createElement('link');
-        canonical.setAttribute('rel', 'canonical');
-        document.head.appendChild(canonical);
-    }
-    canonical.setAttribute('href', url.split('?')[0]);
-
-    setMetaName('description', desc);
-    setMetaProperty('og:title', document.title);
-    setMetaProperty('og:description', desc);
-    setMetaProperty('og:image', image);
-    setMetaProperty('og:url', url);
-    setMetaProperty('og:type', 'website');
-};
-
-let debounceTimer = null;
-const debounce = (func, delay) => {
-    return function (...args) {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            func.apply(this, args);
-        }, delay);
-    };
-};
-
-const getFullImage = (path) => {
-    if (!path) return soraPlaceholder;
-    if (path.startsWith('http') || path.startsWith('data:image')) return path;
-    const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    if (cleanPath.startsWith('storage/')) return `${BACKEND_URL}/${cleanPath}`;
-    return `${BACKEND_URL}/storage/${cleanPath}`;
-};
-
-const handleImageError = (e) => {
-    e.target.src = soraPlaceholder;
-};
-
-const formatDate = (dateString) => {
-    if (!dateString) return '';
-    return new Date(dateString).toLocaleDateString('vi-VN', {
-        day: '2-digit', month: '2-digit', year: 'numeric'
-    });
-};
-
-const getExcerpt = (post, length = 180) => {
-    if (post.excerpt) return post.excerpt;
-    if (post.content) {
-        const plainText = post.content.replace(/<[^>]+>/g, '');
-        return plainText.length > length ? plainText.substring(0, length) + '...' : plainText;
-    }
-    return 'Chưa có mô tả...';
-};
-
-// --- COMPUTED ---
-const isSearching = computed(() => !!searchQuery.value || !!authorQuery.value || !!categoryQuery.value);
-const featuredPost = computed(() => posts.value.length > 0 ? posts.value[0] : null);
-const allLatestPosts = computed(() => posts.value.length > 0 ? posts.value.slice(1) : []);
-const totalPages = computed(() => Math.ceil(allLatestPosts.value.length / ITEMS_PER_PAGE));
-
-const paginatedPosts = computed(() => {
-    const start = (currentPage.value - 1) * ITEMS_PER_PAGE;
-    return allLatestPosts.value.slice(start, start + ITEMS_PER_PAGE);
-});
-
-// --- METHODS ---
-const fetchPosts = async (query = '', author = '', category = '') => {
-    isLoading.value = true;
-    try {
-        const params = {};
-        if (query) params.q = query;
-        if (author) params.author = author;
-        if (category) params.category = category;
-
-        const response = await axios.get(`${API_BASE_URL}/news`, { params });
-
-        const responseData = response.data.data ? response.data.data : response.data;
-        posts.value = Array.isArray(responseData) ? responseData : [];
-        currentPage.value = 1;
-
-    } catch (error) {
-        console.error("Lỗi tải danh sách bài viết:", error);
-        posts.value = [];
-    } finally {
-        setTimeout(() => {
-            isLoading.value = false;
-        }, 500);
-    }
-};
-
-const fetchPopularPosts = async () => {
-    try {
-        const response = await axios.get(`${API_BASE_URL}/news/popular`);
-        popularPosts.value = response.data.data ? response.data.data : response.data || [];
-    } catch (error) {
-        console.error("Lỗi tải bài viết phổ biến:", error);
-        popularPosts.value = [];
-    }
-};
-
-const triggerSearch = () => {
-    fetchPosts(searchQuery.value, authorQuery.value, categoryQuery.value);
-};
-
-const searchByAuthor = (authorName) => {
-    searchQuery.value = ''; categoryQuery.value = ''; authorQuery.value = authorName;
-    triggerSearch();
-};
-
-const searchByCategory = (catName) => {
-    searchQuery.value = ''; authorQuery.value = ''; categoryQuery.value = catName;
-    triggerSearch();
-};
-
-const handleSearch = () => {
-    authorQuery.value = ''; categoryQuery.value = '';
-    triggerSearch();
-};
-
-const changePage = (page) => {
-    if (page >= 1 && page <= totalPages.value) {
-        currentPage.value = page;
-        const listSection = document.getElementById('latest-news-section');
-        if (listSection) listSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-};
-
-onMounted(() => {
-    triggerSearch();
-    fetchPopularPosts();
-    updateListingSeo();
-});
-
-watch(searchQuery, debounce((newQuery) => {
-    if (newQuery !== null) {
-        authorQuery.value = ''; categoryQuery.value = '';
-        triggerSearch();
-    }
-}, 400));
-
-watch(authorQuery, (newAuthor) => { if (newAuthor === '') triggerSearch(); });
-watch(categoryQuery, (newCat) => { if (newCat === '') triggerSearch(); });
-</script>
-
 <template>
     <section class="blog-page">
         <!-- Hero Section -->
@@ -233,10 +7,8 @@ watch(categoryQuery, (newCat) => { if (newCat === '') triggerSearch(); });
                     SORA - Chạm đến sự hoàn mỹ
                 </p>
                 <h1 class="text-main font-oswald text-uppercase" v-if="searchQuery">Tìm kiếm: "{{ searchQuery }}"</h1>
-                <h1 class="text-main font-oswald text-uppercase" v-else-if="authorQuery">Tác giả: "{{ authorQuery }}"
-                </h1>
-                <h1 class="text-main font-oswald text-uppercase" v-else-if="categoryQuery">Danh mục: "{{ categoryQuery
-                    }}"</h1>
+                <h1 class="text-main font-oswald text-uppercase" v-else-if="authorQuery">Tác giả: "{{ authorQuery }}"</h1>
+                <h1 class="text-main font-oswald text-uppercase" v-else-if="categoryQuery">Danh mục: "{{ categoryQuery }}"</h1>
                 <h1 class="text-main font-oswald text-uppercase" v-else>SORA BLOG</h1>
                 <p class="hero-subtitle text-muted mt-3">
                     Khám phá xu hướng trang sức & bí quyết làm đẹp tinh tế mỗi ngày.
@@ -245,7 +17,7 @@ watch(categoryQuery, (newCat) => { if (newCat === '') triggerSearch(); });
         </header>
 
         <main class="page-container container">
-            <!-- Skeleton Loading -->
+            <!-- Skeleton Loading (Chỉ hiện lần đầu tiên) -->
             <div v-if="isLoading" class="page-layout fade-in">
                 <section class="content-column">
                     <div class="featured-heading skeleton-box skeleton-text w-50 mb-4 shimmer"></div>
@@ -268,8 +40,7 @@ watch(categoryQuery, (newCat) => { if (newCat === '') triggerSearch(); });
                         <div class="skeleton-box skeleton-text w-25 mb-4 shimmer"></div>
                         <div class="latest-posts-grid">
                             <div v-for="n in 4" :key="n" class="post-card card-style skeleton-card">
-                                <div class="card-img-top skeleton-box img-box shimmer" style="aspect-ratio: 16/9;">
-                                </div>
+                                <div class="card-img-top skeleton-box img-box shimmer" style="aspect-ratio: 16/9;"></div>
                                 <div class="card-body">
                                     <div class="skeleton-box skeleton-text w-50 mb-3 shimmer"></div>
                                     <div class="skeleton-box skeleton-title mb-3 shimmer"></div>
@@ -292,30 +63,27 @@ watch(categoryQuery, (newCat) => { if (newCat === '') triggerSearch(); });
             </div>
 
             <!-- Dữ liệu thực tế -->
-            <div v-else class="page-layout fade-in">
+            <div v-else class="page-layout fade-in" :class="{ 'opacity-50': isFetching }">
                 <section class="content-column">
                     <!-- Trạng thái trống -->
-                    <div v-if="posts.length === 0" class="empty-state card-style">
+                    <div v-if="allLatestPosts.length === 0" class="empty-state card-style">
                         <i class="bi bi-newspaper display-4 text-muted mb-3"></i>
                         <h3 class="text-main" v-if="searchQuery">Không tìm thấy kết quả cho "{{ searchQuery }}"</h3>
-                        <h3 class="text-main" v-else-if="authorQuery">Không tìm thấy bài viết của "{{ authorQuery }}"
-                        </h3>
-                        <h3 class="text-main" v-else-if="categoryQuery">Chưa có bài viết trong "{{ categoryQuery }}"
-                        </h3>
+                        <h3 class="text-main" v-else-if="authorQuery">Không tìm thấy bài viết của "{{ authorQuery }}"</h3>
+                        <h3 class="text-main" v-else-if="categoryQuery">Chưa có bài viết trong "{{ categoryQuery }}"</h3>
                         <h3 class="text-main" v-else>Chưa có tin tức nào</h3>
                         <p class="text-muted">Vui lòng thử lại với từ khóa khác hoặc quay lại sau.</p>
-                        <button v-if="isSearching" @click="handleSearch"
-                            class="btn btn-outline-main rounded-pill px-4 py-2 mt-3 fw-bold">Xem tất cả bài
-                            viết</button>
+                        <button v-if="isSearching" @click="clearSearch"
+                            class="btn btn-outline-main rounded-pill px-4 py-2 mt-3 fw-bold">Xem tất cả bài viết</button>
                     </div>
 
                     <template v-else>
-                        <h3 class="featured-heading text-main font-serif">
+                        <h3 class="featured-heading text-main font-serif" v-if="featuredPost">
                             <i class="bi bi-bullseye me-2 text-accent"></i>
-                            {{ isSearching ? 'Kết quả lọc' : 'Tin tức nổi bật' }}
+                            {{ isSearching ? 'Kết quả nổi bật' : 'Tin tức nổi bật' }}
                         </h3>
 
-                        <!-- Bài viết nổi bật (Mới nhất) -->
+                        <!-- Bài viết nổi bật (Chỉ hiện ở trang 1) -->
                         <article v-if="featuredPost" class="featured-post card-style product-card">
                             <div class="featured-image-wrap img-zoom-wrapper overflow-hidden">
                                 <router-link
@@ -363,18 +131,17 @@ watch(categoryQuery, (newCat) => { if (newCat === '') triggerSearch(); });
                             </div>
                         </article>
 
-                        <!-- Lưới bài viết khác dùng Component NewsPostCard -->
-                        <div v-if="allLatestPosts.length > 0" class="latest-section" id="latest-news-section">
+                        <!-- Lưới bài viết khác -->
+                        <div v-if="paginatedPosts.length > 0" class="latest-section" id="latest-news-section">
                             <h3 class="section-heading text-main font-serif">
-                                <i class="bi bi-grid-fill me-2 text-accent"></i> {{ isSearching ? 'Các kết quả khác' :
-                                'Tin mới cập nhật' }}
+                                <i class="bi bi-grid-fill me-2 text-accent"></i> {{ isSearching ? 'Các kết quả khác' : 'Tin mới cập nhật' }}
                             </h3>
 
                             <div class="latest-posts-grid">
                                 <NewsPostCard v-for="post in paginatedPosts" :key="post.id" :post="post" />
                             </div>
 
-                            <!-- Pagination -->
+                            <!-- Phân trang API bằng Laravel Paginator -->
                             <div v-if="totalPages > 1" class="pagination-wrapper">
                                 <button class="page-btn prev" :disabled="currentPage === 1"
                                     @click="changePage(currentPage - 1)">
@@ -401,19 +168,19 @@ watch(categoryQuery, (newCat) => { if (newCat === '') triggerSearch(); });
                     <div class="sidebar-widget search-widget border-light-subtle shadow-sm bg-white">
                         <h4 class="font-serif text-main"><i class="bi bi-search me-2 text-accent"></i> Tìm kiếm</h4>
                         <div class="search-box">
-                            <input type="text" v-model="searchQuery" placeholder="Nhập từ khóa..." class="font-inter">
-                            <button @click="handleSearch" class="bg-main"><i class="bi bi-search"></i></button>
+                            <input type="text" v-model="searchInput" @input="handleSearchInput" @keyup.enter="executeSearch" placeholder="Nhập từ khóa..." class="font-inter">
+                            <button @click="executeSearch" class="bg-main"><i class="bi bi-search"></i></button>
                         </div>
 
                         <div v-if="authorQuery"
                             class="alert bg-light-custom border border-main text-main mt-3 py-2 px-3 d-flex justify-content-between align-items-center small rounded">
                             <span>Tác giả: <strong class="font-serif">{{ authorQuery }}</strong></span>
-                            <button @click="authorQuery = ''" class="btn-close ms-2" aria-label="Close"></button>
+                            <button @click="clearSearch" class="btn-close ms-2" aria-label="Close"></button>
                         </div>
                         <div v-if="categoryQuery"
                             class="alert bg-light-custom border border-main text-main mt-3 py-2 px-3 d-flex justify-content-between align-items-center small rounded">
                             <span>Danh mục: <strong class="font-serif">{{ categoryQuery }}</strong></span>
-                            <button @click="categoryQuery = ''" class="btn-close ms-2" aria-label="Close"></button>
+                            <button @click="clearSearch" class="btn-close ms-2" aria-label="Close"></button>
                         </div>
                     </div>
 
@@ -424,8 +191,7 @@ watch(categoryQuery, (newCat) => { if (newCat === '') triggerSearch(); });
                             <li v-for="cat in CATEGORIES" :key="cat.name">
                                 <a href="#" @click.prevent="searchByCategory(cat.name)"
                                     :class="{ 'active-cat': categoryQuery === cat.name }">
-                                    <i class="bi me-2 text-accent" :class="cat.icon || 'bi-caret-right-fill'"></i> {{
-                                    cat.name }}
+                                    <i class="bi me-2 text-accent" :class="cat.icon || 'bi-caret-right-fill'"></i> {{ cat.name }}
                                 </a>
                             </li>
                         </ul>
@@ -433,30 +199,28 @@ watch(categoryQuery, (newCat) => { if (newCat === '') triggerSearch(); });
 
                     <!-- Widget Phổ biến -->
                     <div class="sidebar-widget popular-widget border-light-subtle shadow-sm bg-white">
-                        <h4 class="font-serif text-main"><i class="bi bi-star-fill me-2 text-accent"></i> Phổ biến nhất
-                        </h4>
+                        <h4 class="font-serif text-main"><i class="bi bi-star-fill me-2 text-accent"></i> Phổ biến nhất</h4>
 
-                        <div v-if="popularPosts.length === 0" class="text-center py-3 text-muted small">
+                        <div v-if="!popularPosts || popularPosts.length === 0" class="text-center py-3 text-muted small">
                             Chưa có dữ liệu nổi bật
                         </div>
 
-                        <div v-for="(post, index) in popularPosts" :key="post.id"
+                        <div v-for="(post, index) in popularPosts" :key="post?.id || index"
                             class="popular-post-item product-card p-2 rounded">
-                            <!-- Đã cố định khung ảnh thumbnail -->
                             <div class="flex-shrink-0 img-zoom-wrapper rounded border overflow-hidden"
                                 style="width: 70px; height: 60px;">
-                                <img :src="getFullImage(post.image_url)" @error="handleImageError"
+                                <img :src="getFullImage(post?.image_url)" @error="handleImageError"
                                     class="w-100 h-100 object-fit-cover bg-light transition-transform duration-700 group-hover-scale">
                             </div>
 
                             <div class="flex-grow-1 ms-3">
                                 <router-link
-                                    :to="{ name: 'PostDetailt', params: { slug: post.slug || toSlug(post.title) } }"
+                                    :to="{ name: 'PostDetailt', params: { slug: post?.slug || toSlug(post?.title) } }"
                                     class="text-reset text-decoration-none product-title-link">
-                                    <p class="product-title font-serif fw-bold text-dark m-0 lh-base" style="font-size: 0.95rem;">{{ post.title }}</p>
+                                    <p class="product-title font-serif fw-bold text-dark m-0 lh-base" style="font-size: 0.95rem;">{{ post?.title }}</p>
                                 </router-link>
                                 <span class="post-meta-small d-block mt-1">
-                                    <i class="bi bi-eye text-accent"></i> {{ formatViews(post.views) }} lượt xem
+                                    <i class="bi bi-eye text-accent"></i> {{ formatViews(post?.views) }} lượt xem
                                 </span>
                             </div>
                         </div>
@@ -467,8 +231,7 @@ watch(categoryQuery, (newCat) => { if (newCat === '') triggerSearch(); });
                         class="sidebar-widget support-box mt-4 border-light-subtle shadow-sm bg-light-custom text-center">
                         <i class="bi bi-envelope-paper-fill fs-1 text-main mb-2 d-block"></i>
                         <h5 class="fw-bold font-serif text-main mb-2">Đăng ký nhận tin</h5>
-                        <p class="text-muted small mb-3 fw-light">Đừng bỏ lỡ các kiến thức và ưu đãi trang sức mới nhất từ SORA.
-                        </p>
+                        <p class="text-muted small mb-3 fw-light">Đừng bỏ lỡ các kiến thức và ưu đãi trang sức mới nhất từ SORA.</p>
                         <button class="btn btn-main w-100 rounded-pill fw-bold font-oswald tracking-widest text-uppercase">Đăng ký ngay</button>
                     </div>
                 </aside>
@@ -476,6 +239,189 @@ watch(categoryQuery, (newCat) => { if (newCat === '') triggerSearch(); });
         </main>
     </section>
 </template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import axios from 'axios';
+import { useQuery, keepPreviousData } from '@tanstack/vue-query';
+import NewsPostCard from '@/components/ui/NewsPostCard.vue';
+
+// --- CONFIG ---
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'http://127.0.0.1:8000/storage';
+
+// Tăng số lượng tải lên 7 để chừa 1 bài nổi bật và đúng 6 bài ở phần danh sách lưới bên dưới
+const ITEMS_PER_PAGE = 7;
+const SITE_NAME = 'SORA Jewelry';
+
+const CATEGORIES = [
+    { name: 'Xu hướng trang sức', icon: 'bi-star' },
+    { name: 'Bí quyết chọn trang sức', icon: 'bi-cpu' },
+    { name: 'Trang sức theo dịp', icon: 'bi-tools' },
+    { name: 'Kiến thức đá quý & kim loại', icon: 'bi-gift' }
+];
+
+// --- STATE ---
+const searchInput = ref(''); 
+const searchQuery = ref(''); 
+const authorQuery = ref('');
+const categoryQuery = ref('');
+const currentPage = ref(1);
+
+// --- TANSTACK QUERY: FETCH NEWS CHÍNH ---
+const fetchNews = async ({ queryKey }) => {
+    const [_key, page, q, author, category] = queryKey;
+    
+    const params = { page, per_page: ITEMS_PER_PAGE };
+    if (q) params.q = q;
+    if (author) params.author = author;
+    if (category) params.category = category;
+
+    const { data } = await axios.get(`${API_BASE_URL}/news`, { params });
+    return data.data; 
+};
+
+const { data: newsPaginator, isLoading, isFetching } = useQuery({
+    queryKey: ['newsList', currentPage, searchQuery, authorQuery, categoryQuery],
+    queryFn: fetchNews,
+    placeholderData: keepPreviousData, 
+    staleTime: 5 * 60 * 1000, 
+});
+
+// --- TANSTACK QUERY: POPULAR NEWS ---
+const fetchPopular = async () => {
+    const { data } = await axios.get(`${API_BASE_URL}/news/popular`);
+    return data.data;
+};
+
+const { data: popularPosts } = useQuery({
+    queryKey: ['popularNews'],
+    queryFn: fetchPopular,
+    staleTime: 10 * 60 * 1000,
+});
+
+// --- COMPUTED FROM QUERY DATA ---
+const isSearching = computed(() => !!searchQuery.value || !!authorQuery.value || !!categoryQuery.value);
+const allLatestPosts = computed(() => newsPaginator.value?.data || []);
+const totalPages = computed(() => newsPaginator.value?.last_page || 1);
+
+const featuredPost = computed(() => {
+    if (currentPage.value === 1 && allLatestPosts.value.length > 0) {
+        return allLatestPosts.value[0];
+    }
+    return null;
+});
+
+const paginatedPosts = computed(() => {
+    if (featuredPost.value) {
+        return allLatestPosts.value.slice(1);
+    }
+    return allLatestPosts.value;
+});
+
+// --- HELPER METHODS ---
+const soraPlaceholder = '/Sora-placeholder.png';
+
+const toSlug = (str) => {
+    if (!str) return '';
+    str = str.toLowerCase();
+    str = str.replace(/(à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ)/g, 'a');
+    str = str.replace(/(è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ)/g, 'e');
+    str = str.replace(/(ì|í|ị|ỉ|ĩ)/g, 'i');
+    str = str.replace(/(ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ)/g, 'o');
+    str = str.replace(/(ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ)/g, 'u');
+    str = str.replace(/(ỳ|ý|ỵ|ỷ|ỹ)/g, 'y');
+    str = str.replace(/(đ)/g, 'd');
+    str = str.replace(/([^0-9a-z-\s])/g, '');
+    str = str.replace(/(\s+)/g, '-');
+    str = str.replace(/^-+/g, '');
+    str = str.replace(/-+$/g, '');
+    return str;
+};
+
+const formatViews = (count) => {
+    if (!count) return 0;
+    if (count >= 1000000) return (count / 1000000).toFixed(1) + 'M';
+    if (count >= 1000) return (count / 1000).toFixed(1) + 'K';
+    return count.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+};
+
+const getFullImage = (path) => {
+    if (!path) return soraPlaceholder;
+    if (path.startsWith('http') || path.startsWith('data:image')) return path;
+    let cleanPath = path.startsWith('/') ? path.substring(1) : path;
+    if (cleanPath.startsWith('storage/')) {
+        cleanPath = cleanPath.substring(8);
+    }
+    return `${STORAGE_URL}/${cleanPath}`;
+};
+
+const handleImageError = (e) => { e.target.src = soraPlaceholder; };
+
+const formatDate = (dateString) => {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleDateString('vi-VN', {
+        day: '2-digit', month: '2-digit', year: 'numeric'
+    });
+};
+
+const getExcerpt = (post, length = 180) => {
+    if (post.excerpt) return post.excerpt;
+    return 'Chưa có mô tả...';
+};
+
+const updateListingSeo = () => {
+    document.title = `Tin tức & Xu hướng trang sức - ${SITE_NAME}`;
+};
+
+// --- ACTIONS ---
+let debounceTimer = null;
+const handleSearchInput = () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        searchQuery.value = searchInput.value;
+        authorQuery.value = ''; 
+        categoryQuery.value = '';
+        currentPage.value = 1; 
+    }, 500);
+};
+
+const executeSearch = () => {
+    searchQuery.value = searchInput.value;
+    authorQuery.value = ''; 
+    categoryQuery.value = '';
+    currentPage.value = 1;
+};
+
+const searchByAuthor = (authorName) => {
+    searchInput.value = ''; searchQuery.value = ''; categoryQuery.value = ''; 
+    authorQuery.value = authorName;
+    currentPage.value = 1;
+};
+
+const searchByCategory = (catName) => {
+    searchInput.value = ''; searchQuery.value = ''; authorQuery.value = ''; 
+    categoryQuery.value = catName;
+    currentPage.value = 1;
+};
+
+const clearSearch = () => {
+    searchInput.value = ''; searchQuery.value = ''; authorQuery.value = ''; categoryQuery.value = '';
+    currentPage.value = 1;
+};
+
+const changePage = (page) => {
+    if (page >= 1 && page <= totalPages.value) {
+        currentPage.value = page;
+        const listSection = document.getElementById('latest-news-section');
+        if (listSection) listSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+};
+
+onMounted(() => {
+    updateListingSeo();
+});
+</script>
 
 <style>
 :root {
@@ -530,7 +476,7 @@ h1, h2, h3, h4, h5, h6 { font-family: 'Inter', sans-serif; font-weight: 700; col
 
 /* Layout Grid */
 .page-container { margin: 50px auto; flex-grow: 1; }
-.page-layout { display: grid; grid-template-columns: 1fr 340px; gap: 48px; align-items: start; position: relative; }
+.page-layout { display: grid; grid-template-columns: 1fr 340px; gap: 48px; align-items: start; position: relative; transition: opacity 0.3s; }
 .card-style { background: #FFFFFF; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04); overflow: hidden; }
 .empty-state { padding: 60px 0; text-align: center; grid-column: 1 / -1; }
 

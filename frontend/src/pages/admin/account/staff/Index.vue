@@ -60,97 +60,129 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-if="paginatedStaff.length === 0">
-                  <td colspan="5" class="text-center py-5 text-muted">
-                    <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
-                    Không có dữ liệu trong danh sách này.
-                  </td>
-                </tr>
-                <tr v-else v-for="staff in paginatedStaff" :key="staff.id" :class="{'bg-light opacity-75': staff.deleted_at, 'bg-light': staff.id === currentUserId && !staff.deleted_at}">
-                  
-                  <td class="px-4 py-3">
-                    <div class="d-flex align-items-center">
-                      <!-- Ảnh click để phóng to -->
-                      <img :src="getAvatarUrl(staff.avatar_url)" 
-                           @error="handleImageError" 
-                           @click="viewFullImage(getAvatarUrl(staff.avatar_url))"
-                           class="rounded-circle object-fit-cover me-3 border shadow-sm flex-shrink-0 cursor-pointer hover-zoom" 
-                           style="width: 45px; height: 45px;">
-                      
-                      <div class="overflow-hidden">
-                        <h6 class="mb-0 fw-bold text-dark text-truncate d-flex align-items-center" :title="staff.fullname">
-                          {{ staff.fullname }} 
-                          <span v-if="staff.id === currentUserId" class="badge bg-brand text-white ms-2" style="font-size: 0.65rem;">BẠN</span>
-                          <span v-if="staff.id === 1 && staff.id !== currentUserId" class="badge bg-danger text-white ms-2" style="font-size: 0.65rem;">GỐC</span>
-                        </h6>
-                        <small class="text-muted d-block text-truncate font-monospace mt-1" :title="staff.email">{{ staff.email }}</small>
+                <!-- HIỆU ỨNG SKELETON KHI CHUYỂN TAB -->
+                <template v-if="isTableLoading">
+                  <tr v-for="i in 5" :key="'skeleton-'+i">
+                    <td class="px-4 py-3">
+                      <div class="d-flex align-items-center">
+                        <div class="placeholder-glow flex-shrink-0 me-3">
+                          <div class="placeholder rounded-circle" style="width: 45px; height: 45px;"></div>
+                        </div>
+                        <div class="overflow-hidden w-100 placeholder-glow">
+                          <span class="placeholder col-6 mb-1 rounded"></span>
+                          <span class="placeholder col-4 d-block rounded"></span>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  
-                  <td class="px-4">
-                    <span class="badge" :class="staff.role?.badgeClass || 'bg-secondary'">{{ staff.role?.label || 'Chưa gán' }}</span>
-                  </td>
-                  
-                  <td class="px-4 overflow-hidden">
-                    <div class="text-dark fw-medium small mb-1 text-truncate" :title="staff.phone"><i class="bi bi-telephone text-brand me-1"></i> {{ staff.phone || 'Chưa cập nhật' }}</div>
-                    <div class="text-muted small text-truncate" :title="staff.address">
-                      <i class="bi bi-geo-alt text-brand me-1"></i> {{ staff.address || 'Chưa cập nhật' }}
-                    </div>
-                  </td>
-                  
-                  <!-- SỬA TRẠNG THÁI NHANH (INLINE EDIT) -->
-                  <td class="px-4 text-center">
-                    <span v-if="staff.deleted_at" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary" title="Đã chuyển vào thùng rác">
-                      <i class="bi bi-trash3-fill"></i> Đã xóa
-                    </span>
-                    <div v-else class="d-flex align-items-center justify-content-center gap-1 flex-nowrap w-100">
-                      <!-- Khóa không cho sửa tài khoản Gốc (1) hoặc Tự khóa chính mình -->
-                      <select class="form-select form-select-sm border shadow-sm fw-semibold flex-shrink-0" 
-                              style="width: 120px; font-size: 0.8rem; border-color: #ced4da !important;"
-                              :class="getStatusSelectClass(staff.localStatus || staff.status)"
-                              v-model="staff.localStatus"
-                              @change="checkStatusChange(staff)"
-                              :disabled="staff.isUpdatingStatus || staff.id === 1 || staff.id === currentUserId">
-                        <option value="active">Hoạt động</option>
-                        <option value="locked">Bị Khóa</option>
-                      </select>
-                      
-                      <!-- Khung cố định chống nhảy -->
-                      <div class="d-flex align-items-center justify-content-start flex-shrink-0" style="min-width: 55px; height: 28px;">
-                        <div v-if="staff.isUpdatingStatus" class="spinner-border text-brand ms-1" style="width: 1.25rem; height: 1.25rem; border-width: 0.15em;" role="status"></div>
-                        <template v-else-if="staff.isStatusChanged">
-                          <button @click="saveStaffStatus(staff)" class="btn btn-sm btn-success rounded-circle shadow-sm d-flex align-items-center justify-content-center ms-1" style="width: 24px; height: 24px; padding: 0;" title="Lưu">
-                            <i class="bi bi-check-lg fw-bold" style="font-size: 0.7rem;"></i>
-                          </button>
-                          <button @click="cancelStatusChange(staff)" class="btn btn-sm btn-light rounded-circle shadow-sm text-danger border d-flex align-items-center justify-content-center ms-1" style="width: 24px; height: 24px; padding: 0;" title="Hủy">
-                            <i class="bi bi-x-lg fw-bold" style="font-size: 0.7rem;"></i>
-                          </button>
-                        </template>
-                      </div>
-                    </div>
-                  </td>
-                  
-                  <td class="px-4 text-center">
-                    <button class="btn btn-sm btn-light text-info me-2 shadow-sm border" title="Xem chi tiết" @click="openQuickView(staff)">
-                      <i class="bi bi-eye"></i>
-                    </button>
+                    </td>
+                    <td class="px-4 placeholder-glow"><span class="placeholder col-8 rounded py-2"></span></td>
+                    <td class="px-4 placeholder-glow">
+                      <span class="placeholder col-10 mb-1 rounded"></span>
+                      <span class="placeholder col-8 d-block rounded"></span>
+                    </td>
+                    <td class="px-4 text-center placeholder-glow"><span class="placeholder col-6 rounded py-2"></span></td>
+                    <td class="px-4 text-center placeholder-glow"><span class="placeholder col-8 rounded py-2"></span></td>
+                  </tr>
+                </template>
 
-                    <template v-if="!staff.deleted_at">
-                      <router-link :to="{ name: 'admin-staff-edit', params: { id: staff.id } }" class="btn btn-sm btn-light text-primary me-2 shadow-sm border" title="Chỉnh sửa">
-                        <i class="bi bi-pencil-square"></i>
-                      </router-link>
-                      <button class="btn btn-sm btn-light text-danger shadow-sm border" @click="confirmDelete(staff.id, staff.fullname)" :disabled="staff.id === 1 || staff.id === currentUserId" title="Đưa vào thùng rác">
-                        <i class="bi bi-trash"></i>
+                <!-- DỮ LIỆU THẬT -->
+                <template v-else>
+                  <tr v-if="paginatedStaff.length === 0">
+                    <td colspan="5" class="text-center py-5 text-muted">
+                      <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
+                      Không có dữ liệu trong danh sách này.
+                    </td>
+                  </tr>
+                  <tr v-else v-for="staff in paginatedStaff" :key="staff.id" :class="{'bg-light opacity-75': staff.deleted_at, 'bg-light': staff.id === currentUserId && !staff.deleted_at}">
+                    
+                    <td class="px-4 py-3">
+                      <div class="d-flex align-items-center">
+                        <!-- Áp dụng SoraImage thay cho thẻ img truyền thống để xử lý lỗi ảnh mượt mà -->
+                        <div class="position-relative flex-shrink-0 cursor-pointer hover-zoom me-3" style="width: 45px; height: 45px;">
+                          <SoraImage 
+                            :src="staff.avatar_url" 
+                            :placeholder="defaultAvatar"
+                            imgClass="rounded-circle object-fit-cover border shadow-sm" 
+                            style="width: 45px; height: 45px;"
+                            alt="Avatar"
+                            @click="viewFullImage(getAvatarUrl(staff.avatar_url))"
+                          />
+                        </div>
+                        
+                        <div class="overflow-hidden">
+                          <h6 class="mb-0 fw-bold text-dark text-truncate d-flex align-items-center" :title="staff.fullname">
+                            {{ staff.fullname }} 
+                            <span v-if="staff.id === currentUserId" class="badge bg-brand text-white ms-2" style="font-size: 0.65rem;">BẠN</span>
+                            <span v-if="staff.id === 1 && staff.id !== currentUserId" class="badge bg-danger text-white ms-2" style="font-size: 0.65rem;">GỐC</span>
+                          </h6>
+                          <small class="text-muted d-block text-truncate font-monospace mt-1" :title="staff.email">{{ staff.email }}</small>
+                        </div>
+                      </div>
+                    </td>
+                    
+                    <td class="px-4">
+                      <span class="badge" :class="staff.role?.badgeClass || 'bg-secondary'">{{ staff.role?.label || 'Chưa gán' }}</span>
+                    </td>
+                    
+                    <td class="px-4 overflow-hidden">
+                      <div class="text-dark fw-medium small mb-1 text-truncate" :title="staff.phone"><i class="bi bi-telephone text-brand me-1"></i> {{ staff.phone || 'Chưa cập nhật' }}</div>
+                      <div class="text-muted small text-truncate" :title="staff.address">
+                        <i class="bi bi-geo-alt text-brand me-1"></i> {{ staff.address || 'Chưa cập nhật' }}
+                      </div>
+                    </td>
+                    
+                    <!-- SỬA TRẠNG THÁI NHANH (INLINE EDIT) -->
+                    <td class="px-4 text-center">
+                      <span v-if="staff.deleted_at" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary" title="Đã chuyển vào thùng rác">
+                        <i class="bi bi-trash3-fill"></i> Đã xóa
+                      </span>
+                      <div v-else class="d-flex align-items-center justify-content-center gap-1 flex-nowrap w-100">
+                        <!-- Khóa không cho sửa tài khoản Gốc (1) hoặc Tự khóa chính mình -->
+                        <select class="form-select form-select-sm border shadow-sm fw-semibold flex-shrink-0" 
+                                style="width: 120px; font-size: 0.8rem; border-color: #ced4da !important;"
+                                :class="getStatusSelectClass(staff.localStatus ?? staff.status)"
+                                v-model="staff.localStatus"
+                                @change="checkStatusChange(staff)"
+                                :disabled="isUpdatingStatusId === staff.id || staff.id === 1 || staff.id === currentUserId">
+                          <option value="active">Hoạt động</option>
+                          <option value="locked">Bị Khóa</option>
+                        </select>
+                        
+                        <!-- Khung cố định chống nhảy -->
+                        <div class="d-flex align-items-center justify-content-start flex-shrink-0" style="min-width: 55px; height: 28px;">
+                          <div v-if="isUpdatingStatusId === staff.id" class="spinner-border text-brand ms-1" style="width: 1.25rem; height: 1.25rem; border-width: 0.15em;" role="status"></div>
+                          <template v-else-if="staff.isStatusChanged">
+                            <button @click="saveStaffStatus(staff)" class="btn btn-sm btn-success rounded-circle shadow-sm d-flex align-items-center justify-content-center ms-1" style="width: 24px; height: 24px; padding: 0;" title="Lưu">
+                              <i class="bi bi-check-lg fw-bold" style="font-size: 0.7rem;"></i>
+                            </button>
+                            <button @click="cancelStatusChange(staff)" class="btn btn-sm btn-light rounded-circle shadow-sm text-danger border d-flex align-items-center justify-content-center ms-1" style="width: 24px; height: 24px; padding: 0;" title="Hủy">
+                              <i class="bi bi-x-lg fw-bold" style="font-size: 0.7rem;"></i>
+                            </button>
+                          </template>
+                        </div>
+                      </div>
+                    </td>
+                    
+                    <td class="px-4 text-center">
+                      <button class="btn btn-sm btn-light text-info me-2 shadow-sm border" title="Xem chi tiết" @click="openQuickView(staff)">
+                        <i class="bi bi-eye"></i>
                       </button>
-                    </template>
-                    <template v-else>
-                      <button class="btn btn-sm btn-light text-success shadow-sm border" @click="restoreStaff(staff.id)" title="Khôi phục tài khoản">
-                        <i class="bi bi-arrow-counterclockwise"></i>
-                      </button>
-                    </template>
-                  </td>
-                </tr>
+
+                      <template v-if="!staff.deleted_at">
+                        <router-link :to="{ name: 'admin-staff-edit', params: { id: staff.id } }" class="btn btn-sm btn-light text-primary me-2 shadow-sm border" title="Chỉnh sửa">
+                          <i class="bi bi-pencil-square"></i>
+                        </router-link>
+                        <button class="btn btn-sm btn-light text-danger shadow-sm border" @click="confirmDelete(staff.id, staff.fullname)" :disabled="staff.id === 1 || staff.id === currentUserId" title="Đưa vào thùng rác">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </template>
+                      <template v-else>
+                        <button class="btn btn-sm btn-light text-success shadow-sm border" @click="restoreStaff(staff.id)" title="Khôi phục tài khoản">
+                          <i class="bi bi-arrow-counterclockwise"></i>
+                        </button>
+                      </template>
+                    </td>
+                  </tr>
+                </template>
               </tbody>
             </table>
           </div>
@@ -179,7 +211,7 @@
       </div>
     </div>
 
-    <!-- MÀN HÌNH CHỜ ĐỘC LẬP -->
+    <!-- MÀN HÌNH CHỜ ĐỘC LẬP (Chỉ chạy 1 lần duy nhất khi vừa vào trang) -->
     <div v-else class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
       <h1 class="logo-shimmer mb-3">ThinkHub</h1>
       <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">
@@ -196,13 +228,16 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body p-4 text-center" v-if="selectedStaff">
-            <div class="position-relative d-inline-block mb-3">
-              <!-- Ảnh click để phóng to -->
-              <img :src="getAvatarUrl(selectedStaff.avatar_url)" 
-                   @error="handleImageError" 
-                   @click="viewFullImage(getAvatarUrl(selectedStaff.avatar_url))"
-                   class="rounded-circle shadow-sm border border-2 border-white object-fit-cover cursor-pointer hover-zoom" 
-                   style="width: 110px; height: 110px;">
+            <div class="position-relative d-inline-block mb-3" style="width: 110px; height: 110px;">
+              <!-- Sử dụng SoraImage thay cho thẻ img truyền thống ở Modal chi tiết -->
+              <SoraImage 
+                :src="selectedStaff.avatar_url" 
+                :placeholder="defaultAvatar"
+                imgClass="rounded-circle shadow-sm border border-2 border-white object-fit-cover cursor-pointer hover-zoom" 
+                style="width: 110px; height: 110px;"
+                alt="Avatar"
+                @click="viewFullImage(getAvatarUrl(selectedStaff.avatar_url))"
+              />
                    
               <span v-if="!selectedStaff.deleted_at" class="position-absolute bottom-0 end-0 p-2 border border-light rounded-circle" :class="selectedStaff.status === 'active' ? 'bg-success' : 'bg-warning'" style="width: 15px; height: 15px;"></span>
               <span v-else class="position-absolute bottom-0 end-0 p-2 border border-light rounded-circle bg-secondary" style="width: 15px; height: 15px;"></span>
@@ -250,25 +285,28 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
+import { ref, onMounted, computed, onBeforeUnmount, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios'; 
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { getFullImage } from '@/composables/useUtilities';
-import defaultAvatar from '../../../../assets/images/defaults/avatar1.png';
+
+// Tái sử dụng linh hoạt SoraImage và defaultAvatar thống nhất hệ thống
+import SoraImage from '@/components/ui/SoraImage.vue';
+import defaultAvatar from '@/assets/images/defaults/avatar1.png';
 
 const route = useRoute();
 const router = useRouter();
-const staffs = ref([]);
-const roles = ref([]);
-const systemModules = ref([]);
-const isLoading = ref(true);
+const queryClient = useQueryClient();
+
 const searchQuery = ref('');
 const activeTab = ref('all');
 const currentPageLevel = ref(null);
+const isUpdatingStatusId = ref(null); // Quản lý spin-loading theo id riêng biệt tránh nhiễu loạn UI
+const isTableLoading = ref(false); // Quản lý trạng thái hiển thị Skeleton Loading
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const currentAdmin = JSON.parse(localStorage.getItem('admin_info') || '{}');
 const currentUserId = currentAdmin.id;
@@ -321,7 +359,6 @@ const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
 };
 
 const getAvatarUrl = (path) => path ? getFullImage(path) : defaultAvatar;
-const handleImageError = (e) => { e.target.src = defaultAvatar; };
 
 const viewFullImage = (url) => {
   Swal.fire({
@@ -359,34 +396,79 @@ const getLevelColor = (level) => {
   }
 };
 
-const fetchData = async () => {
-  isLoading.value = true;
-  try {
-    const [resStaff, resRole, resModules] = await Promise.all([
-      axios.get(`${API_URL}/admin/staff`, { headers: getHeaders() }),
-      axios.get(`${API_URL}/admin/roles`, { headers: getHeaders() }),
-      axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() })
-    ]);
-    
-    const rawStaffs = resStaff.data.data;
-    staffs.value = rawStaffs.map(s => ({
-        ...s, localStatus: s.status, isStatusChanged: false, isUpdatingStatus: false
-    }));
+// ==========================================
+// TANSTACK VUE QUERY - FETCH DATA
+// ==========================================
 
-    roles.value = resRole.data.data;
-    
-    systemModules.value = resModules.data.data;
-    const currentCode = route.meta.moduleCode;
-    if (currentCode) {
-      const currentModule = systemModules.value.find(m => m.module_code === currentCode);
-      if (currentModule) currentPageLevel.value = currentModule.required_level;
-    }
-  } catch (err) { 
-    console.error("Lỗi khi fetch dữ liệu:", err); 
-  } finally { 
-    isLoading.value = false; 
-  }
+// Query lấy danh sách staff
+const { data: staffsResponse, isLoading: isStaffsLoading } = useQuery({
+  queryKey: ['adminStaffs'],
+  queryFn: async () => {
+    const response = await axios.get(`${API_URL}/admin/staff`, { headers: getHeaders() });
+    return response.data;
+  },
+  staleTime: 5 * 60 * 1000 // Cache dữ liệu trong 5 phút
+});
+
+// Query lấy danh sách roles
+const { data: rolesResponse } = useQuery({
+  queryKey: ['adminRoles'],
+  queryFn: async () => {
+    const response = await axios.get(`${API_URL}/admin/roles`, { headers: getHeaders() });
+    return response.data;
+  },
+  staleTime: 30 * 60 * 1000 // Roles ít thay đổi, cache 30 phút
+});
+
+// Query lấy danh sách modules
+const { data: modulesResponse } = useQuery({
+  queryKey: ['adminModules'],
+  queryFn: async () => {
+    const response = await axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() });
+    return response.data;
+  },
+  staleTime: 30 * 60 * 1000
+});
+
+// isLoading dùng cho giao diện Shimmer ở lần load ĐẦU TIÊN
+const isLoading = computed(() => isStaffsLoading.value);
+
+// Chuyển đổi dữ liệu thô sang reactive state tương thích cục bộ
+const localStaffs = ref([]);
+const roles = computed(() => rolesResponse.value?.data || []);
+
+const rawStaffsList = computed(() => staffsResponse.value?.data || []);
+
+// ĐỊNH NGHĨA HÀM KHỞI TẠO ĐỒNG BỘ TRƯỚC (ĐỂ ĐẢM BẢO KHÔNG BỊ TRUY CẬP TRƯỚC KHI KHỞI TẠO)
+const syncLocalStaffs = () => {
+  localStaffs.value = rawStaffsList.value.map(s => {
+    // Giữ lại trạng thái thay đổi cục bộ hiện tại nếu có
+    const existing = localStaffs.value.find(ls => ls.id === s.id);
+    return {
+      ...s,
+      localStatus: existing ? existing.localStatus : s.status,
+      isStatusChanged: existing ? existing.isStatusChanged : false
+    };
+  });
 };
+
+// SỬ DỤNG WATCH SAU KHI CÁC HÀM PHỤ TRỢ ĐÃ ĐƯỢC ĐỊNH NGHĨA AN TOÀN
+watch(rawStaffsList, (newList) => {
+  if (newList && newList.length > 0) {
+    syncLocalStaffs();
+  }
+}, { immediate: true });
+
+// Thiết lập quyền hạn cấp trang từ dữ liệu modules đã load
+computed(() => {
+  const modules = modulesResponse.value?.data || [];
+  const currentCode = route.meta.moduleCode;
+  if (currentCode && modules.length > 0) {
+    const currentModule = modules.find(m => m.module_code === currentCode);
+    if (currentModule) currentPageLevel.value = currentModule.required_level;
+  }
+  return modules;
+});
 
 const openQuickView = (staff) => {
   selectedStaff.value = staff;
@@ -397,16 +479,17 @@ const openQuickView = (staff) => {
 };
 
 const allTabs = computed(() => {
+  const list = localStaffs.value;
   const tabs = [
-    { id: 'all', name: 'Tất cả', count: staffs.value.filter(s => !s.deleted_at).length, icon: 'bi-people-fill' },
-    { id: 'locked', name: 'Bị khóa', count: staffs.value.filter(s => s.status === 'locked' && !s.deleted_at).length, icon: 'bi-lock-fill text-warning' }
+    { id: 'all', name: 'Tất cả', count: list.filter(s => !s.deleted_at).length, icon: 'bi-people-fill' },
+    { id: 'locked', name: 'Bị khóa', count: list.filter(s => s.status === 'locked' && !s.deleted_at).length, icon: 'bi-lock-fill text-warning' }
   ];
 
   roles.value.forEach(r => {
     tabs.push({
       id: `role_${r.id}`,
       name: r.label,
-      count: staffs.value.filter(s => s.role_id === r.id && !s.deleted_at).length,
+      count: list.filter(s => s.role_id === r.id && !s.deleted_at).length,
       icon: 'bi-person-badge text-primary'
     });
   });
@@ -414,7 +497,7 @@ const allTabs = computed(() => {
   tabs.push({ 
     id: 'deleted', 
     name: 'Thùng rác', 
-    count: staffs.value.filter(s => s.deleted_at).length, 
+    count: list.filter(s => s.deleted_at).length, 
     icon: 'bi-trash3-fill text-danger',
     isEnd: true 
   });
@@ -423,8 +506,17 @@ const allTabs = computed(() => {
 });
 
 const switchTab = (tabId) => {
+  if (activeTab.value === tabId) return;
+
+  // Bật Skeleton table
+  isTableLoading.value = true;
   activeTab.value = tabId;
   currentPage.value = 1; 
+
+  // Tạo độ trễ nhỏ để trải nghiệm giao diện mượt mà hơn khi chuyển tab
+  setTimeout(() => {
+    isTableLoading.value = false;
+  }, 350);
 };
 
 const getStatusSelectClass = (status) => {
@@ -438,9 +530,48 @@ const getStatusSelectClass = (status) => {
 const checkStatusChange = (staff) => { staff.isStatusChanged = (staff.localStatus !== staff.status); };
 const cancelStatusChange = (staff) => { staff.localStatus = staff.status; staff.isStatusChanged = false; };
 
-const saveStaffStatus = async (staff) => {
-  staff.isUpdatingStatus = true;
-  
+// ==========================================
+// TANSTACK VUE QUERY - MUTATIONS (THAY ĐỔI DỮ LIỆU)
+// ==========================================
+
+// 1. Cập nhật trạng thái
+const updateStatusMutation = useMutation({
+  mutationFn: async ({ id, payload }) => {
+    const response = await axios.post(`${API_URL}/admin/staff/${id}`, payload, { headers: getHeaders() });
+    return response.data;
+  },
+  onMutate: async ({ id, payload }) => {
+    isUpdatingStatusId.value = id;
+  },
+  onSuccess: (data, variables) => {
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
+    
+    // Đồng bộ nóng (optimistic updates) dữ liệu cache mà không cần reload
+    queryClient.setQueryData(['adminStaffs'], (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        data: old.data.map(s => s.id === variables.id ? { ...s, status: variables.payload.status } : s)
+      };
+    });
+
+    // Nếu sửa trạng thái của chính mình, đồng bộ luôn query thông tin profile cá nhân ở Header
+    if (variables.id === currentUserId) {
+      queryClient.invalidateQueries({ queryKey: ['adminProfile'] });
+    }
+  },
+  onError: (error, variables) => {
+    // Nếu lỗi, rollback giá trị cũ của nhân viên tương ứng
+    const staff = localStaffs.value.find(s => s.id === variables.id);
+    if (staff) cancelStatusChange(staff);
+    handleAxiosError(error, 'Không thể cập nhật trạng thái');
+  },
+  onSettled: () => {
+    isUpdatingStatusId.value = null;
+  }
+});
+
+const saveStaffStatus = (staff) => {
   const payload = {
       _method: 'PUT',
       fullname: staff.fullname,
@@ -450,22 +581,85 @@ const saveStaffStatus = async (staff) => {
       address: staff.address || '',
       status: staff.localStatus
   };
-
-  try {
-    await axios.post(`${API_URL}/admin/staff/${staff.id}`, payload, { headers: getHeaders() });
-    staff.status = staff.localStatus; 
-    staff.isStatusChanged = false;
-    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
-  } catch (error) { 
-    cancelStatusChange(staff); 
-    handleAxiosError(error, 'Không thể cập nhật trạng thái');
-  } finally { 
-    staff.isUpdatingStatus = false; 
-  }
+  updateStatusMutation.mutate({ id: staff.id, payload });
 };
 
+// 2. Xóa mềm nhân viên
+const deleteStaffMutation = useMutation({
+  mutationFn: async (id) => {
+    const response = await axios.delete(`${API_URL}/admin/staff/${id}`, { headers: getHeaders() });
+    return response.data;
+  },
+  onSuccess: (data, id) => {
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa', text: data.message, showConfirmButton: false, timer: 1500 });
+    
+    // Optimistic update: Chuyển dữ liệu của nhân sự này sang trạng thái deleted_at cục bộ
+    queryClient.setQueryData(['adminStaffs'], (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        data: old.data.map(s => s.id === id ? { ...s, deleted_at: new Date().toISOString() } : s)
+      };
+    });
+  },
+  onError: (err) => {
+    handleAxiosError(err, 'Không thể xóa nhân viên này');
+  }
+});
+
+const confirmDelete = (id, name) => {
+  Swal.fire({
+    title: 'Đưa vào thùng rác?', text: `Nhân viên "${name}" sẽ bị vô hiệu hóa và chuyển vào thùng rác!`, icon: 'warning',
+    showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Đồng ý xóa'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      deleteStaffMutation.mutate(id);
+    }
+  });
+};
+
+// 3. Khôi phục nhân viên
+const restoreStaffMutation = useMutation({
+  mutationFn: async (id) => {
+    const response = await axios.post(`${API_URL}/admin/staff/${id}/restore`, {}, { headers: getHeaders() });
+    return response.data;
+  },
+  onSuccess: (data, id) => {
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Thành công', text: data.message, showConfirmButton: false, timer: 1500 });
+    
+    // Optimistic update: Khôi phục trạng thái deleted_at về null ngay lập tức
+    queryClient.setQueryData(['adminStaffs'], (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        data: old.data.map(s => s.id === id ? { ...s, deleted_at: null } : s)
+      };
+    });
+  },
+  onError: (err) => {
+    handleAxiosError(err, 'Không thể khôi phục nhân viên');
+  }
+});
+
+const restoreStaff = (id) => {
+  Swal.fire({
+    title: 'Khôi phục tài khoản?',
+    text: "Tài khoản này sẽ hoạt động trở lại bình thường.",
+    icon: 'info',
+    showCancelButton: true, confirmButtonColor: '#009981', confirmButtonText: 'Khôi phục ngay'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      restoreStaffMutation.mutate(id);
+    }
+  });
+};
+
+// ==========================================
+// FILTERS & PAGINATION LOGIC
+// ==========================================
+
 const processedStaff = computed(() => {
-  let result = staffs.value;
+  let result = localStaffs.value;
 
   if (activeTab.value === 'deleted') {
     result = result.filter(s => s.deleted_at);
@@ -505,44 +699,6 @@ const paginatedStaff = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
   return processedStaff.value.slice(start, start + itemsPerPage);
 });
-
-const confirmDelete = (id, name) => {
-  Swal.fire({
-    title: 'Đưa vào thùng rác?', text: `Nhân viên "${name}" sẽ bị vô hiệu hóa và chuyển vào thùng rác!`, icon: 'warning',
-    showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Đồng ý xóa'
-  }).then(async (result) => {
-    if (result.isConfirmed) {
-      try {
-        const res = await axios.delete(`${API_URL}/admin/staff/${id}`, { headers: getHeaders() });
-        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa', text: res.data.message, showConfirmButton: false, timer: 1500 });
-        fetchData(); 
-      } catch (err) { 
-        handleAxiosError(err, 'Không thể xóa nhân viên này');
-      }
-    }
-  });
-};
-
-const restoreStaff = (id) => {
-  Swal.fire({
-    title: 'Khôi phục tài khoản?',
-    text: "Tài khoản này sẽ hoạt động trở lại bình thường.",
-    icon: 'info',
-    showCancelButton: true, confirmButtonColor: '#009981', confirmButtonText: 'Khôi phục ngay'
-  }).then(async (result) => {
-    if (result.isConfirmed) {
-      try {
-        const res = await axios.post(`${API_URL}/admin/staff/${id}/restore`, {}, { headers: getHeaders() });
-        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Thành công', text: res.data.message, showConfirmButton: false, timer: 1500 });
-        fetchData(); 
-      } catch (err) { 
-        handleAxiosError(err, 'Không thể khôi phục nhân viên');
-      }
-    }
-  });
-};
-
-onMounted(() => fetchData());
 </script>
 
 <style scoped>

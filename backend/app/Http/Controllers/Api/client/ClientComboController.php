@@ -14,7 +14,16 @@ class ClientComboController extends Controller
     {
         $yesterday = Carbon::now()->subDay();
 
-        $query = Combo::with(['items.product', 'items.variant'])
+        $query = Combo::select(
+                'id', 'name', 'slug', 'description', 'thumbnail_image', 
+                'target_gender', 'theme', 'discount_type', 'discount_value', 
+                'usage_limit', 'start_date', 'end_date', 'status'
+            )
+            ->with([
+                'items:id,combo_id,product_id,product_variant_id,quantity',
+                'items.product:id,name,base_price,thumbnail_image',
+                'items.variant:id,product_id,sku,price,promotional_price'
+            ])
             ->where('status', 'active')
             ->where(function($q) use ($yesterday) {
                 $q->whereNull('end_date')
@@ -39,19 +48,29 @@ class ClientComboController extends Controller
     {
         $now = Carbon::now();
 
+        // Tối ưu hóa: Chỉ select các cột cần thiết cho trang Detail.vue
         $combo = Combo::with([
+            'items:id,combo_id,product_id,product_variant_id,quantity',
             'items.product' => function($q) {
-                $q->with([
+                $q->select('id', 'category_id', 'brand_id', 'name', 'slug', 'base_price', 'thumbnail_image')
+                  ->with([
                     'category:id,name,slug',
                     'brand:id,name',
                     'variants' => function($vq) {
-                        $vq->where('stock_quantity', '>', 0)
-                           ->with(['attributeValues.attribute']);
+                        $vq->select('id', 'product_id', 'sku', 'price', 'promotional_price', 'stock_quantity', 'image_url')
+                           ->where('stock_quantity', '>', 0)
+                           ->with(['attributeValues.attribute:id,name']);
                     }
                 ]);
             },
             'items.variant' => function($vq) {
-                $vq->with(['attributeValues.attribute', 'product.category', 'product.brand']);
+                $vq->select('id', 'product_id', 'sku', 'price', 'promotional_price', 'stock_quantity', 'image_url')
+                   ->with([
+                    'attributeValues.attribute:id,name',
+                    'product:id,category_id,brand_id,name,base_price,thumbnail_image',
+                    'product.category:id,name', 
+                    'product.brand:id,name'
+                ]);
             }
         ])
         ->where('slug', $slug)
@@ -66,7 +85,8 @@ class ClientComboController extends Controller
             return $item->product_id;
         })->filter()->unique()->toArray();
 
-        $relatedProducts = Product::with(['category:id,name,slug'])
+        $relatedProducts = Product::select('id', 'name', 'slug', 'base_price', 'promotional_price', 'thumbnail_image', 'category_id')
+            ->with(['category:id,name,slug'])
             ->whereIn('category_id', $categoryIds)
             ->whereNotIn('id', $productIdsInCombo)
             ->where('status', 'published')

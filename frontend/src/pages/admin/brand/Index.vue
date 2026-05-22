@@ -1,7 +1,8 @@
 <template>
   <div class="brand-index-wrapper pb-5 mb-5">
     
-    <div v-if="isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
+    <!-- MÀN HÌNH CHỜ ĐỘC LẬP (SHIMMER) CHỈ CHẠY 1 LẦN ĐẦU TIÊN VÀO TRANG -->
+    <div v-if="isPageLoading" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
       <h1 class="logo-shimmer mb-3">ThinkHub</h1>
       <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ liệu thương hiệu...</p>
     </div>
@@ -23,30 +24,39 @@
         </div>
       </div>
 
+      <!-- TABS LỌC TRẠNG THÁI -->
       <div class="mb-4" :class="{'opacity-50 pe-none': isReorderMode}">
         <ul class="nav nav-underline border-bottom mb-2 flex-nowrap overflow-hidden custom-scrollbar-x pb-1">
           <li class="nav-item">
             <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#" :class="{ 'active-tab': activeTab === 'all' }" @click.prevent="switchTab('all')">
               <i class="bi bi-grid-fill me-2"></i> Tất cả
-              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'all'}">{{ brands.filter(b => !b.deleted_at).length }}</span>
+              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'all'}">
+                {{ localBrands.filter(b => !b.deleted_at).length }}
+              </span>
             </a>
           </li>
           <li class="nav-item">
             <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#" :class="{ 'active-tab': activeTab === 'active' }" @click.prevent="switchTab('active')">
               <i class="bi bi-check-circle-fill me-2 text-success"></i> Đang hiển thị
-              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'active'}">{{ brands.filter(b => b.status === 'active' && !b.deleted_at).length }}</span>
+              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'active'}">
+                {{ localBrands.filter(b => b.status === 'active' && !b.deleted_at).length }}
+              </span>
             </a>
           </li>
           <li class="nav-item">
             <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#" :class="{ 'active-tab': activeTab === 'hidden' }" @click.prevent="switchTab('hidden')">
               <i class="bi bi-eye-slash-fill me-2 text-warning"></i> Đang ẩn
-              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'hidden'}">{{ brands.filter(b => b.status === 'hidden' && !b.deleted_at).length }}</span>
+              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'hidden'}">
+                {{ localBrands.filter(b => b.status === 'hidden' && !b.deleted_at).length }}
+              </span>
             </a>
           </li>
           <li class="nav-item ms-auto">
             <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab text-danger" href="#" :class="{ 'active-tab': activeTab === 'deleted' }" @click.prevent="switchTab('deleted')">
               <i class="bi bi-trash3-fill me-2"></i> Đã xóa
-              <span class="badge ms-2 rounded-pill bg-danger text-white">{{ brands.filter(b => b.deleted_at).length }}</span>
+              <span class="badge ms-2 rounded-pill bg-danger text-white">
+                {{ localBrands.filter(b => b.deleted_at).length }}
+              </span>
             </a>
           </li>
         </ul>
@@ -95,88 +105,118 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-if="isTableLoading">
-                  <td :colspan="isReorderMode ? 5 : 6" class="text-center py-5 text-muted">
-                    <div class="spinner-border spinner-border-sm text-brand mb-2" role="status"></div>
-                    <div class="small fw-semibold">Đang cập nhật...</div>
-                  </td>
-                </tr>
-                <tr v-else-if="displayBrands.length === 0">
-                  <td :colspan="isReorderMode ? 5 : 6" class="text-center py-5 text-muted">
-                    <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>Không có dữ liệu.
-                  </td>
-                </tr>
-                
-                <tr v-else v-for="(brand, index) in displayBrands" :key="brand.id" 
-                    :class="{'bg-light opacity-75': brand.deleted_at || brand.status === 'hidden', 'drag-item': isReorderMode, 'dragging': draggedIndex === index, 'drag-over': dragOverIndex === index}"
-                    :draggable="isReorderMode"
-                    @dragstart="onDragStart(index, $event)"
-                    @dragover.prevent="onDragOver(index, $event)"
-                    @dragenter.prevent="onDragEnter(index)"
-                    @dragleave="onDragLeave(index)"
-                    @drop="onDrop(index)"
-                    @dragend="onDragEnd">
-                  
-                  <td v-if="isReorderMode" class="px-4 text-muted cursor-move text-center">
-                    <i class="bi bi-grip-vertical fs-5 text-warning"></i>
-                  </td>
-
-                  <td class="px-4 fw-bold text-center" :class="isReorderMode ? 'text-warning' : 'text-muted'">
-                    {{ isReorderMode ? index + 1 : (brand.sort_order ? brand.sort_order : '-') }}
-                  </td>
-
-                  <td class="px-4 py-3">
-                    <div class="d-flex align-items-center">
-                      <div class="position-relative d-inline-block me-3 shadow-sm border rounded-3 overflow-hidden bg-white flex-shrink-0" style="width: 55px; height: 55px; padding: 4px;">
-                        <img :src="getImageUrl(brand.logo)" class="w-100 h-100 object-fit-contain pe-none" alt="Logo" @error="handleImageError">
+                <!-- HIỆU ỨNG SKELETON KHI CHUYỂN TABS HOẶC LOADING NHẸ -->
+                <template v-if="isTableLoading">
+                  <tr v-for="i in 5" :key="'skeleton-'+i">
+                    <td v-if="isReorderMode" style="width: 50px;"></td>
+                    <td class="text-center placeholder-glow"><span class="placeholder col-4 rounded py-2"></span></td>
+                    <td class="px-4 py-3">
+                      <div class="d-flex align-items-center">
+                        <div class="placeholder-glow flex-shrink-0 me-3">
+                          <div class="placeholder rounded-3" style="width: 55px; height: 55px;"></div>
+                        </div>
+                        <div class="overflow-hidden w-100 placeholder-glow">
+                          <span class="placeholder col-6 mb-1 rounded"></span>
+                          <span class="placeholder col-4 d-block rounded"></span>
+                        </div>
                       </div>
-                      <div class="overflow-hidden">
-                        <div class="fw-bold text-dark fs-6 mb-1 text-truncate" :title="brand.name">{{ brand.name }}</div>
-                        <div class="text-muted small font-monospace"><i class="bi bi-link-45deg"></i> {{ brand.slug }}</div>
-                      </div>
-                    </div>
-                  </td>
+                    </td>
+                    <td class="text-center placeholder-glow"><span class="placeholder col-6 rounded py-2"></span></td>
+                    <td class="text-center placeholder-glow"><span class="placeholder col-8 rounded py-2"></span></td>
+                    <td class="text-center placeholder-glow" v-if="!isReorderMode"><span class="placeholder col-8 rounded py-2"></span></td>
+                  </tr>
+                </template>
+
+                <!-- HIỂN THỊ DỮ LIỆU THẬT -->
+                <template v-else>
+                  <tr v-if="displayBrands.length === 0">
+                    <td :colspan="isReorderMode ? 5 : 6" class="text-center py-5 text-muted">
+                      <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>Không có dữ liệu.
+                    </td>
+                  </tr>
                   
-                  <td class="px-4 text-center">
-                    <div class="badge bg-light text-dark border px-3 py-2 rounded-pill shadow-sm">
-                        <i class="bi bi-box-seam text-brand me-1"></i> {{ brand.products_count || 0 }} SP
-                    </div>
-                  </td>
+                  <tr v-else v-for="(brand, index) in displayBrands" :key="brand.id" 
+                      :class="{'bg-light opacity-75': brand.deleted_at || brand.status === 'hidden', 'drag-item': isReorderMode, 'dragging': draggedIndex === index, 'drag-over': dragOverIndex === index}"
+                      :draggable="isReorderMode"
+                      @dragstart="onDragStart(index, $event)"
+                      @dragover.prevent="onDragOver(index, $event)"
+                      @dragenter.prevent="onDragEnter(index)"
+                      @dragleave="onDragLeave(index)"
+                      @drop="onDrop(index)"
+                      @dragend="onDragEnd">
+                    
+                    <td v-if="isReorderMode" class="px-4 text-muted cursor-move text-center">
+                      <i class="bi bi-grip-vertical fs-5 text-warning"></i>
+                    </td>
 
-                  <td class="px-4 text-center">
-                    <span v-if="brand.deleted_at" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary"><i class="bi bi-trash3-fill"></i> Đã xóa</span>
-                    <div v-else class="d-flex align-items-center justify-content-center gap-1">
-                      <select class="form-select form-select-sm border shadow-sm fw-semibold" 
-                              style="width: 120px; font-size: 0.8rem;"
-                              :class="getStatusSelectClass(brand.localStatus || brand.status)"
-                              v-model="brand.localStatus"
-                              @change="checkStatusChange(brand)"
-                              :disabled="brand.isUpdatingStatus || isReorderMode">
-                        <option value="active">Đang hoạt động</option>
-                        <option value="hidden">Đang ẩn</option>
-                      </select>
-                      
-                      <button v-if="brand.isStatusChanged && !brand.isUpdatingStatus" @click="saveBrandStatus(brand)" class="btn btn-sm btn-success rounded-circle shadow-sm px-2 py-1" title="Lưu">
-                        <i class="bi bi-check-lg fw-bold"></i>
-                      </button>
-                      <button v-if="brand.isStatusChanged && !brand.isUpdatingStatus" @click="cancelStatusChange(brand)" class="btn btn-sm btn-light rounded-circle shadow-sm px-2 py-1 text-danger border" title="Hủy">
-                        <i class="bi bi-x-lg fw-bold"></i>
-                      </button>
-                      <span v-if="brand.isUpdatingStatus" class="spinner-border spinner-border-sm text-brand ms-1"></span>
-                    </div>
-                  </td>
+                    <td class="px-4 fw-bold text-center" :class="isReorderMode ? 'text-warning' : 'text-muted'">
+                      {{ isReorderMode ? index + 1 : (brand.sort_order ? brand.sort_order : '-') }}
+                    </td>
 
-                  <td class="px-4 text-center" v-if="!isReorderMode">
-                    <button class="btn btn-sm btn-light text-info me-2 shadow-sm border" @click="openQuickView(brand)" title="Xem nhanh"><i class="bi bi-eye"></i></button>
-                    <template v-if="!brand.deleted_at">
-                      <router-link :to="{ name: 'admin-brands-edit', params: {id: brand.id} }" class="btn btn-sm btn-light text-primary me-2 shadow-sm border" title="Sửa"><i class="bi bi-pencil-square"></i></router-link>
-                      <button class="btn btn-sm btn-light text-danger shadow-sm border" @click="confirmDelete(brand.id, brand.name)" title="Xóa"><i class="bi bi-trash"></i></button>
-                    </template>
-                    <template v-else>
-                      <button class="btn btn-sm btn-light text-success shadow-sm border" @click="restoreBrand(brand.id)" title="Khôi phục"><i class="bi bi-arrow-counterclockwise"></i> Khôi phục</button>
-                    </template>
-                  </td>
-                </tr>
+                    <td class="px-4 py-3">
+                      <div class="d-flex align-items-center">
+                        <!-- ÁP DỤNG COMPONENT SORAIMAGE VÀO THƯƠNG HIỆU -->
+                        <div class="position-relative d-inline-block me-3 shadow-sm border rounded-3 overflow-hidden bg-white flex-shrink-0" style="width: 55px; height: 55px; padding: 4px;">
+                          <SoraImage 
+                            :src="brand.logo" 
+                            :placeholder="defaultImage" 
+                            imgClass="w-100 h-100 object-fit-contain pe-none" 
+                            alt="Logo"
+                          />
+                        </div>
+                        <div class="overflow-hidden">
+                          <div class="fw-bold text-dark fs-6 mb-1 text-truncate" :title="brand.name">{{ brand.name }}</div>
+                          <div class="text-muted small font-monospace"><i class="bi bi-link-45deg"></i> {{ brand.slug }}</div>
+                        </div>
+                      </div>
+                    </td>
+                    
+                    <td class="px-4 text-center">
+                      <div class="badge bg-light text-dark border px-3 py-2 rounded-pill shadow-sm">
+                          <i class="bi bi-box-seam text-brand me-1"></i> {{ brand.products_count || 0 }} SP
+                      </div>
+                    </td>
+
+                    <td class="px-4 text-center">
+                      <span v-if="brand.deleted_at" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary"><i class="bi bi-trash3-fill"></i> Đã xóa</span>
+                      <div v-else class="d-flex align-items-center justify-content-center gap-1">
+                        <!-- SỬA TRẠNG THÁI NHANH (OPTIMISTIC UPDATE) -->
+                        <select class="form-select form-select-sm border shadow-sm fw-semibold" 
+                                style="width: 120px; font-size: 0.8rem;"
+                                :class="getStatusSelectClass(brand.localStatus || brand.status)"
+                                v-model="brand.localStatus"
+                                @change="checkStatusChange(brand)"
+                                :disabled="isUpdatingStatusId === brand.id || isReorderMode">
+                          <option value="active">Đang hoạt động</option>
+                          <option value="hidden">Đang ẩn</option>
+                        </select>
+                        
+                        <div class="d-flex align-items-center justify-content-start flex-shrink-0" style="min-width: 55px; height: 28px;">
+                          <span v-if="isUpdatingStatusId === brand.id" class="spinner-border spinner-border-sm text-brand ms-1"></span>
+                          <template v-else-if="brand.isStatusChanged">
+                            <button @click="saveBrandStatus(brand)" class="btn btn-sm btn-success rounded-circle shadow-sm px-2 py-1 ms-1" title="Lưu">
+                              <i class="bi bi-check-lg fw-bold"></i>
+                            </button>
+                            <button @click="cancelStatusChange(brand)" class="btn btn-sm btn-light rounded-circle shadow-sm px-2 py-1 text-danger border ms-1" title="Hủy">
+                              <i class="bi bi-x-lg fw-bold"></i>
+                            </button>
+                          </template>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td class="px-4 text-center" v-if="!isReorderMode">
+                      <button class="btn btn-sm btn-light text-info me-2 shadow-sm border" @click="openQuickView(brand)" title="Xem nhanh"><i class="bi bi-eye"></i></button>
+                      <template v-if="!brand.deleted_at">
+                        <router-link :to="{ name: 'admin-brands-edit', params: {id: brand.id} }" class="btn btn-sm btn-light text-primary me-2 shadow-sm border" title="Sửa"><i class="bi bi-pencil-square"></i></router-link>
+                        <button class="btn btn-sm btn-light text-danger shadow-sm border" @click="confirmDelete(brand.id, brand.name)" title="Xóa"><i class="bi bi-trash"></i></button>
+                      </template>
+                      <template v-else>
+                        <button class="btn btn-sm btn-light text-success shadow-sm border" @click="restoreBrand(brand.id)" title="Khôi phục"><i class="bi bi-arrow-counterclockwise"></i> Khôi phục</button>
+                      </template>
+                    </td>
+                  </tr>
+                </template>
               </tbody>
             </table>
           </div>
@@ -195,6 +235,7 @@
       </div>
     </div>
 
+    <!-- QUICK VIEW MODAL -->
     <div class="modal fade" id="quickViewBrandModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
@@ -204,7 +245,13 @@
           </div>
           <div class="modal-body p-4 text-center" v-if="selectedBrand">
             <div class="mb-4 position-relative mx-auto bg-white border shadow-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 120px; height: 120px; padding: 15px;">
-              <img :src="getImageUrl(selectedBrand.logo)" class="img-fluid object-fit-contain" style="max-height: 100%; max-width: 100%;" @error="handleImageError">
+              <SoraImage 
+                :src="selectedBrand.logo" 
+                :placeholder="defaultImage" 
+                imgClass="img-fluid object-fit-contain" 
+                style="max-height: 100%; max-width: 100%;" 
+                alt="Logo"
+              />
             </div>
             <h4 class="fw-bold text-dark mb-1">{{ selectedBrand.name }}</h4>
             <p class="text-muted font-monospace small mb-3">/{{ selectedBrand.slug }}</p>
@@ -233,26 +280,27 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
+import { ref, onMounted, computed, onBeforeUnmount, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 import { getFullImage } from '@/composables/useUtilities';
-import defaultImage from '../../../assets/images/defaults/placeholder.png';
+
+import SoraImage from '@/components/ui/SoraImage.vue';
+import defaultImage from '@/assets/images/defaults/placeholder.png';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const route = useRoute();
-const brands = ref([]);
-
-const isFirstLoad = ref(true);
-const isTableLoading = ref(false);
+const queryClient = useQueryClient();
 
 const searchQuery = ref('');
 const activeTab = ref('all');
 const currentPageLevel = ref(null);
+const isUpdatingStatusId = ref(null); 
+const isTableLoading = ref(false); 
 
 const currentPage = ref(1);
 const itemsPerPage = 8; 
@@ -273,8 +321,6 @@ onBeforeUnmount(() => {
 });
 
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
-const getImageUrl = (path) => path ? getFullImage(path) : defaultImage;
-const handleImageError = (e) => { e.target.src = defaultImage; };
 
 const getLevelColor = (level) => {
   if(!level) return 'bg-secondary';
@@ -289,29 +335,79 @@ const getLevelColor = (level) => {
   }
 };
 
-const fetchData = async () => {
-  if (!isFirstLoad.value) isTableLoading.value = true;
-  try {
-    const [resBrands, resModules] = await Promise.all([
-      axios.get(`${API_URL}/admin/brands`, { headers: getHeaders() }),
-      axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() })
-    ]);
-    
-    const rawBrands = Array.isArray(resBrands.data.data) ? resBrands.data.data : [];
-    brands.value = rawBrands.map(b => ({ 
-      ...b, localStatus: b.status, isStatusChanged: false, isUpdatingStatus: false 
-    }));
-
-    const systemModules = resModules.data.data;
-    const currentModule = systemModules.find(m => m.module_code === (route.meta.moduleCode || 'admin_brands'));
-    if (currentModule) currentPageLevel.value = currentModule.required_level;
-  } catch (err) {
-    console.error(err);
-  } finally { 
-    isFirstLoad.value = false;
-    isTableLoading.value = false;
+const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
+  if (e.response) {
+    if (e.response.status === 401) {
+      Swal.fire('Lỗi xác thực', 'Phiên đăng nhập đã hết hạn!', 'error');
+    } else if (e.response.data && e.response.data.errors) {
+      let errorHtml = '<ul class="text-start text-danger small mt-2" style="max-height: 200px; overflow-y: auto; padding-left: 20px;">';
+      Object.values(e.response.data.errors).flat().forEach(msg => {
+          errorHtml += `<li class="mb-1">${msg}</li>`;
+      });
+      errorHtml += '</ul>';
+      Swal.fire({ title: 'Dữ liệu không hợp lệ', html: errorHtml, icon: 'error', confirmButtonColor: '#dc3545' });
+    } else {
+      Swal.fire('Lỗi', e.response.data.message || defaultMsg, 'error');
+    }
+  } else {
+    Swal.fire('Lỗi', 'Mất kết nối Server', 'error');
   }
 };
+
+// ==========================================
+// TANSTACK VUE QUERY - FETCH DATA
+// ==========================================
+const { data: brandsResponse, isLoading: isBrandsLoading } = useQuery({
+  queryKey: ['adminBrands'],
+  queryFn: async () => {
+    const response = await axios.get(`${API_URL}/admin/brands`, { headers: getHeaders() });
+    return response.data;
+  },
+  staleTime: 5 * 60 * 1000 // Cache dữ liệu thương hiệu trong 5 phút
+});
+
+const { data: modulesResponse } = useQuery({
+  queryKey: ['adminModules'],
+  queryFn: async () => {
+    const response = await axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() });
+    return response.data;
+  },
+  staleTime: 30 * 60 * 1000
+});
+
+const isPageLoading = computed(() => isBrandsLoading.value);
+
+const localBrands = ref([]);
+const rawBrandsList = computed(() => brandsResponse.value?.data || []);
+
+// Hàm định nghĩa trước watch để đồng bộ
+const syncLocalBrands = () => {
+  localBrands.value = rawBrandsList.value.map(b => {
+    const existing = localBrands.value.find(lb => lb.id === b.id);
+    return {
+      ...b,
+      localStatus: existing ? existing.localStatus : b.status,
+      isStatusChanged: existing ? existing.isStatusChanged : false
+    };
+  });
+};
+
+watch(rawBrandsList, (newList) => {
+  if (newList && newList.length > 0) {
+    syncLocalBrands();
+  }
+}, { immediate: true });
+
+// Thiết lập quyền hạn cấp trang
+computed(() => {
+  const modules = modulesResponse.value?.data || [];
+  const currentCode = route.meta.moduleCode || 'admin_brands';
+  if (currentCode && modules.length > 0) {
+    const currentModule = modules.find(m => m.module_code === currentCode);
+    if (currentModule) currentPageLevel.value = currentModule.required_level;
+  }
+  return modules;
+});
 
 const toggleReorderMode = () => {
   if (activeTab.value !== 'active') {
@@ -362,40 +458,41 @@ const onDragEnd = (event) => {
   dragOverIndex.value = null;
 };
 
-const saveReorder = async () => {
-  isSavingOrder.value = true;
+// MUTATION SẮP XẾP THỨ TỰ (REORDER)
+const reorderBrandsMutation = useMutation({
+  mutationFn: async (payload) => {
+    const response = await axios.post(`${API_URL}/admin/brands/reorder`, { items: payload }, { headers: getHeaders() });
+    return response.data;
+  },
+  onMutate: () => { isSavingOrder.value = true; },
+  onSuccess: (data) => {
+    Swal.fire({ icon: 'success', title: 'Đã lưu thứ tự!', timer: 1500, showConfirmButton: false });
+    isReorderMode.value = false;
+    queryClient.invalidateQueries({ queryKey: ['adminBrands'] });
+  },
+  onError: (err) => handleAxiosError(err, 'Không thể cập nhật thứ tự'),
+  onSettled: () => { isSavingOrder.value = false; }
+});
+
+const saveReorder = () => {
   const payload = reorderList.value.map((brand, index) => ({
     id: brand.id,
     sort_order: index + 1
   }));
-
-  try {
-    await axios.post(`${API_URL}/admin/brands/reorder`, { items: payload }, { headers: getHeaders() });
-    Swal.fire({icon: 'success', title: 'Đã lưu thứ tự!', timer: 1500, showConfirmButton: false});
-    isReorderMode.value = false;
-    await fetchData(); 
-  } catch (err) {
-    if (err.response && err.response.data && err.response.data.errors) {
-        let errorHtml = '<ul class="text-start text-danger small mt-2" style="padding-left: 20px;">';
-        Object.values(err.response.data.errors).flat().forEach(msg => { errorHtml += `<li class="mb-1">${msg}</li>`; });
-        errorHtml += '</ul>';
-        Swal.fire({ title: 'Lỗi Dữ liệu', html: errorHtml, icon: 'error' });
-    } else {
-        Swal.fire('Lỗi', 'Không thể cập nhật thứ tự', 'error');
-    }
-  } finally {
-    isSavingOrder.value = false;
-  }
+  reorderBrandsMutation.mutate(payload);
 };
 
 const switchTab = (tabId) => { 
-    activeTab.value = tabId; 
-    currentPage.value = 1; 
-    isReorderMode.value = false;
+  if (activeTab.value === tabId) return;
+  isTableLoading.value = true;
+  activeTab.value = tabId; 
+  currentPage.value = 1; 
+  isReorderMode.value = false;
+  setTimeout(() => isTableLoading.value = false, 350);
 };
 
 const processedBrands = computed(() => {
-  let result = brands.value;
+  let result = localBrands.value;
   if (activeTab.value === 'deleted') { result = result.filter(r => r.deleted_at); } 
   else {
     result = result.filter(r => !r.deleted_at);
@@ -424,7 +521,7 @@ const getStatusSelectClass = (status) => {
 
 useAdminRefreshListener((payload) => {
   if (payload.module === 'brands') {
-    fetchData(true);
+    queryClient.invalidateQueries({ queryKey: ['adminBrands'] });
     Swal.fire({ toast: true, position: 'bottom-end', icon: 'info', title: 'Thương hiệu đã được cập nhật', showConfirmButton: false, timer: 2000 });
   }
 });
@@ -432,41 +529,40 @@ useAdminRefreshListener((payload) => {
 const checkStatusChange = (brand) => { brand.isStatusChanged = (brand.localStatus !== brand.status); };
 const cancelStatusChange = (brand) => { brand.localStatus = brand.status; brand.isStatusChanged = false; };
 
-const saveBrandStatus = async (brand) => {
-  brand.isUpdatingStatus = true;
+// MUTATION CẬP NHẬT TRẠNG THÁI NHANH (STATUS OPTIMISTIC UPDATE)
+const updateStatusMutation = useMutation({
+  mutationFn: async ({ id, formData }) => {
+    const response = await axios.post(`${API_URL}/admin/brands/${id}`, formData, { headers: getHeaders() });
+    return response.data;
+  },
+  onMutate: ({ id }) => { isUpdatingStatusId.value = id; },
+  onSuccess: (data, variables) => {
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
+    queryClient.setQueryData(['adminBrands'], (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        data: old.data.map(b => b.id === variables.id ? { ...b, status: variables.status } : b)
+      };
+    });
+    queryClient.invalidateQueries({ queryKey: ['adminBrands'] });
+  },
+  onError: (error, variables) => {
+    const brand = localBrands.value.find(b => b.id === variables.id);
+    if (brand) cancelStatusChange(brand);
+    handleAxiosError(error, 'Không thể cập nhật trạng thái');
+  },
+  onSettled: () => { isUpdatingStatusId.value = null; }
+});
+
+const saveBrandStatus = (brand) => {
   const formData = new FormData();
   formData.append('_method', 'PUT'); 
   formData.append('name', brand.name);
   formData.append('slug', brand.slug);
   formData.append('status', brand.localStatus); 
 
-  try {
-    await axios.post(`${API_URL}/admin/brands/${brand.id}`, formData, { headers: getHeaders() });
-    brand.status = brand.localStatus; 
-    brand.isStatusChanged = false;
-    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
-    fetchData(); 
-  } catch (error) { 
-    cancelStatusChange(brand); 
-    if (error.response) {
-        if (error.response.status === 401) {
-            Swal.fire('Lỗi xác thực', 'Phiên đăng nhập đã hết hạn!', 'error');
-        } else if (error.response.data && error.response.data.errors) {
-            let errorHtml = '<ul class="text-start text-danger small mt-2" style="max-height: 200px; overflow-y: auto; padding-left: 20px;">';
-            Object.values(error.response.data.errors).flat().forEach(msg => {
-                errorHtml += `<li class="mb-1">${msg}</li>`;
-            });
-            errorHtml += '</ul>';
-            Swal.fire({ title: 'Dữ liệu không hợp lệ', html: errorHtml, icon: 'error', confirmButtonColor: '#dc3545' });
-        } else {
-            Swal.fire('Lỗi', error.response.data.message || 'Không thể cập nhật trạng thái', 'error');
-        }
-    } else {
-        Swal.fire('Lỗi', 'Mất kết nối Server', 'error');
-    }
-  } finally { 
-    brand.isUpdatingStatus = false; 
-  }
+  updateStatusMutation.mutate({ id: brand.id, status: brand.localStatus, formData });
 };
 
 const openQuickView = (brand) => {
@@ -476,47 +572,59 @@ const openQuickView = (brand) => {
 };
 const closeQuickView = () => { if(quickViewModalInstance) quickViewModalInstance.hide(); };
 
+// MUTATION XÓA MỀM
+const deleteBrandMutation = useMutation({
+  mutationFn: async (id) => {
+    const response = await axios.delete(`${API_URL}/admin/brands/${id}`, { headers: getHeaders() });
+    return response.data;
+  },
+  onMutate: () => { isTableLoading.value = true; },
+  onSuccess: (data, id) => {
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã đưa vào thùng rác', showConfirmButton: false, timer: 1500 });
+    queryClient.setQueryData(['adminBrands'], (old) => {
+      if (!old) return old;
+      return { ...old, data: old.data.map(b => b.id === id ? { ...b, deleted_at: new Date().toISOString() } : b) };
+    });
+    queryClient.invalidateQueries({ queryKey: ['adminBrands'] });
+  },
+  onError: (err) => handleAxiosError(err, 'Không thể xóa thương hiệu'),
+  onSettled: () => { isTableLoading.value = false; }
+});
+
 const confirmDelete = (id, name) => {
-  Swal.fire({ title: 'Xóa Thương hiệu?', text: `Thương hiệu "${name}" sẽ bị đưa vào thùng rác!`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Đồng ý' }).then(async (result) => {
+  Swal.fire({ title: 'Xóa Thương hiệu?', text: `Thương hiệu "${name}" sẽ bị đưa vào thùng rác!`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Đồng ý' }).then((result) => {
     if (result.isConfirmed) {
-      isTableLoading.value = true;
-      try {
-        await axios.delete(`${API_URL}/admin/brands/${id}`, { headers: getHeaders() });
-        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã đưa vào thùng rác', showConfirmButton: false, timer: 1500 });
-        fetchData(); 
-      } catch(e) {
-        isTableLoading.value = false;
-        if (e.response && e.response.data && e.response.data.message) {
-            Swal.fire('Lỗi', e.response.data.message, 'error');
-        } else {
-            Swal.fire('Lỗi', 'Không thể xóa', 'error');
-        }
-      }
+      deleteBrandMutation.mutate(id);
     }
   });
 };
+
+// MUTATION KHÔI PHỤC
+const restoreBrandMutation = useMutation({
+  mutationFn: async (id) => {
+    const response = await axios.post(`${API_URL}/admin/brands/${id}/restore`, {}, { headers: getHeaders() });
+    return response.data;
+  },
+  onMutate: () => { isTableLoading.value = true; },
+  onSuccess: (data, id) => {
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã khôi phục thành công', showConfirmButton: false, timer: 1500 });
+    queryClient.setQueryData(['adminBrands'], (old) => {
+      if (!old) return old;
+      return { ...old, data: old.data.map(b => b.id === id ? { ...b, deleted_at: null } : b) };
+    });
+    queryClient.invalidateQueries({ queryKey: ['adminBrands'] });
+  },
+  onError: (err) => handleAxiosError(err, 'Không thể khôi phục thương hiệu'),
+  onSettled: () => { isTableLoading.value = false; }
+});
 
 const restoreBrand = (id) => {
-  Swal.fire({ title: 'Khôi phục?', text: "Khôi phục thương hiệu này?", icon: 'info', showCancelButton: true, confirmButtonColor: '#009981', confirmButtonText: 'Đồng ý' }).then(async (result) => {
+  Swal.fire({ title: 'Khôi phục?', text: "Khôi phục thương hiệu này?", icon: 'info', showCancelButton: true, confirmButtonColor: '#009981', confirmButtonText: 'Đồng ý' }).then((result) => {
     if (result.isConfirmed) {
-      isTableLoading.value = true;
-      try {
-        await axios.post(`${API_URL}/admin/brands/${id}/restore`, {}, { headers: getHeaders() });
-        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã khôi phục thành công', showConfirmButton: false, timer: 1500 });
-        fetchData(); 
-      } catch(e) {
-        isTableLoading.value = false;
-        if (e.response && e.response.data && e.response.data.message) {
-            Swal.fire('Lỗi', e.response.data.message, 'error');
-        } else {
-            Swal.fire('Lỗi', 'Không thể khôi phục', 'error');
-        }
-      }
+      restoreBrandMutation.mutate(id);
     }
   });
 };
-
-onMounted(() => fetchData());
 </script>
 
 <style scoped>

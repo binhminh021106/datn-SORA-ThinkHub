@@ -485,7 +485,8 @@ const handleCartUpdateEvent = (e) => {
 watch(
   () => route.fullPath,
   () => {
-    fetchHeaderData();
+    // FIX: Tắt gọi fetchHeaderData() ở đây để tránh gọi API liên tục mỗi khi đổi route, gây giật lag
+    // fetchHeaderData();
   }
 );
 

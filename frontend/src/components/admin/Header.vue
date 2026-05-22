@@ -20,14 +20,29 @@
         <li v-if="isLoggedIn" class="nav-item dropdown user-menu-container" ref="userMenuContainer">
           <a href="#" @click.prevent="toggleUserMenu" class="nav-link d-flex align-items-center dropdown-toggle text-decoration-none"
              :class="isDarkMode ? 'text-light' : 'text-dark'">
-            <img :src="adminUser.avatar" class="user-image rounded-circle shadow-sm me-2" alt="User Image">
+            <!-- Sử dụng SoraImage thay cho thẻ img thường để tự động xử lý ảnh lỗi và fallback về defaultAvatar -->
+            <SoraImage 
+              :src="adminUser.avatar" 
+              :placeholder="defaultAvatar"
+              imgClass="user-image rounded-circle shadow-sm me-2" 
+              alt="User Image" 
+            />
             <span class="d-none d-md-inline fw-semibold text-truncate" style="max-width: 150px;">{{ adminUser.name }}</span>
           </a>
           
           <ul class="dropdown-menu dropdown-menu-end shadow border mt-2 transition-all" 
               :class="[{ 'show': isUserMenuActive }, isDarkMode ? 'bg-dark border-secondary' : 'bg-white border-0']">
             <li class="user-header-modern text-white text-center p-3 rounded-top">
-              <img :src="adminUser.avatar" class="rounded-circle shadow mb-2" style="width: 60px; height: 60px; object-fit: cover;" alt="User Image">
+              <!-- Áp dụng SoraImage cho ảnh trong dropdown menu -->
+              <div class="d-flex justify-content-center mb-2">
+                <SoraImage 
+                  :src="adminUser.avatar" 
+                  :placeholder="defaultAvatar"
+                  imgClass="rounded-circle shadow" 
+                  style="width: 60px; height: 60px; object-fit: cover;" 
+                  alt="User Image" 
+                />
+              </div>
               <p class="mb-0 fw-bold">{{ adminUser.name }}</p>
               <small class="text-light opacity-75">{{ adminUser.roleName }}</small>
             </li>
@@ -46,7 +61,7 @@
           </ul>
         </li>
 
-        <!-- Trường hợp 2: Chưa đăng nhập - Hiển thị nút Đăng nhập -->
+        <!-- Trường hợp 2: Chưa đăng nhập - Hiển thị Nút Đăng nhập -->
         <li v-else class="nav-item">
           <router-link :to="{ name: 'admin-login' }" class="btn btn-brand-outline px-3 py-1 fw-bold">
             <i class="bi bi-box-arrow-in-right me-1"></i> Đăng nhập
@@ -62,8 +77,12 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import { getFullImage } from '@/composables/useUtilities';
+import axios from 'axios';
+import { useQuery } from '@tanstack/vue-query';
 
-import defaultAvatar from '../../assets/images/defaults/avatar1.png';
+// Import component SoraImage phục vụ việc tự động fallback ảnh lỗi
+import SoraImage from '@/components/ui/SoraImage.vue';
+import defaultAvatar from '@/assets/images/defaults/avatar1.png';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -106,16 +125,43 @@ const isLoggedIn = computed(() => {
   return !!localStorage.getItem('admin_token');
 });
 
-const getAdminData = () => {
-  const savedInfo = localStorage.getItem('admin_info');
+// Hàm gọi API lấy thông tin profile admin bằng Axios
+const fetchAdminProfile = async () => {
+  const token = localStorage.getItem('admin_token');
+  if (!token) throw new Error('Không tìm thấy token xác thực');
+  
+  // Lưu ý: Đảm bảo endpoint '/api/admin/profile' trùng khớp với API backend của bạn
+  const response = await axios.get(`${API_URL}/api/admin/profile`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+  return response.data;
+};
+
+// Áp dụng TanStack Query để tự động fetch và cache dữ liệu
+const { data: adminProfileData } = useQuery({
+  queryKey: ['adminProfile'],
+  queryFn: fetchAdminProfile,
+  enabled: isLoggedIn, // Chỉ kích hoạt gọi API khi đã đăng nhập
+  staleTime: 5 * 60 * 1000, // Caching dữ liệu trong 5 phút
+  initialData: () => {
+    // Tận dụng localStorage làm dữ liệu khởi tạo để UI hiển thị ngay lập tức (không bị giật)
+    const savedInfo = localStorage.getItem('admin_info');
+    return savedInfo ? JSON.parse(savedInfo) : undefined;
+  }
+});
+
+// Tính toán lại adminUser dựa trên data trả về từ Vue Query thay vì ref() tĩnh
+const adminUser = computed(() => {
+  const data = adminProfileData.value;
   const roleId = localStorage.getItem('admin_role');
   
-  if (savedInfo) {
-    const admin = JSON.parse(savedInfo);
+  if (data) {
     return {
-      name: admin.fullname || 'Quản trị viên',
-      roleName: roleId == 1 ? 'Super Admin' : 'Nhân viên',
-      avatar: admin.avatar_url ? getFullImage(admin.avatar_url) : defaultAvatar
+      name: data.fullname || data.name || 'Quản trị viên',
+      roleName: (data.role_id == 1 || roleId == 1) ? 'Super Admin' : 'Nhân viên',
+      avatar: data.avatar_url ? getFullImage(data.avatar_url) : defaultAvatar
     };
   }
   
@@ -124,9 +170,7 @@ const getAdminData = () => {
     roleName: 'Chưa xác định',
     avatar: defaultAvatar
   };
-};
-
-const adminUser = ref(getAdminData());
+});
 
 const toggleUserMenu = () => {
   isUserMenuActive.value = !isUserMenuActive.value;

@@ -25,10 +25,10 @@ export const getHeaders = () => {
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-if (!API_BASE_URL) {
-  throw new Error('VITE_API_BASE_URL is not defined in environment variables');
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || API_BASE_URL?.replace(/\/api\/?$/, '');
+if (!API_BASE_URL && !BACKEND_URL) {
+  throw new Error('VITE_API_BASE_URL or VITE_BACKEND_URL must be defined in environment variables');
 }
-const BACKEND_URL = API_BASE_URL.replace(/\/api\/?$/, '');
 const soraPlaceholder = '/Sora-placeholder.png';
 
 export const getFullImage = (path) => {

@@ -376,6 +376,7 @@ import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import Toast from '@/utils/toastConfig';
 import { Swiper, SwiperSlide } from 'swiper/vue';
 import { Navigation } from 'swiper/modules';
 import 'swiper/css';
@@ -402,10 +403,13 @@ const quickAddSelections = ref({});
 const quickAddError = ref(false);
 let quickAddModalInstance = null;
 
-const currentTime = ref(new Date());
+// TỐI ƯU HIỆU SUẤT: Lấy epoch time dạng số thay vì Object Date
+const currentTime = ref(new Date().getTime());
 let timerInterval = null;
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
+// SỬ DỤNG TRỰC TIẾP BIẾN MÔI TRƯỜNG ĐỒNG BỘ CẢ DỰ ÁN
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'http://127.0.0.1:8000/storage';
 
 const shopFeatures = [
   { icon: 'bi-truck', text: 'Giao Hàng<br>Miễn Phí' },
@@ -413,16 +417,6 @@ const shopFeatures = [
   { icon: 'bi-shield-check', text: 'Bảo Hành<br>Trọn Đời' },
   { icon: 'bi-gem', text: 'Chất Lượng<br>Đỉnh Cao' }
 ];
-
-const Toast = Swal.mixin({
-  toast: true,
-  position: 'top-end',
-  showConfirmButton: false,
-  timer: 2000,
-  background: '#fffafa',
-  color: '#9f273b',
-  iconColor: '#9f273b'
-});
 
 const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val || 0);
 
@@ -437,9 +431,13 @@ const setSafeStorage = (key, val) => {
 const getImage = (path) => {
     if (!path) return '/Sora-placeholder.png';
     if (path.startsWith('http') || path.startsWith('data:image')) return path;
+    
     let cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    if (cleanPath.startsWith('storage/')) return `${API_BASE_URL}/${cleanPath}`;
-    return `${API_BASE_URL}/storage/${cleanPath}`;
+    
+    if (cleanPath.startsWith('storage/')) {
+        cleanPath = cleanPath.substring(8);
+    }
+    return `${STORAGE_URL}/${cleanPath}`;
 };
 
 const getImageUrl = getImage;
@@ -491,11 +489,15 @@ const buildVariantMatrix = (variants) => {
     variants.forEach(variant => {
         let attrs = {};
         let attrVals = variant.attributeValues || variant.attribute_values;
+        
         if (attrVals) { 
             attrVals.forEach(av => { if (av.attribute) attrs[av.attribute.name] = av.value; });
         } else if (variant.attributes) {
             attrs = typeof variant.attributes === 'string' ? JSON.parse(variant.attributes) : variant.attributes;
+        } else if (variant.formatted_attributes) {
+            attrs = variant.formatted_attributes;
         }
+        
         variant.formatted_attributes = attrs;
         
         Object.entries(attrs).forEach(([attrName, attrValue]) => {
@@ -516,7 +518,7 @@ const fetchFavorites = async () => {
   const token = getToken();
   if (!token) return;
   try {
-    const response = await fetch(`${API_BASE_URL}/api/client/favourites`, {
+    const response = await fetch(`${API_BASE_URL}/client/favourites`, {
       headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
     });
     const data = await response.json();
@@ -544,7 +546,7 @@ const toggleWishlist = async (prod) => {
 
   isTogglingFav.value = prod.id; 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/client/favourites/toggle`, {
+    const response = await fetch(`${API_BASE_URL}/client/favourites/toggle`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
       body: JSON.stringify({ product_id: prod.id })
@@ -662,7 +664,7 @@ const openQuickAdd = async (product) => {
     quickAddModalInstance.show();
 
     try {
-        const res = await axios.get(`${API_BASE_URL}/api/shop/all/products/${product.slug}`);
+        const res = await axios.get(`${API_BASE_URL}/shop/all/products/${product.slug}`);
         if (res.data && res.data.data) {
             quickAddProduct.value = {
                 ...res.data.data,
@@ -702,7 +704,7 @@ const confirmQuickAdd = async () => {
 
     try {
         const headers = getCartHeaders();
-        const res = await axios.post(`${API_BASE_URL}/api/client/cart`, {
+        const res = await axios.post(`${API_BASE_URL}/client/cart`, {
             product_variant_id: selectedVar.id,
             quantity: 1
         }, { headers });
@@ -747,6 +749,7 @@ const savingsPercentage = computed(() => {
   return Math.round((savings / originalTotal.value) * 100);
 });
 
+// Hàm parse ngày tháng 1 lần duy nhất
 const parseDBDate = (dateStr) => {
     if (!dateStr) return null;
     return new Date(dateStr.replace(' ', 'T').substring(0, 19)).getTime();
@@ -765,12 +768,13 @@ const calculateTimeParts = (diff) => {
 
 const getTimerData = (comboObj) => {
     if (!comboObj) return { type: 'forever', title: '', isEnded: false };
-    const now = currentTime.value.getTime();
+    const now = currentTime.value; // Dùng số milliseconds thẳng luôn
     
     if (comboObj.usage_limit !== null && comboObj.usage_limit <= 0) return { type: 'soldout', title: 'ĐÃ BÁN HẾT SỐ LƯỢNG', isEnded: true };
 
-    const startTime = parseDBDate(comboObj.start_date);
-    const endTime = parseDBDate(comboObj.end_date);
+    // TỐI ƯU HÓA: Dùng ngày tháng đã parse từ trước
+    const startTime = comboObj.parsed_start_date;
+    const endTime = comboObj.parsed_end_date;
 
     if (endTime && endTime < now) return { type: 'ended', title: 'ƯU ĐÃI ĐÃ KẾT THÚC', isEnded: true };
     if (startTime && startTime > now) return { type: 'upcoming', title: 'MỞ BÁN SAU', isEnded: false, ...calculateTimeParts(startTime - now) };
@@ -791,7 +795,7 @@ const fetchRelatedProducts = async () => {
     if (!combo.value || !combo.value.items) return;
     const categoryIds = [...new Set(combo.value.items.map(item => item.product?.category_id).filter(Boolean))];
     try {
-        let url = `${API_BASE_URL}/api/shop/all/products?per_page=7`;
+        let url = `${API_BASE_URL}/shop/all/products?per_page=7`;
         if (categoryIds.length > 0) url += `&category_id=${categoryIds[0]}`;
         const res = await axios.get(url);
         if (res.data && res.data.success) {
@@ -805,8 +809,14 @@ const fetchDetail = async (slug) => {
   isLoading.value = true;
   combo.value = null; 
   try {
-    const res = await axios.get(`${API_BASE_URL}/api/client/combos/${slug}`);
-    combo.value = res.data.data;
+    const res = await axios.get(`${API_BASE_URL}/client/combos/${slug}`);
+    let fetchedCombo = res.data.data;
+    
+    // TỐI ƯU HÓA: Parse trước start_date và end_date
+    fetchedCombo.parsed_start_date = parseDBDate(fetchedCombo.start_date);
+    fetchedCombo.parsed_end_date = parseDBDate(fetchedCombo.end_date);
+    
+    combo.value = fetchedCombo;
     
     userSelections.value = {}; validationErrors.value = {}; itemMatrices.value = {};
 
@@ -892,7 +902,7 @@ const addToCart = async () => {
   
   try {
       const headers = getCartHeaders();
-      const res = await axios.post(`${API_BASE_URL}/api/client/cart/add-combo`, payload, { headers });
+      const res = await axios.post(`${API_BASE_URL}/client/cart/add-combo`, payload, { headers });
       
       if (res.data.session_id) {
           setSafeStorage('cart_session_id', res.data.session_id);
@@ -926,7 +936,7 @@ watch(() => route.params.slug, (newSlug) => {
 onMounted(() => {
     fetchFavorites();
     fetchDetail(route.params.slug);
-    timerInterval = setInterval(() => { currentTime.value = new Date(); }, 1000);
+    timerInterval = setInterval(() => { currentTime.value = new Date().getTime(); }, 1000);
 });
 
 onUnmounted(() => {

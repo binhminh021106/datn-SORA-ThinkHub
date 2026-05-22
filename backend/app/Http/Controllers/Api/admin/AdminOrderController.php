@@ -36,6 +36,7 @@ class AdminOrderController extends Controller
     {
         $baseQuery = Order::query();
 
+        // Lọc theo ngày
         if ($request->filled('start_date')) {
             $baseQuery->where('created_at', '>=', $request->start_date . ' 00:00:00');
         }
@@ -43,10 +44,12 @@ class AdminOrderController extends Controller
             $baseQuery->where('created_at', '<=', $request->end_date . ' 23:59:59');
         }
 
+        // Lọc theo trạng thái thanh toán
         if ($request->filled('payment_status') && $request->payment_status !== 'all') {
             $baseQuery->where('payment_status', $request->payment_status);
         }
 
+        // Tìm kiếm
         if ($request->filled('search')) {
             $searchTerm = $request->search;
             $baseQuery->where(function ($q) use ($searchTerm) {
@@ -56,6 +59,7 @@ class AdminOrderController extends Controller
             });
         }
 
+        // Xử lý đếm và lọc trang Hoàn trả (Returns)
         if ($request->boolean('is_return_page')) {
             $baseQuery->where(function ($q) {
                 $q->whereIn('status', ['returned', 'return_requested'])
@@ -64,17 +68,24 @@ class AdminOrderController extends Controller
                     });
             });
 
-            $countQuery = clone $baseQuery;
-            $allReturns = $countQuery->get(['payment_status', 'refund_amount']);
+            // [TỐI ƯU ORM 1] Thay vì get() toàn bộ, sử dụng Aggregation ở cấp DB để chạy siêu tốc cho Tanstack Query
+            $returnStats = (clone $baseQuery)->select(
+                DB::raw('COUNT(*) as total_all'),
+                DB::raw('SUM(CASE WHEN payment_status = "paid" AND refund_amount IS NULL THEN 1 ELSE 0 END) as total_pending'),
+                DB::raw('SUM(CASE WHEN payment_status = "paid" AND refund_amount > 0 THEN 1 ELSE 0 END) as total_proposing'),
+                DB::raw('SUM(CASE WHEN payment_status = "refunded" THEN 1 ELSE 0 END) as total_refunded'),
+                DB::raw('SUM(CASE WHEN payment_status = "paid" AND refund_amount = 0 THEN 1 ELSE 0 END) as total_rejected')
+            )->first();
 
             $counts = [
-                'all'       => $allReturns->count(),
-                'pending'   => $allReturns->where('payment_status', 'paid')->whereNull('refund_amount')->count(),
-                'proposing' => $allReturns->filter(fn($q) => $q->payment_status === 'paid' && $q->refund_amount !== null && (float)$q->refund_amount > 0)->count(),
-                'refunded'  => $allReturns->where('payment_status', 'refunded')->count(),
-                'rejected'  => $allReturns->filter(fn($q) => $q->payment_status === 'paid' && $q->refund_amount !== null && (float)$q->refund_amount === 0.0)->count(),
+                'all'       => (int) ($returnStats->total_all ?? 0),
+                'pending'   => (int) ($returnStats->total_pending ?? 0),
+                'proposing' => (int) ($returnStats->total_proposing ?? 0),
+                'refunded'  => (int) ($returnStats->total_refunded ?? 0),
+                'rejected'  => (int) ($returnStats->total_rejected ?? 0),
             ];
 
+            // Lọc theo tab Hoàn trả
             if ($request->filled('return_tab') && $request->return_tab !== 'all') {
                 $tab = $request->return_tab;
                 if ($tab === 'pending') {
@@ -88,9 +99,10 @@ class AdminOrderController extends Controller
                 }
             }
         }
+        // Xử lý đếm và lọc trang Đơn hàng tiêu chuẩn
         else {
-            $countQuery = clone $baseQuery;
-            $rawCounts = $countQuery->select('status', DB::raw('count(*) as total'))
+            // [TỐI ƯU ORM 2] Gom cụm GroupBy
+            $rawCounts = (clone $baseQuery)->select('status', DB::raw('count(*) as total'))
                 ->groupBy('status')
                 ->pluck('total', 'status')
                 ->toArray();
@@ -113,6 +125,7 @@ class AdminOrderController extends Controller
             }
         }
 
+        // [TỐI ƯU ORM 3] Eager Loading Pagination
         $orders = $baseQuery->with(['user:id,fullName,email'])
             ->withCount('items')
             ->orderBy('id', 'desc')
@@ -153,6 +166,7 @@ class AdminOrderController extends Controller
 
     /**
      * Hàm dùng chung để Hoàn lại Tồn kho và Hoàn lượt dùng Hạng TV
+     * [TỐI ƯU ORM 4] Dọn sạch N+1 Query và Gom nhóm increment
      */
     private function restoreOrderResources(Order $order)
     {
@@ -161,32 +175,51 @@ class AdminOrderController extends Controller
             ->where('service_type', 'tier_discount')
             ->delete();
 
-        // 2. HOÀN LẠI TỒN KHO SẢN PHẨM & LƯỢT DÙNG COMBO
+        // Khai báo bộ nạp Eager Loading để ngăn loop query
+        $comboIds = $order->items->whereNotNull('combo_id')->pluck('combo_id')->unique();
+        $combos = $comboIds->isNotEmpty() ? Combo::with('items')->whereIn('id', $comboIds)->get()->keyBy('id') : collect();
+
+        // Bộ đệm Gom nhóm Variant ID tránh lặp query
+        $variantIncrements = [];
+        $comboUsageIncrements = [];
+
+        // 2. PHÂN TÍCH NHÓM LƯỢNG TRẢ LẠI
         foreach ($order->items as $item) {
             if ($item->product_variant_id) {
-                ProductVariant::where('id', $item->product_variant_id)->increment('stock_quantity', $item->quantity);
+                $variantIncrements[$item->product_variant_id] = ($variantIncrements[$item->product_variant_id] ?? 0) + $item->quantity;
             } elseif ($item->combo_id) {
-                Combo::where('id', $item->combo_id)->whereNotNull('usage_limit')->increment('usage_limit', $item->quantity);
+                $comboUsageIncrements[$item->combo_id] = ($comboUsageIncrements[$item->combo_id] ?? 0) + $item->quantity;
 
+                // Selection trong combo
                 if (is_array($item->combo_selections)) {
                     foreach ($item->combo_selections as $selection) {
                         $vId = $selection['selected_variant_id'] ?? null;
                         if ($vId) {
-                            ProductVariant::where('id', $vId)->increment('stock_quantity', $item->quantity);
+                            $variantIncrements[$vId] = ($variantIncrements[$vId] ?? 0) + $item->quantity;
                         }
                     }
                 }
 
-                $combo = Combo::with('items')->find($item->combo_id);
+                // Cố định trong combo
+                $combo = $combos->get($item->combo_id);
                 if ($combo) {
                     foreach ($combo->items as $cItem) {
                         if ($cItem->product_variant_id) {
                             $totalQtyToRestore = $item->quantity * $cItem->quantity;
-                            ProductVariant::where('id', $cItem->product_variant_id)->increment('stock_quantity', $totalQtyToRestore);
+                            $variantIncrements[$cItem->product_variant_id] = ($variantIncrements[$cItem->product_variant_id] ?? 0) + $totalQtyToRestore;
                         }
                     }
                 }
             }
+        }
+
+        // 3. THỰC THI CHỈ MỘT VÒNG LẶP DUY NHẤT LÊN DB
+        foreach ($variantIncrements as $vId => $qty) {
+            ProductVariant::where('id', $vId)->increment('stock_quantity', $qty);
+        }
+
+        foreach ($comboUsageIncrements as $cId => $qty) {
+            Combo::where('id', $cId)->whereNotNull('usage_limit')->increment('usage_limit', $qty);
         }
     }
 
@@ -213,7 +246,7 @@ class AdminOrderController extends Controller
                     'changed_by_type' => 'admin'
                 ]);
 
-                // if dh chuyển trạng thái từ Đang giao / Đã giao sang Hủy hoặc Trả hàng => Hoàn lại
+                // Hoàn kho nếu đang giao mà Hủy hoặc Trả hàng
                 if (in_array($newStatus, ['cancelled', 'returned']) && !in_array($oldStatus, ['cancelled', 'returned'])) {
                     $this->restoreOrderResources($order);
                 }
@@ -230,7 +263,8 @@ class AdminOrderController extends Controller
 
             DB::commit();
             
-            if ($order->user_id) {
+            // Xử lý Hạng chỉ cho các case đã xác nhận kết thúc đơn
+            if ($order->user_id && in_array($newStatus, ['delivered', 'cancelled', 'returned'])) {
                 $this->checkAndUpgradeUserTier($order->user_id);
             }
             
@@ -253,7 +287,8 @@ class AdminOrderController extends Controller
 
         DB::beginTransaction();
         try {
-            $order = Order::findOrFail($id);
+            // [TỐI ƯU ORM] Eager load items sẵn để hàm restore hoạt động mượt mà
+            $order = Order::with('items')->findOrFail($id);
             
             $order->refund_amount = $request->action === 'reject' ? 0 : $request->refund_amount;
             $order->refund_note = $request->refund_note;
@@ -322,23 +357,25 @@ class AdminOrderController extends Controller
         return response()->json(['success' => true, 'message' => 'Đã đưa đơn hàng vào thùng rác']);
     }
 
-    //
+    /**
+     * [TỐI ƯU ORM 5] Gom gộp 2 truy vấn Sum & Count thành 1 Hit Query Data
+     */
     protected function checkAndUpgradeUserTier($userId)
     {
         $user = User::find($userId);
         if (!$user) return;
 
-        // tính tổng chi tiêu và số đơn đã hoàn thành của user
-        $totalSpent = Order::where('user_id', $userId)
-                           ->where('status', 'delivered')
-                           ->where('payment_status', 'paid')
-                           ->sum('total_amount');
+        $stats = Order::where('user_id', $userId)
+            ->where('status', 'delivered')
+            ->where('payment_status', 'paid')
+            ->select(
+                DB::raw('COALESCE(SUM(total_amount), 0) as total_spent'),
+                DB::raw('COUNT(id) as total_orders')
+            )
+            ->first();
 
-        // số đơn hàng đã hoàn thànhh
-        $totalOrders = Order::where('user_id', $userId)
-                            ->where('status', 'delivered')
-                            ->where('payment_status', 'paid')
-                            ->count();
+        $totalSpent = $stats->total_spent;
+        $totalOrders = $stats->total_orders;
 
         $user->accumulated_spent = $totalSpent;
         $user->accumulated_orders = $totalOrders;

@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Storage;
 
 class AdminCustomerGalleryController extends Controller
 {
-    // Lấy danh sách ảnh cho Admin
+    // Lấy danh sách ảnh cho Admin (Đã bỏ withTrashed gây lỗi 500)
     public function index()
     {
         $galleries = CustomerGallery::orderBy('sort_order', 'asc')
@@ -18,7 +18,7 @@ class AdminCustomerGalleryController extends Controller
         return response()->json(['success' => true, 'data' => $galleries]);
     }
 
-    // ĐÃ THÊM: Lấy thông tin 1 ảnh để hiển thị lên form Sửa (Vue Edit)
+    // Lấy thông tin 1 ảnh để hiển thị lên form Sửa (Vue Edit)
     public function show($id)
     {
         try {
@@ -57,20 +57,18 @@ class AdminCustomerGalleryController extends Controller
         $gallery = CustomerGallery::findOrFail($id);
 
         $request->validate([
-            'title' => 'nullable|string|max:255', // Thêm validate cho title
+            'title' => 'nullable|string|max:255',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'sort_order' => 'nullable|integer',
             'is_active' => 'nullable|boolean',
         ]);
 
-        // Cập nhật Tiêu đề (Đã bổ sung)
         if ($request->has('title')) {
             $gallery->title = $request->title;
         }
 
-        // Nếu có upload ảnh mới thì xóa ảnh cũ
         if ($request->hasFile('image')) {
-            if (Storage::disk('public')->exists($gallery->image_path)) {
+            if ($gallery->image_path && Storage::disk('public')->exists($gallery->image_path)) {
                 Storage::disk('public')->delete($gallery->image_path);
             }
             $gallery->image_path = $request->file('image')->store('customer_galleries', 'public');
@@ -81,7 +79,6 @@ class AdminCustomerGalleryController extends Controller
         }
         
         if ($request->has('is_active')) {
-            // Chuyển đổi boolean an toàn hơn
             $gallery->is_active = filter_var($request->is_active, FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
         }
 
@@ -90,22 +87,12 @@ class AdminCustomerGalleryController extends Controller
         return response()->json(['success' => true, 'data' => $gallery]);
     }
 
-    // Đổi trạng thái Ẩn/Hiện nhanh
-    public function toggleStatus($id)
-    {
-        $gallery = CustomerGallery::findOrFail($id);
-        $gallery->is_active = !$gallery->is_active;
-        $gallery->save();
-
-        return response()->json(['success' => true, 'data' => $gallery]);
-    }
-
-    // Xóa ảnh
+    // Xóa ảnh (Phục hồi logic xóa vĩnh viễn gốc, dọn dẹp file vật lý)
     public function destroy($id)
     {
         $gallery = CustomerGallery::findOrFail($id);
         
-        if (Storage::disk('public')->exists($gallery->image_path)) {
+        if ($gallery->image_path && Storage::disk('public')->exists($gallery->image_path)) {
             Storage::disk('public')->delete($gallery->image_path);
         }
         
