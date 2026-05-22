@@ -124,7 +124,7 @@ Route::prefix('client')->group(function () {
     });
 
     // Hồ Sơ Cá Nhân (Profile)
-    Route::prefix('profile')->group(function () {
+    Route::prefix('profile')->middleware('auth:sanctum')->group(function () {
         Route::get('/', [\App\Http\Controllers\Api\client\ClientProfileController::class, 'show']);
         Route::post('/', [\App\Http\Controllers\Api\client\ClientProfileController::class, 'update']);
         Route::post('/password', [\App\Http\Controllers\Api\client\ClientProfileController::class, 'updatePassword']);
