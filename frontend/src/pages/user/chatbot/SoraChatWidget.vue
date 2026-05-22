@@ -328,6 +328,13 @@ const fetchHistory = async () => {
     messages.value = [{ id: 'sys1', type: 'admin', message_type: 'text', text: 'Kính chào quý khách! Vui lòng Đăng Nhập ở góc trên cùng bên phải để chuyên viên có thể hỗ trợ trực tiếp.', time: 'Ngay bây giờ' }];
     return;
   }
+  // Không gọi API nếu không có token
+  const token = getToken();
+  if (!token) {
+    isLoggedIn.value = false;
+    messages.value = [{ id: 'sys1', type: 'admin', message_type: 'text', text: 'Kính chào quý khách! Vui lòng Đăng Nhập ở góc trên cùng bên phải để chuyên viên có thể hỗ trợ trực tiếp.', time: 'Ngay bây giờ' }];
+    return;
+  }
   try {
     const res = await axios.get(`${API_URL}/client/messages`, axiosConfig());
     if (res.data.status) {
@@ -357,14 +364,25 @@ const fetchHistory = async () => {
       scrollToBottom();
     }
   } catch(err) {
-    console.error(err);
+    if (err.response?.status === 401) {
+      // Token hết hạn hoặc không hợp lệ -> hiện thông báo đăng nhập
+      isLoggedIn.value = false;
+      messages.value = [{ id: 'sys1', type: 'admin', message_type: 'text', text: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để được hỗ trợ.', time: 'Ngay bây giờ' }];
+    } else {
+      console.error(err);
+    }
   }
 };
 
 const toggleChat = () => {
   isOpen.value = !isOpen.value;
   if (isOpen.value && messages.value.length === 0) {
-    fetchHistory();
+    // Chỉ fetch nếu đã đăng nhập
+    if (checkAuth() && getToken()) {
+      fetchHistory();
+    } else {
+      messages.value = [{ id: 'sys1', type: 'admin', message_type: 'text', text: 'Kính chào quý khách! Vui lòng Đăng Nhập ở góc trên cùng bên phải để chuyên viên có thể hỗ trợ trực tiếp.', time: 'Ngay bây giờ' }];
+    }
   }
   if (isOpen.value) {
     nextTick(scrollToBottom);
