@@ -75,6 +75,17 @@ class ClientCheckoutController extends Controller
             ->where(function ($q) {
                 $q->whereNull('usage_limit')->orWhereColumn('usage_count', '<', 'usage_limit');
             })
+            ->where(function ($q) use ($user) {
+                $q->where('type', '!=', 'birthday');
+
+                if ($user && $this->isSilverTierOrAbove($user)) {
+                    $q->orWhere(function ($birthday) use ($user) {
+                        $birthday->where('type', 'birthday')
+                            ->where('user_id', $user->id)
+                            ->where('is_used', 0);
+                    });
+                }
+            })
             ->get();
 
         return response()->json([
@@ -253,6 +264,17 @@ class ClientCheckoutController extends Controller
                     if (!$coupon || $coupon->status !== 'active') {
                         throw new \Exception("Mã giảm giá không hợp lệ hoặc đã tạm ngưng sử dụng.");
                     }
+                    if ($coupon->type === 'birthday') {
+                        if ((int) $coupon->user_id !== (int) $user->id || !$this->isSilverTierOrAbove($user)) {
+                            throw new \Exception("Voucher chỉ dành cho thành viên hạng Bạc trở lên.");
+                        }
+                        if ($coupon->is_used) {
+                            throw new \Exception("Mã voucher sinh nhật đã được sử dụng.");
+                        }
+                    }
+                    if ($coupon->expires_at && now()->greaterThan($coupon->expires_at)) {
+                        throw new \Exception("Mã giảm giá đã hết hạn.");
+                    }
                     if ($coupon->usage_limit !== null && $coupon->usage_count >= $coupon->usage_limit) {
                         throw new \Exception("Mã giảm giá đã hết lượt sử dụng.");
                     }
@@ -263,6 +285,10 @@ class ClientCheckoutController extends Controller
                     $discountAmount = ($coupon->type === 'fixed') ? $coupon->value : ($subTotal * ($coupon->value / 100));
                     $couponId = $coupon->id;
                     $coupon->increment('usage_count');
+                    if ($coupon->type === 'birthday') {
+                        $coupon->is_used = 1;
+                        $coupon->save();
+                    }
                 }
 
                 $tierDiscountAmount = 0;
@@ -371,6 +397,31 @@ class ClientCheckoutController extends Controller
         } finally {
             $lock->release();
         }
+    }
+
+    private function isSilverTierOrAbove($user): bool
+    {
+        if (!$user || !$user->tier_id) {
+            return false;
+        }
+
+        $userTier = $user->relationLoaded('tier') ? $user->tier : MembershipTier::find($user->tier_id);
+        if (!$userTier) {
+            return false;
+        }
+
+        $silverTier = MembershipTier::orderBy('min_spent', 'asc')
+            ->get()
+            ->first(function ($tier) {
+                $tierName = Str::lower(Str::ascii($tier->name ?? ''));
+                return Str::contains($tierName, ['silver', 'bac']);
+            });
+
+        if (!$silverTier) {
+            return false;
+        }
+
+        return (float) $userTier->min_spent >= (float) $silverTier->min_spent;
     }
 
     private function generateMomoUrl($order)

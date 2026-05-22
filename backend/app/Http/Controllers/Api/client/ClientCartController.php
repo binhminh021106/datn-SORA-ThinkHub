@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use App\Http\Requests\UserStoreCartItemRequest;
 use App\Http\Requests\UserUpdateCartItemRequest;
+use App\Models\Coupon;
+use App\Models\MembershipTier;
 
 class ClientCartController extends Controller
 {
@@ -254,6 +256,71 @@ class ClientCartController extends Controller
                 'clear_session' => true // FE dựa vào cờ này để xóa Session ID ở LocalStorage
             ]);
         });
+    }
+
+    public function applyBirthdayCoupon(Request $request)
+    {
+        $code = $request->input('code');
+        if (!$code) {
+            return response()->json(['success' => false, 'message' => 'Không tìm thấy mã voucher.']);
+        }
+
+        $user = auth('sanctum')->user();
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Bạn cần đăng nhập để sử dụng voucher sinh nhật.']);
+        }
+
+        if (!$this->isSilverTierOrAbove($user)) {
+            return response()->json(['success' => false, 'message' => 'Voucher chỉ dành cho thành viên hạng Bạc trở lên.']);
+        }
+
+        $coupon = Coupon::where('code', $code)
+            ->where('type', 'birthday')
+            ->where('status', 'active')
+            ->where('user_id', $user->id)
+            ->where('is_used', 0)
+            ->where(function ($q) {
+                $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            })
+            ->where(function ($q) {
+                $q->whereNull('usage_limit')->orWhereColumn('usage_count', '<', 'usage_limit');
+            })
+            ->first();
+
+        if (!$coupon) {
+            return response()->json(['success' => false, 'message' => 'Mã voucher không hợp lệ hoặc đã hết hạn.']);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Áp dụng mã sinh nhật thành công!',
+            'coupon' => $coupon->code
+        ]);
+    }
+
+    private function isSilverTierOrAbove($user): bool
+    {
+        if (!$user || !$user->tier_id) {
+            return false;
+        }
+
+        $userTier = $user->relationLoaded('tier') ? $user->tier : MembershipTier::find($user->tier_id);
+        if (!$userTier) {
+            return false;
+        }
+
+        $silverTier = MembershipTier::orderBy('min_spent', 'asc')
+            ->get()
+            ->first(function ($tier) {
+                $tierName = Str::lower(Str::ascii($tier->name ?? ''));
+                return Str::contains($tierName, ['silver', 'bac']);
+            });
+
+        if (!$silverTier) {
+            return false;
+        }
+
+        return (float) $userTier->min_spent >= (float) $silverTier->min_spent;
     }
 
     private function resolveCart(Request $request, $createIfNotFound = false)

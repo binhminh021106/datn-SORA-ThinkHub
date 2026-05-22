@@ -91,6 +91,7 @@ Route::prefix('client')->group(function () {
         Route::post('/add-combo', 'addCombo');
         Route::post('/merge', 'mergeCart');
         Route::post('/clear', 'clear');
+        Route::post('/apply-birthday-coupon', 'applyBirthdayCoupon'); // Thêm route này
 
         Route::get('/', 'index');
         Route::post('/', 'store');

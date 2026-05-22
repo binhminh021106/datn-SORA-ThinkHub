@@ -112,7 +112,7 @@
                 
                 <ul v-if="filterCollapses[attr.name] !== false" class="list-unstyled mb-0 filter-list-text d-flex flex-column gap-2 mt-3">
                   <li v-for="val in attr.values" :key="val.id" class="w-100">
-                    <div class="d-flex align-items-center cursor-pointer category-item" @click="toggleAttribute(val.value)" :class="{'active': selectedAttributes.includes(val.value)}">
+                    <div class="d-flex align-items-center cursor-pointer category-item" @click="toggleAttribute(attr.name, val.value)" :class="{'active': selectedAttributes[attr.name] === val.value}">
                       <span class="dot me-2"></span>
                       <span class="label-text transition-colors">{{ val.value }}</span>
                     </div>
@@ -326,13 +326,14 @@ const isLoadingAttributes = ref(true);
 const isPageLoading = ref(true);
 
 const categories = shallowRef([]);
-const dynamicAttributes = ref([]); // Đổi thành ref để cập nhật trực tiếp từ biến thể
+const dynamicAttributes = ref([]); 
 const allProducts = shallowRef([]);
 const pagination = ref({ current_page: 1, last_page: 1, total: 0 });
 
-const selectedAttributes = ref([]); 
-const colorOptions = ref([]); // State lưu các màu hiện có lấy từ biến thể
-const selectedColors = ref([]); // State lưu các màu đang chọn
+// Thay đổi sang Object để lưu trữ dạng { 'Tên thuộc tính': 'Giá trị đã chọn' } -> Giúp single-select
+const selectedAttributes = ref({}); 
+const colorOptions = ref([]); 
+const selectedColors = ref([]); 
 const filters = reactive({ sort: 'recommended', categories: '' });
 
 const filterCollapses = ref({
@@ -341,7 +342,6 @@ const filterCollapses = ref({
 });
 
 const toggleCollapse = (key) => {
-  // Thay thế object mới để kích hoạt reactivity của Vue
   const newCollapses = { ...filterCollapses.value };
   if (newCollapses[key] === undefined) {
     newCollapses[key] = false;
@@ -368,6 +368,48 @@ const getToken = () => {
     }
   }
   return '';
+};
+
+const handleBirthdayCouponFromUrl = async () => {
+  const couponCode = route.query.coupon;
+  if (!couponCode) return;
+
+  const code = Array.isArray(couponCode) ? couponCode[0] : couponCode;
+  const token = getToken();
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/client/cart/apply-birthday-coupon`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ code })
+    });
+
+    const data = await response.json();
+    if (data.success) {
+      localStorage.setItem('birthday_coupon_code', data.coupon || code);
+      Toast.fire({ icon: 'success', title: data.message || 'Đã lưu voucher sinh nhật vào giỏ hàng.' });
+    } else {
+      localStorage.removeItem('birthday_coupon_code');
+      soraAlert.fire({
+        icon: 'error',
+        title: 'Không thể áp dụng voucher',
+        text: data.message || 'Voucher chi danh cho thanh vien hang Bac tro len.'
+      });
+    }
+  } catch (error) {
+    soraAlert.fire({
+      icon: 'error',
+        title: 'Lỗi áp dụng voucher',
+        text: 'Không thể kiểm tra voucher lúc này.'
+    });
+  } finally {
+    const { coupon, ...query } = route.query;
+    router.replace({ query }).catch(() => {});
+  }
 };
 
 const formatPrice = (price) => {
@@ -401,10 +443,18 @@ const getColorCode = (colorName) => {
   return map[colorName.toLowerCase().trim()] || '#e0e0e0'; 
 };
 
-// Cập nhật filterCollapses với các thuộc tính mới
+const buildFilterOptionParams = () => {
+  const params = new URLSearchParams();
+  if (filters.categories) params.set('categories', filters.categories);
+  return params.toString();
+};
+
+const refreshFilterOptions = () => Promise.all([fetchColors(), fetchAttributes()]);
+
 const fetchColors = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/shop/${shopSlug.value}/colors`);
+    const query = buildFilterOptionParams();
+    const response = await fetch(`${API_BASE_URL}/api/shop/${shopSlug.value}/colors${query ? `?${query}` : ''}`);
     const data = await response.json();
     if(data?.success) {
       colorOptions.value = data.data;
@@ -417,17 +467,16 @@ const fetchColors = async () => {
 const fetchAttributes = async () => {
   isLoadingAttributes.value = true;
   try {
-    const response = await fetch(`${API_BASE_URL}/api/shop/${shopSlug.value}/attributes`);
+    const query = buildFilterOptionParams();
+    const response = await fetch(`${API_BASE_URL}/api/shop/${shopSlug.value}/attributes${query ? `?${query}` : ''}`);
     const data = await response.json();
     if(data?.success) {
-      // Chỉ lấy các thuộc tính không phải màu sắc (ví dụ: Chất liệu)
       dynamicAttributes.value = data.data.filter(attr => !isColorAttribute(attr.name)).map(attr => ({
         id: attr.id,
         name: attr.name,
         values: attr.values
       }));
       
-      // Khởi tạo state cho các thuộc tính mới để reactivity hoạt động tốt
       const newCollapses = { ...filterCollapses.value };
       let hasChanges = false;
       dynamicAttributes.value.forEach(attr => {
@@ -447,23 +496,30 @@ const fetchAttributes = async () => {
   }
 };
 
-// Hàm bật/tắt bộ lọc màu sắc
+// Cập nhật hàm toggleColor: reset lại khi chọn và chỉ cho chọn 1
 const toggleColor = (color) => {
-  const index = selectedColors.value.indexOf(color);
-  if (index > -1) {
-    selectedColors.value.splice(index, 1);
+  selectedAttributes.value = {}; // Reset các thuộc tính khác khi chọn màu sắc (Logic ban đầu)
+
+  // Nếu màu đang click đã được chọn -> bỏ chọn
+  if (selectedColors.value[0] === color) {
+    selectedColors.value = [];
   } else {
-    selectedColors.value.push(color);
+    // Nếu chưa được chọn -> gán làm màu duy nhất
+    selectedColors.value = [color];
   }
   applyFilters();
 };
 
-const toggleAttribute = (val) => {
-  const index = selectedAttributes.value.indexOf(val);
-  if (index > -1) {
-    selectedAttributes.value.splice(index, 1); 
+// Cập nhật hàm toggleAttribute: Gán đích danh theo từng mục (ví dụ 'Size' -> 'Ni 10')
+const toggleAttribute = (attrName, val) => {
+  selectedColors.value = []; // Reset bộ lọc màu sắc (Logic ban đầu)
+
+  // Nếu thuộc tính đã được chọn giá trị này -> Bỏ chọn
+  if (selectedAttributes.value[attrName] === val) {
+    delete selectedAttributes.value[attrName]; 
   } else {
-    selectedAttributes.value.push(val); 
+    // Nếu chưa chọn, hoặc đang chọn giá trị khác -> Chọn mới (sẽ đè lên giá trị cũ)
+    selectedAttributes.value[attrName] = val; 
   }
   applyFilters();
 };
@@ -471,9 +527,12 @@ const toggleAttribute = (val) => {
 const fetchCategories = async () => {
   isLoadingCategories.value = true;
   try {
-    const data = await apiClient.get(`/shop/${shopSlug.value}/categories`);
-    if(data?.data?.success) categories.value = data.data.data; 
-  } catch (e) {} finally { isLoadingCategories.value = false; }
+    const response = await fetch(`${API_BASE_URL}/api/shop/${shopSlug.value}/categories`);
+    const data = await response.json();
+    if(data?.success) categories.value = data.data; 
+  } catch (e) {
+    console.error('Lỗi khi tải danh mục:', e);
+  } finally { isLoadingCategories.value = false; }
 };
 
 const fetchProducts = async (page = 1) => {
@@ -487,9 +546,10 @@ const fetchProducts = async (page = 1) => {
       queryPayload.color = selectedColors.value.join(',');
     }
 
-    // Gửi tham số thuộc tính
-    if (selectedAttributes.value.length > 0) {
-      queryPayload.attribute_values = selectedAttributes.value.join(',');
+    // Lấy tất cả các "giá trị" (values) từ object được chọn để gửi lên server
+    const activeAttributeValues = Object.values(selectedAttributes.value);
+    if (activeAttributeValues.length > 0) {
+      queryPayload.attribute_values = activeAttributeValues.join(',');
     }
 
     const params = new URLSearchParams(queryPayload);
@@ -507,8 +567,11 @@ const fetchProducts = async (page = 1) => {
   }
 };
 
-const filterByCategory = (categorySlug) => {
+const filterByCategory = async (categorySlug) => {
+  selectedColors.value = [];
+  selectedAttributes.value = {}; // Đổi về {} để reset
   filters.categories = filters.categories === categorySlug ? '' : categorySlug; 
+  await refreshFilterOptions();
   applyFilters();
 };
 
@@ -516,8 +579,9 @@ const applyFilters = () => fetchProducts(1);
 const resetFilters = () => { 
   filters.categories = ''; 
   filters.sort = 'recommended';
-  selectedAttributes.value = []; 
+  selectedAttributes.value = {}; // Đổi về {} để reset
   selectedColors.value = []; 
+  refreshFilterOptions();
   applyFilters(); 
 };
 
@@ -712,6 +776,7 @@ const confirmAddToCart = async () => {
 };
 
 onMounted(() => { 
+  handleBirthdayCouponFromUrl();
   Promise.all([
     fetchCategories(), 
     fetchColors(),
