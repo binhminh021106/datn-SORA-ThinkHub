@@ -21,11 +21,11 @@ class ClientProfileUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'fullName' => 'required|string|max:150',
-            'phone' => 'nullable|string|max:12',
-            'birthday' => 'nullable|date',
-            'gender' => 'nullable|in:Nam,Nữ,Khác',
-            'avatar' => 'nullable|image|max:5120',
+            'fullName' => ['required', 'string', 'min:2', 'max:50', 'regex:/^[A-Za-zÀ-ỹ]+(?:\s+[A-Za-zÀ-ỹ]+)+$/u'],
+            'phone' => ['required', 'numeric', 'regex:/^0[3|5|7|8|9][0-9]{8}$/'],
+            'birthday' => ['required', 'date', 'before_or_equal:today'],
+            'gender' => ['required', 'in:Nam,Nữ,Khác'],
+            'avatar' => ['nullable', 'image', 'max:5120'],
         ];
     }
 
@@ -35,11 +35,18 @@ class ClientProfileUpdateRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'fullName.required' => 'Vui lòng nhập họ tên.',
-            'fullName.max' => 'Họ tên không được vượt quá 150 ký tự.',
-            'phone.max' => 'Số điện thoại không được vượt quá 12 ký tự.',
-            'birthday.date' => 'Ngày sinh không đúng định dạng.',
-            'gender.in' => 'Giới tính không hợp lệ.',
+            'fullName.required' => 'Vui lòng nhập họ và tên',
+            'fullName.min' => 'Họ tên phải từ 2 đến 50 ký tự',
+            'fullName.max' => 'Họ tên phải từ 2 đến 50 ký tự',
+            'fullName.regex' => 'Họ tên phải chứa ít nhất 2 từ (không chứa số hoặc ký tự đặc biệt)',
+            'phone.required' => 'Vui lòng nhập số điện thoại',
+            'phone.numeric' => 'Số điện thoại chỉ được chứa số',
+            'phone.regex' => 'Số điện thoại không hợp lệ',
+            'birthday.required' => 'Vui lòng chọn ngày sinh',
+            'birthday.date' => 'Ngày sinh không hợp lệ',
+            'birthday.before_or_equal' => 'Ngày sinh không hợp lệ',
+            'gender.required' => 'Vui lòng chọn giới tính',
+            'gender.in' => 'Giới tính không hợp lệ',
             'avatar.image' => 'File avatar phải là hình ảnh.',
             'avatar.max' => 'Kích thước avatar không được vượt quá 5MB.',
         ];
@@ -51,33 +58,28 @@ class ClientProfileUpdateRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
-            // Validate birthday không được lớn hơn ngày hiện tại
+            if ($this->has('email')) {
+                $validator->errors()->add('email', 'Bạn không có quyền thay đổi email');
+            }
+
             if ($this->has('birthday') && $this->birthday) {
-                $birthday = \Carbon\Carbon::parse($this->birthday);
-                $today = \Carbon\Carbon::now();
-                
-                if ($birthday->greaterThan($today)) {
-                    $validator->errors()->add('birthday', 'Ngày sinh không được lớn hơn ngày hiện tại!');
-                }
-                
-                // Validate tuổi hợp lý (không quá 150 tuổi, không dưới 1 tuổi)
-                $age = $birthday->diffInYears($today);
-                if ($age > 150 || $age < 1) {
-                    $validator->errors()->add('birthday', 'Ngày sinh không hợp lệ!');
+                try {
+                    $birthday = \Carbon\Carbon::parse($this->birthday);
+                    $today = \Carbon\Carbon::now();
+                    $age = $birthday->diffInYears($today);
+                    
+                    if ($age < 13) {
+                        $validator->errors()->add('birthday', 'Bạn chưa đủ tuổi sử dụng');
+                    }
+                } catch (\Exception $e) {
+                    // Lỗi format date đã được xử lý ở rules()
                 }
             }
 
-            // Kiểm tra số điện thoại đã tồn tại chưa (trừ user hiện tại và số điện thoại cũ của chính user đó)
-            if ($this->has('phone') && $this->phone) {
-                $normalizedPhone = $this->normalizeVietnamesePhone($this->phone);
-                
-                if (!$normalizedPhone) {
-                    $validator->errors()->add('phone', 'Số điện thoại không hợp lệ! Vui lòng nhập số điện thoại Việt Nam 10 số bắt đầu bằng số 0 (ví dụ: 0912345678).');
-                    return;
-                }
-
+            // Kiểm tra số điện thoại đã tồn tại chưa
+            if ($this->has('phone') && $this->phone && preg_match('/^0[3|5|7|8|9][0-9]{8}$/', $this->phone)) {
                 $userId = $this->user()?->id;
-                $exists = \App\Models\User::where('phone', $normalizedPhone)
+                $exists = \App\Models\User::where('phone', $this->phone)
                     ->when($userId, fn($q) => $q->where('id', '!=', $userId))
                     ->exists();
                 
@@ -93,48 +95,28 @@ class ClientProfileUpdateRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        // Chuẩn hóa số điện thoại Việt Nam trước khi validate
+        if ($this->has('fullName') && $this->fullName) {
+            $this->merge([
+                'fullName' => preg_replace('/\s+/', ' ', trim($this->fullName))
+            ]);
+        }
+
         if ($this->has('phone') && $this->phone) {
-            $normalizedPhone = $this->normalizeVietnamesePhone($this->phone);
-            if (!$normalizedPhone) {
-                // Để validator xử lý lỗi này
-                return;
-            }
-            $this->merge(['phone' => $normalizedPhone]);
+            $this->merge([
+                'phone' => $this->normalizeVietnamesePhone($this->phone)
+            ]);
         }
     }
 
-    /**
-     * Chuẩn hóa số điện thoại Việt Nam (10 số)
-     * Bắt buộc phải bắt đầu bằng số 0
-     */
     private function normalizeVietnamesePhone(?string $phone): ?string
     {
-        if (empty($phone)) {
-            return null;
+        if (empty($phone)) return null;
+        
+        $phone = trim($phone);
+        if (str_starts_with($phone, '+84')) {
+            $phone = '0' . substr($phone, 3);
         }
-
-        // Loại bỏ tất cả ký tự không phải số
-        $phone = preg_replace('/[^0-9]/', '', $phone);
-
-        // Kiểm tra độ dài phải là 10 số
-        if (strlen($phone) !== 10) {
-            return null;
-        }
-
-        // Phải bắt đầu bằng số 0
-        if (!str_starts_with($phone, '0')) {
-            return null;
-        }
-
-        // Các đầu số Việt Nam hợp lệ (sau số 0)
-        $validPrefixes = ['32', '33', '34', '35', '36', '37', '38', '39', '52', '56', '58', '59', '70', '76', '77', '78', '79', '82', '83', '84', '85', '86', '87', '88', '89', '90', '91', '92', '93', '94', '96', '97', '98', '99'];
-
-        $prefix = substr($phone, 1, 2); // Lấy 2 số sau số 0
-        if (!in_array($prefix, $validPrefixes)) {
-            return null;
-        }
-
+        
         return $phone;
     }
 }
