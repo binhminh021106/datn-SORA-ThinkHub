@@ -78,7 +78,22 @@ class ClientProfileUpdateRequest extends FormRequest
 
             // Kiểm tra số điện thoại đã tồn tại chưa
             if ($this->has('phone') && $this->phone && preg_match('/^0[3|5|7|8|9][0-9]{8}$/', $this->phone)) {
-                $userId = $this->user()?->id;
+                $userId = auth('sanctum')->id();
+                
+                // Fallback nếu guard sanctum chưa được khởi tạo (do thiếu middleware trên route)
+                if (!$userId && $this->bearerToken()) {
+                    $token = \Laravel\Sanctum\PersonalAccessToken::findToken($this->bearerToken());
+                    if ($token) {
+                        $userId = $token->tokenable_id;
+                    }
+                }
+
+                \Illuminate\Support\Facades\Log::info('ClientProfileUpdateRequest - Validating phone', [
+                    'phone' => $this->phone,
+                    'auth_sanctum_id' => $userId,
+                    'auth_header' => $this->header('Authorization')
+                ]);
+
                 $exists = \App\Models\User::where('phone', $this->phone)
                     ->when($userId, fn($q) => $q->where('id', '!=', $userId))
                     ->exists();

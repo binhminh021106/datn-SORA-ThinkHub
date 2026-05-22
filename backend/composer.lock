@@ -1529,6 +1529,7 @@
         },
         {
             "name": "laravel/framework",
+<<<<<<< HEAD
             "version": "v12.60.2",
             "source": {
                 "type": "git",
@@ -1539,6 +1540,18 @@
                 "type": "zip",
                 "url": "https://api.github.com/repos/laravel/framework/zipball/b8b55ce32175cc00f834a56eeb6316f18ed6ea39",
                 "reference": "b8b55ce32175cc00f834a56eeb6316f18ed6ea39",
+=======
+            "version": "v12.59.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/laravel/framework.git",
+                "reference": "70a838b1a6f12abaf5bebb76ea4f28fbd37451fa"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/laravel/framework/zipball/70a838b1a6f12abaf5bebb76ea4f28fbd37451fa",
+                "reference": "70a838b1a6f12abaf5bebb76ea4f28fbd37451fa",
+>>>>>>> 3ca3c71aad779abaf2cd48248e12aba871350c7d
                 "shasum": ""
             },
             "require": {
@@ -1747,7 +1760,11 @@
                 "issues": "https://github.com/laravel/framework/issues",
                 "source": "https://github.com/laravel/framework"
             },
+<<<<<<< HEAD
             "time": "2026-05-20T11:48:19+00:00"
+=======
+            "time": "2026-05-14T15:31:40+00:00"
+>>>>>>> 3ca3c71aad779abaf2cd48248e12aba871350c7d
         },
         {
             "name": "laravel/prompts",
@@ -5862,6 +5879,7 @@
         },
         {
             "name": "symfony/http-kernel",
+<<<<<<< HEAD
             "version": "v7.4.12",
             "source": {
                 "type": "git",
@@ -5872,6 +5890,18 @@
                 "type": "zip",
                 "url": "https://api.github.com/repos/symfony/http-kernel/zipball/7922b53e70d2ba2027af8bb6a59d91eb3541ea4d",
                 "reference": "7922b53e70d2ba2027af8bb6a59d91eb3541ea4d",
+=======
+            "version": "v7.4.11",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/http-kernel.git",
+                "reference": "eb9d68199af3fcfb3fb4d2e227367b68f8c1bb88"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/http-kernel/zipball/eb9d68199af3fcfb3fb4d2e227367b68f8c1bb88",
+                "reference": "eb9d68199af3fcfb3fb4d2e227367b68f8c1bb88",
+>>>>>>> 3ca3c71aad779abaf2cd48248e12aba871350c7d
                 "shasum": ""
             },
             "require": {
@@ -5957,7 +5987,11 @@
             "description": "Provides a structured process for converting a Request into a Response",
             "homepage": "https://symfony.com",
             "support": {
+<<<<<<< HEAD
                 "source": "https://github.com/symfony/http-kernel/tree/v7.4.12"
+=======
+                "source": "https://github.com/symfony/http-kernel/tree/v7.4.11"
+>>>>>>> 3ca3c71aad779abaf2cd48248e12aba871350c7d
             },
             "funding": [
                 {
@@ -5977,7 +6011,11 @@
                     "type": "tidelift"
                 }
             ],
+<<<<<<< HEAD
             "time": "2026-05-20T09:27:11+00:00"
+=======
+            "time": "2026-05-13T17:55:00+00:00"
+>>>>>>> 3ca3c71aad779abaf2cd48248e12aba871350c7d
         },
         {
             "name": "symfony/mailer",
@@ -8349,6 +8387,7 @@
         },
         {
             "name": "laravel/sail",
+<<<<<<< HEAD
             "version": "v1.60.0",
             "source": {
                 "type": "git",
@@ -8359,6 +8398,18 @@
                 "type": "zip",
                 "url": "https://api.github.com/repos/laravel/sail/zipball/2a1538ed22eed4210ac1e17904235032571bd89c",
                 "reference": "2a1538ed22eed4210ac1e17904235032571bd89c",
+=======
+            "version": "v1.59.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/laravel/sail.git",
+                "reference": "a41abad557e487eaefde6c9873085ed086fdf47a"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/laravel/sail/zipball/a41abad557e487eaefde6c9873085ed086fdf47a",
+                "reference": "a41abad557e487eaefde6c9873085ed086fdf47a",
+>>>>>>> 3ca3c71aad779abaf2cd48248e12aba871350c7d
                 "shasum": ""
             },
             "require": {
@@ -8408,7 +8459,11 @@
                 "issues": "https://github.com/laravel/sail/issues",
                 "source": "https://github.com/laravel/sail"
             },
+<<<<<<< HEAD
             "time": "2026-05-14T17:29:51+00:00"
+=======
+            "time": "2026-05-13T14:02:20+00:00"
+>>>>>>> 3ca3c71aad779abaf2cd48248e12aba871350c7d
         },
         {
             "name": "mockery/mockery",
@@ -10264,6 +10319,7 @@
         },
         {
             "name": "symfony/yaml",
+<<<<<<< HEAD
             "version": "v7.4.12",
             "source": {
                 "type": "git",
@@ -10274,6 +10330,18 @@
                 "type": "zip",
                 "url": "https://api.github.com/repos/symfony/yaml/zipball/8b6952b56ca6417f25f7a65758cadd0ce02edc51",
                 "reference": "8b6952b56ca6417f25f7a65758cadd0ce02edc51",
+=======
+            "version": "v7.4.11",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/yaml.git",
+                "reference": "e2eb64a57763815ccae07ac1c7653d6cc1c326fd"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/yaml/zipball/e2eb64a57763815ccae07ac1c7653d6cc1c326fd",
+                "reference": "e2eb64a57763815ccae07ac1c7653d6cc1c326fd",
+>>>>>>> 3ca3c71aad779abaf2cd48248e12aba871350c7d
                 "shasum": ""
             },
             "require": {
@@ -10316,7 +10384,11 @@
             "description": "Loads and dumps YAML files",
             "homepage": "https://symfony.com",
             "support": {
+<<<<<<< HEAD
                 "source": "https://github.com/symfony/yaml/tree/v7.4.12"
+=======
+                "source": "https://github.com/symfony/yaml/tree/v7.4.11"
+>>>>>>> 3ca3c71aad779abaf2cd48248e12aba871350c7d
             },
             "funding": [
                 {
@@ -10336,7 +10408,11 @@
                     "type": "tidelift"
                 }
             ],
+<<<<<<< HEAD
             "time": "2026-05-20T07:20:23+00:00"
+=======
+            "time": "2026-05-13T12:04:42+00:00"
+>>>>>>> 3ca3c71aad779abaf2cd48248e12aba871350c7d
         },
         {
             "name": "theseer/tokenizer",
@@ -10391,12 +10467,17 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {},
+    "stability-flags": [],
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
         "php": "^8.2"
     },
+<<<<<<< HEAD
     "platform-dev": {},
     "plugin-api-version": "2.6.0"
+=======
+    "platform-dev": [],
+    "plugin-api-version": "2.3.0"
+>>>>>>> 3ca3c71aad779abaf2cd48248e12aba871350c7d
 }

@@ -57,37 +57,43 @@
                                                 v-model="form.slug" readonly>
                                         </div>
 
+                                        <!-- ĐỒNG BỘ STYLE DROPDOWN DANH MỤC SANG TRỌNG -->
                                         <div class="col-md-4">
                                             <label class="form-label fw-bold">Danh mục <span
                                                     class="text-danger">*</span></label>
-                                            <select class="form-select border-brand fw-semibold text-brand"
-                                                v-model="form.category_id" required>
-                                                <option value="" disabled>-- Chọn danh mục --</option>
-                                                <option v-if="categories.length === 0" value="" disabled
-                                                    class="text-danger">
-                                                    Trống! Cần tạo Danh mục.
-                                                </option>
-                                                <option v-else v-for="cat in categories" :key="cat.id" :value="cat.id">
-                                                    {{ cat.name }}
-                                                </option>
-                                            </select>
+                                            <div class="position-relative select-wrapper">
+                                                <select class="form-select border-brand fw-semibold text-brand filter-select cursor-pointer py-2 ps-3 pe-4"
+                                                    v-model="form.category_id" required>
+                                                    <option value="" disabled>-- Chọn danh mục --</option>
+                                                    <option v-if="categories.length === 0" value="" disabled
+                                                        class="text-danger">
+                                                        Trống! Cần tạo Danh mục.
+                                                    </option>
+                                                    <option v-else v-for="cat in categories" :key="cat.id" :value="cat.id" class="text-dark fw-normal">
+                                                        {{ cat.name }}
+                                                    </option>
+                                                </select>
+                                            </div>
                                         </div>
 
+                                        <!-- ĐỒNG BỘ STYLE DROPDOWN THƯƠNG HIỆU SANG TRỌNG -->
                                         <div class="col-md-4">
                                             <label class="form-label fw-bold">Thương hiệu</label>
-                                            <select class="form-select fw-semibold" v-model="form.brand_id">
-                                                <option value="">-- Không có (No Brand) --</option>
-                                                <option v-for="brand in brands" :key="brand.id" :value="brand.id">
-                                                    {{ brand.name }}
-                                                </option>
-                                            </select>
+                                            <div class="position-relative select-wrapper">
+                                                <select class="form-select border-secondary fw-semibold text-dark filter-select cursor-pointer py-2 ps-3 pe-4" v-model="form.brand_id">
+                                                    <option value="" class="text-muted fw-normal">-- Không có (No Brand) --</option>
+                                                    <option v-for="brand in brands" :key="brand.id" :value="brand.id" class="fw-normal">
+                                                        {{ brand.name }}
+                                                    </option>
+                                                </select>
+                                            </div>
                                         </div>
 
                                         <div class="col-md-4">
                                             <label class="form-label fw-bold">Giá tham khảo <span
                                                     class="text-danger">*</span></label>
                                             <div class="input-group">
-                                                <input type="number" class="form-control"
+                                                <input type="number" class="form-control py-2"
                                                     v-model.number="form.base_price" required min="0">
                                                 <span class="input-group-text bg-light">VNĐ</span>
                                             </div>
@@ -110,10 +116,11 @@
                                     <h6 class="fw-bold mb-3 text-start form-section-title"><i
                                             class="bi bi-image me-2"></i>Ảnh Đại Diện <span class="text-danger">*</span>
                                     </h6>
-                                    <div class="mb-3 position-relative border rounded-4 overflow-hidden bg-white"
+                                    <div class="mb-3 position-relative border rounded-4 overflow-hidden bg-white d-flex align-items-center justify-content-center"
                                         style="height: 250px;">
-                                        <img v-if="thumbnailPreview" :src="thumbnailPreview"
-                                            class="w-100 h-100 object-fit-contain p-2">
+                                        <!-- ÁP DỤNG SORA IMAGE CHO THUMBNAIL PREVIEW -->
+                                        <SoraImage v-if="thumbnailPreview" :src="thumbnailPreview"
+                                            imgClass="w-100 h-100 p-2" fit="contain" :placeholder="defaultPlaceholder" />
                                         <div v-else
                                             class="d-flex flex-column justify-content-center align-items-center h-100 text-muted">
                                             <i class="bi bi-camera fs-1 mb-2 opacity-50"></i>
@@ -221,9 +228,10 @@
                                                     class="variant-row" :class="{ 'row-error': v.hasDuplicateError }">
                                                     <td class="text-center position-relative">
                                                         <label class="cursor-pointer d-block m-0">
-                                                            <img :src="v.preview || 'https://placehold.co/40x40?text=+'"
-                                                                class="img-preview-sm"
-                                                                onerror="this.src='https://placehold.co/40x40?text=+'">
+                                                            <!-- ÁP DỤNG SORA IMAGE CHO ẢNH BIẾN THỂ -->
+                                                            <SoraImage :src="v.preview"
+                                                                imgClass="img-preview-sm"
+                                                                :placeholder="defaultPlaceholder" />
                                                             <input type="file" class="d-none" accept="image/*"
                                                                 @change="handleVariantImage(index, $event)">
                                                         </label>
@@ -315,6 +323,7 @@
             </div>
         </div>
 
+        <!-- LOGO SHIMMER KHỞI ĐẦU LUÔN CHẠY KHI VÀO TRANG -->
         <div v-else class="d-flex flex-column justify-content-center align-items-center w-100"
             style="min-height: 70vh;">
             <h1 class="logo-shimmer mb-3">ThinkHub</h1>
@@ -411,26 +420,27 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, watch } from 'vue';
+import { ref, computed, onMounted, nextTick, watch, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
+
+// IMPORT COMPONENT SORAIMAGE VÀ ẢNH PLACEHOLDER ĐỒNG BỘ
+import SoraImage from '@/components/ui/SoraImage.vue';
+import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const router = useRouter();
 const route = useRoute();
+const queryClient = useQueryClient();
 const productId = route.params.id;
 
 const isPageLoading = ref(true);
 const isSaving = ref(false);
 const isProcessingSchema = ref(false);
 const currentStep = ref(1);
-
-const categories = ref([]);
-const systemAttributes = ref([]);
-const brands = ref([]);
 
 const form = ref({
     category_id: '', brand_id: '', name: '', slug: '', base_price: 0, isPublished: true
@@ -464,6 +474,49 @@ const getImageUrl = (path) => {
     if (path.startsWith('http')) return path;
     return getFullImage(path);
 };
+
+// --- TANSTACK QUERY: TRUY VẤN SONG SONG TỐI ƯU SIÊU DỮ LIỆU ---
+const fetchCategories = async () => {
+    const res = await axios.get(`${API_URL}/admin/categories?status=active`, { headers: getHeaders() });
+    return Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data.data?.data) ? res.data.data.data : []);
+};
+
+const fetchAttributes = async () => {
+    const res = await axios.get(`${API_URL}/admin/attributes`, { headers: getHeaders() });
+    return Array.isArray(res.data.data) ? res.data.data : [];
+};
+
+const fetchBrands = async () => {
+    const res = await axios.get(`${API_URL}/admin/brands?status=active`, { headers: getHeaders() });
+    return Array.isArray(res.data.data) ? res.data.data : [];
+};
+
+const { data: categoriesData } = useQuery({
+    queryKey: ['adminActiveCategories'],
+    queryFn: fetchCategories,
+    staleTime: 30 * 60 * 1000, 
+});
+
+const { data: attributesData, refetch: refetchAttributes } = useQuery({
+    queryKey: ['adminAttributes'],
+    queryFn: fetchAttributes,
+    staleTime: 30 * 60 * 1000, 
+});
+
+const { data: brandsData } = useQuery({
+    queryKey: ['adminActiveBrands'],
+    queryFn: fetchBrands,
+    staleTime: 30 * 60 * 1000, 
+});
+
+const categories = computed(() => categoriesData.value || []);
+const systemAttributes = ref([]);
+const brands = computed(() => brandsData.value || []);
+
+// Theo dõi dữ liệu từ cache TanStack Query và đồng bộ hóa vào ref nội bộ phục vụ biến động trạng thái mượt mà
+watch(attributesData, (newAttrs) => {
+    if (newAttrs) systemAttributes.value = JSON.parse(JSON.stringify(newAttrs));
+}, { immediate: true });
 
 const canProceedToStep2 = computed(() => {
     return form.value.name && form.value.category_id && form.value.base_price >= 0 && (thumbnailFile.value || thumbnailPreview.value);
@@ -518,6 +571,9 @@ const proceedToStep2 = async () => {
                     res.data.data.values = [];
                     systemAttributes.value.push(res.data.data);
                     attrIdToAdd = res.data.data.id.toString();
+                    
+                    // Cập nhật bộ nhớ đệm cache Tanstack để đồng bộ hóa
+                    queryClient.setQueryData(['adminAttributes'], (old) => old ? [...old, res.data.data] : [res.data.data]);
                 } catch (e) { console.error('Lỗi tự động tạo thuộc tính', e); }
             }
 
@@ -638,6 +694,10 @@ const submitCreateAttribute = async () => {
         );
         res.data.data.values = [];
         systemAttributes.value.push(res.data.data);
+        
+        // Cập nhật ngược lại Tanstack Query Cache
+        queryClient.setQueryData(['adminAttributes'], (old) => old ? [...old, res.data.data] : [res.data.data]);
+        
         hideModals();
         newAttrForm.value.name = '';
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã thêm thuộc tính', showConfirmButton: false, timer: 2000 });
@@ -674,6 +734,10 @@ const submitCreateValue = async () => {
         if (currentOperatingRowIndex.value !== null) {
             variants.value[currentOperatingRowIndex.value].attributes[attrObj.id] = res.data.data.id;
         }
+        
+        // Cập nhật đồng bộ ngược lại bộ nhớ cache hệ thống
+        queryClient.setQueryData(['adminAttributes'], JSON.parse(JSON.stringify(systemAttributes.value)));
+        
         hideModals();
         validateDuplicates();
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã thêm giá trị', showConfirmButton: false, timer: 2000 });
@@ -700,6 +764,9 @@ const updateAttribute = async (id) => {
         );
         const attr = systemAttributes.value.find(a => a.id === parseInt(id));
         if (attr) attr.name = manageAttrName.value;
+        
+        queryClient.setQueryData(['adminAttributes'], JSON.parse(JSON.stringify(systemAttributes.value)));
+        
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật thành công', showConfirmButton: false, timer: 2000 });
     } catch (e) {
         if (e.response) Swal.fire('Lỗi', e.response.data.message || 'Lỗi cập nhật', 'error');
@@ -719,6 +786,9 @@ const deleteAttribute = async (id) => {
                 if (activeAttributes.value.includes(id.toString())) {
                     removeAttributeColumn(id.toString());
                 }
+                
+                queryClient.setQueryData(['adminAttributes'], JSON.parse(JSON.stringify(systemAttributes.value)));
+                
                 Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa', showConfirmButton: false, timer: 2000 });
             } catch (e) {
                 if (e.response) Swal.fire('Lỗi', e.response.data.message || 'Không thể xóa', 'error');
@@ -774,60 +844,26 @@ const validateDuplicates = () => {
     return hasDuplicate;
 };
 
-const submitProduct = async () => {
-    validateDuplicates();
-    let hasHardError = false;
-
-    variants.value.forEach((v, i) => {
-        validateRow(i);
-        if (v.priceError || v.saleError || v.attrError || v.hasDuplicateError) hasHardError = true;
-    });
-
-    if (hasHardError) {
-        Swal.fire('Lỗi Dữ liệu', 'Vui lòng kiểm tra các dòng bị bôi đỏ (Chưa chọn thuộc tính, sai giá, hoặc trùng lặp).', 'error'); return;
-    }
-
-    isSaving.value = true;
-    try {
-        const formData = new FormData();
-        formData.append('_method', 'PUT');
-
-        formData.append('category_id', form.value.category_id);
-        if (form.value.brand_id) {
-            formData.append('brand_id', form.value.brand_id);
-        }
-        formData.append('name', form.value.name);
-        formData.append('slug', form.value.slug);
-        formData.append('base_price', form.value.base_price);
-        formData.append('status', form.value.isPublished ? 'published' : 'draft');
-
-        if (thumbnailFile.value) {
-            formData.append('thumbnail_image', thumbnailFile.value);
-        }
-
-        const variantsPayload = variants.value.map(v => ({
-            id: v.id || null,
-            sku: v.sku,
-            price: v.price,
-            promotional_price: v.promotional_price || 0,
-            stock_quantity: v.stock_quantity,
-            attributes: v.attributes,
-            current_image: v.current_image || null
-        }));
-        formData.append('variants_data', JSON.stringify(variantsPayload));
-
-        variants.value.forEach((v, index) => {
-            if (v.imageFile) formData.append(`variant_image_${index}`, v.imageFile);
-        });
-
+// --- TANSTACK MUTATION: LƯU SẢN PHẨM NHANH CHÓNG & LÀM MỚI CACHING ---
+const updateProductMutation = useMutation({
+    mutationFn: async (formData) => {
         const res = await axios.post(`${API_URL}/admin/products/${productId}`, formData, {
-            headers: getHeaders()
+            headers: {
+                ...getHeaders(),
+                'Content-Type': 'multipart/form-data'
+            }
         });
-
+        return res.data;
+    },
+    onSuccess: () => {
+        // Hủy bỏ cache của danh sách sản phẩm để ép tải lại dữ liệu mới nhất
+        queryClient.invalidateQueries({ queryKey: ['adminProducts'] });
+        
         Swal.fire({ icon: 'success', title: 'Cập nhật thành công', text: 'Sản phẩm đã được lưu', timer: 2000, showConfirmButton: false }).then(() => {
             router.push({ name: 'admin-products' });
         });
-    } catch (e) {
+    },
+    onError: (e) => {
         if (e.response) {
             let errorHtml = '';
             if (e.response.data.errors) {
@@ -849,30 +885,75 @@ const submitProduct = async () => {
         } else {
             Swal.fire('Lỗi', 'Mất kết nối Server', 'error');
         }
-    } finally {
+    },
+    onSettled: () => {
         isSaving.value = false;
     }
+});
+
+const submitProduct = async () => {
+    validateDuplicates();
+    let hasHardError = false;
+
+    variants.value.forEach((v, i) => {
+        validateRow(i);
+        if (v.priceError || v.saleError || v.attrError || v.hasDuplicateError) hasHardError = true;
+    });
+
+    if (hasHardError) {
+        Swal.fire('Lỗi Dữ liệu', 'Vui lòng kiểm tra các dòng bị bôi đỏ (Chưa chọn thuộc tính, sai giá, hoặc trùng lặp).', 'error'); return;
+    }
+
+    isSaving.value = true;
+    
+    const formData = new FormData();
+    formData.append('_method', 'PUT');
+
+    formData.append('category_id', form.value.category_id);
+    if (form.value.brand_id) {
+        formData.append('brand_id', form.value.brand_id);
+    }
+    formData.append('name', form.value.name);
+    formData.append('slug', form.value.slug);
+    formData.append('base_price', form.value.base_price);
+    formData.append('status', form.value.isPublished ? 'published' : 'draft');
+
+    if (thumbnailFile.value) {
+        formData.append('thumbnail_image', thumbnailFile.value);
+    }
+
+    const variantsPayload = variants.value.map(v => ({
+        id: v.id || null,
+        sku: v.sku,
+        price: v.price,
+        promotional_price: v.promotional_price || 0,
+        stock_quantity: v.stock_quantity,
+        attributes: v.attributes,
+        current_image: v.current_image || null
+    }));
+    formData.append('variants_data', JSON.stringify(variantsPayload));
+
+    variants.value.forEach((v, index) => {
+        if (v.imageFile) formData.append(`variant_image_${index}`, v.imageFile);
+    });
+
+    updateProductMutation.mutate(formData);
 };
 
+// TỐI ƯU HÓA FETCH CHI TIẾT SẢN PHẨM TRÁNH NGHẼN WATERFALL
 const fetchData = async () => {
+    isPageLoading.value = true;
     try {
-        const [catRes, attrRes, brandRes, prodRes] = await Promise.all([
-            axios.get(`${API_URL}/admin/categories?status=active`, { headers: getHeaders() }),
-            axios.get(`${API_URL}/admin/attributes`, { headers: getHeaders() }),
-            axios.get(`${API_URL}/admin/brands?status=active`, { headers: getHeaders() }),
-            axios.get(`${API_URL}/admin/products/${productId}`, { headers: getHeaders() })
+        // Tải các siêu dữ liệu song song (TanStack query sẽ tự lấy từ cache nếu có)
+        await Promise.all([
+            refetchAttributes(),
+            queryClient.ensureQueryData({ queryKey: ['adminActiveCategories'], queryFn: fetchCategories }),
+            queryClient.ensureQueryData({ queryKey: ['adminActiveBrands'], queryFn: fetchBrands })
         ]);
 
-        const catData = catRes.data;
-        categories.value = Array.isArray(catData.data) ? catData.data : (Array.isArray(catData.data?.data) ? catData.data.data : []);
-
-        const attrData = attrRes.data;
-        systemAttributes.value = Array.isArray(attrData.data) ? attrData.data : [];
-
-        const brandData = brandRes.data;
-        brands.value = Array.isArray(brandData.data) ? brandData.data : [];
-
+        const prodRes = await axios.get(`${API_URL}/admin/products/${productId}`, { headers: getHeaders() });
         const pData = prodRes.data.data;
+        
         form.value.name = pData.name;
         form.value.slug = pData.slug;
         form.value.category_id = pData.category_id || '';
@@ -915,11 +996,23 @@ const fetchData = async () => {
         console.error('Lỗi khởi tạo dữ liệu trang Edit Product:', e);
         Swal.fire('Lỗi', 'Không thể tải thông tin sản phẩm', 'error');
     } finally {
-        isPageLoading.value = false;
+        // Trì hoãn một chút để đảm bảo DOM render mượt mà, hạn chế giật khung hình
+        setTimeout(() => {
+            isPageLoading.value = false;
+        }, 150);
     }
 };
 
 onMounted(() => fetchData());
+
+onBeforeUnmount(() => {
+    if (createAttrModalObj) createAttrModalObj.hide();
+    if (createValueModalObj) createValueModalObj.hide();
+    if (manageAttrModalObj) manageAttrModalObj.hide();
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    document.body.className = '';
+    document.body.style = '';
+});
 </script>
 
 <style scoped>
@@ -1093,5 +1186,25 @@ onMounted(() => fetchData());
     to {
         background-position: 200% center;
     }
+}
+
+/* ĐỒNG BỘ STYLE SELECT TRONG BIỂU MẪU */
+.select-wrapper {
+    width: 100%;
+}
+.filter-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23009981' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 1rem center !important;
+    background-size: 12px !important;
+    border-radius: 8px !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.filter-select:focus {
+    border-color: #009981 !important;
+    box-shadow: 0 0 0 0.25rem rgba(0, 153, 129, 0.15) !important;
 }
 </style>

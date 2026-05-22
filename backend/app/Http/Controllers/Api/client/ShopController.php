@@ -108,27 +108,12 @@ class ShopController extends Controller
      * API: Lấy danh sách màu sắc duy nhất từ các biến thể
      */
     public function colors($shop_slug) {
-        // Truy vấn các biến thể của sản phẩm đang được publish
-        $variants = ProductVariant::whereHas('product', function($q) {
-            $q->where('status', 'published');
-        })->with(['attributeValues' => function($q) {
-            // Chỉ lấy các giá trị thuộc tính là màu sắc
-            $q->whereHas('attribute', function($q2) {
-                $q2->whereIn('name', ['Màu sắc', 'Color', 'Màu', 'color']);
-            });
-        }])->get();
-
-        $colors = collect();
-        
-        // Lấy tất cả giá trị màu
-        foreach ($variants as $variant) {
-            foreach ($variant->attributeValues as $attrValue) {
-                $colors->push($attrValue->value);
-            }
-        }
-
-        // Loại bỏ trùng lặp và reset keys
-        $uniqueColors = $colors->unique()->values();
+        // FIX: Tránh Memory Leak do lấy toàn bộ biến thể về RAM - Xử lý trực tiếp dưới Database bằng JOIN & DISTINCT
+        $uniqueColors = \Illuminate\Support\Facades\DB::table('attribute_values')
+            ->join('attributes', 'attribute_values.attribute_id', '=', 'attributes.id')
+            ->whereIn('attributes.name', ['Màu sắc', 'Color', 'Màu', 'color'])
+            ->distinct()
+            ->pluck('attribute_values.value');
 
         return response()->json(['success' => true, 'data' => $uniqueColors]);
     }

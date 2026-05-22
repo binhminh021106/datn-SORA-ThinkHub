@@ -15,7 +15,12 @@ class AdminUserController extends Controller
 {
     public function index()
     {
-        $users = User::withTrashed()->with(['defaultAddress', 'addresses'])->orderBy('id', 'desc')->paginate(20);
+        // Sử dụng get() thay vì paginate() để Frontend xử lý client-side filtering/pagination mượt mà qua Tanstack
+        $users = User::withTrashed()
+            ->with(['defaultAddress', 'addresses'])
+            ->orderBy('id', 'desc')
+            ->get();
+            
         return response()->json(['success' => true, 'data' => $users]);
     }
 
@@ -48,6 +53,9 @@ class AdminUserController extends Controller
 
                 return $newUser;
             });
+
+            // Eager load các relations để trả về cho TanStack Query lưu cache
+            $user->load(['defaultAddress', 'addresses']);
 
             event(new UserAccountUpdated($user->id, ['action' => 'created']));
             return response()->json(['success' => true, 'message' => 'Tạo tài khoản khách hàng thành công!', 'data' => $user], 201);
@@ -111,8 +119,10 @@ class AdminUserController extends Controller
                 }
             });
 
+            $user->load(['defaultAddress', 'addresses']);
+
             event(new UserAccountUpdated($user->id, ['action' => 'updated']));
-            return response()->json(['success' => true, 'message' => 'Cập nhật thông tin thành công!']);
+            return response()->json(['success' => true, 'message' => 'Cập nhật thông tin thành công!', 'data' => $user]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Lỗi hệ thống: ' . $e->getMessage()], 500);
         }
@@ -123,7 +133,7 @@ class AdminUserController extends Controller
         $user = User::findOrFail($id);
         $user->delete(); 
         event(new UserAccountUpdated($user->id, ['action' => 'deleted']));
-        return response()->json(['success' => true, 'message' => 'Đã chuyển khách hàng vào thùng rác!']);
+        return response()->json(['success' => true, 'message' => 'Đã chuyển khách hàng vào thùng rác!', 'id' => $id]);
     }
 
     public function restore($id)
@@ -141,12 +151,14 @@ class AdminUserController extends Controller
         if ($conflict) {
             return response()->json([
                 'success' => false, 
-                'message' => 'Không thể khôi phục! Email hoặc Số điện thoại của khách hàng này đã bị tài khoản khác sử dụng trong thời gian bị xóa mềm.'
+                'message' => 'Không thể khôi phục! Email hoặc Số điện thoại đã bị tài khoản khác sử dụng.'
             ], 400);
         }
 
         $user->restore();
+        $user->load(['defaultAddress', 'addresses']);
+        
         event(new UserAccountUpdated($user->id, ['action' => 'restored']));
-        return response()->json(['success' => true, 'message' => 'Đã khôi phục tài khoản thành công!']);
+        return response()->json(['success' => true, 'message' => 'Đã khôi phục tài khoản thành công!', 'data' => $user]);
     }
 }

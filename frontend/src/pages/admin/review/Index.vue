@@ -1,6 +1,7 @@
 <template>
   <div class="review-index-wrapper pb-5 mb-5">
     
+    <!-- KHÓA CỨNG: Shimmer Logo chỉ hiện đúng 1 lần duy nhất khi vừa F5 hoặc vừa vào trang -->
     <div v-if="isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
       <h1 class="logo-shimmer mb-3">ThinkHub</h1>
       <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải hệ thống đánh giá...</p>
@@ -16,7 +17,7 @@
             <i class="bi bi-shield-check text-success me-1"></i>
             Trang yêu cầu: <span class="badge" :class="getLevelColor(currentPageLevel)">Cấp {{ currentPageLevel }}</span>
           </div>
-          <button class="btn btn-light border shadow-sm fw-bold text-dark px-4 py-2" @click="fetchData(1, true)">
+          <button class="btn btn-light border shadow-sm fw-bold text-dark px-4 py-2" @click="refetchAll">
             <i class="bi bi-arrow-clockwise me-1"></i> Làm mới
           </button>
         </div>
@@ -27,35 +28,36 @@
           <li class="nav-item">
             <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#" :class="{ 'active-tab': activeTab === 'all' }" @click.prevent="switchTab('all')">
               <i class="bi bi-grid-fill me-2"></i> Tất cả
-              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'all'}">{{ statusCounts['all'] || 0 }}</span>
+              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'all'}">{{ statusCountsData?.all || 0 }}</span>
             </a>
           </li>
           <li class="nav-item">
             <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#" :class="{ 'active-tab': activeTab === 'pending' }" @click.prevent="switchTab('pending')">
               <i class="bi bi-hourglass-split me-2 text-warning"></i> Chờ duyệt
-              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'pending'}">{{ statusCounts['pending'] || 0 }}</span>
+              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'pending'}">{{ statusCountsData?.pending || 0 }}</span>
             </a>
           </li>
           <li class="nav-item">
             <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#" :class="{ 'active-tab': activeTab === 'approved' }" @click.prevent="switchTab('approved')">
               <i class="bi bi-check-circle-fill me-2 text-success"></i> Đã duyệt
-              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'approved'}">{{ statusCounts['approved'] || 0 }}</span>
+              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'approved'}">{{ statusCountsData?.approved || 0 }}</span>
             </a>
           </li>
           <li class="nav-item">
             <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#" :class="{ 'active-tab': activeTab === 'hidden' }" @click.prevent="switchTab('hidden')">
               <i class="bi bi-eye-slash-fill me-2 text-secondary"></i> Đã ẩn
-              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'hidden'}">{{ statusCounts['hidden'] || 0 }}</span>
+              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'hidden'}">{{ statusCountsData?.hidden || 0 }}</span>
             </a>
           </li>
         </ul>
       </div>
 
-      <div class="d-flex flex-wrap gap-3 mb-4">
-        <div class="d-flex align-items-center bg-white px-3 py-2 rounded-pill border shadow-sm">
-          <span class="text-muted small fw-semibold me-2"><i class="bi bi-star-half text-brand"></i> Số sao:</span>
-          <select class="form-select form-select-sm border-0 bg-transparent fw-bold p-0 pe-4 cursor-pointer" style="width: auto; box-shadow: none;" v-model="filters.rating" @change="fetchData(1, true)">
-            <option value="">Tất cả</option>
+      <!-- BỘ LỌC ĐƯỢC THIẾT KẾ LẠI: Đồng bộ chiều ngang, trải dài chuyên nghiệp -->
+      <div class="row g-3 mb-4">
+        <div class="col-md-5 d-flex align-items-center gap-3">
+          <label class="fw-bold text-secondary mb-0" style="min-width: 80px;"><i class="bi bi-star-half text-brand me-1"></i> Số sao:</label>
+          <select class="form-select border-0 shadow-sm rounded-3 py-2 flex-grow-1 cursor-pointer" v-model="filterRating" @change="resetPage">
+            <option value="">Tất cả đánh giá</option>
             <option value="5">5 Sao</option>
             <option value="4">4 Sao</option>
             <option value="3">3 Sao</option>
@@ -69,11 +71,11 @@
         <div class="card-header bg-white border-bottom-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
           <h6 class="fw-bold mb-0 text-dark d-flex align-items-center">
             <i class="bi bi-list-ul me-2"></i>Danh sách Đánh giá
-            <div v-if="isSilentLoading" class="spinner-border spinner-border-sm text-brand ms-2" role="status"></div>
+            <div v-if="isFetchingReviews && !isFirstLoad" class="spinner-border spinner-border-sm text-brand ms-2" role="status"></div>
           </h6>
           <div class="search-box position-relative" style="width: 300px; max-width: 100%;">
-            <input type="text" class="form-control rounded-pill pe-5 shadow-sm bg-light border-0" v-model="searchQuery" @keyup.enter="fetchData(1, true)" placeholder="Tìm theo SP, Combo, KH...">
-            <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-3 text-muted cursor-pointer" @click="fetchData(1, true)"></i>
+            <input type="text" class="form-control rounded-pill pe-5 shadow-sm bg-light border-0" v-model="searchInput" @keyup.enter="applySearch" placeholder="Tìm kiếm đánh giá...">
+            <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-3 text-muted cursor-pointer" @click="applySearch"></i>
           </div>
         </div>
         
@@ -89,19 +91,55 @@
                   <th class="py-3 px-4 text-secondary text-center border-0" style="width: 20%;">Thao tác</th>
                 </tr>
               </thead>
-              <tbody :class="{'pe-none': isSilentLoading}">
-                <tr v-if="reviews.length === 0 && !isSilentLoading && !isTableLoading">
+              <tbody>
+                
+                <!-- THUẬT TOÁN SMART LOAD (Nếu count = 0 thì không hiện skeleton) -->
+                <template v-if="isFetchingReviews && !localReviews.length && expectedCount !== 0">
+                  <tr v-for="n in 5" :key="'skeleton-row-' + n" class="skeleton-row-item">
+                    <td class="px-4 py-3">
+                      <div class="d-flex align-items-start gap-3">
+                        <div class="skeleton-shimmer rounded-circle flex-shrink-0" style="width: 45px; height: 45px;"></div>
+                        <div class="flex-grow-1">
+                          <div class="skeleton-shimmer mb-2" style="width: 70%; height: 16px;"></div>
+                          <div class="skeleton-shimmer mb-2" style="width: 50%; height: 12px;"></div>
+                          <div class="skeleton-shimmer" style="width: 100%; height: 24px; border-radius: 4px;"></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="px-4">
+                      <div class="skeleton-shimmer mb-1" style="width: 60px; height: 18px; border-radius: 4px;"></div>
+                      <div class="skeleton-shimmer" style="width: 90%; height: 14px;"></div>
+                    </td>
+                    <td class="px-4 text-center">
+                      <div class="skeleton-shimmer mx-auto mb-1" style="width: 80px; height: 16px;"></div>
+                      <div class="skeleton-shimmer mx-auto" style="width: 60px; height: 12px;"></div>
+                    </td>
+                    <td class="px-4 text-center">
+                      <div class="skeleton-shimmer mx-auto" style="width: 120px; height: 30px; border-radius: 6px;"></div>
+                    </td>
+                    <td class="px-4 text-center">
+                      <div class="skeleton-shimmer mx-auto" style="width: 100px; height: 30px; border-radius: 6px;"></div>
+                    </td>
+                  </tr>
+                </template>
+
+                <!-- KHÔNG CÓ DỮ LIỆU SẼ BẬT LÊN NGAY LẬP TỨC (0 GIÂY) NẾU COUNT = 0 -->
+                <tr v-else-if="filteredReviews.length === 0">
                   <td colspan="5" class="text-center py-5 text-muted">
                     <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>Không có dữ liệu.
                   </td>
                 </tr>
-                <tr v-else v-for="review in displayedReviews" :key="review.id" :class="{'bg-light opacity-75': review.status === 'hidden'}">
+                
+                <tr v-else v-for="review in filteredReviews" :key="review.id" :class="{'bg-light opacity-75': review.status === 'hidden'}">
                   
                   <td class="px-4 py-3 overflow-hidden">
                     <div class="d-flex align-items-start gap-3">
-                      <div class="bg-secondary bg-opacity-10 text-dark rounded-circle d-flex align-items-center justify-content-center fw-bold border shadow-sm flex-shrink-0" style="width: 45px; height: 45px;">
+                      <!-- Sử dụng SoraImage cho Avatar -->
+                      <div v-if="!review.user?.avatar_url" class="bg-secondary bg-opacity-10 text-dark rounded-circle d-flex align-items-center justify-content-center fw-bold border shadow-sm flex-shrink-0" style="width: 45px; height: 45px;">
                         {{ review.user?.fullName?.charAt(0).toUpperCase() || 'U' }}
                       </div>
+                      <SoraImage v-else :src="review.user?.avatar_url" :placeholder="defaultPlaceholder" imgClass="rounded-circle object-fit-cover shadow-sm border" style="width: 45px; height: 45px;" />
+                      
                       <div class="overflow-hidden">
                         <div class="fw-bold text-dark fs-6 mb-1 text-truncate">{{ review.user?.fullName || 'Khách vãng lai' }}</div>
                         <div class="text-muted small text-truncate mb-2"><i class="bi bi-envelope me-1"></i>{{ review.user?.email || 'N/A' }}</div>
@@ -144,6 +182,7 @@
                           <option value="hidden" :hidden="!canTransitionTo(review.status, 'hidden')">Đã ẩn</option>
                         </select>
                         
+                        <!-- Khung cố định chống nhảy -->
                         <div class="d-flex align-items-center justify-content-start" style="min-width: 55px; height: 28px; flex-shrink: 0 !important;">
                           <div v-if="review.isUpdatingStatus" class="spinner-border text-brand ms-1" style="width: 1.25rem; height: 1.25rem; border-width: 0.15em; flex-shrink: 0 !important;" role="status"></div>
                           <template v-else-if="review.isStatusChanged">
@@ -177,13 +216,20 @@
         </div>
       </div>
 
-      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2" v-if="pagination.last_page > 1 && !isTableLoading">
+      <!-- Phân trang -->
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2" v-if="pagination.last_page > 1">
         <span class="text-muted small">Hiển thị trang {{ pagination.current_page }} / {{ pagination.last_page }}</span>
         <nav>
           <ul class="pagination pagination-sm mb-0 shadow-sm">
-            <li class="page-item" :class="{ disabled: pagination.current_page === 1 }"><button class="page-link text-brand" @click="fetchData(pagination.current_page - 1, true)"><i class="bi bi-chevron-left"></i></button></li>
-            <li class="page-item" v-for="page in pagination.last_page" :key="page" :class="{ active: pagination.current_page === page }"><button class="page-link" :class="pagination.current_page === page ? 'bg-brand border-brand text-white' : 'text-dark'" @click="fetchData(page, true)">{{ page }}</button></li>
-            <li class="page-item" :class="{ disabled: pagination.current_page === pagination.last_page }"><button class="page-link text-brand" @click="fetchData(pagination.current_page + 1, true)"><i class="bi bi-chevron-right"></i></button></li>
+            <li class="page-item" :class="{ disabled: pagination.current_page === 1 }">
+              <button class="page-link text-brand" @click="changePage(pagination.current_page - 1)"><i class="bi bi-chevron-left"></i></button>
+            </li>
+            <li class="page-item" v-for="page in pagination.last_page" :key="page" :class="{ active: pagination.current_page === page }">
+              <button class="page-link" :class="pagination.current_page === page ? 'bg-brand border-brand text-white' : 'text-dark'" @click="changePage(page)">{{ page }}</button>
+            </li>
+            <li class="page-item" :class="{ disabled: pagination.current_page === pagination.last_page }">
+              <button class="page-link text-brand" @click="changePage(pagination.current_page + 1)"><i class="bi bi-chevron-right"></i></button>
+            </li>
           </ul>
         </nav>
       </div>
@@ -201,12 +247,13 @@
           <div class="modal-body p-0 bg-light custom-scrollbar-y" style="max-height: 80vh; overflow-y: auto;" v-if="selectedReview">
             
             <div class="row g-0">
-              <!-- Cột Trái: Thông tin Đánh giá & Phản hồi (Đã thu gọn thành Col 5) -->
+              <!-- Cột Trái: Thông tin Đánh giá & Phản hồi -->
               <div class="col-lg-5 bg-white p-4 border-end">
                 <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom border-light-subtle">
-                  <div class="bg-secondary bg-opacity-10 text-dark rounded-circle d-flex align-items-center justify-content-center fw-bold border shadow-sm fs-4" style="width: 50px; height: 50px;">
+                  <div v-if="!selectedReview.user?.avatar_url" class="bg-secondary bg-opacity-10 text-dark rounded-circle d-flex align-items-center justify-content-center fw-bold border shadow-sm fs-4" style="width: 50px; height: 50px;">
                     {{ selectedReview.user?.fullName?.charAt(0).toUpperCase() || 'U' }}
                   </div>
+                  <SoraImage v-else :src="selectedReview.user?.avatar_url" :placeholder="defaultPlaceholder" imgClass="rounded-circle object-fit-cover shadow-sm border" style="width: 50px; height: 50px;" />
                   <div>
                     <h5 class="fw-bold text-dark mb-1">{{ selectedReview.user?.fullName || 'Khách vãng lai' }}</h5>
                     <div class="text-muted small">{{ selectedReview.user?.email || 'N/A' }}</div>
@@ -227,7 +274,7 @@
                   </div>
 
                   <div v-if="selectedReview.images && selectedReview.images.length" class="mt-3 d-flex gap-2 flex-wrap">
-                    <img v-for="(img, idx) in selectedReview.images" :key="idx" :src="img" class="rounded border shadow-sm object-fit-cover cursor-pointer hover-brand" style="width: 70px; height: 70px;">
+                    <SoraImage v-for="(img, idx) in selectedReview.images" :key="idx" :src="img" :placeholder="defaultPlaceholder" imgClass="rounded border shadow-sm object-fit-cover cursor-pointer hover-brand" style="width: 70px; height: 70px;" />
                   </div>
                 </div>
 
@@ -241,7 +288,7 @@
                 </div>
               </div>
 
-              <!-- Cột Phải: Cấu hình chi tiết Sản Phẩm/Combo được đánh giá -->
+              <!-- Cột Phải: Cấu hình chi tiết Sản Phẩm/Combo -->
               <div class="col-lg-7 bg-light">
                 <div v-if="isFetchingDetail" class="d-flex flex-column justify-content-center align-items-center h-100 p-5 text-muted">
                     <div class="spinner-border text-brand mb-3" role="status"></div>
@@ -252,8 +299,8 @@
                   <div class="bg-white p-4 border-bottom">
                     <div class="row align-items-center g-4">
                       <div class="col-md-3 text-center">
-                        <div class="position-relative d-inline-block shadow-sm border rounded-4 overflow-hidden p-1 bg-light">
-                          <img :src="getThumbnail(selectedItemDetail.thumbnail_image)" class="w-100 h-100 object-fit-cover rounded-3" style="aspect-ratio: 1/1;">
+                        <div class="position-relative d-inline-block shadow-sm border rounded-4 overflow-hidden p-1 bg-light w-100">
+                          <SoraImage :src="selectedItemDetail.thumbnail_image" :placeholder="defaultPlaceholder" imgClass="w-100 h-100 object-fit-cover rounded-3" style="aspect-ratio: 1/1;" />
                         </div>
                       </div>
                       
@@ -306,7 +353,9 @@
                         </thead>
                         <tbody>
                           <tr v-for="v in selectedItemDetail.variants" :key="v.id">
-                            <td class="px-3 py-2"><img :src="getThumbnail(v.image_url)" class="rounded border object-fit-cover shadow-sm bg-white" style="width: 35px; height: 35px;"></td>
+                            <td class="px-3 py-2">
+                                <SoraImage :src="v.image_url" :placeholder="defaultPlaceholder" imgClass="rounded border object-fit-cover shadow-sm bg-white" style="width: 35px; height: 35px;" />
+                            </td>
                             <td class="px-3 font-monospace fw-bold text-dark">{{ v.sku }}</td>
                             <td class="px-3">
                               <div class="d-flex flex-wrap gap-1">
@@ -329,7 +378,7 @@
                   <div class="bg-white p-4 border-bottom">
                     <div class="d-flex align-items-center gap-3">
                        <div class="position-relative d-inline-block shadow-sm border rounded-4 overflow-hidden p-1 bg-light" style="width: 90px; height: 90px; flex-shrink: 0;">
-                         <img :src="getThumbnail(selectedItemDetail.thumbnail_image)" class="w-100 h-100 object-fit-cover rounded-3">
+                         <SoraImage :src="selectedItemDetail.thumbnail_image" :placeholder="defaultPlaceholder" imgClass="w-100 h-100 object-fit-cover rounded-3" />
                        </div>
                        <div>
                          <span class="badge bg-primary text-white mb-2"><i class="bi bi-stars me-1"></i>Combo Đặc Quyền</span>
@@ -343,7 +392,9 @@
                      <h6 class="fw-bold text-dark mb-3 text-uppercase small"><i class="bi bi-box-seam text-brand me-2"></i>Sản phẩm trong Combo</h6>
                      <div class="bg-white border rounded shadow-sm">
                        <div v-for="(item, idx) in selectedItemDetail.items" :key="item.id" class="d-flex align-items-center gap-3 p-3" :class="{'border-bottom border-light-subtle': idx < selectedItemDetail.items.length - 1}">
-                          <img :src="getThumbnail(item.product?.thumbnail_image)" class="rounded border object-fit-cover shadow-sm bg-white flex-shrink-0" style="width: 50px; height: 50px;">
+                          <div class="flex-shrink-0" style="width: 50px; height: 50px;">
+                            <SoraImage :src="item.product?.thumbnail_image" :placeholder="defaultPlaceholder" imgClass="rounded border object-fit-cover shadow-sm bg-white w-100 h-100" />
+                          </div>
                           <div>
                             <div class="fw-bold text-dark fs-6">{{ item.product?.name }}</div>
                             <div class="small text-muted mt-1">
@@ -364,8 +415,8 @@
 
           <div class="modal-footer bg-white border-top py-3 d-flex justify-content-between">
              <button type="button" class="btn btn-outline-brand rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Hủy bỏ</button>
-             <button type="button" class="btn btn-brand rounded-pill px-5 fw-bold shadow-sm" @click="saveReviewReply" :disabled="isSaving">
-                <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>
+             <button type="button" class="btn btn-brand rounded-pill px-5 fw-bold shadow-sm" @click="saveReviewReply" :disabled="replyMutation.isPending.value">
+                <span v-if="replyMutation.isPending.value" class="spinner-border spinner-border-sm me-2"></span>
                 <i v-else class="bi bi-send-fill me-1"></i> Lưu Thay Đổi
              </button>
           </div>
@@ -377,49 +428,254 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
-import { getFullImage } from '@/composables/useUtilities';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
+
+// Tích hợp Component Ảnh với Fallback Mặc định
+import SoraImage from '@/components/ui/SoraImage.vue';
+import defaultPlaceholder from '../../../assets/images/defaults/placeholder.png';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
 
 const route = useRoute();
-const router = useRouter();
-const reviews = ref([]);
+const queryClient = useQueryClient();
+
 const systemModules = ref([]); 
-const systemAttributes = ref([]); // Thêm ref để chứa thuộc tính hệ thống
-
-const isFirstLoad = ref(true);
-const isTableLoading = ref(false);
-const isSilentLoading = ref(false);
-const isSaving = ref(false);
-
-const searchQuery = ref('');
-const activeTab = ref('all');
-const filters = ref({ rating: '' });
+const systemAttributes = ref([]); 
 const currentPageLevel = ref(null);
 
-const pagination = ref({ current_page: 1, last_page: 1, total: 0 });
-const statusCounts = ref({ all: 0, pending: 0, approved: 0, hidden: 0 });
+const activeTab = ref('all');
+const filterRating = ref('');
+const searchInput = ref('');
+const activeSearchQuery = ref(''); 
+const currentPage = ref(1);
 
 const selectedReview = ref(null);
 let quickViewModalInstance = null;
 let isUnmounted = false;
 
+// ĐÃ SỬA VÀ TÁCH BIẾN: Quản lý khởi động cứng đúng 1 lần
+const isFirstLoad = ref(true);
+
 const editForm = ref({ admin_reply: '' });
 const errors = ref({});
 
-const tabCache = ref({});
-
-// Logic cho QuickView Details
 const isFetchingDetail = ref(false);
 const selectedItemDetail = ref(null);
-const selectedItemType = ref(''); // 'product' or 'combo'
+const selectedItemType = ref('');
 
-// Logic chặn chuyển trạng thái ngược
+const getHeaders = () => ({ 'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
+
+// ==========================================
+// TANSTACK QUERY LẤY DANH SÁCH (CÓ PHÂN TRANG)
+// ==========================================
+// ĐÃ SỬA: Loại bỏ việc gán alias isLoading: isFirstLoad
+const { data: reviewsData, isFetching: isFetchingReviews, refetch: refetchReviews } = useQuery({
+  queryKey: ['admin-reviews', currentPage, activeTab, filterRating, activeSearchQuery],
+  queryFn: async () => {
+    let queryParams = new URLSearchParams({ page: currentPage.value });
+    if (activeTab.value !== 'all') queryParams.append('status', activeTab.value);
+    if (filterRating.value) queryParams.append('rating', filterRating.value);
+    
+    const res = await axios.get(`${API_URL}/admin/reviews?${queryParams.toString()}`, { headers: getHeaders() });
+    return res.data.data; 
+  },
+  staleTime: 5 * 60 * 1000 
+});
+
+// Logic dập tắt Logo Shimmer
+watch(reviewsData, (newVal) => {
+  if (newVal) {
+     isFirstLoad.value = false;
+  }
+  if (newVal && newVal.data) {
+    localReviews.value = newVal.data.map(r => ({
+      ...r,
+      localStatus: r.status, 
+      isStatusChanged: false,
+      isUpdatingStatus: false
+    }));
+    pagination.value = {
+      current_page: newVal.current_page,
+      last_page: newVal.last_page,
+      total: newVal.total
+    };
+  }
+}, { immediate: true });
+
+watch(isFetchingReviews, (isFetching) => {
+  if (!isFetching) {
+     isFirstLoad.value = false; // Luôn tắt sau lượt tải đầu tiên dù thành công hay lỗi mạng
+  }
+});
+
+// ==========================================
+// TANSTACK QUERY LẤY THỐNG KÊ ĐẾM (COUNTS)
+// ==========================================
+const { data: statusCountsData, refetch: refetchCounts } = useQuery({
+  queryKey: ['admin-reviews-counts'],
+  queryFn: async () => {
+    const statuses = ['all', 'pending', 'approved', 'hidden'];
+    const requests = statuses.map(status => {
+        let url = `${API_URL}/admin/reviews?page=1`;
+        if (status !== 'all') url += `&status=${status}`;
+        return axios.get(url, { headers: getHeaders() }).then(res => res.data);
+    });
+    const results = await Promise.all(requests);
+    const counts = {};
+    statuses.forEach((status, index) => {
+        if (results[index] && results[index].data) {
+            counts[status] = results[index].data.total;
+        }
+    });
+    return counts;
+  },
+  staleTime: 5 * 60 * 1000
+});
+
+// TÍNH TOÁN SMART LOAD DỰA TRÊN SỐ ĐẾM (Nếu đang lọc thì không chắc chắn)
+const expectedCount = computed(() => {
+    if (activeSearchQuery.value || filterRating.value) return -1;
+    if (!statusCountsData.value) return -1;
+    return statusCountsData.value[activeTab.value] ?? -1;
+});
+
+const localReviews = ref([]);
+const pagination = ref({ current_page: 1, last_page: 1, total: 0 });
+
+// Lọc Text Frontend với hàm chuẩn hóa Tiếng Việt (Tìm kiếm không dấu)
+const removeAccents = (str) => {
+    if (!str) return '';
+    return str.normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+              .toLowerCase();
+};
+
+const filteredReviews = computed(() => {
+  let result = localReviews.value;
+  if (activeSearchQuery.value) {
+    const q = removeAccents(activeSearchQuery.value);
+    result = result.filter(r => 
+        (removeAccents(r.user?.fullName).includes(q)) || 
+        (removeAccents(r.product?.name).includes(q)) ||
+        (removeAccents(r.combo?.name).includes(q))
+    );
+  }
+  return result;
+});
+
+const applySearch = () => {
+  activeSearchQuery.value = searchInput.value;
+  currentPage.value = 1;
+  localReviews.value = []; // Reset để kích hoạt hiệu ứng Skeleton
+};
+
+const resetPage = () => {
+  currentPage.value = 1;
+  localReviews.value = []; 
+};
+
+const changePage = (page) => {
+  currentPage.value = page;
+  localReviews.value = []; 
+};
+
+const switchTab = (tabId) => { 
+  activeTab.value = tabId; 
+  currentPage.value = 1; 
+  localReviews.value = []; 
+};
+
+const refetchAll = () => {
+  localReviews.value = []; 
+  refetchReviews();
+  refetchCounts();
+};
+
+// ==========================================
+// TANSTACK MUTATIONS (Cập nhật, Trả lời, Xóa)
+// ==========================================
+const statusMutation = useMutation({
+  mutationFn: async ({ id, status, admin_reply }) => {
+    return axios.put(`${API_URL}/admin/reviews/${id}`, { status, admin_reply }, { headers: getHeaders() });
+  },
+  onSuccess: () => {
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
+    queryClient.invalidateQueries({ queryKey: ['admin-reviews'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-reviews-counts'] });
+  },
+  onError: (error, variables) => {
+    const review = localReviews.value.find(r => r.id === variables.id);
+    if (review) cancelStatusChange(review);
+    let errorMsg = 'Không thể cập nhật trạng thái';
+    if (error.response?.data?.errors?.status) errorMsg = error.response.data.errors.status[0];
+    Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: errorMsg, showConfirmButton: false, timer: 2000 });
+  }
+});
+
+const saveReviewStatus = (review) => {
+  review.isUpdatingStatus = true;
+  statusMutation.mutate({ id: review.id, status: review.localStatus, admin_reply: review.admin_reply }, {
+    onSettled: () => { review.isUpdatingStatus = false; }
+  });
+};
+
+const replyMutation = useMutation({
+  mutationFn: async ({ id, status, admin_reply }) => {
+    return axios.put(`${API_URL}/admin/reviews/${id}`, { status, admin_reply }, { headers: getHeaders() });
+  },
+  onSuccess: () => {
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã lưu phản hồi', showConfirmButton: false, timer: 1500 });
+    if (quickViewModalInstance) quickViewModalInstance.hide();
+    queryClient.invalidateQueries({ queryKey: ['admin-reviews'] });
+  },
+  onError: (error) => {
+    if (error.response && error.response.status === 422) {
+        errors.value = error.response.data.errors || {};
+    } else {
+        Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'Không thể lưu phản hồi', showConfirmButton: false, timer: 2000 });
+    }
+  }
+});
+
+const saveReviewReply = () => {
+  errors.value = {};
+  replyMutation.mutate({
+    id: selectedReview.value.id,
+    status: selectedReview.value.status,
+    admin_reply: editForm.value.admin_reply
+  });
+};
+
+const deleteMutation = useMutation({
+  mutationFn: async (id) => {
+    return axios.delete(`${API_URL}/admin/reviews/${id}`, { headers: getHeaders() });
+  },
+  onSuccess: () => {
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa đánh giá', showConfirmButton: false, timer: 1500 });
+    queryClient.invalidateQueries({ queryKey: ['admin-reviews'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-reviews-counts'] });
+  },
+  onError: () => {
+    Swal.fire('Lỗi', 'Không thể xóa đánh giá', 'error');
+  }
+});
+
+const confirmDelete = (id) => {
+  Swal.fire({ title: 'Xóa Đánh giá?', text: `Đánh giá này sẽ bị xóa vĩnh viễn!`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Đồng ý xóa' }).then((result) => {
+    if (result.isConfirmed) {
+      deleteMutation.mutate(id);
+    }
+  });
+};
+
+// ==========================================
+// CÁC HÀM TIỆN ÍCH VÀ LOGIC KHÁC
+// ==========================================
 const allowedTransitions = {
     'pending': ['pending', 'approved', 'hidden'],
     'approved': ['approved', 'hidden'], 
@@ -430,36 +686,73 @@ const canTransitionTo = (currentStatus, targetStatus) => {
     return allowedTransitions[currentStatus]?.includes(targetStatus);
 };
 
-onBeforeUnmount(() => {
-  isUnmounted = true;
-  if (quickViewModalInstance) quickViewModalInstance.hide();
-  document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-  document.body.className = '';
-  document.body.style = '';
-});
+const openQuickView = async (review) => {
+  selectedReview.value = review;
+  editForm.value.admin_reply = review.admin_reply || '';
+  errors.value = {};
+  selectedItemDetail.value = null;
+  selectedItemType.value = review.product ? 'product' : 'combo';
 
-const getHeaders = () => ({ 'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
+  if(!quickViewModalInstance) quickViewModalInstance = new window.bootstrap.Modal(document.getElementById('quickViewReviewModal'));
+  quickViewModalInstance.show();
+
+  // KỸ THUẬT: SỬ DỤNG CACHE TANSTACK ĐỂ LẤY NGAY THÔNG TIN (Zero-loading state)
+  const queryCacheKey = review.product ? ['adminProducts'] : ['adminCombos'];
+  const cachedItems = queryClient.getQueryData(queryCacheKey);
+  if (cachedItems) {
+      const foundItem = cachedItems.find(item => item.id === (review.product ? review.product.id : review.combo.id));
+      if (foundItem) {
+          selectedItemDetail.value = { ...foundItem, isPartial: true };
+      }
+  }
+
+  isFetchingDetail.value = true;
+  try {
+      const endpoint = review.product 
+          ? `${API_URL}/admin/products/${review.product.id}`
+          : `${API_URL}/admin/combos/${review.combo.id}`;
+      
+      const res = await axios.get(endpoint, { headers: getHeaders() });
+      
+      let detailData = res.data.data;
+      if (review.product && detailData.variants) {
+          detailData.variants = detailData.variants.map(v => {
+              if (typeof v.attributes === 'string') {
+                  try { v.attributes = JSON.parse(v.attributes); } catch(e) {}
+              }
+              return v;
+          });
+      }
+      selectedItemDetail.value = detailData;
+  } catch (e) {
+      console.error("Lỗi lấy chi tiết mục đánh giá:", e);
+  } finally {
+      isFetchingDetail.value = false;
+  }
+};
+
+const checkStatusChange = (review) => {
+  review.isStatusChanged = (review.localStatus !== review.status);
+};
+
+const cancelStatusChange = (review) => {
+  review.localStatus = review.status; 
+  review.isStatusChanged = false;
+};
 
 const formatDate = (dateString) => {
   if (!dateString) return '';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return new Date(dateString).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
 const formatDateTime = (dateString) => {
   if (!dateString) return '';
-  const date = new Date(dateString);
-  return date.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
+  return new Date(dateString).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
 const formatCurrency = (val) => { 
   if (val === null || val === undefined || val === '' || isNaN(val)) return '---'; 
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val); 
-};
-
-const getThumbnail = (url) => { 
-    if (url) return getFullImage(url); 
-    return 'https://placehold.co/150x150/e0e0e0/6c757d?text=No+Image'; 
 };
 
 const getAttributeName = (attrId) => {
@@ -487,15 +780,6 @@ const getLevelColor = (level) => {
     case 5: return 'bg-success bg-opacity-10 text-success border-success'; 
     default: return 'bg-light text-secondary border-secondary'; 
   }
-};
-
-const checkStatusChange = (review) => {
-  review.isStatusChanged = (review.localStatus !== review.status);
-};
-
-const cancelStatusChange = (review) => {
-  review.localStatus = review.status; 
-  review.isStatusChanged = false;
 };
 
 const getStatusSelectClass = (status) => {
@@ -528,212 +812,26 @@ const fetchAttributes = async () => {
     } catch(e) {}
 };
 
-const fetchCounts = async () => {
+const fetchModules = async () => {
     try {
-        const statuses = ['all', 'pending', 'approved', 'hidden'];
-        const requests = statuses.map(status => {
-            let url = `${API_URL}/admin/reviews?page=1`;
-            if (status !== 'all') url += `&status=${status}`;
-            return axios.get(url, { headers: getHeaders() }).then(res => res.data);
-        });
-
-        const results = await Promise.all(requests);
-        statuses.forEach((status, index) => {
-            if (results[index] && results[index].data) {
-                statusCounts.value[status] = results[index].data.total;
-            }
-        });
-    } catch (e) { console.error(e); }
+        const res = await axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() });
+        const sysModules = res.data.data;
+        const currentModule = sysModules.find(m => m.module_code === (route.meta.moduleCode || 'admin_reviews'));
+        if (currentModule) currentPageLevel.value = currentModule.required_level;
+    } catch(e) {}
 };
-
-const fetchData = async (page = 1, silent = false) => {
-  const cacheKey = `${activeTab.value}_${page}_${filters.value.rating}_${searchQuery.value}`;
-
-  if (tabCache.value[cacheKey]) {
-      reviews.value = tabCache.value[cacheKey].data;
-      pagination.value = tabCache.value[cacheKey].pagination;
-      isSilentLoading.value = true;
-  } else {
-      if (silent) isSilentLoading.value = true;
-      else if (!isFirstLoad.value) isTableLoading.value = true;
-  }
-  
-  try {
-    let queryParams = new URLSearchParams({ page });
-    if (activeTab.value !== 'all') queryParams.append('status', activeTab.value);
-    if (filters.value.rating) queryParams.append('rating', filters.value.rating);
-
-    const [resReviews, resModules] = await Promise.all([
-      axios.get(`${API_URL}/admin/reviews?${queryParams.toString()}`, { headers: getHeaders() }),
-      axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() })
-    ]);
-    
-    if (isUnmounted) return;
-
-    const sysModules = resModules.data.data;
-    const currentModule = sysModules.find(m => m.module_code === (route.meta.moduleCode || 'admin_reviews'));
-    if (currentModule) currentPageLevel.value = currentModule.required_level;
-
-    const result = resReviews.data;
-    const dataPayload = result.data.data ? result.data.data : result.data; 
-    
-    const mappedReviews = dataPayload.map(r => ({
-      ...r,
-      localStatus: r.status, 
-      isStatusChanged: false,
-      isUpdatingStatus: false
-    }));
-
-    const newPagination = result.data.last_page ? {
-        current_page: result.data.current_page,
-        last_page: result.data.last_page,
-        total: result.data.total
-    } : pagination.value;
-
-    reviews.value = mappedReviews;
-    pagination.value = newPagination;
-    tabCache.value[cacheKey] = { data: mappedReviews, pagination: newPagination };
-
-  } catch (err) {
-      console.error('Lỗi Axios Load Data:', err);
-  } finally { 
-    if(!isUnmounted) {
-      isFirstLoad.value = false;
-      isTableLoading.value = false;
-      isSilentLoading.value = false;
-    }
-  }
-};
-
-const switchTab = (tabId) => { 
-    activeTab.value = tabId; 
-    fetchData(1, true); 
-};
-
-const openQuickView = async (review) => {
-  selectedReview.value = review;
-  editForm.value.admin_reply = review.admin_reply || '';
-  errors.value = {};
-  selectedItemDetail.value = null;
-  selectedItemType.value = review.product ? 'product' : 'combo';
-
-  if(!quickViewModalInstance) quickViewModalInstance = new window.bootstrap.Modal(document.getElementById('quickViewReviewModal'));
-  quickViewModalInstance.show();
-
-  // Gọi API lấy dữ liệu chi tiết Sản phẩm/Combo
-  isFetchingDetail.value = true;
-  try {
-      const endpoint = review.product 
-          ? `${API_URL}/admin/products/${review.product.id}`
-          : `${API_URL}/admin/combos/${review.combo.id}`;
-      
-      const res = await axios.get(endpoint, { headers: getHeaders() });
-      
-      let detailData = res.data.data;
-      if (review.product && detailData.variants) {
-          detailData.variants = detailData.variants.map(v => {
-              if (typeof v.attributes === 'string') {
-                  try { v.attributes = JSON.parse(v.attributes); } catch(e) {}
-              }
-              return v;
-          });
-      }
-      selectedItemDetail.value = detailData;
-  } catch (e) {
-      console.error("Lỗi lấy chi tiết mục đánh giá:", e);
-  } finally {
-      isFetchingDetail.value = false;
-  }
-};
-
-const saveReviewStatus = async (review) => {
-  review.isUpdatingStatus = true;
-  try {
-    await axios.put(`${API_URL}/admin/reviews/${review.id}`, {
-      status: review.localStatus,
-      admin_reply: review.admin_reply
-    }, { headers: getHeaders() });
-    
-    review.status = review.localStatus; 
-    review.isStatusChanged = false;
-    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
-    
-    tabCache.value = {}; 
-    fetchCounts();
-  } catch (error) { 
-    cancelStatusChange(review); 
-    let errorMsg = 'Không thể cập nhật trạng thái';
-    if (error.response?.data?.errors?.status) errorMsg = error.response.data.errors.status[0];
-    Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: errorMsg, showConfirmButton: false, timer: 2000 });
-  } finally { 
-    review.isUpdatingStatus = false; 
-  }
-};
-
-const saveReviewReply = async () => {
-  isSaving.value = true;
-  errors.value = {};
-  
-  // Khi ở trong Modal (chỉnh sửa status từ dropdown của Modal nếu có, hoặc chỉ lưu reply)
-  // Ở đây Modal không có chọn dropdown status, nên lấy từ selectedReview.status
-  try {
-    await axios.put(`${API_URL}/admin/reviews/${selectedReview.value.id}`, {
-      status: selectedReview.value.status,
-      admin_reply: editForm.value.admin_reply
-    }, { headers: getHeaders() });
-    
-    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã lưu phản hồi', showConfirmButton: false, timer: 1500 });
-    quickViewModalInstance.hide();
-    
-    tabCache.value = {};
-    fetchData(pagination.value.current_page, true);
-  } catch (error) {
-    if (error.response && error.response.status === 422) {
-        errors.value = error.response.data.errors || {};
-    } else {
-        Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'Không thể lưu phản hồi', showConfirmButton: false, timer: 2000 });
-    }
-  } finally {
-    isSaving.value = false;
-  }
-};
-
-const confirmDelete = (id) => {
-  Swal.fire({ title: 'Xóa Đánh giá?', text: `Đánh giá này sẽ bị xóa vĩnh viễn!`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Đồng ý xóa' }).then(async (result) => {
-    if (result.isConfirmed) {
-      isSilentLoading.value = true;
-      try {
-        await axios.delete(`${API_URL}/admin/reviews/${id}`, { headers: getHeaders() });
-        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa đánh giá', showConfirmButton: false, timer: 1500 });
-        
-        tabCache.value = {};
-        fetchData(pagination.value.current_page, true); 
-        fetchCounts();
-      } catch(e) {
-        Swal.fire('Lỗi', 'Không thể xóa đánh giá', 'error');
-        isSilentLoading.value = false;
-      }
-    }
-  });
-};
-
-const displayedReviews = computed(() => {
-  let result = reviews.value;
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase();
-    result = result.filter(r => 
-        (r.user?.fullName?.toLowerCase().includes(q)) || 
-        (r.product?.name?.toLowerCase().includes(q)) ||
-        (r.combo?.name?.toLowerCase().includes(q))
-    );
-  }
-  return result;
-});
 
 onMounted(() => {
-  fetchAttributes(); // Cần load trước để map được tên Thuộc tính
-  fetchData(1);
-  fetchCounts();
+  fetchAttributes();
+  fetchModules();
+});
+
+onBeforeUnmount(() => {
+  isUnmounted = true;
+  if (quickViewModalInstance) quickViewModalInstance.hide();
+  document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+  document.body.className = '';
+  document.body.style = '';
 });
 </script>
 
@@ -763,4 +861,25 @@ onMounted(() => {
 .custom-scrollbar-y::-webkit-scrollbar-track { background: #f8f9fa; }
 .custom-scrollbar-y::-webkit-scrollbar-thumb { background: #ced4da; border-radius: 10px; }
 .custom-scrollbar-y::-webkit-scrollbar-thumb:hover { background: #adb5bd; }
+
+/* INLINE SKELETON PLACEHOLDER EFFECT */
+.skeleton-row-item {
+  animation: skeletonPulse 1.5s infinite ease-in-out;
+}
+.skeleton-shimmer {
+  background: #e9ecef;
+  background: linear-gradient(90deg, #f1f3f5 25%, #e9ecef 50%, #f1f3f5 75%);
+  background-size: 200% 100%;
+  animation: shimmerMove 1.5s infinite linear;
+  border-radius: 4px;
+}
+@keyframes skeletonPulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+@keyframes shimmerMove {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
 </style>

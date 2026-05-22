@@ -29,7 +29,15 @@ class AdminProductController extends Controller
             $query->where('status', $request->status);
         }
 
-        $products = $query->with(['category:id,name', 'brand:id,name'])
+        // TỐI ƯU ORM ĐỂ KẾT HỢP TANSTACK QUERY:
+        // Thay vì SELECT * kéo theo các cột description, content (chứa HTML/Base64 nặng nề),
+        // Ta chỉ lấy đúng các trường cơ bản phục vụ cho Datatable List.
+        // Bắt buộc phải có category_id và brand_id để Eloquent có thể map dữ liệu với hàm with()
+        $products = $query->select(
+                'id', 'name', 'slug', 'base_price', 'promotional_price', 
+                'thumbnail_image', 'status', 'category_id', 'brand_id', 'deleted_at', 'created_at'
+            )
+            ->with(['category:id,name', 'brand:id,name'])
             ->withCount('variants')
             ->withSum('variants as total_stock', 'stock_quantity')
             ->orderBy('id', 'desc')
@@ -40,6 +48,8 @@ class AdminProductController extends Controller
 
     public function show($id)
     {
+        // Ở hàm Show (dùng cho QuickView hoặc Form Edit), ta BẮT BUỘC phải lấy toàn bộ dữ liệu 
+        // (bao gồm description, specs...) nên giữ nguyên SELECT *.
         $product = Product::with([
             'category:id,name',
             'brand:id,name',

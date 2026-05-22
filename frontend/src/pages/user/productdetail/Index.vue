@@ -103,7 +103,7 @@
 
             <h1 class="product-title">{{ product.name }}</h1>
             
-            <!-- PRICE DISPLAY - giữ nguyên cấu trúc cũ -->
+            <!-- PRICE DISPLAY -->
             <div class="product-price mb-3" style="display: flex; align-items: center; gap: 15px;">
               <template v-if="isAllAttributesSelected && currentVariant">
                 <span class="price-current" style="font-size: 24px; font-weight: 700; color: rgb(159,39,59);">{{ formatMoney(currentVariant.promotional_price || currentVariant.price) }}</span>
@@ -129,7 +129,7 @@
               </div>
             </div>
 
-            <!-- VARIANT SELECTION - giữ nguyên cấu trúc cũ -->
+            <!-- VARIANT SELECTION (ĐÃ NÂNG CẤP SMART SELECTION) -->
             <div v-if="product.attributes" class="product-variants mb-4">
               <div v-for="(options, attrName) in product.attributes" :key="attrName" class="variant-group mb-3">
                 <div class="variant-label-wrapper d-flex justify-content-between align-items-center gap-2 mb-2">
@@ -156,23 +156,20 @@
                   <button 
                     v-for="option in options" 
                     :key="option.id"
-                    @click="!isOptionDisabled(attrName, option.id) && selectAttribute(attrName, option.id)"
-                    class="color-swatch-btn d-flex justify-content-center align-items-center"
+                    @click="selectAttribute(attrName, option.id)"
+                    class="color-swatch-btn d-flex justify-content-center align-items-center transition-all"
                     :class="{ 
                       'active': selectedAttributes[attrName] === option.id,
-                      'disabled': isOptionDisabled(attrName, option.id)
+                      'disabled-option': isOptionDisabled(attrName, option.id) && selectedAttributes[attrName] !== option.id
                     }"
                     :title="option.name"
                     :style="{ 
-                      width: '36px', height: '36px', borderRadius: '50%', border: selectedAttributes[attrName] === option.id ? '2px solid #9f273b' : '1px solid #ddd',
-                      backgroundColor: getColorCode(option.name),
-                      opacity: isOptionDisabled(attrName, option.id) ? 0.4 : 1,
-                      cursor: isOptionDisabled(attrName, option.id) ? 'not-allowed' : 'pointer'
+                      width: '36px', height: '36px', borderRadius: '50%', 
+                      border: selectedAttributes[attrName] === option.id ? '2px solid #9f273b' : '1px solid #ddd',
+                      backgroundColor: getColorCode(option.name)
                     }"
-                    :disabled="isOptionDisabled(attrName, option.id)"
                   >
                     <i v-if="selectedAttributes[attrName] === option.id" class="bi bi-check fw-bold" :class="isLightColor(option.name) ? 'text-dark' : 'text-white'" style="font-size: 1.3rem;"></i>
-                    <i v-else-if="isOptionDisabled(attrName, option.id)" class="bi bi-slash-circle text-secondary" style="font-size: 1rem;"></i>
                   </button>
                 </div>
                 
@@ -181,29 +178,27 @@
                   <button 
                     v-for="option in options" 
                     :key="option.id"
-                    @click="!isOptionDisabled(attrName, option.id) && selectAttribute(attrName, option.id)"
-                    class="variant-btn"
+                    @click="selectAttribute(attrName, option.id)"
+                    class="variant-btn transition-all"
                     :class="{ 
                       'active': selectedAttributes[attrName] === option.id,
-                      'disabled': isOptionDisabled(attrName, option.id)
+                      'disabled-option': isOptionDisabled(attrName, option.id) && selectedAttributes[attrName] !== option.id
                     }"
-                    :disabled="isOptionDisabled(attrName, option.id)"
                     :style="{ 
-                      padding: '8px 16px', border: selectedAttributes[attrName] === option.id ? '2px solid #9f273b' : '1px solid #ddd',
+                      padding: '8px 16px', 
+                      border: selectedAttributes[attrName] === option.id ? '2px solid #9f273b' : '1px solid #ddd',
                       backgroundColor: selectedAttributes[attrName] === option.id ? '#fff0f2' : '#fff',
                       color: selectedAttributes[attrName] === option.id ? '#9f273b' : '#333',
-                      borderRadius: '6px', fontSize: '14px', cursor: isOptionDisabled(attrName, option.id) ? 'not-allowed' : 'pointer',
-                      opacity: isOptionDisabled(attrName, option.id) ? 0.4 : 1
+                      borderRadius: '6px', fontSize: '14px'
                     }"
                   >
                     {{ option.name }}
-                    <i v-if="isOptionDisabled(attrName, option.id)" class="bi bi-slash-circle ms-1" style="font-size: 0.8rem;"></i>
                   </button>
                 </div>
               </div>
             </div>
 
-            <!-- STOCK STATUS - giữ nguyên cấu trúc cũ -->
+            <!-- STOCK STATUS -->
             <div class="stock-progress-wrapper mb-4">
               <template v-if="isAllAttributesSelected && currentVariant">
                 <div v-if="currentStock > 0 && currentStock < 10" class="stock-alert critical" style="background: #fff0f2; border: 1px solid #f8d7da; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
@@ -552,6 +547,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import Swal from 'sweetalert2';
+import Toast from '@/utils/toastConfig';
 
 import ProductCard from '@/components/ui/ProductCard.vue';
 import CompareModal from '@/components/ui/CompareModal.vue';
@@ -563,7 +559,7 @@ import PriceDisplay from '@/components/ui/PriceDisplay.vue';
 // Composables
 import { useWishlist } from '@/composables/useWishlist';
 import { useProductVariants } from '@/composables/useProductVariants';
-import { isColorAttribute, isSizeAttribute } from '@/composables/useColorMapping';
+import { isColorAttribute, isSizeAttribute, getColorCode, isLightColor } from '@/composables/useColorMapping';
 import { getToken, getHeaders, getFullImage, formatMoney } from '@/composables/useUtilities';
 import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener.js';
 
@@ -575,7 +571,7 @@ const isLoading = ref(true);
 const showSizeGuideModal = ref(false);
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const BACKEND_URL = API_BASE_URL.replace(/\/api\/?$/, '');
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || API_BASE_URL.replace(/\/api\/?$/, '');
 const shopSlug = route.params.shop_slug || 'aurora';
 const soraPlaceholder = '/Sora-placeholder.png';
 
@@ -778,17 +774,6 @@ const soraAlert = Swal.mixin({
   customClass: { confirmButton: 'px-4 py-2 mx-2 rounded-pill shadow-sm fw-bold', cancelButton: 'px-4 py-2 mx-2 rounded-pill fw-bold' }
 });
 
-const Toast = Swal.mixin({
-  toast: true,
-  position: 'top-end',
-  showConfirmButton: false,
-  timer: 3000,
-  timerProgressBar: true,
-  background: '#fffafa',
-  color: '#9f273b',
-  iconColor: '#9f273b'
-});
-
 // Wishlist wrapper with Toast & soraAlert
 const toggleFavourite = async (prod) => {
   await toggleFav(prod, Toast, soraAlert, router);
@@ -930,11 +915,22 @@ const fetchRecommendations = async (tab) => {
   }
 };
 
-// Variants methods wrapper using composable
+// MỚI: Xử lý logic gỡ xung đột tự động cho Chi tiết sản phẩm
 const selectAttribute = (attrName, optionId) => {
   const comp = getVariantsComposable();
   if (comp) {
-    comp.selectAttribute(attrName, optionId);
+    if (comp.isOptionAvailable(attrName, optionId)) {
+        comp.selectAttribute(attrName, optionId);
+    } else {
+        // Auto-resolve: Nếu option này bị mờ nhưng user vẫn chọn -> Bỏ chọn tất cả các lựa chọn khác
+        Object.keys(comp.selectedAttributes.value).forEach(key => {
+            if (key !== attrName) {
+                comp.selectAttribute(key, null);
+            }
+        });
+        comp.selectAttribute(attrName, optionId);
+    }
+
     if (comp.isAllAttributesSelected.value && comp.currentVariant.value) {
       const variantImage = comp.currentVariant.value.image || comp.currentVariant.value.image_url;
       if (variantImage) {
@@ -1240,7 +1236,7 @@ input[type=number] { -moz-appearance: textfield; }
 .section-title { font-size: 18px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 25px; }
 .description-content { line-height: 1.8; color: #555; font-size: 15px; }
 
-/* REVIEWS SECTION - ĐÃ REDESIGN LẠI GIAO DIỆN XỊN XÒ VÀ HIỂN THỊ ĐÚNG SỐ SAO */
+/* REVIEWS SECTION */
 .bg-light-custom { background-color: #faf9f8 !important; }
 .border-main { border-color: #9f273b !important; }
 .font-oswald { font-family: 'Oswald', sans-serif; }
@@ -1288,6 +1284,33 @@ input[type=number] { -moz-appearance: textfield; }
 
 .size-guide-btn-compact:active {
   transform: scale(0.95);
+}
+
+/* CSS CHO SMART SELECTION (AUTO-RESOLVE CONFLICT) */
+.color-swatch-btn.disabled-option {
+  opacity: 0.4 !important;
+  cursor: pointer !important;
+  position: relative;
+}
+.color-swatch-btn.disabled-option::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -2px;
+  right: -2px;
+  height: 2px;
+  background-color: #dc3545;
+  transform: translateY(-50%) rotate(45deg);
+  pointer-events: none;
+}
+
+.variant-btn.disabled-option {
+  opacity: 0.4 !important;
+  cursor: pointer !important;
+  text-decoration: line-through;
+  background-color: #f8f9fa !important;
+  color: #adb5bd !important;
+  border-color: #e9ecef !important;
 }
 
 @media (max-width: 1024px) {
