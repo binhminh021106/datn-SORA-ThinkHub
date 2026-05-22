@@ -35,4 +35,20 @@ class Admin extends Authenticatable
     {
         return $this->belongsTo(Role::class, 'role_id', 'id');
     }
+
+    /**
+     * Lấy bản ghi chấm công cho 1 ngày (dùng eager load với constraint từ controller)
+     */
+    public function attendance()
+    {
+        return $this->hasOne(AdminAttendance::class, 'admin_id', 'id');
+    }
+
+    /**
+     * Lấy ca phân công cho nhân viên
+     */
+    public function shiftAssignment()
+    {
+        return $this->hasOne(AdminShiftAssignment::class, 'admin_id', 'id');
+    }
 }

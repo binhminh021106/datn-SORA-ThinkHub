@@ -305,7 +305,9 @@ class AdminOrderController extends Controller
                 }
 
                 OrderStatusHistory::create([
-                    'order_id' => $order->id, 'old_status' => $order->status, 'new_status' => $order->status,
+                    'order_id' => $order->id,
+                    'old_status' => $oldStatus,
+                    'new_status' => $order->status,
                     'note' => 'Kế toán xác nhận Đã chuyển khoản hoàn tiền.',
                     'changed_by' => Auth::id(), 'changed_by_type' => 'admin'
                 ]);

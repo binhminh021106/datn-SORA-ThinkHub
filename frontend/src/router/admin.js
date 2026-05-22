@@ -135,6 +135,35 @@ const admin = [
         meta: { moduleCode: 'admin_brands' },
       },
 
+      // ROUTE QUẢN LÝ CHẤM CÔNG (ATTENDANCE)
+      {
+        path: 'attendance',
+        name: 'admin-attendance-dashboard',
+        component: () => import('../pages/admin/admin-attendance/Index.vue'),
+        meta: {
+          moduleCode: 'admin_attendances',
+          title: 'Bảng chấm công cá nhân'
+        },
+      },
+      {
+        path: 'attendance/history',
+        name: 'admin-attendance-history',
+        component: () => import('../pages/admin/admin-attendance/History.vue'),
+        meta: {
+          moduleCode: 'admin_attendances',
+          title: 'Lịch sử chấm công'
+        },
+      },
+      {
+        path: 'attendance/shifts',
+        name: 'admin-attendance-shifts',
+        component: () => import('../pages/admin/admin-attendance/WorkShifts.vue'),
+        meta: {
+          moduleCode: 'admin_attendances',
+          title: 'Quản lý ca làm việc'
+        },
+      },
+      
       // ROUTE QUẢN LÝ BANNER (BANNERS) - THÊM MỚI
       {
         path: 'banners',

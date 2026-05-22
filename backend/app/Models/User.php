@@ -77,4 +77,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Review::class);
     }
+
+    public function birthdayEmailLogs()
+    {
+        return $this->hasMany(BirthdayEmailLog::class, 'user_id');
+    }
 }

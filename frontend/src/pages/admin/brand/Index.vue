@@ -280,7 +280,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, onBeforeUnmount, watch } from 'vue';
+import { ref, onMounted, computed, onBeforeUnmount, watch, watchEffect } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
@@ -399,7 +399,7 @@ watch(rawBrandsList, (newList) => {
 }, { immediate: true });
 
 // Thiết lập quyền hạn cấp trang
-computed(() => {
+watchEffect(() => {
   const modules = modulesResponse.value?.data || [];
   const currentCode = route.meta.moduleCode || 'admin_brands';
   if (currentCode && modules.length > 0) {

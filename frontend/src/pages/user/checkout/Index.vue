@@ -424,6 +424,7 @@ const soraAlert = Swal.mixin({
 
 const getSafeStorage = (key) => { try { return localStorage.getItem(key); } catch(e) { return null; } };
 const removeSafeStorage = (key) => { try { localStorage.removeItem(key); } catch(e) {} };
+const setSafeStorage = (key, value) => { try { localStorage.setItem(key, value); } catch(e) {} };
 
 const getHeaders = () => {
   const headers = { 'Accept': 'application/json' };
@@ -814,10 +815,26 @@ const openCouponModal = () => {
 const applyCoupon = (coupon) => {
     if (subTotal.value < coupon.min_spend) return;
     selectedCoupon.value = coupon;
+    if (coupon.type === 'birthday') setSafeStorage('birthday_coupon_code', coupon.code);
 };
 const clearCoupon = () => {
     selectedCoupon.value = null;
+    removeSafeStorage('birthday_coupon_code');
     if (couponModalInstance) couponModalInstance.hide();
+};
+
+const autoApplyStoredBirthdayCoupon = () => {
+    const storedCode = getSafeStorage('birthday_coupon_code');
+    if (!storedCode || isCouponBlocked.value) return;
+
+    const coupon = availableCoupons.value.find(c => String(c.code).toLowerCase() === String(storedCode).toLowerCase());
+    if (!coupon) {
+        removeSafeStorage('birthday_coupon_code');
+        return;
+    }
+
+    if (subTotal.value < coupon.min_spend) return;
+    selectedCoupon.value = coupon;
 };
 
 const checkDirectBuy = async () => {
@@ -883,6 +900,7 @@ const submitOrder = async () => {
                 allowOutsideClick: false
             }).then(() => {
                 removeSafeStorage('cart_session_id');
+                removeSafeStorage('birthday_coupon_code');
                 router.push('/checkout/success?order=' + res.data.data.order_code).catch(()=>{});
             });
         }
@@ -917,6 +935,7 @@ onMounted(async () => {
     isInitializing.value = true;
     await checkDirectBuy();
     await fetchInitData(); 
+    autoApplyStoredBirthdayCoupon();
     await fetchProvinces();
     isInitializing.value = false;
     window.scrollTo({ top: 0, behavior: 'smooth' });

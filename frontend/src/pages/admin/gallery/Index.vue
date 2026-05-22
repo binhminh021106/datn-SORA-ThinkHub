@@ -359,7 +359,6 @@ const statusMutation = useMutation({
 
 const onStatusChange = (item, newStatus) => {
   statusMutation.mutate({ id: item.id, status: newStatus });
-  Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã lưu trạng thái', showConfirmButton: false, timer: 1000 });
 };
 
 const deleteMutation = useMutation({
@@ -373,6 +372,9 @@ const deleteMutation = useMutation({
     if (prev) queryClient.setQueryData(['admin', 'galleries'], old => old.filter(g => g.id !== id));
     return { prev };
   },
+  onSuccess: () => {
+    Swal.fire({icon: 'success', title: 'Đã xóa hoàn toàn', timer: 1500, showConfirmButton: false, toast: true, position: 'top-end'});
+  },
   onError: (err, id, ctx) => { 
     if (ctx?.prev) queryClient.setQueryData(['admin', 'galleries'], ctx.prev); 
     Swal.fire('Lỗi', err.response?.data?.message || err.message, 'error');
@@ -384,7 +386,6 @@ const confirmDelete = (id, title) => {
   Swal.fire({ title: 'Xóa hình ảnh?', text: `Ảnh "${title}" sẽ bị xóa khỏi hệ thống!`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Đồng ý xóa' }).then((result) => {
     if (result.isConfirmed) {
       deleteMutation.mutate(id);
-      Swal.fire({icon: 'success', title: 'Đã xóa hoàn toàn', timer: 1500, showConfirmButton: false, toast: true, position: 'top-end'});
     }
   });
 };
