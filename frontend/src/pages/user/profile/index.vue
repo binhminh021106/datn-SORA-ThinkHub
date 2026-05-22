@@ -228,39 +228,45 @@
               <div class="row mb-4 align-items-center">
                 <label for="fullName" class="col-sm-3 col-form-label text-sm-end text-secondary fw-medium">Họ Và Tên</label>
                 <div class="col-sm-9 col-md-7">
-                  <input type="text" class="form-control custom-input" id="fullName" v-model="form.fullName" required placeholder="Nhập họ và tên của bạn">
+                  <input type="text" class="form-control custom-input" :class="{'is-invalid': errors.fullName}" id="fullName" v-model="form.fullName" @blur="validateField('fullName')" required placeholder="Nhập họ và tên của bạn">
+                  <div v-if="errors.fullName" class="invalid-feedback">{{ errors.fullName }}</div>
                 </div>
               </div>
 
               <div class="row mb-4 align-items-center">
                 <label for="phone" class="col-sm-3 col-form-label text-sm-end text-secondary fw-medium">Số Điện Thoại</label>
                 <div class="col-sm-9 col-md-7">
-                  <input type="tel" class="form-control custom-input" id="phone" v-model="form.phone" placeholder="Nhập số điện thoại liên hệ">
+                  <input type="tel" class="form-control custom-input" :class="{'is-invalid': errors.phone}" id="phone" v-model="form.phone" @input="form.phone = form.phone.replace(/\D/g, '')" @blur="validateField('phone')" placeholder="Nhập số điện thoại liên hệ">
+                  <div v-if="errors.phone" class="invalid-feedback">{{ errors.phone }}</div>
                 </div>
               </div>
 
               <div class="row mb-4 align-items-center">
-                <label class="col-sm-3 col-form-label text-sm-end text-secondary fw-medium">Giới Tính</label>
-                <div class="col-sm-9 col-md-7 d-flex gap-4 pt-2">
-                  <div class="form-check custom-radio">
-                    <input class="form-check-input" type="radio" name="gender" id="genderMale" value="Nam" v-model="form.gender">
-                    <label class="form-check-label text-secondary" for="genderMale">Nam</label>
+                <label class="col-sm-3 col-form-label text-sm-end text-secondary fw-medium" :class="{'text-danger': errors.gender}">Giới Tính</label>
+                <div class="col-sm-9 col-md-7">
+                  <div class="d-flex gap-4 pt-2">
+                    <div class="form-check custom-radio">
+                      <input class="form-check-input" :class="{'is-invalid': errors.gender}" type="radio" name="gender" id="genderMale" value="Nam" v-model="form.gender" @change="validateField('gender')">
+                      <label class="form-check-label text-secondary" for="genderMale">Nam</label>
+                    </div>
+                    <div class="form-check custom-radio">
+                      <input class="form-check-input" :class="{'is-invalid': errors.gender}" type="radio" name="gender" id="genderFemale" value="Nữ" v-model="form.gender" @change="validateField('gender')">
+                      <label class="form-check-label text-secondary" for="genderFemale">Nữ</label>
+                    </div>
+                    <div class="form-check custom-radio">
+                      <input class="form-check-input" :class="{'is-invalid': errors.gender}" type="radio" name="gender" id="genderOther" value="Khác" v-model="form.gender" @change="validateField('gender')">
+                      <label class="form-check-label text-secondary" for="genderOther">Khác</label>
+                    </div>
                   </div>
-                  <div class="form-check custom-radio">
-                    <input class="form-check-input" type="radio" name="gender" id="genderFemale" value="Nữ" v-model="form.gender">
-                    <label class="form-check-label text-secondary" for="genderFemale">Nữ</label>
-                  </div>
-                  <div class="form-check custom-radio">
-                    <input class="form-check-input" type="radio" name="gender" id="genderOther" value="Khác" v-model="form.gender">
-                    <label class="form-check-label text-secondary" for="genderOther">Khác</label>
-                  </div>
+                  <div v-if="errors.gender" class="small text-danger mt-1">{{ errors.gender }}</div>
                 </div>
               </div>
 
               <div class="row mb-4 align-items-center">
                 <label for="birthday" class="col-sm-3 col-form-label text-sm-end text-secondary fw-medium">Ngày Sinh</label>
                 <div class="col-sm-9 col-md-7">
-                  <input type="date" class="form-control custom-input" id="birthday" v-model="form.birthday">
+                  <input type="date" class="form-control custom-input" :class="{'is-invalid': errors.birthday}" id="birthday" v-model="form.birthday" @blur="validateField('birthday')">
+                  <div v-if="errors.birthday" class="invalid-feedback">{{ errors.birthday }}</div>
                 </div>
               </div>
 
@@ -306,7 +312,7 @@
                 <div class="col-sm-9 offset-sm-3">
                   <button type="submit" class="btn btn-main px-5 py-2 text-uppercase fw-medium rounded-0" :disabled="isSaving" style="letter-spacing: 0.1em;">
                     <span v-if="isSaving" class="spinner-border spinner-border-sm me-2" role="status"></span>
-                    Lưu Thay Đổi
+                    {{ isSaving ? 'Đang lưu...' : 'Lưu Thay Đổi' }}
                   </button>
                 </div>
               </div>
@@ -424,11 +430,13 @@
               <div class="row g-4 mb-4">
                 <div class="col-md-6">
                   <label class="form-label text-secondary small fw-medium">Họ và tên người nhận <span class="text-danger">*</span></label>
-                  <input type="text" class="form-control custom-input bg-white" v-model="addressForm.customer_name" required placeholder="Nhập họ tên">
+                  <input type="text" class="form-control custom-input bg-white" :class="{'is-invalid': addressErrors.customer_name}" v-model="addressForm.customer_name" @blur="validateAddressField('customer_name')" required placeholder="Nhập họ tên">
+                  <div v-if="addressErrors.customer_name" class="invalid-feedback">{{ addressErrors.customer_name }}</div>
                 </div>
                 <div class="col-md-6">
                   <label class="form-label text-secondary small fw-medium">Số điện thoại <span class="text-danger">*</span></label>
-                  <input type="tel" class="form-control custom-input bg-white" v-model="addressForm.customer_phone" required placeholder="Nhập số điện thoại">
+                  <input type="tel" class="form-control custom-input bg-white" :class="{'is-invalid': addressErrors.customer_phone}" v-model="addressForm.customer_phone" @input="addressForm.customer_phone = addressForm.customer_phone.replace(/\D/g, '')" @blur="validateAddressField('customer_phone')" required placeholder="Nhập số điện thoại">
+                  <div v-if="addressErrors.customer_phone" class="invalid-feedback">{{ addressErrors.customer_phone }}</div>
                 </div>
               </div>
 
@@ -436,30 +444,45 @@
               <div class="row g-4 mb-4">
                 <div class="col-md-4">
                   <label class="form-label text-secondary small fw-medium">Tỉnh / Thành phố <span class="text-danger">*</span></label>
-                  <select class="form-select custom-input bg-white" v-model="addressForm.city" @change="handleCityChange" required>
+                  <select class="form-select custom-input bg-white" :class="{'is-invalid': addressErrors.city}" v-model="addressForm.city" @change="handleCityChange(); validateAddressField('city')" required>
                     <option value="" disabled>-- Chọn Tỉnh/TP --</option>
                     <option v-for="p in provincesData" :key="p.Id" :value="p.Name">{{ p.Name }}</option>
                   </select>
+                  <div v-if="addressErrors.city" class="invalid-feedback">{{ addressErrors.city }}</div>
                 </div>
                 <div class="col-md-4">
                   <label class="form-label text-secondary small fw-medium">Quận / Huyện <span class="text-danger">*</span></label>
-                  <select class="form-select custom-input bg-white" v-model="addressForm.district" @change="handleDistrictChange" :disabled="!addressForm.city" required>
+                  <select class="form-select custom-input bg-white" :class="{'is-invalid': addressErrors.district}" v-model="addressForm.district" @change="handleDistrictChange(); validateAddressField('district')" :disabled="!addressForm.city" required>
                     <option value="" disabled>-- Chọn Quận/Huyện --</option>
                     <option v-for="d in districtsData" :key="d.Id" :value="d.Name">{{ d.Name }}</option>
                   </select>
+                  <div v-if="addressErrors.district" class="invalid-feedback">{{ addressErrors.district }}</div>
                 </div>
                 <div class="col-md-4">
                   <label class="form-label text-secondary small fw-medium">Phường / Xã <span class="text-danger">*</span></label>
-                  <select class="form-select custom-input bg-white" v-model="addressForm.ward" :disabled="!addressForm.district" required>
+                  <select class="form-select custom-input bg-white" :class="{'is-invalid': addressErrors.ward}" v-model="addressForm.ward" @change="validateAddressField('ward')" :disabled="!addressForm.district" required>
                     <option value="" disabled>-- Chọn Phường/Xã --</option>
                     <option v-for="w in wardsData" :key="w.Id" :value="w.Name">{{ w.Name }}</option>
                   </select>
+                  <div v-if="addressErrors.ward" class="invalid-feedback">{{ addressErrors.ward }}</div>
                 </div>
               </div>
 
               <div class="mb-4">
-                <label class="form-label text-secondary small fw-medium">Địa chỉ cụ thể <span class="text-danger">*</span></label>
-                <input type="text" class="form-control custom-input bg-white" v-model="addressForm.shipping_address" required placeholder="Số nhà, tên tòa nhà, tên đường...">
+                <div class="d-flex justify-content-between align-items-end mb-2">
+                  <label class="form-label text-secondary small fw-medium mb-0">Địa chỉ cụ thể <span class="text-danger">*</span></label>
+                  <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2" @click="getCurrentLocation" :disabled="isLocating">
+                    <span v-if="isLocating" class="spinner-border spinner-border-sm"></span>
+                    <i v-else class="bi bi-geo-alt"></i> Lấy định vị hiện tại
+                  </button>
+                </div>
+                <input type="text" class="form-control custom-input bg-white" :class="{'is-invalid': addressErrors.shipping_address}" v-model="addressForm.shipping_address" @blur="validateAddressField('shipping_address')" required placeholder="Số nhà, tên tòa nhà, tên đường...">
+                <div v-if="addressErrors.shipping_address" class="invalid-feedback">{{ addressErrors.shipping_address }}</div>
+                
+                <!-- HIỂN THỊ BẢN ĐỒ KHI ĐÃ CÓ MAP URL -->
+                <div v-if="mapUrl" class="mt-3 rounded overflow-hidden border shadow-sm">
+                  <iframe :src="mapUrl" width="100%" height="250" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                </div>
               </div>
 
               <div class="form-check custom-checkbox mb-5">
@@ -590,6 +613,104 @@ const addressForm = ref({
   is_default: false
 });
 
+const addressErrors = ref({
+  customer_name: '',
+  customer_phone: '',
+  shipping_address: '',
+  city: '',
+  district: '',
+  ward: ''
+});
+
+const validateAddressField = (field) => {
+  if (field === 'customer_name') {
+    let val = addressForm.value.customer_name || '';
+    val = val.trim().replace(/\s+/g, ' ');
+    addressForm.value.customer_name = val;
+    if (!val) {
+      addressErrors.value.customer_name = 'Vui lòng nhập tên người nhận';
+    } else if (val.length < 2 || val.length > 50) {
+      addressErrors.value.customer_name = 'Tên người nhận phải từ 2 đến 50 ký tự';
+    } else if (!/^[A-Za-zÀ-ỹ]+(?:\s+[A-Za-zÀ-ỹ]+)+$/.test(val)) {
+      addressErrors.value.customer_name = 'Tên người nhận phải chứa ít nhất 2 từ (không chứa số hoặc ký tự đặc biệt)';
+    } else {
+      addressErrors.value.customer_name = '';
+    }
+  }
+
+  if (field === 'customer_phone') {
+    let val = addressForm.value.customer_phone || '';
+    val = val.replace(/\D/g, ''); 
+    addressForm.value.customer_phone = val;
+    
+    if (!val) {
+      addressErrors.value.customer_phone = 'Vui lòng nhập số điện thoại';
+    } else if (!/^0[3|5|7|8|9][0-9]{8}$/.test(val)) {
+      addressErrors.value.customer_phone = 'Số điện thoại không hợp lệ';
+    } else {
+      addressErrors.value.customer_phone = '';
+    }
+  }
+
+  if (field === 'shipping_address') {
+    let val = addressForm.value.shipping_address || '';
+    if (!val) {
+      addressErrors.value.shipping_address = 'Vui lòng nhập địa chỉ chi tiết';
+    } else if (val.length < 10) {
+      addressErrors.value.shipping_address = 'Địa chỉ quá ngắn';
+    } else if (val.length > 255) {
+      addressErrors.value.shipping_address = 'Địa chỉ tối đa 255 ký tự';
+    } else {
+      addressErrors.value.shipping_address = '';
+    }
+  }
+
+  if (field === 'city') {
+    addressErrors.value.city = addressForm.value.city ? '' : 'Vui lòng chọn Tỉnh/TP';
+  }
+  if (field === 'district') {
+    addressErrors.value.district = addressForm.value.district ? '' : 'Vui lòng chọn Quận/Huyện';
+  }
+  if (field === 'ward') {
+    addressErrors.value.ward = addressForm.value.ward ? '' : 'Vui lòng chọn Phường/Xã';
+  }
+};
+
+const isLocating = ref(false);
+const mapUrl = ref('');
+
+const getCurrentLocation = () => {
+  if (!navigator.geolocation) {
+    showToast('Trình duyệt của bạn không hỗ trợ định vị', 'error');
+    return;
+  }
+  isLocating.value = true;
+  navigator.geolocation.getCurrentPosition(async (position) => {
+    try {
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+      const response = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=vi`);
+      if (response.data && response.data.display_name) {
+        mapUrl.value = `https://maps.google.com/maps?q=${lat},${lon}&hl=vi&z=15&output=embed`;
+        addressForm.value.shipping_address = response.data.display_name;
+        validateAddressField('shipping_address');
+        showToast('Đã lấy vị trí hiện tại', 'success');
+      }
+    } catch (err) {
+      showToast('Lỗi khi lấy thông tin địa chỉ từ tọa độ', 'error');
+    } finally {
+      isLocating.value = false;
+    }
+  }, (err) => {
+    showToast('Không thể lấy vị trí. Vui lòng cấp quyền!', 'error');
+    isLocating.value = false;
+  }, {
+    enableHighAccuracy: true,
+    timeout: 10000,
+    maximumAge: 0
+  });
+};
+
 const defaultAddress = computed(() => {
   if (addresses.value.length === 0) return null;
   const def = addresses.value.find(addr => addr.is_default);
@@ -600,6 +721,77 @@ const form = ref({
   fullName: '', email: '', phone: '', gender: '', birthday: '', avatar_url: '',
   tier_id: null, accumulated_spent: 0, accumulated_orders: 0, tier: null, all_tiers: []
 });
+
+const errors = ref({
+  fullName: '',
+  phone: '',
+  gender: '',
+  birthday: ''
+});
+
+const validateField = (field) => {
+  if (field === 'fullName') {
+    let val = form.value.fullName || '';
+    val = val.trim().replace(/\s+/g, ' ');
+    form.value.fullName = val;
+    
+    if (!val) {
+      errors.value.fullName = 'Vui lòng nhập họ và tên';
+    } else if (val.length < 2 || val.length > 50) {
+      errors.value.fullName = 'Họ tên phải từ 2 đến 50 ký tự';
+    } else if (!/^[A-Za-zÀ-ỹ]+(?:\s+[A-Za-zÀ-ỹ]+)+$/.test(val)) {
+      errors.value.fullName = 'Họ tên phải chứa ít nhất 2 từ (không chứa số hoặc ký tự đặc biệt)';
+    } else {
+      errors.value.fullName = '';
+    }
+  }
+
+  if (field === 'phone') {
+    let val = form.value.phone || '';
+    val = val.replace(/\D/g, ''); 
+    form.value.phone = val;
+    
+    if (!val) {
+      errors.value.phone = 'Vui lòng nhập số điện thoại';
+    } else if (!/^0[3|5|7|8|9][0-9]{8}$/.test(val)) {
+      errors.value.phone = 'Số điện thoại không hợp lệ';
+    } else {
+      errors.value.phone = '';
+    }
+  }
+
+  if (field === 'birthday') {
+    let val = form.value.birthday || '';
+    if (!val) {
+      errors.value.birthday = 'Vui lòng chọn ngày sinh';
+    } else {
+      const bday = new Date(val);
+      const today = new Date();
+      if (bday > today) {
+        errors.value.birthday = 'Ngày sinh không hợp lệ';
+      } else {
+        let age = today.getFullYear() - bday.getFullYear();
+        const m = today.getMonth() - bday.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < bday.getDate())) {
+          age--;
+        }
+        if (age < 13) {
+          errors.value.birthday = 'Bạn chưa đủ tuổi sử dụng';
+        } else {
+          errors.value.birthday = '';
+        }
+      }
+    }
+  }
+
+  if (field === 'gender') {
+    if (!form.value.gender) {
+      errors.value.gender = 'Vui lòng chọn giới tính';
+    } else {
+      errors.value.gender = '';
+    }
+  }
+};
 
 const passwordForm = ref({
   current_password: '', password: '', password_confirmation: ''
@@ -682,6 +874,7 @@ const openAddAddressForm = () => {
   };
   districtsData.value = []; // Reset list Huyện
   wardsData.value = [];     // Reset list Xã
+  mapUrl.value = '';        // Reset bản đồ
   showAddressForm.value = true;
 };
 
@@ -696,6 +889,7 @@ const openEditAddressForm = (addr) => {
   updateDistricts();
   updateWards();
   
+  mapUrl.value = ''; // Reset bản đồ
   showAddressForm.value = true;
 };
 
@@ -708,6 +902,24 @@ const closeAddressForm = () => {
 };
 
 const saveAddress = async () => {
+  validateAddressField('customer_name');
+  validateAddressField('customer_phone');
+  validateAddressField('shipping_address');
+  validateAddressField('city');
+  validateAddressField('district');
+  validateAddressField('ward');
+
+  if (
+    addressErrors.value.customer_name || 
+    addressErrors.value.customer_phone || 
+    addressErrors.value.shipping_address || 
+    addressErrors.value.city || 
+    addressErrors.value.district || 
+    addressErrors.value.ward
+  ) {
+    return;
+  }
+
   isSavingAddress.value = true;
   try {
     const url = isEditingAddress.value ? `${apiBase}/addresses/${addressForm.value.id}` : `${apiBase}/addresses`;
@@ -814,6 +1026,20 @@ const handleFileChange = (event) => {
 };
 
 const updateProfile = async () => {
+  validateField('fullName');
+  validateField('phone');
+  validateField('gender');
+  validateField('birthday');
+
+  if (errors.value.fullName || errors.value.phone || errors.value.gender || errors.value.birthday) {
+    const firstError = ['fullName', 'phone', 'gender', 'birthday'].find(k => errors.value[k] !== '');
+    if (firstError) {
+      const el = document.getElementById(firstError) || document.querySelector(`input[name="${firstError}"]`);
+      if (el) el.focus();
+    }
+    return;
+  }
+
   isSaving.value = true;
   try {
     const formData = new FormData();
