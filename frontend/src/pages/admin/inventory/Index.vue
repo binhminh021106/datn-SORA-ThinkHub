@@ -630,7 +630,7 @@ const visiblePages = computed(() => {
 });
 
 // Theo dõi tab và ô tìm kiếm để reset trang phân trang
-watch([activeTab, searchQuery, filters], () => {
+watch([activeTab, searchQuery, () => filters.value.product_status], () => {
   currentPage.value = 1;
 });
 

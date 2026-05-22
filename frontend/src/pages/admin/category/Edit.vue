@@ -243,11 +243,16 @@ const generateSlug = () => {
 
 const handleRestore = async () => {
   isRestoring.value = true;
-  await refetchCategory();
-  setTimeout(() => {
+    const result = await refetchCategory();
+    errors.value = {};
     isRestoring.value = false;
+
+    if (result.error) {
+        Swal.fire('Lỗi', 'Không thể tải lại dữ liệu gốc', 'error');
+        return;
+    }
+
     Swal.fire({ icon: 'success', title: 'Đã khôi phục dữ liệu gốc', timer: 1500, showConfirmButton: false });
-  }, 400); 
 };
 
 const handleImageChange = (e) => {

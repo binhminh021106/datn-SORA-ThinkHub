@@ -56,9 +56,7 @@ class AdminInventoryController extends Controller
     {
         $variant = ProductVariant::findOrFail($id);
         
-        DB::beginTransaction();
         try {
-            $oldStock = $variant->stock_quantity;
             $action = $request->input('action');
             $quantity = $request->input('quantity');
 
@@ -70,6 +68,8 @@ class AdminInventoryController extends Controller
                 ], 403);
             }
 
+            DB::beginTransaction();
+            $oldStock = $variant->stock_quantity;
             $variant->stock_quantity += $quantity;
             $variant->save();
             
