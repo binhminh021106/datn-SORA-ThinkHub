@@ -183,9 +183,15 @@
                                         </p>
                                         <div class="d-flex flex-wrap gap-2">
                                             <label v-for="val in values" :key="val" 
-                                                   class="attr-chip m-0 cursor-pointer transition-all"
-                                                   :class="{'selected': userSelections[item.id][attrName] === val, 'error': validationErrors[item.id]}">
-                                              <input type="radio" class="d-none" :name="`attr_${item.id}_${attrName}`" :value="val" v-model="userSelections[item.id][attrName]" @change="validationErrors[item.id] = false">
+                                                   class="attr-chip m-0 transition-all"
+                                                   :class="{
+                                                     'selected': userSelections[item.id][attrName] === val, 
+                                                     'error': validationErrors[item.id],
+                                                     'disabled': !isOptionAvailable(item, attrName, val)
+                                                   }"
+                                                   :title="!isOptionAvailable(item, attrName, val) ? 'Tạm hết hàng' : ''"
+                                                   @click.prevent="isOptionAvailable(item, attrName, val) ? toggleSelection(item.id, attrName, val) : null">
+                                              <input type="radio" class="d-none" :name="`attr_${item.id}_${attrName}`" :checked="userSelections[item.id][attrName] === val">
                                               <div class="chip-inner px-3 py-1 d-flex flex-column align-items-center justify-content-center text-center shadow-sm" style="min-width: 45px;">
                                                 <span class="fw-bold font-oswald tracking-wide" style="font-size: 0.85rem;">{{ val }}</span>
                                               </div>
@@ -196,9 +202,6 @@
 
                                  <div class="text-danger small mt-3 fst-italic p-2 bg-danger bg-opacity-10 border border-danger border-opacity-25 rounded" v-if="validationErrors[item.id]">
                                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Vui lòng hoàn tất tùy chọn thiết kế cho món này.
-                                 </div>
-                                 <div class="text-danger small mt-3 fst-italic fw-bold p-2 bg-danger bg-opacity-10 border border-danger border-opacity-25 rounded" v-else-if="!getSelectedVariant(item.id) && isAllAttributesSelected(item.id)">
-                                   <i class="bi bi-x-circle-fill me-1"></i> Sự kết hợp này hiện đã hết hàng.
                                  </div>
                              </div>
                          </div>
@@ -338,8 +341,15 @@
                    {{ attrName }}: <span class="fw-normal text-sora-primary ms-1">{{ quickAddSelections[attrName] || '' }}</span>
                  </p>
                  <div class="d-flex flex-wrap gap-2">
-                   <label v-for="val in values" :key="val" class="attr-chip m-0 cursor-pointer transition-all" :class="{'selected': String(quickAddSelections[attrName]) === String(val)}">
-                     <input type="radio" class="d-none" :value="val" v-model="quickAddSelections[attrName]" @change="quickAddError = false">
+                   <label v-for="val in values" :key="val" 
+                          class="attr-chip m-0 transition-all" 
+                          :class="{
+                            'selected': String(quickAddSelections[attrName]) === String(val),
+                            'disabled': !isQuickAddOptionAvailable(attrName, val)
+                          }"
+                          :title="!isQuickAddOptionAvailable(attrName, val) ? 'Tạm hết hàng' : ''"
+                          @click.prevent="isQuickAddOptionAvailable(attrName, val) ? toggleQuickAddSelection(attrName, val) : null">
+                     <input type="radio" class="d-none" :checked="String(quickAddSelections[attrName]) === String(val)">
                      <div class="chip-inner px-3 py-2 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
                        <span class="fw-bold font-oswald tracking-wide small">{{ val }}</span>
                      </div>
@@ -349,10 +359,6 @@
               
               <div class="text-danger small fst-italic mt-2 fw-bold bg-danger bg-opacity-10 p-2 rounded" v-if="quickAddError">
                  <i class="bi bi-exclamation-triangle-fill me-1"></i> Vui lòng chọn đầy đủ phân loại.
-              </div>
-              
-              <div class="text-danger small fst-italic mt-2 fw-bold bg-danger bg-opacity-10 p-2 rounded" v-else-if="quickAddMatrix && Object.keys(quickAddMatrix).length > 0 && !quickAddSelectedVariant && isQuickAddAllSelected">
-                 <i class="bi bi-x-circle-fill me-1"></i> Phiên bản này đã hết hàng hoặc không tồn tại.
               </div>
 
               <button @click="confirmQuickAdd" class="btn luxury-btn-solid w-100 py-3 mt-4 font-oswald tracking-widest text-uppercase fw-bold shadow-sm fs-6">
@@ -403,11 +409,9 @@ const quickAddSelections = ref({});
 const quickAddError = ref(false);
 let quickAddModalInstance = null;
 
-// TỐI ƯU HIỆU SUẤT: Lấy epoch time dạng số thay vì Object Date
 const currentTime = ref(new Date().getTime());
 let timerInterval = null;
 
-// SỬ DỤNG TRỰC TIẾP BIẾN MÔI TRƯỜNG ĐỒNG BỘ CẢ DỰ ÁN
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'http://127.0.0.1:8000/storage';
 
@@ -509,6 +513,52 @@ const buildVariantMatrix = (variants) => {
     const finalMatrix = {};
     Object.keys(matrix).forEach(key => { finalMatrix[key] = Array.from(matrix[key]); });
     return finalMatrix;
+};
+
+const isOptionAvailable = (item, attrName, val) => {
+    if (!item.product?.variants) return false;
+    const otherSelections = { ...userSelections.value[item.id] };
+    delete otherSelections[attrName];
+
+    return item.product.variants.some(v => {
+        if (!v.formatted_attributes || String(v.formatted_attributes[attrName]) !== String(val)) return false;
+        return Object.entries(otherSelections).every(([k, vVal]) => {
+            if (!vVal) return true;
+            return String(v.formatted_attributes[k]) === String(vVal);
+        });
+    });
+};
+
+const isQuickAddOptionAvailable = (attrName, val) => {
+    if (!quickAddProduct.value?.variants) return false;
+    const otherSelections = { ...quickAddSelections.value };
+    delete otherSelections[attrName];
+
+    return quickAddProduct.value.variants.some(v => {
+        if (!v.formatted_attributes || String(v.formatted_attributes[attrName]) !== String(val)) return false;
+        return Object.entries(otherSelections).every(([k, vVal]) => {
+            if (!vVal) return true;
+            return String(v.formatted_attributes[k]) === String(vVal);
+        });
+    });
+};
+
+const toggleSelection = (itemId, attrName, val) => {
+    if (userSelections.value[itemId][attrName] === val) {
+        userSelections.value[itemId][attrName] = null;
+    } else {
+        userSelections.value[itemId][attrName] = val;
+        validationErrors.value[itemId] = false;
+    }
+};
+
+const toggleQuickAddSelection = (attrName, val) => {
+    if (String(quickAddSelections.value[attrName]) === String(val)) {
+        quickAddSelections.value[attrName] = null;
+    } else {
+        quickAddSelections.value[attrName] = val;
+        quickAddError.value = false;
+    }
 };
 
 const favourites = ref([]);
@@ -749,7 +799,6 @@ const savingsPercentage = computed(() => {
   return Math.round((savings / originalTotal.value) * 100);
 });
 
-// Hàm parse ngày tháng 1 lần duy nhất
 const parseDBDate = (dateStr) => {
     if (!dateStr) return null;
     return new Date(dateStr.replace(' ', 'T').substring(0, 19)).getTime();
@@ -768,11 +817,10 @@ const calculateTimeParts = (diff) => {
 
 const getTimerData = (comboObj) => {
     if (!comboObj) return { type: 'forever', title: '', isEnded: false };
-    const now = currentTime.value; // Dùng số milliseconds thẳng luôn
+    const now = currentTime.value; 
     
     if (comboObj.usage_limit !== null && comboObj.usage_limit <= 0) return { type: 'soldout', title: 'ĐÃ BÁN HẾT SỐ LƯỢNG', isEnded: true };
 
-    // TỐI ƯU HÓA: Dùng ngày tháng đã parse từ trước
     const startTime = comboObj.parsed_start_date;
     const endTime = comboObj.parsed_end_date;
 
@@ -812,7 +860,6 @@ const fetchDetail = async (slug) => {
     const res = await axios.get(`${API_BASE_URL}/client/combos/${slug}`);
     let fetchedCombo = res.data.data;
     
-    // TỐI ƯU HÓA: Parse trước start_date và end_date
     fetchedCombo.parsed_start_date = parseDBDate(fetchedCombo.start_date);
     fetchedCombo.parsed_end_date = parseDBDate(fetchedCombo.end_date);
     
@@ -980,10 +1027,14 @@ onUnmounted(() => {
 @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(204, 30, 46, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(204, 30, 46, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(204, 30, 46, 0); } }
 
 .attr-chip { border-radius: 4px; overflow: hidden; min-width: 55px; }
+.attr-chip:not(.disabled) { cursor: pointer; }
+.attr-chip.disabled { opacity: 0.6; cursor: not-allowed; }
+.attr-chip.disabled .chip-inner { background-color: #f8f9fa; border-color: #e9ecef; color: #adb5bd; box-shadow: none !important; }
+.attr-chip.disabled:hover .chip-inner { border-color: #e9ecef; color: #adb5bd; }
 .attr-chip .chip-inner { border: 1px solid #dee2e6; background-color: #fff; color: #555; border-radius: 4px; transition: all 0.3s ease-in-out; padding: 6px 12px; }
-.attr-chip:hover .chip-inner { border-color: #e7ce7d; color: #9f273b; }
-.attr-chip.selected .chip-inner { background-color: #9f273b; border-color: #9f273b; color: #fff !important; box-shadow: 0 4px 10px rgba(159, 39, 59, 0.25); }
-.attr-chip.selected .chip-inner span { color: #fff !important; }
+.attr-chip:hover:not(.disabled) .chip-inner { border-color: #e7ce7d; color: #9f273b; }
+.attr-chip.selected:not(.disabled) .chip-inner { background-color: #9f273b; border-color: #9f273b; color: #fff !important; box-shadow: 0 4px 10px rgba(159, 39, 59, 0.25); }
+.attr-chip.selected:not(.disabled) .chip-inner span { color: #fff !important; }
 .attr-chip.error .chip-inner { border-color: #dc3545; color: #dc3545; background-color: rgba(220, 53, 69, 0.05); animation: shake 0.4s; }
 
 @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 50% { transform: translateX(4px); } 75% { transform: translateX(-4px); } }
