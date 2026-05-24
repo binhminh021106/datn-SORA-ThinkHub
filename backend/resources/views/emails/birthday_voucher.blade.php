@@ -1,126 +1,192 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
+
 <head>
     <meta charset="utf-8">
-    <title>Chúc mừng sinh nhật!</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chúc mừng sinh nhật từ SORA ThinkHub!</title>
     <style>
+        /* Reset cơ bản */
         body {
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            background-color: #f4f4f4;
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f6f8;
             margin: 0;
-            padding: 0;
+            padding: 40px 0;
+            -webkit-font-smoothing: antialiased;
         }
+
         .container {
             max-width: 600px;
-            margin: 40px auto;
+            margin: 0 auto;
             background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            border-radius: 4px;
             overflow: hidden;
+            border: 1px solid #eaeaea;
         }
+
+        /* Phần Header tối màu giống mẫu */
         .header {
-            background-color: #ff6b6b;
+            background-color: #343a40;
             color: #ffffff;
             text-align: center;
-            padding: 30px 20px;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 28px;
+            padding: 25px 20px;
+            font-size: 20px;
+            font-weight: bold;
             letter-spacing: 1px;
-        }
-        .content {
-            padding: 30px;
-            color: #333333;
-            line-height: 1.6;
-        }
-        .content h2 {
-            color: #ff6b6b;
-            font-size: 22px;
-            margin-top: 0;
-        }
-        .voucher-box {
-            background-color: #fff0f0;
-            border: 2px dashed #ff6b6b;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-            margin: 25px 0;
-        }
-        .voucher-code {
-            font-size: 28px;
-            font-weight: bold;
-            color: #e74c3c;
-            letter-spacing: 3px;
-            margin: 10px 0;
-            padding: 10px;
-            background-color: #ffffff;
-            display: inline-block;
-            border-radius: 4px;
-            border: 1px solid #ffdcdc;
-        }
-        .btn-shop {
-            display: inline-block;
-            background-color: #ff6b6b;
-            color: #ffffff !important;
-            text-decoration: none;
-            padding: 12px 30px;
-            border-radius: 25px;
-            font-weight: bold;
-            margin-top: 15px;
             text-transform: uppercase;
         }
-        .footer {
-            background-color: #333333;
-            color: #ffffff;
-            text-align: center;
-            padding: 20px;
-            font-size: 14px;
+
+        .content {
+            padding: 30px 40px;
+            color: #333333;
+            line-height: 1.6;
+            font-size: 15px;
         }
-        .footer p {
-            margin: 5px 0;
-        }
-        .discount-value {
-            font-size: 24px;
+
+        /* Hộp thông báo nổi bật giống mẫu nhưng thay màu #9F273B */
+        .alert-box {
+            background-color: #fcf0f1;
+            border-left: 4px solid #9F273B;
+            padding: 15px 20px;
+            color: #9F273B;
             font-weight: bold;
-            color: #2c3e50;
+            margin-bottom: 25px;
+            font-size: 16px;
+        }
+
+        .greeting {
+            margin-bottom: 20px;
+            color: #333333;
+            text-align: justify;
+        }
+
+        /* Bảng thông tin giống form mẫu */
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .details-table tr {
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .details-table td {
+            padding: 16px 0;
+        }
+
+        .details-table .label {
+            color: #666666;
+            width: 35%;
+            font-weight: bold;
+        }
+
+        .details-table .value {
+            color: #111111;
+            font-weight: bold;
+        }
+
+        .highlight-text {
+            color: #9F273B !important;
+            font-size: 16px;
+        }
+
+        /* Nút bấm Call-to-action */
+        .btn-container {
+            text-align: center;
+            margin-top: 35px;
+            margin-bottom: 10px;
+        }
+
+        .btn-action {
+            display: inline-block;
+            background-color: #9F273B;
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 14px 40px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 14px;
+            text-transform: uppercase;
+            transition: opacity 0.3s;
+        }
+
+        .btn-action:hover {
+            opacity: 0.9;
+        }
+
+        /* Footer đơn giản */
+        .footer {
+            background-color: #f9fafb;
+            color: #888888;
+            text-align: center;
+            padding: 25px 20px;
+            font-size: 13px;
+            border-top: 1px solid #eeeeee;
+            line-height: 1.5;
         }
     </style>
 </head>
+
 <body>
     <div class="container">
+        <!-- Header -->
         <div class="header">
-            <h1>🎉 CHÚC MỪNG SINH NHẬT! 🎂</h1>
+            HỆ THỐNG SORA THINKHUB
         </div>
+
         <div class="content">
-            <h2>Chào {{ $user->fullName }},</h2>
-            <p>Nhân ngày đặc biệt của bạn, SORA ThinkHub xin gửi đến bạn những lời chúc tốt đẹp nhất. Chúc bạn một tuổi mới ngập tràn niềm vui, sức khỏe và thành công!</p>
-            <p>Để thêm phần trọn vẹn, chúng tôi dành tặng bạn một món quà sinh nhật đặc biệt:</p>
-            
-            <div class="voucher-box">
-                <p>MÃ GIẢM GIÁ ĐẶC QUYỀN:</p>
-                <div class="voucher-code">{{ $coupon->code }}</div>
-                <p class="discount-value">
-                    Giảm ngay 
-                    @if($coupon->type === 'percent' || $coupon->type === 'birthday')
-                        {{ $coupon->value }}%
-                    @else
-                        {{ number_format($coupon->value, 0, ',', '.') }}đ
-                    @endif
-                </p>
-                <p>Hạn sử dụng: {{ \Carbon\Carbon::parse($coupon->expires_at)->format('d/m/Y') }}</p>
+            <!-- Alert Box -->
+            <div class="alert-box">
+                ✨ QUÀ TẶNG ĐẶC QUYỀN NHÂN NGÀY SINH NHẬT!
             </div>
-            
-            <p>Hãy nhanh tay sử dụng mã giảm giá này để tự thưởng cho mình những món quà tuyệt vời nhất tại SORA ThinkHub.</p>
-            
-            <div style="text-align: center;">
-                <a href="{{ config('app.frontend_url', 'http://localhost:5173') }}/shop?coupon={{ urlencode($coupon->code) }}" class="btn-shop">Mua Sắm Ngay</a>
+
+            <div class="greeting">
+                Xin chào <strong>{{ $user->fullName }}</strong>,<br><br>
+                Nhân dịp sinh nhật, SORA ThinkHub xin gửi đến bạn lời chúc một tuổi mới thật nhiều niềm vui, hạnh phúc và luôn tỏa sáng theo cách riêng c ủa mình.<br><br>
+                Cảm ơn bạn đã tin tưởng đồng hành cùng chúng tôi. Như một lời tri ân, SORA xin dành tặng bạn một ưu đãi đặc biệt để ngày sinh nhật thêm trọn vẹn và ý nghĩa.
+            </div>
+
+            <!-- Bảng thông tin -->
+            <table class="details-table">
+                <tr>
+                    <td class="label">Mã quà tặng:</td>
+                    <td class="value highlight-text">{{ $coupon->code }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Mức ưu đãi:</td>
+                    <td class="value highlight-text">
+                        @if($coupon->type === 'percent' || $coupon->type === 'birthday')
+                        {{ $coupon->value }}%
+                        @else
+                        {{ number_format($coupon->value, 0, ',', '.') }} đ
+                        @endif
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">Áp dụng cho:</td>
+                    <td class="value">Tất cả các bộ sưu tập trang sức</td>
+                </tr>
+                <tr>
+                    <td class="label">Hạn sử dụng:</td>
+                    <td class="value">{{ \Carbon\Carbon::parse($coupon->expires_at)->format('d/m/Y') }}</td>
+                </tr>
+            </table>
+
+            <!-- Button -->
+            <div class="btn-container">
+                <a href="{{ config('app.frontend_url', 'http://localhost:5173') }}/shop?coupon={{ urlencode($coupon->code) }}" class="btn-action">CHỌN MÓN TRANG SỨC CHO RIÊNG MÌNH</a>
             </div>
         </div>
+
+        <!-- Footer -->
         <div class="footer">
-            <p>Cảm ơn bạn đã luôn đồng hành cùng SORA ThinkHub!</p>
-            <p>&copy; {{ date('Y') }} SORA ThinkHub. All rights reserved.</p>
+            Trân trọng,<br>
+            <strong>Đội ngũ SORA ThinkHub</strong> - <em>Tôn vinh vẻ đẹp đích thực</em><br><br>
+            Email này được tạo tự động từ hệ thống chăm sóc khách hàng của SORA.
         </div>
     </div>
 </body>
+
 </html>

@@ -10,7 +10,8 @@
         ></div>
       </transition>
 
-      <div class="cart-wrapper d-flex" :class="isOpen ? 'open' : ''">
+      <!-- Bỏ class 'open' xử lý chung ở wrapper, wrapper giờ chỉ là khung cố định -->
+      <div class="cart-wrapper d-flex" :class="{ 'open': isOpen }">
         
         <!-- ========================================== -->
         <!-- BẢNG GỢI Ý SẢN PHẨM BÊN TRÁI (FULL MÀN HÌNH) -->
@@ -22,14 +23,16 @@
           </div>
           
           <div class="flex-grow-1 d-flex flex-column justify-content-center overflow-hidden pb-4 position-relative w-100">
-            <div class="d-flex flex-nowrap overflow-x-auto overflow-y-hidden custom-scrollbar pb-4 align-items-center w-100 sora-drag-container sora-evenly-spaced"
+            <!-- Đã fix class slider-layout để cuộn lướt ngang mượt mà -->
+            <div class="d-flex flex-nowrap overflow-x-auto overflow-y-hidden custom-scrollbar pb-4 align-items-center w-100 sora-drag-container slider-layout"
                  ref="featuredScrollContainer"
                  @mousedown="startDrag"
                  @mouseleave="stopDrag"
                  @mouseup="stopDrag"
                  @mousemove="onDrag">
               
-              <div v-for="product in featuredProducts.slice(0, 4)" :key="product.id" style="min-width: 300px; width: 300px; flex-shrink: 0;" class="py-2" @click.capture="handleCardAction($event)">
+              <!-- Giảm số lượng về 4 sản phẩm và làm khung nhỏ lại (230px) -->
+              <div v-for="product in featuredProducts.slice(0, 4)" :key="product.id" style="min-width: 230px; width: 230px; flex-shrink: 0;" class="py-2 slider-item" @click.capture="handleCardAction($event)">
                 <ProductCard 
                   :product="product"
                   :showWishlist="true" 
@@ -89,7 +92,6 @@
               >
                 <!-- Ảnh sản phẩm trong giỏ -->
                 <div class="bg-light cursor-pointer border border-light-subtle" style="width: 85px; height: 105px; flex-shrink: 0;" @click="goToProduct(item.variant?.product?.slug || item.combo?.slug, !!item.combo_id)">
-                  <!-- THÊM LOADING LAZY ĐỂ TỐI ƯU HIỆU NĂNG LOAD -->
                   <img 
                     loading="lazy"
                     :src="getImage(item.variant?.image_url || item.combo?.thumbnail_image)" 
@@ -127,7 +129,6 @@
                   <!-- Số lượng và Xóa -->
                   <div class="d-flex justify-content-between align-items-center mt-2">
                     <div class="quantity-control d-flex align-items-center border border-light-subtle bg-white">
-                      <!-- LOẠI BỎ :disabled="isUpdating" để user có thể bấm nhiều lần liên tục -->
                       <button 
                         @click="updateQuantity(item, item.quantity - 1)" 
                         class="btn btn-sm border-0 px-2 py-0 text-muted"
@@ -147,7 +148,6 @@
                     </div>
                   </div>
 
-                  <!-- Thêm trạng thái Spinner nhỏ nếu đang update item này -->
                   <div v-if="updatingItemId === item.id" class="position-absolute bottom-0 end-0 mb-1 me-4">
                      <div class="spinner-border text-secondary" style="width: 1rem; height: 1rem; border-width: 0.15em;" role="status"></div>
                   </div>
@@ -206,7 +206,7 @@ const Toast = Swal.mixin({
 
 const isOpen = ref(false);
 const isLoading = ref(false);
-const updatingItemId = ref(null); // Lưu ID của item đang được update
+const updatingItemId = ref(null);
 
 const cartItems = ref([]);
 const summary = ref({ total_items: 0, subtotal: 0 });
@@ -214,7 +214,6 @@ const featuredProducts = ref([]);
 
 const FREE_SHIPPING_THRESHOLD = 1000000;
 
-// Gợi ý: Sau này bạn nên chuyển phần getHeaders này vào thư mục utils/axios.js (Tạo file cấu hình axios riêng)
 const getHeaders = () => {
   const headers = { 'Accept': 'application/json' };
   const token = localStorage.getItem('auth_token');
@@ -247,6 +246,11 @@ watch(() => route.fullPath, () => {
 
 const openCart = () => {
   isOpen.value = true;
+  
+  const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+  if (scrollbarWidth > 0) {
+    document.body.style.paddingRight = `${scrollbarWidth}px`;
+  }
   document.body.style.overflow = 'hidden';
   
   fetchCart();
@@ -256,7 +260,13 @@ const openCart = () => {
 
 const closeCart = () => {
   isOpen.value = false;
-  document.body.style.overflow = '';
+  
+  setTimeout(() => {
+    if (!isOpen.value) {
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    }
+  }, 400); 
 };
 
 const handleCardAction = (event) => {
@@ -296,7 +306,8 @@ const onDrag = (e) => {
   if (!isDragging.value || !featuredScrollContainer.value) return;
   e.preventDefault();
   const x = e.pageX - featuredScrollContainer.value.offsetLeft;
-  const walk = (x - startX.value) * 1.5; 
+  // Tăng tốc độ cuộn chuột lên x2 để lướt nhạy hơn
+  const walk = (x - startX.value) * 2; 
   dragDistance.value = walk;
   featuredScrollContainer.value.scrollLeft = scrollLeft.value - walk;
 };
@@ -366,21 +377,17 @@ const fetchFeaturedProducts = async () => {
   }
 };
 
-// CƠ CHẾ DEBOUNCE: Chống spam request khi người dùng bấm +/- liên tục
 let updateTimeout = null;
 
 const updateQuantity = (item, newQuantity) => {
   if (newQuantity < 1) return;
   
-  // Cập nhật giao diện ngay lập tức để tạo cảm giác mượt mà (Optimistic UI update)
   item.quantity = newQuantity;
   
-  // Clear timeout cũ nếu user nhấn liên tiếp
   if (updateTimeout) clearTimeout(updateTimeout);
   
   updatingItemId.value = item.id;
 
-  // Set timeout mới: Chờ 600ms sau lần click cuối cùng mới gọi API
   updateTimeout = setTimeout(async () => {
     try {
       const res = await axios.put(`${BACKEND_URL}/client/cart/${item.id}`, 
@@ -394,7 +401,6 @@ const updateQuantity = (item, newQuantity) => {
         }));
       }
     } catch (error) {
-      // Nếu API lỗi, hoàn tác lại data bằng cách gọi lại fetchCart
       await fetchCart(false);
       Swal.fire({
         toast: true,
@@ -415,7 +421,6 @@ const removeItem = async (id) => {
     updatingItemId.value = id;
     const res = await axios.delete(`${BACKEND_URL}/client/cart/${id}`, { headers: getHeaders() });
     if (res.data.success) {
-      // Xóa tạm thời trên UI trước để tăng độ mượt
       cartItems.value = cartItems.value.filter(item => item.id !== id);
       await fetchCart(false); 
       window.dispatchEvent(new CustomEvent('update-cart-count', {
@@ -457,13 +462,14 @@ defineExpose({ openCart, fetchCart });
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
+  width: 100%; 
   height: 100vh;
   background-color: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(3px); 
   z-index: 1060;
 }
 
+/* Fix lỗi kéo ngang cả màn hình: Lớp wrapper sẽ luôn nằm im */
 .cart-wrapper {
   position: fixed;
   top: 0;
@@ -473,49 +479,69 @@ defineExpose({ openCart, fetchCart });
   pointer-events: none;
   display: flex;
   justify-content: flex-end;
-  width: 100vw;
-  transform: translateX(100%);
-  transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+  width: 100%;
 }
 
-.cart-wrapper.open {
-  transform: translateX(0);
-}
-
+/* LEFT PANEL (Gợi ý): Chỉ mờ dần (Fade in/out), KHÔNG trượt */
 .featured-products-panel {
   flex-grow: 1; 
   height: 100vh; 
-  pointer-events: auto;
+  pointer-events: none; /* Khóa tương tác khi đóng */
   background-color: #fcfcfc;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0s 0.3s;
 }
 
-.sora-evenly-spaced {
-  justify-content: space-evenly;
-  gap: 15px; 
+.cart-wrapper.open .featured-products-panel {
+  pointer-events: auto; /* Mở tương tác khi hiện */
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.3s ease, visibility 0s 0s;
 }
 
-@media (max-width: 1450px) {
-  .sora-evenly-spaced {
-    justify-content: flex-start;
-    padding-left: 2rem !important;
-    padding-right: 2rem !important;
-  }
-}
-
-.sora-drag-container {
-  cursor: grab;
-  scroll-behavior: smooth;
-}
-.sora-drag-container:active {
-  cursor: grabbing;
-}
-
+/* RIGHT PANEL (Giỏ hàng): Giữ nguyên hiệu ứng trượt */
 .mini-cart-panel {
-  width: 100vw;
+  width: 100%; 
   max-width: 420px;
   height: 100vh;
   pointer-events: auto;
   flex-shrink: 0;
+  transform: translateX(100%);
+  visibility: hidden; 
+  will-change: transform, visibility;
+  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), visibility 0s 0.4s;
+}
+
+.cart-wrapper.open .mini-cart-panel {
+  transform: translateX(0);
+  visibility: visible; 
+  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), visibility 0s 0s;
+}
+
+/* Đảm bảo thẻ luôn nằm thẳng lề trái */
+.slider-layout {
+  justify-content: center !important;
+  gap: 1.5rem;
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+/* Khóa chặn hoàn toàn các hành vi mặc định cản trở lướt */
+.sora-drag-container {
+  cursor: grab;
+  /* LOẠI BỎ scroll-behavior: smooth vì nó làm kẹt lướt chuột bằng JS */
+  user-select: none; /* Ngăn bôi đen chữ khi lướt */
+}
+.sora-drag-container:active {
+  cursor: grabbing;
+}
+/* Tránh kéo dính ảnh và nút (ghost drag) */
+.sora-drag-container img, 
+.sora-drag-container a, 
+.slider-item {
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 @media (max-width: 991px) {
