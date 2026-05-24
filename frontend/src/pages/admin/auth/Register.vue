@@ -5,7 +5,7 @@
       <div
         class="col-md-5 d-none d-md-flex flex-column justify-content-center align-items-center text-white p-5 brand-banner">
         <i class="bi bi-person-plus-fill brand-icon"></i>
-        <h2 class="fw-bold mt-3 text-center">Tham gia MyShop</h2>
+        <h2 class="fw-bold mt-3 text-center">Tham gia SORA</h2>
         <p class="text-center mt-2 opacity-75">Đăng ký tài khoản quản trị viên để bắt đầu vận hành hệ thống cửa hàng của
           bạn.</p>
       </div>
@@ -13,7 +13,7 @@
       <div class="col-md-7 p-5">
         <div class="text-center mb-4 d-md-none">
           <i class="bi bi-person-plus-fill text-brand mobile-icon"></i>
-          <h3 class="fw-bold mt-2 text-brand">Đăng ký MyShop</h3>
+          <h3 class="fw-bold mt-2 text-brand">Đăng ký SORA</h3>
         </div>
 
         <h4 class="fw-bold mb-1 text-dark">Tạo tài khoản mới</h4>

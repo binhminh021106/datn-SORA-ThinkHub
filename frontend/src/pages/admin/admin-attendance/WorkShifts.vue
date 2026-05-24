@@ -125,16 +125,29 @@
                         </div>
                       </div>
 
-                      <div v-if="activeTab === 'active'" class="shift-assignments p-3 rounded-4 bg-light border">
-                        <div class="fw-semibold text-dark mb-2">Nhân sự thuộc ca ({{ shift.assignments?.length || 0 }})</div>
-                        <div v-if="shift.assignments && shift.assignments.length" class="d-flex flex-wrap gap-2">
-                          <span v-for="item in shift.assignments" :key="item.admin?.id || item.id" class="badge bg-white text-dark border px-3 py-2 rounded-pill d-flex align-items-center gap-2 shadow-sm">
-                            <i class="bi bi-person-circle text-brand"></i>
-                            <span>{{ item.admin?.fullname || 'Nhân viên chưa rõ' }}</span>
-                            <button type="button" class="btn-close ms-2" style="font-size: 0.6rem;" aria-label="Gỡ" @click.stop="removeAssignment(shift.id, item.admin?.id)"></button>
-                          </span>
+                      <div v-if="activeTab === 'active'" class="shift-assignments p-3 rounded-4 bg-light border mt-3">
+                        <div class="fw-semibold text-dark mb-2">Nhân sự thuộc ca ({{ getDisplayAssignments(shift.assignments).length }})</div>
+                        <div v-if="getDisplayAssignments(shift.assignments).length" class="d-flex flex-wrap gap-2">
+                          
+                          <!-- DÙNG ROUNDED-3 VÀ HIỂN THỊ NGÀY ÁP DỤNG -->
+                          <div v-for="item in getDisplayAssignments(shift.assignments)" :key="item.admin?.id || item.id" 
+                               class="badge bg-white text-dark border px-3 py-2 rounded-3 d-flex flex-column gap-2 shadow-sm text-start" 
+                               style="min-width: 190px;">
+                            <div class="d-flex justify-content-between align-items-center">
+                              <span class="d-flex align-items-center gap-2">
+                                <i class="bi bi-person-circle text-brand fs-6"></i>
+                                <span class="fw-semibold">{{ item.admin?.fullname || 'Nhân viên chưa rõ' }}</span>
+                              </span>
+                              <button type="button" class="btn-close ms-2" style="font-size: 0.6rem;" aria-label="Gỡ" @click.stop="removeAssignment(shift.id, item.admin?.id)"></button>
+                            </div>
+                            <div class="text-muted fw-normal border-top pt-1 mt-1" style="font-size: 0.7rem;">
+                              <i class="bi bi-calendar-event me-1"></i>
+                              {{ formatDateUI(item.valid_from) }} <i class="bi bi-arrow-right mx-1" style="font-size: 0.6rem"></i> <span :class="{'text-success': !item.valid_to}">{{ item.valid_to ? formatDateUI(item.valid_to) : 'Vô thời hạn' }}</span>
+                            </div>
+                          </div>
+
                         </div>
-                        <div v-else class="small text-muted fst-italic"><i class="bi bi-info-circle me-1"></i>Chưa có nhân viên được phân công</div>
+                        <div v-else class="small text-muted fst-italic"><i class="bi bi-info-circle me-1"></i>Chưa có nhân sự nào hoạt động hoặc tất cả đã hết hạn phân ca.</div>
                       </div>
                     </div>
                   </div>
@@ -146,13 +159,26 @@
                 <div class="d-flex justify-content-between align-items-start mb-3">
                   <div>
                     <div class="fw-bold text-dark fs-6">Phân công ca: <span class="text-brand">{{ currentAssignShift.name }}</span></div>
-                    <small class="text-muted">Chọn nhân viên và nhấn Áp dụng.</small>
+                    <small class="text-muted">Thiết lập thời gian áp dụng và chọn nhân viên.</small>
                   </div>
                   <button class="btn btn-sm btn-light border rounded-circle shadow-sm" @click="closeAssignPanel"><i class="bi bi-x-lg"></i></button>
                 </div>
 
+                <!-- BỔ SUNG: FORM THỜI GIAN ÁP DỤNG -->
+                <div class="row g-3 mb-3 bg-white p-3 border rounded-3 mx-0">
+                  <div class="col-md-6">
+                    <label class="form-label small fw-semibold mb-1 text-dark">Từ ngày (Bắt đầu áp dụng) <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control form-control-sm bg-light" v-model="assignValidFrom" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small fw-semibold mb-1 text-dark">Đến ngày (Tùy chọn)</label>
+                    <input type="date" class="form-control form-control-sm bg-light" v-model="assignValidTo">
+                    <small class="text-muted d-block mt-1" style="font-size: 0.7rem;">Bỏ trống nếu áp dụng vô thời hạn.</small>
+                  </div>
+                </div>
+
                 <div v-if="adminsLoading" class="text-center py-4"><div class="spinner-border spinner-border-sm text-brand"></div></div>
-                <div v-else class="row g-2 border rounded p-2 bg-white" style="max-height:220px; overflow:auto;">
+                <div v-else class="row g-2 border rounded p-2 bg-white mx-0" style="max-height:220px; overflow:auto;">
                   <div v-for="a in admins" :key="a.id" class="col-12 col-sm-6">
                     <div class="form-check custom-checkbox-brand p-2 border rounded-3 h-100 d-flex align-items-center" :class="{ 'opacity-75': assignedElsewhere.has(a.id) && !selectedAdmins.includes(a.id) }">
                       <input class="form-check-input ms-0 me-2" type="checkbox" :id="`assign-${a.id}`" v-model="selectedAdmins" :value="a.id" :disabled="assignedElsewhere.has(a.id) && !selectedAdmins.includes(a.id)">
@@ -161,7 +187,7 @@
                         <div class="text-muted" style="font-size: 0.75rem;">{{ a.email }}</div>
                       </label>
                     </div>
-                    <div v-if="assignedElsewhere.has(a.id) && !selectedAdmins.includes(a.id)" class="text-danger small mt-1">Đã được gán ca khác, không thể chọn lại.</div>
+                    <div v-if="assignedElsewhere.has(a.id) && !selectedAdmins.includes(a.id)" class="text-danger small mt-1">Đã có lịch tại ca khác.</div>
                   </div>
                 </div>
 
@@ -307,6 +333,10 @@ const currentAssignShift = ref(null);
 const selectedAdmins = ref([]);
 const assignLoading = ref(false);
 
+// Fields để thiết lập khoảng thời gian phân công
+const assignValidFrom = ref('');
+const assignValidTo = ref('');
+
 const form = ref({ 
   id: null, name: '', start_time: '', end_time: '', late_tolerance: 0, is_overnight: false,
   working_days: [true, true, true, true, true, false, false],
@@ -346,10 +376,9 @@ const admins = computed(() => adminsData.value || []);
 const loading = computed(() => shiftsLoading.value);
 const adminsLoading = computed(() => adminsFetching.value);
 
-// Đếm số lượng để hiển thị nhanh trên Badge của Tab (đếm dựa trên query cache hoặc giá trị đang có)
+// Đếm số lượng để hiển thị nhanh trên Badge của Tab
 const activeShiftsCount = computed(() => {
   if (activeTab.value === 'active') return shifts.value.length;
-  // Fallback tạm thời nếu đang đứng ở tab deleted
   const cache = queryClient.getQueryData(['workShifts', ref('active')]);
   return cache ? cache.length : shifts.value.filter(s => !s.deleted_at).length;
 });
@@ -367,16 +396,39 @@ watch(loading, (newVal) => {
   }
 });
 
-// Kiểm tra xem nhân viên đã được gán vào ca làm việc khác (active) hay chưa
+// Helper định dạng UI cho ngày áp dụng
+const formatDateUI = (dateStr) => {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-');
+  return `${d}/${m}/${y}`;
+};
+
+// Lọc bỏ những phân công ca cũ (Đã hết hạn/Bị gỡ) khỏi UI hiển thị
+const getDisplayAssignments = (assignments) => {
+  if (!assignments) return [];
+  const today = new Date().toISOString().split('T')[0];
+  return assignments.filter(a => {
+    // Chỉ hiển thị nếu valid_to >= hôm nay HOẶC không có giới hạn (null)
+    if (a.valid_to && a.valid_to < today) return false;
+    return true; 
+  });
+};
+
+// Kiểm tra xem nhân viên đã được gán vào ca làm việc khác (vẫn đang active/tương lai) hay chưa
 const assignedElsewhere = computed(() => {
   const blocked = new Set();
   if (!currentAssignShift.value) return blocked;
   
+  const today = new Date().toISOString().split('T')[0];
+
   shifts.value.forEach(shift => {
     if (shift.id !== currentAssignShift.value.id && shift.assignments) {
       shift.assignments.forEach(item => {
-        if (item.admin && item.admin.id) {
-          blocked.add(item.admin.id);
+        // Nếu record gán ca vẫn còn hiệu lực hoặc sẽ hiệu lực ở tương lai, thì block checkbox
+        if (!item.valid_to || item.valid_to >= today) {
+          if (item.admin && item.admin.id) {
+            blocked.add(item.admin.id);
+          }
         }
       });
     }
@@ -434,7 +486,13 @@ function toggleFormOvertimeDay(idx) {
 
 function openAssignPanel(shift) {
   currentAssignShift.value = shift;
-  selectedAdmins.value = (shift.assignments || []).map(item => item.admin?.id).filter(Boolean);
+  // Lọc ra id những nhân viên đang (hoặc sẽ) thuộc ca hiện tại
+  selectedAdmins.value = getDisplayAssignments(shift.assignments).map(item => item.admin?.id).filter(Boolean);
+  
+  // Set mặc định valid_from là hôm nay
+  assignValidFrom.value = new Date().toISOString().split('T')[0];
+  assignValidTo.value = '';
+
   if (!admins.value.length) {
     refetchAdmins();
   }
@@ -455,12 +513,18 @@ async function applyAssignments() {
     Toast.fire({ icon: 'warning', title: 'Vui lòng chọn ít nhất 1 nhân viên để phân công.' });
     return;
   }
+  if (!assignValidFrom.value) {
+    Toast.fire({ icon: 'warning', title: 'Vui lòng nhập Ngày bắt đầu áp dụng!' });
+    return;
+  }
 
   assignLoading.value = true;
   try {
     await axios.post(`${API_URL}/admin/work-shifts/assign-multiple`, {
       admin_ids: selectedAdmins.value,
       work_shift_id: currentAssignShift.value.id,
+      valid_from: assignValidFrom.value,
+      valid_to: assignValidTo.value || undefined, // Gửi null/undefined nếu để trống
     }, { headers: { Authorization: `Bearer ${token}` } });
 
     // Invalidate cache của TanStack Query để tự động render lại UI mượt mà
@@ -479,7 +543,7 @@ async function applyAssignments() {
 async function removeAssignment(shiftId, adminId) {
   const result = await Swal.fire({
     title: 'Xác nhận gỡ',
-    text: 'Bạn có chắc chắn muốn gỡ nhân viên này khỏi ca?',
+    text: 'Bạn có chắc chắn muốn kết thúc ca làm việc của nhân sự này từ ngày hôm nay?',
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#009981',

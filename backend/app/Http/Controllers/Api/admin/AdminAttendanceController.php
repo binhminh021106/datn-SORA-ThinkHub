@@ -24,6 +24,15 @@ class AdminAttendanceController extends Controller
     }
 
     /**
+     * API Lấy danh sách ca làm việc phục vụ cho bộ lọc
+     */
+    public function getWorkShifts()
+    {
+        $shifts = WorkShift::all(['id', 'name', 'start_time', 'end_time']);
+        return response()->json(['success' => true, 'data' => $shifts]);
+    }
+
+    /**
      * Lấy trạng thái hiện tại (Fix 500: Chuyển sang dùng $request->user()->id của Sanctum)
      */
     public function checkStatus(Request $request)
@@ -31,7 +40,7 @@ class AdminAttendanceController extends Controller
         $adminId = $request->user()->id; 
         $today = Carbon::today()->format('Y-m-d');
 
-        // 1. Kiểm tra ca treo
+        // 1. Kiểm tra ca treo (chưa check-out từ hôm trước)
         $hangingShift = AdminAttendance::where('admin_id', $adminId)
             ->where('attendance_date', '<', $today)
             ->where('checkout_status', 'pending')
@@ -58,7 +67,18 @@ class AdminAttendanceController extends Controller
             }
         }
 
-        return response()->json(['success' => true, 'state' => 'ready', 'data' => null]);
+        // 3. Nếu chưa làm gì, lấy thông tin phân ca ngày hôm nay để hiển thị ra UI
+        $assignment = AdminShiftAssignment::where('admin_id', $adminId)
+            ->active($today)
+            ->with('workShift')
+            ->first();
+
+        return response()->json([
+            'success' => true, 
+            'state' => 'ready', 
+            'data' => null,
+            'shift_assignment' => $assignment ? $assignment->workShift : null 
+        ]);
     }
 
     /**
@@ -70,7 +90,6 @@ class AdminAttendanceController extends Controller
         $today = Carbon::today()->format('Y-m-d');
         $now = Carbon::now();
 
-        // Kiểm tra Check-in đúp
         if (AdminAttendance::where('admin_id', $adminId)->where('attendance_date', $today)->exists()) {
             return response()->json(['success' => false, 'message' => 'Bạn đã check-in hôm nay rồi.'], 400);
         }
@@ -78,35 +97,31 @@ class AdminAttendanceController extends Controller
         try {
             DB::beginTransaction();
 
-            // Lấy phân công ca nếu có
-            $assignment = AdminShiftAssignment::where('admin_id', $adminId)->first();
-            $workShiftId = null;
+            $assignment = AdminShiftAssignment::where('admin_id', $adminId)->active($today)->first();
+            $workShift = $assignment ? WorkShift::find($assignment->work_shift_id) : null;
+            
             $lateMinutes = 0;
+            $status = 'present';
 
-            if ($assignment) {
-                $ws = WorkShift::find($assignment->work_shift_id);
-                if ($ws) {
-                    $workShiftId = $ws->id;
-
-                    // Tính toán trạng thái đi muộn dựa trên start_time và late_tolerance
-                    try {
-                        $scheduledStart = Carbon::parse($today . ' ' . $ws->start_time);
-                        $diff = $now->diffInMinutes($scheduledStart, false); // positive if now after scheduled
-                        $tolerance = intval($ws->late_tolerance ?? 0);
-                        if ($diff > $tolerance) {
-                            $lateMinutes = max(0, $diff - $tolerance);
-                        }
-                    } catch (\Exception $ex) {
-                        // ignore parse errors, keep defaults
+            if ($workShift && $workShift->start_time) {
+                try {
+                    $scheduledStart = Carbon::parse($today . ' ' . $workShift->start_time);
+                    $diff = $now->diffInMinutes($scheduledStart, false); 
+                    $tolerance = intval($workShift->late_tolerance ?? 0);
+                    
+                    if ($diff > $tolerance) {
+                        $lateMinutes = max(0, $diff - $tolerance);
+                        $status = 'late';
                     }
-                }
+                } catch (\Exception $ex) {}
             }
-
-            $status = $lateMinutes > 0 ? 'late' : 'present';
 
             $attendance = AdminAttendance::create([
                 'admin_id' => $adminId,
-                'work_shift_id' => $workShiftId,
+                'work_shift_id' => $workShift ? $workShift->id : null,
+                'shift_start_time' => $workShift ? $workShift->start_time : null,
+                'shift_end_time' => $workShift ? $workShift->end_time : null,
+                'shift_late_tolerance' => $workShift ? ($workShift->late_tolerance ?? 0) : 0,
                 'attendance_date' => $today,
                 'clock_in' => $now,
                 'status' => $status,
@@ -145,15 +160,27 @@ class AdminAttendanceController extends Controller
             ->first();
 
         if (!$shift) {
-            return response()->json(['success' => false, 'message' => 'Không tìm thấy ca làm việc.'], 404);
+            return response()->json(['success' => false, 'message' => 'Không tìm thấy ca làm việc đang mở.'], 404);
         }
 
         $checkoutTime = Carbon::now();
         $earlyLeaveMinutes = 0;
 
-        if ($shift->workShift) {
+        if ($shift->shift_end_time) {
+            $shiftEnd = Carbon::parse($shift->attendance_date->format('Y-m-d') . ' ' . $shift->shift_end_time);
+            
+            if ($shift->shift_start_time && $shift->shift_end_time <= $shift->shift_start_time) {
+                $shiftEnd->addDay();
+            }
+
+            if ($checkoutTime->lessThan($shiftEnd)) {
+                $earlyLeaveMinutes = $shiftEnd->diffInMinutes($checkoutTime);
+            }
+        } 
+        elseif ($shift->workShift) {
             $shiftStart = Carbon::parse($shift->attendance_date->format('Y-m-d') . ' ' . $shift->workShift->start_time);
             $shiftEnd = Carbon::parse($shift->attendance_date->format('Y-m-d') . ' ' . $shift->workShift->end_time);
+            
             if ($shift->workShift->end_time <= $shift->workShift->start_time) {
                 $shiftEnd->addDay();
             }
@@ -175,8 +202,7 @@ class AdminAttendanceController extends Controller
     public function index(Request $request)
     {
         $adminId = $request->user()->id; 
-
-        $query = AdminAttendance::with('admin:id,fullname,email')
+        $query = AdminAttendance::with(['admin:id,fullname,email', 'workShift'])
                                 ->where('admin_id', $adminId); 
 
         if ($request->has('start_date') && $request->has('end_date')) {
@@ -185,16 +211,12 @@ class AdminAttendanceController extends Controller
 
         $attendances = $query->orderBy('attendance_date', 'asc')->paginate($request->per_page ?? 50);
                              
-        return response()->json([
-            'success' => true, 
-            'data' => $attendances
-        ]);
+        return response()->json(['success' => true, 'data' => $attendances]);
     }
 
     public function history(Request $request, $adminId)
     {
-        $query = AdminAttendance::with('workShift')
-                                ->where('admin_id', $adminId);
+        $query = AdminAttendance::with('workShift')->where('admin_id', $adminId);
 
         if ($request->has('start_date') && $request->has('end_date')) {
             $query->whereBetween('attendance_date', [$request->start_date, $request->end_date]);
@@ -202,29 +224,40 @@ class AdminAttendanceController extends Controller
 
         $attendances = $query->orderBy('attendance_date', 'asc')->paginate($request->per_page ?? 50);
 
-        return response()->json([
-            'success' => true,
-            'data' => $attendances
-        ]);
+        return response()->json(['success' => true, 'data' => $attendances]);
     }
 
     public function dailyStatus(Request $request)
     {
         $date = $request->get('date', Carbon::today()->format('Y-m-d'));
         $roleId = $request->get('role_id', 'all');
+        $workShiftId = $request->get('work_shift_id', 'all');
 
-        // Lấy toàn bộ Admin, kèm theo dữ liệu chấm công của họ trong cái $date đó
-        $query = \App\Models\Admin::with([
+        $query = Admin::with([
             'attendance' => function($query) use ($date) {
                 $query->where('attendance_date', $date)->with('workShift');
             },
-            'shiftAssignment.workShift',
+            'shiftAssignment' => function($query) use ($date) {
+                $query->active($date)->with('workShift');
+            },
             'role'
         ]);
 
-        // Lọc theo chức vụ nếu có chọn
+        // Lọc theo chức vụ
         if ($roleId !== 'all') {
             $query->where('role_id', $roleId);
+        }
+
+        // Lọc theo ca làm việc (Chỉ những ai có phân công hoặc có chấm công vào ca đó)
+        if ($workShiftId !== 'all') {
+            $query->where(function ($q) use ($date, $workShiftId) {
+                $q->whereHas('shiftAssignment', function ($sub) use ($date, $workShiftId) {
+                    $sub->active($date)->where('work_shift_id', $workShiftId);
+                })
+                ->orWhereHas('attendance', function ($sub) use ($date, $workShiftId) {
+                    $sub->where('attendance_date', $date)->where('work_shift_id', $workShiftId);
+                });
+            });
         }
 
         $admins = $query->get();
@@ -237,24 +270,29 @@ class AdminAttendanceController extends Controller
         $year = intval($request->get('year', Carbon::today()->format('Y')));
         $month = intval($request->get('month', Carbon::today()->format('m')));
         $roleId = $request->get('role_id', 'all');
+        $workShiftId = $request->get('work_shift_id', 'all');
 
         $start = Carbon::create($year, $month, 1)->startOfMonth();
         $end = $start->copy()->endOfMonth();
         $today = Carbon::today();
 
-        // Lấy danh sách admin thỏa mãn bộ lọc role_id
-        $adminQuery = Admin::with('shiftAssignment.workShift');
+        // 1. Lấy danh sách admin theo Role (nếu có lọc role)
+        $adminQuery = Admin::query();
         if ($roleId !== 'all') {
             $adminQuery->where('role_id', $roleId);
         }
         $admins = $adminQuery->get();
         $adminIds = $admins->pluck('id')->toArray();
 
-        // Chỉ lấy records chấm công của các nhân viên thuộc chức vụ đã chọn
-        $attendances = AdminAttendance::whereBetween('attendance_date', [$start->toDateString(), $end->toDateString()])
-            ->whereIn('admin_id', $adminIds)
-            ->get();
-
+        // 2. Lấy danh sách chấm công
+        $attendanceQuery = AdminAttendance::whereBetween('attendance_date', [$start->toDateString(), $end->toDateString()])
+            ->whereIn('admin_id', $adminIds);
+            
+        if ($workShiftId !== 'all') {
+            $attendanceQuery->where('work_shift_id', $workShiftId);
+        }
+        
+        $attendances = $attendanceQuery->get();
         $attendanceByDate = $attendances->groupBy(function ($item) {
             return $item->attendance_date->format('Y-m-d');
         });
@@ -265,36 +303,44 @@ class AdminAttendanceController extends Controller
         for ($day = 1; $day <= $totalDays; $day++) {
             $date = Carbon::create($year, $month, $day);
             $dateString = $date->format('Y-m-d');
-            $weekdayIndex = $date->dayOfWeek === 0 ? 6 : $date->dayOfWeek - 1; // 0 = CN -> 6, 1 = Thu 2 -> 0
+            $weekdayIndex = $date->dayOfWeek === 0 ? 6 : $date->dayOfWeek - 1; 
             $isFuture = $date->isAfter($today);
 
-            // Xác định danh sách nhân viên thực sự có lịch làm việc vào thứ này dựa trên ca phân công
-            $scheduledAdmins = $admins->filter(function ($admin) use ($weekdayIndex) {
-                $shift = optional($admin->shiftAssignment)->workShift;
+            // Lấy danh sách phân ca
+            $assignmentQuery = AdminShiftAssignment::whereIn('admin_id', $adminIds)
+                ->active($dateString)
+                ->with('workShift');
+                
+            if ($workShiftId !== 'all') {
+                $assignmentQuery->where('work_shift_id', $workShiftId);
+            }
+            $activeAssignments = $assignmentQuery->get();
+
+            $scheduledAdminsCount = 0;
+            foreach ($activeAssignments as $assignment) {
+                $shift = $assignment->workShift;
                 if ($shift && is_array($shift->working_days)) {
-                    return isset($shift->working_days[$weekdayIndex]) && $shift->working_days[$weekdayIndex];
+                    if (isset($shift->working_days[$weekdayIndex]) && $shift->working_days[$weekdayIndex]) {
+                        $scheduledAdminsCount++;
+                    }
                 }
-                return false; // Không tự ý mặc định T2-T6 nếu không cấu hình ca
-            });
+            }
 
             $attendanceOnDate = $attendanceByDate->get($dateString, collect());
-            $attendanceAdminIds = $attendanceOnDate->pluck('admin_id')->unique();
+            $attendanceAdminIdsCount = $attendanceOnDate->pluck('admin_id')->unique()->count();
 
             if ($isFuture) {
-                // Đối với tương lai: Tổng số là số người được xếp lịch thực tế, không tính vắng (absent = 0)
-                $totalTracked = $scheduledAdmins->count();
+                $totalTracked = $scheduledAdminsCount;
                 $present = 0;
                 $late = 0;
                 $absent = 0;
             } else {
-                // Đối với quá khứ và hiện tại
-                $totalTracked = $scheduledAdmins->pluck('id')->merge($attendanceAdminIds)->unique()->count();
+                $totalTracked = max($scheduledAdminsCount, $attendanceAdminIdsCount);
                 $present = $attendanceOnDate->where('status', 'present')->count();
                 $late = $attendanceOnDate->where('status', 'late')->count();
                 $absent = max(0, $totalTracked - $present - $late);
             }
 
-            // Nếu ngày nghỉ hoàn toàn không có ai được phân ca và không có dữ liệu chấm công
             if ($totalTracked === 0) {
                 $summary[$dateString] = null;
             } else {
