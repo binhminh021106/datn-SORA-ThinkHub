@@ -131,6 +131,24 @@ const handleRegister = async () => {
     // CẬP NHẬT MỚI: Lưu thông tin User
     localStorage.setItem('userData', JSON.stringify(response.data.user));
 
+    // Đồng bộ giỏ hàng Guest vào tài khoản
+    const sessionId = localStorage.getItem('cart_session_id');
+    if (sessionId) {
+        try {
+            await axios.post(`${API_BASE_URL}/client/cart/merge`, {}, {
+                headers: {
+                    'Authorization': `Bearer ${response.data.access_token}`,
+                    'X-Cart-Session-Id': sessionId,
+                    'Accept': 'application/json'
+                }
+            });
+            localStorage.removeItem('cart_session_id');
+            window.dispatchEvent(new CustomEvent('update-cart-count'));
+        } catch (e) {
+            console.error('Merge cart error:', e);
+        }
+    }
+
     setTimeout(() => {
       window.location.href = '/';
     }, 1500);

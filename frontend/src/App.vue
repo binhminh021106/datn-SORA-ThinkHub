@@ -39,7 +39,7 @@ const checkAuthentication = async () => {
   }
 
   try {
-    const result = await apiClient.get('/admin/me');
+    const result = await apiClient.get('/admin/me', { ignoreAuthRedirect: true });
     currentUser.value = result.data?.data;
     if (result.data?.data?.role) {
        localStorage.setItem('admin_level', result.data.data.role.level);

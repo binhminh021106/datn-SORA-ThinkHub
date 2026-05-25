@@ -62,6 +62,24 @@ onMounted(async () => {
       // Lưu thông tin user
       localStorage.setItem('userData', JSON.stringify(response.data));
 
+      // Đồng bộ giỏ hàng Guest vào tài khoản
+      const sessionId = localStorage.getItem('cart_session_id');
+      if (sessionId) {
+          try {
+              await axios.post(`${API_BASE_URL}/client/cart/merge`, {}, {
+                  headers: {
+                      'Authorization': `Bearer ${token}`,
+                      'X-Cart-Session-Id': sessionId,
+                      'Accept': 'application/json'
+                  }
+              });
+              localStorage.removeItem('cart_session_id');
+              window.dispatchEvent(new CustomEvent('update-cart-count'));
+          } catch (e) {
+              console.error('Merge cart error:', e);
+          }
+      }
+
       statusMessage.value = 'Đăng nhập thành công! Đang đưa bạn vào cửa hàng...';
       
       // Chuyển về trang chủ sau 1 giây

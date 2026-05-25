@@ -10,7 +10,7 @@ export const useWishlist = () => {
     const token = getToken();
     if (!token) return;
     try {
-      const data = await apiClient.get('/client/favourites');
+      const data = await apiClient.get('/client/favourites', { ignoreAuthRedirect: true });
       if (data.data?.status) {
         favourites.value = data.data.data.map(fav => fav.product_id);
       }

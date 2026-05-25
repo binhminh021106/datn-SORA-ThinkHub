@@ -41,11 +41,25 @@ apiClient.interceptors.response.use(
       localStorage.removeItem('auth_token');
       localStorage.removeItem('token');
 
+      if (error.config?.ignoreAuthRedirect) {
+        return Promise.reject(error);
+      }
+
       const requestUrl = error.config?.url || '';
       const currentPath = window.location.pathname || '';
       const isAdminRequest = requestUrl.includes('/admin/') || currentPath.startsWith('/admin');
-      const redirectPath = isAdminRequest ? '/admin/login' : '/login';
-      window.location.href = redirectPath;
+      
+      if (isAdminRequest) {
+        if (!currentPath.includes('/admin/login')) {
+          window.location.href = '/admin/login';
+        }
+      } else {
+        const protectedPaths = ['/profile', '/order', '/checkout', '/favourite'];
+        const isProtectedPath = protectedPaths.some(p => currentPath.startsWith(p));
+        if (isProtectedPath && !currentPath.includes('/login')) {
+          window.location.href = '/login';
+        }
+      }
     }
     
     return Promise.reject(error);

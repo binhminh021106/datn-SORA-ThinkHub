@@ -855,9 +855,12 @@ const fetchProductData = async () => {
       saveToRecentlyViewed(product.value);
       fetchRecommendations('related_category');
       startCountdown();
+    } else {
+      router.push({ name: 'NotFound' });
     }
   } catch (error) {
     console.error("Lỗi kết nối API:", error);
+    router.push({ name: 'NotFound' });
   } finally {
     isLoading.value = false;
   }
