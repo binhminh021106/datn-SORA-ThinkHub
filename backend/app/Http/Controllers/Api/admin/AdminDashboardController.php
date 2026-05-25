@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\User;
 use App\Models\Product;
-use App\Models\OrderItem;
+use App\Models\Coupon;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema; 
@@ -15,8 +15,7 @@ use Illuminate\Support\Facades\Schema;
 class AdminDashboardController extends Controller
 {
     /**
-     * Hàm dùng chung để lọc các đơn hàng được tính vào doanh thu.
-     * Logic MỚI CHUẨN: (Đã giao HOẶC Đã thanh toán) VÀ KHÔNG NẰM TRONG (Hủy, Đã hoàn trả, Đang yêu cầu hoàn trả)
+     * Lọc đơn hàng được tính vào doanh thu.
      */
     private function applyRevenueFilter($query, $tablePrefix = '')
     {
@@ -24,87 +23,67 @@ class AdminDashboardController extends Controller
         $paymentStatusCol = $tablePrefix ? $tablePrefix . '.payment_status' : 'payment_status';
 
         return $query->where(function ($q) use ($statusCol, $paymentStatusCol) {
-            // Điều kiện 1: Lấy tất cả những thằng Đã giao hoặc Đã thanh toán
             $q->where($statusCol, 'delivered')
               ->orWhere($paymentStatusCol, 'paid');
         })
-        // Điều kiện 2: Trừ đi (Loại bỏ) dứt điểm những thằng bị Hủy hoặc liên quan đến Hoàn trả
         ->whereNotIn($statusCol, ['cancelled', 'returned', 'return_requested']);
     }
 
-    /**
-     * Hàm tính phần trăm tăng/giảm
-     */
     private function calculatePercentageChange($current, $previous)
     {
         if ($previous == 0) {
-            return $current > 0 ? 100 : 0; // Nếu kỳ trước bằng 0 mà kỳ này có => Tăng 100%
+            return $current > 0 ? 100 : 0; 
         }
-        return round((($current - $previous) / $previous) * 100, 1); // Làm tròn 1 chữ số thập phân
+        return round((($current - $previous) / $previous) * 100, 1);
     }
 
     public function index()
     {
         try {
             // 1. TỔNG QUAN
-            $revenueQuery = Order::query();
-            $totalRevenue = $this->applyRevenueFilter($revenueQuery)->sum('total_amount') ?? 0; 
-
-           $newOrders = Order::whereDate('created_at', Carbon::today())->count();
-            
-            // Đếm toàn bộ User (Bảng users của bạn chỉ lưu khách hàng)
+            $totalRevenue = $this->applyRevenueFilter(Order::query())->sum('total_amount') ?? 0; 
+            $newOrders = Order::whereDate('created_at', Carbon::today())->count();
             $totalCustomers = User::count();
                 
-            // Tính tổng tồn kho từ bảng product_variants (Sửa 'stock' thành 'stock_quantity')
             $inventory = Schema::hasTable('product_variants') && Schema::hasColumn('product_variants', 'stock_quantity') 
                 ? DB::table('product_variants')->whereNull('deleted_at')->sum('stock_quantity') 
                 : 0;
 
-
-            // ==========================================
-            // TÍNH TOÁN % TĂNG/GIẢM SO VỚI KỲ TRƯỚC
-            // ==========================================
+            // 2. TÍNH TOÁN % TĂNG/GIẢM SO VỚI KỲ TRƯỚC
             $now = Carbon::now();
             $thisMonthStart = $now->copy()->startOfMonth();
             $lastMonthStart = $now->copy()->subMonth()->startOfMonth();
             $lastMonthEnd = $now->copy()->subMonth()->endOfMonth();
 
-            // A. Tăng trưởng Doanh thu (Tháng này vs Tháng trước)
             $revenueThisMonth = $this->applyRevenueFilter(Order::query())->where('created_at', '>=', $thisMonthStart)->sum('total_amount') ?? 0;
             $revenueLastMonth = $this->applyRevenueFilter(Order::query())->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])->sum('total_amount') ?? 0;
             $revenueGrowth = $this->calculatePercentageChange($revenueThisMonth, $revenueLastMonth);
 
-            // B. Tăng trưởng Đơn hàng (Hôm nay vs Hôm qua)
             $ordersYesterday = Order::whereDate('created_at', Carbon::yesterday())->count();
             $ordersGrowth = $this->calculatePercentageChange($newOrders, $ordersYesterday);
 
-            // C. Tăng trưởng Khách hàng (Tháng này vs Tháng trước)
             $customersThisMonth = User::where('created_at', '>=', $thisMonthStart)->count();
             $customersLastMonth = User::whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])->count();
             $customersGrowth = $this->calculatePercentageChange($customersThisMonth, $customersLastMonth);
 
-
-            // 2. ĐƠN HÀNG GẦN ĐÂY
-            $recentOrdersRaw = Order::with('user')->orderBy('created_at', 'desc')->take(5)->get();
-            $recentOrders = $recentOrdersRaw->map(function($order) {
+            // 3. ĐƠN HÀNG GẦN ĐÂY
+            $recentOrders = Order::with('user:id,fullName')->orderBy('created_at', 'desc')->take(5)->get()->map(function($order) {
                 return [
                     'id' => $order->id,
                     'code' => $order->order_code ?? 'ORD-' . str_pad($order->id, 4, '0', STR_PAD_LEFT), 
-                    // Dùng fullName từ User model của bạn
                     'customer' => $order->user ? $order->user->fullName : ($order->customer_name ?? 'Khách lẻ'), 
                     'date' => $order->created_at->format('d/m/Y H:i'),
                     'total' => (float) ($order->total_amount ?? 0), 
-                    'status' => $order->status ?? 'Mới',
+                    'status' => $order->status ?? 'pending',
                 ];
             });
 
-            // 3. SẢN PHẨM BÁN CHẠY
+            // 4. SẢN PHẨM BÁN CHẠY
             $productsQuery = DB::table('order_items')
                 ->join('orders', 'order_items.order_id', '=', 'orders.id')
-                ->whereNull('orders.deleted_at') // Bỏ qua đơn hàng đã xóa mềm
-                ->whereNotNull('order_items.product_id'); // Bỏ qua Combo
+                ->whereNull('orders.deleted_at') 
+                ->whereNotNull('order_items.product_id'); 
                 
-            // Áp dụng cùng 1 logic doanh thu cho Sản phẩm bán chạy
             $topProductsRaw = $this->applyRevenueFilter($productsQuery, 'orders')
                 ->select('order_items.product_id', DB::raw('SUM(order_items.quantity) as total_sold'))
                 ->groupBy('order_items.product_id')
@@ -113,20 +92,11 @@ class AdminDashboardController extends Controller
                 ->get();
 
            $topProducts = $topProductsRaw->map(function($item) {
-                // Dùng withTrashed() để tránh lỗi nếu sản phẩm đó đã bị người quản trị xóa mềm
                 $product = Product::withTrashed()->find($item->product_id);
-                
-                // Lấy tồn kho của tất cả biến thể thuộc sản phẩm này (Sửa 'stock' thành 'stock_quantity')
                 $stock = 0;
                 if ($product && Schema::hasTable('product_variants') && Schema::hasColumn('product_variants', 'stock_quantity')) {
-                    $stock = DB::table('product_variants')
-                        ->where('product_id', $product->id)
-                        ->whereNull('deleted_at')
-                        ->sum('stock_quantity');
+                    $stock = DB::table('product_variants')->where('product_id', $product->id)->whereNull('deleted_at')->sum('stock_quantity');
                 }
-
-
-                // Lấy thông tin lưu trữ trong order_items đề phòng product bị xóa vĩnh viễn
                 $snapshot = DB::table('order_items')->where('product_id', $item->product_id)->first();
 
                 return [
@@ -135,120 +105,293 @@ class AdminDashboardController extends Controller
                     'sold' => (int) $item->total_sold,
                     'stock' => $stock,
                     'price' => $product ? ($product->promotional_price ?? $product->base_price) : ($snapshot->price ?? 0), 
-                    // Dùng thumbnail_image theo đúng Model Product của bạn
                     'image' => $product && $product->thumbnail_image ? asset('storage/' . $product->thumbnail_image) : '', 
                 ];
             });
 
-            // 4. BIỂU ĐỒ 7 NGÀY
-            $chartData = $this->getChartData(Carbon::today()->subDays(6), Carbon::today());
+            // 5. THỐNG KÊ KHUYẾN MÃI (DỮ LIỆU THẬT)
+            $activeCoupons = Coupon::where('status', 'active')->count();
+            $expiredCoupons = Coupon::where('status', 'expired')->orWhere('expires_at', '<', Carbon::now())->count();
+            $upcomingCoupons = Coupon::where('status', 'upcoming')->orWhere(function($q) {
+                $q->where('status', 'inactive')->where('expires_at', '>', Carbon::now());
+            })->count();
+            $totalUses = Coupon::sum('usage_count') ?? 0;
+
+            $couponSummary = [
+                'active' => $activeCoupons,
+                'upcoming' => $upcomingCoupons,
+                'expired' => $expiredCoupons,
+                'total_uses' => (int) $totalUses
+            ];
+
+            // Lấy 3 mã giảm giá mới nhất để hiển thị
+            $couponsRaw = Coupon::orderBy('created_at', 'desc')->take(3)->get();
+            $couponList = $couponsRaw->map(function($coupon) {
+                $isPercent = in_array(strtolower($coupon->type), ['percent', '%', 'percentage']);
+                $valDisplay = $isPercent ? $coupon->value . '%' : number_format($coupon->value, 0, ',', '.') . 'đ';
+                
+                $status = $coupon->status;
+                if ($coupon->expires_at && Carbon::parse($coupon->expires_at)->isPast()) {
+                    $status = 'expired';
+                }
+
+                return [
+                    'id' => $coupon->id,
+                    'name' => $coupon->name ?? $coupon->code,
+                    'desc' => 'Đơn tối thiểu: ' . number_format($coupon->min_spend, 0, ',', '.') . 'đ',
+                    'value_display' => $valDisplay,
+                    'type' => $isPercent ? '% Giảm' : 'Giảm thẳng',
+                    'category' => 'Khuyến mãi hệ thống',
+                    'usage_count' => (int) $coupon->usage_count,
+                    'usage_limit' => (int) $coupon->usage_limit,
+                    'expires_at' => $coupon->expires_at ? Carbon::parse($coupon->expires_at)->format('d/m/Y') : 'Không giới hạn',
+                    'status' => strtolower($status)
+                ];
+            });
+
+            // 6. BIỂU ĐỒ & PAYMENT STATS (Mặc định lấy từ đầu năm nay đến hiện tại)
+            $today = Carbon::today();
+            $chartData = $this->getDynamicChartData($today->copy()->startOfYear(), $today->copy()->endOfDay());
 
             return response()->json([
-                'status' => true,
+                'success' => true,
                 'message' => 'Lấy dữ liệu Dashboard thành công',
                 'data' => [
                     'stats' => [
                         'totalRevenue' => (float) $totalRevenue,
-                        'revenueGrowth' => $revenueGrowth, // % tăng/giảm doanh thu
+                        'revenueGrowth' => $revenueGrowth,
                         'newOrders' => $newOrders,
-                        'ordersGrowth' => $ordersGrowth,   // % tăng/giảm đơn hàng mới
+                        'ordersGrowth' => $ordersGrowth,
                         'inventory' => (int) $inventory,
                         'totalCustomers' => $totalCustomers,
-                        'customersGrowth' => $customersGrowth // % tăng/giảm khách hàng
+                        'customersGrowth' => $customersGrowth
                     ],
                     'recentOrders' => $recentOrders,
                     'topProducts' => $topProducts,
-                    'chartData' => $chartData
+                    'paymentStats' => $chartData['paymentStats'],
+                    'chartData' => [
+                        'labels' => $chartData['labels'],
+                        'values' => $chartData['values']
+                    ],
+                    'couponChart' => [
+                        'labels' => $chartData['labels'],
+                        'values' => $chartData['couponValues']
+                    ],
+                    'coupons' => [
+                        'summary' => $couponSummary,
+                        'list' => $couponList
+                    ]
                 ]
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
-                'status' => false,
-                'message' => 'Lỗi Code Laravel: ' . $e->getMessage() . ' (Dòng: ' . $e->getLine() . ')'
+                'success' => false,
+                'message' => 'Lỗi hệ thống: ' . $e->getMessage() . ' in ' . $e->getFile() . ' on line ' . $e->getLine()
             ], 500);
         }
     }
 
+    /**
+     * API Lọc riêng cho Biểu đồ
+     */
     public function chart(Request $request)
     {
         try {
-            $range = $request->input('range', '7');
-            $startDate = null;
-            $endDate = Carbon::today();
+            $isAll = $request->input('is_all') === 'true';
+            $startDateInput = $request->input('start_date');
+            $endDateInput = $request->input('end_date');
+            $today = Carbon::today();
 
-            if ($range === 'custom' && $request->has('start_date') && $request->has('end_date')) {
-                $startDate = Carbon::parse($request->input('start_date'));
-                $endDate = Carbon::parse($request->input('end_date'));
-            } elseif ($range === 'this_month') {
-                $startDate = Carbon::today()->startOfMonth();
-                $endDate = Carbon::today()->endOfMonth(); 
+            if ($isAll) {
+                $firstOrder = Order::orderBy('created_at', 'asc')->first();
+                $startDate = $firstOrder ? $firstOrder->created_at->startOfDay() : Carbon::createFromDate(2026, 1, 1)->startOfDay();
+                $endDate = $today->copy()->endOfDay();
             } else {
-                $days = (int) $range;
-                $startDate = Carbon::today()->subDays($days - 1);
+                if ($startDateInput && $endDateInput) {
+                    $startDate = Carbon::parse($startDateInput)->startOfDay();
+                    $endDate = Carbon::parse($endDateInput)->endOfDay();
+                } elseif (!$startDateInput && $endDateInput) {
+                    $endDate = Carbon::parse($endDateInput)->endOfDay();
+                    $startDate = $endDate->copy()->startOfYear();
+                } elseif ($startDateInput && !$endDateInput) {
+                    $startDate = Carbon::parse($startDateInput)->startOfDay();
+                    $endDate = $today->copy()->endOfDay();
+                } else {
+                    $startDate = $today->copy()->startOfYear();
+                    $endDate = $today->copy()->endOfDay();
+                }
             }
 
+            if ($endDate > $today->copy()->endOfDay()) { $endDate = $today->copy()->endOfDay(); }
+            if ($startDate > $today->copy()->endOfDay()) { $startDate = $today->copy()->endOfDay(); }
             if ($startDate > $endDate) {
-                $temp = $startDate;
-                $startDate = $endDate;
-                $endDate = $temp;
+                $temp = $startDate; $startDate = $endDate; $endDate = $temp;
             }
 
-            if ($startDate->diffInDays($endDate) > 60) {
-                $startDate = $endDate->copy()->subDays(60);
-            }
-
-            $chartData = $this->getChartData($startDate, $endDate);
+            $chartData = $this->getDynamicChartData($startDate, $endDate);
 
             return response()->json([
-                'status' => true,
-                'data' => $chartData
+                'success' => true,
+                'data' => [
+                    'labels' => $chartData['labels'],
+                    'values' => $chartData['values'],
+                    'paymentStats' => $chartData['paymentStats'],
+                    'couponChart' => [
+                        'labels' => $chartData['labels'],
+                        'values' => $chartData['couponValues']
+                    ]
+                ]
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
-                'status' => false,
-                'message' => 'Lỗi biểu đồ Laravel: ' . $e->getMessage()
+                'success' => false,
+                'message' => 'Lỗi biểu đồ: ' . $e->getMessage()
             ], 500);
         }
     }
 
-    private function getChartData($startDate, $endDate)
+    /**
+     * Tự động kéo dài thời gian (Auto-extend logic) nếu kỳ lọc rỗng
+     * & nhóm dữ liệu (Ngày/Tháng/Năm) để biểu đồ gọn gàng
+     */
+    private function getDynamicChartData($startDate, $endDate)
     {
-        $ordersQuery = Order::where('created_at', '>=', $startDate->copy()->startOfDay())
-                            ->where('created_at', '<=', $endDate->copy()->endOfDay());
+        // LOGIC AUTO-EXTEND (Tự động kéo về quá khứ tối đa 6 tháng nếu không có đơn hàng)
+        $hasData = false;
+        $currentStartDate = $startDate->copy();
+        $maxTries = 6;
+        $tries = 0;
 
-        // Áp dụng cùng 1 logic doanh thu cho Biểu đồ
-        $orders = $this->applyRevenueFilter($ordersQuery)->get(['created_at', 'total_amount']);
+        while ($tries < $maxTries) {
+            $exists = Order::where('created_at', '>=', $currentStartDate)
+                           ->where('created_at', '<=', $endDate)
+                           ->exists();
+            if ($exists) {
+                $hasData = true;
+                break;
+            }
+            // Nếu không có dữ liệu, lùi lại thêm 1 tháng
+            $currentStartDate->subMonths(1)->startOfMonth();
+            $tries++;
+        }
+
+        // Cập nhật lại startDate nếu quá trình lùi ngày tìm thấy dữ liệu
+        if ($hasData) {
+            $startDate = $currentStartDate;
+        }
+
+        $ordersQuery = Order::where('created_at', '>=', $startDate)
+                            ->where('created_at', '<=', $endDate);
+
+        $hasCouponId = Schema::hasColumn('orders', 'coupon_id');
+        $hasDiscountAmount = Schema::hasColumn('orders', 'discount_amount');
+
+        $orders = $this->applyRevenueFilter($ordersQuery)->get();
+        $diffDays = $startDate->diffInDays($endDate);
+
+        if ($diffDays <= 60) {
+            $groupBy = 'day';
+        } elseif ($diffDays <= 730) { 
+            $groupBy = 'month';
+        } else { 
+            $groupBy = 'year';
+        }
 
         $revenues = [];
+        $couponUses = [];
+        $paymentCounts = ['vnpay' => 0, 'momo' => 0, 'cod' => 0, 'bank' => 0];
+        $totalPayments = 0;
+
         foreach ($orders as $order) {
-            $dateKey = $order->created_at->format('Y-m-d');
-            if (!isset($revenues[$dateKey])) {
-                $revenues[$dateKey] = 0;
+            if ($groupBy === 'day') { $key = $order->created_at->format('Y-m-d'); } 
+            elseif ($groupBy === 'month') { $key = $order->created_at->format('Y-m'); } 
+            else { $key = $order->created_at->format('Y'); }
+
+            if (!isset($revenues[$key])) { $revenues[$key] = 0; }
+            $revenues[$key] += $order->total_amount;
+
+            // Đếm số lượt sử dụng coupon theo ngày
+            if (!isset($couponUses[$key])) { $couponUses[$key] = 0; }
+            if ($hasCouponId && $order->coupon_id) {
+                $couponUses[$key]++;
+            } elseif ($hasDiscountAmount && $order->discount_amount > 0) {
+                $couponUses[$key]++;
             }
-            $revenues[$dateKey] += $order->total_amount;
+
+            // Phân tích phương thức thanh toán
+            $method = strtolower($order->payment_method ?? '');
+            if (str_contains($method, 'vnpay')) {
+                $paymentCounts['vnpay']++;
+            } elseif (str_contains($method, 'momo')) {
+                $paymentCounts['momo']++;
+            } elseif (str_contains($method, 'cod') || str_contains($method, 'cash') || str_contains($method, 'tiền mặt')) {
+                $paymentCounts['cod']++;
+            } else {
+                $paymentCounts['bank']++;
+            }
+            $totalPayments++;
+        }
+
+        // Tính % payment stats
+        $paymentStats = [
+            'vnpayPercent' => $totalPayments > 0 ? (int) round(($paymentCounts['vnpay'] / $totalPayments) * 100) : 0,
+            'momoPercent' => $totalPayments > 0 ? (int) round(($paymentCounts['momo'] / $totalPayments) * 100) : 0,
+            'codPercent' => $totalPayments > 0 ? (int) round(($paymentCounts['cod'] / $totalPayments) * 100) : 0,
+            'bankPercent' => $totalPayments > 0 ? (int) round(($paymentCounts['bank'] / $totalPayments) * 100) : 0,
+        ];
+
+        // Do làm tròn đôi khi không tròn 100%, thực hiện bù trừ nhẹ ở codPercent nếu cần thiết
+        if ($totalPayments > 0) {
+            $sum = $paymentStats['vnpayPercent'] + $paymentStats['momoPercent'] + $paymentStats['codPercent'] + $paymentStats['bankPercent'];
+            if ($sum !== 100 && $sum > 0) {
+                $paymentStats['codPercent'] += (100 - $sum);
+            }
         }
 
         $labels = [];
         $values = [];
-        
-        $currentDate = $startDate->copy()->startOfDay();
-        $end = $endDate->copy()->startOfDay();
+        $couponValues = [];
+        $currentDate = $startDate->copy();
 
-        while ($currentDate <= $end) {
-            $dateString = $currentDate->format('Y-m-d');
-            $displayDate = $currentDate->format('d/m');
-            
-            $labels[] = $displayDate;
-            $values[] = isset($revenues[$dateString]) ? (float) $revenues[$dateString] : 0;
-
-            $currentDate->addDay();
+        if ($groupBy === 'day') {
+            $currentDate->startOfDay();
+            $end = $endDate->copy()->startOfDay();
+            while ($currentDate <= $end) {
+                $dateString = $currentDate->format('Y-m-d');
+                $labels[] = $currentDate->format('d/m');
+                $values[] = isset($revenues[$dateString]) ? (float) $revenues[$dateString] : 0;
+                $couponValues[] = isset($couponUses[$dateString]) ? (int) $couponUses[$dateString] : 0;
+                $currentDate->addDay();
+            }
+        } elseif ($groupBy === 'month') {
+            $currentDate->startOfMonth();
+            $end = $endDate->copy()->startOfMonth();
+            while ($currentDate <= $end) {
+                $dateString = $currentDate->format('Y-m');
+                $labels[] = $currentDate->format('m/Y');
+                $values[] = isset($revenues[$dateString]) ? (float) $revenues[$dateString] : 0;
+                $couponValues[] = isset($couponUses[$dateString]) ? (int) $couponUses[$dateString] : 0;
+                $currentDate->addMonth();
+            }
+        } else { 
+            $currentDate->startOfYear();
+            $end = $endDate->copy()->startOfYear();
+            while ($currentDate <= $end) {
+                $dateString = $currentDate->format('Y');
+                $labels[] = $dateString; 
+                $values[] = isset($revenues[$dateString]) ? (float) $revenues[$dateString] : 0;
+                $couponValues[] = isset($couponUses[$dateString]) ? (int) $couponUses[$dateString] : 0;
+                $currentDate->addYear();
+            }
         }
 
         return [
             'labels' => $labels,
-            'values' => $values
+            'values' => $values,
+            'couponValues' => $couponValues,
+            'paymentStats' => $paymentStats
         ];
     }
 }

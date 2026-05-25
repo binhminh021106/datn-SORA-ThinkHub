@@ -27,6 +27,7 @@ const admin = [
         path: '',
         name: 'admin-dashboard',
         component: () => import('../pages/admin/index.vue'),
+        meta: { title: 'Bảng điều khiển', moduleCode: 'admin_dashboard' },
       },
       {
         path: '/admin/profile',
@@ -134,7 +135,33 @@ const admin = [
         component: () => import('../pages/admin/brand/Edit.vue'),
         meta: { moduleCode: 'admin_brands' },
       },
-
+      
+      // history attendance
+      {
+        path: 'attendance/history',
+        name: 'admin-attendance-history',
+        component: () => import('../pages/admin/admin-attendance/History.vue'),
+      },
+      // ROUTE QUẢN LÝ CHẤM CÔNG (ATTENDANCE)
+      {
+        path: 'attendance',
+        name: 'admin-attendance-dashboard',
+        component: () => import('../pages/admin/admin-attendance/Index.vue'),
+        meta: {
+          moduleCode: 'admin_attendances',
+          title: 'Bảng chấm công cá nhân'
+        },
+      },
+      {
+        path: 'attendance/shifts',
+        name: 'admin-attendance-shifts',
+        component: () => import('../pages/admin/admin-attendance/WorkShifts.vue'),
+        meta: {
+          moduleCode: 'admin_attendances',
+          title: 'Quản lý ca làm việc'
+        },
+      },
+      
       // ROUTE QUẢN LÝ BANNER (BANNERS) - THÊM MỚI
       {
         path: 'banners',

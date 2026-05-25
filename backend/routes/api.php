@@ -34,8 +34,8 @@ use App\Http\Controllers\Api\admin\AdminInventoryController;
 use App\Http\Controllers\Api\admin\AdminDashboardController;
 use App\Http\Controllers\Api\admin\AdminContactController;
 use App\Http\Controllers\Api\admin\AdminNewController;
-use App\Http\Controllers\Api\admin\AdminChatbotController; 
-
+use App\Http\Controllers\Api\admin\AdminChatbotController;
+use App\Http\Controllers\Api\admin\AdminAttendanceController;
 
 // Controllers Client
 use App\Http\Controllers\Api\client\ProductDetailController;
@@ -90,7 +90,7 @@ Route::prefix('client')->group(function () {
         Route::get('/', [\App\Http\Controllers\Api\MessageController::class, 'history']);
         Route::post('/', [\App\Http\Controllers\Api\MessageController::class, 'store']);
     });
-    
+
     Route::get('header-data', [ClientHeaderController::class, 'getMegaMenuData']);
     Route::get('search', [ClientHeaderController::class, 'search']);
     Route::get('/home-data', [ClientHomeController::class, 'index']);
@@ -107,10 +107,11 @@ Route::prefix('client')->group(function () {
         Route::post('/add-combo', 'addCombo');
         Route::post('/merge', 'mergeCart');
         Route::post('/clear', 'clear');
+        Route::post('/apply-birthday-coupon', 'applyBirthdayCoupon'); // Thêm route này
 
         Route::get('/', 'index');
         Route::post('/', 'store');
-        
+
         Route::put('/{cartItem}', 'update');
         Route::delete('/{cartItem}', 'destroy');
     });
@@ -123,7 +124,7 @@ Route::prefix('client')->group(function () {
     });
 
     // Hồ Sơ Cá Nhân (Profile)
-    Route::prefix('profile')->group(function () {
+    Route::prefix('profile')->middleware('auth:sanctum')->group(function () {
         Route::get('/', [\App\Http\Controllers\Api\client\ClientProfileController::class, 'show']);
         Route::post('/', [\App\Http\Controllers\Api\client\ClientProfileController::class, 'update']);
         Route::post('/password', [\App\Http\Controllers\Api\client\ClientProfileController::class, 'updatePassword']);
@@ -167,7 +168,7 @@ Route::prefix('client')->group(function () {
     Route::middleware('auth:sanctum')->prefix('messages')->group(function () {
         Route::get('/', [\App\Http\Controllers\Api\MessageController::class, 'history']);
         Route::post('/', [\App\Http\Controllers\Api\MessageController::class, 'store']);
-    });// THÊM VÀO ĐÂY (trước hoặc sau các route khác đều được)
+    }); // THÊM VÀO ĐÂY (trước hoặc sau các route khác đều được)
     Route::middleware('auth:sanctum')->prefix('messages')->group(function () {
         Route::get('/', [\App\Http\Controllers\Api\MessageController::class, 'history']);
         Route::post('/', [\App\Http\Controllers\Api\MessageController::class, 'store']);
@@ -184,6 +185,8 @@ Route::prefix('shop/{shop_slug}')->group(function () {
     Route::post('/compare', [ClientCompareController::class, 'getCompareData']);
 });
 Route::get('shop/{shop_slug}/categories', [App\Http\Controllers\Api\client\ShopController::class, 'categories']);
+Route::get('shop/{shop_slug}/colors', [App\Http\Controllers\Api\client\ShopController::class, 'colors']);
+Route::get('shop/{shop_slug}/attributes', [App\Http\Controllers\Api\client\ShopController::class, 'attributes']);
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -209,6 +212,8 @@ Route::prefix('admin')->group(function () {
 
 
         Route::controller(AdminProfileController::class)->group(function () {
+            Route::get('profile', 'getProfile');
+
             Route::post('profile', 'updateProfile');
             Route::put('profile/password', 'updatePassword');
         });
@@ -364,9 +369,8 @@ Route::prefix('admin')->group(function () {
         Route::middleware(['check.module:admin_news'])->group(function () {
             Route::controller(AdminNewController::class)->prefix('news')->group(function () {
                 Route::get('/', 'index');
-                
-        
-                Route::post('/{id}/restore', 'restore'); 
+
+                Route::post('/{id}/restore', 'restore');
 
                 Route::get('/{id}', 'show');
                 Route::post('/', 'store');
@@ -375,7 +379,7 @@ Route::prefix('admin')->group(function () {
                 Route::patch('/{id}', 'updateStatus');
             });
         });
-        
+
         // QUẢN LÝ CHATBOT
         Route::middleware(['check.module:admin_chatbot'])->group(function () {
             Route::apiResource('chatbot', AdminChatbotController::class)->except(['create', 'edit']);
@@ -388,6 +392,37 @@ Route::prefix('admin')->group(function () {
             Route::post('/', [\App\Http\Controllers\Api\MessageController::class, 'store']);
             // Xóa toàn bộ cuộc trò chuyện với user
             Route::delete('/conversations/{userId}', [\App\Http\Controllers\Api\MessageController::class, 'deleteConversation']);
+        });
+
+        // QUẢN LÝ CHẤM CÔNG VÀ CA LÀM VIỆC
+        Route::middleware(['check.module:admin_attendances'])->group(function () {
+
+            // 1. Quản lý Chấm công
+            Route::controller(\App\Http\Controllers\Api\admin\AdminAttendanceController::class)->prefix('attendances')->group(function () {
+                Route::get('/monthly-summary', 'monthlySummary');
+                Route::get('/status', 'checkStatus');
+                Route::get('/daily-status', 'dailyStatus');
+                Route::get('/roles', 'getRoles'); // <-- BỔ SUNG DÒNG NÀY ĐỂ FIX API DROP-DOWN CHỨC VỤ
+                Route::get('/history/{adminId}', 'history');
+                Route::get('/', 'index');
+                Route::post('/check-in', 'checkIn');
+                Route::post('/check-out', 'checkOut');
+                Route::post('/{id}/resolve', 'resolveForgotten');
+            });
+
+            // 2. Quản lý Ca làm việc
+            Route::controller(\App\Http\Controllers\Api\admin\AdminWorkShiftController::class)->prefix('work-shifts')->group(function () {
+                Route::get('/', 'index');
+                Route::post('/', 'store');
+                // restore ca làm việc đã xóa
+                Route::post('/{id}/restore', 'restore');
+                Route::put('/{id}', 'update');
+                Route::delete('/{id}', 'destroy');
+                Route::get('/assignments', 'getAssignments');
+                Route::post('/assign', 'assignShift');
+                Route::post('/assign-multiple', 'assignMultiple');
+                Route::delete('/assignments/{adminId}', 'removeAssignment');
+            });
         });
     });
 });

@@ -185,7 +185,7 @@ const { data: rawBanners, isLoading, isFetching, refetch } = useQuery({
   queryKey: ['admin', 'banners'],
   queryFn: fetchBanners,
   staleTime: 5 * 60 * 1000, 
-  cacheTime: 10 * 60 * 1000,
+  gcTime: 10 * 60 * 1000,
 });
 
 // Sync data thô ra view, tách riêng logic Reorder

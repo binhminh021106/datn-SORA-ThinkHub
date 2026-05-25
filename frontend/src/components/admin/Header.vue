@@ -5,6 +5,37 @@
     <div class="container-fluid">
 
       <ul class="navbar-nav ms-auto align-items-center">
+        <!-- NÚT CHẤM CÔNG NHANH TRÊN HEADER (Được bọc trong v-if="isLoggedIn") -->
+        <li class="nav-item me-3" v-if="isLoggedIn">
+          <div class="d-flex align-items-center">
+             <!-- Đang Loading trạng thái -->
+             <button v-if="isLoadingStatus" class="btn btn-sm btn-light border-light text-muted fw-bold d-flex align-items-center shadow-sm" disabled>
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Đang tải ca...
+             </button>
+
+             <!-- Trạng thái READY: Nút Check-in -->
+             <button v-else-if="attendanceState === 'ready'" @click="handleCheckIn" :disabled="isActionMutating" class="btn btn-sm btn-brand text-white fw-bold d-flex align-items-center shadow-sm" style="background-color: #009981; border: none;">
+                <i class="bi bi-fingerprint me-2 fs-6"></i> {{ isActionMutating ? 'Đang xử lý...' : 'Vào ca' }}
+             </button>
+
+             <!-- Trạng thái WORKING: Nút Check-out -->
+             <button v-else-if="attendanceState === 'working'" @click="handleCheckOut" :disabled="isActionMutating" class="btn btn-sm btn-warning text-dark fw-bold d-flex align-items-center shadow-sm">
+                <i class="bi bi-person-dash me-2 fs-6"></i> {{ isActionMutating ? 'Đang xử lý...' : 'Tan ca' }}
+             </button>
+
+             <!-- Trạng thái HANGING: Quên checkout -->
+             <router-link v-else-if="attendanceState === 'hanging'" :to="{ name: 'admin-attendance-history' }" class="btn btn-sm btn-danger text-white fw-bold d-flex align-items-center shadow-sm">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i> Xử lý ca treo
+             </router-link>
+
+             <!-- Trạng thái COMPLETED -->
+             <button v-else-if="attendanceState === 'completed'" class="btn btn-sm fw-bold d-flex align-items-center border-0" :class="isDarkMode ? 'btn-outline-success text-success' : 'btn-outline-success bg-success-subtle text-success'" disabled>
+                <i class="bi bi-check2-circle me-2"></i> Hoàn thành ca
+             </button>
+          </div>
+        </li>
+
         <!-- NÚT TOGGLE DARK MODE (MỚI THÊM) -->
         <li class="nav-item me-3" v-if="isLoggedIn">
           <button @click="toggleTheme" 
@@ -25,6 +56,7 @@
               :src="adminUser.avatar" 
               :placeholder="defaultAvatar"
               imgClass="user-image rounded-circle shadow-sm me-2" 
+              :width="36" :height="36"
               alt="User Image" 
             />
             <span class="d-none d-md-inline fw-semibold text-truncate" style="max-width: 150px;">{{ adminUser.name }}</span>
@@ -39,7 +71,7 @@
                   :src="adminUser.avatar" 
                   :placeholder="defaultAvatar"
                   imgClass="rounded-circle shadow" 
-                  style="width: 60px; height: 60px; object-fit: cover;" 
+                  :width="60" :height="60"
                   alt="User Image" 
                 />
               </div>
@@ -52,6 +84,14 @@
                 <i class="bi bi-person me-2"></i> Hồ sơ cá nhân
               </router-link>
             </li>
+            
+            <!-- LINK ĐẾN LỊCH SỬ CHẤM CÔNG -->
+            <li>
+              <router-link :to="{ name: 'admin-attendance-history' }" class="dropdown-item py-2" :class="isDarkMode ? 'text-light hover-dark' : ''">
+                <i class="bi bi-calendar2-check me-2"></i> Lịch sử chấm công
+              </router-link>
+            </li>
+
             <li><hr class="dropdown-divider" :class="isDarkMode ? 'border-secondary' : ''"></li>
             <li>
               <a href="#" @click.prevent="handleLogout" class="dropdown-item py-2 fw-bold" :class="isDarkMode ? 'text-danger hover-dark' : 'text-danger'">
@@ -78,7 +118,7 @@ import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import { getFullImage } from '@/composables/useUtilities';
 import axios from 'axios';
-import { useQuery } from '@tanstack/vue-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 
 // Import component SoraImage phục vụ việc tự động fallback ảnh lỗi
 import SoraImage from '@/components/ui/SoraImage.vue';
@@ -131,7 +171,7 @@ const fetchAdminProfile = async () => {
   if (!token) throw new Error('Không tìm thấy token xác thực');
   
   // Lưu ý: Đảm bảo endpoint '/api/admin/profile' trùng khớp với API backend của bạn
-  const response = await axios.get(`${API_URL}/api/admin/profile`, {
+  const response = await axios.get(`${API_URL}/admin/profile`, {
     headers: {
       Authorization: `Bearer ${token}`
     }
@@ -147,8 +187,13 @@ const { data: adminProfileData } = useQuery({
   staleTime: 5 * 60 * 1000, // Caching dữ liệu trong 5 phút
   initialData: () => {
     // Tận dụng localStorage làm dữ liệu khởi tạo để UI hiển thị ngay lập tức (không bị giật)
-    const savedInfo = localStorage.getItem('admin_info');
-    return savedInfo ? JSON.parse(savedInfo) : undefined;
+      const savedInfo = localStorage.getItem('admin_info');
+      if (!savedInfo) return undefined;
+      try {
+        return JSON.parse(savedInfo);
+      } catch {
+        return undefined;
+      }
   }
 });
 
@@ -218,6 +263,82 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('click', closeUserMenu);
 });
+
+// ==========================================
+// LOGIC CHẤM CÔNG TANSTACK QUERY
+// ==========================================
+const queryClient = useQueryClient();
+const isActionMutating = ref(false);
+
+const { data: statusData, isLoading: isLoadingStatus } = useQuery({
+  queryKey: ['attendanceStatus'],
+  queryFn: async () => {
+    const token = localStorage.getItem('admin_token');
+    const response = await axios.get(`${API_URL}/admin/attendances/status`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+  },
+  refetchInterval: 60000, 
+  enabled: isLoggedIn, // Đảm bảo chỉ gọi API chấm công khi đã login
+});
+
+const attendanceState = computed(() => statusData.value?.state || 'ready');
+
+const checkInMutation = useMutation({
+  mutationFn: async () => {
+      const token = localStorage.getItem('admin_token');
+      return await axios.post(`${API_URL}/admin/attendances/check-in`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+      });
+  },
+  onSuccess: () => {
+    Swal.fire({ title: 'Check-in thành công!', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+    queryClient.invalidateQueries({ queryKey: ['attendanceStatus'] });
+  },
+  onError: (error) => {
+    Swal.fire('Lỗi Check-in', error.response?.data?.message || 'Có lỗi xảy ra', 'error');
+  }
+});
+
+const checkOutMutation = useMutation({
+  mutationFn: async () => {
+      const token = localStorage.getItem('admin_token');
+      return await axios.post(`${API_URL}/admin/attendances/check-out`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+      });
+  },
+  onSuccess: () => {
+    Swal.fire({ title: 'Đã Check-out ra về!', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+    queryClient.invalidateQueries({ queryKey: ['attendanceStatus'] });
+  },
+  onError: (error) => {
+    Swal.fire('Lỗi Check-out', error.response?.data?.message || 'Có lỗi xảy ra', 'error');
+  }
+});
+
+const handleCheckIn = () => {
+  isActionMutating.value = true;
+  checkInMutation.mutate(null, { onSettled: () => isActionMutating.value = false });
+};
+
+const handleCheckOut = () => {
+  Swal.fire({
+    title: 'Xác nhận ra về?',
+    text: 'Hệ thống sẽ ghi nhận bạn kết thúc ca làm.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#ffc107',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Kết thúc ca',
+    cancelButtonText: 'Hủy'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      isActionMutating.value = true;
+      checkOutMutation.mutate(null, { onSettled: () => isActionMutating.value = false });
+    }
+  });
+};
 </script>
 
 <style scoped>

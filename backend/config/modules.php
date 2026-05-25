@@ -96,4 +96,9 @@ return [
         'module_code' => 'admin_chatbot',
         'default_level' => 2
     ],
+    [
+        'module_name' => 'admin_attendance',
+        'module_code' => 'admin_attendance',
+        'default_level' => 2
+    ],
 ];

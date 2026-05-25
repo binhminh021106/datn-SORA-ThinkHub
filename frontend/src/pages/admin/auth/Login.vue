@@ -6,7 +6,7 @@
       <div
         class="col-md-6 d-none d-md-flex flex-column justify-content-center align-items-center text-white p-5 brand-banner">
         <i class="bi bi-box-seam-fill brand-icon"></i>
-        <h2 class="fw-bold mt-3 text-center">MyShop Admin</h2>
+        <h2 class="fw-bold mt-3 text-center">SORA Admin</h2>
         <p class="text-center mt-2 opacity-75">Hệ thống quản trị và vận hành cửa hàng toàn diện.</p>
       </div>
 
@@ -14,7 +14,7 @@
       <div class="col-md-6 p-5">
         <div class="text-center mb-4 d-md-none">
           <i class="bi bi-box-seam-fill text-brand mobile-icon"></i>
-          <h3 class="fw-bold mt-2 text-brand">MyShop Admin</h3>
+          <h3 class="fw-bold mt-2 text-brand">SORA Admin</h3>
         </div>
 
         <h4 class="fw-bold mb-1 text-dark">Đăng nhập</h4>

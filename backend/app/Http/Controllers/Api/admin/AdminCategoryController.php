@@ -131,7 +131,7 @@ class AdminCategoryController extends Controller
                     Storage::disk('public')->delete($category->thumbnail);
                 }
                 $data['thumbnail'] = $request->file('thumbnail')->store('categories', 'public');
-            } elseif ($request->input('remove_thumbnail') == 'true') {
+            } elseif (filter_var($request->input('remove_thumbnail'), FILTER_VALIDATE_BOOLEAN)) {
                 if ($category->thumbnail && Storage::disk('public')->exists($category->thumbnail)) {
                     Storage::disk('public')->delete($category->thumbnail);
                 }
