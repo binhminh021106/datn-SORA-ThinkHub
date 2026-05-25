@@ -1,13 +1,18 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Image, Dimensions, StatusBar, Alert, ActivityIndicator,
-  Modal,
+  ScrollView, Image, Dimensions, StatusBar, ActivityIndicator,
+  Modal, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL, MOBILE_AUTH_URL } from '../config/api';
+import { showCustomAlert } from '../components/CustomAlert';
+
+const Alert = {
+  alert: (title, message, buttons) => showCustomAlert(title, message, buttons)
+};
 
 const { width } = Dimensions.get('window');
 
@@ -18,8 +23,15 @@ export default function LoginScreen({ navigation }) {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-
-
+  useFocusEffect(
+    React.useCallback(() => {
+      StatusBar.setBarStyle('dark-content');
+      if (Platform.OS === 'android') {
+        StatusBar.setBackgroundColor('transparent');
+        StatusBar.setTranslucent(true);
+      }
+    }, [])
+  );
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -71,8 +83,8 @@ export default function LoginScreen({ navigation }) {
   const handleSocial = (p) => Alert.alert('Thông báo', `Đăng nhập bằng ${p} đang phát triển!`);
 
   return (
-    <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#9f273b" />
+    <View style={s.safe}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={s.banner}>
           <TouchableOpacity style={s.backBtn} onPress={() => navigation?.goBack()}>
@@ -110,7 +122,7 @@ export default function LoginScreen({ navigation }) {
           </View>
 
           <TouchableOpacity style={[s.primaryBtn, isLoading && s.primaryBtnOff]} onPress={handleLogin} disabled={isLoading}>
-            {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={s.primaryTxt}>ĐĂNG NHẬP</Text>}
+            {isLoading ? <ActivityIndicator color="#9f273b" /> : <Text style={s.primaryTxt}>ĐĂNG NHẬP</Text>}
           </TouchableOpacity>
 
           <View style={s.divider}>
@@ -136,15 +148,15 @@ export default function LoginScreen({ navigation }) {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#fcf9f5' },
   scroll: { flexGrow: 1, alignItems: 'center', paddingBottom: 40 },
-  banner: { width: '100%', height: 200, backgroundColor: '#9f273b', alignItems: 'center', justifyContent: 'center' },
-  backBtn: { position: 'absolute', top: 50, left: 16, width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  banner: { width: '100%', height: 250, backgroundColor: '#9f273b', alignItems: 'center', justifyContent: 'center', paddingTop: Platform.OS === 'ios' ? 45 : 30 },
+  backBtn: { position: 'absolute', top: Platform.OS === 'ios' ? 55 : 40, left: 16, width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
   bannerLogo: { width: 200, height: 80, tintColor: '#fff', marginBottom: 8 },
   bannerSlogan: { fontFamily: 'Oswald_400Regular', fontSize: 11, letterSpacing: 3, color: '#e7ce7d' },
   card: { width: width - 32, backgroundColor: '#fff', borderRadius: 16, padding: 28, marginTop: -30, shadowColor: '#9f273b', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 20, elevation: 10 },

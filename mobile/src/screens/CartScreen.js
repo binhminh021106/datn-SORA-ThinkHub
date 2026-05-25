@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -14,9 +14,13 @@ import {
   Animated,
   PanResponder,
   RefreshControl,
+  ActivityIndicator
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useIsFocused } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_BASE_URL } from "../config/api";
+import { showCustomAlert } from "../components/CustomAlert";
 
 const { width, height } = Dimensions.get("window");
 
@@ -333,59 +337,148 @@ const sw = StyleSheet.create({
   },
 });
 
-// Dummy cart data
-const INITIAL_ITEMS = [
-  {
-    id: "1",
-    name: "Nhẫn Kim Cương Eternal Trắng 18K",
-    category: "Nhẫn Cao Cấp",
-    variant: "Vàng Trắng 18K / Size 12",
-    price: 25000000,
-    oldPrice: 30500000,
-    qty: 1,
-    image:
-      "https://images.unsplash.com/photo-1605100804763-247f67b854d4?q=80&w=600&auto=format&fit=crop",
-  },
-  {
-    id: "2",
-    name: "Dây Chuyền Ngọc Trai Tự Nhiên Biển Nam",
-    category: "Dây Chuyền",
-    variant: "Bạch Kim / 45cm",
-    price: 12500000,
-    oldPrice: 15000000,
-    qty: 2,
-    image:
-      "https://images.unsplash.com/photo-1599643477877-530eb83abc8e?q=80&w=600&auto=format&fit=crop",
-  },
-  {
-    id: "3",
-    name: "Bông Tai Sapphire Xanh Cao Cấp",
-    category: "Bông Tai",
-    variant: "Vàng Vàng 18K",
-    price: 18200000,
-    oldPrice: 22000000,
-    qty: 1,
-    image:
-      "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?q=80&w=600&auto=format&fit=crop",
-  },
-];
+// Helper to resolve storage paths
+const getStorageUrl = (path) => {
+  if (!path) return '';
+  if (path.startsWith('http')) return path;
+  return `${API_BASE_URL.replace('/api', '')}/storage/${path}`;
+};
 
-const fmt = (n) => n.toLocaleString("vi-VN") + "đ";
+// Helper to format currency
+const fmt = (n) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(n) || 0);
+
+// Helper to map backend cart item payload into SwipeableCartItem schema
+const mapBackendItem = (item) => {
+  const isCombo = !!item.combo_id;
+  
+  let name = 'Sản phẩm Trang sức SORA';
+  let category = 'Trang sức';
+  let variant = '';
+  let price = 0;
+  let oldPrice = null;
+  let image = 'https://images.unsplash.com/photo-1605100804763-247f67b854d4?q=80&w=600';
+
+  if (isCombo && item.combo) {
+    name = item.combo.name || 'Gói Ưu Đãi SORA';
+    category = 'Combo cao cấp';
+    variant = `Bộ ${item.combo_selections?.length || 0} món tự chọn`;
+    price = Number(item.price) || 0;
+    image = item.combo.thumbnail_image 
+      ? getStorageUrl(item.combo.thumbnail_image)
+      : 'https://images.unsplash.com/photo-1605100804763-247f67b854d4?q=80&w=600';
+  } else if (item.variant) {
+    name = item.variant.product?.name || 'Sản phẩm Trang sức SORA';
+    category = item.variant.product?.category?.name || 'Trang sức';
+    
+    // Process multi-attributes object, e.g., "VÀNG HỒNG / SIZE 11"
+    if (item.variant.attributes) {
+      variant = Object.entries(item.variant.attributes)
+        .map(([key, val]) => `${key}: ${val}`)
+        .join(' / ');
+    } else {
+      variant = 'Bản Giới Hạn SORA';
+    }
+
+    const basePrice = Number(item.variant.price) || 0;
+    const promoPrice = Number(item.variant.promotional_price) || 0;
+    
+    if (promoPrice > 0 && promoPrice < basePrice) {
+      price = promoPrice;
+      oldPrice = basePrice;
+    } else {
+      price = basePrice;
+    }
+
+    const relativeImage = item.variant.image_url || item.variant.product?.thumbnail_image;
+    if (relativeImage) {
+      image = getStorageUrl(relativeImage);
+    }
+  }
+
+  return {
+    id: item.id.toString(),
+    name,
+    category,
+    variant,
+    price,
+    oldPrice,
+    qty: item.quantity || 1,
+    image,
+    rawItem: item
+  };
+};
 
 export default function CartScreen() {
   const navigation = useNavigation();
-  const [items, setItems] = useState(INITIAL_ITEMS);
+  const isFocused = useIsFocused();
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [items, setItems] = useState([]);
   const [selected, setSelected] = useState([]);
   const [lightboxImg, setLightboxImg] = useState(null);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const onRefresh = useCallback(() => {
+  // Read auth token & guest session ID for API requests
+  const getHeaders = async () => {
+    const headers = { 'Accept': 'application/json' };
+    try {
+      const token = await AsyncStorage.getItem('auth_token');
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
+      let sid = await AsyncStorage.getItem('cart_session_id');
+      if (!sid && !token) { 
+        sid = 'session_' + Math.random().toString(36).substr(2, 9);
+        await AsyncStorage.setItem('cart_session_id', sid);
+      }
+      if (sid) {
+        headers['X-Cart-Session-Id'] = sid;
+      }
+    } catch (e) {
+      console.log('Error getting headers:', e);
+    }
+    return headers;
+  };
+
+  // Fetch items from Laravel API
+  const fetchCartItems = async (isBackground = false) => {
+    if (!isBackground) setIsLoading(true);
+    try {
+      const headers = await getHeaders();
+      const response = await fetch(`${API_BASE_URL}/client/cart`, {
+        method: 'GET',
+        headers
+      });
+      const result = await response.json();
+      if (result.success && result.data) {
+        const mapped = result.data.map(mapBackendItem);
+        setItems(mapped);
+        
+        // Auto-select all items on first load
+        if (!isBackground) {
+          setSelected(mapped.map(i => i.id));
+        }
+      }
+    } catch (e) {
+      console.log('Error fetching cart:', e);
+    } finally {
+      if (!isBackground) setIsLoading(false);
+    }
+  };
+
+  // Reload cart whenever screen comes into focus
+  useEffect(() => {
+    if (isFocused) {
+      fetchCartItems();
+    }
+  }, [isFocused]);
+
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    setTimeout(() => {
-      setItems(INITIAL_ITEMS);
-      setRefreshing(false);
-    }, 1200);
+    await fetchCartItems(true);
+    setRefreshing(false);
   }, []);
 
   const allSelected = items.length > 0 && selected.length === items.length;
@@ -400,9 +493,10 @@ export default function CartScreen() {
     setSelected(allSelected ? [] : items.map((i) => i.id));
   };
 
+  // Deletes multiple selected items from the backend cart
   const deleteSelected = () => {
     if (selected.length === 0) return;
-    Alert.alert(
+    showCustomAlert(
       "Xoá sản phẩm",
       `Bạn muốn xoá ${selected.length} sản phẩm đã chọn?`,
       [
@@ -410,22 +504,121 @@ export default function CartScreen() {
         {
           text: "Xoá",
           style: "destructive",
-          onPress: () => {
-            setItems((prev) => prev.filter((i) => !selected.includes(i.id)));
-            setSelected([]);
+          onPress: async () => {
+            setIsLoading(true);
+            try {
+              const headers = await getHeaders();
+              // Delete each item on backend in parallel
+              await Promise.all(
+                selected.map(async (id) => {
+                  const targetItem = items.find(i => i.id === id);
+                  if (targetItem) {
+                    await fetch(`${API_BASE_URL}/client/cart/${targetItem.rawItem.id}`, {
+                      method: 'DELETE',
+                      headers
+                    });
+                  }
+                })
+              );
+              showCustomAlert("GIỎ HÀNG", "Đã xóa các sản phẩm được chọn khỏi giỏ hàng thành công!", [{ text: "ĐỒNG Ý" }]);
+              setSelected([]);
+              await fetchCartItems(false);
+            } catch (e) {
+              console.log('Error deleting selected items:', e);
+              setIsLoading(false);
+            }
           },
         },
       ],
     );
   };
 
-  const changeQty = (id, delta) => {
+  // Syncs quantity modifications with backend with optimistic UI updates
+  const changeQty = async (id, delta) => {
+    const targetItem = items.find((i) => i.id === id);
+    if (!targetItem) return;
+
+    const newQty = targetItem.qty + delta;
+    if (newQty < 1) return;
+
+    // Check stock boundaries
+    const maxStock = targetItem.rawItem.variant?.stock || targetItem.rawItem.variant?.stock_quantity || 99;
+    if (newQty > maxStock) {
+      showCustomAlert("KHO KHÔNG ĐỦ", `Sản phẩm này hiện chỉ còn ${maxStock} sản phẩm trong kho!`);
+      return;
+    }
+
+    // Optimistic UI updates
+    const originalQty = targetItem.qty;
     setItems((prev) =>
-      prev.map((i) => {
-        if (i.id !== id) return i;
-        const newQty = Math.max(1, i.qty + delta);
-        return { ...i, qty: newQty };
-      }),
+      prev.map((i) => (i.id === id ? { ...i, qty: newQty } : i))
+    );
+
+    try {
+      const headers = await getHeaders();
+      const response = await fetch(`${API_BASE_URL}/client/cart/${targetItem.rawItem.id}`, {
+        method: 'PUT',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ quantity: newQty })
+      });
+      const result = await response.json();
+      if (result.success) {
+        await fetchCartItems(true); // background sync
+      } else {
+        // Revert on error
+        setItems((prev) =>
+          prev.map((i) => (i.id === id ? { ...i, qty: originalQty } : i))
+        );
+      }
+    } catch (e) {
+      console.log('Error updating quantity:', e);
+      // Revert on error
+      setItems((prev) =>
+        prev.map((i) => (i.id === id ? { ...i, qty: originalQty } : i))
+      );
+    }
+  };
+
+  // Deletes a single cart item from the backend with optimistic UI updates
+  const deleteSingleItem = (id) => {
+    const targetItem = items.find(i => i.id === id);
+    if (!targetItem) return;
+
+    showCustomAlert(
+      "Xoá sản phẩm",
+      "Bạn có chắc chắn muốn bỏ sản phẩm này khỏi giỏ hàng?",
+      [
+        { text: "Huỷ", style: "cancel" },
+        {
+          text: "Xoá",
+          style: "destructive",
+          onPress: async () => {
+            // Optimistic UI updates
+            setItems((prev) => prev.filter((i) => i.id !== id));
+            setSelected((prev) => prev.filter((x) => x !== id));
+            
+            try {
+              const headers = await getHeaders();
+              const response = await fetch(`${API_BASE_URL}/client/cart/${targetItem.rawItem.id}`, {
+                method: 'DELETE',
+                headers
+              });
+              const result = await response.json();
+              if (result.success) {
+                // Background sync
+                await fetchCartItems(true);
+              }
+            } catch (e) {
+              console.log('Error deleting single item:', e);
+              // Restore state on failure
+              await fetchCartItems(false);
+            }
+          }
+        }
+      ]
     );
   };
 
@@ -437,9 +630,18 @@ export default function CartScreen() {
 
   const totalQty = items.reduce((sum, i) => sum + i.qty, 0);
 
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[s.safe, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#9f273b" />
+        <Text style={{ fontFamily: 'Oswald_500Medium', fontSize: 13, color: '#9f273b', marginTop: 14, letterSpacing: 1 }}>ĐANG TẢI GIỎ HÀNG SORA...</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f5f5f5" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
 
       {/* ── HEADER ── */}
       <View style={s.header}>
@@ -541,10 +743,7 @@ export default function CartScreen() {
                 item={item}
                 isChecked={isChecked}
                 onToggle={toggleSelect}
-                onDelete={(id) => {
-                  setItems((prev) => prev.filter((i) => i.id !== id));
-                  setSelected((prev) => prev.filter((x) => x !== id));
-                }}
+                onDelete={deleteSingleItem}
                 onOpenImage={setLightboxImg}
                 onQtyChange={changeQty}
                 onSwipeStart={() => setScrollEnabled(false)}
@@ -569,7 +768,7 @@ export default function CartScreen() {
             onPress={() => {
               const selectedItems = items.filter((i) => selected.includes(i.id));
               if (selectedItems.length === 0) {
-                Alert.alert(
+                showCustomAlert(
                   "Giỏ hàng",
                   "Vui lòng chọn ít nhất 1 sản phẩm để thanh toán!"
                 );
