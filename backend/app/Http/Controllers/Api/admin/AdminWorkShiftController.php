@@ -8,19 +8,17 @@ use App\Models\AdminShiftAssignment;
 use App\Http\Requests\WorkShift\StoreWorkShiftRequest;
 use App\Http\Requests\WorkShift\UpdateWorkShiftRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class AdminWorkShiftController extends Controller
 {
     public function index(Request $request)
     {
-        // Khởi tạo query và gộp Eager Loading để lấy danh sách phân công & thông tin admin
-        // Chỉ lấy các trường id, fullname, email của admin để tối ưu dung lượng JSON trả về
         $query = WorkShift::withCount('assignments')->with(['assignments.admin' => function($q) {
             $q->select('id', 'fullname', 'email');
         }]);
 
-        // Nếu yêu cầu danh sách đã xóa
         if ($request->query('trashed') === 'true') {
             $query->onlyTrashed();
         } 
@@ -38,8 +36,8 @@ class AdminWorkShiftController extends Controller
             'end_time' => $request->end_time,
             'late_tolerance' => $request->late_tolerance ?? 0,
             'is_overnight' => $request->is_overnight ?? false,
-            'working_days' => $request->working_days, // Lưu mảng 7 ngày vào DB
-            'overtime_days' => $request->overtime_days, // Lưu mảng 7 ngày OT vào DB
+            'working_days' => $request->working_days, 
+            'overtime_days' => $request->overtime_days, 
         ]);
 
         return response()->json([
@@ -75,10 +73,7 @@ class AdminWorkShiftController extends Controller
         try {
             $shift = WorkShift::findOrFail($id);
             
-            // Xóa cứng toàn bộ liên kết nhân viên thuộc ca làm việc đó để trả về trạng thái tự do (free)
             AdminShiftAssignment::where('work_shift_id', $id)->delete();
-            
-            // Tiến hành xóa mềm ca làm việc
             $shift->delete();
             
             DB::commit();
@@ -118,19 +113,51 @@ class AdminWorkShiftController extends Controller
         $request->validate([
             'admin_id' => 'required|exists:admins,id',
             'work_shift_id' => 'required|exists:work_shifts,id',
+            'valid_from' => 'nullable|date',
+            'valid_to' => 'nullable|date|after_or_equal:valid_from',
         ]);
 
-        // Cập nhật hoặc tạo mới phân công ca cho admin đó
-        $assignment = AdminShiftAssignment::updateOrCreate(
-            ['admin_id' => $request->admin_id],
-            ['work_shift_id' => $request->work_shift_id]
-        );
+        $validFrom = $request->valid_from ?? now()->toDateString();
+        $validTo = $request->valid_to ?? null;
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Phân công ca thành công!',
-            'data' => $assignment
-        ]);
+        DB::beginTransaction();
+        try {
+            // Đóng ca hiện tại (nếu có) để bảo toàn lịch sử thay vì ghi đè
+            $currentActive = AdminShiftAssignment::where('admin_id', $request->admin_id)
+                ->active($validFrom)
+                ->first();
+
+            if ($currentActive && $currentActive->work_shift_id != $request->work_shift_id) {
+                $currentActive->update([
+                    'valid_to' => Carbon::parse($validFrom)->subDay()->toDateString()
+                ]);
+            }
+
+            // Tạo mới (hoặc update nếu thao tác trên cùng 1 ngày để tránh duplicate)
+            $assignment = AdminShiftAssignment::updateOrCreate(
+                [
+                    'admin_id' => $request->admin_id,
+                    'valid_from' => $validFrom
+                ],
+                [
+                    'work_shift_id' => $request->work_shift_id,
+                    'valid_to' => $validTo
+                ]
+            );
+            
+            DB::commit();
+            return response()->json([
+                'success' => true,
+                'message' => 'Phân công ca thành công!',
+                'data' => $assignment
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi khi phân công ca: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function assignMultiple(Request $request)
@@ -139,14 +166,35 @@ class AdminWorkShiftController extends Controller
             'admin_ids' => 'required|array',
             'admin_ids.*' => 'exists:admins,id',
             'work_shift_id' => 'required|exists:work_shifts,id',
+            'valid_from' => 'nullable|date',
+            'valid_to' => 'nullable|date|after_or_equal:valid_from',
         ]);
+
+        $validFrom = $request->valid_from ?? now()->toDateString();
+        $validTo = $request->valid_to ?? null;
 
         DB::beginTransaction();
         try {
             foreach ($request->admin_ids as $adminId) {
+                $currentActive = AdminShiftAssignment::where('admin_id', $adminId)
+                    ->active($validFrom)
+                    ->first();
+
+                if ($currentActive && $currentActive->work_shift_id != $request->work_shift_id) {
+                    $currentActive->update([
+                        'valid_to' => Carbon::parse($validFrom)->subDay()->toDateString()
+                    ]);
+                }
+
                 AdminShiftAssignment::updateOrCreate(
-                    ['admin_id' => $adminId],
-                    ['work_shift_id' => $request->work_shift_id]
+                    [
+                        'admin_id' => $adminId,
+                        'valid_from' => $validFrom
+                    ],
+                    [
+                        'work_shift_id' => $request->work_shift_id,
+                        'valid_to' => $validTo
+                    ]
                 );
             }
             DB::commit();
@@ -170,12 +218,17 @@ class AdminWorkShiftController extends Controller
             'work_shift_id' => 'required|exists:work_shifts,id',
         ]);
 
+        // Lấy ca đang active hiện tại
         $assignment = AdminShiftAssignment::where('admin_id', $adminId)
             ->where('work_shift_id', $request->work_shift_id)
+            ->active() 
             ->first();
 
         if ($assignment) {
-            $assignment->delete();
+            // Thay vì delete() cứng làm mất dữ liệu lịch sử đối soát, ta thiết lập ngày kết thúc
+            $assignment->update([
+                'valid_to' => now()->subDay()->toDateString()
+            ]);
         }
 
         return response()->json([

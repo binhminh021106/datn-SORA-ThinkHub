@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Đặt lại mật khẩu MyShop Admin</title>
+    <title>Đặt lại mật khẩu SORA Admin</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -69,11 +69,11 @@
 <body>
     <div class="email-container">
         <div class="header">
-            <h1>MyShop Admin System</h1>
+            <h1>SORA Admin System</h1>
         </div>
         <div class="content">
             <p>Xin chào <strong>{{ $admin->fullname }}</strong>,</p>
-            <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản quản trị MyShop của bạn liên kết với email
+            <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản quản trị SORA của bạn liên kết với email
                 <strong>{{ $admin->email }}</strong>.
             </p>
 
@@ -92,10 +92,10 @@
                 của bạn vẫn an toàn và không có thay đổi nào được thực hiện.
             </div>
 
-            <p style="margin-top: 30px;">Trân trọng,<br><strong>Đội ngũ Kỹ thuật MyShop</strong></p>
+            <p style="margin-top: 30px;">Trân trọng,<br><strong>Đội ngũ Kỹ thuật SORA</strong></p>
         </div>
         <div class="footer">
-            &copy; {{ date('Y') }} MyShop. Mọi quyền được bảo lưu.<br>
+            &copy; {{ date('Y') }} SORA. Mọi quyền được bảo lưu.<br>
             Đây là email tự động, vui lòng không trả lời.
         </div>
     </div>

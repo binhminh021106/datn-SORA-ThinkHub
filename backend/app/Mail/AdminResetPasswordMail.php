@@ -24,7 +24,7 @@ class AdminResetPasswordMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: '[MyShop] Yêu cầu đặt lại mật khẩu quản trị viên',
+            subject: '[SORA] Yêu cầu đặt lại mật khẩu quản trị viên',
         );
     }
 

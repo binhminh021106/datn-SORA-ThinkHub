@@ -27,6 +27,7 @@ const admin = [
         path: '',
         name: 'admin-dashboard',
         component: () => import('../pages/admin/index.vue'),
+        meta: { title: 'Bảng điều khiển', moduleCode: 'admin_dashboard' },
       },
       {
         path: '/admin/profile',
@@ -134,7 +135,13 @@ const admin = [
         component: () => import('../pages/admin/brand/Edit.vue'),
         meta: { moduleCode: 'admin_brands' },
       },
-
+      
+      // history attendance
+      {
+        path: 'attendance/history',
+        name: 'admin-attendance-history',
+        component: () => import('../pages/admin/admin-attendance/History.vue'),
+      },
       // ROUTE QUẢN LÝ CHẤM CÔNG (ATTENDANCE)
       {
         path: 'attendance',
@@ -143,15 +150,6 @@ const admin = [
         meta: {
           moduleCode: 'admin_attendances',
           title: 'Bảng chấm công cá nhân'
-        },
-      },
-      {
-        path: 'attendance/history',
-        name: 'admin-attendance-history',
-        component: () => import('../pages/admin/admin-attendance/History.vue'),
-        meta: {
-          moduleCode: 'admin_attendances',
-          title: 'Lịch sử chấm công'
         },
       },
       {

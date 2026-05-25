@@ -3,8 +3,10 @@
     
     <!-- 1. SHIMMER LOGO (Chỉ hiện lần đầu tiên) -->
     <div v-if="isFirstVisit && isLoading" class="d-flex flex-column justify-content-center align-items-center w-100 shimmer-wrapper">
-      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">ĐANG ĐỒNG BỘ DỮ LIỆU LỊCH...</p>
+      <div class="logo-shimmer-container text-center">
+        <h1 class="logo-shimmer mb-2">ThinkHub</h1>
+        <p class="loading-text text-muted fw-bold small text-uppercase tracking-widest mt-2" style="letter-spacing: 3px; font-size: 0.75rem;">ĐANG TẢI DỮ LIỆU...</p>
+      </div>
     </div>
 
     <!-- NỘI DUNG CHÍNH (Ẩn đi khi đang hiện Shimmer) -->
@@ -18,7 +20,22 @@
           </router-link>
           <div class="d-flex flex-column">
             <h3 class="fw-bold text-dark mb-0">Lịch sử làm việc cá nhân</h3>
-            <p class="text-muted small mb-0 mt-1 fw-semibold">Theo dõi giờ giấc Check-in/out theo lịch tháng của bạn</p>
+            <p class="text-muted small mb-0 mt-1 fw-semibold">Theo dõi giờ giấc Check-in/out và tổng kết chuyên cần tháng</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- BẢNG ĐIỀU HƯỚNG CHÚ THÍCH & KPI CÁ NHÂN -->
+      <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-md-6" v-for="kpi in kpiSummaries" :key="kpi.title">
+          <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body p-3 d-flex align-items-center gap-3">
+              <div class="icon-box-small" :class="kpi.bgClass"><i :class="kpi.icon"></i></div>
+              <div>
+                <div class="text-muted small fw-bold text-uppercase mb-1" style="font-size: 0.75rem;">{{ kpi.title }}</div>
+                <h4 class="fw-black mb-0" :class="kpi.textClass || 'text-dark'">{{ kpi.value }}</h4>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -120,14 +137,21 @@
                       <span class="fw-bold">{{ formatTime(day.data.clock_out) }}</span>
                     </div>
 
+                    <!-- Hiển thị đầy đủ Badge trạng thái và giờ phút -->
                     <div class="d-flex flex-wrap gap-1 mt-2 justify-content-end">
-                      <span :class="getStatusBadgeClass(day.data.status)" class="badge">
-                        {{ getStatusLabel(day.data.status) }}
+                      <span :class="getStatusBadgeClass(getRealStatus(day.data))" class="badge">
+                        {{ getStatusLabel(getRealStatus(day.data)) }}
                       </span>
-                      <span v-if="day.data.checkout_status === 'forgotten'" class="badge bg-danger shadow-sm">
-                        Quên Checkout
+                      <span v-if="getRealLateMinutes(day.data) > 0" class="badge bg-warning text-dark shadow-sm">
+                        Muộn {{ formatDuration(getRealLateMinutes(day.data)) }}
                       </span>
-                      <span v-if="!isStaffWorkingDay(day.date, day)" class="badge bg-dark text-white shadow-sm">Tăng ca</span>
+                      <span v-if="getRealEarlyLeave(day.data) > 0" class="badge text-white shadow-sm" style="background-color: #fd7e14;">
+                        Về sớm {{ formatDuration(getRealEarlyLeave(day.data)) }}
+                      </span>
+                      <span v-if="day.data.checkout_status === 'forgotten'" class="badge bg-danger shadow-sm">Quên Checkout</span>
+                      
+                      <!-- SỬA: Chỉ hiển thị Tăng ca nếu không về sớm -->
+                      <span v-if="!isStaffWorkingDay(day.date, day) && getRealEarlyLeave(day.data) <= 0" class="badge bg-dark text-white shadow-sm">Tăng ca</span>
                     </div>
                   </div>
 
@@ -325,6 +349,161 @@ const attendanceMap = computed(() => {
   return map;
 });
 
+// 5. Helpers logic nhận diện ngày nghỉ/đi làm chính xác 100%
+const getWeekdayIndex = (dateStr) => {
+  if (!dateStr) return null;
+  const dayOfWeek = new Date(dateStr).getDay();
+  return dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 0-6 = T2-CN
+};
+
+// Chuẩn hóa hàm kiểm tra ngày hiện tại và quá khứ 
+const isToday = (dateStr) => {
+  if (!dateStr) return false;
+  const targetDate = new Date(dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  targetDate.setHours(0, 0, 0, 0);
+  return targetDate.getTime() === today.getTime();
+};
+
+const isPastOrToday = (dateStr) => {
+  if (!dateStr) return false;
+  const targetDate = new Date(dateStr);
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+  return targetDate <= today;
+};
+
+// Ưu tiên lấy ca làm việc được lưu trong lịch sử điểm danh của ngày đó (nếu có)
+const getDayWorkShift = (day) => {
+  if (!day) return null;
+  if (day.data && (day.data.workShift || day.data.work_shift)) {
+    return day.data.workShift || day.data.work_shift;
+  }
+  return currentUserShift.value;
+};
+
+// Kiểm tra ngày này nhân sự CÓ BẮT BUỘC ĐI LÀM KHÔNG
+const isStaffWorkingDay = (dateStr, day = null) => {
+  if (!dateStr) return false;
+  const arrayIndex = getWeekdayIndex(dateStr);
+  const shift = getDayWorkShift(day);
+
+  // So với ca cá nhân
+  if (shift && Array.isArray(shift.working_days)) {
+    return !!shift.working_days[arrayIndex];
+  }
+
+  // So với ca công ty
+  if (workDaySettings.value && Array.isArray(workDaySettings.value.working_days)) {
+    return !!workDaySettings.value.working_days[arrayIndex];
+  }
+
+  // Fallback mặc định
+  return arrayIndex >= 0 && arrayIndex < 5;
+};
+
+// ----------------------------------------------------------------------
+// CÁC HÀM TÍNH TOÁN & ĐỊNH DẠNG TỪ SNAPSHOT FE (PORT TỪ INDEX.VUE)
+// ----------------------------------------------------------------------
+
+const formatDuration = (totalMinutes) => {
+  if (!totalMinutes || totalMinutes <= 0) return '';
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h > 0 && m > 0) return `${h}h ${m}p`;
+  if (h > 0) return `${h}h`;
+  return `${m}p`;
+};
+
+const getRealLateMinutes = (att) => {
+  if (!att || !att.clock_in) return att?.late_minutes || 0;
+  const startTime = att.shift_start_time || att.work_shift?.start_time;
+  if (!startTime) return att.late_minutes || 0;
+  try {
+    const clockInTime = new Date(att.clock_in).getTime();
+    const dateOnly = att.clock_in.split('T')[0].split(' ')[0]; 
+    const expectedTime = new Date(`${dateOnly}T${startTime}`).getTime();
+    const diffMins = Math.floor((clockInTime - expectedTime) / 60000);
+    const tolerance = parseInt(att.shift_late_tolerance || att.work_shift?.late_tolerance || 0);
+    if (diffMins > tolerance) return diffMins - tolerance;
+    return 0;
+  } catch(e) {
+    return att.late_minutes || 0;
+  }
+};
+
+const getRealEarlyLeave = (att) => {
+  if (!att || !att.clock_out) return att?.early_leave_minutes || 0;
+  const endTime = att.shift_end_time || att.work_shift?.end_time;
+  const startTime = att.shift_start_time || att.work_shift?.start_time;
+  if (!endTime) return att.early_leave_minutes || 0;
+  try {
+    const clockOutTime = new Date(att.clock_out).getTime();
+    const dateOnly = att.clock_out.split('T')[0].split(' ')[0];
+    let expectedTimeObj = new Date(`${dateOnly}T${endTime}`);
+    if (startTime && endTime <= startTime) expectedTimeObj.setDate(expectedTimeObj.getDate() + 1);
+    const diffMins = Math.floor((expectedTimeObj.getTime() - clockOutTime) / 60000);
+    if (diffMins > 0) return diffMins;
+    return 0;
+  } catch(e) {
+    return att.early_leave_minutes || 0;
+  }
+};
+
+const getRealStatus = (att) => {
+  if (!att) return 'absent';
+  if (att.status === 'on_leave') return 'on_leave';
+  if (getRealLateMinutes(att) > 0) return 'late';
+  return 'present';
+};
+
+// THỐNG KÊ THÁNG CÁ NHÂN (KPI CỦA CÁ NHÂN)
+const kpiSummaries = computed(() => {
+  let totalWorkDays = 0;
+  let presentCount = 0;
+  let lateCount = 0;
+  let absentCount = 0;
+  let overtimeCount = 0;
+
+  const year = currentYear.value;
+  const month = currentMonth.value - 1;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  for (let i = 1; i <= daysInMonth; i++) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+    const dayData = attendanceMap.value[dateStr];
+    const mockDay = { date: dateStr, data: dayData, isCurrentMonth: true };
+    
+    const isWorkingDay = isStaffWorkingDay(dateStr, mockDay);
+    
+    if (isWorkingDay) totalWorkDays++; // Tổng số ngày yêu cầu đi làm trong tháng
+
+    if (dayData) {
+       // Đã check-in có dữ liệu
+       if (isWorkingDay) {
+          presentCount++; // Đi làm đúng lịch
+       } else {
+          // SỬA: Nếu làm vào ngày nghỉ nhưng về sớm thì KHÔNG tính là tăng ca
+          if (getRealEarlyLeave(dayData) <= 0) {
+              overtimeCount++; 
+          }
+       }
+       if (getRealLateMinutes(dayData) > 0) lateCount++;
+    } else if (isWorkingDay && isPastOrToday(dateStr)) {
+       // Đã qua hoặc hôm nay mà chưa có data -> Bị đánh dấu vắng mặt
+       absentCount++;
+    }
+  }
+
+  return [
+    { title: 'Công thực tế tháng', value: `${presentCount} / ${totalWorkDays}`, icon: 'bi bi-check2-circle text-success', bgClass: 'bg-success-subtle text-success', textClass: 'text-success' },
+    { title: 'Số lần đi muộn', value: lateCount, icon: 'bi bi-exclamation-triangle text-warning', bgClass: 'bg-warning-subtle text-warning-emphasis', textClass: 'text-warning-emphasis' },
+    { title: 'Ngày vắng mặt', value: absentCount, icon: 'bi bi-person-x text-danger', bgClass: 'bg-danger-subtle text-danger', textClass: 'text-danger' },
+    { title: 'Ngày tăng ca', value: overtimeCount, icon: 'bi bi-briefcase text-primary', bgClass: 'bg-primary-subtle text-primary', textClass: 'text-primary' }
+  ];
+});
+
 // 3. Logic render Lưới lịch 2 chiều (Grid Calendar)
 const calendarGrid = computed(() => {
   const year = currentYear.value;
@@ -374,57 +553,6 @@ const calendarGrid = computed(() => {
 const prevMonth = () => { currentDate.value = new Date(currentYear.value, currentMonth.value - 2, 1); };
 const nextMonth = () => { currentDate.value = new Date(currentYear.value, currentMonth.value, 1); };
 const goToToday = () => { currentDate.value = new Date(); };
-
-// 5. Helpers logic nhận diện ngày nghỉ/đi làm chính xác 100%
-const getWeekdayIndex = (dateStr) => {
-  if (!dateStr) return null;
-  const dayOfWeek = new Date(dateStr).getDay();
-  return dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 0-6 = T2-CN
-};
-
-// Ưu tiên lấy ca làm việc được lưu trong lịch sử điểm danh của ngày đó (nếu có)
-const getDayWorkShift = (day) => {
-  if (!day) return null;
-  if (day.data && (day.data.workShift || day.data.work_shift)) {
-    return day.data.workShift || day.data.work_shift;
-  }
-  return currentUserShift.value;
-};
-
-// Kiểm tra ngày này nhân sự CÓ BẮT BUỘC ĐI LÀM KHÔNG
-const isStaffWorkingDay = (dateStr, day = null) => {
-  if (!dateStr) return false;
-  const arrayIndex = getWeekdayIndex(dateStr);
-  const shift = getDayWorkShift(day);
-
-  // So với ca cá nhân
-  if (shift && Array.isArray(shift.working_days)) {
-    return !!shift.working_days[arrayIndex];
-  }
-
-  // So với ca công ty
-  if (workDaySettings.value && Array.isArray(workDaySettings.value.working_days)) {
-    return !!workDaySettings.value.working_days[arrayIndex];
-  }
-
-  // Fallback mặc định
-  return arrayIndex >= 0 && arrayIndex < 5;
-};
-
-// Chuẩn hóa hàm kiểm tra ngày hiện tại và quá khứ dựa trên chuỗi YYYY-MM-DD
-const isToday = (dateStr) => {
-  if (!dateStr) return false;
-  const today = new Date();
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  return dateStr === todayStr;
-};
-
-const isPastOrToday = (dateStr) => {
-  if (!dateStr) return false;
-  const today = new Date();
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  return dateStr <= todayStr;
-}
 
 // Logic hiển thị Nhãn (Label) cho ô ngày trống (Không có điểm danh)
 const getAttendanceCellLabel = (day) => {
@@ -484,6 +612,10 @@ const getStatusBadgeClass = (status) => {
 .text-brand { color: #009981 !important; }
 .btn-brand { background-color: #009981; border: none; transition: 0.2s; }
 .btn-brand:hover { background-color: #007a67; }
+
+/* Thêm Class CSS cho KPI Grid */
+.icon-box-small { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 1.1rem; }
+.fw-black { font-weight: 900; }
 
 /* CALENDAR CSS CHUYÊN NGHIỆP */
 .calendar-container {
@@ -574,23 +706,36 @@ const getStatusBadgeClass = (status) => {
   border-style: dashed !important;
 }
 
-/* CSS LOGO SHIMMER */
-.shimmer-wrapper {
-  min-height: 70vh;
+/* CSS LOGO SHIMMER LÀM LẠI THEO THIẾT KẾ MỚI CỦA INDEX.VUE */
+.shimmer-wrapper { 
+  min-height: 80vh; 
+  background-color: #ffffff; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  z-index: 9999;
 }
-.logo-shimmer {
-  font-size: 3.5rem;
-  font-weight: 900;
-  letter-spacing: -1.5px;
-  background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%);
-  background-size: 200% auto;
-  color: transparent;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: shine 1.5s linear infinite;
+.logo-shimmer { 
+  font-size: 4rem; 
+  font-weight: 900; 
+  letter-spacing: -2px; 
+  background: linear-gradient(90deg, #12d8a0 0%, #009981 100%); 
+  background-size: 200% auto; 
+  color: transparent; 
+  -webkit-background-clip: text; 
+  background-clip: text; 
+  animation: shine-logo 2s linear infinite; 
 }
-@keyframes shine {
-  to { background-position: 200% center; }
+.loading-text {
+  color: #6c757d;
+  opacity: 0.8;
+  animation: pulse-text 1.5s infinite ease-in-out;
+}
+@keyframes shine-logo { to { background-position: 200% center; } }
+@keyframes pulse-text {
+  0% { opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
 }
 
 /* CSS SKELETON LOADING */

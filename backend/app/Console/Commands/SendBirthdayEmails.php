@@ -52,6 +52,22 @@ class SendBirthdayEmails extends Command
 
         // Lấy tất cả user có sinh nhật hôm nay để log ra terminal
         $allBirthdayUsers = User::with('tier')
+
+        // Cache silverTier ra ngoài vòng lặp: tránh query lặp lại N lần
+        $silverTier = MembershipTier::orderBy('min_spent', 'asc')
+            ->get()
+            ->first(function ($tier) {
+                $tierName = Str::lower(Str::ascii($tier->name ?? ''));
+                return Str::contains($tierName, ['silver', 'bac']);
+            });
+
+        if (!$silverTier) {
+            $this->error('Không tìm thấy hạng Bạc trong hệ thống. Dừng lệnh.');
+            return;
+        }
+
+        // Lấy tất cả user có sinh nhật hôm nay để log ra terminal
+        $allBirthdayUsers = User::with('tier')
             ->whereMonth('birthday', $today->month)
             ->whereDay('birthday', $today->day)
             ->get();
@@ -99,11 +115,24 @@ class SendBirthdayEmails extends Command
             DB::beginTransaction();
             try {
                 // Tạo Voucher: Sinh mã random, hạn sử dụng 7 ngày
+                // Tạo Voucher: Sinh mã random, hạn sử dụng 7 ngày
                 $code = strtoupper(Str::random(8));
                 while (Coupon::where('code', $code)->exists()) {
                     $code = strtoupper(Str::random(8));
                 }
 
+                // 4. Mức giảm giá linh hoạt theo Hạng: bạc 5%, vàng 10%, kim cương 15%
+                $userTier = $user->relationLoaded('tier') ? $user->tier : MembershipTier::find($user->tier_id);
+                $tierName = Str::lower(Str::ascii($userTier->name ?? ''));
+                
+                $discountPercent = 5; // Mặc định hạng Bạc 5%
+                if (Str::contains($tierName, ['kim cuong', 'diamond'])) {
+                    $discountPercent = 15;
+                } elseif (Str::contains($tierName, ['vang', 'gold'])) {
+                    $discountPercent = 10;
+                } elseif (Str::contains($tierName, ['bac', 'silver'])) {
+                    $discountPercent = 5;
+                }
                 // 4. Mức giảm giá linh hoạt theo Hạng: bạc 5%, vàng 10%, kim cương 15%
                 $userTier = $user->relationLoaded('tier') ? $user->tier : MembershipTier::find($user->tier_id);
                 $tierName = Str::lower(Str::ascii($userTier->name ?? ''));
@@ -132,6 +161,7 @@ class SendBirthdayEmails extends Command
                     'status' => 'active'
                 ]);
 
+                // Gửi Email ngay lập tức (đồng bộ)
                 // Gửi Email ngay lập tức (đồng bộ)
                 Mail::to($user->email)->send(new BirthdayVoucherMail($user, $coupon));
 
