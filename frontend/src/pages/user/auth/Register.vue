@@ -16,7 +16,6 @@
         </div>
 
         <div v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</div>
-        <div v-if="successMessage" class="alert alert-success">{{ successMessage }}</div>
 
         <form @submit.prevent="handleRegister" class="auth-form">
           <div class="form-group">
@@ -95,6 +94,7 @@
 <script setup>
 import { ref, reactive } from 'vue';
 import axios from 'axios';
+import Toast from '@/utils/toastConfig';
 // import { useRouter } from 'vue-router';
 
 // const router = useRouter();
@@ -102,7 +102,6 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const isLoading = ref(false);
 const errorMessage = ref('');
-const successMessage = ref('');
 
 const LoginWithGoogle = () => {
   window.location.href = `${API_BASE_URL}/auth/google/redirect`;
@@ -119,12 +118,11 @@ const form = reactive({
 const handleRegister = async () => {
   isLoading.value = true;
   errorMessage.value = '';
-  successMessage.value = '';
 
   try {
     const response = await axios.post(`${API_BASE_URL}/register`, form);
 
-    successMessage.value = 'Đăng ký thành công! Đang tự động đăng nhập...';
+    Toast.fire({ icon: 'success', title: 'Đăng ký thành công! Đang tự động đăng nhập...' });
 
     // Lưu Token
     localStorage.setItem('auth_token', response.data.access_token);
@@ -132,6 +130,24 @@ const handleRegister = async () => {
 
     // CẬP NHẬT MỚI: Lưu thông tin User
     localStorage.setItem('userData', JSON.stringify(response.data.user));
+
+    // Đồng bộ giỏ hàng Guest vào tài khoản
+    const sessionId = localStorage.getItem('cart_session_id');
+    if (sessionId) {
+        try {
+            await axios.post(`${API_BASE_URL}/client/cart/merge`, {}, {
+                headers: {
+                    'Authorization': `Bearer ${response.data.access_token}`,
+                    'X-Cart-Session-Id': sessionId,
+                    'Accept': 'application/json'
+                }
+            });
+            localStorage.removeItem('cart_session_id');
+            window.dispatchEvent(new CustomEvent('update-cart-count'));
+        } catch (e) {
+            console.error('Merge cart error:', e);
+        }
+    }
 
     setTimeout(() => {
       window.location.href = '/';
@@ -149,7 +165,7 @@ const handleRegister = async () => {
 };
 
 const handleSocialLogin = (platform) => {
-  alert(`Tính năng đăng ký bằng ${platform} đang được phát triển!`);
+  Toast.fire({ icon: 'info', title: `Tính năng đăng ký bằng ${platform} đang được phát triển!` });
 };
 </script>
 

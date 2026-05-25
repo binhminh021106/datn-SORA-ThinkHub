@@ -294,6 +294,8 @@ const confirmQuickAdd = async () => {
             setSafeStorage('cart_session_id', res.data.session_id);
         }
         
+        window.dispatchEvent(new CustomEvent('update-cart-count'));
+        
         quickAddModalInstance.hide();
         Toast.fire({ icon: 'success', title: 'Đã thêm sản phẩm vào giỏ' });
     } catch (error) {

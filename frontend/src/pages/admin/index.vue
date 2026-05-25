@@ -152,7 +152,7 @@
 
                 <button @click="applyChartFilter(false)" class="btn btn-brand rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-2 transition-all shadow-sm" style="height: 42px;" :disabled="chartMutation.isPending.value">
                   <span v-if="chartMutation.isPending.value" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                  <i v-else class="bi bi-funnel-fill"></i> Lọc
+                  <i v-else class="bi bi-funnel-fill"></i>
                 </button>
 
                 <button @click="applyChartFilter(true)" class="btn btn-light border-light rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-2 transition-all shadow-sm text-secondary" style="height: 42px;" :disabled="chartMutation.isPending.value">
@@ -547,7 +547,6 @@ const toggleCouponStatus = async (coupon) => {
     isUpdatingCoupon.value = coupon.id;
     const newStatus = coupon.status === 'active' ? 'inactive' : 'active';
     try {
-        // Đổi từ axios.put sang axios.patch khớp với Route Laravel của bạn
         const res = await axios.patch(`${apiUrl}/admin/coupons/${coupon.id}`, { status: newStatus }, { headers: getHeaders() });
 
         if(res && res.data.success) {
@@ -828,4 +827,85 @@ const formatCouponDate = (dateStr) => {
 .helper-date-label { font-size: 0.65rem; color: #8792a3; font-weight: 600; text-transform: uppercase; margin-top: -3px; text-align: center; }
 
 select:focus, input:focus, button:focus { outline: none; box-shadow: none !important; }
+</style>
+
+<style>
+/* TỐI ƯU DARK MODE - KHÔNG SCOPED ĐỂ FIX LỖI NHẬN CSS */
+[data-bs-theme="dark"] .dashboard-wrapper {
+    background-color: transparent !important; 
+}
+[data-bs-theme="dark"] .dashboard-wrapper .bg-white,
+[data-bs-theme="dark"] .dashboard-wrapper .card,
+[data-bs-theme="dark"] .dashboard-wrapper .custom-card,
+[data-bs-theme="dark"] .dashboard-wrapper .coupon-card {
+    background-color: #1e2125 !important;
+    border-color: #373b3e !important;
+}
+[data-bs-theme="dark"] .dashboard-wrapper .text-dark {
+    color: #f8f9fa !important;
+}
+[data-bs-theme="dark"] .dashboard-wrapper .text-secondary,
+[data-bs-theme="dark"] .dashboard-wrapper .text-muted {
+    color: #adb5bd !important;
+}
+[data-bs-theme="dark"] .dashboard-wrapper .bg-light,
+[data-bs-theme="dark"] .dashboard-wrapper .bg-light-soft {
+    background-color: #2b3035 !important;
+    color: #f8f9fa !important;
+}
+[data-bs-theme="dark"] .dashboard-wrapper .bg-light-purple {
+    background-color: #2b3035 !important;
+    border: 1px solid #373b3e !important;
+}
+[data-bs-theme="dark"] .dashboard-wrapper .border-light,
+[data-bs-theme="dark"] .dashboard-wrapper .border-bottom {
+    border-color: #373b3e !important;
+}
+[data-bs-theme="dark"] .dashboard-wrapper .btn-light {
+    background-color: #2b3035 !important;
+    border-color: #373b3e !important;
+    color: #f8f9fa !important;
+}
+[data-bs-theme="dark"] .dashboard-wrapper .btn-light:hover {
+    background-color: #343a40 !important;
+    border-color: #495057 !important;
+}
+[data-bs-theme="dark"] .dashboard-wrapper .filter-group {
+    background-color: #1e2125 !important;
+    border-color: #373b3e !important;
+}
+[data-bs-theme="dark"] .dashboard-wrapper .custom-date-input {
+    color: #f8f9fa !important;
+    background-color: transparent !important;
+}
+[data-bs-theme="dark"] .dashboard-wrapper .custom-date-input::-webkit-calendar-picker-indicator {
+    filter: invert(1) !important;
+}
+[data-bs-theme="dark"] .dashboard-wrapper .coupon-icon {
+    background-color: #2b3035 !important;
+    color: #f8f9fa !important;
+    border-color: #373b3e !important;
+}
+[data-bs-theme="dark"] .dashboard-wrapper .progress-thin {
+    background-color: #373b3e !important;
+}
+[data-bs-theme="dark"] .dashboard-wrapper .progress-bar.bg-dark {
+    background-color: #009981 !important; 
+}
+[data-bs-theme="dark"] .dashboard-wrapper .rank-normal {
+    background-color: #2b3035 !important;
+    color: #adb5bd !important;
+}
+[data-bs-theme="dark"] .dashboard-wrapper .table-row-hover:hover {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+}
+[data-bs-theme="dark"] .dashboard-wrapper .custom-table th,
+[data-bs-theme="dark"] .dashboard-wrapper .custom-table td {
+    background-color: transparent !important;
+    border-bottom-color: #373b3e !important;
+    color: #f8f9fa !important;
+}
+[data-bs-theme="dark"] .dashboard-wrapper .table-hover>tbody>tr:hover>* {
+    color: #f8f9fa !important;
+}
 </style>

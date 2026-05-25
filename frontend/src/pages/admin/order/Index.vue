@@ -1,5 +1,5 @@
 <template>
-  <div class="order-index-wrapper pb-5 mb-5">
+  <div class="order-index-wrapper">
 
     <div v-if="isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100"
       style="min-height: 70vh;">
@@ -212,27 +212,29 @@
                           <option value="failed" v-if="canPaymentTransitionTo(order.payment_status, 'failed')">Thất bại</option>
                         </select>
 
-                        <div v-if="order.isUpdatingPayment" class="mt-2 text-center w-100">
-                          <div class="spinner-border text-brand"
-                            style="width: 1.1rem; height: 1.1rem; border-width: 0.15em;" role="status"></div>
-                        </div>
+                        <div class="d-flex align-items-start justify-content-center w-100" style="min-height: 38px;">
+                          <div v-if="order.isUpdatingPayment" class="mt-2 text-center w-100">
+                            <div class="spinner-border text-brand"
+                              style="width: 1.1rem; height: 1.1rem; border-width: 0.15em;" role="status"></div>
+                          </div>
 
-                        <div v-else-if="order.isPaymentStatusChanged" class="mt-2 w-100 d-flex gap-1 animate-fade-in">
-                          <button @click="savePaymentStatus(order)"
-                            class="btn btn-sm btn-brand text-white flex-grow-1 shadow-sm d-flex align-items-center justify-content-center action-btn-hover"
-                            style="padding: 0.35rem; font-size: 0.75rem;" title="Xác nhận">
-                            <i class="bi bi-send-check-fill me-1"></i> Xác nhận
-                          </button>
-                          <button @click="cancelPaymentStatusChange(order)"
-                            class="btn btn-sm btn-light border shadow-sm d-flex align-items-center justify-content-center action-btn-hover"
-                            style="padding: 0.35rem 0.5rem;" title="Hủy">
-                            <i class="bi bi-x-lg text-danger" style="font-size: 0.75rem;"></i>
-                          </button>
-                        </div>
+                          <div v-else-if="order.isPaymentStatusChanged" class="mt-2 w-100 d-flex gap-1 animate-fade-in">
+                            <button @click="savePaymentStatus(order)"
+                              class="btn btn-sm btn-brand text-white flex-grow-1 shadow-sm d-flex align-items-center justify-content-center action-btn-hover"
+                              style="padding: 0.35rem; font-size: 0.75rem;" title="Xác nhận">
+                              <i class="bi bi-send-check-fill me-1"></i> Xác nhận
+                            </button>
+                            <button @click="cancelPaymentStatusChange(order)"
+                              class="btn btn-sm btn-light border shadow-sm d-flex align-items-center justify-content-center action-btn-hover"
+                              style="padding: 0.35rem 0.5rem;" title="Hủy">
+                              <i class="bi bi-x-lg text-danger" style="font-size: 0.75rem;"></i>
+                            </button>
+                          </div>
 
-                        <div class="small fw-semibold text-muted text-uppercase mt-2 text-nowrap"
-                          style="font-size: 0.65rem;" v-if="!order.isPaymentStatusChanged && !order.isUpdatingPayment">
-                          <i class="bi bi-wallet2 me-1"></i> {{ order.payment_method }}
+                          <div class="small fw-semibold text-muted text-uppercase mt-2 text-nowrap"
+                            style="font-size: 0.65rem;" v-else>
+                            <i class="bi bi-wallet2 me-1"></i> {{ order.payment_method }}
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -254,22 +256,24 @@
                           <option value="cancelled" v-if="canTransitionTo(order.status, 'cancelled')">Hủy đơn</option>
                         </select>
 
-                        <div v-if="order.isUpdatingStatus" class="mt-2 text-center w-100">
-                          <div class="spinner-border text-brand"
-                            style="width: 1.1rem; height: 1.1rem; border-width: 0.15em;" role="status"></div>
-                        </div>
+                        <div class="d-flex align-items-start justify-content-center w-100" style="min-height: 38px;">
+                          <div v-if="order.isUpdatingStatus" class="mt-2 text-center w-100">
+                            <div class="spinner-border text-brand"
+                              style="width: 1.1rem; height: 1.1rem; border-width: 0.15em;" role="status"></div>
+                          </div>
 
-                        <div v-else-if="order.isStatusChanged" class="mt-2 w-100 d-flex gap-1 animate-fade-in">
-                          <button @click="saveOrderStatus(order)"
-                            class="btn btn-sm btn-brand text-white flex-grow-1 shadow-sm d-flex align-items-center justify-content-center action-btn-hover"
-                            style="padding: 0.35rem; font-size: 0.75rem;" title="Xác nhận">
-                            <i class="bi bi-send-check-fill me-1"></i> Xác nhận
-                          </button>
-                          <button @click="cancelStatusChange(order)"
-                            class="btn btn-sm btn-light border shadow-sm d-flex align-items-center justify-content-center action-btn-hover"
-                            style="padding: 0.35rem 0.5rem;" title="Hủy">
-                            <i class="bi bi-x-lg text-danger" style="font-size: 0.75rem;"></i>
-                          </button>
+                          <div v-else-if="order.isStatusChanged" class="mt-2 w-100 d-flex gap-1 animate-fade-in">
+                            <button @click="saveOrderStatus(order)"
+                              class="btn btn-sm btn-brand text-white flex-grow-1 shadow-sm d-flex align-items-center justify-content-center action-btn-hover"
+                              style="padding: 0.35rem; font-size: 0.75rem;" title="Xác nhận">
+                              <i class="bi bi-send-check-fill me-1"></i> Xác nhận
+                            </button>
+                            <button @click="cancelStatusChange(order)"
+                              class="btn btn-sm btn-light border shadow-sm d-flex align-items-center justify-content-center action-btn-hover"
+                              style="padding: 0.35rem 0.5rem;" title="Hủy">
+                              <i class="bi bi-x-lg text-danger" style="font-size: 0.75rem;"></i>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -473,13 +477,13 @@ const canPaymentTransitionTo = (currentStatus, targetStatus) => allowedPaymentTr
 
 const getOrderRowClass = (status) => {
   const classes = {
-    'pending': 'bg-warning bg-opacity-20',
-    'confirmed': 'bg-info bg-opacity-20',
-    'processing': 'bg-primary bg-opacity-20',
-    'shipping': 'bg-primary bg-opacity-20',
-    'delivered': 'bg-success bg-opacity-20',
-    'cancelled': 'bg-danger bg-opacity-20',
-    'returned': 'bg-secondary bg-opacity-20'
+    'pending': 'bg-warning bg-opacity-15',
+    'confirmed': 'bg-info bg-opacity-15',
+    'processing': 'bg-primary bg-opacity-15',
+    'shipping': 'bg-primary bg-opacity-15',
+    'delivered': 'bg-success bg-opacity-15',
+    'cancelled': 'bg-danger bg-opacity-15',
+    'returned': 'bg-secondary bg-opacity-15'
   };
   return classes[status] || '';
 };
@@ -963,5 +967,106 @@ onMounted(() => {
 .custom-radio:checked {
   background-color: #009981;
   border-color: #009981;
+}
+
+/* DARK MODE OVERRIDES */
+[data-bs-theme="dark"] .bg-white {
+  background-color: var(--bs-dark) !important;
+}
+[data-bs-theme="dark"] .bg-light,
+[data-bs-theme="dark"] .table-light {
+  background-color: var(--bs-gray-800) !important;
+  color: var(--bs-light) !important;
+}
+[data-bs-theme="dark"] .text-dark {
+  color: var(--bs-light) !important;
+}
+[data-bs-theme="dark"] .text-muted {
+  color: #adb5bd !important;
+}
+[data-bs-theme="dark"] .border {
+  border-color: var(--bs-border-color) !important;
+}
+[data-bs-theme="dark"] .border-bottom {
+  border-bottom-color: var(--bs-border-color) !important;
+}
+/* For table headers and body */
+[data-bs-theme="dark"] .table {
+  color: var(--bs-light);
+}
+[data-bs-theme="dark"] tbody tr.bg-warning.bg-opacity-15 {
+  background-color: rgba(255, 193, 7, 0.1) !important;
+}
+[data-bs-theme="dark"] tbody tr.bg-info.bg-opacity-15 {
+  background-color: rgba(13, 202, 240, 0.1) !important;
+}
+[data-bs-theme="dark"] tbody tr.bg-primary.bg-opacity-15 {
+  background-color: rgba(13, 110, 253, 0.1) !important;
+}
+[data-bs-theme="dark"] tbody tr.bg-success.bg-opacity-15 {
+  background-color: rgba(25, 135, 84, 0.1) !important;
+}
+[data-bs-theme="dark"] tbody tr.bg-danger.bg-opacity-15 {
+  background-color: rgba(220, 53, 69, 0.1) !important;
+}
+[data-bs-theme="dark"] tbody tr.bg-secondary.bg-opacity-15 {
+  background-color: rgba(108, 117, 125, 0.1) !important;
+}
+/* Inputs / Selects in dark mode */
+[data-bs-theme="dark"] input.bg-transparent, 
+[data-bs-theme="dark"] select.bg-transparent {
+  color: var(--bs-light) !important;
+}
+[data-bs-theme="dark"] input.bg-transparent::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+[data-bs-theme="dark"] .form-select.bg-white,
+[data-bs-theme="dark"] .form-control.bg-light {
+  background-color: var(--bs-dark) !important;
+  color: var(--bs-light) !important;
+  border-color: var(--bs-border-color) !important;
+}
+/* Tabs */
+[data-bs-theme="dark"] .custom-tab {
+  color: #adb5bd;
+}
+[data-bs-theme="dark"] .custom-tab:hover {
+  background-color: rgba(255,255,255,0.05);
+  color: var(--bs-light);
+}
+[data-bs-theme="dark"] .active-tab {
+  color: #009981 !important;
+}
+[data-bs-theme="dark"] .tab-badge.bg-light {
+  background-color: var(--bs-gray-700) !important;
+  color: var(--bs-light) !important;
+}
+/* Skeleton */
+[data-bs-theme="dark"] .skeleton {
+  background: linear-gradient(110deg, var(--bs-gray-800) 8%, var(--bs-gray-700) 18%, var(--bs-gray-800) 33%);
+  background-size: 200% 100%;
+}
+/* Responsive table borders */
+[data-bs-theme="dark"] .responsive-table tr {
+  background-color: var(--bs-dark) !important;
+  border-color: var(--bs-border-color) !important;
+}
+[data-bs-theme="dark"] .responsive-table td {
+  border-bottom-color: var(--bs-border-color) !important;
+}
+/* Note radios */
+[data-bs-theme="dark"] .note-radio-wrap {
+  background-color: var(--bs-dark) !important;
+  border-color: var(--bs-border-color) !important;
+}
+[data-bs-theme="dark"] .note-radio-wrap:hover {
+  background-color: rgba(0, 153, 129, 0.1) !important;
+}
+[data-bs-theme="dark"] .note-radio-wrap.active-radio {
+  background-color: rgba(0, 153, 129, 0.15) !important;
+}
+
+.bg-opacity-15 {
+  --bs-bg-opacity: 0.15;
 }
 </style>
