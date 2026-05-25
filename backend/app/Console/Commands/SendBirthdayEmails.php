@@ -36,19 +36,53 @@ class SendBirthdayEmails extends Command
     public function handle()
     {
         $today = Carbon::today();
-        
-        // Lọc User có sinh nhật hôm nay và đã từng có đơn hàng (dựa vào accumulated_orders)
-        $users = User::with('tier')
+
+        // Cache silverTier ra ngoài vòng lặp: tránh query lặp lại N lần
+        $silverTier = MembershipTier::orderBy('min_spent', 'asc')
+            ->get()
+            ->first(function ($tier) {
+                $tierName = Str::lower(Str::ascii($tier->name ?? ''));
+                return Str::contains($tierName, ['silver', 'bac']);
+            });
+
+        if (!$silverTier) {
+            $this->error('Không tìm thấy hạng Bạc trong hệ thống. Dừng lệnh.');
+            return;
+        }
+
+        // Lấy tất cả user có sinh nhật hôm nay để log ra terminal
+        $allBirthdayUsers = User::with('tier')
             ->whereMonth('birthday', $today->month)
             ->whereDay('birthday', $today->day)
-            // ->where('accumulated_orders', '>', 0) // <-- TẠM TẮT ĐIỀU KIỆN NÀY ĐỂ BẠN DỄ TEST
             ->get();
 
         $count = 0;
 
-        foreach ($users as $user) {
-            if (!$this->isSilverTierOrAbove($user)) {
-                $this->info("Bo qua {$user->email}: chua dat hang Bac tro len.");
+        foreach ($allBirthdayUsers as $user) {
+            // 1. Trạng thái tài khoản đang hoạt động
+            if ($user->status !== 'active') {
+                $this->warn("Bỏ qua {$user->email}: Trạng thái tài khoản không active.");
+                continue;
+            }
+            // 2. Đã xác thực Email
+            // if (is_null($user->email_verified_at)) {
+            //     $this->warn("Bỏ qua {$user->email}: Chưa xác thực email.");
+            //     continue;
+            // }
+            // 3. Có hoạt động trong 1 năm trở lại đây
+            if ($user->updated_at < Carbon::now()->subYears(1)) {
+                $this->warn("Bỏ qua {$user->email}: Không hoạt động trong 1 năm qua.");
+                continue;
+            }
+            // Phải có ít nhất 1 đơn hàng thành công
+            if ($user->accumulated_orders <= 0) {
+                $this->warn("Bỏ qua {$user->email}: Chưa có đơn hàng nào.");
+                continue;
+            }
+
+            // Dùng $silverTier đã được cache từ trước, không query lại
+            if (!$user->tier_id || !$user->tier || (float)$user->tier->min_spent < (float)$silverTier->min_spent) {
+                $this->warn("Bỏ qua {$user->email}: Chưa đạt hạng Bạc trở lên.");
                 continue;
             }
 
@@ -64,13 +98,24 @@ class SendBirthdayEmails extends Command
 
             DB::beginTransaction();
             try {
-                // Tạo Voucher: Sinh mã random, giảm giá 10-30%, hạn sử dụng 7 ngày
+                // Tạo Voucher: Sinh mã random, hạn sử dụng 7 ngày
                 $code = strtoupper(Str::random(8));
                 while (Coupon::where('code', $code)->exists()) {
                     $code = strtoupper(Str::random(8));
                 }
 
-                $discountPercent = rand(10, 30);
+                // 4. Mức giảm giá linh hoạt theo Hạng: bạc 5%, vàng 10%, kim cương 15%
+                $userTier = $user->relationLoaded('tier') ? $user->tier : MembershipTier::find($user->tier_id);
+                $tierName = Str::lower(Str::ascii($userTier->name ?? ''));
+                
+                $discountPercent = 5; // Mặc định hạng Bạc 5%
+                if (Str::contains($tierName, ['kim cuong', 'diamond'])) {
+                    $discountPercent = 15;
+                } elseif (Str::contains($tierName, ['vang', 'gold'])) {
+                    $discountPercent = 10;
+                } elseif (Str::contains($tierName, ['bac', 'silver'])) {
+                    $discountPercent = 5;
+                }
 
                 $coupon = Coupon::create([
                     'user_id' => $user->id,
@@ -87,7 +132,7 @@ class SendBirthdayEmails extends Command
                     'status' => 'active'
                 ]);
 
-                // Gửi Email
+                // Gửi Email ngay lập tức (đồng bộ)
                 Mail::to($user->email)->send(new BirthdayVoucherMail($user, $coupon));
 
                 // Gửi In-app Notification
@@ -123,28 +168,6 @@ class SendBirthdayEmails extends Command
         $this->info("Hoàn tất. Đã gửi {$count} email sinh nhật hôm nay.");
     }
 
-    private function isSilverTierOrAbove(User $user): bool
-    {
-        if (!$user->tier_id) {
-            return false;
-        }
-
-        $userTier = $user->relationLoaded('tier') ? $user->tier : MembershipTier::find($user->tier_id);
-        if (!$userTier) {
-            return false;
-        }
-
-        $silverTier = MembershipTier::orderBy('min_spent', 'asc')
-            ->get()
-            ->first(function ($tier) {
-                $tierName = Str::lower(Str::ascii($tier->name ?? ''));
-                return Str::contains($tierName, ['silver', 'bac']);
-            });
-
-        if (!$silverTier) {
-            return false;
-        }
-
-        return (float) $userTier->min_spent >= (float) $silverTier->min_spent;
-    }
+    // Hàm isSilverTierOrAbove đã được tích hợp trực tiếp vào vòng lặp
+    // sử dụng $silverTier đã được cache — không cần hàm riêng nữa
 }
