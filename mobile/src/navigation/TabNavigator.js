@@ -10,6 +10,13 @@ import ProfileScreen from '../screens/ProfileScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
+import AddressScreen from '../screens/AddressScreen';
+import OrderHistoryScreen from '../screens/OrderHistoryScreen';
+import WarrantyScreen from '../screens/WarrantyScreen';
+import ContactScreen from '../screens/ContactScreen';
+import AboutScreen from '../screens/AboutScreen';
+import ProductDetailScreen from '../screens/ProductDetailScreen';
 
 const RewardsScreen = () => null;
 
@@ -57,6 +64,13 @@ export default function TabNavigator() {
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="Checkout" component={CheckoutScreen} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="AddressBook" component={AddressScreen} />
+      <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />
+      <Stack.Screen name="Warranty" component={WarrantyScreen} />
+      <Stack.Screen name="ContactCSKH" component={ContactScreen} />
+      <Stack.Screen name="About" component={AboutScreen} />
+      <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
     </Stack.Navigator>
   );
 }

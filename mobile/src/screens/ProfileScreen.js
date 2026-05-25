@@ -1,14 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Image,
-  SafeAreaView, StatusBar, ScrollView, ActivityIndicator, Alert,
-  RefreshControl,
+  SafeAreaView, StatusBar, ScrollView, ActivityIndicator,
+  RefreshControl, Platform, Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MOBILE_AUTH_URL, API_BASE_URL } from '../config/api';
+import { showCustomAlert } from '../components/CustomAlert';
+
+const Alert = {
+  alert: (title, message, buttons) => showCustomAlert(title, message, buttons)
+};
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const formatCurrency = (v) =>
@@ -16,9 +21,17 @@ const formatCurrency = (v) =>
 
 const getStorageUrl = (path) => {
   if (!path) return '';
-  if (path.startsWith('http')) return path;
   const origin = API_BASE_URL.replace('/api', '');
-  return `${origin}/storage/${path}`;
+  let formattedPath = path;
+  if (path.startsWith('http')) {
+    formattedPath = path
+      .replace('http://127.0.0.1:8000', origin)
+      .replace('http://localhost:8000', origin)
+      .replace('https://127.0.0.1:8000', origin)
+      .replace('https://localhost:8000', origin);
+    return formattedPath;
+  }
+  return `${origin}/storage/${formattedPath}`;
 };
 
 const TIER_CONFIG = {
@@ -37,13 +50,94 @@ const getTierConfig = (tierName) => {
   return TIER_CONFIG.default;
 };
 
+const TIER_THEMES = {
+  silver: {
+    bg: '#f8f9fa',
+    safeBg: '#f1f5f9',
+    cardBg: '#ffffff',
+    headerBg: '#ffffff',
+    border: '#cbd5e1',
+    shadow: 'rgba(71, 85, 105, 0.15)',
+    text: '#475569',
+    accent: '#475569',
+    iconWrapBg: '#e2e8f0',
+    glow1: '#e2e8f0',
+    glow2: '#f1f5f9',
+    progressColors: ['#64748b', '#cbd5e1'],
+    avatarBorder: '#cbd5e1',
+    labelColor: '#64748b',
+    nameColor: '#334155',
+  },
+  gold: {
+    bg: '#fffdf6',
+    safeBg: '#fffbf0',
+    cardBg: '#ffffff',
+    headerBg: '#ffffff',
+    border: '#ebd5a3',
+    shadow: 'rgba(235, 213, 163, 0.5)',
+    text: '#92400e',
+    accent: '#9f273b',
+    iconWrapBg: '#fef4cb',
+    glow1: '#fde9b8',
+    glow2: '#fef4cb',
+    progressColors: ['#9f273b', '#ebd5a3'],
+    avatarBorder: '#ebd5a3',
+    labelColor: '#8c826e',
+    nameColor: '#1a1a1a',
+  },
+  diamond: {
+    bg: '#f4fdff',
+    safeBg: '#ecfeff',
+    cardBg: '#ffffff',
+    headerBg: '#ffffff',
+    border: '#a5f3fc',
+    shadow: 'rgba(6, 182, 212, 0.2)',
+    text: '#0369a1',
+    accent: '#0891b2',
+    iconWrapBg: '#e0f7fa',
+    glow1: '#cffafe',
+    glow2: '#ecfeff',
+    progressColors: ['#0891b2', '#a5f3fc'],
+    avatarBorder: '#a5f3fc',
+    labelColor: '#0e7490',
+    nameColor: '#0f172a',
+  },
+  default: {
+    bg: '#fafafa',
+    safeBg: '#f5f5f5',
+    cardBg: '#ffffff',
+    headerBg: '#ffffff',
+    border: '#e5e7eb',
+    shadow: 'rgba(0, 0, 0, 0.05)',
+    text: '#555555',
+    accent: '#9f273b',
+    iconWrapBg: '#f3f4f6',
+    glow1: '#f3f4f6',
+    glow2: '#f9fafb',
+    progressColors: ['#9f273b', '#d1d5db'],
+    avatarBorder: '#d1d5db',
+    labelColor: '#6b7280',
+    nameColor: '#1f2937',
+  },
+};
+
+const getTierTheme = (tierName) => {
+  if (!tierName) return TIER_THEMES.default;
+  const n = tierName.toLowerCase();
+  if (n.includes('kim') || n.includes('diamond')) return TIER_THEMES.diamond;
+  if (n.includes('vàng') || n.includes('gold')) return TIER_THEMES.gold;
+  if (n.includes('bạc') || n.includes('silver')) return TIER_THEMES.silver;
+  return TIER_THEMES.default;
+};
+
 // ─── TierBadge ───────────────────────────────────────────────────────────────
 function TierBadge({ tierName }) {
   const cfg = getTierConfig(tierName);
+  const theme = getTierTheme(tierName);
   return (
-    <View style={[s.tierBadge, { backgroundColor: cfg.from, borderColor: cfg.border }]}>
-      <Ionicons name={cfg.icon} size={13} color={cfg.text} />
-      <Text style={[s.tierBadgeTxt, { color: cfg.text }]}>{tierName || 'Thành viên'}</Text>
+    <View style={[s.tierBadge, { backgroundColor: theme.iconWrapBg, borderColor: theme.border }]}>
+      <Ionicons name={cfg.icon} size={13} color={theme.text} />
+      <Text style={[s.tierBadgeTxt, { color: theme.text }]}>{tierName || 'Thành viên'}</Text>
     </View>
   );
 }
@@ -51,6 +145,7 @@ function TierBadge({ tierName }) {
 // ─── TierCard ────────────────────────────────────────────────────────────────
 function TierCard({ user, allTiers }) {
   const cfg = getTierConfig(user?.tier?.name);
+  const theme = getTierTheme(user?.tier?.name);
   const spent = parseFloat(user?.accumulated_spent || 0);
 
   // Tính tier tiếp theo
@@ -61,7 +156,7 @@ function TierCard({ user, allTiers }) {
     : 100;
 
   return (
-    <View style={s.tierCard}>
+    <View style={[s.tierCard, { backgroundColor: theme.bg, borderColor: theme.border, shadowColor: theme.border }]}>
       {/* Soft Glowing Ambient Light Patches (Simulating Radial Gradient Glow) */}
       <View style={{
         position: 'absolute',
@@ -70,7 +165,7 @@ function TierCard({ user, allTiers }) {
         width: 170,
         height: 170,
         borderRadius: 85,
-        backgroundColor: '#fde9b8',
+        backgroundColor: theme.glow1,
         opacity: 0.45,
         zIndex: 0,
       }} />
@@ -81,62 +176,62 @@ function TierCard({ user, allTiers }) {
         width: 140,
         height: 140,
         borderRadius: 70,
-        backgroundColor: '#fef4cb',
+        backgroundColor: theme.glow2,
         opacity: 0.3,
         zIndex: 0,
       }} />
 
       {/* Header */}
-      <View style={[s.tierCardHeader, { zIndex: 1 }]}>
+      <View style={[s.tierCardHeader, { zIndex: 1, borderBottomColor: theme.border }]}>
         <View style={s.tierCardLeft}>
-          <View style={s.tierCardIconWrap}>
+          <View style={[s.tierCardIconWrap, { backgroundColor: theme.iconWrapBg, borderColor: theme.border }]}>
             {user?.tier?.icon_url ? (
               <Image
                 source={{ uri: getStorageUrl(user.tier.icon_url) }}
                 style={s.tierCardIcon}
               />
             ) : (
-              <Ionicons name={cfg.icon} size={26} color="#e7a800" />
+              <Ionicons name={cfg.icon} size={26} color={theme.text} />
             )}
           </View>
           <View>
-            <Text style={s.tierCardRankLabel}>HẠNG THÀNH VIÊN</Text>
-            <Text style={s.tierCardRankName}>{user?.tier?.name || 'Thành viên mới'}</Text>
+            <Text style={[s.tierCardRankLabel, { color: theme.labelColor }]}>HẠNG THÀNH VIÊN</Text>
+            <Text style={[s.tierCardRankName, { color: theme.nameColor }]}>{user?.tier?.name || 'Thành viên mới'}</Text>
           </View>
         </View>
         <View style={s.tierCardRight}>
-          <Text style={s.tierBenefitVal}>
+          <Text style={[s.tierBenefitVal, { color: theme.accent }]}>
             {user?.tier?.discount_percent ? `${user.tier.discount_percent}%` : '0%'}
           </Text>
-          <Text style={s.tierBenefitLbl}>GIẢM GIÁ</Text>
+          <Text style={[s.tierBenefitLbl, { color: theme.labelColor }]}>GIẢM GIÁ</Text>
         </View>
       </View>
 
       {/* Spent + Progress */}
       <View style={[s.tierCardBody, { zIndex: 1 }]}>
         <View style={s.tierSpentRow}>
-          <Text style={s.tierSpentLabel}>Đã chi tiêu</Text>
-          <Text style={s.tierSpentVal}>{formatCurrency(spent)}</Text>
+          <Text style={[s.tierSpentLabel, { color: theme.labelColor }]}>Đã chi tiêu</Text>
+          <Text style={[s.tierSpentVal, { color: theme.accent }]}>{formatCurrency(spent)}</Text>
         </View>
 
         {nextTier ? (
           <>
-            <View style={s.tierProgressBar}>
+            <View style={[s.tierProgressBar, { backgroundColor: theme.glow1 }]}>
               <LinearGradient
-                colors={['#9f273b', cfg.from || '#ffd700']}
+                colors={theme.progressColors}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={[s.tierProgressFill, { width: `${progress}%` }]}
               />
             </View>
-            <Text style={s.tierProgressHint}>
-              Còn <Text style={{ fontWeight: '700', color: '#9f273b' }}>
+            <Text style={[s.tierProgressHint, { color: theme.labelColor }]}>
+              Còn <Text style={{ fontWeight: '700', color: theme.accent }}>
                 {formatCurrency(parseFloat(nextTier.min_spent) - spent)}
-              </Text> nữa để lên hạng <Text style={{ fontFamily: 'PlayfairDisplay_700Bold', color: '#333' }}>{nextTier.name}</Text>
+              </Text> nữa để lên hạng <Text style={{ fontFamily: 'PlayfairDisplay_700Bold', color: theme.nameColor }}>{nextTier.name}</Text>
             </Text>
           </>
         ) : (
-          <Text style={[s.tierProgressHint, { color: '#e7a800', fontWeight: '700' }]}>
+          <Text style={[s.tierProgressHint, { color: theme.text, fontWeight: '700' }]}>
             ⭐ Bạn đã đạt hạng thành viên cao nhất!
           </Text>
         )}
@@ -144,19 +239,23 @@ function TierCard({ user, allTiers }) {
         {/* Roadmap */}
         {sortedTiers.length > 0 && (
           <View style={s.roadmap}>
-            <View style={s.roadmapLine} />
+            <View style={[s.roadmapLine, { backgroundColor: theme.border }]} />
             {/* Điểm gốc */}
             <View style={s.roadmapPoint}>
-              <View style={[s.roadmapDot, s.roadmapDotActive]} />
-              <Text style={s.roadmapName}>Thành viên</Text>
+              <View style={[s.roadmapDot, s.roadmapDotActive, { backgroundColor: theme.accent, borderColor: theme.border }]} />
+              <Text style={[s.roadmapName, { color: theme.labelColor }]}>Thành viên</Text>
             </View>
             {sortedTiers.map(t => {
               const achieved = spent >= parseFloat(t.min_spent);
               return (
                 <View key={t.id} style={s.roadmapPoint}>
-                  <View style={[s.roadmapDot, achieved ? s.roadmapDotActive : s.roadmapDotInactive]} />
-                  <Text style={[s.roadmapName, !achieved && { color: '#aaa' }]}>{t.name}</Text>
-                  <Text style={s.roadmapSpent}>
+                  <View style={[
+                    s.roadmapDot,
+                    achieved ? s.roadmapDotActive : s.roadmapDotInactive,
+                    achieved && { backgroundColor: theme.accent, borderColor: theme.border }
+                  ]} />
+                  <Text style={[s.roadmapName, achieved ? { color: theme.nameColor } : { color: '#aaa' }]}>{t.name}</Text>
+                  <Text style={[s.roadmapSpent, achieved ? { color: theme.labelColor } : { color: '#bbb' }]}>
                     {parseFloat(t.min_spent) >= 1e9
                       ? `${(parseFloat(t.min_spent) / 1e9).toFixed(0)}tỷ`
                       : `${(parseFloat(t.min_spent) / 1e6).toFixed(0)}tr`}
@@ -192,6 +291,7 @@ export default function ProfileScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const loadProfile = useCallback(async (showOverlay = true) => {
     if (showOverlay) {
@@ -248,49 +348,52 @@ export default function ProfileScreen() {
   // Refresh khi quay lại tab
   useFocusEffect(
     useCallback(() => {
+      StatusBar.setBarStyle('dark-content');
+      if (Platform.OS === 'android') {
+        StatusBar.setBackgroundColor('transparent');
+        StatusBar.setTranslucent(true);
+      }
       loadProfile(true);
     }, [loadProfile])
   );
 
   const handleLogout = () => {
-    Alert.alert('Đăng xuất', 'Bạn có chắc muốn đăng xuất?', [
-      { text: 'Hủy', style: 'cancel' },
-      {
-        text: 'Đăng xuất', style: 'destructive', onPress: async () => {
-          try {
-            const token = await AsyncStorage.getItem('auth_token');
-            if (token) {
-              await fetch(`${MOBILE_AUTH_URL}/logout`, {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-              });
-            }
-          } catch { }
-          await AsyncStorage.multiRemove(['auth_token', 'user']);
-          setIsLoggedIn(false);
-          setUser(null);
-        },
-      },
-    ]);
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = async () => {
+    setShowLogoutModal(false);
+    try {
+      const token = await AsyncStorage.getItem('auth_token');
+      if (token) {
+        await fetch(`${MOBILE_AUTH_URL}/logout`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+        });
+      }
+    } catch { }
+    await AsyncStorage.multiRemove(['auth_token', 'user']);
+    setIsLoggedIn(false);
+    setUser(null);
   };
 
   // ── LOADING ──
   if (isLoading) {
     return (
-      <SafeAreaView style={s.safe}>
-        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <View style={s.safe}>
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color="#9f273b" />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   // ── GUEST ──
   if (!isLoggedIn) {
     return (
-      <SafeAreaView style={s.safe}>
-        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <View style={[s.safe, { paddingTop: Platform.OS === 'ios' ? 47 : (StatusBar.currentHeight || 24) }]}>
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
         <View style={s.header}>
           <Text style={s.headerTitle}>Cá Nhân</Text>
         </View>
@@ -325,13 +428,14 @@ export default function ProfileScreen() {
           {/* Quick Links cho guest */}
           <View style={s.section}>
             {[
-              { icon: 'receipt-outline', label: 'Lịch sử đơn hàng' },
-              { icon: 'heart-outline', label: 'Sản phẩm yêu thích' },
-              { icon: 'gift-outline', label: 'Điểm thưởng & Ưu đãi' },
-              { icon: 'shield-checkmark-outline', label: 'Chính sách bảo hành' },
-              { icon: 'call-outline', label: 'Liên hệ CSKH' },
+              { icon: 'receipt-outline', label: 'Lịch sử đơn hàng', route: 'Login' },
+              { icon: 'heart-outline', label: 'Sản phẩm yêu thích', route: 'Login' },
+              { icon: 'gift-outline', label: 'Điểm thưởng & Ưu đãi', route: 'Login' },
+              { icon: 'information-circle-outline', label: 'Về SORA', route: 'About' },
+              { icon: 'shield-checkmark-outline', label: 'Chính sách bảo hành', route: 'Warranty' },
+              { icon: 'call-outline', label: 'Liên hệ CSKH', route: 'ContactCSKH' },
             ].map((item, i) => (
-              <TouchableOpacity key={i} style={s.menuItem} onPress={() => navigation.navigate('Login')}>
+              <TouchableOpacity key={i} style={s.menuItem} onPress={() => navigation.navigate(item.route)}>
                 <View style={s.menuIconWrap}>
                   <Ionicons name={item.icon} size={20} color="#9f273b" />
                 </View>
@@ -341,7 +445,7 @@ export default function ProfileScreen() {
             ))}
           </View>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -350,9 +454,11 @@ export default function ProfileScreen() {
     ? getStorageUrl(user.avatar_url)
     : `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || 'U')}&background=9f273b&color=fff&size=200`;
 
+  const theme = getTierTheme(user?.tier?.name);
+
   return (
-    <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+    <View style={[s.safe, { paddingTop: Platform.OS === 'ios' ? 47 : (StatusBar.currentHeight || 24) }]}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
       <View style={s.header}>
         <Text style={s.headerTitle}>Cá Nhân</Text>
       </View>
@@ -371,12 +477,12 @@ export default function ProfileScreen() {
       >
 
         {/* ── Hero Card ── */}
-        <View style={s.heroCard}>
-          <View style={s.heroAvatarWrap}>
+        <View style={[s.heroCard, { backgroundColor: theme.bg, borderColor: theme.border, shadowColor: theme.border }]}>
+          <View style={[s.heroAvatarWrap, { borderColor: theme.avatarBorder }]}>
             <Image source={{ uri: avatarUri }} style={s.heroAvatar} />
           </View>
           <View style={s.heroInfo}>
-            <Text style={s.heroName}>{user?.fullName || 'Thành viên SORA'}</Text>
+            <Text style={[s.heroName, { color: theme.nameColor }]}>{user?.fullName || 'Thành viên SORA'}</Text>
             <Text style={s.heroEmail}>{user?.email}</Text>
             <TierBadge tierName={user?.tier?.name} />
           </View>
@@ -390,18 +496,18 @@ export default function ProfileScreen() {
         <TierCard user={user} allTiers={allTiers} />
 
         {/* ── Thống kê nhanh ── */}
-        <View style={s.statsRow}>
+        <View style={[s.statsRow, { backgroundColor: theme.bg, borderColor: theme.border, shadowColor: theme.border }]}>
           <View style={s.statBoxSide}>
-            <Text style={s.statVal} numberOfLines={1} adjustsFontSizeToFit>{user?.accumulated_orders || 0}</Text>
-            <Text style={s.statLabel}>Đơn hàng</Text>
+            <Text style={[s.statVal, { color: theme.accent }]} numberOfLines={1} adjustsFontSizeToFit>{user?.accumulated_orders || 0}</Text>
+            <Text style={[s.statLabel, { color: theme.labelColor }]}>Đơn hàng</Text>
           </View>
-          <View style={[s.statBox, s.statBoxMid]}>
-            <Text style={s.statVal} numberOfLines={1} adjustsFontSizeToFit>{formatCurrency(user?.accumulated_spent)}</Text>
-            <Text style={s.statLabel}>Đã chi tiêu</Text>
+          <View style={[s.statBox, s.statBoxMid, { borderColor: theme.border }]}>
+            <Text style={[s.statVal, { color: theme.accent }]} numberOfLines={1} adjustsFontSizeToFit>{formatCurrency(user?.accumulated_spent)}</Text>
+            <Text style={[s.statLabel, { color: theme.labelColor }]}>Đã chi tiêu</Text>
           </View>
           <View style={s.statBoxSide}>
-            <Text style={s.statVal} numberOfLines={1} adjustsFontSizeToFit>{user?.tier?.discount_percent ? `${user.tier.discount_percent}%` : '0%'}</Text>
-            <Text style={s.statLabel}>Ưu đãi</Text>
+            <Text style={[s.statVal, { color: theme.accent }]} numberOfLines={1} adjustsFontSizeToFit>{user?.tier?.discount_percent ? `${user.tier.discount_percent}%` : '0%'}</Text>
+            <Text style={[s.statLabel, { color: theme.labelColor }]}>Ưu đãi</Text>
           </View>
         </View>
 
@@ -411,11 +517,11 @@ export default function ProfileScreen() {
           <Text style={s.sectionTitleTxt}>Quản Lý Tài Khoản</Text>
         </View>
         <View style={s.section}>
-          <MenuItem icon="person-outline" label="Thông tin cá nhân" onPress={() => navigation.navigate('Login')} />
-          <MenuItem icon="receipt-outline" label="Lịch sử đơn hàng" onPress={() => navigation.navigate('Login')} />
-          <MenuItem icon="heart-outline" label="Sản phẩm yêu thích" onPress={() => navigation.navigate('Login')} />
-          <MenuItem icon="location-outline" label="Sổ địa chỉ" onPress={() => navigation.navigate('Login')} />
-          <MenuItem icon="gift-outline" label="Ưu đãi & Thành viên" onPress={() => navigation.navigate('Login')} />
+          <MenuItem icon="person-outline" label="Thông tin cá nhân" onPress={() => navigation.navigate('EditProfile')} />
+          <MenuItem icon="receipt-outline" label="Lịch sử đơn hàng" onPress={() => navigation.navigate('OrderHistory')} />
+          <MenuItem icon="heart-outline" label="Sản phẩm yêu thích" onPress={() => navigation.navigate('Wishlist')} />
+          <MenuItem icon="location-outline" label="Sổ địa chỉ" onPress={() => navigation.navigate('AddressBook')} />
+          <MenuItem icon="gift-outline" label="Ưu đãi & Thành viên" onPress={() => Alert.alert('Thành viên SORA', 'Ưu đãi và thứ hạng của bạn được cập nhật trực quan tại Thẻ thành viên phía trên!')} />
         </View>
 
         <View style={s.sectionTitle}>
@@ -423,13 +529,40 @@ export default function ProfileScreen() {
           <Text style={s.sectionTitleTxt}>Hỗ Trợ</Text>
         </View>
         <View style={s.section}>
-          <MenuItem icon="shield-checkmark-outline" label="Chính sách bảo hành" onPress={() => { }} />
-          <MenuItem icon="call-outline" label="Liên hệ CSKH" onPress={() => { }} />
+          <MenuItem icon="information-circle-outline" label="Về SORA" onPress={() => navigation.navigate('About')} />
+          <MenuItem icon="shield-checkmark-outline" label="Chính sách bảo hành" onPress={() => navigation.navigate('Warranty')} />
+          <MenuItem icon="call-outline" label="Liên hệ CSKH" onPress={() => navigation.navigate('ContactCSKH')} />
           <MenuItem icon="log-out-outline" label="Đăng xuất" onPress={handleLogout} danger />
         </View>
 
       </ScrollView>
-    </SafeAreaView>
+
+      {/* Custom Logout Modal */}
+      <Modal
+        transparent={true}
+        visible={showLogoutModal}
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View style={s.modalOverlay}>
+          <View style={s.modalContainer}>
+            <View style={s.modalIconWrap}>
+              <Ionicons name="log-out" size={28} color="#9f273b" />
+            </View>
+            <Text style={s.modalTitle}>Đăng xuất</Text>
+            <Text style={s.modalMessage}>Bạn có chắc chắn muốn đăng xuất khỏi tài khoản SORA không?</Text>
+            <View style={s.modalBtnRow}>
+              <TouchableOpacity style={[s.modalBtn, s.modalBtnCancel]} onPress={() => setShowLogoutModal(false)} activeOpacity={0.8}>
+                <Text style={s.modalBtnCancelTxt}>HỦY</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.modalBtn, s.modalBtnConfirm]} onPress={confirmLogout} activeOpacity={0.8}>
+                <Text style={s.modalBtnConfirmTxt}>ĐĂNG XUẤT</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
@@ -668,4 +801,85 @@ const s = StyleSheet.create({
   menuIconDanger: { backgroundColor: '#fff0f0' },
   menuLabel: { fontFamily: 'Oswald_400Regular', fontSize: 14, color: '#333', letterSpacing: 0.3 },
   menuLabelDanger: { color: '#cc1e2e' },
+
+  // Custom Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '85%',
+    backgroundColor: '#fffdf9',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#ebd5a3',
+    shadowColor: '#ebd5a3',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalIconWrap: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#fdf5f6',
+    borderWidth: 1.5,
+    borderColor: '#ebd5a3',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontFamily: 'PlayfairDisplay_700Bold',
+    fontSize: 20,
+    color: '#9f273b',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontFamily: 'Oswald_400Regular',
+    fontSize: 13,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+    paddingHorizontal: 8,
+  },
+  modalBtnRow: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  modalBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalBtnCancel: {
+    backgroundColor: '#fff',
+    borderWidth: 1.2,
+    borderColor: '#ebd5a3',
+  },
+  modalBtnConfirm: {
+    backgroundColor: '#9f273b',
+  },
+  modalBtnCancelTxt: {
+    fontFamily: 'Oswald_600SemiBold',
+    fontSize: 13,
+    color: '#8c826e',
+    letterSpacing: 1,
+  },
+  modalBtnConfirmTxt: {
+    fontFamily: 'Oswald_600SemiBold',
+    fontSize: 13,
+    color: '#fff',
+    letterSpacing: 1,
+  },
 });

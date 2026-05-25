@@ -77,6 +77,7 @@ class ClientHeaderController extends Controller
     public function search(Request $request)
     {
         $keyword = $request->query('keyword');
+        $categoryName = $request->query('category');
 
         if (!$keyword) {
             return response()->json(['success' => true, 'data' => ['products' => [], 'categories' => []]]);
@@ -91,7 +92,15 @@ class ClientHeaderController extends Controller
         $productsQuery = Product::where('name', 'LIKE', "%{$keyword}%")
             ->where('status', 'published');
 
-        if ($productsQuery->count() === 0 && $categories->count() > 0) {
+        // Áp dụng bộ lọc danh mục nếu người dùng chọn danh mục cụ thể
+        if ($categoryName && $categoryName !== 'Tất cả') {
+            $cat = Category::where('name', 'LIKE', "%{$categoryName}%")->first();
+            if ($cat) {
+                $productsQuery->where('category_id', $cat->id);
+            }
+        }
+
+        if ($productsQuery->count() === 0 && $categories->count() > 0 && (!$categoryName || $categoryName === 'Tất cả')) {
             $products = Product::where('category_id', $categories->first()->id)
                 ->where('status', 'published')
                 ->take(5)
