@@ -1,20 +1,26 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Image, Dimensions, StatusBar, Alert, ActivityIndicator,
+  ScrollView, Image, Dimensions, StatusBar, ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL, MOBILE_AUTH_URL } from '../config/api';
+import { showCustomAlert } from '../components/CustomAlert';
+
+const Alert = {
+  alert: (title, message, buttons) => showCustomAlert(title, message, buttons)
+};
 
 const { width } = Dimensions.get('window');
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#fcf9f5' },
   scroll: { flexGrow: 1, alignItems: 'center', paddingBottom: 40 },
-  banner: { width: '100%', height: 180, backgroundColor: '#9f273b', alignItems: 'center', justifyContent: 'center' },
-  backBtn: { position: 'absolute', top: 50, left: 16, width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  banner: { width: '100%', height: 230, backgroundColor: '#9f273b', alignItems: 'center', justifyContent: 'center', paddingTop: Platform.OS === 'ios' ? 45 : 30 },
+  backBtn: { position: 'absolute', top: Platform.OS === 'ios' ? 55 : 40, left: 16, width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
   bannerLogo: { width: 200, height: 75, tintColor: '#fff', marginBottom: 8 },
   bannerSlogan: { fontFamily: 'Oswald_400Regular', fontSize: 11, letterSpacing: 3, color: '#e7ce7d' },
   card: { width: width - 32, backgroundColor: '#fff', borderRadius: 16, padding: 28, marginTop: -30, shadowColor: '#9f273b', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 20, elevation: 10 },
@@ -91,10 +97,15 @@ export default function RegisterScreen({ navigation }) {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-
-
-
-  // useCallback để tránh tạo lại hàm mỗi render
+  useFocusEffect(
+    React.useCallback(() => {
+      StatusBar.setBarStyle('dark-content');
+      if (Platform.OS === 'android') {
+        StatusBar.setBackgroundColor('transparent');
+        StatusBar.setTranslucent(true);
+      }
+    }, [])
+  );  // useCallback để tránh tạo lại hàm mỗi render
   const set = useCallback((k) => (v) => setForm(prev => ({ ...prev, [k]: v })), []);
 
   const handleRegister = async () => {
@@ -156,8 +167,8 @@ export default function RegisterScreen({ navigation }) {
   const handleSocial = (p) => Alert.alert('Thông báo', `Đăng ký bằng ${p} đang phát triển!`);
 
   return (
-    <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#9f273b" />
+    <View style={s.safe}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={s.banner}>
           <TouchableOpacity style={s.backBtn} onPress={() => navigation?.goBack()}>
@@ -180,7 +191,7 @@ export default function RegisterScreen({ navigation }) {
           <Field label="XÁC NHẬN MẬT KHẨU *" field="password_confirmation" placeholder="Nhập lại mật khẩu" secure showState={showConfirm} toggleShow={() => setShowConfirm(!showConfirm)} value={form.password_confirmation} onChangeText={set('password_confirmation')} />
 
           <TouchableOpacity style={[s.primaryBtn, isLoading && s.primaryBtnOff]} onPress={handleRegister} disabled={isLoading}>
-            {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={s.primaryTxt}>ĐĂNG KÝ TÀI KHOẢN</Text>}
+            {isLoading ? <ActivityIndicator color="#9f273b" /> : <Text style={s.primaryTxt}>ĐĂNG KÝ TÀI KHOẢN</Text>}
           </TouchableOpacity>
 
           <View style={s.divider}>
@@ -206,6 +217,6 @@ export default function RegisterScreen({ navigation }) {
           </View>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

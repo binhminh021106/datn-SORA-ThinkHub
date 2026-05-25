@@ -10,13 +10,18 @@ import {
   Image,
   Modal,
   Dimensions,
-  Alert,
   Animated,
   PanResponder,
   RefreshControl,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { showCustomAlert } from '../components/CustomAlert';
+
+const Alert = {
+  alert: (title, message, buttons) => showCustomAlert(title, message, buttons)
+};
 
 const { width, height } = Dimensions.get("window");
 
@@ -251,7 +256,34 @@ const sw = StyleSheet.create({
   thumbOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 26, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', borderBottomRightRadius: 8 },
 });
 
-const fmt = (n) => n.toLocaleString("vi-VN") + "đ";
+const parsePriceToNumber = (v) => {
+  if (!v) return 0;
+  const str = String(v);
+  
+  // If it is a clean numeric string with a dot (like "25000000.00"), parse as float
+  if (/^\d+\.\d+$/.test(str)) {
+    return Math.floor(parseFloat(str));
+  }
+  
+  // Otherwise, it is a formatted string with dots (like "25.000.000đ"). Clean non-digits
+  const cleanStr = str.replace(/[^\d]/g, '');
+  return parseInt(cleanStr, 10) || 0;
+};
+
+const fmt = (v) => {
+  if (v === null || v === undefined) return '';
+  const str = String(v);
+  if (str.includes('đ') || str.includes('₫')) {
+    return str;
+  }
+  // Check for numeric decimal string like "25000000.00"
+  if (str.includes('.') && !str.includes(',') && /^\d+\.\d+$/.test(str)) {
+    const num = parseFloat(str);
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num);
+  }
+  const num = parsePriceToNumber(str);
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num);
+};
 
 // ── Dummy wishlist data ──────────────────────────────────────────────────────
 const INITIAL_WISHLIST = [
@@ -286,36 +318,72 @@ const INITIAL_WISHLIST = [
 
 export default function WishlistScreen() {
   const navigation = useNavigation();
-  const [items, setItems] = useState(INITIAL_WISHLIST);
+  const [items, setItems] = useState([]);
   const [selected, setSelected] = useState([]);
   const [lightboxImg, setLightboxImg] = useState(null);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    setTimeout(() => {
-      setItems(INITIAL_WISHLIST);
-      setRefreshing(false);
-    }, 1200);
+  const loadWishlist = useCallback(async () => {
+    try {
+      const stored = await AsyncStorage.getItem('sora_wishlist_items');
+      if (stored) {
+        setItems(JSON.parse(stored));
+      } else {
+        setItems([]);
+      }
+    } catch (e) {
+      console.log('Error loading wishlist items in WishlistScreen:', e);
+    }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadWishlist();
+    }, [loadWishlist])
+  );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadWishlist();
+    setRefreshing(false);
+  }, [loadWishlist]);
 
   const allSelected = items.length > 0 && selected.length === items.length;
 
   const toggleSelect = (id) => {
+    const idStr = id.toString();
     setSelected((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+      prev.includes(idStr) ? prev.filter((x) => x !== idStr) : [...prev, idStr],
     );
   };
 
   const toggleSelectAll = () => {
-    setSelected(allSelected ? [] : items.map((i) => i.id));
+    setSelected(allSelected ? [] : items.map((i) => i.id.toString()));
   };
 
-  const deleteWishlistItem = (id) => {
-    setItems((prev) => prev.filter((i) => i.id !== id));
-    setSelected((prev) => prev.filter((x) => x !== id));
-    Alert.alert("Yêu thích", "Đã xoá sản phẩm khỏi danh sách yêu thích!");
+  const deleteWishlistItem = async (id) => {
+    try {
+      const idStr = id.toString();
+      const storedIds = await AsyncStorage.getItem('sora_wishlist_ids');
+      const storedItems = await AsyncStorage.getItem('sora_wishlist_items');
+
+      let currentIds = storedIds ? JSON.parse(storedIds) : [];
+      let currentItems = storedItems ? JSON.parse(storedItems) : [];
+
+      const updatedIds = currentIds.filter(x => x.toString() !== idStr);
+      const updatedItems = currentItems.filter(i => i.id.toString() !== idStr);
+
+      setItems(updatedItems);
+      setSelected((prev) => prev.filter((x) => x !== idStr));
+
+      await AsyncStorage.setItem('sora_wishlist_ids', JSON.stringify(updatedIds));
+      await AsyncStorage.setItem('sora_wishlist_items', JSON.stringify(updatedItems));
+
+      Alert.alert("Yêu thích", "Đã xoá sản phẩm khỏi danh sách yêu thích!");
+    } catch (e) {
+      console.log('Error deleting item from wishlist screen:', e);
+    }
   };
 
   const deleteSelected = () => {
@@ -328,9 +396,27 @@ export default function WishlistScreen() {
         {
           text: "Xoá",
           style: "destructive",
-          onPress: () => {
-            setItems((prev) => prev.filter((i) => !selected.includes(i.id)));
-            setSelected([]);
+          onPress: async () => {
+            try {
+              const storedIds = await AsyncStorage.getItem('sora_wishlist_ids');
+              const storedItems = await AsyncStorage.getItem('sora_wishlist_items');
+
+              let currentIds = storedIds ? JSON.parse(storedIds) : [];
+              let currentItems = storedItems ? JSON.parse(storedItems) : [];
+
+              const updatedIds = currentIds.filter(x => !selected.includes(x.toString()));
+              const updatedItems = currentItems.filter(i => !selected.includes(i.id.toString()));
+
+              setItems(updatedItems);
+              setSelected([]);
+
+              await AsyncStorage.setItem('sora_wishlist_ids', JSON.stringify(updatedIds));
+              await AsyncStorage.setItem('sora_wishlist_items', JSON.stringify(updatedItems));
+
+              Alert.alert("Yêu thích", "Đã xoá các sản phẩm khỏi danh sách yêu thích!");
+            } catch (e) {
+              console.log('Error deleting selected items:', e);
+            }
           },
         },
       ],
@@ -346,15 +432,15 @@ export default function WishlistScreen() {
     Alert.alert("Giỏ hàng", `Đã thêm ${selected.length} sản phẩm được chọn vào giỏ hàng thành công!`);
   };
 
-  const selectedItems = items.filter((i) => selected.includes(i.id));
-  const totalValue = (selected.length > 0 ? selectedItems : items).reduce(
-    (sum, i) => sum + i.price,
+  const selectedItems = items.filter((i) => selected.includes(i.id.toString()));
+  const totalValue = selectedItems.reduce(
+    (sum, i) => sum + parsePriceToNumber(i.price),
     0,
   );
 
   return (
     <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f5f5f5" />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
 
       {/* ── HEADER ── */}
       <View style={s.header}>

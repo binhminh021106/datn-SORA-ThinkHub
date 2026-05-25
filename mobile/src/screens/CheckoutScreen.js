@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,77 +12,93 @@ import {
   Alert,
   Dimensions,
   Modal,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_BASE_URL } from "../config/api";
+import { showCustomAlert } from "../components/CustomAlert";
+
+// Mock Alert to use CustomAlert globally in this screen
+const OriginalAlert = Alert;
+const CustomAlertShim = {
+  alert: (title, message, buttons, options) => {
+    showCustomAlert(title, message, buttons);
+  }
+};
 
 const { width } = Dimensions.get("window");
-
-// Dummy Addresses
-const DUMMY_ADDRESSES = [
-  {
-    id: "addr_1",
-    label: "Nhà riêng (Mặc định)",
-    receiver: "Nguyễn Hoàng Nam",
-    phone: "0987 654 321",
-    detail: "123 Đường Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh",
-  },
-  {
-    id: "addr_2",
-    label: "Văn phòng làm việc",
-    receiver: "Nguyễn Hoàng Nam",
-    phone: "0987 654 321",
-    detail:
-      "Tầng 18, Toà nhà Bitexco, 2 Hải Triều, Bến Nghé, Quận 1, TP. Hồ Chí Minh",
-  },
-  {
-    id: "addr_3",
-    label: "Nhà bố mẹ",
-    receiver: "Bác Nguyễn Văn Hùng",
-    phone: "0912 345 678",
-    detail: "789 Đường Láng, Phường Láng Thượng, Quận Đống Đa, Hà Nội",
-  },
-];
-
-// Dummy Products from Cart (to display summary)
-const DUMMY_ORDER_ITEMS = [
-  {
-    id: "1",
-    name: "Nhẫn Kim Cương Eternal Trắng 18K",
-    variant: "Vàng Trắng 18K / Size 12",
-    price: 25000000,
-    qty: 1,
-    image:
-      "https://images.unsplash.com/photo-1605100804763-247f67b854d4?q=80&w=600&auto=format&fit=crop",
-  },
-  {
-    id: "2",
-    name: "Dây Chuyền Ngọc Trai Tự Nhiên Biển Nam",
-    variant: "Bạch Kim / 45cm",
-    price: 12500000,
-    qty: 2,
-    image:
-      "https://images.unsplash.com/photo-1599643477877-530eb83abc8e?q=80&w=600&auto=format&fit=crop",
-  },
-];
 
 const fmt = (n) => n.toLocaleString("vi-VN") + "đ";
 
 export default function CheckoutScreen({ route }) {
   const navigation = useNavigation();
 
+  const [isLoading, setIsLoading] = useState(true);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+
   // Retrieve checkout items passed from Cart, fallback to dummy
-  const checkoutItems = route?.params?.checkoutItems || DUMMY_ORDER_ITEMS;
+  const [checkoutItems, setCheckoutItems] = useState(route?.params?.checkoutItems || []);
 
   // Personal Info States
-  const [personalName, setPersonalName] = useState("Nguyễn Hoàng Nam");
-  const [personalPhone, setPersonalPhone] = useState("0987 654 321");
-  const [personalEmail, setPersonalEmail] = useState("nam.nh@gmail.com");
+  const [personalName, setPersonalName] = useState("");
+  const [personalPhone, setPersonalPhone] = useState("");
+  const [personalEmail, setPersonalEmail] = useState("");
   const [isEditingInfo, setIsEditingInfo] = useState(false);
 
   // Address States
-  const [addresses, setAddresses] = useState(DUMMY_ADDRESSES);
-  const [selectedAddrId, setSelectedAddrId] = useState("addr_1");
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddrId, setSelectedAddrId] = useState(null);
+
+  // API Data
+  const [apiCoupons, setApiCoupons] = useState([]);
+  const [tierDiscountInfo, setTierDiscountInfo] = useState(null);
+  const [createdOrder, setCreatedOrder] = useState(null);
+
+  useEffect(() => {
+    fetchInitData();
+  }, []);
+
+  const fetchInitData = async () => {
+    try {
+      setIsLoading(true);
+      const token = await AsyncStorage.getItem("auth_token");
+      const sessionId = await AsyncStorage.getItem("cart_session_id");
+
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      if (sessionId) headers["X-Cart-Session-Id"] = sessionId;
+
+      const res = await fetch(`${API_BASE_URL}/client/checkout/init`, { headers });
+      const json = await res.json();
+
+      if (json.success) {
+        // We do not override checkoutItems with json.cart_items because they are raw unmapped items.
+        // We rely on the pre-mapped checkoutItems passed via navigation route params.
+        if (json.addresses) {
+          setAddresses(json.addresses);
+          const defaultAddr = json.addresses.find((a) => a.is_default);
+          if (defaultAddr) {
+            setSelectedAddrId(defaultAddr.id);
+          } else if (json.addresses.length > 0) {
+            setSelectedAddrId(json.addresses[0].id);
+          }
+        }
+        if (json.user) {
+          setPersonalName(json.user.name || "");
+          setPersonalPhone(json.user.phone || "");
+          setPersonalEmail(json.user.email || "");
+        }
+        if (json.coupons) setApiCoupons(json.coupons);
+        if (json.tier_discount) setTierDiscountInfo(json.tier_discount);
+      }
+    } catch (error) {
+      console.log("Error fetching init data", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Add Address Modal States
   const [isAddAddrVisible, setIsAddAddrVisible] = useState(false);
@@ -106,38 +122,46 @@ export default function CheckoutScreen({ route }) {
 
   // Subtotal Calculation
   const subtotal = checkoutItems.reduce(
-    (sum, item) => sum + item.price * item.qty,
+    (sum, item) => sum + item.price * (item.quantity || item.qty || 1),
     0,
   );
   const shippingFee = 0; // Miễn phí vận chuyển bảo mật
-  const total = Math.max(0, subtotal + shippingFee - discountAmount);
+
+  const tierDiscountAmount = tierDiscountInfo ? subtotal * (tierDiscountInfo.discount_percent / 100) : 0;
+  const total = Math.max(0, subtotal + shippingFee - discountAmount - tierDiscountAmount);
 
   const handleApplyPromo = () => {
     const code = promoCode.trim().toUpperCase();
     if (!code) return;
 
-    if (code === "SORA10" || code === "WELCOME2026") {
-      const discount = subtotal * 0.1; // Giảm 10%
-      setDiscountAmount(discount);
-      setAppliedCode(code);
-      Alert.alert(
-        "Mã giảm giá",
-        `Áp dụng thành công mã "${code}". Bạn được giảm 10%!`,
-      );
-    } else if (code === "VIPJEWELRY") {
-      const discount = subtotal * 0.15; // Giảm 15%
-      setDiscountAmount(discount);
-      setAppliedCode(code);
-      Alert.alert(
-        "Mã giảm giá",
-        `Áp dụng thành công mã VIP "${code}". Bạn được giảm 15%!`,
-      );
-    } else {
-      Alert.alert(
-        "Mã giảm giá",
-        "Mã không tồn tại hoặc đã hết hạn. Hãy thử 'SORA10' hoặc 'VIPJEWELRY'!",
-      );
+    const coupon = apiCoupons.find((c) => c.code.toUpperCase() === code);
+    if (!coupon) {
+      showCustomAlert("Mã giảm giá", "Mã không tồn tại hoặc đã hết hạn.");
+      return;
     }
+
+    if (coupon.min_spend && subtotal < coupon.min_spend) {
+      showCustomAlert("Mã giảm giá", `Đơn hàng chưa đạt giá trị tối thiểu (${fmt(coupon.min_spend)}) để áp dụng mã này.`);
+      return;
+    }
+
+    let discount = 0;
+    if (coupon.type === "fixed") {
+      discount = coupon.value;
+    } else {
+      discount = subtotal * (coupon.value / 100);
+    }
+
+    if (coupon.max_discount && discount > coupon.max_discount) {
+      discount = coupon.max_discount;
+    }
+
+    setDiscountAmount(discount);
+    setAppliedCode(code);
+    showCustomAlert(
+      "Mã giảm giá",
+      `Áp dụng thành công mã "${code}"!`,
+    );
   };
 
   const handleRemovePromo = () => {
@@ -148,10 +172,10 @@ export default function CheckoutScreen({ route }) {
 
   const handleDeleteAddress = (id) => {
     if (id === "addr_1" || id === "addr_2" || id === "addr_3") {
-      Alert.alert("Địa chỉ", "Không thể xoá địa chỉ mặc định của hệ thống!");
+      showCustomAlert("Địa chỉ", "Không thể xoá địa chỉ mặc định của hệ thống!");
       return;
     }
-    Alert.alert(
+    showCustomAlert(
       "Xoá địa chỉ",
       "Bạn chắc chắn muốn xoá địa chỉ giao hàng này?",
       [
@@ -177,7 +201,7 @@ export default function CheckoutScreen({ route }) {
       !newPhone.trim() ||
       !newDetail.trim()
     ) {
-      Alert.alert("Lỗi", "Vui lòng điền đầy đủ tất cả thông tin!");
+      showCustomAlert("Lỗi", "Vui lòng điền đầy đủ tất cả thông tin!");
       return;
     }
     const newId = "addr_" + Date.now();
@@ -198,17 +222,99 @@ export default function CheckoutScreen({ route }) {
     setNewDetail("");
     setIsAddAddrVisible(false);
 
-    Alert.alert("Thành công", "Đã thêm và lựa chọn địa chỉ giao hàng mới!");
+    showCustomAlert("Thành công", "Đã thêm và lựa chọn địa chỉ giao hàng mới!");
   };
 
-  const handlePlaceOrder = () => {
-    setIsSuccessModalVisible(true);
+  const handlePlaceOrder = async () => {
+    if (checkoutItems.length === 0) {
+      showCustomAlert("Lỗi", "Giỏ hàng trống.");
+      return;
+    }
+
+    if (addresses.length > 0 && !selectedAddrId) {
+      showCustomAlert("Lỗi", "Vui lòng chọn địa chỉ giao hàng.");
+      return;
+    }
+
+    if (addresses.length === 0 && (!personalName.trim() || !personalPhone.trim())) {
+      showCustomAlert("Lỗi", "Vui lòng cung cấp địa chỉ giao hàng.");
+      return;
+    }
+
+    try {
+      setIsPlacingOrder(true);
+      const token = await AsyncStorage.getItem("auth_token");
+      const sessionId = await AsyncStorage.getItem("cart_session_id");
+
+      const headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      if (sessionId) headers["X-Cart-Session-Id"] = sessionId;
+
+      let payload = {
+        customer_name: personalName,
+        customer_phone: personalPhone,
+        customer_email: personalEmail,
+        order_note: note,
+        payment_method: paymentMethod,
+        shipping_fee: shippingFee,
+      };
+
+      if (appliedCode) {
+        payload.coupon_code = appliedCode;
+      }
+
+      if (selectedAddrId && addresses.some(a => a.id === selectedAddrId)) {
+        payload.user_address_id = selectedAddrId;
+      } else {
+        payload.customer_address = newDetail || "Chưa có địa chỉ chi tiết";
+      }
+
+      const res = await fetch(`${API_BASE_URL}/client/checkout`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload)
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        if (json.payment_url) {
+          showCustomAlert("Thành công", "Đang chuyển hướng thanh toán...");
+          setCreatedOrder(json.data);
+          setIsSuccessModalVisible(true);
+        } else {
+          setCreatedOrder(json.data);
+          setIsSuccessModalVisible(true);
+        }
+      } else {
+        showCustomAlert("Lỗi đặt hàng", json.message || "Có lỗi xảy ra");
+      }
+    } catch (error) {
+      console.log("Error placing order", error);
+      showCustomAlert("Lỗi", "Không thể kết nối đến máy chủ.");
+    } finally {
+      setIsPlacingOrder(false);
+    }
   };
 
   const handleCloseSuccess = () => {
     setIsSuccessModalVisible(false);
-    navigation.navigate("Home"); // Quay về trang chủ
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'MainTabs', params: { screen: 'Home' } }],
+    });
   };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[s.safe, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#9f273b" />
+        <Text style={{ marginTop: 10, fontFamily: "Oswald_400Regular" }}>Đang tải dữ liệu...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={s.safe}>
@@ -259,7 +365,7 @@ export default function CheckoutScreen({ route }) {
                     !personalPhone.trim() ||
                     !personalEmail.trim()
                   ) {
-                    Alert.alert(
+                    showCustomAlert(
                       "Lỗi",
                       "Vui lòng nhập đầy đủ thông tin khách hàng!",
                     );
@@ -349,7 +455,7 @@ export default function CheckoutScreen({ route }) {
 
           {addresses.map((addr) => {
             const isSelected = selectedAddrId === addr.id;
-            const isDefault = ["addr_1", "addr_2", "addr_3"].includes(addr.id);
+            const isDefault = addr.is_default;
             return (
               <TouchableOpacity
                 key={addr.id}
@@ -375,7 +481,7 @@ export default function CheckoutScreen({ route }) {
                       style={[s.addrLabel, isSelected && s.addrLabelSelected]}
                       numberOfLines={1}
                     >
-                      {addr.label}
+                      {addr.label || "Địa chỉ"}
                     </Text>
                   </View>
                   <View
@@ -408,10 +514,10 @@ export default function CheckoutScreen({ route }) {
 
                 <View style={s.addrBody}>
                   <Text style={s.addrUser}>
-                    {addr.receiver}{" "}
-                    <Text style={s.addrPhone}>• {addr.phone}</Text>
+                    {addr.customer_name || addr.receiver || personalName}{" "}
+                    <Text style={s.addrPhone}>• {addr.customer_phone || addr.phone || personalPhone}</Text>
                   </Text>
-                  <Text style={s.addrDetail}>{addr.detail}</Text>
+                  <Text style={s.addrDetail}>{addr.shipping_address || addr.detail}{addr.ward ? `, ${addr.ward}, ${addr.district}, ${addr.city}` : ""}</Text>
                 </View>
               </TouchableOpacity>
             );
@@ -426,24 +532,38 @@ export default function CheckoutScreen({ route }) {
           </View>
 
           <View style={s.orderItemsContainer}>
-            {checkoutItems.map((item) => (
-              <View key={item.id} style={s.orderItemRow}>
-                <Image source={{ uri: item.image }} style={s.orderItemImg} />
-                <View style={s.orderItemInfo}>
-                  <Text style={s.orderItemName} numberOfLines={1}>
-                    {item.name}
-                  </Text>
-                  <Text style={s.orderItemVariant}>{item.variant}</Text>
-                  <View style={s.orderItemPriceRow}>
-                    <Text style={s.orderItemPrice}>{fmt(item.price)}</Text>
-                    <Text style={s.orderItemQty}>SL: {item.qty}</Text>
+            {checkoutItems.map((item) => {
+              return (
+                <View key={item.id} style={s.orderItemRow}>
+                  <Image source={{ uri: item.image }} style={s.orderItemImg} />
+                  <View style={s.orderItemInfo}>
+                    <Text style={s.orderItemName} numberOfLines={1}>
+                      {item.name}
+                    </Text>
+                    {item.category ? (
+                      <Text style={{ fontFamily: "Oswald_400Regular", fontSize: 10, color: "#888", marginBottom: 2 }}>
+                        {item.category}
+                      </Text>
+                    ) : null}
+                    <Text style={s.orderItemVariant}>{item.variant}</Text>
+                    <View style={s.orderItemPriceRow}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                        <Text style={s.orderItemPrice}>{fmt(item.price)}</Text>
+                        {item.oldPrice ? (
+                          <Text style={{ fontFamily: "Oswald_400Regular", fontSize: 10, color: "#999", textDecorationLine: "line-through" }}>
+                            {fmt(item.oldPrice)}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <Text style={s.orderItemQty}>SL: {item.qty}</Text>
+                    </View>
                   </View>
+                  <Text style={s.orderItemTotal}>
+                    {fmt(item.price * item.qty)}
+                  </Text>
                 </View>
-                <Text style={s.orderItemTotal}>
-                  {fmt(item.price * item.qty)}
-                </Text>
-              </View>
-            ))}
+              );
+            })}
           </View>
         </View>
 
@@ -672,6 +792,12 @@ export default function CheckoutScreen({ route }) {
               <Text style={s.costValDiscount}>-{fmt(discountAmount)}</Text>
             </View>
           ) : null}
+          {tierDiscountAmount > 0 ? (
+            <View style={s.costRow}>
+              <Text style={s.costLabel}>Hạng thành viên ({tierDiscountInfo?.tier_name}):</Text>
+              <Text style={s.costValDiscount}>-{fmt(tierDiscountAmount)}</Text>
+            </View>
+          ) : null}
           <View style={[s.costRow, s.costRowTotal]}>
             <Text style={s.costLabelTotal}>TỔNG THANH TOÁN:</Text>
             <Text style={s.costValTotal}>{fmt(total)}</Text>
@@ -680,17 +806,24 @@ export default function CheckoutScreen({ route }) {
 
         {/* BUTTON ĐẶT HÀNG */}
         <TouchableOpacity
-          style={s.placeOrderBtn}
+          style={[s.placeOrderBtn, isPlacingOrder && { opacity: 0.7 }]}
           onPress={handlePlaceOrder}
           activeOpacity={0.9}
+          disabled={isPlacingOrder}
         >
-          <Ionicons
-            name="shield-checkmark"
-            size={20}
-            color="#fff"
-            style={{ marginRight: 8 }}
-          />
-          <Text style={s.placeOrderBtnTxt}>ĐẶT HÀNG AN TOÀN NGAY</Text>
+          {isPlacingOrder ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <>
+              <Ionicons
+                name="shield-checkmark"
+                size={20}
+                color="#fff"
+                style={{ marginRight: 8 }}
+              />
+              <Text style={s.placeOrderBtnTxt}>ĐẶT HÀNG AN TOÀN NGAY</Text>
+            </>
+          )}
         </TouchableOpacity>
       </ScrollView>
 
@@ -713,7 +846,7 @@ export default function CheckoutScreen({ route }) {
               <Text style={s.summaryTitle}>CHI TIẾT ĐƠN HÀNG</Text>
               <View style={s.summaryRow}>
                 <Text style={s.summaryLabel}>Mã đơn hàng:</Text>
-                <Text style={s.summaryValHighlight}>{orderId}</Text>
+                <Text style={s.summaryValHighlight}>{createdOrder ? createdOrder.order_code : orderId}</Text>
               </View>
               <View style={s.summaryRow}>
                 <Text style={s.summaryLabel}>Tổng thanh toán:</Text>

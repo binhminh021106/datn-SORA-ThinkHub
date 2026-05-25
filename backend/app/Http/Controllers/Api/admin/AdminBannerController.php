@@ -9,6 +9,7 @@ use App\Models\Banner;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
 
 class AdminBannerController extends Controller
 {
@@ -55,6 +56,9 @@ class AdminBannerController extends Controller
         $banner = Banner::create($data);
         $banner->load('brand:id,name,slug'); // Eager load trả về cho FE
 
+        // Clear homepage cache when a new banner is stored
+        Cache::forget('sora_home_data_v2');
+
         return response()->json(['success' => true, 'message' => 'Tạo banner thành công', 'data' => $banner]);
     }
 
@@ -100,6 +104,9 @@ class AdminBannerController extends Controller
         $banner->update($data);
         $banner->load('brand:id,name,slug'); // Load lại quan hệ để FE update cache
 
+        // Clear homepage cache when a banner is updated
+        Cache::forget('sora_home_data_v2');
+
         return response()->json(['success' => true, 'message' => 'Cập nhật thành công', 'data' => $banner]);
     }
 
@@ -111,6 +118,9 @@ class AdminBannerController extends Controller
         $banner = Banner::findOrFail($id);
         $banner->update(['sort_order' => null]);
         $banner->delete();
+
+        // Clear homepage cache when a banner is deleted
+        Cache::forget('sora_home_data_v2');
 
         return response()->json(['success' => true, 'message' => 'Đã đưa banner vào thùng rác', 'id' => $id]);
     }
@@ -128,6 +138,9 @@ class AdminBannerController extends Controller
         }
         $banner->load('brand:id,name,slug'); // Load lại data cho cache FE
 
+        // Clear homepage cache when a banner is restored
+        Cache::forget('sora_home_data_v2');
+
         return response()->json(['success' => true, 'message' => 'Đã khôi phục banner', 'data' => $banner]);
     }
 
@@ -140,6 +153,10 @@ class AdminBannerController extends Controller
         foreach ($items as $item) {
             Banner::where('id', $item['id'])->update(['sort_order' => $item['sort_order']]);
         }
+
+        // Clear homepage cache when banners are reordered
+        Cache::forget('sora_home_data_v2');
+
         return response()->json(['success' => true, 'message' => 'Đã cập nhật thứ tự']);
     }
 }
