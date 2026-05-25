@@ -191,7 +191,8 @@
                                                    }"
                                                    :title="!isOptionAvailable(item, attrName, val) ? 'Tạm hết hàng' : ''"
                                                    @click.prevent="isOptionAvailable(item, attrName, val) ? toggleSelection(item.id, attrName, val) : null">
-                                              <input type="radio" class="d-none" :name="`attr_${item.id}_${attrName}`" :checked="userSelections[item.id][attrName] === val">
+                                              <!-- Đã thêm :disabled -->
+                                              <input type="radio" class="d-none" :name="`attr_${item.id}_${attrName}`" :checked="userSelections[item.id][attrName] === val" :disabled="!isOptionAvailable(item, attrName, val)">
                                               <div class="chip-inner px-3 py-1 d-flex flex-column align-items-center justify-content-center text-center shadow-sm" style="min-width: 45px;">
                                                 <span class="fw-bold font-oswald tracking-wide" style="font-size: 0.85rem;">{{ val }}</span>
                                               </div>
@@ -349,7 +350,8 @@
                           }"
                           :title="!isQuickAddOptionAvailable(attrName, val) ? 'Tạm hết hàng' : ''"
                           @click.prevent="isQuickAddOptionAvailable(attrName, val) ? toggleQuickAddSelection(attrName, val) : null">
-                     <input type="radio" class="d-none" :checked="String(quickAddSelections[attrName]) === String(val)">
+                     <!-- Đã thêm :disabled -->
+                     <input type="radio" class="d-none" :checked="String(quickAddSelections[attrName]) === String(val)" :disabled="!isQuickAddOptionAvailable(attrName, val)">
                      <div class="chip-inner px-3 py-2 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
                        <span class="fw-bold font-oswald tracking-wide small">{{ val }}</span>
                      </div>
@@ -763,6 +765,7 @@ const confirmQuickAdd = async () => {
             setSafeStorage('cart_session_id', res.data.session_id);
         }
         
+        window.dispatchEvent(new CustomEvent('update-cart-count'));
         quickAddModalInstance.hide();
         Toast.fire({ icon: 'success', title: 'Đã thêm sản phẩm vào giỏ' });
     } catch (error) {
@@ -955,6 +958,7 @@ const addToCart = async () => {
           setSafeStorage('cart_session_id', res.data.session_id);
       }
 
+      window.dispatchEvent(new CustomEvent('update-cart-count'));
       Toast.fire({ icon: 'success', title: 'Đã thêm Combo vào Túi mua sắm' });
       
   } catch (error) {

@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <div class="mini-cart-container">
-      <!-- Overlay -->
+      <!-- Overlay xuyên thấu -->
       <transition name="fade">
         <div 
           v-if="isOpen" 
@@ -10,39 +10,67 @@
         ></div>
       </transition>
 
-      <!-- Bỏ class 'open' xử lý chung ở wrapper, wrapper giờ chỉ là khung cố định -->
-      <div class="cart-wrapper d-flex" :class="{ 'open': isOpen }">
+      <div class="cart-wrapper d-flex" :class="isOpen ? 'open' : ''">
         
         <!-- ========================================== -->
-        <!-- BẢNG GỢI Ý SẢN PHẨM BÊN TRÁI (FULL MÀN HÌNH) -->
+        <!-- BẢNG GỢI Ý SẢN PHẨM BÊN TRÁI -->
         <!-- ========================================== -->
-        <div class="featured-products-panel bg-white d-none d-lg-flex flex-column p-4" v-if="featuredProducts.length > 0">
-          <div class="text-center mb-4 mt-2">
-             <h4 class="m-0 tracking-wide fw-medium text-dark font-oswald text-uppercase" style="font-size: 1.5rem;">Sản phẩm yêu thích nhất</h4>
-             <p class="text-muted font-serif fst-italic mt-1">Gợi ý 4 sản phẩm bán chạy dành riêng cho bạn</p>
-          </div>
+        <div class="featured-products-panel bg-transparent d-none d-lg-flex flex-column align-items-center justify-content-center p-4">
           
-          <div class="flex-grow-1 d-flex flex-column justify-content-center overflow-hidden pb-4 position-relative w-100">
-            <!-- Đã fix class slider-layout để cuộn lướt ngang mượt mà -->
-            <div class="d-flex flex-nowrap overflow-x-auto overflow-y-hidden custom-scrollbar pb-4 align-items-center w-100 sora-drag-container slider-layout"
-                 ref="featuredScrollContainer"
-                 @mousedown="startDrag"
-                 @mouseleave="stopDrag"
-                 @mouseup="stopDrag"
-                 @mousemove="onDrag">
+          <!-- HỘP TRẮNG CHỨA SẢN PHẨM Ở GIỮA -->
+          <div class="suggested-products-box bg-white p-4 shadow w-100 position-relative" style="max-width: 950px;" v-show="featuredProducts.length > 0 || isProductsLoading">
+            <div class="text-center mb-4 mt-2">
+               <h4 class="m-0 tracking-wide fw-medium text-dark font-oswald" style="font-size: 1.5rem;">Bạn có thể quan tâm</h4>
+            </div>
+            
+            <div class="swiper-wrapper-container w-100 position-relative">
               
-              <!-- Giảm số lượng về 4 sản phẩm và làm khung nhỏ lại (230px) -->
-              <div v-for="product in featuredProducts.slice(0, 4)" :key="product.id" style="min-width: 230px; width: 230px; flex-shrink: 0;" class="py-2 slider-item" @click.capture="handleCardAction($event)">
-                <ProductCard 
-                  :product="product"
-                  :showWishlist="true" 
-                  :showCompare="true"
-                  :showAddToCart="true"
-                  :hoverAddToCart="true"
-                  :isInWishlist="isFavourited(product.id)"
-                  @toggle-wishlist="handleToggleWishlist"
-                  class="cursor-pointer shadow-sm"
-                />
+              <!-- SKELETON LOADING ĐỒNG BỘ LAYOUT PRODUCT CARD -->
+              <div v-if="isProductsLoading" class="d-flex px-2 pb-5" style="gap: 20px;">
+                <div v-for="i in 3" :key="'skel-prod-'+i" class="d-flex flex-column border border-light-subtle bg-white" style="width: calc((100% - 40px) / 3);">
+                  <!-- Skeleton Khung Ảnh Tỉ lệ 1:1 -->
+                  <div class="ratio ratio-1x1 w-100 skeleton border-bottom border-light-subtle"></div>
+                  <!-- Skeleton Nội dung thẻ -->
+                  <div class="p-4 d-flex flex-column flex-grow-1 text-center" style="padding-bottom: 64px !important;">
+                    <div class="skeleton mx-auto mb-2" style="width: 80%; height: 24px; border-radius: 4px;"></div>
+                    <div class="skeleton mx-auto mb-3" style="width: 50%; height: 18px; border-radius: 4px;"></div>
+                    <div class="mt-auto d-flex flex-column align-items-center justify-content-center">
+                      <div class="skeleton mb-1" style="width: 40%; height: 16px; border-radius: 4px;"></div>
+                      <div class="skeleton" style="width: 60%; height: 24px; border-radius: 4px;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- SWIPER SẢN PHẨM THỰC TẾ -->
+              <div v-else class="position-relative w-100">
+                <Swiper
+                  :modules="swiperModules"
+                  :slides-per-view="3"
+                  :space-between="20"
+                  :pagination="{ clickable: true }"
+                  :navigation="{ nextEl: '.sora-swiper-next', prevEl: '.sora-swiper-prev' }"
+                  :grab-cursor="true"
+                  class="pb-5 px-2 custom-swiper"
+                >
+                  <SwiperSlide v-for="product in featuredProducts" :key="product.id" class="d-flex justify-content-center h-auto">
+                    <div class="w-100 h-100" @click.capture="handleCardAction($event)">
+                      <ProductCard 
+                        :product="product"
+                        :showWishlist="true" 
+                        :showCompare="true"
+                        :showAddToCart="true"
+                        :hoverAddToCart="true"
+                        :isInWishlist="isFavourited(product.id)"
+                        @toggle-wishlist="handleToggleWishlist"
+                        class="cursor-pointer h-100"
+                      />
+                    </div>
+                  </SwiperSlide>
+                </Swiper>
+                
+                <div class="sora-swiper-prev"><i class="bi bi-chevron-left"></i></div>
+                <div class="sora-swiper-next"><i class="bi bi-chevron-right"></i></div>
               </div>
 
             </div>
@@ -50,32 +78,30 @@
         </div>
 
         <!-- ========================================== -->
-        <!-- SLIDE-OUT CART (GIỎ HÀNG BÊN PHẢI)           -->
+        <!-- SLIDE-OUT CART -->
         <!-- ========================================== -->
         <div class="mini-cart-panel bg-white d-flex flex-column border-start border-light-subtle shadow">
           <div class="p-4 border-bottom border-light-subtle position-relative">
-            <div class="d-flex align-items-center justify-content-center mb-3 position-relative">
+            <div class="d-flex align-items-center justify-content-center position-relative">
               <h5 class="m-0 font-oswald tracking-wide fw-bold text-uppercase" style="font-size: 1.2rem; font-weight: 500;">Giỏ hàng của bạn</h5>
               <button @click="closeCart" class="btn border-0 text-dark fs-4 p-0 position-absolute end-0 hover-primary transition-color" style="top: -5px;">&times;</button>
-            </div>
-            
-            <div class="text-center small text-muted mb-3 font-serif" style="font-size: 0.9rem;">
-              <span v-if="amountToFreeShipping > 0">
-                Thêm <span class="fw-bold text-sora-primary">{{ formatPrice(amountToFreeShipping) }}</span> nữa để được <span class="fw-bold text-dark">miễn phí vận chuyển!</span>
-              </span>
-              <span v-else class="text-sora-primary fw-bold">
-                Chúc mừng! Đơn hàng của bạn đã được miễn phí vận chuyển.
-              </span>
-            </div>
-            
-            <div class="progress rounded-pill bg-light" style="height: 4px;">
-              <div class="progress-bar bg-success transition-all" role="progressbar" :style="{ width: progressPercentage + '%' }"></div>
             </div>
           </div>
 
           <div class="flex-grow-1 overflow-auto p-4 custom-scrollbar">
-            <div v-if="isLoading" class="text-center py-5 text-muted">
-              <div class="spinner-border spinner-border-sm text-sora-primary me-2" role="status"></div> Đang tải...
+            
+            <div v-if="isLoading" class="d-flex flex-column gap-4">
+              <div v-for="i in 3" :key="'skel-cart-'+i" class="d-flex gap-3 position-relative cart-item border-0">
+                <div class="skeleton" style="width: 85px; height: 105px; flex-shrink: 0; border-radius: 4px;"></div>
+                <div class="d-flex flex-column flex-grow-1 py-1">
+                  <div class="skeleton" style="width: 90%; height: 18px; border-radius: 4px; margin-bottom: 8px;"></div>
+                  <div class="skeleton" style="width: 60%; height: 14px; border-radius: 4px; margin-bottom: 12px;"></div>
+                  <div class="skeleton" style="width: 40%; height: 20px; border-radius: 4px;"></div>
+                  <div class="mt-auto d-flex justify-content-between align-items-center">
+                    <div class="skeleton" style="width: 70px; height: 25px; border-radius: 4px;"></div>
+                  </div>
+                </div>
+              </div>
             </div>
             
             <div v-else-if="cartItems.length === 0" class="text-center text-muted mt-5 py-5 d-flex flex-column align-items-center">
@@ -90,7 +116,6 @@
                 :key="item.id" 
                 class="d-flex gap-3 position-relative cart-item"
               >
-                <!-- Ảnh sản phẩm trong giỏ -->
                 <div class="bg-light cursor-pointer border border-light-subtle" style="width: 85px; height: 105px; flex-shrink: 0;" @click="goToProduct(item.variant?.product?.slug || item.combo?.slug, !!item.combo_id)">
                   <img 
                     loading="lazy"
@@ -101,7 +126,6 @@
                   >
                 </div>
 
-                <!-- Thông tin sản phẩm trong giỏ -->
                 <div class="d-flex flex-column justify-content-between flex-grow-1 overflow-hidden py-1">
                   <div class="pe-4">
                     <h6 class="mb-1 text-dark fw-bold text-truncate cursor-pointer hover-primary font-oswald text-uppercase" style="font-size: 0.95rem; transition: color 0.2s;" :title="item.variant?.product?.name || item.combo?.name || 'Tên sản phẩm'" @click="goToProduct(item.variant?.product?.slug || item.combo?.slug, !!item.combo_id)">
@@ -126,7 +150,6 @@
                     </p>
                   </div>
 
-                  <!-- Số lượng và Xóa -->
                   <div class="d-flex justify-content-between align-items-center mt-2">
                     <div class="quantity-control d-flex align-items-center border border-light-subtle bg-white">
                       <button 
@@ -182,12 +205,18 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import ProductCard from '@/components/ui/ProductCard.vue';
 import { useWishlist } from '@/composables/useWishlist.js';
+
+import { Swiper, SwiperSlide } from 'swiper/vue';
+import { Pagination, Navigation } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/pagination';
+import 'swiper/css/navigation';
 
 const router = useRouter();
 const route = useRoute();
@@ -204,15 +233,16 @@ const Toast = Swal.mixin({
   timer: 3000
 });
 
+const swiperModules = [Pagination, Navigation];
+
 const isOpen = ref(false);
-const isLoading = ref(false);
+const isLoading = ref(false); 
+const isProductsLoading = ref(false);
 const updatingItemId = ref(null);
 
 const cartItems = ref([]);
 const summary = ref({ total_items: 0, subtotal: 0 });
 const featuredProducts = ref([]);
-
-const FREE_SHIPPING_THRESHOLD = 1000000;
 
 const getHeaders = () => {
   const headers = { 'Accept': 'application/json' };
@@ -246,11 +276,6 @@ watch(() => route.fullPath, () => {
 
 const openCart = () => {
   isOpen.value = true;
-  
-  const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-  if (scrollbarWidth > 0) {
-    document.body.style.paddingRight = `${scrollbarWidth}px`;
-  }
   document.body.style.overflow = 'hidden';
   
   fetchCart();
@@ -260,13 +285,7 @@ const openCart = () => {
 
 const closeCart = () => {
   isOpen.value = false;
-  
-  setTimeout(() => {
-    if (!isOpen.value) {
-      document.body.style.overflow = '';
-      document.body.style.paddingRight = '';
-    }
-  }, 400); 
+  document.body.style.overflow = '';
 };
 
 const handleCardAction = (event) => {
@@ -282,36 +301,6 @@ const handleToggleWishlist = (product) => {
   toggleFavourite(product, Toast, Swal, router);
 };
 
-const featuredScrollContainer = ref(null);
-const isDragging = ref(false);
-const startX = ref(0);
-const scrollLeft = ref(0);
-const dragDistance = ref(0);
-
-const startDrag = (e) => {
-  if (!featuredScrollContainer.value) return;
-  isDragging.value = true;
-  dragDistance.value = 0;
-  startX.value = e.pageX - featuredScrollContainer.value.offsetLeft;
-  scrollLeft.value = featuredScrollContainer.value.scrollLeft;
-};
-
-const stopDrag = () => {
-  setTimeout(() => {
-    isDragging.value = false;
-  }, 50);
-};
-
-const onDrag = (e) => {
-  if (!isDragging.value || !featuredScrollContainer.value) return;
-  e.preventDefault();
-  const x = e.pageX - featuredScrollContainer.value.offsetLeft;
-  // Tăng tốc độ cuộn chuột lên x2 để lướt nhạy hơn
-  const walk = (x - startX.value) * 2; 
-  dragDistance.value = walk;
-  featuredScrollContainer.value.scrollLeft = scrollLeft.value - walk;
-};
-
 const goToCart = () => {
   closeCart();
   router.push({ name: 'cart' });
@@ -324,8 +313,6 @@ const goToCheckout = () => {
 
 const goToProduct = (slug, isCombo = false) => {
   if (!slug) return;
-  if (isDragging.value && Math.abs(dragDistance.value) > 10) return;
-
   closeCart();
   const shopSlug = route?.params?.shop_slug || 'aurora-jewelry'; 
   
@@ -335,16 +322,6 @@ const goToProduct = (slug, isCombo = false) => {
     router.push({ name: 'productDetail', params: { shop_slug: shopSlug, slug: slug } });
   }
 };
-
-const amountToFreeShipping = computed(() => {
-  const remaining = FREE_SHIPPING_THRESHOLD - summary.value.subtotal;
-  return remaining > 0 ? remaining : 0;
-});
-
-const progressPercentage = computed(() => {
-  const percentage = (summary.value.subtotal / FREE_SHIPPING_THRESHOLD) * 100;
-  return percentage > 100 ? 100 : percentage;
-});
 
 const formatPrice = (value) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0);
@@ -367,6 +344,7 @@ const fetchCart = async (showLoading = true) => {
 
 const fetchFeaturedProducts = async () => {
   if (featuredProducts.value.length > 0) return;
+  isProductsLoading.value = true;
   try {
     const res = await axios.get(`${BACKEND_URL}/client/home-data`);
     if (res.data.success && res.data.data.products) {
@@ -374,6 +352,8 @@ const fetchFeaturedProducts = async () => {
     }
   } catch (error) {
     console.error('Lỗi khi tải sản phẩm nổi bật', error);
+  } finally {
+    isProductsLoading.value = false;
   }
 };
 
@@ -381,11 +361,9 @@ let updateTimeout = null;
 
 const updateQuantity = (item, newQuantity) => {
   if (newQuantity < 1) return;
-  
   item.quantity = newQuantity;
   
   if (updateTimeout) clearTimeout(updateTimeout);
-  
   updatingItemId.value = item.id;
 
   updateTimeout = setTimeout(async () => {
@@ -462,14 +440,12 @@ defineExpose({ openCart, fetchCart });
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%; 
+  width: 100vw;
   height: 100vh;
-  background-color: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(3px); 
+  background-color: rgba(0, 0, 0, 0.45);
   z-index: 1060;
 }
 
-/* Fix lỗi kéo ngang cả màn hình: Lớp wrapper sẽ luôn nằm im */
 .cart-wrapper {
   position: fixed;
   top: 0;
@@ -479,120 +455,99 @@ defineExpose({ openCart, fetchCart });
   pointer-events: none;
   display: flex;
   justify-content: flex-end;
-  width: 100%;
+  width: 100vw;
+  transform: translateX(100%);
+  transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-/* LEFT PANEL (Gợi ý): Chỉ mờ dần (Fade in/out), KHÔNG trượt */
+.cart-wrapper.open {
+  transform: translateX(0);
+}
+
 .featured-products-panel {
   flex-grow: 1; 
   height: 100vh; 
-  pointer-events: none; /* Khóa tương tác khi đóng */
-  background-color: #fcfcfc;
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.3s ease, visibility 0s 0.3s;
-}
-
-.cart-wrapper.open .featured-products-panel {
-  pointer-events: auto; /* Mở tương tác khi hiện */
-  opacity: 1;
-  visibility: visible;
-  transition: opacity 0.3s ease, visibility 0s 0s;
-}
-
-/* RIGHT PANEL (Giỏ hàng): Giữ nguyên hiệu ứng trượt */
-.mini-cart-panel {
-  width: 100%; 
-  max-width: 420px;
-  height: 100vh;
   pointer-events: auto;
-  flex-shrink: 0;
-  transform: translateX(100%);
-  visibility: hidden; 
-  will-change: transform, visibility;
-  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), visibility 0s 0.4s;
 }
 
-.cart-wrapper.open .mini-cart-panel {
-  transform: translateX(0);
-  visibility: visible; 
-  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), visibility 0s 0s;
+.skeleton {
+  background: #f0f0f0;
+  background-image: linear-gradient(90deg, #f0f0f0 0px, #f8f8f8 40px, #f0f0f0 80px);
+  background-size: 200vw 100%;
+  animation: shimmer 1.5s infinite linear;
 }
 
-/* Đảm bảo thẻ luôn nằm thẳng lề trái */
-.slider-layout {
-  justify-content: center !important;
-  gap: 1.5rem;
-  padding-left: 2rem;
-  padding-right: 2rem;
+@keyframes shimmer {
+  0% { background-position: -20vw 0; }
+  100% { background-position: 20vw 0; }
 }
 
-/* Khóa chặn hoàn toàn các hành vi mặc định cản trở lướt */
-.sora-drag-container {
-  cursor: grab;
-  /* LOẠI BỎ scroll-behavior: smooth vì nó làm kẹt lướt chuột bằng JS */
-  user-select: none; /* Ngăn bôi đen chữ khi lướt */
+.swiper-wrapper-container {
+  --swiper-pagination-color: #9f273b;
+  position: relative; 
 }
-.sora-drag-container:active {
-  cursor: grabbing;
+
+:deep(.swiper-pagination) { bottom: 0px !important; }
+:deep(.swiper-pagination-bullet) {
+  width: 6px; height: 6px; background: #c4c4c4; opacity: 1; transition: all 0.3s ease;
 }
-/* Tránh kéo dính ảnh và nút (ghost drag) */
-.sora-drag-container img, 
-.sora-drag-container a, 
-.slider-item {
-  -webkit-user-drag: none;
-  user-select: none;
+:deep(.swiper-pagination-bullet-active) {
+  width: 20px; border-radius: 4px; background: #9f273b;
+}
+
+.sora-swiper-prev, .sora-swiper-next {
+  position: absolute;
+  top: 40%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  background-color: #fff;
+  border-radius: 50%;
+  border: 1px solid #eaeaea;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; z-index: 50; color: #333; transition: all 0.3s ease;
+}
+
+.sora-swiper-prev:hover, .sora-swiper-next:hover {
+  color: #9f273b;
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.sora-swiper-prev i, .sora-swiper-next i { font-size: 16px; font-weight: 900; }
+.sora-swiper-prev { left: -10px; }
+.sora-swiper-next { right: -10px; }
+
+.sora-swiper-prev.swiper-button-disabled,
+.sora-swiper-next.swiper-button-disabled { opacity: 0 !important; pointer-events: none; }
+
+.mini-cart-panel {
+  width: 100vw; max-width: 420px; height: 100vh;
+  pointer-events: auto; flex-shrink: 0; z-index: 2;
 }
 
 @media (max-width: 991px) {
-  .featured-products-panel {
-    display: none !important;
-  }
+  .featured-products-panel { display: none !important; }
 }
 
-.cart-item {
-  padding-bottom: 1.25rem;
-  border-bottom: 1px dashed #e9ecef;
-}
-.cart-item:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
+.cart-item { padding-bottom: 1.25rem; border-bottom: 1px dashed #e9ecef; }
+.cart-item:last-child { border-bottom: none; padding-bottom: 0; }
 
-.quantity-control {
-  height: 30px;
-}
+.quantity-control { height: 30px; }
 
 .custom-scrollbar {
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin; 
-  scrollbar-color: #e0e0e0 transparent;
+  -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: #e0e0e0 transparent;
 }
-.custom-scrollbar::-webkit-scrollbar {
-  height: 8px; 
-  width: 6px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent; 
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #e0e0e0; 
-  border-radius: 10px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: #c0c0c0; 
-}
+.custom-scrollbar::-webkit-scrollbar { height: 8px; width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background-color: #e0e0e0; border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #c0c0c0; }
 
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.4s ease;
-}
-.fade-enter-from, .fade-leave-to {
-  opacity: 0;
-}
+.fade-enter-active, .fade-leave-active { transition: opacity 0.4s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>
 
 <style>
-.high-z-index-swal {
-  z-index: 10000 !important;
-}
+.high-z-index-swal { z-index: 10000 !important; }
 </style>

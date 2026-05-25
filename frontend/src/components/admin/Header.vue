@@ -80,14 +80,16 @@
             </li>
             
             <li class="mt-2">
-              <router-link :to="{ name: 'admin-profile' }" class="dropdown-item py-2" :class="isDarkMode ? 'text-light hover-dark' : ''">
+              <!-- Thêm @click="isUserMenuActive = false" để ẩn menu khi click -->
+              <router-link :to="{ name: 'admin-profile' }" class="dropdown-item py-2" :class="isDarkMode ? 'text-light hover-dark' : ''" @click="isUserMenuActive = false">
                 <i class="bi bi-person me-2"></i> Hồ sơ cá nhân
               </router-link>
             </li>
             
             <!-- LINK ĐẾN LỊCH SỬ CHẤM CÔNG -->
             <li>
-              <router-link :to="{ name: 'admin-attendance-history' }" class="dropdown-item py-2" :class="isDarkMode ? 'text-light hover-dark' : ''">
+              <!-- Thêm @click="isUserMenuActive = false" để ẩn menu khi click -->
+              <router-link :to="{ name: 'admin-attendance-history' }" class="dropdown-item py-2" :class="isDarkMode ? 'text-light hover-dark' : ''" @click="isUserMenuActive = false">
                 <i class="bi bi-calendar2-check me-2"></i> Lịch sử chấm công
               </router-link>
             </li>
@@ -222,6 +224,8 @@ const toggleUserMenu = () => {
 };
 
 const handleLogout = () => {
+  isUserMenuActive.value = false; // Đóng menu thả xuống
+  
   Swal.fire({
     title: 'Xác nhận đăng xuất?',
     text: "Bạn sẽ phải đăng nhập lại để tiếp tục quản trị!",

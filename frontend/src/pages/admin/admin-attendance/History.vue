@@ -150,7 +150,7 @@
                       </span>
                       <span v-if="day.data.checkout_status === 'forgotten'" class="badge bg-danger shadow-sm">Quên Checkout</span>
                       
-                      <!-- SỬA: Chỉ hiển thị Tăng ca nếu không về sớm -->
+                      <!-- Chỉ hiển thị Tăng ca nếu không về sớm -->
                       <span v-if="!isStaffWorkingDay(day.date, day) && getRealEarlyLeave(day.data) <= 0" class="badge bg-dark text-white shadow-sm">Tăng ca</span>
                     </div>
                   </div>
@@ -352,23 +352,28 @@ const attendanceMap = computed(() => {
 // 5. Helpers logic nhận diện ngày nghỉ/đi làm chính xác 100%
 const getWeekdayIndex = (dateStr) => {
   if (!dateStr) return null;
-  const dayOfWeek = new Date(dateStr).getDay();
+  // FIX: Tránh timezone shift bằng cách bóc tách năm, tháng, ngày
+  const [year, month, day] = dateStr.split('-');
+  const dayOfWeek = new Date(year, month - 1, day).getDay();
   return dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 0-6 = T2-CN
 };
 
 // Chuẩn hóa hàm kiểm tra ngày hiện tại và quá khứ 
 const isToday = (dateStr) => {
   if (!dateStr) return false;
-  const targetDate = new Date(dateStr);
+  // FIX: Tránh timezone shift bằng cách bóc tách năm, tháng, ngày
+  const [year, month, day] = dateStr.split('-');
+  const targetDate = new Date(year, month - 1, day);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  targetDate.setHours(0, 0, 0, 0);
   return targetDate.getTime() === today.getTime();
 };
 
 const isPastOrToday = (dateStr) => {
   if (!dateStr) return false;
-  const targetDate = new Date(dateStr);
+  // FIX: Tránh timezone shift bằng cách bóc tách năm, tháng, ngày
+  const [year, month, day] = dateStr.split('-');
+  const targetDate = new Date(year, month - 1, day);
   const today = new Date();
   today.setHours(23, 59, 59, 999);
   return targetDate <= today;
@@ -484,7 +489,7 @@ const kpiSummaries = computed(() => {
        if (isWorkingDay) {
           presentCount++; // Đi làm đúng lịch
        } else {
-          // SỬA: Nếu làm vào ngày nghỉ nhưng về sớm thì KHÔNG tính là tăng ca
+          // Nếu làm vào ngày nghỉ nhưng về sớm thì KHÔNG tính là tăng ca
           if (getRealEarlyLeave(dayData) <= 0) {
               overtimeCount++; 
           }

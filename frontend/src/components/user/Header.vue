@@ -247,8 +247,10 @@ import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import Swal from 'sweetalert2';
+import Toast from '@/utils/toastConfig';
 import MegaMenu from '@/components/user/MegaMenu.vue';
 import MiniCart from '@/pages/user/cart/MiniCart.vue';
+import { cartItemCount } from '@/stores/cartStore';
 
 const route = useRoute();
 const router = useRouter();
@@ -278,8 +280,6 @@ const searchContainer = ref(null);
 const isCategoryFallback = ref(false);
 let searchDebounce = null;
 const isFetchingSearch = ref(false);
-
-const cartItemCount = ref(0);
 
 // ==========================================
 // TÍCH HỢP BẢO VỆ CHUỘT CHO MEGA MENU (200MS)
@@ -344,7 +344,7 @@ const safeNavigate = (routeName, options = {}) => {
   if (router.hasRoute(routeName)) {
     router.push({ name: routeName, ...options });
   } else {
-    Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: 'Tính năng đang được phát triển!', showConfirmButton: false, timer: 2000 });
+    Toast.fire({ icon: 'info', title: 'Tính năng đang được phát triển!' });
   }
 };
 
@@ -474,7 +474,7 @@ const handleLogout = () => {
       user.value = null;
       isUserMenuOpen.value = false;
       safeNavigate('home');
-      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã đăng xuất', showConfirmButton: false, timer: 1500 });
+      Toast.fire({ icon: 'success', title: 'Đã đăng xuất' });
     }
   });
 };

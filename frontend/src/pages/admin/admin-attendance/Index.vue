@@ -330,15 +330,15 @@
             <table class="table table-hover align-middle mb-0">
               <thead class="table-light">
                 <tr>
-                  <th class="border-0 text-muted small py-3 rounded-start-3">Nhân sự</th>
-                  <th class="border-0 text-muted small py-3">Ca làm việc</th>
-                  <th class="border-0 text-muted small py-3">Bắt đầu</th>
-                  <th class="border-0 text-muted small py-3">Kết thúc</th>
-                  <th class="border-0 text-muted small py-3">Giờ Vào</th>
-                  <th class="border-0 text-muted small py-3">Giờ Ra</th>
-                  <th class="border-0 text-muted small py-3">Trạng thái ca</th>
-                  <th class="border-0 text-muted small py-3">Checkout</th>
-                  <th class="border-0 text-muted small py-3 rounded-end-3">Hành động</th>
+                  <th class="border-0 text-muted small py-3 align-top rounded-start-3">Nhân sự</th>
+                  <th class="border-0 text-muted small py-3 align-top">Ca làm việc</th>
+                  <th class="border-0 text-muted small py-3 align-top">Bắt đầu</th>
+                  <th class="border-0 text-muted small py-3 align-top">Kết thúc</th>
+                  <th class="border-0 text-muted small py-3 align-top">Giờ Vào</th>
+                  <th class="border-0 text-muted small py-3 align-top">Giờ Ra</th>
+                  <th class="border-0 text-muted small py-3 align-top">Trạng thái ca</th>
+                  <th class="border-0 text-muted small py-3 align-top">Checkout</th>
+                  <th class="border-0 text-muted small py-3 align-top rounded-end-3">Hành động</th>
                 </tr>
               </thead>
 
@@ -392,9 +392,8 @@
                       </div>
                       <div>
                         <div class="mb-1">{{ admin.fullname }}</div>
-                        <div class="d-flex flex-wrap gap-1 align-items-center">
-                          <span class="badge bg-light text-secondary border fw-normal" style="font-size: 0.7rem;">{{
-                            admin.email }}</span>
+                        <div class="d-flex flex-column gap-1 align-items-start">
+                          <span class="badge bg-light text-secondary border fw-normal" style="font-size: 0.7rem;">{{ admin.email }}</span>
                           <span v-if="admin.role" class="badge fw-normal"
                             :class="admin.role.badgeClass || 'bg-primary-subtle text-primary'"
                             style="font-size: 0.7rem;">
@@ -1169,7 +1168,9 @@ const getStatusLabel = (status) => ({
   present: 'Đúng giờ', late: 'Đi muộn', absent: 'Vắng', on_leave: 'Nghỉ phép'
 }[status] || status);
 
-const getAdminShift = (admin) => admin.attendance?.work_shift || admin.shift_assignment?.work_shift || null;
+function getAdminShift(admin) {
+  return admin.attendance?.work_shift || admin.shift_assignment?.work_shift || null;
+}
 
 const getStatusBadgeClass = (status) => ({
   present: 'badge bg-success-subtle text-success border border-success',
@@ -1600,5 +1601,77 @@ const getCheckoutStatusBadgeClass = (status) => ({
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+/* DARK MODE OVERRIDES */
+[data-bs-theme="dark"] .bg-white {
+  background-color: var(--bs-dark) !important;
+}
+[data-bs-theme="dark"] .bg-light,
+[data-bs-theme="dark"] .table-light {
+  background-color: var(--bs-gray-800) !important;
+  color: var(--bs-light) !important;
+}
+[data-bs-theme="dark"] .text-dark {
+  color: var(--bs-light) !important;
+}
+[data-bs-theme="dark"] .text-muted {
+  color: #adb5bd !important;
+}
+[data-bs-theme="dark"] .calendar-container,
+[data-bs-theme="dark"] .calendar-day-summary,
+[data-bs-theme="dark"] .calendar-day {
+  background-color: var(--bs-dark) !important;
+  border-color: var(--bs-border-color) !important;
+}
+[data-bs-theme="dark"] .calendar-header-row,
+[data-bs-theme="dark"] .calendar-week,
+[data-bs-theme="dark"] .calendar-header-col {
+  border-color: var(--bs-border-color) !important;
+}
+[data-bs-theme="dark"] .table-card {
+  border-color: var(--bs-border-color) !important;
+}
+[data-bs-theme="dark"] .card {
+  background-color: var(--bs-dark) !important;
+  border-color: var(--bs-border-color) !important;
+}
+[data-bs-theme="dark"] .filter-metric-card {
+  background-color: var(--bs-gray-900) !important;
+}
+[data-bs-theme="dark"] .filter-metric-card.bg-light-subtle {
+  background-color: var(--bs-gray-900) !important;
+}
+[data-bs-theme="dark"] .active-metric-filter {
+  background-color: rgba(0, 153, 129, 0.15) !important;
+}
+[data-bs-theme="dark"] .active-metric-filter-success {
+  background-color: rgba(25, 135, 84, 0.15) !important;
+}
+[data-bs-theme="dark"] .active-metric-filter-warning {
+  background-color: rgba(255, 193, 7, 0.15) !important;
+}
+[data-bs-theme="dark"] .active-metric-filter-danger {
+  background-color: rgba(108, 117, 125, 0.15) !important;
+}
+[data-bs-theme="dark"] .not-current-month {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+[data-bs-theme="dark"] .calendar-day-summary:hover:not(.not-current-month) {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+[data-bs-theme="dark"] .day-summary-visual .bg-light-warning {
+  background-color: rgba(255, 193, 7, 0.1) !important;
+}
+[data-bs-theme="dark"] .is-selected-day {
+  background-color: rgba(0, 153, 129, 0.15) !important;
+}
+[data-bs-theme="dark"] .filter-control-panel {
+  background-color: var(--bs-gray-800) !important;
+  border-color: var(--bs-border-color) !important;
+}
+[data-bs-theme="dark"] .filter-control-panel select,
+[data-bs-theme="dark"] .filter-control-panel input {
+  color: var(--bs-light) !important;
 }
 </style>

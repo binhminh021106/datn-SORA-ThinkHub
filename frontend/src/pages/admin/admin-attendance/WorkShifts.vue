@@ -346,6 +346,15 @@ const formSubmitting = ref(false);
 
 const weekdays = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
+// Helper: Lấy chuỗi YYYY-MM-DD theo múi giờ Local thay vì UTC
+const getLocalDateString = () => {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
 // Lấy danh sách ca làm việc cho tab hiện tại
 const fetchShifts = async () => {
   const isTrashed = activeTab.value === 'deleted' ? 'true' : 'false';
@@ -403,12 +412,14 @@ const formatDateUI = (dateStr) => {
   return `${d}/${m}/${y}`;
 };
 
-// Lọc bỏ những phân công ca cũ (Đã hết hạn/Bị gỡ) khỏi UI hiển thị
+// Lọc bỏ những phân công ca cũ (Đã hết hạn/Bị gỡ) hoặc ở tương lai khỏi UI hiển thị (Đang hoạt động)
 const getDisplayAssignments = (assignments) => {
   if (!assignments) return [];
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateString();
   return assignments.filter(a => {
-    // Chỉ hiển thị nếu valid_to >= hôm nay HOẶC không có giới hạn (null)
+    // Bỏ qua nếu ngày bắt đầu ở tương lai (Chưa hoạt động/ Chưa tới ngày)
+    if (a.valid_from && a.valid_from > today) return false;
+    // Bỏ qua nếu đã hết hạn (Quá khứ)
     if (a.valid_to && a.valid_to < today) return false;
     return true; 
   });
@@ -419,7 +430,7 @@ const assignedElsewhere = computed(() => {
   const blocked = new Set();
   if (!currentAssignShift.value) return blocked;
   
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalDateString();
 
   shifts.value.forEach(shift => {
     if (shift.id !== currentAssignShift.value.id && shift.assignments) {
@@ -489,8 +500,8 @@ function openAssignPanel(shift) {
   // Lọc ra id những nhân viên đang (hoặc sẽ) thuộc ca hiện tại
   selectedAdmins.value = getDisplayAssignments(shift.assignments).map(item => item.admin?.id).filter(Boolean);
   
-  // Set mặc định valid_from là hôm nay
-  assignValidFrom.value = new Date().toISOString().split('T')[0];
+  // Set mặc định valid_from là hôm nay theo giờ local
+  assignValidFrom.value = getLocalDateString();
   assignValidTo.value = '';
 
   if (!admins.value.length) {

@@ -18,7 +18,6 @@
         </div>
 
         <div v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</div>
-        <div v-if="successMessage" class="alert alert-success">{{ successMessage }}</div>
 
         <form @submit.prevent="handleLogin" class="auth-form">
           <div class="form-group">
@@ -76,6 +75,7 @@
 <script setup>
 import { ref, reactive } from 'vue';
 import axios from 'axios';
+import Toast from '@/utils/toastConfig';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -85,7 +85,6 @@ const LoginWithGoogle = () => {
 
 const isLoading = ref(false);
 const errorMessage = ref('');
-const successMessage = ref('');
 
 const form = reactive({
   email: '',
@@ -95,12 +94,11 @@ const form = reactive({
 const handleLogin = async () => {
   isLoading.value = true;
   errorMessage.value = '';
-  successMessage.value = '';
 
   try {
     const response = await axios.post(`${API_BASE_URL}/login`, form);
     
-    successMessage.value = 'Đăng nhập thành công!';
+    Toast.fire({ icon: 'success', title: 'Đăng nhập thành công!' });
     
     // Lưu Token
     localStorage.setItem('auth_token', response.data.access_token);
@@ -125,7 +123,7 @@ const handleLogin = async () => {
 };
 
 const handleSocialLogin = (platform) => {
-  alert(`Tính năng đăng nhập bằng ${platform} đang được phát triển!`);
+  Toast.fire({ icon: 'info', title: `Tính năng đăng nhập bằng ${platform} đang được phát triển!` });
 };
 </script>
 

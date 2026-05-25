@@ -71,10 +71,10 @@
 
         <div class="mt-auto">
           <div class="d-flex flex-column align-items-center justify-content-center">
-            <span v-if="product.promotional_price && product.promotional_price < product.base_price" class="text-muted text-decoration-line-through small fw-light font-serif mb-1">
+            <span v-if="product.promotional_price && product.promotional_price < product.base_price" class="text-muted text-decoration-line-through small fw-light font-luxury mb-1">
               {{ formatCurrency(product.base_price) }}
             </span>
-            <span class="text-sora-primary fw-bold font-serif fs-5">{{ formatCurrency(product.promotional_price || product.base_price) }}</span>
+            <span class="text-sora-primary fw-bold font-luxury fs-5">{{ formatCurrency(product.promotional_price || product.base_price) }}</span>
           </div>
         </div>
 
