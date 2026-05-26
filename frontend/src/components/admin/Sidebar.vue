@@ -41,9 +41,8 @@
               </span>
 
               <router-link v-if="hasAccess(item.moduleCode)" :to="item.path"
-                :active-class="item.path === '/admin' ? 'ignore-active' : 'router-link-active'"
                 class="nav-link text-white py-2 rounded shadow-sm-hover transition-all d-flex align-items-center"
-                :class="isCollapsed ? 'justify-content-center px-0' : 'px-3'" :title="isCollapsed ? item.name : ''">
+                :class="[isCollapsed ? 'justify-content-center px-0' : 'px-3', { 'router-link-active': isItemActive(item.path) }]" :title="isCollapsed ? item.name : ''">
                 <i class="nav-icon bi" :class="[item.icon, isCollapsed ? 'fs-5' : 'me-3']"></i>
                 <p class="m-0 fw-semibold text-nowrap" v-show="!isCollapsed">{{ item.name }}</p>
               </router-link>
@@ -84,7 +83,8 @@
                   </span>
 
                   <router-link v-if="hasAccess(subItem.moduleCode)" :to="subItem.path"
-                    class="nav-link text-white-50 py-2 px-3 rounded sub-link d-flex align-items-center">
+                    class="nav-link text-white-50 py-2 px-3 rounded sub-link d-flex align-items-center"
+                    :class="{ 'router-link-active': isItemActive(subItem.path) }">
                     <i class="bi bi-circle-fill fs-xs me-3 opacity-50" style="font-size: 6px;"></i>
                     <p class="m-0 fw-medium text-nowrap">{{ subItem.name }}</p>
                   </router-link>
@@ -108,7 +108,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, inject, computed } from 'vue';
+import { ref, reactive, onMounted, inject, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import apiClient from '@/utils/apiClient';
@@ -273,19 +273,32 @@ const showAccessDenied = (menuName, reqLevel) => {
   });
 };
 
-onMounted(() => {
-  fetchSidebarData();
+const isItemActive = (itemPath) => {
   const currentPath = route.path;
+  if (itemPath === '/admin') return currentPath === '/admin';
+  if (currentPath === itemPath) return true;
+  if (currentPath.startsWith(itemPath + '/')) {
+    const allPaths = menuItems.value.flatMap(item => item.children ? item.children.map(c => c.path) : [item.path]);
+    const bestMatch = allPaths.filter(p => currentPath === p || currentPath.startsWith(p + '/'))
+                              .sort((a, b) => b.length - a.length)[0];
+    return itemPath === bestMatch;
+  }
+  return false;
+};
+
+watch(() => route.path, () => {
   menuItems.value.forEach(item => {
     if (item.children) {
-      const isChildActive = item.children.some(subItem => {
-        return currentPath === subItem.path || currentPath.startsWith(subItem.path + '/');
-      });
-      if (isChildActive) {
+      const isChildActive = item.children.some(subItem => isItemActive(subItem.path));
+      if (isChildActive && !isCollapsed.value) {
         menuState[item.stateKey] = true;
       }
     }
   });
+}, { immediate: true });
+
+onMounted(() => {
+  fetchSidebarData();
 });
 </script>
 

@@ -141,6 +141,10 @@ const admin = [
         path: 'attendance/history',
         name: 'admin-attendance-history',
         component: () => import('../pages/admin/admin-attendance/History.vue'),
+        meta: {
+          moduleCode: 'admin_attendances',
+          title: 'Lịch sử chấm công'
+        },
       },
       // ROUTE QUẢN LÝ CHẤM CÔNG (ATTENDANCE)
       {
@@ -314,7 +318,7 @@ const admin = [
         component: () => import('../pages/admin/AdminChat.vue'),
         meta: { moduleCode: 'admin_chat' },
       },
-      // tin tứcccc
+      // ROUTE QUẢN LÝ TIN TỨC (NEWS)
       {
         path: 'news',
         name: 'admin-news',

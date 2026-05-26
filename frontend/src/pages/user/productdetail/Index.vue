@@ -184,13 +184,6 @@
                       'active': selectedAttributes[attrName] === option.id,
                       'disabled-option': isOptionDisabled(attrName, option.id) && selectedAttributes[attrName] !== option.id
                     }"
-                    :style="{ 
-                      padding: '8px 16px', 
-                      border: selectedAttributes[attrName] === option.id ? '2px solid #9f273b' : '1px solid #ddd',
-                      backgroundColor: selectedAttributes[attrName] === option.id ? '#fff0f2' : '#fff',
-                      color: selectedAttributes[attrName] === option.id ? '#9f273b' : '#333',
-                      borderRadius: '6px', fontSize: '14px'
-                    }"
                   >
                     {{ option.name }}
                   </button>
@@ -757,6 +750,8 @@ const confirmQuickAdd = async () => {
     if (res.data.session_id) {
       localStorage.setItem('cart_session_id', res.data.session_id);
     }
+    
+    window.dispatchEvent(new CustomEvent('update-cart-count'));
 
     quickAddModalInstance.hide();
     Toast.fire({ icon: 'success', title: 'Đã thêm sản phẩm vào giỏ' });
@@ -860,9 +855,12 @@ const fetchProductData = async () => {
       saveToRecentlyViewed(product.value);
       fetchRecommendations('related_category');
       startCountdown();
+    } else {
+      router.push({ name: 'NotFound' });
     }
   } catch (error) {
     console.error("Lỗi kết nối API:", error);
+    router.push({ name: 'NotFound' });
   } finally {
     isLoading.value = false;
   }
@@ -977,7 +975,7 @@ const addToCart = async () => {
     if (response.data.success) {
       Toast.fire({ icon: 'success', title: 'Thêm vào giỏ thành công' });
       if (response.data.session_id) localStorage.setItem('cart_session_id', response.data.session_id);
-      router.push('/cart');
+      window.dispatchEvent(new CustomEvent('update-cart-count'));
     }
   } catch (error) {
     let errorMsg = 'Hệ thống đang bận, không thể thêm vào giỏ hàng lúc này.';

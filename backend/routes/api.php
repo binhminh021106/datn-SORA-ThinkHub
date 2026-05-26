@@ -394,15 +394,18 @@ Route::prefix('admin')->group(function () {
             Route::delete('/conversations/{userId}', [\App\Http\Controllers\Api\MessageController::class, 'deleteConversation']);
         });
 
-        // QUẢN LÝ CHẤM CÔNG VÀ CA LÀM VIỆC
-        Route::middleware(['check.module:admin_attendances'])->group(function () {
+         Route::middleware(['check.module:admin_attendances'])->group(function () {
 
             // 1. Quản lý Chấm công
             Route::controller(\App\Http\Controllers\Api\admin\AdminAttendanceController::class)->prefix('attendances')->group(function () {
                 Route::get('/monthly-summary', 'monthlySummary');
                 Route::get('/status', 'checkStatus');
                 Route::get('/daily-status', 'dailyStatus');
-                Route::get('/roles', 'getRoles'); // <-- BỔ SUNG DÒNG NÀY ĐỂ FIX API DROP-DOWN CHỨC VỤ
+                
+                // Các API lấy dữ liệu cho bộ lọc dropdown
+                Route::get('/roles', 'getRoles'); // <-- FIX API DROP-DOWN CHỨC VỤ
+                Route::get('/work-shifts', 'getWorkShifts'); // <-- BỔ SUNG ĐỂ FIX LỖI 404 THEO CẢNH BÁO CỦA CODERABBIT
+                
                 Route::get('/history/{adminId}', 'history');
                 Route::get('/', 'index');
                 Route::post('/check-in', 'checkIn');
@@ -423,6 +426,7 @@ Route::prefix('admin')->group(function () {
                 Route::post('/assign-multiple', 'assignMultiple');
                 Route::delete('/assignments/{adminId}', 'removeAssignment');
             });
+            
         });
     });
 });

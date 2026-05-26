@@ -122,12 +122,13 @@ class AdminWorkShiftController extends Controller
 
         DB::beginTransaction();
         try {
-            // Đóng ca hiện tại (nếu có) để bảo toàn lịch sử thay vì ghi đè
+            // Đóng ca cũ ở quá khứ bất kể có cùng work_shift_id hay không để tránh chồng lấn
             $currentActive = AdminShiftAssignment::where('admin_id', $request->admin_id)
                 ->active($validFrom)
+                ->where('valid_from', '<', $validFrom)
                 ->first();
 
-            if ($currentActive && $currentActive->work_shift_id != $request->work_shift_id) {
+            if ($currentActive) {
                 $currentActive->update([
                     'valid_to' => Carbon::parse($validFrom)->subDay()->toDateString()
                 ]);
@@ -178,9 +179,10 @@ class AdminWorkShiftController extends Controller
             foreach ($request->admin_ids as $adminId) {
                 $currentActive = AdminShiftAssignment::where('admin_id', $adminId)
                     ->active($validFrom)
+                    ->where('valid_from', '<', $validFrom)
                     ->first();
 
-                if ($currentActive && $currentActive->work_shift_id != $request->work_shift_id) {
+                if ($currentActive) {
                     $currentActive->update([
                         'valid_to' => Carbon::parse($validFrom)->subDay()->toDateString()
                     ]);
@@ -218,17 +220,18 @@ class AdminWorkShiftController extends Controller
             'work_shift_id' => 'required|exists:work_shifts,id',
         ]);
 
-        // Lấy ca đang active hiện tại
-        $assignment = AdminShiftAssignment::where('admin_id', $adminId)
+        // Sử dụng get() để đóng toàn bộ các ca bị chồng chéo đang active (nếu có do dữ liệu cũ)
+        $assignments = AdminShiftAssignment::where('admin_id', $adminId)
             ->where('work_shift_id', $request->work_shift_id)
             ->active() 
-            ->first();
+            ->get();
 
-        if ($assignment) {
-            // Thay vì delete() cứng làm mất dữ liệu lịch sử đối soát, ta thiết lập ngày kết thúc
-            $assignment->update([
-                'valid_to' => now()->subDay()->toDateString()
-            ]);
+        if ($assignments->isNotEmpty()) {
+            foreach ($assignments as $assignment) {
+                $assignment->update([
+                    'valid_to' => now()->subDay()->toDateString()
+                ]);
+            }
         }
 
         return response()->json([
