@@ -28,12 +28,20 @@ class ClientCartController extends Controller
             ]);
         }
 
+        // TỐI ƯU ORM: Eager load toàn bộ items và các quan hệ từ đầu
+        // Tránh lỗi N+1 khi truy cập các thuộc tính ảo (accessor) tính giá
+        $cart->load([
+            'items.variant.product', 
+            'items.variant.attributeValues.attribute', 
+            'items.combo'
+        ]);
+
         return response()->json([
             'success' => true,
-            'data' => $cart->items->load(['variant', 'combo']),
+            'data' => $cart->items,
             'summary' => [
                 'total_items' => $cart->items->sum('quantity'),
-                'subtotal'    => $cart->items->sum('subtotal') 
+                'subtotal'    => $cart->items->sum('subtotal') // Đảm bảo model CartItem đã có accessor getSubtotalAttribute()
             ]
         ]);
     }
@@ -63,7 +71,7 @@ class ClientCartController extends Controller
                 return response()->json([
                     'success'    => true,
                     'message'    => 'Đã thêm sản phẩm vào giỏ hàng.',
-                    'data'       => $cartItem->load('variant'),
+                    'data'       => $cartItem->load(['variant.product', 'variant.attributeValues.attribute']),
                     'session_id' => $request->header('X-Cart-Session-Id')
                 ]);
             });
@@ -84,7 +92,6 @@ class ClientCartController extends Controller
             return DB::transaction(function () use ($request) {
                 $cart = $this->resolveCart($request, true);
 
-                // FIX LỖI BLIND SPOT: Kiểm tra tồn kho của từng item trong Combo (và khóa dòng)
                 $variantIds = array_column($request->combo_selections, 'selected_variant_id');
                 $variantsInCombo = ProductVariant::whereIn('id', $variantIds)->lockForUpdate()->get();
 
@@ -97,7 +104,6 @@ class ClientCartController extends Controller
 
                 $newQuantity = $existingItem ? $existingItem->quantity + $request->quantity : $request->quantity;
 
-                // Cảnh báo nếu số lượng tổng vượt quá kho của bất kỳ biến thể nào
                 foreach ($variantsInCombo as $v) {
                     if ($newQuantity > $v->stock_quantity) {
                         throw new \Exception("Sản phẩm thuộc combo (ID: {$v->id}) chỉ còn tối đa {$v->stock_quantity} chiếc trong kho.");
@@ -128,10 +134,6 @@ class ClientCartController extends Controller
         }
     }
 
-    /**
-     * Sửa lỗi IDOR & Route Binding: Không nhận inject trực tiếp CartItem nữa
-     * Sử dụng thẳng param $id và verify nó thuộc về user hiện tại
-     */
     public function update(UserUpdateCartItemRequest $request, $id)
     {
         $cart = $this->resolveCart($request);
@@ -140,7 +142,6 @@ class ClientCartController extends Controller
             return response()->json(['success' => false, 'message' => 'Giỏ hàng đã hết hạn hoặc không tồn tại.'], 403);
         }
 
-        // CHỐNG IDOR: CartItem phải nằm trong giỏ của chính User/Session này
         $cartItem = CartItem::where('cart_id', $cart->id)->find($id);
 
         if (!$cartItem) {
@@ -156,9 +157,6 @@ class ClientCartController extends Controller
         ]);
     }
 
-    /**
-     * Sửa lỗi IDOR
-     */
     public function destroy(Request $request, $id)
     {
         $cart = $this->resolveCart($request);
@@ -167,7 +165,6 @@ class ClientCartController extends Controller
             return response()->json(['success' => false, 'message' => 'Giỏ hàng trống.'], 403);
         }
 
-        // CHỐNG IDOR
         $cartItem = CartItem::where('cart_id', $cart->id)->find($id);
 
         if (!$cartItem) {
@@ -205,7 +202,8 @@ class ClientCartController extends Controller
             return response()->json(['success' => false, 'message' => 'Dữ liệu không hợp lệ.'], 400);
         }
 
-        $guestCart = Cart::where('session_id', $sessionId)->first();
+        // TỐI ƯU ORM: Load sẵn item của guest để tránh N+1 khi gọi $guestCart->items
+        $guestCart = Cart::with('items')->where('session_id', $sessionId)->first();
         
         if (!$guestCart || $guestCart->items->isEmpty()) {
             return response()->json([
@@ -217,15 +215,17 @@ class ClientCartController extends Controller
 
         return DB::transaction(function () use ($guestCart, $user) {
             $userCart = Cart::firstOrCreate(['user_id' => $user->id]);
+            
+            // TỐI ƯU N+1: Lấy tất cả item của user ra RAM thay vì query trong vòng lặp foreach
+            $userItems = CartItem::where('cart_id', $userCart->id)->get();
 
             foreach ($guestCart->items as $guestItem) {
                 if ($guestItem->combo_id) {
-                    $userItem = CartItem::where('cart_id', $userCart->id)
-                        ->where('combo_id', $guestItem->combo_id)
-                        ->get()
-                        ->first(function ($item) use ($guestItem) {
-                            return $item->combo_selections == $guestItem->combo_selections;
-                        });
+                    // Tìm kiếm trên Collection thay vì Query Builder
+                    $userItem = $userItems->where('combo_id', $guestItem->combo_id)
+                                          ->first(function ($item) use ($guestItem) {
+                                              return $item->combo_selections == $guestItem->combo_selections;
+                                          });
 
                     if ($userItem) {
                         $userItem->increment('quantity', $guestItem->quantity);
@@ -236,24 +236,25 @@ class ClientCartController extends Controller
                     }
                 } 
                 else {
-                    $userItem = CartItem::firstOrNew([
-                        'cart_id'            => $userCart->id,
-                        'product_variant_id' => $guestItem->product_variant_id,
-                    ]);
-
-                    $userItem->quantity += $guestItem->quantity;
-                    $userItem->save();
+                    $userItem = collect($userItems)->where('product_variant_id', $guestItem->product_variant_id)->first();
+                    
+                    if ($userItem) {
+                        $userItem->increment('quantity', $guestItem->quantity);
+                    } else {
+                        $newItem = $guestItem->replicate();
+                        $newItem->cart_id = $userCart->id;
+                        $newItem->save();
+                    }
                 }
             }
 
-            // Xoá giỏ hàng rác sau khi đồng bộ
             $guestCart->items()->delete();
             $guestCart->delete();
 
             return response()->json([
                 'success' => true, 
                 'message' => 'Đã đồng bộ giỏ hàng vào tài khoản của bạn.',
-                'clear_session' => true // FE dựa vào cờ này để xóa Session ID ở LocalStorage
+                'clear_session' => true
             ]);
         });
     }

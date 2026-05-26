@@ -198,7 +198,7 @@ const handleUpload = (e, type) => {
 };
 
 // 3. Mutation Cập nhật API
-const { mutate: updateBanner, isLoading: isUpdating } = useMutation({
+const { mutate: updateBanner, isPending: isUpdating } = useMutation({
   mutationFn: async (formData) => {
     const res = await fetch(`${API_URL}/admin/banners/${bannerId}`, { method: 'POST', headers: getHeaders(), body: formData });
     if (!res.ok) { const err = await res.json(); throw new Error(err.message || 'Lỗi dữ liệu'); }

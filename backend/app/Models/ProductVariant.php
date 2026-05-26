@@ -26,6 +26,8 @@ class ProductVariant extends Model
         'promotional_price' => 'decimal:2'
     ];
 
+    protected $appends = ['attributes'];
+
     public function product()
     {
         return $this->belongsTo(Product::class);
@@ -34,5 +36,20 @@ class ProductVariant extends Model
     public function attributeValues()
     {
         return $this->belongsToMany(AttributeValue::class, 'product_variant_attributes', 'variant_id', 'attribute_value_id');
+    }
+
+    public function getAttributesAttribute()
+    {
+        if (!$this->relationLoaded('attributeValues')) {
+            return null; // Return null so frontend doesn't get confused if not loaded
+        }
+
+        $attrs = [];
+        foreach ($this->attributeValues as $av) {
+            if ($av->relationLoaded('attribute') && $av->attribute) {
+                $attrs[$av->attribute->name] = $av->value;
+            }
+        }
+        return $attrs;
     }
 }

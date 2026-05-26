@@ -487,6 +487,10 @@ const { data: reviewsData, isFetching: isFetchingReviews, refetch: refetchReview
 });
 
 // Logic dập tắt Logo Shimmer
+// localReviews and pagination must exist before the immediate watcher runs
+const localReviews = ref([]);
+const pagination = ref({ current_page: 1, last_page: 1, total: 0 });
+
 watch(reviewsData, (newVal) => {
   if (newVal) {
      isFirstLoad.value = false;
@@ -508,13 +512,11 @@ watch(reviewsData, (newVal) => {
 
 watch(isFetchingReviews, (isFetching) => {
   if (!isFetching) {
-     isFirstLoad.value = false; // Luôn tắt sau lượt tải đầu tiên dù thành công hay lỗi mạng
+     isFirstLoad.value = false; 
   }
 });
 
-// ==========================================
 // TANSTACK QUERY LẤY THỐNG KÊ ĐẾM (COUNTS)
-// ==========================================
 const { data: statusCountsData, refetch: refetchCounts } = useQuery({
   queryKey: ['admin-reviews-counts'],
   queryFn: async () => {
@@ -543,8 +545,7 @@ const expectedCount = computed(() => {
     return statusCountsData.value[activeTab.value] ?? -1;
 });
 
-const localReviews = ref([]);
-const pagination = ref({ current_page: 1, last_page: 1, total: 0 });
+// localReviews and pagination were declared above for watcher safety
 
 // Lọc Text Frontend với hàm chuẩn hóa Tiếng Việt (Tìm kiếm không dấu)
 const removeAccents = (str) => {

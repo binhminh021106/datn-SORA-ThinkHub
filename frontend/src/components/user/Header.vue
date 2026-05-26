@@ -75,10 +75,10 @@
             </transition>
           </div>
 
-          <router-link :to="{ name: 'cart' }" class="icon-link position-relative hover-primary transition-color d-flex align-items-center">
+          <a href="#" @click.prevent="openMiniCart" class="icon-link position-relative hover-primary transition-color d-flex align-items-center">
             <i class="bi bi-bag"></i>
             <span v-if="cartItemCount > 0" class="cart-badge">{{ cartItemCount > 99 ? '99+' : cartItemCount }}</span>
-          </router-link>
+          </a>
         </div>
       </div>
 
@@ -236,6 +236,9 @@
         </div>
       </div>
     </transition>
+
+    <!-- Mini Cart -->
+    <MiniCart ref="miniCartRef" />
   </header>
 </template>
 
@@ -245,6 +248,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import MegaMenu from '@/components/user/MegaMenu.vue';
+import MiniCart from '@/pages/user/cart/MiniCart.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -258,6 +262,13 @@ const userMenuContainer = ref(null);
 
 const categories = ref([]);
 const hoveredCategory = ref(null);
+
+const miniCartRef = ref(null);
+const openMiniCart = () => {
+  if (miniCartRef.value) {
+    miniCartRef.value.openCart();
+  }
+};
 
 const searchQuery = ref('');
 const searchResults = ref([]);

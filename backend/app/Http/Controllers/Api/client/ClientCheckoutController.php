@@ -69,6 +69,12 @@ class ClientCheckoutController extends Controller
         }
 
         $coupons = Coupon::where('status', 'active')
+            ->where(function ($q) use ($user) {
+                $q->whereNull('user_id'); // Lấy mã chung
+                if ($user) {
+                    $q->orWhere('user_id', $user->id); // Lấy thêm mã sinh nhật của riêng user này
+                }
+            })
             ->where(function ($q) {
                 $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
             })

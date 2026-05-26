@@ -40,6 +40,7 @@ class ClientHomeController extends Controller
 
                 // 2. Lấy Coupons
                 $result['coupons'] = Coupon::where('status', 'active')
+                    ->whereNull('user_id') // SỬA LỖI Ở ĐÂY: Chỉ lấy các mã chung, không lấy mã sinh nhật cá nhân
                     ->where(function ($q) {
                         $q->whereNull('expires_at')
                             ->orWhere('expires_at', '>=', now());

@@ -57,21 +57,35 @@
           <!-- BỘ LỌC DANH MỤC -->
           <div class="filter-widget mb-4 border-bottom pb-3">
             <div class="d-flex justify-content-between align-items-center cursor-pointer" :class="{'mb-3': filterCollapses.categories !== false}" @click="toggleCollapse('categories')">
-              <h6 class="text-uppercase fw-bold mb-0 text-dark" style="font-size: 0.85rem; letter-spacing: 0.5px;">DANH MỤC</h6>
+              <div class="position-relative pb-1">
+                <h6 class="text-uppercase fw-bold mb-0 text-dark font-serif" style="font-size: 1.1rem; letter-spacing: 0.5px;">DANH MỤC</h6>
+                <div style="position: absolute; bottom: 0; left: 0; width: 40px; height: 2px; background-color: #e7ce7d;"></div>
+              </div>
               <i class="bi text-muted" :class="filterCollapses.categories !== false ? 'bi-chevron-up' : 'bi-chevron-down'" style="font-size: 0.8rem;"></i>
             </div>
             
-            <ul v-if="filterCollapses.categories !== false" class="list-unstyled mb-0 filter-list-text d-flex flex-column gap-2 mt-3">
-              <li>
-                <div class="d-flex align-items-center cursor-pointer category-item" @click="filterByCategory('')" :class="{'active': filters.categories === ''}">
-                  <span class="dot me-2"></span>
-                  <span class="label-text transition-colors">Tất cả</span>
+            <ul v-if="filterCollapses.categories !== false" class="list-unstyled mb-0 d-flex flex-column mt-3">
+              <li class="border-bottom sora-border-light last-no-border">
+                <div class="d-flex align-items-center justify-content-between cursor-pointer py-2 px-1 category-elegant-item" @click="filterByCategory('')" :class="{'active': filters.categories === ''}">
+                  <div class="d-flex align-items-center gap-3">
+                    <div class="cat-icon-wrapper d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
+                      <i class="bi bi-grid-fill text-muted" style="font-size: 1rem;"></i>
+                    </div>
+                    <span class="cat-name transition-colors fw-medium">Tất cả</span>
+                  </div>
+                  <i class="bi bi-chevron-right text-muted chevron-icon" style="font-size: 0.8rem;"></i>
                 </div>
               </li>
-              <li v-for="cat in categories" :key="cat.id">
-                <div class="d-flex align-items-center cursor-pointer category-item" @click="filterByCategory(cat.slug)" :class="{'active': filters.categories === cat.slug}">
-                  <span class="dot me-2"></span>
-                  <span class="label-text transition-colors">{{ cat.name }}</span>
+              <li v-for="cat in categories" :key="cat.id" class="border-bottom sora-border-light last-no-border">
+                <div class="d-flex align-items-center justify-content-between cursor-pointer py-2 px-1 category-elegant-item" @click="filterByCategory(cat.slug)" :class="{'active': filters.categories === cat.slug}">
+                  <div class="d-flex align-items-center gap-3">
+                    <div class="cat-icon-wrapper d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;">
+                      <img v-if="cat.thumbnail" :src="getImageUrl(cat.thumbnail)" :alt="cat.name" class="w-100 h-100 object-fit-contain" @error="handleImageError">
+                      <i v-else class="bi bi-gem text-muted" style="font-size: 1rem;"></i>
+                    </div>
+                    <span class="cat-name transition-colors fw-medium">{{ cat.name }}</span>
+                  </div>
+                  <i class="bi bi-chevron-right text-muted chevron-icon" style="font-size: 0.8rem;"></i>
                 </div>
               </li>
             </ul>
@@ -80,7 +94,10 @@
           <!-- BỘ LỌC MÀU SẮC (Trích xuất từ Biến thể) -->
           <div v-if="colorOptions.length > 0" class="filter-widget mb-4 border-bottom pb-3">
             <div class="d-flex justify-content-between align-items-center cursor-pointer" :class="{'mb-3': filterCollapses.colors !== false}" @click="toggleCollapse('colors')">
-              <h6 class="text-uppercase fw-bold mb-0 text-dark" style="font-size: 0.85rem; letter-spacing: 0.5px;">MÀU SẮC</h6>
+              <div class="position-relative pb-1">
+                <h6 class="text-uppercase fw-bold mb-0 text-dark font-serif" style="font-size: 1.1rem; letter-spacing: 0.5px;">MÀU SẮC</h6>
+                <div style="position: absolute; bottom: 0; left: 0; width: 40px; height: 2px; background-color: #e7ce7d;"></div>
+              </div>
               <i class="bi text-muted" :class="filterCollapses.colors !== false ? 'bi-chevron-up' : 'bi-chevron-down'" style="font-size: 0.8rem;"></i>
             </div>
             
@@ -106,13 +123,16 @@
             <div class="filter-widget mb-4 border-bottom pb-3" v-for="attr in dynamicAttributes" :key="attr.id">
               <template v-if="!isColorAttribute(attr.name)">
                 <div class="d-flex justify-content-between align-items-center cursor-pointer" :class="{'mb-3': filterCollapses[attr.name] !== false}" @click="toggleCollapse(attr.name)">
-                  <h6 class="text-uppercase fw-bold mb-0 text-dark" style="font-size: 0.85rem; letter-spacing: 0.5px;">{{ attr.name }}</h6>
+                  <div class="position-relative pb-1">
+                    <h6 class="text-uppercase fw-bold mb-0 text-dark font-serif" style="font-size: 1.1rem; letter-spacing: 0.5px;">{{ attr.name }}</h6>
+                    <div style="position: absolute; bottom: 0; left: 0; width: 40px; height: 2px; background-color: #e7ce7d;"></div>
+                  </div>
                   <i class="bi text-muted" :class="filterCollapses[attr.name] !== false ? 'bi-chevron-up' : 'bi-chevron-down'" style="font-size: 0.8rem;"></i>
                 </div>
                 
                 <ul v-if="filterCollapses[attr.name] !== false" class="list-unstyled mb-0 filter-list-text d-flex flex-column gap-2 mt-3">
                   <li v-for="val in attr.values" :key="val.id" class="w-100">
-                    <div class="d-flex align-items-center cursor-pointer category-item" @click="toggleAttribute(attr.name, val.value)" :class="{'active': selectedAttributes[attr.name] === val.value}">
+                    <div class="d-flex align-items-center cursor-pointer category-item" @click="toggleAttribute(val.value)" :class="{'active': selectedAttributes.includes(val.value)}">
                       <span class="dot me-2"></span>
                       <span class="label-text transition-colors">{{ val.value }}</span>
                     </div>
@@ -326,14 +346,13 @@ const isLoadingAttributes = ref(true);
 const isPageLoading = ref(true);
 
 const categories = shallowRef([]);
-const dynamicAttributes = ref([]); 
+const dynamicAttributes = ref([]); // Đổi thành ref để cập nhật trực tiếp từ biến thể
 const allProducts = shallowRef([]);
 const pagination = ref({ current_page: 1, last_page: 1, total: 0 });
 
-// Thay đổi sang Object để lưu trữ dạng { 'Tên thuộc tính': 'Giá trị đã chọn' } -> Giúp single-select
-const selectedAttributes = ref({}); 
-const colorOptions = ref([]); 
-const selectedColors = ref([]); 
+const selectedAttributes = ref([]); 
+const colorOptions = ref([]); // State lưu các màu hiện có lấy từ biến thể
+const selectedColors = ref([]); // State lưu các màu đang chọn
 const filters = reactive({ sort: 'recommended', categories: '' });
 
 const filterCollapses = ref({
@@ -342,6 +361,7 @@ const filterCollapses = ref({
 });
 
 const toggleCollapse = (key) => {
+  // Thay thế object mới để kích hoạt reactivity của Vue
   const newCollapses = { ...filterCollapses.value };
   if (newCollapses[key] === undefined) {
     newCollapses[key] = false;
@@ -443,6 +463,7 @@ const getColorCode = (colorName) => {
   return map[colorName.toLowerCase().trim()] || '#e0e0e0'; 
 };
 
+// Cập nhật filterCollapses với các thuộc tính mới
 const buildFilterOptionParams = () => {
   const params = new URLSearchParams();
   if (filters.categories) params.set('categories', filters.categories);
@@ -471,12 +492,14 @@ const fetchAttributes = async () => {
     const response = await fetch(`${API_BASE_URL}/api/shop/${shopSlug.value}/attributes${query ? `?${query}` : ''}`);
     const data = await response.json();
     if(data?.success) {
+      // Chỉ lấy các thuộc tính không phải màu sắc (ví dụ: Chất liệu)
       dynamicAttributes.value = data.data.filter(attr => !isColorAttribute(attr.name)).map(attr => ({
         id: attr.id,
         name: attr.name,
         values: attr.values
       }));
       
+      // Khởi tạo state cho các thuộc tính mới để reactivity hoạt động tốt
       const newCollapses = { ...filterCollapses.value };
       let hasChanges = false;
       dynamicAttributes.value.forEach(attr => {
@@ -496,30 +519,27 @@ const fetchAttributes = async () => {
   }
 };
 
-// Cập nhật hàm toggleColor: reset lại khi chọn và chỉ cho chọn 1
+// Hàm bật/tắt bộ lọc màu sắc
 const toggleColor = (color) => {
-  selectedAttributes.value = {}; // Reset các thuộc tính khác khi chọn màu sắc (Logic ban đầu)
+  selectedAttributes.value = [];
 
-  // Nếu màu đang click đã được chọn -> bỏ chọn
-  if (selectedColors.value[0] === color) {
-    selectedColors.value = [];
+  const index = selectedColors.value.indexOf(color);
+  if (index > -1) {
+    selectedColors.value.splice(index, 1);
   } else {
-    // Nếu chưa được chọn -> gán làm màu duy nhất
-    selectedColors.value = [color];
+    selectedColors.value.push(color);
   }
   applyFilters();
 };
 
-// Cập nhật hàm toggleAttribute: Gán đích danh theo từng mục (ví dụ 'Size' -> 'Ni 10')
-const toggleAttribute = (attrName, val) => {
-  selectedColors.value = []; // Reset bộ lọc màu sắc (Logic ban đầu)
+const toggleAttribute = (val) => {
+  selectedColors.value = [];
 
-  // Nếu thuộc tính đã được chọn giá trị này -> Bỏ chọn
-  if (selectedAttributes.value[attrName] === val) {
-    delete selectedAttributes.value[attrName]; 
+  const index = selectedAttributes.value.indexOf(val);
+  if (index > -1) {
+    selectedAttributes.value.splice(index, 1); 
   } else {
-    // Nếu chưa chọn, hoặc đang chọn giá trị khác -> Chọn mới (sẽ đè lên giá trị cũ)
-    selectedAttributes.value[attrName] = val; 
+    selectedAttributes.value.push(val); 
   }
   applyFilters();
 };
@@ -546,10 +566,9 @@ const fetchProducts = async (page = 1) => {
       queryPayload.color = selectedColors.value.join(',');
     }
 
-    // Lấy tất cả các "giá trị" (values) từ object được chọn để gửi lên server
-    const activeAttributeValues = Object.values(selectedAttributes.value);
-    if (activeAttributeValues.length > 0) {
-      queryPayload.attribute_values = activeAttributeValues.join(',');
+    // Gửi tham số thuộc tính
+    if (selectedAttributes.value.length > 0) {
+      queryPayload.attribute_values = selectedAttributes.value.join(',');
     }
 
     const params = new URLSearchParams(queryPayload);
@@ -569,7 +588,7 @@ const fetchProducts = async (page = 1) => {
 
 const filterByCategory = async (categorySlug) => {
   selectedColors.value = [];
-  selectedAttributes.value = {}; // Đổi về {} để reset
+  selectedAttributes.value = [];
   filters.categories = filters.categories === categorySlug ? '' : categorySlug; 
   await refreshFilterOptions();
   applyFilters();
@@ -579,7 +598,7 @@ const applyFilters = () => fetchProducts(1);
 const resetFilters = () => { 
   filters.categories = ''; 
   filters.sort = 'recommended';
-  selectedAttributes.value = {}; // Đổi về {} để reset
+  selectedAttributes.value = []; 
   selectedColors.value = []; 
   refreshFilterOptions();
   applyFilters(); 
@@ -817,6 +836,17 @@ onMounted(() => {
 .category-item .label-text { font-size: 0.9rem; color: #555; transition: all 0.3s ease; }
 .category-item:hover .label-text { color: #111; }
 .category-item.active .label-text { color: #111; font-weight: 600; }
+
+/* New elegant category list */
+.category-elegant-item { transition: all 0.3s ease; }
+.category-elegant-item .cat-name { font-size: 1rem; color: #555; font-family: 'Playfair Display', serif; }
+.category-elegant-item:hover .cat-name, .category-elegant-item.active .cat-name { color: #9f273b; font-weight: 600; }
+.category-elegant-item i.bi-grid-fill, .category-elegant-item i.bi-gem { transition: color 0.3s ease; }
+.category-elegant-item:hover i.bi-grid-fill, .category-elegant-item.active i.bi-grid-fill,
+.category-elegant-item:hover i.bi-gem, .category-elegant-item.active i.bi-gem { color: #9f273b !important; }
+.category-elegant-item .chevron-icon { transition: transform 0.3s ease, color 0.3s ease; }
+.category-elegant-item:hover .chevron-icon, .category-elegant-item.active .chevron-icon { color: #9f273b !important; transform: translateX(4px); }
+.last-no-border:last-child { border-bottom: none !important; }
 
 .color-filter-circle {
   width: 28px;

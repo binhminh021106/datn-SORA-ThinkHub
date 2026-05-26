@@ -234,7 +234,7 @@ const { data: fetchedOrder, isFetching } = useQuery({
     enabled: computed(() => !!activeOrderId.value),
     // Lưu lại bộ đệm trong 5 phút. Nếu click lại cùng order sẽ lấy ngay Data từ Cache mà ko load lại API
     staleTime: 5 * 60 * 1000, 
-    cacheTime: 10 * 60 * 1000
+    gcTime: 10 * 60 * 1000
 });
 
 // Linh hoạt kết hợp Cache và Dữ liệu được push từ ngoài vào để tránh bị mồ côi
