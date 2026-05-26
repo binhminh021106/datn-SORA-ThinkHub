@@ -24,6 +24,10 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
+    'goong' => [
+        'key' => env('GOONG_API_KEY'),
+    ],
+
     'sepay' => [
         'webhook_token' => env('SEPAY_WEBHOOK_TOKEN'),
         'bank_acc' => env('SEPAY_BANK_ACC'),

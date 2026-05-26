@@ -2,26 +2,26 @@
   <div class="favorite-page bg-light-custom font-sans pb-5 min-vh-100 position-relative">
     
     <!-- Tiêu đề trang -->
-    <section class="pt-4 pb-5 bg-white text-center shadow-sm mb-5 position-relative">
-      <!-- NÚT QUAY VỀ CỬA HÀNG -->
-      <div class="container text-start mb-2">
-         <router-link to="/shop" class="text-decoration-none text-secondary back-link d-inline-flex align-items-center transition-all">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-2" viewBox="0 0 16 16">
-              <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
-            </svg>
-            <span class="font-serif fw-bold text-uppercase" style="font-size: 0.8rem; letter-spacing: 1px;">Quay lại Cửa hàng</span>
-         </router-link>
-      </div>
-
+    <section class="pt-4 pb-4 bg-white text-center shadow-sm mb-4 position-relative">
       <div class="container py-2">
-        <span class="text-accent text-uppercase fw-bold mb-2 d-block tracking-wide" style="font-size: 0.8rem; letter-spacing: 0.2em;">Tủ Đồ Cá Nhân</span>
+        <span class="text-accent text-uppercase fw-bold mb-2 d-block tracking-wide" style="font-size: 0.8rem; letter-spacing: 0.2em;">Tài Khoản Của Tôi</span>
         <h1 class="display-6 font-serif text-main mb-3">Sản Phẩm Yêu Thích</h1>
         <div class="divider bg-accent mx-auto"></div>
-        <p class="text-secondary fw-light mt-4 mb-0">Những tuyệt tác SORA mà bạn đang lưu giữ</p>
       </div>
     </section>
 
     <div class="container">
+      <!-- LAYOUT 2 CỘT: SIDEBAR + NỘI DUNG -->
+      <div class="row g-4 g-lg-5 align-items-start">
+
+        <!-- SIDEBAR TRÁI -->
+        <div class="col-lg-3">
+          <ProfileSidebar />
+        </div>
+
+        <!-- NỘI DUNG CHÍNH BÊN PHẢI -->
+        <div class="col-lg-9">
+
       <!-- CẢNH BÁO NẾU CHƯA ĐĂNG NHẬP -->
       <div v-if="!isLoggedIn" class="text-center py-5 bg-white shadow-sm p-5 border border-light mb-5">
         <h4 class="text-danger-custom mb-3 font-serif">Bạn chưa đăng nhập!</h4>
@@ -59,7 +59,7 @@
 
         <!-- Lưới sản phẩm dùng ProductCard -->
         <div v-else class="row g-4">
-          <div v-for="item in favorites" :key="'fav-'+item.id" class="col-6 col-md-4 col-lg-3">
+          <div v-for="item in favorites" :key="'fav-'+item.id" class="col-6 col-md-4">
             <ProductCard
               v-if="item.product"
               :product="item.product"
@@ -75,8 +75,12 @@
           </div>
         </div>
       </div>
-    </div>
 
+        </div><!-- end col-lg-9 -->
+      </div><!-- end row -->
+    </div><!-- end container -->
+
+    <!-- MODALS (outside layout) -->
     <!-- TÍCH HỢP COMPONENT COMPARE MODAL -->
     <CompareModal 
       ref="compareModalRef" 
@@ -146,6 +150,7 @@ import Swal from 'sweetalert2';
 import Toast from '@/utils/toastConfig';
 import ProductCard from '@/components/ui/ProductCard.vue';
 import CompareModal from '@/components/ui/CompareModal.vue';
+import ProfileSidebar from '@/components/ui/ProfileSidebar.vue';
 
 const router = useRouter();
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
@@ -231,10 +236,8 @@ const toggleFavorite = async (product) => {
     });
 
     if (response.data.status) {
-      if (response.data.action === 'removed') {
-        favorites.value = favorites.value.filter(item => item.product_id !== product.id);
-        Toast.fire({ icon: 'info', title: 'Đã gỡ khỏi danh sách yêu thích' });
-      }
+      favorites.value = favorites.value.filter(item => item.product_id !== product.id);
+      Toast.fire({ icon: 'info', title: 'Đã gỡ khỏi danh sách yêu thích' });
     }
   } catch (error) {
     Toast.fire({ icon: 'error', title: 'Có lỗi xảy ra, thử lại sau' });
