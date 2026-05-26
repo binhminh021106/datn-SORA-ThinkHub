@@ -10,8 +10,7 @@
         ></div>
       </transition>
 
-      <!-- Bỏ class 'open' xử lý chung ở wrapper, wrapper giờ chỉ là khung cố định -->
-      <div class="cart-wrapper d-flex" :class="{ 'open': isOpen }">
+      <div class="cart-wrapper d-flex" :class="isOpen ? 'open' : ''">
         
         <!-- ========================================== -->
         <!-- BẢNG GỢI Ý SẢN PHẨM BÊN TRÁI -->
@@ -277,11 +276,6 @@ watch(() => route.fullPath, () => {
 
 const openCart = () => {
   isOpen.value = true;
-  
-  const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-  if (scrollbarWidth > 0) {
-    document.body.style.paddingRight = `${scrollbarWidth}px`;
-  }
   document.body.style.overflow = 'hidden';
   
   fetchCart();
@@ -291,13 +285,7 @@ const openCart = () => {
 
 const closeCart = () => {
   isOpen.value = false;
-  
-  setTimeout(() => {
-    if (!isOpen.value) {
-      document.body.style.overflow = '';
-      document.body.style.paddingRight = '';
-    }
-  }, 400); 
+  document.body.style.overflow = '';
 };
 
 const handleCardAction = (event) => {
@@ -452,13 +440,12 @@ defineExpose({ openCart, fetchCart });
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%; 
+  width: 100vw;
   height: 100vh;
   background-color: rgba(0, 0, 0, 0.45);
   z-index: 1060;
 }
 
-/* Fix lỗi kéo ngang cả màn hình: Lớp wrapper sẽ luôn nằm im */
 .cart-wrapper {
   position: fixed;
   top: 0;
@@ -468,10 +455,15 @@ defineExpose({ openCart, fetchCart });
   pointer-events: none;
   display: flex;
   justify-content: flex-end;
-  width: 100%;
+  width: 100vw;
+  transform: translateX(100%);
+  transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-/* LEFT PANEL (Gợi ý): Chỉ mờ dần (Fade in/out), KHÔNG trượt */
+.cart-wrapper.open {
+  transform: translateX(0);
+}
+
 .featured-products-panel {
   flex-grow: 1; 
   height: 100vh; 
