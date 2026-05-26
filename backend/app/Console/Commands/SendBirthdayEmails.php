@@ -51,7 +51,7 @@ class SendBirthdayEmails extends Command
         }
 
         // Lấy tất cả user có sinh nhật hôm nay để log ra terminal
-        $allBirthdayUsers = User::with('tier')
+        $allBirthdayUsers = User::with('tier');
 
         // Cache silverTier ra ngoài vòng lặp: tránh query lặp lại N lần
         $silverTier = MembershipTier::orderBy('min_spent', 'asc')
