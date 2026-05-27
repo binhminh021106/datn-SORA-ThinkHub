@@ -303,6 +303,9 @@ export default function ProductDetailScreen() {
         showCustomAlert("YÊU THÍCH", `Đã xóa sản phẩm khỏi danh sách yêu thích thành công!`, [{ text: "ĐỒNG Ý" }]);
       } else {
         updatedIds = [...currentIds, product.id];
+        const firstVariant = Array.isArray(product.variants) && product.variants.length > 0
+          ? product.variants[0]
+          : null;
         
         // Map product details
         const mappedProduct = {
@@ -310,11 +313,11 @@ export default function ProductDetailScreen() {
           name: product.name,
           category: product.category?.name || 'Trang Sức SORA',
           variant: 'Bản Giới Hạn SORA',
-          price: product.variants && product.variants.length > 0 
-            ? (product.variants[0].promotional_price || product.variants[0].price)
+          price: firstVariant
+            ? (firstVariant.promotional_price || firstVariant.price)
             : 0,
-          oldPrice: product.variants && product.variants.length > 0
-            ? (product.variants[0].promotional_price ? product.variants[0].price : null)
+          oldPrice: firstVariant
+            ? (firstVariant.promotional_price ? firstVariant.price : null)
             : null,
           image: product.images && product.images.length > 0 ? product.images[0] : ''
         };
@@ -528,9 +531,9 @@ export default function ProductDetailScreen() {
           {/* Swiper dots */}
           {imagesToRender.length > 1 && (
             <View style={s.dotsContainer}>
-              {imagesToRender.map((_, idx) => (
+              {imagesToRender.map((img, idx) => (
                 <View 
-                  key={idx} 
+                  key={`${img}-${idx}`}
                   style={[s.dot, idx === activeImageIndex && s.dotActive]} 
                 />
               ))}
@@ -708,7 +711,7 @@ export default function ProductDetailScreen() {
 
           {product.reviews && product.reviews.length > 0 ? (
             product.reviews.map((rev) => (
-              <View key={rev.id.toString()} style={s.reviewCard}>
+              <View key={(rev.id || rev.created_at || rev.user_id || rev.comment || 'review').toString()} style={s.reviewCard}>
                 <View style={s.reviewHeader}>
                   <Image 
                     source={{ uri: rev.user?.avatar_url 
@@ -754,7 +757,7 @@ export default function ProductDetailScreen() {
                       const fullImgUrl = getReviewImageUrl(img);
                       return (
                         <TouchableOpacity 
-                          key={index} 
+                          key={`${img}-${index}`}
                           style={s.reviewImageWrapper}
                           onPress={() => setZoomImageUrl(fullImgUrl)}
                           activeOpacity={0.9}

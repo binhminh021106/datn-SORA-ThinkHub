@@ -13,6 +13,7 @@ import {
   Animated,
   PanResponder,
   RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
@@ -323,8 +324,10 @@ export default function WishlistScreen() {
   const [lightboxImg, setLightboxImg] = useState(null);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadWishlist = useCallback(async () => {
+    setIsLoading(true);
     try {
       const stored = await AsyncStorage.getItem('sora_wishlist_items');
       if (stored) {
@@ -334,6 +337,8 @@ export default function WishlistScreen() {
       }
     } catch (e) {
       console.log('Error loading wishlist items in WishlistScreen:', e);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -437,6 +442,15 @@ export default function WishlistScreen() {
     (sum, i) => sum + parsePriceToNumber(i.price),
     0,
   );
+
+  if (isLoading && !refreshing && items.length === 0) {
+    return (
+      <SafeAreaView style={[s.safe, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#9f273b" />
+        <Text style={{ marginTop: 10, fontFamily: "Oswald_500Medium", color: "#9f273b", fontSize: 13, letterSpacing: 1, textTransform: 'uppercase' }}>Đang tải yêu thích SORA...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={s.safe}>

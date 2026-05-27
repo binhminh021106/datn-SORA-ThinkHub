@@ -34,8 +34,8 @@ use App\Http\Controllers\Api\admin\AdminInventoryController;
 use App\Http\Controllers\Api\admin\AdminDashboardController;
 use App\Http\Controllers\Api\admin\AdminContactController;
 use App\Http\Controllers\Api\admin\AdminNewController;
-use App\Http\Controllers\Api\admin\AdminChatbotController;
 use App\Http\Controllers\Api\admin\AdminAttendanceController;
+use App\Http\Controllers\Api\admin\AdminAffiliateController;
 
 // Controllers Client
 use App\Http\Controllers\Api\client\ProductDetailController;
@@ -43,6 +43,7 @@ use App\Http\Controllers\Api\client\ClientCartController;
 use App\Http\Controllers\Api\client\ClientOrderController;
 use App\Http\Controllers\Api\client\ClientHeaderController;
 use App\Http\Controllers\Api\client\ClientHomeController;
+use App\Http\Controllers\Api\client\ClientAffiliateController;
 use App\Http\Controllers\Api\client\ClientCompareController;
 use App\Http\Controllers\Api\client\ClientContactController;
 use App\Http\Controllers\Api\Auth\AuthController;
@@ -66,7 +67,6 @@ Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect']);
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback']);
 
 // ── MOBILE APP AUTH ROUTES ─────────────────────────────────────────────────────
-// Route riêng cho Mobile App: đăng ký không yêu cầu số điện thoại
 use App\Http\Controllers\Api\Auth\MobileAuthController;
 
 Route::prefix('mobile')->group(function () {
@@ -172,6 +172,12 @@ Route::prefix('client')->group(function () {
     Route::middleware('auth:sanctum')->prefix('messages')->group(function () {
         Route::get('/', [\App\Http\Controllers\Api\MessageController::class, 'history']);
         Route::post('/', [\App\Http\Controllers\Api\MessageController::class, 'store']);
+    });
+
+    // CHƯƠNG TRÌNH ĐỐI TÁC (AFFILIATE)
+    Route::middleware('auth:sanctum')->prefix('affiliate')->group(function () {
+        Route::get('/status', [ClientAffiliateController::class, 'status']);
+        Route::post('/apply', [ClientAffiliateController::class, 'apply']);
     });
 });
 
@@ -380,9 +386,11 @@ Route::prefix('admin')->group(function () {
             });
         });
 
-        // QUẢN LÝ CHATBOT
-        Route::middleware(['check.module:admin_chatbot'])->group(function () {
-            Route::apiResource('chatbot', AdminChatbotController::class)->except(['create', 'edit']);
+        // QUẢN LÝ AFFILIATE
+        Route::controller(AdminAffiliateController::class)->prefix('affiliate')->group(function () {
+            Route::get('/applications', 'index');
+            Route::post('/applications/{id}/approve', 'approve');
+            Route::post('/applications/{id}/reject', 'reject');
         });
 
         // BỔ SUNG ROUTE REAL-TIME CHAT CHO ADMIN

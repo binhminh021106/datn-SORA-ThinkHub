@@ -37,6 +37,20 @@
                   <i v-if="opt.link" class="bi bi-box-arrow-up-right ms-2" style="font-size: 0.75rem;"></i>
                 </button>
               </div>
+
+              <div v-if="msg.sender === 'bot' && msg.products && msg.products.length > 0" class="chat-product-list mt-3">
+                <ProductCard
+                  v-for="product in msg.products"
+                  :key="product.id"
+                  :product="product"
+                  :show-wishlist="false"
+                  :show-compare="false"
+                  :show-add-to-cart="false"
+                  :hover-add-to-cart="false"
+                  class="chat-product-card"
+                  @click="closeAfterProductClick"
+                />
+              </div>
             </div>
 
             <div v-if="isLoading" class="message-bubble bot-msg p-3 shadow-sm" style="width: 80px; height: 45px;">
@@ -64,6 +78,7 @@
 import { ref, nextTick, watch, defineProps, defineEmits } from 'vue';
 import axios from 'axios';
 import { useRouter } from 'vue-router';
+import ProductCard from '@/components/ui/ProductCard.vue';
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -125,6 +140,11 @@ const handleOptionClick = (opt) => {
   }
 };
 
+const closeAfterProductClick = () => {
+  isOpen.value = false;
+  emit('update:visible', false);
+};
+
 const sendMessage = async () => {
   const text = userInput.value.trim();
   if (!text) return;
@@ -135,10 +155,16 @@ const sendMessage = async () => {
   try {
     const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/client/chatbot`, { message: text });
     if (response.data.success) {
-      messages.value.push({ sender: 'bot', text: response.data.reply, options: response.data.options, time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) });
+      messages.value.push({
+        sender: 'bot',
+        text: response.data.reply,
+        options: response.data.options,
+        products: response.data.products || [],
+        time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+      });
     }
   } catch (error) {
-    messages.value.push({ sender: 'bot', text: 'Dạ, hệ thống SORA đang bận.', options: [], time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) });
+    messages.value.push({ sender: 'bot', text: 'Dạ, hệ thống SORA đang bận.', options: [], products: [], time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) });
   } finally {
     isLoading.value = false; scrollToBottom();
   }
@@ -173,6 +199,54 @@ const sendMessage = async () => {
 .time-stamp { font-size: 0.7rem; }
 .btn-outline-gold { color: #9f273b; border: 1px solid #9f273b; background: white; padding: 6px 14px; font-size: 0.85rem; }
 .btn-outline-gold:hover { background: linear-gradient(135deg, #9f273b, #7a1c2d); color: white; border-color: #9f273b; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(159, 39, 59, 0.2) !important; }
+.chat-product-list {
+  width: min(100%, 330px);
+  display: flex;
+  gap: 10px;
+  align-self: flex-start;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 2px 10px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.chat-product-list::-webkit-scrollbar { height: 5px; }
+.chat-product-list::-webkit-scrollbar-track { background: transparent; }
+.chat-product-list::-webkit-scrollbar-thumb { background: #d8c6a2; border-radius: 999px; }
+.chat-product-card {
+  width: 138px;
+  min-width: 138px;
+  max-width: 138px;
+  min-height: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  scroll-snap-align: start;
+}
+.chat-product-card :deep(.luxury-related-card) { border-radius: 8px; }
+.chat-product-card :deep(.p-4) { padding: 6px !important; padding-bottom: 6px !important; }
+.chat-product-card :deep(.text-truncate-2) {
+  min-height: 1.72rem;
+  font-size: 0.68rem !important;
+  line-height: 1.2 !important;
+  letter-spacing: 0.04em !important;
+  margin-bottom: 2px !important;
+  -webkit-line-clamp: 2;
+}
+.chat-product-card :deep(.font-serif.fst-italic) {
+  font-size: 0.64rem !important;
+  margin-bottom: 3px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chat-product-card :deep(.font-luxury.fs-5) { font-size: 0.72rem !important; line-height: 1.15 !important; }
+.chat-product-card :deep(.small.fw-light) { font-size: 0.62rem !important; }
+.chat-product-card :deep(.ratio) { aspect-ratio: 1 / 0.78; }
+.chat-product-card :deep(.sora-card-badges),
+.chat-product-card :deep(.badge) { font-size: 0.52rem !important; padding: 2px 5px !important; }
+.chat-product-card :deep(.wishlist-btn),
+.chat-product-card :deep(.compare-btn),
+.chat-product-card :deep(.related-btn-add) { display: none !important; }
 .sora-input { border-radius: 25px; border: 1px solid #e0e0e0; background-color: #f4f4f4; padding: 12px 20px; }
 .sora-input:focus { border-color: #9f273b; background-color: #fff; box-shadow: 0 0 0 3px rgba(159, 39, 59, 0.1) !important; }
 .btn-send { width: 48px; height: 48px; flex-shrink: 0; border-radius: 50%; background-color: #9f273b; border: none; transition: all 0.2s; }

@@ -37,7 +37,7 @@ class ClientAffiliateController extends Controller
             $user = Auth::user();
 
             $existingApp = AffiliateApplication::where('user_id', $user->id)->first();
-            if ($existingApp) {
+            if ($existingApp && in_array($existingApp->status, ['pending', 'approved'])) {
                 return response()->json(['success' => false, 'message' => 'Bạn đã nộp đơn đăng ký rồi!'], 400);
             }
 
@@ -46,12 +46,22 @@ class ClientAffiliateController extends Controller
                 'introduce_message' => 'required|string|max:1000'
             ]);
 
-            $application = AffiliateApplication::create([
-                'user_id' => $user->id,
-                'social_links' => $request->social_links,
-                'introduce_message' => $request->introduce_message,
-                'status' => 'pending'
-            ]);
+            if ($existingApp && $existingApp->status === 'rejected') {
+                $existingApp->update([
+                    'social_links' => $request->social_links,
+                    'introduce_message' => $request->introduce_message,
+                    'status' => 'pending',
+                    'admin_notes' => null
+                ]);
+                $application = $existingApp;
+            } else {
+                $application = AffiliateApplication::create([
+                    'user_id' => $user->id,
+                    'social_links' => $request->social_links,
+                    'introduce_message' => $request->introduce_message,
+                    'status' => 'pending'
+                ]);
+            }
 
             return response()->json([
                 'success' => true,

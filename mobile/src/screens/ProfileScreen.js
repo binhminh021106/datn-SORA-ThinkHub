@@ -384,7 +384,8 @@ export default function ProfileScreen() {
         <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color="#9f273b" />
-        </View>
+          <Text style={{ marginTop: 10, fontFamily: "Oswald_500Medium", color: "#9f273b", fontSize: 13, letterSpacing: 1, textTransform: 'uppercase' }}>Đang tải hồ sơ SORA...</Text>
+          </View>
       </View>
     );
   }

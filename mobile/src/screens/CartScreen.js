@@ -418,6 +418,7 @@ export default function CartScreen() {
   const [lightboxImg, setLightboxImg] = useState(null);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const isMountedRef = useRef(true);
 
   // Read auth token & guest session ID for API requests
   const getHeaders = async () => {
@@ -444,6 +445,7 @@ export default function CartScreen() {
 
   // Fetch items from Laravel API
   const fetchCartItems = async (isBackground = false) => {
+    if (!isMountedRef.current) return;
     if (!isBackground) setIsLoading(true);
     try {
       const headers = await getHeaders();
@@ -452,6 +454,7 @@ export default function CartScreen() {
         headers
       });
       const result = await response.json();
+      if (!isMountedRef.current) return;
       if (result.success && result.data) {
         const mapped = result.data.map(mapBackendItem);
         setItems(mapped);
@@ -464,9 +467,17 @@ export default function CartScreen() {
     } catch (e) {
       console.log('Error fetching cart:', e);
     } finally {
-      if (!isBackground) setIsLoading(false);
+      if (isMountedRef.current && !isBackground) setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Reload cart whenever screen comes into focus
   useEffect(() => {
@@ -478,7 +489,7 @@ export default function CartScreen() {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchCartItems(true);
-    setRefreshing(false);
+    if (isMountedRef.current) setRefreshing(false);
   }, []);
 
   const allSelected = items.length > 0 && selected.length === items.length;

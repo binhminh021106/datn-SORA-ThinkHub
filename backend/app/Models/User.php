@@ -30,6 +30,9 @@ class User extends Authenticatable
         'accumulated_spent',
         'pending_spent',
         'accumulated_orders',
+        'is_affiliate',
+        'affiliate_code',
+        'commission_balance',
     ];
 
     protected $hidden = [
@@ -45,6 +48,8 @@ class User extends Authenticatable
             'accumulated_spent' => 'decimal:2',
             'pending_spent' => 'decimal:2',
             'accumulated_orders' => 'integer',
+            'is_affiliate' => 'boolean',
+            'commission_balance' => 'decimal:2',
         ];
     }
 

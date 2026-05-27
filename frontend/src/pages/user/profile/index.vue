@@ -154,6 +154,7 @@
             <PasswordForm 
               v-if="activeTab === 'password'" 
             />
+
           </div>
         </div>
 

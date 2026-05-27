@@ -135,7 +135,7 @@ const admin = [
         component: () => import('../pages/admin/brand/Edit.vue'),
         meta: { moduleCode: 'admin_brands' },
       },
-      
+
       // history attendance
       {
         path: 'attendance/history',
@@ -165,7 +165,7 @@ const admin = [
           title: 'Quản lý ca làm việc'
         },
       },
-      
+
       // ROUTE QUẢN LÝ BANNER (BANNERS) - THÊM MỚI
       {
         path: 'banners',
@@ -225,8 +225,6 @@ const admin = [
         component: () => import('../pages/admin/order/Returns.vue'),
         meta: { moduleCode: 'admin_orders' },
       },
-
-
       {
         path: 'coupons',
         name: 'admin-coupons',
@@ -301,14 +299,6 @@ const admin = [
         name: 'admin-contacts',
         component: () => import('../pages/admin/contact/index.vue'),
         meta: { moduleCode: 'admin_contacts' },
-      },
-
-      // ROUTE QUẢN LÝ CHATBOT
-      {
-        path: 'chatbot',
-        name: 'admin-chatbot',
-        component: () => import('../pages/admin/chatbot/Index.vue'),
-        meta: { moduleCode: 'admin_chatbot' },
       },
 
       // ROUTE CHAT

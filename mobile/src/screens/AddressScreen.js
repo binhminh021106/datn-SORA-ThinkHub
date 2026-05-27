@@ -489,7 +489,8 @@ export default function AddressScreen() {
     return (
       <View style={s.center}>
         <ActivityIndicator size="large" color="#9f273b" />
-      </View>
+          <Text style={{ marginTop: 10, fontFamily: "Oswald_500Medium", color: "#9f273b", fontSize: 13, letterSpacing: 1, textTransform: 'uppercase' }}>Đang tải sổ địa chỉ SORA...</Text>
+        </View>
     );
   }
 

@@ -41,7 +41,12 @@ class AdminAffiliateController extends Controller
             // Kích hoạt User thành Affiliate và tạo mã
             $user = $application->user;
             $user->is_affiliate = true;
-            $user->affiliate_code = 'SORA-' . strtoupper(Str::random(6));
+
+            do {
+                $code = 'SORA-' . strtoupper(Str::random(6));
+            } while (\App\Models\User::where('affiliate_code', $code)->exists());
+
+            $user->affiliate_code = $code;
             $user->save();
 
             return response()->json([
