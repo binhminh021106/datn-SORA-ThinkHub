@@ -1,6 +1,5 @@
 <template>
   <div class="profile-sidebar">
-    <!-- Avatar & User Info Card -->
     <div class="sidebar-user-card bg-white p-4 shadow-sm border border-light text-center mb-3 rounded-3">
       <svg width="0" height="0" style="position:absolute">
         <defs>
@@ -26,9 +25,7 @@
         </defs>
       </svg>
 
-      <!-- Avatar + Tier Badge -->
       <div class="avatar-tier-container mx-auto mb-3 position-relative" style="width: 130px; height: 145px;">
-        <!-- Tier Badge -->
         <div class="tier-badge-crown" :class="tierBadgeClass" v-if="tierName">
           <div class="tier-badge-inner">
             <span class="tier-badge-svg" v-html="tierSvgIcon"></span>
@@ -42,7 +39,6 @@
           </div>
         </div>
 
-        <!-- Avatar -->
         <div
           class="avatar-wrapper mx-auto position-relative rounded-circle overflow-hidden bg-light"
           style="width: 110px; height: 110px; border: 4px solid #fff;"
@@ -61,10 +57,8 @@
       <p class="text-muted small fw-light mb-0">{{ email }}</p>
     </div>
 
-    <!-- Navigation Menu -->
     <div class="bg-white shadow-sm border border-light overflow-hidden rounded-3">
       <ul class="list-unstyled mb-0 profile-menu">
-        <!-- Hồ sơ cá nhân -->
         <li>
           <router-link
             to="/profile"
@@ -79,9 +73,6 @@
           </router-link>
         </li>
 
-
-
-        <!-- Đổi mật khẩu -->
         <li>
           <router-link
             to="/profile?tab=password"
@@ -96,7 +87,6 @@
           </router-link>
         </li>
 
-        <!-- Sổ địa chỉ -->
         <li>
           <router-link
             to="/profile?tab=address"
@@ -112,7 +102,20 @@
           </router-link>
         </li>
 
-        <!-- Đơn mua của tôi -->
+        <li>
+          <router-link
+            to="/profile?tab=affiliate"
+            class="d-flex align-items-center p-3 text-decoration-none"
+            :class="isActive('/profile', 'affiliate') ? 'active-menu' : 'text-secondary'"
+            @click.native="$emit('navigate')"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="me-3">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+            Chương trình đối tác
+          </router-link>
+        </li>
+
         <li>
           <router-link
             to="/order"
@@ -126,7 +129,6 @@
           </router-link>
         </li>
 
-        <!-- Sản phẩm yêu thích -->
         <li>
           <router-link
             to="/favourite"
@@ -140,7 +142,6 @@
           </router-link>
         </li>
 
-        <!-- Đăng xuất -->
         <li class="border-top">
           <a
             href="#"
