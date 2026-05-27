@@ -1,7 +1,7 @@
 <template>
   <div class="order-history-wrapper pb-5"
     style="min-height: 100vh; background-color: #f8f9fa; font-family: 'Lato', sans-serif;">
-    <div class="bg-white py-5 mb-5 border-bottom shadow-sm">
+    <div class="bg-white py-5 mb-4 border-bottom shadow-sm">
       <div class="container text-center">
         <nav aria-label="breadcrumb" class="mb-3 d-flex justify-content-center">
           <ol class="breadcrumb mb-0 small text-uppercase fw-bold" style="letter-spacing: 0.15em;">
@@ -19,6 +19,17 @@
     </div>
 
     <main class="container">
+      <!-- LAYOUT 2 CỘT: SIDEBAR + NỘI DUNG -->
+      <div class="row g-4 g-lg-5 align-items-start">
+
+        <!-- SIDEBAR TRÁI -->
+        <div class="col-lg-3">
+          <ProfileSidebar />
+        </div>
+
+        <!-- NỘI DUNG CHÍNH BÊN PHẢI -->
+        <div class="col-lg-9">
+
       <div v-if="isLoading" class="d-flex justify-content-center align-items-center py-5 my-5">
         <div class="spinner-border text-primary-custom" style="width: 3rem; height: 3rem;"></div>
       </div>
@@ -193,8 +204,11 @@
             mua sắm</button>
         </div>
       </div>
+        </div><!-- end col-lg-9 -->
+      </div><!-- end row -->
     </main>
 
+    <!-- MODALS -->
     <OrderDetailModal :is-open="isModalOpen" :order="selectedOrder" v-on:close="closeModal"
       v-on:cancel-order="confirmCancel" v-on:open-review="openReview" v-on:reorder="handleReorder" />
 
@@ -214,7 +228,8 @@ import Toast from '@/utils/toastConfig';
 import OrderDetailModal from './OrderDetailModal.vue';
 import ReviewModal from './ReviewModal.vue';
 import ViewReviewModal from './ViewReviewModal.vue';
-import defaultPlaceholder from '@/assets/images/defaults/placeholder.png'; 
+import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
+import ProfileSidebar from '@/components/ui/ProfileSidebar.vue';
 
 const router = useRouter();
 const isLoading = ref(true);

@@ -47,6 +47,7 @@ use App\Http\Controllers\Api\client\ClientAffiliateController;
 use App\Http\Controllers\Api\client\ClientCompareController;
 use App\Http\Controllers\Api\client\ClientContactController;
 use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\GeoController;
 // use App\Http\Controllers\Api\client\ClientCheckoutController;
 use App\Http\Controllers\Api\Auth\GoogleAuthController;
 use App\Http\Controllers\Api\client\ClientFavouriteController;
@@ -89,6 +90,12 @@ Route::prefix('client')->group(function () {
     Route::middleware('auth:sanctum')->prefix('messages')->group(function () {
         Route::get('/', [\App\Http\Controllers\Api\MessageController::class, 'history']);
         Route::post('/', [\App\Http\Controllers\Api\MessageController::class, 'store']);
+    });
+
+    Route::prefix('geo')->group(function () {
+        Route::get('autocomplete', [GeoController::class, 'autocomplete']);
+        Route::get('reverse', [GeoController::class, 'reverse']);
+        Route::get('geocode', [GeoController::class, 'geocode']);
     });
 
     Route::get('header-data', [ClientHeaderController::class, 'getMegaMenuData']);
