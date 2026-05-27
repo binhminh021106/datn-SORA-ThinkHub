@@ -240,6 +240,23 @@ const admin = [
         name: 'admin-coupon-edit',
         component: () => import('../pages/admin/coupon/edit.vue'),
       },
+      {
+        path: 'email-campaigns',
+        name: 'admin-email-campaigns',
+        component: () => import('../pages/admin/email-campaign/Index.vue'),
+        meta: { moduleCode: 'admin_coupons' },
+      },
+      {
+        path: 'email-campaigns/create',
+        name: 'admin-email-campaigns-create',
+        component: () => import('../pages/admin/email-campaign/Create.vue'),
+        meta: { moduleCode: 'admin_coupons' },
+      },
+      {path: 'email-campaigns/:id/edit',
+        name: 'admin-email-campaigns-edit',
+        component: () => import('../pages/admin/email-campaign/Edit.vue'),
+        meta: { moduleCode: 'admin_coupons' },
+      },
 
       // ROUTE QUẢN LÝ HẠNG THÀNH VIÊN (MEMBERSHIP TIERS)
       {
