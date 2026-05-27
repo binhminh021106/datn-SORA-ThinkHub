@@ -207,6 +207,7 @@ export default function CheckoutScreen({ route }) {
     const newId = "addr_" + Date.now();
     const newAddr = {
       id: newId,
+      is_local: true,
       label: newLabel.trim(),
       receiver: newReceiver.trim(),
       phone: newPhone.trim(),
@@ -266,8 +267,13 @@ export default function CheckoutScreen({ route }) {
         payload.coupon_code = appliedCode;
       }
 
-      if (selectedAddrId && addresses.some(a => a.id === selectedAddrId)) {
-        payload.user_address_id = selectedAddrId;
+      const selectedAddress = addresses.find(a => a.id === selectedAddrId);
+      if (selectedAddress?.is_local) {
+        payload.customer_name = selectedAddress.receiver || personalName;
+        payload.customer_phone = selectedAddress.phone || personalPhone;
+        payload.customer_address = selectedAddress.detail || "Chưa có địa chỉ chi tiết";
+      } else if (selectedAddress) {
+        payload.user_address_id = selectedAddress.id;
       } else {
         payload.customer_address = newDetail || "Chưa có địa chỉ chi tiết";
       }
@@ -311,7 +317,7 @@ export default function CheckoutScreen({ route }) {
     return (
       <SafeAreaView style={[s.safe, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color="#9f273b" />
-        <Text style={{ marginTop: 10, fontFamily: "Oswald_400Regular" }}>Đang tải dữ liệu...</Text>
+        <Text style={{ marginTop: 10, fontFamily: "Oswald_500Medium", color: "#9f273b", fontSize: 13, letterSpacing: 1, textTransform: 'uppercase' }}>Đang chuẩn bị thanh toán...</Text>
       </SafeAreaView>
     );
   }

@@ -370,6 +370,33 @@ class ClientCheckoutController extends Controller
                     'changed_by_type' => $user ? 'user' : 'guest',
                 ]);
 
+                // Logic xử lý Affiliate Commission (Hoa hồng 10%)
+                if ($request->filled('affiliate_code')) {
+                    $affiliateUser = \App\Models\User::where('affiliate_code', $request->affiliate_code)
+                        ->where('is_affiliate', true)
+                        ->first();
+
+                    // Không tự giới thiệu chính mình
+                    if ($affiliateUser && (!$user || $affiliateUser->id !== $user->id)) {
+                        $commissionRate = 0.10; // 10%
+                        $commissionAmount = $totalAmount * $commissionRate;
+
+                        if ($commissionAmount > 0) {
+                            \App\Models\CommissionHistory::create([
+                                'user_id' => $affiliateUser->id,
+                                'order_id' => $order->id,
+                                'amount' => $commissionAmount,
+                                'type' => 'earn',
+                                'description' => "Hoa hồng 10% từ đơn hàng " . $order->order_code,
+                                'created_at' => now()
+                            ]);
+
+                            $affiliateUser->commission_balance += $commissionAmount;
+                            $affiliateUser->save();
+                        }
+                    }
+                }
+
                 try {
                     broadcast(new NewOrderReceived($order->order_code, (float) $order->total_amount));
                 } catch (\Exception $e) {

@@ -78,8 +78,10 @@ const ProgressTimeline = ({ order }) => {
   // Pulse animation for the current active step outer ring
   const pulseAnim = useRef(new Animated.Value(0.92)).current;
   useEffect(() => {
+    let loopAnimation = null;
+
     if (isNormal && curStepIdx !== -1) {
-      Animated.loop(
+      loopAnimation = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
             toValue: 1.15,
@@ -92,8 +94,14 @@ const ProgressTimeline = ({ order }) => {
             useNativeDriver: true,
           }),
         ])
-      ).start();
+      );
+      loopAnimation.start();
     }
+
+    return () => {
+      loopAnimation?.stop();
+      pulseAnim.stopAnimation();
+    };
   }, [pulseAnim, isNormal, curStepIdx]);
 
   const pulseOpacity = pulseAnim.interpolate({
@@ -401,7 +409,7 @@ const DraggableDetailSheet = ({ visible, onClose, order, loading, reviewedOrders
                 <Text style={ds.sectionTitle}>SẢN PHẨM ({order.items?.length || 0})</Text>
               </View>
               {order.items?.map((item, idx) => (
-                <View key={idx} style={ds.itemRow}>
+                <View key={item.id || item.order_item_id || item.variant_sku || `${item.product_id || 'item'}-${idx}`} style={ds.itemRow}>
                   <Image source={{ uri: getItemImage(item.variant_image) }} style={ds.itemImg} />
                   <View style={ds.itemInfo}>
                     <Text style={ds.itemName} numberOfLines={2}>{item.product_name}</Text>
@@ -719,7 +727,9 @@ export default function OrderHistoryScreen() {
   // ── Reorder ──────────────────────────────────────────────────────────────
   const handleReorder = (code) => Alert.alert('Mua lại','Thêm toàn bộ sản phẩm vào giỏ hàng?',[{text:'Huỷ',style:'cancel'},{text:'MUA LẠI',onPress:async()=>{try{const token=await AsyncStorage.getItem('auth_token');const res=await fetch(`${API_BASE_URL}/client/orders/${code}/reorder`,{method:'POST',headers:{Authorization:`Bearer ${token}`,Accept:'application/json'}});const d=await res.json();if(res.ok&&d.success)Alert.alert('Thành công','Đã thêm vào giỏ!',[{text:'Xem giỏ',onPress:()=>navigation.navigate('Cart')},{text:'OK'}]);else Alert.alert('Thất bại',d.message||'Không thể mua lại.');}catch(_){Alert.alert('Lỗi','Không thể kết nối.');}}}]);
 
-  if (isLoading) return <View style={s.center}><ActivityIndicator size="large" color="#9f273b" /></View>;
+  if (isLoading) return <View style={s.center}><ActivityIndicator size="large" color="#9f273b" />
+      <Text style={{ marginTop: 10, fontFamily: "Oswald_500Medium", color: "#9f273b", fontSize: 13, letterSpacing: 1, textTransform: 'uppercase' }}>Đang tải lịch sử đơn hàng...</Text>
+    </View>;
   const filtered = getFiltered();
 
   return (
@@ -739,7 +749,7 @@ export default function OrderHistoryScreen() {
       <View style={s.tabBar}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabBarInner}>
           {['Tất cả','Chờ xác nhận','Đang xử lý','Hoàn thành','Đã huỷ/Trả'].map((label, idx) => (
-            <TouchableOpacity key={idx} style={[s.tab, selectedTab===idx && s.tabActive]} onPress={() => setSelectedTab(idx)} activeOpacity={0.7}>
+            <TouchableOpacity key={label} style={[s.tab, selectedTab===idx && s.tabActive]} onPress={() => setSelectedTab(idx)} activeOpacity={0.7}>
               <Text style={[s.tabTxt, selectedTab===idx && s.tabTxtActive]}>{label}</Text>
             </TouchableOpacity>
           ))}
@@ -773,7 +783,7 @@ export default function OrderHistoryScreen() {
 
               <View style={s.cardBody}>
                 {order.items?.slice(0,2).map((item, idx) => (
-                  <View key={idx} style={s.itemRow}>
+                  <View key={item.id || item.order_item_id || item.variant_sku || `${item.product_id || 'item'}-${idx}`} style={s.itemRow}>
                     <Image source={{ uri: getItemImage(item.variant_image) }} style={s.itemImg} />
                     <View style={s.itemInfo}>
                       <Text style={s.itemName} numberOfLines={1}>{item.product_name}</Text>
@@ -869,7 +879,7 @@ export default function OrderHistoryScreen() {
             <Text style={s.sheetSub}>{reviewOrder?.order_code}</Text>
             <ScrollView style={{ paddingHorizontal: 16 }} showsVerticalScrollIndicator={false}>
               {reviewItems.map((rItem, idx) => (
-                <View key={idx} style={s.reviewCard}>
+                <View key={rItem.product_id || rItem.combo_id || rItem.name || idx} style={s.reviewCard}>
                   <View style={s.reviewHead}>
                     <Image source={{ uri: rItem.image }} style={s.reviewImg}/>
                     <Text style={s.reviewName} numberOfLines={2}>{rItem.name}</Text>
@@ -882,7 +892,7 @@ export default function OrderHistoryScreen() {
                   <TextInput style={s.reviewInput} value={rItem.comment} onChangeText={(v)=>updateReviewItem(idx,'comment',v)} placeholder="Chia sẻ trải nghiệm..." placeholderTextColor="#9ca3af" multiline numberOfLines={3} textAlignVertical="top"/>
                   <View style={s.reviewImgRow}>
                     {rItem.images.map((uri,imgIdx)=>(
-                      <View key={imgIdx} style={s.reviewImgWrap}>
+                      <View key={`${uri}-${imgIdx}`} style={s.reviewImgWrap}>
                         <Image source={{ uri }} style={s.reviewImgThumb}/>
                         <TouchableOpacity style={s.reviewImgDel} onPress={()=>updateReviewItem(idx,'images',rItem.images.filter((_,i)=>i!==imgIdx))}><Ionicons name="close-circle" size={18} color="#dc2626"/></TouchableOpacity>
                       </View>

@@ -213,6 +213,7 @@ export default function HomeScreen({ navigation }) {
   const [isHomeLoading, setIsHomeLoading] = useState(true);
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
   const bannerFlatListRef = useRef(null);
+  const bannerIntervalRef = useRef(null);
 
   const onBannerScroll = (event) => {
     const slideSize = event.nativeEvent.layoutMeasurement.width;
@@ -384,19 +385,38 @@ export default function HomeScreen({ navigation }) {
 
   useEffect(() => {
     const totalBanners = banners.length > 0 ? banners.length : BANNERS.length;
-    if (totalBanners <= 1) return;
+    if (bannerIntervalRef.current) {
+      clearInterval(bannerIntervalRef.current);
+      bannerIntervalRef.current = null;
+    }
 
-    const interval = setInterval(() => {
-      const nextIndex = (activeBannerIndex + 1) % totalBanners;
-      bannerFlatListRef.current?.scrollToIndex({
-        index: nextIndex,
-        animated: true,
+    if (totalBanners <= 1) {
+      setActiveBannerIndex(0);
+      return undefined;
+    }
+
+    bannerIntervalRef.current = setInterval(() => {
+      setActiveBannerIndex(prev => {
+        const nextIndex = (prev + 1) % totalBanners;
+        try {
+          bannerFlatListRef.current?.scrollToIndex({
+            index: nextIndex,
+            animated: true,
+          });
+        } catch (e) {
+          console.log('Banner auto-scroll failed:', e);
+        }
+        return nextIndex;
       });
-      setActiveBannerIndex(nextIndex);
     }, 4000);
 
-    return () => clearInterval(interval);
-  }, [activeBannerIndex, banners.length]);
+    return () => {
+      if (bannerIntervalRef.current) {
+        clearInterval(bannerIntervalRef.current);
+        bannerIntervalRef.current = null;
+      }
+    };
+  }, [banners.length]);
 
   const performSearch = async (query) => {
     if (!query) {
@@ -689,7 +709,7 @@ export default function HomeScreen({ navigation }) {
               <View style={styles.ratingContainer}>
                 {[1, 2, 3, 4, 5].map((star, index) => (
                   <Ionicons 
-                    key={index} 
+                    key={star}
                     name={index < (item.rating || 5) ? "star" : "star-outline"} 
                     size={11} 
                     color="#f1c40f" 
@@ -712,6 +732,15 @@ export default function HomeScreen({ navigation }) {
       </TouchableOpacity>
     );
   };
+
+  if (isHomeLoading && !refreshing && banners.length === 0) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#9f273b" />
+        <Text style={{ marginTop: 10, fontFamily: "Oswald_500Medium", color: "#9f273b", fontSize: 13, letterSpacing: 1, textTransform: 'uppercase' }}>Đang tải trang chủ SORA...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>

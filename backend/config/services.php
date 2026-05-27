@@ -34,6 +34,14 @@ return [
         'bank_name' => env('SEPAY_BANK_NAME'),
     ],
 
+    'ai' => [
+        'provider' => env('AI_PROVIDER', 'freemodel'),
+        'key' => env('AI_API_KEY'),
+        'base_url' => rtrim(env('AI_BASE_URL', 'https://api.freemodel.dev/v1'), '/'),
+        'model' => env('AI_MODEL', 'gpt-5.5'),
+        'timeout' => (int) env('AI_TIMEOUT', 30),
+    ],
+
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],
