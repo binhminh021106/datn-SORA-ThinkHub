@@ -1,7 +1,6 @@
 <template>
   <div class="profile-page bg-light-custom font-sans pb-5 min-vh-100 position-relative">
     
-    <!-- Tiêu đề trang -->
     <section class="py-4 bg-white text-center shadow-sm mb-4">
       <div class="container py-2">
         <h1 class="display-6 font-serif text-main mb-3">Tài Khoản Của Tôi</h1>
@@ -18,19 +17,16 @@
 
       <div v-else class="row g-4 g-lg-5">
         
-        <!-- SIDEBAR MENU BÊN TRÁI -->
         <div class="col-lg-3">
           <ProfileSidebar :user="form" />
         </div>
 
-        <!-- CÁC FORM CẬP NHẬT BÊN PHẢI -->
         <div class="col-lg-9">
           <div v-if="isLoading" class="text-center py-5">
             <div class="spinner-border text-accent" role="status"></div>
           </div>
           
           <div v-else>
-            <!-- Tab Contents -->
             <ProfileForm 
               v-if="activeTab === 'profile'" 
               :initialForm="form" 
@@ -49,6 +45,10 @@
               :userName="form.fullName"
               :userPhone="form.phone"
             />
+
+            <AffiliateTab 
+              v-if="activeTab === 'affiliate'" 
+            />
           </div>
         </div>
 
@@ -65,6 +65,7 @@ import ProfileForm from './components/ProfileForm.vue';
 import PasswordForm from './components/PasswordForm.vue';
 import AddressBook from './components/AddressBook.vue';
 import ProfileSidebar from '@/components/ui/ProfileSidebar.vue';
+import AffiliateTab from './components/AffiliateTab.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -74,7 +75,7 @@ const activeTab = ref(route.query.tab || 'profile');
 
 // Sync tab khi query thay đổi (VD: ProfileSidebar navigate qua router-link)
 watch(() => route.query.tab, (newTab) => {
-  if (newTab && ['profile', 'password', 'address'].includes(newTab)) {
+  if (newTab && ['profile', 'password', 'address', 'affiliate'].includes(newTab)) {
     activeTab.value = newTab;
   } else if (!newTab && route.path === '/profile') {
     activeTab.value = 'profile';
