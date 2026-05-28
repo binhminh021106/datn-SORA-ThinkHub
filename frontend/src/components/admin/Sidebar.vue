@@ -187,6 +187,7 @@ const menuItems = ref([
     children: [
       { name: 'Banner', path: '/admin/banners', moduleCode: 'admin_banners' },
       { name: 'Mã Giảm Giá', path: '/admin/coupons', moduleCode: 'admin_coupons' },
+      { name: 'Email tự động', path: '/admin/email-campaigns', moduleCode: 'admin_coupons' },
       { name: 'Chân dung SORA', path: '/admin/gallery', moduleCode: 'admin_banners' },
       { name: 'Đánh giá', path: '/admin/reviews', moduleCode: 'admin_reviews' },
       { name: 'Tin tức', path: '/admin/news', moduleCode: 'admin_news' }
