@@ -187,7 +187,6 @@
           </div>
         </div>
 
-        <!-- CỘT BÊN PHẢI: GIỎ HÀNG & ƯU ĐÃI -->
         <div class="col-lg-5">
           <div class="bg-white shadow-sm border border-light-subtle sticky-top" style="top: 100px;">
             <div class="p-4 bg-light border-bottom">
@@ -236,7 +235,16 @@
               </div>
             </div>
 
-            <!-- PHẦN CHỌN MÃ GIẢM GIÁ COUPON -->
+            <div class="p-4 bg-light border-top border-light-subtle">
+                <label class="form-label font-oswald text-muted text-uppercase tracking-wide small fw-bold mb-2">
+                  <i class="bi bi-person-heart text-sora-primary me-1"></i> Mã Người Giới Thiệu (Nếu có)
+                </label>
+                <div class="input-group input-group-sm">
+                  <input type="text" class="form-control luxury-input py-2 fw-bold text-uppercase tracking-widest text-sora-primary bg-white" v-model="form.affiliate_code" placeholder="Nhập mã giới thiệu">
+                </div>
+                <small class="text-muted mt-2 d-block fst-italic" style="font-size: 0.75rem;">Ủng hộ Đại sứ thương hiệu đã giới thiệu bạn đến SORA.</small>
+            </div>
+
             <div class="p-4 bg-light border-top border-bottom border-light-subtle">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
@@ -253,7 +261,6 @@
                 </div>
             </div>
 
-            <!-- THÔNG TIN ĐẶC QUYỀN HẠNG THÀNH VIÊN -->
             <div class="p-4 bg-light border-bottom border-light-subtle" v-if="tierDiscountInfo">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
@@ -319,7 +326,6 @@
       </div>
     </div>
 
-    <!-- MODAL COUPON -->
     <div class="modal fade" id="couponModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content rounded-0 border-0 shadow-lg">
@@ -385,7 +391,7 @@ const isUpdatingCart = ref(false);
 const cartItems = ref([]);
 const addresses = ref([]);
 const availableCoupons = ref([]);
-const tierDiscountInfo = ref(null); // Biến lưu thông tin Hạng thành viên
+const tierDiscountInfo = ref(null); 
 
 const selectedAddressId = ref(null);
 const useNewAddress = ref(false);
@@ -409,7 +415,8 @@ const form = ref({
     customer_email: '',
     customer_address: '', 
     order_note: '',
-    payment_method: 'cod'
+    payment_method: 'cod',
+    affiliate_code: '' // BỔ SUNG BIẾN CHỨA MÃ AFFILIATE
 });
 
 const soraAlert = Swal.mixin({
@@ -629,7 +636,6 @@ const parseAttributes = (attr) => {
 
 const formatPrice = (value) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value || 0);
 
-// CẬP NHẬT LẠI HÀM GET_IMAGE_URL CHO GỌN GÀNG VÀ CHUẨN XÁC HƠN
 const getImageUrl = (path) => {
     if (!path) return defaultPlaceholder;
     if (path.startsWith('http') || path.startsWith('data:image')) return path;
@@ -662,14 +668,12 @@ const discountAmount = computed(() => {
     return subTotal.value * (parseFloat(selectedCoupon.value.value) / 100);
 });
 
-// THÊM: Tính số tiền giảm giá của hạng thành viên
 const tierDiscountAmount = computed(() => {
     if (!tierDiscountInfo.value) return 0;
-    if (tierDiscountInfo.value.remaining_quota <= 0) return 0; // Đã hết lượt dùng thì bằng 0
+    if (tierDiscountInfo.value.remaining_quota <= 0) return 0; 
     return subTotal.value * (parseFloat(tierDiscountInfo.value.discount_percent) / 100);
 });
 
-// CẬP NHẬT: Trừ đi cả phần tiền giảm hạng thành viên
 const totalAmount = computed(() => Math.max(subTotal.value - discountAmount.value - tierDiscountAmount.value + shippingFee.value, 0));
 
 const fetchInitData = async () => {
@@ -679,7 +683,7 @@ const fetchInitData = async () => {
             cartItems.value = res.data.cart_items || [];
             addresses.value = res.data.addresses || [];
             availableCoupons.value = res.data.coupons || [];
-            tierDiscountInfo.value = res.data.tier_discount || null; // Nhận thông tin Hạng từ Backend
+            tierDiscountInfo.value = res.data.tier_discount || null; 
 
             if (res.data.user) {
                 form.value.customer_email = res.data.user.email || '';
@@ -879,7 +883,8 @@ const submitOrder = async () => {
         order_note: form.value.order_note,
         payment_method: form.value.payment_method,
         coupon_code: selectedCoupon.value && !isCouponBlocked.value ? selectedCoupon.value.code : null,
-        shipping_fee: shippingFee.value
+        shipping_fee: shippingFee.value,
+        affiliate_code: form.value.affiliate_code || null // KẸP MÃ AFFILIATE VÀO PAYLOAD GỬI LÊN SERVER
     };
 
     isSubmitting.value = true;
@@ -901,6 +906,7 @@ const submitOrder = async () => {
             }).then(() => {
                 removeSafeStorage('cart_session_id');
                 removeSafeStorage('birthday_coupon_code');
+                removeSafeStorage('sora_affiliate_code'); // THÊM MỚI: ĐẶT HÀNG XONG THÌ XÓA MÃ AFFILIATE KHỎI COOKIE
                 router.push('/checkout/success?order=' + res.data.data.order_code).catch(()=>{});
             });
         }
@@ -933,6 +939,12 @@ onMounted(async () => {
     }
 
     isInitializing.value = true;
+    
+    const savedAffiliateCode = getSafeStorage('sora_affiliate_code');
+    if (savedAffiliateCode) {
+        form.value.affiliate_code = savedAffiliateCode;
+    }
+
     await checkDirectBuy();
     await fetchInitData(); 
     autoApplyStoredBirthdayCoupon();

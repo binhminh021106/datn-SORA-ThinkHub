@@ -1,4 +1,3 @@
-<!-- test -->
 <template>
   <div v-if="isCheckingAuth" class="vh-100 d-flex flex-column justify-content-center align-items-center bg-light">
     <div class="logo-pulse-wrapper mb-4">
@@ -9,15 +8,14 @@
   <div v-else>
     <router-view></router-view>
 
-    <!-- GLOBAL MODALS: Đặt ở đây để hoạt động trên TOÀN BỘ hệ thống -->
     <QuickAddModal />
     <CompareModal shop-slug="sora" />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, provide } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, onMounted, provide, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import apiClient from '@/utils/apiClient';
 
 // Nhúng 2 Modal Global vào App
@@ -25,10 +23,23 @@ import QuickAddModal from '@/components/ui/QuickAddModal.vue';
 import CompareModal from '@/components/ui/CompareModal.vue';
 
 const router = useRouter();
+const route = useRoute();
 const isCheckingAuth = ref(true);
 const currentUser = ref(null);
 
 provide('currentUser', currentUser);
+
+watch(
+  () => route.query.ref,
+  (newRef) => {
+    if (newRef) {
+      localStorage.setItem('sora_affiliate_code', newRef);
+      console.log('Đã lưu mã giới thiệu:', newRef);
+    }
+  },
+  { immediate: true }
+);
+// ===== KẾT THÚC: LOGIC LƯU MÃ AFFILIATE TỰ ĐỘNG =====
 
 const checkAuthentication = async () => {
   const token = localStorage.getItem('admin_token');

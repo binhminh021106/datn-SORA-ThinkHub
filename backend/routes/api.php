@@ -394,7 +394,7 @@ Route::prefix('admin')->group(function () {
         });
 
         // QUẢN LÝ AFFILIATE
-        Route::controller(AdminAffiliateController::class)->prefix('affiliate')->group(function () {
+        Route::controller(AdminAffiliateController::class)->prefix('affiliates')->group(function () {
             Route::get('/applications', 'index');
             Route::post('/applications/{id}/approve', 'approve');
             Route::post('/applications/{id}/reject', 'reject');
