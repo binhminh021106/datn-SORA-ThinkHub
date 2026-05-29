@@ -4,6 +4,7 @@
       <!-- Page Header -->
       <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-2 mb-3">
         <div>
+
           <h4 class="fw-bold text-dark mb-1">Gửi email tự động Lễ & Sinh nhật</h4>
           <p class="text-muted small mb-0">Quản lý chiến dịch, mẫu nội dung và thao tác kiểm tra gửi email cho khách hàng.</p>
         </div>
@@ -578,7 +579,7 @@ function showToast(title) { Swal.fire({ toast: true, position: 'top-end', icon: 
 .text-brand { color: #9F273B; }
 .bg-brand { background-color: #009981; }
 .border-brand-focus:focus { border-color: #009981; box-shadow: 0 0 0 0.2rem rgba(0, 153, 129, 0.15); }
-.cursor-pointer { cursor: pointer; }
+.cursor-pointer { cursor: pointer; color: #009981; }
 
 .btn-brand { background: #009981; border-color: #009981; }
 .btn-brand:hover { background: #00856f; border-color: #00856f; }
