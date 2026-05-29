@@ -14,9 +14,9 @@ class AdminAttendance extends Model
     protected $fillable = [
         'admin_id',
         'work_shift_id',
-        'shift_start_time',     // Lưu cứng giờ bắt đầu ca
-        'shift_end_time',       // Lưu cứng giờ kết thúc ca
-        'shift_late_tolerance', // Lưu cứng số phút cho phép đi muộn
+        'shift_start_time',
+        'shift_end_time',
+        'shift_late_tolerance',
         'attendance_date',
         'clock_in',
         'clock_out',
@@ -27,9 +27,10 @@ class AdminAttendance extends Model
         'late_minutes',
         'early_leave_minutes',
         'note',
+        'is_ot_approved', 
+        'ot_minutes',     
     ];
 
-    // Ép kiểu dữ liệu khi lấy ra hoặc lưu vào DB
     protected $casts = [
         'attendance_date'      => 'date',
         'clock_in'             => 'datetime',
@@ -37,6 +38,8 @@ class AdminAttendance extends Model
         'late_minutes'         => 'integer',
         'early_leave_minutes'  => 'integer',
         'shift_late_tolerance' => 'integer',
+        'is_ot_approved'       => 'boolean',
+        'ot_minutes'           => 'integer',
     ];
 
     public function admin()

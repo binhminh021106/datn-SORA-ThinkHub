@@ -4,10 +4,11 @@
       <!-- Page Header -->
       <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-2 mb-3">
         <div>
-          
           <h4 class="fw-bold text-dark mb-1">Gửi email tự động Lễ & Sinh nhật</h4>
           <p class="text-muted small mb-0">Quản lý chiến dịch, mẫu nội dung và thao tác kiểm tra gửi email cho khách hàng.</p>
         </div>
+        <div class="d-flex align-items-center gap-2">
+</div>
       </div>
 
       <!-- Thống kê -->

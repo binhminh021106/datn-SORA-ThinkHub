@@ -20,6 +20,8 @@
           </h3>
           <p class="text-muted small mb-0 mt-1">Hệ thống Heatmap cảnh báo sớm tỷ lệ đi muộn và vắng mặt</p>
         </div>
+        <div class="col-lg-7 text-lg-end d-flex justify-content-lg-end">
+</div>
       </div>
 
       <div class="row g-3 mb-4" v-if="isSummaryLoading">
@@ -486,103 +488,7 @@
 
     </div>
 
-    <div v-if="showHistoryModal" class="modal-backdrop-custom" @click.self="closeHistoryModal">
-      <div class="modal-dialog-custom modal-xl mx-auto my-4 px-2">
-        <div class="card shadow-lg rounded-4 overflow-hidden border-0">
-          <div class="card-header p-4 d-flex justify-content-between align-items-center bg-white border-bottom">
-            <div>
-              <h4 class="mb-1 fw-bold text-dark d-flex align-items-center"><i
-                  class="bi bi-calendar2-week text-brand me-2"></i>Lịch sử chấm công cá nhân</h4>
-              <p class="text-muted small mb-0 fw-semibold">{{ activeHistoryAdmin?.fullname }} - <span
-                  class="fw-normal">{{ activeHistoryAdmin?.email }}</span></p>
-            </div>
-            <button type="button" class="btn btn-light rounded-circle shadow-sm" style="width: 40px; height: 40px;"
-              @click="closeHistoryModal"><i class="bi bi-x-lg"></i></button>
-          </div>
-          <div class="card-body p-4 bg-light">
-            <div v-if="historyLoading">
-              <div class="calendar-container shadow-sm">
-                <div class="calendar-header-row rounded-top-3">
-                  <div class="calendar-header-col" v-for="i in 7" :key="'h-' + i">Thứ {{ i + 1 }}</div>
-                </div>
-                <div class="calendar-body">
-                  <div class="calendar-week" v-for="w in 5" :key="'w-' + w">
-                    <div class="calendar-day" v-for="d in 7" :key="'d-' + d">
-                      <div class="skeleton ms-auto mb-2" style="width: 20px; height: 20px; border-radius: 4px;"></div>
-                      <div class="skeleton w-100 mb-1" style="height: 25px; border-radius: 6px;"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div v-else>
-              <div class="calendar-container shadow-sm">
-                <div class="calendar-header-row rounded-top-3">
-                  <div class="calendar-header-col">Thứ 2</div>
-                  <div class="calendar-header-col">Thứ 3</div>
-                  <div class="calendar-header-col">Thứ 4</div>
-                  <div class="calendar-header-col">Thứ 5</div>
-                  <div class="calendar-header-col">Thứ 6</div>
-                  <div class="calendar-header-col text-primary bg-light">Thứ 7</div>
-                  <div class="calendar-header-col text-danger bg-light">Chủ Nhật</div>
-                </div>
-                <div class="calendar-body">
-                  <div class="calendar-week" v-for="(week, index) in historyGrid" :key="index">
-                    <div class="calendar-day" v-for="day in week" :key="day.date || Math.random()" :class="{
-                      'not-current-month': !day.isCurrentMonth,
-                      'is-today': isToday(day.date),
-                      'is-weekend': !isStaffWorkingDay(day.date, day)
-                    }">
-                      <div class="day-number" :class="{ 'text-brand fw-bolder': isToday(day.date) }">
-                        <span v-if="isToday(day.date)" class="badge bg-brand text-white rounded-circle p-1 px-2 me-1"
-                          style="font-size: 0.7rem;">Hôm nay</span>{{ day.dayNumber }}
-                      </div>
-
-                      <div class="day-data mt-2" v-if="day.data">
-                        <div
-                          class="time-item text-success bg-success-subtle rounded px-2 py-1 mb-1 border border-success border-opacity-25 shadow-sm">
-                          <span><i class="bi bi-box-arrow-in-right me-1"></i>Vào:</span>
-                          <span class="fw-bold">{{ formatMiniTime(day.data.clock_in) }}</span>
-                        </div>
-
-                        <div class="time-item rounded px-2 py-1 mb-1 border shadow-sm" v-if="day.data.clock_out"
-                          :class="day.data.checkout_status === 'forgotten' ? 'bg-danger-subtle text-danger border-danger border-opacity-25' : 'bg-warning-subtle text-warning-emphasis border-warning border-opacity-25'">
-                          <span><i class="bi bi-box-arrow-left me-1"></i>Ra:</span>
-                          <span class="fw-bold">{{ formatMiniTime(day.data.clock_out) }}</span>
-                        </div>
-
-                        <div class="d-flex flex-wrap gap-1 mt-2 justify-content-end">
-                          <span :class="getStatusBadgeClassGrid(getRealStatus(day.data))" class="badge">{{
-                            getStatusLabel(getRealStatus(day.data)) }}</span>
-
-                          <span v-if="getRealLateMinutes(day.data) > 0"
-                            class="badge bg-warning text-dark shadow-sm">Muộn {{
-                              formatDuration(getRealLateMinutes(day.data)) }}</span>
-                          <span v-if="getRealEarlyLeave(day.data) > 0" class="badge text-white shadow-sm"
-                            style="background-color: #fd7e14;">Về sớm {{ formatDuration(getRealEarlyLeave(day.data))
-                            }}</span>
-
-                          <span v-if="day.data.checkout_status === 'forgotten'" class="badge bg-danger shadow-sm">Quên
-                            Checkout</span>
-                          <span v-if="!isStaffWorkingDay(day.date, day) && getRealEarlyLeave(day.data) <= 0"
-                            class="badge bg-dark text-white shadow-sm">Tăng ca</span>
-                        </div>
-                      </div>
-
-                      <div class="day-data mt-2 text-center" v-else-if="day.isCurrentMonth">
-                        <span :class="getAttendanceCellBadgeClass(day)">{{ getAttendanceCellLabel(day) }}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
+    <AttendanceHistoryModal ref="historyModalRef" />
   </div>
 </template>
 
@@ -595,6 +501,7 @@ import Swal from 'sweetalert2';
 import SoraImage from '@/components/ui/SoraImage.vue';
 import defaultAvatar from '@/assets/images/defaults/avatar1.png';
 import { getFullImage } from '@/composables/useUtilities';
+import AttendanceHistoryModal from './AttendanceHistoryModal.vue';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -622,8 +529,7 @@ const selectedShift = ref('all'); // State mới cho chức năng Lọc Ca Làm 
 const currentPage = ref(1);
 const itemsPerPage = 6; 
 
-const showHistoryModal = ref(false);
-const activeHistoryAdmin = ref(null);
+const historyModalRef = ref(null);
 const drillDownSection = ref(null);
 
 // Reset tất cả các bộ lọc về mặc định ban đầu
@@ -782,30 +688,7 @@ const refetchAll = () => {
   refetchDailyDetail();
 };
 
-// 4. QUERY CHI TIẾT LỊCH SỬ CỦA 1 NHÂN SỰ
-const { data: adminHistoryData, isFetching: historyLoading } = useQuery({
-  queryKey: computed(() => ['adminAttendanceHistory', activeHistoryAdmin.value?.id, drillDownDate.value]),
-  queryFn: async () => {
-    try {
-      const token = localStorage.getItem('admin_token');
-      const date = new Date(drillDownDate.value);
-      const start = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
-      const end = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
-
-      const response = await axios.get(`${API_URL}/admin/attendances/history/${activeHistoryAdmin.value.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params: { start_date: start, end_date: end }
-      });
-      return response.data;
-    } catch (error) {
-      Toast.fire({ icon: 'error', title: 'Không thể tải lịch sử của nhân viên này!' });
-      throw error;
-    }
-  },
-  enabled: computed(() => !!activeHistoryAdmin.value && showHistoryModal.value),
-  staleTime: 1000 * 60 * 5,
-  keepPreviousData: true,
-});
+// Removed adminHistoryData Query
 
 const formatDuration = (totalMinutes) => {
   if (!totalMinutes || totalMinutes <= 0) return '';
@@ -997,55 +880,10 @@ const paginatedDrillDownList = computed(() => {
   return filteredDrillDownList.value.slice(start, start + itemsPerPage);
 });
 
-const adminHistoryMap = computed(() => {
-  const map = {};
-  const items = adminHistoryData.value?.data?.data || [];
-  items.forEach(item => { map[item.attendance_date.split('T')[0]] = item; });
-  return map;
-});
-
-const historyGrid = computed(() => {
-  if (!drillDownDate.value) return [];
-  const date = new Date(drillDownDate.value);
-  const year = date.getFullYear();
-  const month = date.getMonth();
-
-  const firstDayOfMonth = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-  let startDay = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
-  let days = [];
-  const prevMonthDays = new Date(year, month, 0).getDate();
-
-  for (let i = startDay - 1; i >= 0; i--) {
-    days.push({ dayNumber: prevMonthDays - i, isCurrentMonth: false, date: null });
-  }
-  for (let i = 1; i <= daysInMonth; i++) {
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-    days.push({ dayNumber: i, isCurrentMonth: true, date: dateStr, data: adminHistoryMap.value[dateStr] || null });
-  }
-
-  const totalCells = Math.ceil(days.length / 7) * 7;
-  let nextMonthDay = 1;
-  while (days.length < totalCells) {
-    days.push({ dayNumber: nextMonthDay++, isCurrentMonth: false, date: null });
-  }
-
-  const weeks = [];
-  for (let i = 0; i < days.length; i += 7) { weeks.push(days.slice(i, i + 7)); }
-  return weeks;
-});
-
 function openHistoryModal(admin) {
-  activeHistoryAdmin.value = admin;
-  showHistoryModal.value = true;
-  document.body.style.overflow = 'hidden';
-}
-
-function closeHistoryModal() {
-  showHistoryModal.value = false;
-  activeHistoryAdmin.value = null;
-  document.body.style.overflow = '';
+  if (historyModalRef.value) {
+    historyModalRef.value.openModal(admin, drillDownDate.value);
+  }
 }
 
 const isWeekend = (dateStr) => {

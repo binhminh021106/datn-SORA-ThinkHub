@@ -14,12 +14,7 @@
           <h3 class="fw-bold text-dark mb-0">Danh Mục Sản Phẩm</h3>
         </div>
         <div class="col-md-6 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end align-items-center gap-3 flex-wrap">
-          <div class="border rounded px-3 py-1 bg-white shadow-sm text-muted small" v-if="currentPageLevel">
-            <i class="bi bi-shield-check text-success me-1"></i>
-            Trang yêu cầu: <span class="badge" :class="getLevelColor(currentPageLevel)">Cấp {{ currentPageLevel }}</span>
-          </div>
-
-          <router-link :to="{ name: 'admin-category-create' }" class="btn btn-brand btn-brand-solid px-4 py-2 fw-bold shadow-sm" v-if="!isReorderMode">
+<router-link :to="{ name: 'admin-category-create' }" class="btn btn-brand btn-brand-solid px-4 py-2 fw-bold shadow-sm" v-if="!isReorderMode">
             <i class="bi bi-plus-circle-fill me-1"></i> Thêm Danh Mục
           </router-link>
         </div>

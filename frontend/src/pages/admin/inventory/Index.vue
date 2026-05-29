@@ -14,11 +14,7 @@
           <h3 class="fw-bold text-dark mb-0">Quản lý Kho (Inventory)</h3>
         </div>
         <div class="col-md-6 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end align-items-center gap-3">
-          <div class="border rounded px-3 py-1 bg-white shadow-sm text-muted small" v-if="currentPageLevel">
-            <i class="bi bi-shield-check text-success me-1"></i>
-            Trang yêu cầu: <span class="badge" :class="getLevelColor(currentPageLevel)">Cấp {{ currentPageLevel }}</span>
-          </div>
-          <!-- Đồng bộ bằng cách xóa cache và tải lại -->
+<!-- Đồng bộ bằng cách xóa cache và tải lại -->
           <button class="btn btn-light border shadow-sm fw-bold text-dark px-4 py-2" @click="syncData" :disabled="isSilentLoading">
             <span v-if="isSilentLoading" class="spinner-border spinner-border-sm me-1"></span>
             <i v-else class="bi bi-arrow-clockwise me-1"></i> Đồng bộ kho

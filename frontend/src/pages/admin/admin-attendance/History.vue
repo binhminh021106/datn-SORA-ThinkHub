@@ -246,40 +246,8 @@ const { data: currentUserData } = useQuery({
   staleTime: 1000 * 60 * 30, // Caching 30 phút
 });
 
-// Lấy danh sách toàn bộ phân công ca
-const { data: assignmentsData } = useQuery({
-  queryKey: ['workShiftAssignments'],
-  queryFn: async () => {
-    try {
-      const token = localStorage.getItem('admin_token');
-      const response = await axios.get(`${API_URL}/admin/work-shifts/assignments`, { 
-        headers: { Authorization: `Bearer ${token}` } 
-      });
-      return response.data.success ? response.data.data : [];
-    } catch (e) {
-      return [];
-    }
-  },
-  enabled: isLoggedIn,
-  staleTime: 1000 * 60 * 30,
-});
-
-// Xác định chính xác ca làm việc đang được gán cho user hiện tại
-const currentUserShift = computed(() => {
-  if (currentUserData.value?.shift_assignment?.work_shift) {
-    return currentUserData.value.shift_assignment.work_shift;
-  }
-  if (currentUserData.value?.shiftAssignment?.workShift) {
-    return currentUserData.value.shiftAssignment.workShift;
-  }
-  // So khớp với bảng danh sách phân công
-  if (assignmentsData.value && currentUserData.value) {
-    const myId = currentUserData.value.id;
-    const myAssignment = assignmentsData.value.find(a => a.admin_id === myId || a.admin?.id === myId);
-    return myAssignment?.work_shift || myAssignment?.workShift || null;
-  }
-  return null;
-});
+// Xóa phần fetch toàn bộ `assignmentsData` không cần thiết.
+// Các assignments cắt qua tháng sẽ được trả về kèm theo trong API điểm danh.
 
 // Lấy cấu hình ngày nghỉ toàn hệ thống của doanh nghiệp (Làm Fallback cuối cùng)
 const { data: workDaySettings } = useQuery({
@@ -338,6 +306,11 @@ watch(isLoading, (newVal) => {
   }
 });
 
+// Lấy mảng assignments cắt qua tháng từ Response
+const historyAssignments = computed(() => {
+  return attendanceResponse.value?.data?.assignments || [];
+});
+
 // Map dữ liệu thành dạng Dictionary Key-Value với Key là YYYY-MM-DD
 const attendanceMap = computed(() => {
   const map = {};
@@ -385,7 +358,31 @@ const getDayWorkShift = (day) => {
   if (day.data && (day.data.workShift || day.data.work_shift)) {
     return day.data.workShift || day.data.work_shift;
   }
-  return currentUserShift.value;
+  
+  if (day.date && historyAssignments.value.length > 0) {
+    const dateObj = new Date(day.date);
+    dateObj.setHours(0,0,0,0);
+    
+    // Tìm kiếm trong mảng assignments
+    const matchingAssignment = historyAssignments.value.find(a => {
+      const from = new Date(a.valid_from);
+      from.setHours(0,0,0,0);
+      
+      let to = null;
+      if (a.valid_to) {
+        to = new Date(a.valid_to);
+        to.setHours(23,59,59,999);
+      }
+      
+      return dateObj >= from && (!to || dateObj <= to);
+    });
+    
+    if (matchingAssignment) {
+      return matchingAssignment.workShift || matchingAssignment.work_shift;
+    }
+  }
+
+  return null;
 };
 
 // Kiểm tra ngày này nhân sự CÓ BẮT BUỘC ĐI LÀM KHÔNG

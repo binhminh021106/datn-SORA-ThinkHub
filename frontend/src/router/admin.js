@@ -142,7 +142,7 @@ const admin = [
         name: 'admin-attendance-history',
         component: () => import('../pages/admin/admin-attendance/History.vue'),
         meta: {
-          moduleCode: 'admin_attendances',
+          moduleCode: 'admin_attendance',
           title: 'Lịch sử chấm công'
         },
       },
@@ -152,7 +152,7 @@ const admin = [
         name: 'admin-attendance-dashboard',
         component: () => import('../pages/admin/admin-attendance/Index.vue'),
         meta: {
-          moduleCode: 'admin_attendances',
+          moduleCode: 'admin_attendance',
           title: 'Bảng chấm công cá nhân'
         },
       },
@@ -161,8 +161,18 @@ const admin = [
         name: 'admin-attendance-shifts',
         component: () => import('../pages/admin/admin-attendance/WorkShifts.vue'),
         meta: {
-          moduleCode: 'admin_attendances',
+          moduleCode: 'admin_attendance',
           title: 'Quản lý ca làm việc'
+        },
+      },
+      // ROUTE MÁY QUÉT ĐIỂM DANH QR
+      {
+        path: 'attendance/scanner',
+        name: 'admin-attendance-scanner',
+        component: () => import('../pages/admin/admin-attendance/AttendanceScanner.vue'),
+        meta: {
+          moduleCode: 'admin_attendance',
+          title: 'Máy quét điểm danh'
         },
       },
 
@@ -191,19 +201,19 @@ const admin = [
         path: 'gallery',
         name: 'admin-gallery',
         component: () => import('../pages/admin/gallery/Index.vue'),
-        meta: { moduleCode: 'admin_gallery' },
+        meta: { moduleCode: 'admin_banners' },
       },
       {
         path: 'gallery/create',
         name: 'admin-gallery-create',
         component: () => import('../pages/admin/gallery/Create.vue'),
-        meta: { moduleCode: 'admin_gallery' },
+        meta: { moduleCode: 'admin_banners' },
       },
       {
         path: 'gallery/:id/edit',
         name: 'admin-gallery-edit',
         component: () => import('../pages/admin/gallery/Edit.vue'),
-        meta: { moduleCode: 'admin_gallery' },
+        meta: { moduleCode: 'admin_banners' },
       },
 
       // ROUTE QUẢN LÝ ĐƠN HÀNG (ORDERS)
@@ -259,24 +269,23 @@ const admin = [
         meta: { moduleCode: 'admin_coupons' },
       },
 
-      // ROUTE QUẢN LÝ HẠNG THÀNH VIÊN (MEMBERSHIP TIERS)
       {
         path: 'tiers',
         name: 'admin-tiers',
         component: () => import('../pages/admin/tier/Index.vue'),
-        meta: { moduleCode: 'admin_roles' },
+        meta: { moduleCode: 'admin_tiers' },
       },
       {
         path: 'tiers/create',
         name: 'admin-tiers-create',
         component: () => import('../pages/admin/tier/Create.vue'),
-        meta: { moduleCode: 'admin_roles' },
+        meta: { moduleCode: 'admin_tiers' },
       },
       {
         path: 'tiers/:id/edit',
         name: 'admin-tiers-edit',
         component: () => import('../pages/admin/tier/Edit.vue'),
-        meta: { moduleCode: 'admin_roles' },
+        meta: { moduleCode: 'admin_tiers' },
       },
       // ROUTE QUẢN LÝ COMBO SẢN PHẨM (PRODUCT COMBOS)
       {

@@ -252,14 +252,16 @@ Route::prefix('admin')->group(function () {
         });
 
         // Quản lý Vai trò & Phân quyền (Mã: admin_roles)
+        
+        // 1. Lấy danh sách modules (AI CŨNG CẦN ĐỂ RENDER SIDEBAR)
+        Route::get('modules', [AdminModulePermissionController::class, 'index']);
+        
         Route::middleware(['check.module:admin_roles'])->group(function () {
             Route::apiResource('roles', AdminRoleController::class);
             Route::post('roles/{id}/restore', [AdminRoleController::class, 'restore']);
 
-
-            // Quản lý phân quyền module trong vai trò
+            // Quản lý phân quyền module trong vai trò (CHỈ ADMIN QUẢN LÝ QUYỀN)
             Route::controller(AdminModulePermissionController::class)->group(function () {
-                Route::get('modules', 'index');
                 Route::post('modules/sync', 'sync');
                 Route::put('modules/{id}/level', 'updateLevel');
             });
@@ -409,39 +411,45 @@ Route::prefix('admin')->group(function () {
             Route::delete('/conversations/{userId}', [\App\Http\Controllers\Api\MessageController::class, 'deleteConversation']);
         });
 
-         Route::middleware(['check.module:admin_attendances'])->group(function () {
+        // 1. CÁC ROUTE ĐIỂM DANH CÁ NHÂN (AI CŨNG ĐƯỢC DÙNG, KHÔNG YÊU CẦU QUYỀN MODULE)
+        Route::controller(\App\Http\Controllers\Api\admin\AdminAttendanceController::class)->prefix('attendances')->group(function () {
+            Route::get('/status', 'checkStatus');       // Lấy trạng thái của mình hoặc Quét QR
+            Route::post('/check-in', 'checkIn');        // Vào ca
+            Route::post('/check-out', 'checkOut');      // Tan ca
+        });
 
-            // 1. Quản lý Chấm công
+        // 2. CÁC ROUTE QUẢN LÝ ĐIỂM DANH (CHỈ DÀNH CHO QUẢN LÝ / SUPER ADMIN)
+        Route::middleware(['check.module:admin_attendance'])->group(function () {
             Route::controller(\App\Http\Controllers\Api\admin\AdminAttendanceController::class)->prefix('attendances')->group(function () {
-                Route::get('/monthly-summary', 'monthlySummary');
-                Route::get('/status', 'checkStatus');
-                Route::get('/daily-status', 'dailyStatus');
-                
-                // Các API lấy dữ liệu cho bộ lọc dropdown
-                Route::get('/roles', 'getRoles'); // <-- FIX API DROP-DOWN CHỨC VỤ
-                Route::get('/work-shifts', 'getWorkShifts'); // <-- BỔ SUNG ĐỂ FIX LỖI 404 THEO CẢNH BÁO CỦA CODERABBIT
-                
+                // ĐẶT CÁC ROUTE TĨNH LÊN TRƯỚC (Tránh bị route động nuốt)
+                Route::get('/work-shifts', 'getWorkShifts');
+                Route::get('/qr-token', 'generateQrToken'); // Lấy mã QR 25s
+                Route::get('/daily-status', 'dailyStatus'); // Kiosk gọi liên tục (Polling) để hiện Live Feed
+                Route::get('/monthly-summary', 'monthlySummary'); // Lấy báo cáo chấm công tháng
+
+                // ĐẶT CÁC ROUTE ĐỘNG {id} XUỐNG DƯỚI CÙNG
                 Route::get('/history/{adminId}', 'history');
                 Route::get('/', 'index');
-                Route::post('/check-in', 'checkIn');
-                Route::post('/check-out', 'checkOut');
                 Route::post('/{id}/resolve', 'resolveForgotten');
             });
 
             // 2. Quản lý Ca làm việc
             Route::controller(\App\Http\Controllers\Api\admin\AdminWorkShiftController::class)->prefix('work-shifts')->group(function () {
+                // ĐẶT CÁC ROUTE TĨNH LÊN TRƯỚC ĐỂ TRÁNH BỊ {id} NUỐT
                 Route::get('/', 'index');
                 Route::post('/', 'store');
+                Route::get('/assignments', 'getAssignments');
+                Route::post('/assign', 'assignShift');
+                Route::post('/assign-multiple', 'assignMultiple');
+                Route::post('/auto-assign', 'autoAssign'); // THÊM POST CHO AUTO ASSIGN
+                Route::delete('/assignments/{adminId}', 'removeAssignment');
+
+                // ĐẶT CÁC ROUTE ĐỘNG {id} XUỐNG DƯỚI
                 // restore ca làm việc đã xóa
                 Route::post('/{id}/restore', 'restore');
                 Route::put('/{id}', 'update');
                 Route::delete('/{id}', 'destroy');
-                Route::get('/assignments', 'getAssignments');
-                Route::post('/assign', 'assignShift');
-                Route::post('/assign-multiple', 'assignMultiple');
-                Route::delete('/assignments/{adminId}', 'removeAssignment');
             });
-            
         });
     });
 });

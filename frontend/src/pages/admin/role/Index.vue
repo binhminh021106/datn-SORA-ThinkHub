@@ -8,12 +8,7 @@
         </div>
         
         <div class="col-md-6 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end align-items-center gap-3 flex-wrap">
-          <div class="border rounded px-3 py-1 bg-white shadow-sm text-muted small" v-if="currentPageLevel">
-            <i class="bi bi-shield-check text-success me-1"></i>
-            Trang yêu cầu: <span class="badge" :class="getLevelColor(currentPageLevel)">Cấp {{ currentPageLevel }}</span>
-          </div>
-
-          <button v-if="activeTab === 'roles'" class="btn btn-brand px-4 py-2 fw-bold shadow-sm text-white rounded-pill" @click="openRoleModal('create')">
+<button v-if="activeTab === 'roles'" class="btn btn-brand px-4 py-2 fw-bold shadow-sm text-white rounded-pill" @click="openRoleModal('create')">
             <i class="bi bi-plus-circle me-1"></i> Thêm Role
           </button>
         </div>

@@ -107,7 +107,7 @@
             <div v-else-if="cartItems.length === 0" class="text-center text-muted mt-5 py-5 d-flex flex-column align-items-center">
               <i class="bi bi-bag-x mb-3" style="font-size: 3.5rem; color: #ddd;"></i>
               <p class="mt-2 font-oswald tracking-wide fs-5">GIỎ HÀNG TRỐNG</p>
-              <button @click="closeCart" class="btn btn-outline-brand rounded-0 px-4 py-2 mt-3 font-oswald tracking-widest text-uppercase">Tiếp tục mua sắm</button>
+              <button @click="closeCart" class="btn btn-outline-brand rounded-3 px-4 py-2 mt-3 font-oswald tracking-widest text-uppercase">Tiếp tục mua sắm</button>
             </div>
 
             <div v-else class="d-flex flex-column gap-4">
@@ -116,12 +116,12 @@
                 :key="item.id" 
                 class="d-flex gap-3 position-relative cart-item"
               >
-                <div class="bg-light cursor-pointer border border-light-subtle" style="width: 85px; height: 105px; flex-shrink: 0;" @click="goToProduct(item.variant?.product?.slug || item.combo?.slug, !!item.combo_id)">
+                <div class="bg-light cursor-pointer border border-light-subtle rounded-1" style="width: 85px; height: 105px; flex-shrink: 0;" @click="goToProduct(item.variant?.product?.slug || item.combo?.slug, !!item.combo_id)">
                   <img 
                     loading="lazy"
                     :src="getImage(item.variant?.image_url || item.combo?.thumbnail_image)" 
                     alt="Product" 
-                    class="w-100 h-100 object-fit-cover transition-transform hover-scale p-1"
+                    class="w-100 h-100 object-fit-cover transition-transform hover-scale p-1 rounded-1"
                     @error="handleImageError"
                   >
                 </div>
@@ -151,7 +151,7 @@
                   </div>
 
                   <div class="d-flex justify-content-between align-items-center mt-2">
-                    <div class="quantity-control d-flex align-items-center border border-light-subtle bg-white">
+                    <div class="quantity-control d-flex align-items-center border border-light-subtle bg-white rounded-2 overflow-hidden">
                       <button 
                         @click="updateQuantity(item, item.quantity - 1)" 
                         class="btn btn-sm border-0 px-2 py-0 text-muted"
@@ -190,10 +190,10 @@
             </div>
             
             <div class="d-flex flex-column gap-2">
-              <button @click="goToCheckout" class="btn btn-brand w-100 py-3 font-oswald tracking-widest text-uppercase fw-bold rounded-0 shadow-sm" :disabled="cartItems.length === 0">
+              <button @click="goToCheckout" class="btn btn-brand w-100 py-3 font-oswald tracking-widest text-uppercase fw-bold rounded-3 shadow-sm" :disabled="cartItems.length === 0">
                 Thanh toán ngay
               </button>
-              <button @click="goToCart" class="btn btn-outline-brand w-100 py-2 font-oswald tracking-widest text-uppercase fw-bold rounded-0">
+              <button @click="goToCart" class="btn btn-outline-brand w-100 py-2 font-oswald tracking-widest text-uppercase fw-bold rounded-3">
                 Xem giỏ hàng
               </button>
             </div>
@@ -426,11 +426,32 @@ defineExpose({ openCart, fetchCart });
 .text-sora-primary { color: #9f273b !important; }
 .bg-sora-primary { background-color: #9f273b !important; }
 
-.btn-brand { background-color: #9f273b; border: 1px solid #9f273b; color: white !important; transition: all 0.3s ease; }
-.btn-brand:hover { background-color: #7a1c2d; border-color: #7a1c2d; color: white !important; box-shadow: 0 5px 15px rgba(159,39,59,0.3); }
+/* Nút Thanh toán ngay */
+.btn-brand { 
+  background-color: #9f273b; 
+  border: 1px solid #9f273b; 
+  color: white !important; 
+  transition: all 0.3s ease; 
+}
+.btn-brand:hover { 
+  background-color: #cc1e2e; /* Đổi sang màu đỏ hover */
+  border-color: #cc1e2e; 
+  color: white !important; 
+  box-shadow: 0 5px 15px rgba(204, 30, 46, 0.3); 
+}
 
-.btn-outline-brand { border: 1px solid #222; color: #222; background: transparent; transition: all 0.3s ease; }
-.btn-outline-brand:hover { background-color: #222; color: white !important; }
+/* Nút Xem giỏ hàng */
+.btn-outline-brand { 
+  border: 1px solid #e7ce7d; /* Viền màu vàng gold (màu phụ) */
+  color: #9f273b; /* Chữ màu đỏ để nổi bật */
+  background: transparent; 
+  transition: all 0.3s ease; 
+}
+.btn-outline-brand:hover { 
+  background-color: #e7ce7d; /* Lấp đầy nền vàng khi hover */
+  border-color: #e7ce7d;
+  color: #9f273b !important; 
+}
 
 .hover-primary:hover { color: #9f273b !important; }
 .transition-color { transition: color 0.2s ease; }
@@ -443,7 +464,7 @@ defineExpose({ openCart, fetchCart });
   width: 100vw;
   height: 100vh;
   background-color: rgba(0, 0, 0, 0.45);
-  z-index: 1060;
+  z-index: 999998; /* Tăng Z-index cực cao để đè chat widget */
 }
 
 .cart-wrapper {
@@ -451,7 +472,7 @@ defineExpose({ openCart, fetchCart });
   top: 0;
   right: 0;
   height: 100vh;
-  z-index: 1061;
+  z-index: 999999; /* Tăng Z-index cực cao */
   pointer-events: none;
   display: flex;
   justify-content: flex-end;

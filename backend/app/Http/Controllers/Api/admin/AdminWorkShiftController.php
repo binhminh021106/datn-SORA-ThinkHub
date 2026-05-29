@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Api\admin;
 use App\Http\Controllers\Controller;
 use App\Models\WorkShift;
 use App\Models\AdminShiftAssignment;
+use App\Models\Admin;
+use App\Models\ShiftException;
+use App\Models\ShiftRequirement;
 use App\Http\Requests\WorkShift\StoreWorkShiftRequest;
 use App\Http\Requests\WorkShift\UpdateWorkShiftRequest;
 use Illuminate\Http\Request;
@@ -38,6 +41,7 @@ class AdminWorkShiftController extends Controller
             'is_overnight' => $request->is_overnight ?? false,
             'working_days' => $request->working_days, 
             'overtime_days' => $request->overtime_days, 
+            'is_active' => $request->is_active ?? true,
         ]);
 
         return response()->json([
@@ -58,6 +62,7 @@ class AdminWorkShiftController extends Controller
             'is_overnight' => $request->is_overnight ?? false,
             'working_days' => $request->working_days,
             'overtime_days' => $request->overtime_days,
+            'is_active' => $request->is_active ?? true,
         ]);
 
         return response()->json([
@@ -122,7 +127,6 @@ class AdminWorkShiftController extends Controller
 
         DB::beginTransaction();
         try {
-            // Đóng ca cũ ở quá khứ bất kể có cùng work_shift_id hay không để tránh chồng lấn
             $currentActive = AdminShiftAssignment::where('admin_id', $request->admin_id)
                 ->active($validFrom)
                 ->where('valid_from', '<', $validFrom)
@@ -134,7 +138,6 @@ class AdminWorkShiftController extends Controller
                 ]);
             }
 
-            // Tạo mới (hoặc update nếu thao tác trên cùng 1 ngày để tránh duplicate)
             $assignment = AdminShiftAssignment::updateOrCreate(
                 [
                     'admin_id' => $request->admin_id,
@@ -182,6 +185,7 @@ class AdminWorkShiftController extends Controller
                     ->where('valid_from', '<', $validFrom)
                     ->first();
 
+                // Đóng ca cũ lại (Ghi đè)
                 if ($currentActive) {
                     $currentActive->update([
                         'valid_to' => Carbon::parse($validFrom)->subDay()->toDateString()
@@ -214,13 +218,124 @@ class AdminWorkShiftController extends Controller
         }
     }
 
+    public function autoAssign(Request $request)
+    {
+        $request->validate([
+            'work_shift_id' => 'required|exists:work_shifts,id',
+            'valid_from' => 'required|date',
+            'valid_to' => 'required|date|after_or_equal:valid_from',
+            'override_existing' => 'boolean',
+            'max_employees' => 'nullable|integer|min:1',
+            'candidate_admin_ids' => 'required|array',
+            'candidate_admin_ids.*' => 'exists:admins,id'
+        ]);
+
+        $shiftId = $request->work_shift_id;
+        $from = $request->valid_from;
+        $to = $request->valid_to;
+        $override = $request->boolean('override_existing', false);
+        $maxEmployees = $request->max_employees;
+        $candidateIds = $request->candidate_admin_ids;
+
+        DB::beginTransaction();
+        try {
+            // Danh sách bận của ứng viên
+            $busyAdmins = [];
+
+            // Góc khuất đã xử lý: Overlap Date logic chuẩn xác
+            // Một người bị coi là bận nếu có ca làm việc: Start <= To AND (End >= From OR End is NULL)
+            if (!$override) {
+                $busyAdmins = AdminShiftAssignment::whereIn('admin_id', $candidateIds)
+                    ->where('valid_from', '<=', $to)
+                    ->where(function ($query) use ($from) {
+                        $query->where('valid_to', '>=', $from)
+                              ->orWhereNull('valid_to');
+                    })
+                    ->pluck('admin_id')
+                    ->toArray();
+            }
+
+            // Loại trừ nhân sự có ĐƠN XIN NGHỈ PHÉP
+            $leaveAdmins = ShiftException::where('type', 'leave') 
+                ->whereIn('admin_id', $candidateIds)
+                ->whereBetween('date', [$from, $to])
+                ->pluck('admin_id')
+                ->toArray();
+
+            // Lọc ra danh sách những ứng viên rảnh thực sự
+            $excludedAdmins = array_unique(array_merge($busyAdmins, $leaveAdmins));
+            $availableAdmins = array_diff($candidateIds, $excludedAdmins);
+
+            if (empty($availableAdmins)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không tìm thấy nhân sự ứng viên nào khả dụng (không bận và không xin nghỉ) trong khoảng thời gian này.'
+                ], 400);
+            }
+
+            // Xác định số lượng nhân sự tối đa cần bổ sung:
+            // Thứ tự ưu tiên: 1. Do người dùng nhập từ UI -> 2. Cấu hình định mức (Requirements) -> 3. Toàn bộ ứng viên rảnh
+            $limit = count($availableAdmins);
+            if ($maxEmployees && $maxEmployees > 0) {
+                $limit = min($maxEmployees, $limit);
+            } else {
+                $requirements = ShiftRequirement::where('work_shift_id', $shiftId)->sum('required_count');
+                if ($requirements > 0) {
+                    $limit = min($requirements, $limit);
+                }
+            }
+            
+            // Xếp ca ngẫu nhiên cho những người được chọn trong limit
+            $selectedAdmins = array_slice(array_values($availableAdmins), 0, $limit);
+            $assignments = [];
+
+            foreach ($selectedAdmins as $adminId) {
+                // Kiểm tra ca làm hiện đang active của nhân sự trong thời gian tới để đóng lại (nếu ghi đè)
+                $currentActive = AdminShiftAssignment::where('admin_id', $adminId)
+                    ->active($from)
+                    ->where('valid_from', '<', $from)
+                    ->first();
+
+                // Đóng ca cũ của nhân sự nếu trùng lịch
+                if ($currentActive) {
+                    $currentActive->update(['valid_to' => Carbon::parse($from)->subDay()->toDateString()]);
+                }
+
+                $assignments[] = AdminShiftAssignment::updateOrCreate(
+                    [
+                        'admin_id' => $adminId,
+                        'valid_from' => $from
+                    ],
+                    [
+                        'work_shift_id' => $shiftId,
+                        'valid_to' => $to
+                    ]
+                );
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Tự động phân công thành công cho ' . count($selectedAdmins) . ' nhân viên vào ca này!',
+                'data' => $assignments
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Lỗi hệ thống khi tự động xếp ca: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function removeAssignment(Request $request, $adminId)
     {
         $request->validate([
             'work_shift_id' => 'required|exists:work_shifts,id',
         ]);
 
-        // Sử dụng get() để đóng toàn bộ các ca bị chồng chéo đang active (nếu có do dữ liệu cũ)
         $assignments = AdminShiftAssignment::where('admin_id', $adminId)
             ->where('work_shift_id', $request->work_shift_id)
             ->active() 

@@ -14,11 +14,7 @@
         </div>
         
         <div class="col-md-6 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end align-items-center gap-3 flex-wrap">
-          <div class="border rounded px-3 py-1 bg-white shadow-sm text-muted small" v-if="currentPageLevel">
-            <i class="bi bi-shield-check text-success me-1"></i>
-            Trang yêu cầu: <span class="badge" :class="getLevelColor(currentPageLevel)">Cấp {{ currentPageLevel }}</span>
-          </div>
-          <router-link :to="{ name: 'admin-user-create' }" class="btn btn-brand px-4 py-2 fw-bold shadow-sm text-white rounded-pill">
+<router-link :to="{ name: 'admin-user-create' }" class="btn btn-brand px-4 py-2 fw-bold shadow-sm text-white rounded-pill">
             <i class="bi bi-person-plus-fill me-1"></i> Thêm Khách Hàng
           </router-link>
         </div>
