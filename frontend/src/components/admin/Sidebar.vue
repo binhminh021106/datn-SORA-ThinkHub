@@ -32,34 +32,27 @@
         <ul class="nav nav-pills nav-sidebar flex-column gap-2" data-widget="treeview" role="menu">
           <template v-for="(item, index) in menuItems" :key="index">
 
-            <li class="nav-item position-relative" v-if="!item.children">
-
-              <span v-if="getModuleLevel(item.moduleCode) && !isCollapsed"
+            <!-- Menu item không có menu con -->
+            <li class="nav-item position-relative" v-if="!item.children && hasAccess(item.moduleCode)">
+              
+              <!-- CHỈ SUPER ADMIN MỚI NHÌN THẤY HUY HIỆU CẤP ĐỘ -->
+              <span v-if="userLevel === 1 && getModuleLevel(item.moduleCode) && !isCollapsed"
                 class="position-absolute badge rounded-pill shadow-sm level-badge"
                 :class="hasAccess(item.moduleCode) ? 'bg-success' : 'bg-danger'">
                 Cấp {{ getModuleLevel(item.moduleCode) }}
               </span>
 
-              <router-link v-if="hasAccess(item.moduleCode)" :to="item.path"
+              <router-link :to="item.path"
                 class="nav-link text-white py-2 rounded shadow-sm-hover transition-all d-flex align-items-center"
-                :class="[isCollapsed ? 'justify-content-center px-0' : 'px-3', { 'router-link-active': isItemActive(item.path) }]" :title="isCollapsed ? item.name : ''">
+                :class="[isCollapsed ? 'justify-content-center px-0' : 'px-3', { 'custom-active': isItemActive(item.path) }]" :title="isCollapsed ? item.name : ''">
                 <i class="nav-icon bi" :class="[item.icon, isCollapsed ? 'fs-5' : 'me-3']"></i>
                 <p class="m-0 fw-semibold text-nowrap" v-show="!isCollapsed">{{ item.name }}</p>
               </router-link>
-
-              <div v-else class="nav-link py-2 rounded disabled-menu d-flex align-items-center"
-                :class="isCollapsed ? 'justify-content-center px-0' : 'px-3'"
-                :title="isCollapsed ? item.name + ' (Khóa)' : ''"
-                @click="showAccessDenied(item.name, getModuleLevel(item.moduleCode))">
-                <i class="nav-icon bi" :class="[item.icon, isCollapsed ? 'fs-5' : 'me-3']"></i>
-                <p class="m-0 fw-semibold text-nowrap" v-show="!isCollapsed">{{ item.name }}</p>
-                <i class="bi bi-lock-fill opacity-50"
-                  :class="isCollapsed ? 'position-absolute top-0 start-100 translate-middle' : 'ms-auto'"></i>
-              </div>
             </li>
 
+            <!-- Menu item có menu con -->
             <li class="nav-item mt-2 rounded shadow-sm position-relative transition-all"
-              :class="[menuState[item.stateKey] && !isCollapsed ? 'menu-open bg-dark' : '']" v-else>
+              :class="[menuState[item.stateKey] && !isCollapsed ? 'menu-open bg-dark' : '']" v-else-if="item.children && hasAnyAccess(item)">
 
               <a href="#" class="nav-link text-white py-2 rounded d-flex align-items-center transition-all"
                 :class="[isCollapsed ? 'justify-content-center px-0' : 'justify-content-between px-3', { 'active-group': menuState[item.stateKey] && !isCollapsed }]"
@@ -75,8 +68,9 @@
               <ul class="nav nav-treeview flex-column p-2 pt-1 gap-1" v-show="menuState[item.stateKey] && !isCollapsed"
                 style="background-color: rgba(0,0,0,0.15); border-radius: 0 0 8px 8px;">
                 <li class="nav-item position-relative" v-for="(subItem, subIndex) in item.children" :key="subIndex">
-
-                  <span v-if="getModuleLevel(subItem.moduleCode)"
+                  
+                  <!-- CHỈ SUPER ADMIN MỚI NHÌN THẤY HUY HIỆU CẤP ĐỘ -->
+                  <span v-if="userLevel === 1 && getModuleLevel(subItem.moduleCode)"
                     class="position-absolute badge rounded-pill shadow-sm level-badge-sub"
                     :class="hasAccess(subItem.moduleCode) ? 'bg-success opacity-75' : 'bg-danger opacity-75'">
                     Cấp {{ getModuleLevel(subItem.moduleCode) }}
@@ -84,18 +78,10 @@
 
                   <router-link v-if="hasAccess(subItem.moduleCode)" :to="subItem.path"
                     class="nav-link text-white-50 py-2 px-3 rounded sub-link d-flex align-items-center"
-                    :class="{ 'router-link-active': isItemActive(subItem.path) }">
+                    :class="{ 'custom-active': isItemActive(subItem.path) }">
                     <i class="bi bi-circle-fill fs-xs me-3 opacity-50" style="font-size: 6px;"></i>
                     <p class="m-0 fw-medium text-nowrap">{{ subItem.name }}</p>
                   </router-link>
-
-                  <div v-else
-                    class="nav-link text-white-50 py-2 px-3 rounded sub-link d-flex align-items-center disabled-menu"
-                    @click="showAccessDenied(subItem.name, getModuleLevel(subItem.moduleCode))">
-                    <i class="bi bi-lock-fill fs-xs me-3 opacity-50" style="font-size: 10px;"></i>
-                    <p class="m-0 fw-medium text-nowrap">{{ subItem.name }}</p>
-                  </div>
-
                 </li>
               </ul>
             </li>
@@ -112,6 +98,8 @@ import { ref, reactive, onMounted, inject, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import apiClient from '@/utils/apiClient';
+import { useQuery, useQueryClient } from '@tanstack/vue-query';
+import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -119,8 +107,7 @@ const API_URL = import.meta.env.VITE_API_BASE_URL;
 const emit = defineEmits(['toggle-collapse']);
 
 const route = useRoute();
-const isLoading = ref(true);
-const systemModules = ref([]);
+const queryClient = useQueryClient();
 
 // Trạng thái thu gọn/mở rộng Sidebar
 const isCollapsed = ref(false);
@@ -162,7 +149,7 @@ const menuItems = ref([
     children: [
       { name: 'Nội bộ', path: '/admin/staff', moduleCode: 'admin_staff' },
       { name: 'Khách hàng', path: '/admin/users', moduleCode: 'admin_users' },
-      { name: 'Hạng thành viên', path: '/admin/tiers', moduleCode: 'admin_roles' }
+      { name: 'Hạng thành viên', path: '/admin/tiers', moduleCode: 'admin_tiers' }
     ]
   },
   {
@@ -232,18 +219,14 @@ const getHeaders = () => ({
   'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
 });
 
-const fetchSidebarData = async () => {
-  try {
+const { data: systemModules, isLoading } = useQuery({
+  queryKey: ['admin-modules'],
+  queryFn: async () => {
     const data = await apiClient.get('/admin/modules');
-    if (data.data?.data) {
-      systemModules.value = data.data.data;
-    }
-  } catch (err) {
-    console.error("Lỗi tải dữ liệu Sidebar", err);
-  } finally {
-    isLoading.value = false;
-  }
-};
+    return data.data?.data || [];
+  },
+  initialData: [],
+});
 
 const getModuleLevel = (code) => {
   if (!code) return null;
@@ -262,15 +245,9 @@ const hasAccess = (code) => {
   return userLevel.value <= requiredLevel;
 };
 
-// ĐÃ SỬA: THÔNG BÁO LỖI RÕ RÀNG HƠN
-const showAccessDenied = (menuName, reqLevel) => {
-  const levelText = reqLevel ? reqLevel : '1 (Chưa cấu hình CSDL)';
-  Swal.fire({
-    toast: true, position: 'top-end', icon: 'error',
-    title: 'Truy cập bị từ chối!',
-    text: `Tính năng "${menuName}" yêu cầu Cấp ${levelText}. (Bạn đang ở Cấp ${userLevel.value})`,
-    showConfirmButton: false, timer: 4000, timerProgressBar: true,
-  });
+const hasAnyAccess = (item) => {
+  if (!item.children) return hasAccess(item.moduleCode);
+  return item.children.some(subItem => hasAccess(subItem.moduleCode));
 };
 
 const isItemActive = (itemPath) => {
@@ -297,8 +274,12 @@ watch(() => route.path, () => {
   });
 }, { immediate: true });
 
-onMounted(() => {
-  fetchSidebarData();
+useAdminRefreshListener((payload) => {
+  if (!payload || !payload.module) return;
+  // Khi admin chỉnh sửa role hoặc module thì báo sidebar tải lại để ẩn/hiện tab realtime
+  if (payload.module === 'roles' || payload.module === 'modules' || payload.module === 'all') {
+    queryClient.invalidateQueries({ queryKey: ['admin-modules'] });
+  }
 });
 </script>
 
@@ -399,21 +380,20 @@ onMounted(() => {
   box-shadow: 0 4px 10px rgba(0, 153, 129, 0.3);
 }
 
-.router-link-active,
-.router-link-exact-active {
+.custom-active {
   background-color: #009981 !important;
   color: #fff !important;
   box-shadow: 0 4px 10px rgba(0, 153, 129, 0.3);
 }
 
-.sub-link.router-link-active {
+.sub-link.custom-active {
   background-color: rgba(0, 153, 129, 0.15) !important;
   color: #00ebc4 !important;
   box-shadow: none;
   font-weight: 600;
 }
 
-.sub-link.router-link-active i {
+.sub-link.custom-active i {
   color: #00ebc4 !important;
   opacity: 1 !important;
 }

@@ -35,7 +35,6 @@
         
         <!-- Cột trái: Danh sách sản phẩm -->
         <div class="col-lg-8">
-          <!-- FIX BLIND SPOT: Đổi lưới từ 6-2-2-2 thành 5-2-2-3 để nhường không gian cho số tiền lớn -->
           <div class="row d-none d-md-flex border-bottom pb-3 text-secondary small text-uppercase mb-4 fw-bold" style="letter-spacing: 0.05em;">
             <div class="col-5">Sản phẩm</div>
             <div class="col-2 text-center">Đơn giá</div>
@@ -105,7 +104,6 @@
             </div>
 
             <!-- Tổng và Xóa (Desktop) -->
-            <!-- FIX BLIND SPOT: Đổi col-2 thành col-3, thêm text-nowrap để giá tiền lớn không bị đè lên nút + -->
             <div class="col-3 d-none d-md-flex justify-content-end align-items-center gap-3">
               <span class="fs-5 fw-bold text-primary-custom text-nowrap" >
                 {{ formatPrice(item.quantity * getItemPrice(item)) }}
@@ -114,11 +112,6 @@
                 <i class="bi bi-x-lg fw-bold text-danger"></i>
               </button>
             </div>
-          </div>
-          
-          <div class="mt-5">
-            <label class="form-label small text-secondary fw-bold text-uppercase"><i class="bi bi-pencil-square me-1"></i> Ghi chú đơn hàng (Tùy chọn)</label>
-            <textarea class="form-control rounded-3 shadow-sm border-light-subtle bg-white p-3" rows="3" placeholder="Ví dụ: Đóng gói quà tặng, giao giờ hành chính..."></textarea>
           </div>
         </div>
 
@@ -225,10 +218,8 @@ const checkAndMergeCart = async () => {
     }
   } catch (error) {
     console.error('Merge cart error:', error);
-    // Không báo lỗi cho user để tránh làm gián đoạn trải nghiệm
   }
 };
-// ============================================================
 
 const getItemName = (item) => {
   if (item.combo_id && item.combo) return item.combo.name;

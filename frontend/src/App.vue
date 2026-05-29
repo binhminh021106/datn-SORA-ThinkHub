@@ -9,7 +9,6 @@
   <div v-else>
     <router-view></router-view>
 
-    <!-- GLOBAL MODALS: Đặt ở đây để hoạt động trên TOÀN BỘ hệ thống -->
     <QuickAddModal />
     <CompareModal shop-slug="sora" />
   </div>
@@ -19,6 +18,7 @@
 import { ref, onMounted, provide } from 'vue';
 import { useRouter } from 'vue-router';
 import apiClient from '@/utils/apiClient';
+import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 
 // Nhúng 2 Modal Global vào App
 import QuickAddModal from '@/components/ui/QuickAddModal.vue';
@@ -57,6 +57,14 @@ const checkAuthentication = async () => {
 
 onMounted(() => {
   checkAuthentication();
+});
+
+useAdminRefreshListener((payload) => {
+  if (!payload || !payload.module) return;
+  // Tải lại thông tin user nếu có thay đổi về role hoặc users
+  if (payload.module === 'roles' || payload.module === 'users') {
+    checkAuthentication();
+  }
 });
 </script>
 

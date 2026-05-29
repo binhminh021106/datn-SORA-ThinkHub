@@ -3,37 +3,38 @@
   <nav class="app-header navbar navbar-expand shadow-sm px-3 py-2 border-bottom transition-all"
        :class="isDarkMode ? 'bg-dark border-secondary' : 'bg-white'">
     <div class="container-fluid">
+      
+      <!-- ĐỒNG HỒ DIGITAL (Bên trái) -->
+      <div class="d-none d-sm-flex align-items-center me-auto" v-if="isLoggedIn">
+        <div class="digital-clock-container d-flex align-items-center px-3 py-1 rounded shadow-sm" 
+             :class="isDarkMode ? 'bg-black border border-secondary' : 'bg-dark border'">
+          <i class="bi bi-clock me-2" style="color: #00ff00;"></i>
+          <span class="digital-text" style="color: #00ff00; letter-spacing: 2px; text-shadow: 0 0 5px #00ff00;">
+            {{ currentTime.time }} <span class="ms-1" style="font-size: 0.6em;">{{ currentTime.ampm }}</span>
+          </span>
+        </div>
+      </div>
 
-      <ul class="navbar-nav ms-auto align-items-center">
-        <!-- NÚT CHẤM CÔNG NHANH TRÊN HEADER (Được bọc trong v-if="isLoggedIn") -->
-        <li class="nav-item me-3" v-if="isLoggedIn">
-          <div class="d-flex align-items-center">
-             <!-- Đang Loading trạng thái -->
-             <button v-if="isLoadingStatus" class="btn btn-sm btn-light border-light text-muted fw-bold d-flex align-items-center shadow-sm" disabled>
-                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                Đang tải ca...
-             </button>
+      <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+        <!-- NÚT MỞ TRẠM QUÉT (Chỉ dành cho Super Admin) -->
+        <li class="nav-item me-2 d-flex align-items-center" v-if="isLoggedIn && isSuperAdmin">
+          <button class="btn btn-outline-info rounded-3 btn-sm fw-bold px-3 d-flex align-items-center" @click="openStation">
+            <i class="bi bi-display me-2 fs-6"></i>
+            QR (Lễ tân)
+          </button>
+        </li>
 
-             <!-- Trạng thái READY: Nút Check-in -->
-             <button v-else-if="attendanceState === 'ready'" @click="handleCheckIn" :disabled="isActionMutating" class="btn btn-sm btn-brand text-white fw-bold d-flex align-items-center shadow-sm" style="background-color: #009981; border: none;">
-                <i class="bi bi-fingerprint me-2 fs-6"></i> {{ isActionMutating ? 'Đang xử lý...' : 'Vào ca' }}
-             </button>
-
-             <!-- Trạng thái WORKING: Nút Check-out -->
-             <button v-else-if="attendanceState === 'working'" @click="handleCheckOut" :disabled="isActionMutating" class="btn btn-sm btn-warning text-dark fw-bold d-flex align-items-center shadow-sm">
-                <i class="bi bi-person-dash me-2 fs-6"></i> {{ isActionMutating ? 'Đang xử lý...' : 'Tan ca' }}
-             </button>
-
-             <!-- Trạng thái HANGING: Quên checkout -->
-             <router-link v-else-if="attendanceState === 'hanging'" :to="{ name: 'admin-attendance-history' }" class="btn btn-sm btn-danger text-white fw-bold d-flex align-items-center shadow-sm">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i> Xử lý ca treo
-             </router-link>
-
-             <!-- Trạng thái COMPLETED -->
-             <button v-else-if="attendanceState === 'completed'" class="btn btn-sm fw-bold d-flex align-items-center border-0" :class="isDarkMode ? 'btn-outline-success text-success' : 'btn-outline-success bg-success-subtle text-success'" disabled>
-                <i class="bi bi-check2-circle me-2"></i> Hoàn thành ca
-             </button>
-          </div>
+        <!-- Nút bật Quét QR -->
+        <li class="nav-item me-2 d-flex align-items-center" v-if="isLoggedIn">
+          <button class="btn btn-brand rounded-3 btn-sm fw-bold px-4 d-flex align-items-center text-white shadow-sm" style="background-color: #009981;" @click="handleScanClick" :disabled="isCheckingStatus">
+            <span v-if="isCheckingStatus" class="spinner-border spinner-border-sm me-2"></span>
+            <template v-else>
+              <i v-if="attendanceState === 'working'" class="bi bi-box-arrow-right me-2 fs-5"></i>
+              <i v-else-if="attendanceState === 'completed'" class="bi bi-check-circle me-2 fs-5"></i>
+              <i v-else class="bi bi-box-arrow-in-right me-2 fs-5"></i>
+              {{ attendanceState === 'working' ? 'Check-out' : (attendanceState === 'completed' ? 'Hoàn thành' : 'Check-in') }}
+            </template>
+          </button>
         </li>
 
         <!-- NÚT TOGGLE DARK MODE (MỚI THÊM) -->
@@ -105,12 +106,14 @@
 
         <!-- Trường hợp 2: Chưa đăng nhập - Hiển thị Nút Đăng nhập -->
         <li v-else class="nav-item">
-          <router-link :to="{ name: 'admin-login' }" class="btn btn-brand-outline px-3 py-1 fw-bold">
+          <router-link :to="{ name: 'admin-login' }" class="btn btn-brand-outline px-3 py-1 rounded-3 fw-bold">
             <i class="bi bi-box-arrow-in-right me-1"></i> Đăng nhập
           </router-link>
         </li>
       </ul>
     </div>
+    
+    <QrGeneratorModal ref="qrModalRef" @success="fetchAttendanceState" />
   </nav>
 </template>
 
@@ -120,24 +123,46 @@ import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import { getFullImage } from '@/composables/useUtilities';
 import axios from 'axios';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
+import { useQuery, useQueryClient } from '@tanstack/vue-query';
+import * as bootstrap from 'bootstrap';
 
 // Import component SoraImage phục vụ việc tự động fallback ảnh lỗi
 import SoraImage from '@/components/ui/SoraImage.vue';
 import defaultAvatar from '@/assets/images/defaults/avatar1.png';
+import QrGeneratorModal from './QrGeneratorModal.vue';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 const router = useRouter();
+const queryClient = useQueryClient();
 const isUserMenuActive = ref(false);
 const userMenuContainer = ref(null);
+const attendanceState = ref('ready'); // ready, working, completed, hanging
+
+// LOGIC ĐỒNG HỒ
+const currentTime = ref({ time: '', ampm: '' });
+let timeInterval = null;
+
+const updateTime = () => {
+  const now = new Date();
+  let hours = now.getHours();
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12; 
+  const strHours = String(hours).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  currentTime.value = {
+    time: `${strHours}:${minutes}:${seconds}`,
+    ampm: ampm
+  };
+};
 
 // LOGIC DARK MODE
 const isDarkMode = ref(false);
 
 const initTheme = () => {
   const savedTheme = localStorage.getItem('admin_theme');
-  // Mặc định lấy theo LocalStorage. Nếu không có thì kiểm tra xem máy tính người dùng có đang dùng Dark Mode không.
   if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
     isDarkMode.value = true;
     document.documentElement.setAttribute('data-bs-theme', 'dark');
@@ -161,18 +186,29 @@ const toggleTheme = () => {
     localStorage.setItem('admin_theme', 'light');
   }
 };
-// KẾT THÚC LOGIC DARK MODE
 
 const isLoggedIn = computed(() => {
   return !!localStorage.getItem('admin_token');
 });
+
+const fetchAttendanceState = async () => {
+  if (!isLoggedIn.value) return;
+  try {
+    const token = localStorage.getItem('admin_token');
+    const response = await axios.get(`${API_URL}/admin/attendances/status`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    attendanceState.value = response.data.state;
+  } catch (err) {
+    console.error('Không thể lấy trạng thái điểm danh', err);
+  }
+};
 
 // Hàm gọi API lấy thông tin profile admin bằng Axios
 const fetchAdminProfile = async () => {
   const token = localStorage.getItem('admin_token');
   if (!token) throw new Error('Không tìm thấy token xác thực');
   
-  // Lưu ý: Đảm bảo endpoint '/api/admin/profile' trùng khớp với API backend của bạn
   const response = await axios.get(`${API_URL}/admin/profile`, {
     headers: {
       Authorization: `Bearer ${token}`
@@ -181,14 +217,13 @@ const fetchAdminProfile = async () => {
   return response.data;
 };
 
-// Áp dụng TanStack Query để tự động fetch và cache dữ liệu
+// Áp dụng TanStack Query
 const { data: adminProfileData } = useQuery({
   queryKey: ['adminProfile'],
   queryFn: fetchAdminProfile,
-  enabled: isLoggedIn, // Chỉ kích hoạt gọi API khi đã đăng nhập
-  staleTime: 5 * 60 * 1000, // Caching dữ liệu trong 5 phút
+  enabled: isLoggedIn,
+  staleTime: 5 * 60 * 1000,
   initialData: () => {
-    // Tận dụng localStorage làm dữ liệu khởi tạo để UI hiển thị ngay lập tức (không bị giật)
       const savedInfo = localStorage.getItem('admin_info');
       if (!savedInfo) return undefined;
       try {
@@ -199,7 +234,6 @@ const { data: adminProfileData } = useQuery({
   }
 });
 
-// Tính toán lại adminUser dựa trên data trả về từ Vue Query thay vì ref() tĩnh
 const adminUser = computed(() => {
   const data = adminProfileData.value;
   const roleId = localStorage.getItem('admin_role');
@@ -224,7 +258,7 @@ const toggleUserMenu = () => {
 };
 
 const handleLogout = () => {
-  isUserMenuActive.value = false; // Đóng menu thả xuống
+  isUserMenuActive.value = false;
   
   Swal.fire({
     title: 'Xác nhận đăng xuất?',
@@ -240,6 +274,9 @@ const handleLogout = () => {
       localStorage.removeItem('admin_token');
       localStorage.removeItem('admin_role');
       localStorage.removeItem('admin_info');
+
+      // Xóa toàn bộ cache của TanStack Query để tránh kẹt dữ liệu tài khoản cũ
+      queryClient.clear();
 
       Swal.fire({
         icon: 'success',
@@ -260,88 +297,78 @@ const closeUserMenu = (event) => {
 };
 
 onMounted(() => {
-  initTheme(); // Nạp giao diện lúc load trang
+  initTheme();
   document.addEventListener('click', closeUserMenu);
+  updateTime();
+  timeInterval = setInterval(updateTime, 1000);
+  fetchAttendanceState();
 });
 
 onUnmounted(() => {
   document.removeEventListener('click', closeUserMenu);
+  if (timeInterval) clearInterval(timeInterval);
 });
 
-// ==========================================
-// LOGIC CHẤM CÔNG TANSTACK QUERY
-// ==========================================
-const queryClient = useQueryClient();
-const isActionMutating = ref(false);
+const qrModalRef = ref(null);
 
-const { data: statusData, isLoading: isLoadingStatus } = useQuery({
-  queryKey: ['attendanceStatus'],
-  queryFn: async () => {
-    const token = localStorage.getItem('admin_token');
-    const response = await axios.get(`${API_URL}/admin/attendances/status`, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
-    return response.data;
-  },
-  refetchInterval: 60000, 
-  enabled: isLoggedIn, // Đảm bảo chỉ gọi API chấm công khi đã login
+const isSuperAdmin = computed(() => {
+  const roleId = localStorage.getItem('admin_role');
+  return roleId == 1; 
 });
 
-const attendanceState = computed(() => statusData.value?.state || 'ready');
-
-const checkInMutation = useMutation({
-  mutationFn: async () => {
-      const token = localStorage.getItem('admin_token');
-      return await axios.post(`${API_URL}/admin/attendances/check-in`, {}, {
-          headers: { Authorization: `Bearer ${token}` }
-      });
-  },
-  onSuccess: () => {
-    Swal.fire({ title: 'Check-in thành công!', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
-    queryClient.invalidateQueries({ queryKey: ['attendanceStatus'] });
-  },
-  onError: (error) => {
-    Swal.fire('Lỗi Check-in', error.response?.data?.message || 'Có lỗi xảy ra', 'error');
-  }
-});
-
-const checkOutMutation = useMutation({
-  mutationFn: async () => {
-      const token = localStorage.getItem('admin_token');
-      return await axios.post(`${API_URL}/admin/attendances/check-out`, {}, {
-          headers: { Authorization: `Bearer ${token}` }
-      });
-  },
-  onSuccess: () => {
-    Swal.fire({ title: 'Đã Check-out ra về!', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
-    queryClient.invalidateQueries({ queryKey: ['attendanceStatus'] });
-  },
-  onError: (error) => {
-    Swal.fire('Lỗi Check-out', error.response?.data?.message || 'Có lỗi xảy ra', 'error');
-  }
-});
-
-const handleCheckIn = () => {
-  isActionMutating.value = true;
-  checkInMutation.mutate(null, { onSettled: () => isActionMutating.value = false });
+const openStation = () => {
+  const url = router.resolve({ name: 'admin-attendance-scanner' }).href;
+  window.open(url, '_blank', 'width=1000,height=700');
 };
 
-const handleCheckOut = () => {
-  Swal.fire({
-    title: 'Xác nhận ra về?',
-    text: 'Hệ thống sẽ ghi nhận bạn kết thúc ca làm.',
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#ffc107',
-    cancelButtonColor: '#6c757d',
-    confirmButtonText: 'Kết thúc ca',
-    cancelButtonText: 'Hủy'
-  }).then((result) => {
-    if (result.isConfirmed) {
-      isActionMutating.value = true;
-      checkOutMutation.mutate(null, { onSettled: () => isActionMutating.value = false });
+const openQrModal = () => {
+  if (qrModalRef.value) {
+    qrModalRef.value.openModal();
+  }
+};
+
+const isCheckingStatus = ref(false);
+const handleScanClick = async () => {
+  if (isCheckingStatus.value) return;
+  isCheckingStatus.value = true;
+  
+  try {
+    const token = localStorage.getItem('admin_token');
+    const response = await axios.get(`${API_URL}/admin/attendances/status`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    
+    const state = response.data.state;
+    
+    if (state === 'working') {
+      const result = await Swal.fire({
+        title: 'Xác nhận Tan ca?',
+        text: 'Bạn hiện đang trong ca làm việc. Bạn có muốn quét mã QR để xác nhận Tan ca không?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Có, Quét mã Tan ca',
+        cancelButtonText: 'Đóng'
+      });
+      
+      if (result.isConfirmed) {
+        openQrModal();
+      }
+    } else if (state === 'hanging') {
+      Swal.fire('Lỗi Ca Treo', 'Bạn đang có một ca làm việc chưa được chốt từ ngày trước. Vui lòng báo cáo Quản lý để xử lý trước khi điểm danh mới.', 'error');
+    } else if (state === 'completed') {
+      Swal.fire('Đã hoàn thành', 'Bạn đã hoàn thành ca làm việc hôm nay rồi.', 'info');
+    } else {
+      openQrModal();
     }
-  });
+    
+  } catch (error) {
+    console.error('Lỗi check status:', error);
+    openQrModal();
+  } finally {
+    isCheckingStatus.value = false;
+  }
 };
 </script>
 

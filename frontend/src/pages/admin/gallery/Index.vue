@@ -13,12 +13,7 @@
           <h3 class="fw-bold text-dark mb-0">Chân Dung SORA</h3>
         </div>
         <div class="col-md-6 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end align-items-center gap-3 flex-wrap">
-          <div class="border rounded px-3 py-1 bg-white shadow-sm text-muted small" v-if="currentPageLevel">
-            <i class="bi bi-shield-check text-success me-1"></i>
-            Trang yêu cầu: <span class="badge" :class="getLevelColor(currentPageLevel)">Cấp {{ currentPageLevel }}</span>
-          </div>
-
-          <button class="btn btn-light border shadow-sm fw-bold text-dark px-3 py-2" @click="handleRefresh">
+<button class="btn btn-light border shadow-sm fw-bold text-dark px-3 py-2" @click="handleRefresh">
             <i class="bi bi-arrow-clockwise me-1"></i> Làm mới
           </button>
 

@@ -14,7 +14,7 @@
           <h3 class="fw-bold text-dark mb-0">Banner Quảng Cáo</h3>
         </div>
         <div class="col-md-6 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end align-items-center gap-3 flex-wrap">
-          <router-link :to="{ name: 'admin-banners-create' }" class="btn btn-brand px-4 py-2 fw-bold shadow-sm text-white rounded-pill" v-if="!isReorderMode">
+<router-link :to="{ name: 'admin-banners-create' }" class="btn btn-brand px-4 py-2 fw-bold shadow-sm text-white rounded-pill" v-if="!isReorderMode">
             <i class="bi bi-plus-circle me-1"></i> Thêm Banner
           </router-link>
         </div>

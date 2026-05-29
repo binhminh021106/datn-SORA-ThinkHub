@@ -72,7 +72,7 @@ return [
         'default_level' => 2
     ],
     [
-        'module_name' => 'admin_contacts',
+        'module_name' => 'Quản lý Liên hệ',
         'module_code' => 'admin_contacts',
         'default_level' => 2
     ],
@@ -82,17 +82,17 @@ return [
         'default_level' => 2
     ],
     [
-        'module_name' => 'admin_news',
+        'module_name' => 'Quản lý Tin tức',
         'module_code' => 'admin_news',
         'default_level' => 2
     ],
     [
-        'module_name' => 'admin_chat',
+        'module_name' => 'Quản lý chat',
         'module_code' => 'admin_chat',
         'default_level' => 2
     ],
     [
-        'module_name' => 'admin_attendance',
+        'module_name' => 'Quản lý chấm công',
         'module_code' => 'admin_attendance',
         'default_level' => 2
     ],

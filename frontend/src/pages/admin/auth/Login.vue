@@ -71,10 +71,12 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
+import { useQueryClient } from '@tanstack/vue-query';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 const router = useRouter();
+const queryClient = useQueryClient();
 const form = ref({ email: '', password: '', remember: false });
 const showPassword = ref(false);
 const isLoading = ref(false);
@@ -99,6 +101,9 @@ const handleLogin = async () => {
       }
 
       localStorage.setItem('admin_info', JSON.stringify(data.admin));
+
+      // Xóa toàn bộ cache của TanStack Query để tránh kẹt dữ liệu từ phiên làm việc trước
+      queryClient.clear();
 
       Swal.fire({
         icon: 'success',

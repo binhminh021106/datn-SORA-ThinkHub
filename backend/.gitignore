@@ -24,3 +24,8 @@ Homestead.yaml
 Thumbs.db
 docker-compose.yml
 /storage/logs/
+
+# IDE Helper files
+_ide_helper.php
+_ide_helper_models.php
+.phpstorm.meta.php
