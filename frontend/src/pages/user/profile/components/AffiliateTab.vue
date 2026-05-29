@@ -67,7 +67,7 @@
         <p class="text-muted max-w-600 mx-auto mb-2">Rất tiếc, hồ sơ của bạn hiện tại chưa phù hợp với tiêu chí của chương trình Đại sứ SORA.</p>
         <p v-if="adminNotes" class="text-danger small fst-italic mb-4">"{{ adminNotes }}"</p>
         
-        <button @click="resetForm" class="btn btn-outline-dark font-oswald tracking-widest text-uppercase px-4 py-2">
+        <button @click="resetForm" class="btn btn-outline-main font-oswald tracking-wide text-uppercase px-4 py-2">
           Đăng ký lại
         </button>
       </div>
@@ -91,12 +91,9 @@
           </div>
 
           <div class="text-center mt-5">
-            <button type="submit" class="btn-luxury-slide btn-luxury-primary rounded-pill d-inline-block position-relative text-uppercase tracking-widest fw-bold text-decoration-none px-5 py-3 border border-1 overflow-hidden font-oswald shadow-sm w-100 max-w-400" :disabled="isSubmitting">
-              <span class="position-relative z-index-2 transition-colors duration-500">
-                <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>
-                Gửi Đơn Đăng Ký
-              </span>
-              <div class="position-absolute inset-0 slide-bg transition-transform duration-500" style="transform: translateX(-101%);"></div>
+            <button type="submit" class="btn btn-main text-uppercase tracking-wide font-oswald px-5 py-3 w-100 max-w-400" :disabled="isSubmitting">
+              <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>
+              Gửi Đơn Đăng Ký
             </button>
           </div>
         </form>
@@ -240,12 +237,13 @@ onMounted(() => {
 .font-serif { font-family: 'Playfair Display', serif; }
 .font-oswald { font-family: 'Oswald', sans-serif; }
 .tracking-widest { letter-spacing: 0.15em; }
+.tracking-wide { letter-spacing: 0.1em; }
 
-.btn-luxury-slide { background-color: transparent; }
-.btn-luxury-slide:hover .slide-bg { transform: translateX(0) !important; }
-.btn-luxury-primary { border-color: #9f273b; color: #9f273b; }
-.btn-luxury-primary .slide-bg { background-color: #9f273b; z-index: 1; }
-.btn-luxury-primary:hover span { color: #fff !important; z-index: 2;}
+.btn-main { background-color: #9f273b; color: white; border: 1px solid #9f273b; border-radius: 4px; transition: all 0.3s ease; }
+.btn-main:hover { background-color: #7a1c2d; border-color: #7a1c2d; color: white; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(159,39,59,0.3); }
+
+.btn-outline-main { color: #9f273b; border: 1px solid #9f273b; border-radius: 4px; background: transparent; transition: all 0.3s ease; }
+.btn-outline-main:hover { background-color: #9f273b; color: white; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(159,39,59,0.3); }
 
 .fade-in { animation: fadeIn 0.5s ease-in; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

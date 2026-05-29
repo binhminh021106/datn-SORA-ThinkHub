@@ -100,7 +100,7 @@
           
           <div v-else-if="!defaultAddress" class="d-flex align-items-center justify-content-between bg-light p-3 rounded border border-light">
             <span class="text-secondary fw-light small">Chưa có địa chỉ nhận hàng.</span>
-            <button type="button" @click="$emit('go-address-book')" class="btn btn-sm btn-outline-main text-uppercase fw-medium rounded-0" style="letter-spacing: 0.05em;">
+            <button type="button" @click="$emit('go-address-book')" class="btn btn-sm btn-outline-main text-uppercase fw-medium tracking-wide font-oswald">
               + Thêm Mới
             </button>
           </div>
@@ -122,7 +122,7 @@
             <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
               <span v-if="defaultAddress.is_default" class="badge bg-main text-white px-2 py-1" style="font-size: 0.65rem;">Mặc Định</span>
               <span v-if="addresses.length > 1" class="text-muted small fw-light fst-italic">(và {{ addresses.length - 1 }} địa chỉ khác)</span>
-              <button type="button" @click="$emit('go-address-book')" class="btn btn-sm btn-outline-main rounded-0 ms-auto" style="font-size: 0.78rem; letter-spacing: 0.03em;">
+              <button type="button" @click="$emit('go-address-book')" class="btn btn-sm btn-outline-main ms-auto tracking-wide text-uppercase font-oswald" style="font-size: 0.78rem;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="me-1" style="vertical-align: -2px;">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -137,7 +137,7 @@
 
       <div class="row">
         <div class="col-sm-9 offset-sm-3">
-          <button type="submit" class="btn btn-main px-5 py-2 text-uppercase fw-medium rounded-0" :disabled="isSaving" style="letter-spacing: 0.1em;">
+          <button type="submit" class="btn btn-main px-5 py-2 text-uppercase fw-medium tracking-wide" :disabled="isSaving">
             <span v-if="isSaving" class="spinner-border spinner-border-sm me-2" role="status"></span>
             {{ isSaving ? 'Đang lưu...' : 'Lưu Thay Đổi' }}
           </button>
@@ -379,20 +379,29 @@ const tierBannerClass = computed(() => {
 .btn-main {
   background-color: #9f273b;
   color: white;
-  border: none;
+  border: 1px solid #9f273b;
+  border-radius: 4px;
   transition: all 0.3s ease;
 }
 .btn-main:hover {
-  background-color: #832030;
+  background-color: #7a1c2d;
+  border-color: #7a1c2d;
   color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(159,39,59,0.3);
 }
 .btn-outline-main {
   color: #9f273b;
-  border-color: #9f273b;
+  border: 1px solid #9f273b;
+  border-radius: 4px;
+  background: transparent;
+  transition: all 0.3s ease;
 }
 .btn-outline-main:hover {
   background-color: #9f273b;
   color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(159,39,59,0.3);
 }
 
 .tracking-wide { letter-spacing: 0.1em; }
