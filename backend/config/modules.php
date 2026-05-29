@@ -96,4 +96,9 @@ return [
         'module_code' => 'admin_attendance',
         'default_level' => 2
     ],
+    [
+        'module_name' => 'Quản lý Đối tác Affiliate',
+        'module_code' => 'admin_affiliates',
+        'default_level' => 2
+    ],
 ];

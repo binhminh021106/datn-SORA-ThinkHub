@@ -262,7 +262,8 @@ const admin = [
         component: () => import('../pages/admin/email-campaign/Create.vue'),
         meta: { moduleCode: 'admin_coupons' },
       },
-      {path: 'email-campaigns/:id/edit',
+      {
+        path: 'email-campaigns/:id/edit',
         name: 'admin-email-campaigns-edit',
         component: () => import('../pages/admin/email-campaign/Edit.vue'),
         meta: { moduleCode: 'admin_coupons' },
@@ -354,6 +355,13 @@ const admin = [
         meta: { moduleCode: 'admin_news' },
       },
 
+      // ROUTE QUẢN LÝ AFFILIATE (AFFILIATES)
+      {
+        path: 'affiliates',
+        name: 'AdminAffiliates',
+        component: () => import('@/pages/admin/affiliate/index.vue'),
+        meta: { title: 'Quản lý Đối tác' }
+      }
     ],
   },
 ]
