@@ -201,7 +201,9 @@
                           <span v-if="product.promotional_price" class="sora-badge sale-badge">SALE</span>
                       </div>
                       <img :src="getImageUrl(product.thumbnail_image)" loading="lazy" :alt="product.name" class="sora-main-img" @error="handleImageError">
-                      <img v-if="hasHoverImage(product)" :src="getImageUrl(product.hover_image)" loading="lazy" :alt="product.name + ' hover'" class="sora-hover-img" @error="handleImageError">
+                      
+                      <!-- SỬA Ở ĐÂY: Dùng handleHoverImageError cho ảnh hover -->
+                      <img v-if="hasHoverImage(product)" :src="getImageUrl(product.hover_image)" loading="lazy" :alt="product.name + ' hover'" class="sora-hover-img" @error="handleHoverImageError">
                   </div>
 
                   <div class="sora-card-info">
@@ -462,7 +464,14 @@ const formatPrice = (price) => {
 };
 
 const getImageUrl = (path) => path ? (path.startsWith('http') ? path : `${API_BASE_URL}/storage/${path}`) : '/Sora-placeholder.png';
+
+// Hàm xử lý lỗi ảnh chính
 const handleImageError = (e) => { e.target.src = '/Sora-placeholder.png'; };
+
+// SỬA Ở ĐÂY: Hàm xử lý lỗi ảnh hover - Nếu lỗi sẽ ẩn nó đi thay vì hiện ảnh placeholder đè lên
+const handleHoverImageError = (e) => { 
+  e.target.style.display = 'none'; 
+};
 
 const hasHoverImage = (product) => product.hover_image && product.hover_image !== product.thumbnail_image;
 
@@ -1059,8 +1068,10 @@ onMounted(() => {
 .sora-card-image img { width: 100%; height: 100%; object-fit: cover; object-position: center; transition: opacity 0.6s ease; }
 .sora-main-img { z-index: 1; position: relative; }
 .sora-hover-img { position: absolute; top:0; left:0; z-index: 2; opacity: 0; }
-.sora-luxury-card:hover .sora-card-image.has-hover-image .sora-main-img { opacity: 0; }
+
+/* SỬA Ở ĐÂY: XÓA DOÒNG opacity: 0 CỦA ẢNH CHÍNH, BÂY GIỜ CHỈ CHO ẢNH HOVER HIỆN LÊN ĐÈ LÊN ẢNH CHÍNH THÔI */
 .sora-luxury-card:hover .sora-card-image.has-hover-image .sora-hover-img { opacity: 1; }
+
 .sora-card-badges { position: absolute; top: 15px; left: 15px; z-index: 10; display: flex; flex-direction: column; gap: 8px; }
 .sora-badge { background: #ffffff; color: #222; font-family: 'Oswald', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 2px; padding: 4px 10px; border-radius: 2px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 .sale-badge { background-color: #9f273b !important; color: white !important; }
