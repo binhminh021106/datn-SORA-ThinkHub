@@ -96,15 +96,14 @@
                       <td colspan="5" class="text-center text-muted py-4 small">Chưa có log gửi email.</td>
                     </tr>
                     <tr v-for="log in emailLogs" :key="log.id">
-                      <td class="px-3 py-2 small fw-semibold">{{ log.sentAt }}</td>
-                      <td class="px-3 py-2"><span class="badge bg-secondary bg-opacity-10 text-secondary border">{{ log.eventType }}</span></td>
+                      <td class="px-3 py-2 small fw-semibold">{{ formatDateTime(log.sent_at) }}</td>
+                      <td class="px-3 py-2"><span class="badge bg-secondary bg-opacity-10 text-secondary border">{{ formatEventType(log.event_type) }}</span></td>
                       <td class="px-3 py-2">
-                        <div class="fw-bold small">{{ log.customerName }}</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">{{ log.email }}</div>
+                        <div class="fw-bold small">{{ log.user?.name || 'N/A' }}</div>
+                        <div class="text-muted" style="font-size: 0.75rem;">{{ log.user?.email || 'N/A' }}</div>
                       </td>
                       <td class="px-3 py-2">
-                        <span v-if="log.voucherCode" class="badge bg-light text-dark border font-monospace">{{ log.voucherCode }}</span>
-                        <span v-else class="text-muted" style="font-size: 0.75rem;">Không có</span>
+                        <span class="text-muted" style="font-size: 0.75rem;">Theo sự kiện</span>
                       </td>
                       <td class="px-3 py-2 text-center">
                         <span class="badge" :class="log.status === 'success' ? 'bg-success' : 'bg-danger'">
@@ -159,12 +158,12 @@
                     <tr v-for="event in filteredHolidays" :key="event.id">
                       <td class="px-3 py-2">
                         <div class="fw-bold text-dark text-truncate small" :title="event.name">{{ event.name }}</div>
-                        <div class="text-muted text-truncate" style="font-size: 0.75rem;" :title="event.subject">{{ event.subject }}</div>
+                        <div class="text-muted text-truncate" style="font-size: 0.75rem;" :title="event.email_subject">{{ event.email_subject }}</div>
                       </td>
-                      <td class="px-3 py-2 fw-bold font-monospace text-brand small">{{ formatEventDate(event) }}</td>
-                      <td class="px-3 py-2"><span class="badge bg-light text-dark border fw-normal">{{ targetLabel(event.target) }}</span></td>
+                      <td class="px-3 py-2 fw-bold font-monospace text-brand small">{{ event.event_date }}</td>
+                      <td class="px-3 py-2"><span class="badge bg-light text-dark border fw-normal">{{ targetLabel(event.target_audience) }}</span></td>
                       <td class="px-3 py-2">
-                        <span v-if="event.voucherCode" class="badge bg-success bg-opacity-10 text-success border border-success font-monospace">{{ event.voucherCode }}</span>
+                        <span v-if="event.voucher_code" class="badge bg-success bg-opacity-10 text-success border border-success font-monospace">{{ event.voucher_code }}</span>
                         <span v-else class="text-muted" style="font-size: 0.75rem;">Không kèm</span>
                       </td>
                       <td class="px-3 py-2 text-center">
@@ -347,9 +346,10 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
+import apiClient from '@/utils/apiClient';
 
 const router = useRouter();
 const activeTab = ref('dashboard');
@@ -357,7 +357,6 @@ const isSending = ref(false);
 const holidaySearch = ref('');
 
 const today = new Date();
-const currentYear = today.getFullYear();
 const todayLabel = computed(() => today.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }));
 
 const targetLabels = {
@@ -372,13 +371,11 @@ const targetLabels = {
   regular: 'Khách thường',
 };
 
-// Dữ liệu mẫu
-const holidays = ref([
-  { id: 1, name: 'Quốc tế Phụ nữ 8/3', day: 8, month: 3, target: 'female', subject: 'SORA gửi bạn ưu đãi đặc biệt ngày 8/3', voucherCode: 'SORA0803', status: 'active' },
-  { id: 2, name: 'Black Friday', day: 25, month: 11, target: 'all', subject: 'Black Friday: ưu đãi đặc quyền từ SORA', voucherCode: 'BLACK25', status: 'active' },
-]);
+// DỮ LIỆU TỪ API CHUẨN
+const holidays = ref([]);
+const emailLogs = ref([]);
 
-// ĐÃ SỬA: Chuyển voucher dùng chung thành mảng theo hạng thành viên
+// CẤU HÌNH UI (Do Backend chưa có table này nên lưu local trên Form)
 const birthdaySettings = ref({
   enabled: true,
   subject: 'Chúc mừng sinh nhật [Tên_Khách_Hàng]',
@@ -391,67 +388,131 @@ const birthdaySettings = ref({
   ]
 });
 
-// ĐÃ SỬA: Cập nhật tier ID của khách mẫu để tương thích với mảng tiers
+// Giả lập Khách hàng mẫu cho Khung Xem trước (Preview)
 const sampleCustomers = ref([
-  { id: 1, name: 'Lê Thị Mỹ Duyên', email: 'myduyen@example.com', birthday: toBirthdayDate(today), gender: 'female', tier: 'diamond' },
-  { id: 2, name: 'Trần Quốc Bảo', email: 'quocbao@example.com', birthday: toBirthdayDate(today), gender: 'male', tier: 'regular' },
-  { id: 3, name: 'Lê Thanh Hà', email: 'thanhha@example.com', birthday: '1998-03-08', gender: 'female', tier: 'gold' },
+  { id: 1, name: 'Lê Thị Mỹ Duyên', email: 'myduyen@example.com', gender: 'female', tier: 'diamond' },
 ]);
-
-const emailLogs = ref([
-  { id: 1, customerId: 3, customerName: 'Lê Thanh Hà', email: 'thanhha@example.com', eventType: 'Sinh nhật', voucherCode: 'BDAYGOLD', year: currentYear, sentAt: new Date(today.getTime() - 86400000).toLocaleString('vi-VN'), status: 'success' },
-]);
-
-// Trạng thái chọn hạng thành viên để xem trước
 const previewTierId = ref('diamond');
 
-// Computed
+// ================= FETCH DATA TỪ API =================
+const fetchRecentLogs = async () => {
+  try {
+    const res = await apiClient.get('/admin/email-campaign/recent-logs');
+    if (res.data?.success) emailLogs.value = res.data.data;
+  } catch (err) {
+    console.error('Lỗi fetch log:', err);
+  }
+};
+
+const fetchHolidayEvents = async () => {
+  try {
+    const res = await apiClient.get('/admin/holiday-events');
+    if (res.data?.success) holidays.value = res.data.data;
+  } catch (err) {
+    console.error('Lỗi fetch holiday:', err);
+  }
+};
+
+const fetchBirthdaySettings = async () => {
+  try {
+    const res = await apiClient.get('/admin/email-campaign/settings');
+    if (res.data?.success) {
+      birthdaySettings.value.enabled = !!res.data.data.is_auto_birthday;
+      birthdaySettings.value.subject = res.data.data.birthday_subject || '';
+      birthdaySettings.value.content = res.data.data.birthday_content || '';
+    }
+  } catch (err) {
+    console.error('Loi fetch birthday setting:', err);
+  }
+};
+
+onMounted(() => {
+  fetchRecentLogs();
+  fetchHolidayEvents();
+  fetchBirthdaySettings();
+});
+
+// ================= COMPUTED =================
 const filteredHolidays = computed(() => {
   const q = holidaySearch.value.toLowerCase();
   if (!q) return holidays.value;
   return holidays.value.filter((event) =>
     event.name.toLowerCase().includes(q) ||
-    event.subject.toLowerCase().includes(q) ||
-    (event.voucherCode || '').toLowerCase().includes(q)
+    event.email_subject.toLowerCase().includes(q) ||
+    (event.voucher_code || '').toLowerCase().includes(q)
   );
 });
 
 const stats = computed(() => [
   { label: 'Sự kiện đang bật', value: holidays.value.filter((item) => item.status === 'active').length, icon: 'bi-calendar-check', iconClass: 'green' },
   { label: 'Mẫu sinh nhật', value: birthdaySettings.value.enabled ? 'Đang bật' : 'Đang tắt', icon: 'bi-cake2', iconClass: 'pink' },
-  { label: 'Log gửi mẫu', value: emailLogs.value.length, icon: 'bi-envelope-check', iconClass: 'blue' },
+  { label: 'Log gửi email', value: emailLogs.value.length, icon: 'bi-envelope-check', iconClass: 'blue' },
 ]);
 
-// Cập nhật Computed Preview để lấy voucher từ hạng đang chọn
 const previewTierData = computed(() => {
   return birthdaySettings.value.tiers.find(t => t.id === previewTierId.value) || birthdaySettings.value.tiers[0];
 });
-
 const previewBirthdaySubject = computed(() => replaceTokens(birthdaySettings.value.subject || '', sampleCustomers.value[0], previewTierData.value.voucherCode));
 const previewBirthdayContent = computed(() => replaceTokens(birthdaySettings.value.content || '', sampleCustomers.value[0], previewTierData.value.voucherCode).replace(/\n/g, '<br>'));
 
 
-// Navigation Functions
-function goToCreate() {
-  router.push({ name: 'admin-email-campaigns-create' });
+// ================= ACTIONS KẾT NỐI API =================
+
+// Gửi Email Sinh Nhật (Luồng A)
+async function runBirthdayCampaign() {
+  if (!birthdaySettings.value.enabled) {
+    Swal.fire('Đã tắt tính năng', 'Email sinh nhật đang tắt nên hệ thống bỏ qua.', 'info');
+    return;
+  }
+  isSending.value = true;
+  try {
+    const response = await apiClient.post('/admin/email-campaign/trigger-birthday');
+    if (response.data?.success) {
+      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: response.data.message || `Đã kiểm tra và gửi email sinh nhật.`, showConfirmButton: false, timer: 3000 });
+      await fetchRecentLogs();
+    } else {
+      showToast(response.data.message || 'Lỗi khi gửi email sinh nhật.', 'error');
+    }
+  } catch (error) {
+    showToast('Lỗi máy chủ! Không thể gửi email.', 'error');
+  } finally {
+    isSending.value = false;
+  }
 }
 
-function goToEdit(event) {
-  router.push({ 
-    name: 'admin-email-campaigns-edit', 
-    params: { id: event.id } 
-  });
+// Gửi Email Sự Kiện (Luồng B)
+async function runHolidayCampaign() {
+  isSending.value = true;
+  try {
+    const response = await apiClient.post('/admin/email-campaign/trigger-holiday');
+    if (response.data?.success) {
+      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: response.data.message || `Đã kiểm tra và gửi email sự kiện.`, showConfirmButton: false, timer: 3000 });
+      await fetchRecentLogs();
+    } else {
+      showToast(response.data.message || 'Lỗi khi gửi email sự kiện.', 'error');
+    }
+  } catch (error) {
+    showToast('Lỗi máy chủ! Không thể gửi email sự kiện.', 'error');
+  } finally {
+    isSending.value = false;
+  }
 }
 
-// Logic Utils
-function targetLabel(target) {
-  return targetLabels[target] || target;
+// Bật tắt sự kiện bằng API
+async function toggleHolidayStatus(event) {
+  const newStatus = event.status === 'active' ? 'inactive' : 'active';
+  try {
+    const res = await apiClient.put(`/admin/holiday-events/${event.id}`, { ...event, status: newStatus });
+    if (res.data?.success) {
+      event.status = newStatus;
+      showToast(newStatus === 'active' ? 'Đã bật sự kiện' : 'Đã tắt sự kiện');
+    }
+  } catch (err) {
+    showToast('Có lỗi xảy ra khi đổi trạng thái', 'error');
+  }
 }
 
-function formatEventDate(event) {
-  return `${String(event.day).padStart(2, '0')}/${String(event.month).padStart(2, '0')}`;
-}
-
+// Xóa sự kiện bằng API
 async function deleteHoliday(event) {
   const result = await Swal.fire({
     title: 'Xóa sự kiện?',
@@ -464,14 +525,34 @@ async function deleteHoliday(event) {
   });
 
   if (!result.isConfirmed) return;
-  holidays.value = holidays.value.filter((item) => item.id !== event.id);
-  showToast('Đã xóa sự kiện');
+  try {
+    const res = await apiClient.delete(`/admin/holiday-events/${event.id}`);
+    if (res.data?.success) {
+      holidays.value = holidays.value.filter((item) => item.id !== event.id);
+      emailLogs.value = emailLogs.value.filter((log) => log.event_type !== `holiday_${event.id}`);
+      showToast(res.data.message || 'Đã xóa sự kiện thành công');
+      await Promise.all([fetchHolidayEvents(), fetchRecentLogs()]);
+    }
+  } catch (err) {
+    if (err.response?.status === 404) {
+      holidays.value = holidays.value.filter((item) => item.id !== event.id);
+      emailLogs.value = emailLogs.value.filter((log) => log.event_type !== `holiday_${event.id}`);
+      showToast('Sự kiện đã bị xóa trước đó.');
+      return;
+    }
+
+    showToast('Xóa thất bại', 'error');
+  }
 }
 
-function toggleHolidayStatus(event) {
-  event.status = event.status === 'active' ? 'inactive' : 'active';
-  showToast(event.status === 'active' ? 'Đã bật sự kiện' : 'Đã tắt sự kiện');
-}
+
+// ================= TIỆN ÍCH UI =================
+
+function goToCreate() { router.push({ name: 'admin-email-campaign-create' }); }
+
+function goToEdit(event) { router.push({ name: 'admin-email-campaign-edit', params: { id: event.id } }); }
+
+function targetLabel(target) { return targetLabels[target] || target; }
 
 function insertToken(type, token) {
   if (type === 'birthday') {
@@ -479,99 +560,72 @@ function insertToken(type, token) {
   }
 }
 
-function saveBirthdaySettings() {
-  showToast('Đã lưu cấu hình sinh nhật');
-}
+async function saveBirthdaySettings() {
+  try {
+    const res = await apiClient.post('/admin/email-campaign/settings', {
+      is_auto_birthday: birthdaySettings.value.enabled,
+      birthday_subject: birthdaySettings.value.subject,
+      birthday_content: birthdaySettings.value.content,
+    });
 
-async function runBirthdayCampaign() {
-  if (!birthdaySettings.value.enabled) {
-    Swal.fire('Đã tắt tính năng', 'Email sinh nhật đang tắt nên hệ thống bỏ qua.', 'info');
-    return;
+    if (res.data?.success) {
+      birthdaySettings.value.enabled = !!res.data.data.is_auto_birthday;
+      birthdaySettings.value.subject = res.data.data.birthday_subject || '';
+      birthdaySettings.value.content = res.data.data.birthday_content || '';
+      showToast(res.data.message || 'Da luu cau hinh sinh nhat');
+    } else {
+      showToast(res.data?.message || 'Luu cau hinh that bai', 'error');
+    }
+  } catch (err) {
+    showToast('Luu cau hinh that bai', 'error');
   }
-  isSending.value = true;
-  await wait(500);
-  
-  const customers = sampleCustomers.value.filter((customer) => isSameMonthDay(customer.birthday, today));
-  const pending = customers.filter((customer) => !alreadyLogged(customer.id, 'Sinh nhật'));
-  
-  pending.forEach((customer) => {
-    // ĐÃ SỬA: Tìm voucher tương ứng với hạng của khách hàng
-    const customerTierInfo = birthdaySettings.value.tiers.find(t => t.id === customer.tier) || birthdaySettings.value.tiers[0];
-    pushLog(customer, 'Sinh nhật', customerTierInfo.voucherCode);
-  });
-  
-  isSending.value = false;
-  Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `Đã gửi thành công ${pending.length} email sinh nhật.`, showConfirmButton: false, timer: 2200 });
-}
-
-async function runHolidayCampaign() {
-  isSending.value = true;
-  await wait(500);
-  const todayEvents = holidays.value.filter((event) => event.status === 'active' && Number(event.day) === today.getDate() && Number(event.month) === today.getMonth() + 1);
-
-  if (todayEvents.length === 0) {
-    isSending.value = false;
-    Swal.fire('Hoàn tất kiểm tra!', 'Hôm nay không có sự kiện nào được cài đặt.', 'info');
-    return;
-  }
-
-  let sentCount = 0;
-  todayEvents.forEach((event) => {
-    const customers = sampleCustomers.value.filter((customer) => matchTarget(customer, event.target));
-    const pending = customers.filter((customer) => !alreadyLogged(customer.id, event.name));
-    pending.forEach((customer) => pushLog(customer, event.name, event.voucherCode));
-    sentCount += pending.length;
-  });
-
-  isSending.value = false;
-  Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `Đã gửi thành công ${sentCount} email sự kiện.`, showConfirmButton: false, timer: 2200 });
-}
-
-function pushLog(customer, eventType, voucherCode) {
-  emailLogs.value.unshift({
-    id: Date.now() + Math.random(),
-    customerId: customer.id,
-    customerName: customer.name,
-    email: customer.email,
-    eventType,
-    voucherCode,
-    year: currentYear,
-    sentAt: new Date().toLocaleString('vi-VN'),
-    status: 'success',
-  });
-}
-
-function alreadyLogged(customerId, eventType) {
-  return emailLogs.value.some((log) => log.customerId === customerId && log.eventType === eventType && log.year === currentYear && log.status === 'success');
-}
-
-function matchTarget(customer, target) {
-  if (target === 'all') return true;
-  if (target === 'vip') return customer.tier === 'vip' || customer.tier === 'diamond'; // Điều chỉnh giả lập
-  if (target === 'regular') return customer.tier === 'regular';
-  return customer.gender === target || customer.tier === target;
-}
-
-function isSameMonthDay(dateValue, targetDate) {
-  const d = new Date(dateValue);
-  return d.getDate() === targetDate.getDate() && d.getMonth() === targetDate.getMonth();
 }
 
 function replaceTokens(text, customer, voucherCode) {
   return text.replaceAll('[Tên_Khách_Hàng]', customer.name).replaceAll('[Voucher_Code]', voucherCode || '');
 }
 
-function toBirthdayDate(date) {
-  return `1995-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+function formatDateTime(dateString) {
+  if (!dateString) return 'N/A';
+  const d = new Date(dateString);
+  return d.toLocaleString('vi-VN');
 }
 
-function clearLogs() {
-  emailLogs.value = [];
-  showToast('Đã xóa log mẫu');
+function formatEventType(typeStr) {
+  if (typeStr === 'birthday') return 'Sinh nhật';
+  if (typeStr?.startsWith('holiday_')) return `Sự kiện #${typeStr.split('_')[1]}`;
+  return typeStr;
 }
 
-function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
-function showToast(title) { Swal.fire({ toast: true, position: 'top-end', icon: 'success', title, showConfirmButton: false, timer: 1500 }); }
+async function clearLogs() {
+  const result = await Swal.fire({
+    title: 'Xóa vĩnh viễn lịch sử?',
+    text: 'Toàn bộ log gửi email đang hiển thị sẽ bị xóa khỏi hệ thống.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Xóa lịch sử',
+    cancelButtonText: 'Hủy',
+    confirmButtonColor: '#dc3545',
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    const res = await apiClient.delete('/admin/email-campaign/recent-logs');
+    if (res.data?.success) {
+      emailLogs.value = [];
+      showToast(res.data.message || 'Đã xóa vĩnh viễn lịch sử');
+    } else {
+      showToast(res.data?.message || 'Xóa lịch sử thất bại', 'error');
+    }
+  } catch (err) {
+    showToast('Xóa lịch sử thất bại', 'error');
+  }
+}
+
+function showToast(title, icon = 'success') { 
+  Swal.fire({ toast: true, position: 'top-end', icon, title, showConfirmButton: false, timer: 1500 }); 
+}
 </script>
 
 <style scoped>

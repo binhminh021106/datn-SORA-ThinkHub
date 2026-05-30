@@ -34,7 +34,7 @@ class BirthdayVoucherMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Chúc mừng Sinh nhật từ SORA ThinkHub! Nhận ngay Quà Tặng!',
+            subject: 'Chúc mừng sinh nhật từ SORA ThinkHub! Nhận ngay quà tặng!',
         );
     }
 

@@ -94,10 +94,8 @@ const tryGetStoredUser = () => {
     return null;
 };
 
-const getAuthToken = () => {
-    return localStorage.getItem('admin_token') ||
-           localStorage.getItem('adminToken') ||
-           localStorage.getItem('auth_token') ||
+const getUserAuthToken = () => {
+    return localStorage.getItem('auth_token') ||
            localStorage.getItem('access_token') ||
            localStorage.getItem('userToken') ||
            localStorage.getItem('user_token') ||
@@ -105,8 +103,9 @@ const getAuthToken = () => {
 };
 
 const storedUser = tryGetStoredUser();
-const authToken = getAuthToken();
-if (window.Echo && storedUser && storedUser.id && authToken) {
+const userAuthToken = getUserAuthToken();
+const hasAdminSession = !!(localStorage.getItem('admin_token') || localStorage.getItem('adminToken'));
+if (window.Echo && storedUser && storedUser.id && userAuthToken && !hasAdminSession) {
     try {
         const userId = storedUser.id;
         window.Echo.private(`App.Models.User.${userId}`).listen('.UserAccountUpdated', (data) => {
@@ -115,7 +114,7 @@ if (window.Echo && storedUser && storedUser.id && authToken) {
     } catch (err) {
         console.warn('Failed to subscribe to user private channel', err);
     }
-} else if (storedUser && storedUser.id && !authToken) {
+} else if (storedUser && storedUser.id && !userAuthToken && !hasAdminSession) {
     console.warn('Skipping Echo subscribe because auth token is missing');
 }
 
