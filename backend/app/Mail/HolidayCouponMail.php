@@ -12,20 +12,22 @@ class HolidayCouponMail extends Mailable implements ShouldQueue
     use Queueable, SerializesModels;
 
     public $user;
-    public $coupon;
+    public $event;
     public $holidayName;
 
-    public function __construct($user, $coupon, $holidayName)
+    public function __construct($user, $event, $holidayName = null)
     {
         $this->user = $user;
-        $this->coupon = $coupon;
-        $this->holidayName = $holidayName;
+        $this->event = $event;
+        $this->holidayName = $holidayName ?: ($event->name ?? 'su kien SORA');
     }
 
     public function build()
     {
-        $name = $this->user->fullName ?? $this->user->name ?? 'Quý khách';
-        return $this->subject("SORA Boutique 🎁 Ưu đãi đặc quyền dịp $this->holidayName!")
-                    ->view('emails.holiday_coupon');
+        $subject = $this->event->email_subject
+            ?? "SORA ThinkHub - Uu dai dac biet dip {$this->holidayName}";
+
+        return $this->subject($subject)
+            ->view('emails.holiday_coupon');
     }
 }

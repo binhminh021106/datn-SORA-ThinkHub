@@ -55,6 +55,31 @@ use App\Http\Controllers\Api\client\ClientProfileController;
 use App\Http\Controllers\Api\client\ChatbotController;
 use App\Http\Controllers\Api\client\ClientNewController;
 
+// gửi maill_kh
+use App\Http\Controllers\Api\admin\HolidayEventController;
+use App\Http\Controllers\Api\admin\EmailCampaignController;
+
+
+
+Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
+    
+    // CRUD Quản lý ngày lễ
+    Route::apiResource('holiday-events', HolidayEventController::class);
+
+    // Xử lý gửi & Lịch sử
+    Route::prefix('email-campaign')->group(function () {
+        Route::get('/settings', [EmailCampaignController::class, 'settings']);
+        Route::post('/settings', [EmailCampaignController::class, 'updateSettings']);
+        Route::post('/trigger-birthday', [EmailCampaignController::class, 'triggerBirthday']);
+        Route::post('/trigger-holiday', [EmailCampaignController::class, 'triggerHoliday']);
+        Route::get('/recent-logs', [EmailCampaignController::class, 'recentLogs']);
+        Route::delete('/recent-logs', [EmailCampaignController::class, 'clearLogs']);
+    });
+    
+});
+
+
+
 Route::prefix('news')->group(function () {
     Route::get('/', [ClientNewController::class, 'index']);
     Route::get('/popular', [ClientNewController::class, 'popular']);

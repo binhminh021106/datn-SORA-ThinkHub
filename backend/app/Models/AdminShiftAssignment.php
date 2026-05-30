@@ -47,7 +47,10 @@ class AdminShiftAssignment extends Model
     {
         $date = $date ?? now()->toDateString();
 
-        return $query->where('valid_from', '<=', $date)
+        return $query->where(function ($q) use ($date) {
+                $q->whereNull('valid_from')
+                    ->orWhere('valid_from', '<=', $date);
+            })
             ->where(function ($q) use ($date) {
                 $q->whereNull('valid_to')
                     ->orWhere('valid_to', '>=', $date);
