@@ -36,7 +36,7 @@ class AdminStoreProductRequest extends FormRequest
             'base_price'        => 'required|numeric|min:0',
             'thumbnail_image'   => 'required|image|mimes:jpeg,png,jpg,webp|max:2048', 
             'status'            => 'required|in:published,draft,hidden',
-            
+            'affiliate_commission_rate' => 'nullable|numeric|min:0|max:100',
             'parsed_variants'   => 'required|array|min:1',
             
             'parsed_variants.*.sku'               => 'required|string|distinct|unique:product_variants,sku',
@@ -55,6 +55,8 @@ class AdminStoreProductRequest extends FormRequest
             'slug.unique' => 'Sản phẩm (slug) này đã tồn tại, vui lòng chọn tên khác.',
             'thumbnail_image.required' => 'Vui lòng tải lên ảnh đại diện chính của sản phẩm.',
             'thumbnail_image.max' => 'Ảnh đại diện chính vượt quá 15MB.',
+            'affiliate_commission_rate.min' => 'Tỷ lệ hoa hồng không được nhỏ hơn 0.',
+            'affiliate_commission_rate.max' => 'Tỷ lệ hoa hồng không được lớn hơn 100.',
             'parsed_variants.required' => 'Sản phẩm phải có ít nhất 1 biến thể.',
             
             'parsed_variants.*.sku.required' => 'Mã SKU của biến thể không được để trống.',

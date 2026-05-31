@@ -36,7 +36,7 @@ class AdminUpdateProductRequest extends FormRequest
             'base_price'        => 'required|numeric|min:0',
             'thumbnail_image'   => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048', 
             'status'            => 'required|in:published,draft,hidden',
-            
+            'affiliate_commission_rate' => 'nullable|numeric|min:0|max:100',
             'parsed_variants'   => 'required|array|min:1',
             
             // Xử lý khó nhất: Bỏ qua check Unique SKU nếu ID của SKU đó là của chính nó

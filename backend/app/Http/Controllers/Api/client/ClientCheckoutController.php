@@ -175,6 +175,7 @@ class ClientCheckoutController extends Controller
                     ->orderBy('id')->lockForUpdate()->get()->keyBy('id');
 
                 $subTotal = 0;
+                $totalCommissionAmount = 0;
                 $orderItemsData = [];
 
                 foreach ($cart->items as $item) {
@@ -189,6 +190,10 @@ class ClientCheckoutController extends Controller
 
                         $itemTotal = $item->subtotal;
                         $subTotal += $itemTotal;
+
+                        // TÍNH HOA HỒNG TỪNG SẢN PHẨM
+                        $commissionRate = $variant->product->affiliate_commission_rate ?? 0;
+                        $totalCommissionAmount += $itemTotal * ($commissionRate / 100);
 
                         $orderItemsData[] = [
                             'product_id'         => $variant->product_id,
@@ -315,29 +320,43 @@ class ClientCheckoutController extends Controller
                             $tierDiscountAmount = $subTotal * ($tier->discount_percent / 100);
                             $isTierDiscountApplied = true;
                             $appliedTier = $tier;
-                        } elseif ($usedCount >= $maxLimit && $maxLimit > 0) {
-                            // Tuỳ chọn: Báo lỗi nếu user cố tình ép gửi request xài quá lượt (hoặc có thể bỏ qua và áp mức giảm = 0)
-                            // throw new \Exception("Bạn đã sử dụng hết lượt giảm giá của Hạng thành viên trong năm nay.");
                         }
                     }
                 }
 
-                $shippingFee = (int) $request->shipping_fee;
-
+                $shippingFee = $subTotal > 500000 ? 0 : 30000;
                 $totalAmount = max($subTotal - $discountAmount - $tierDiscountAmount + $shippingFee, 0);
 
+                // CÂN BẰNG TỈ LỆ HOA HỒNG THEO SỐ TIỀN THỰC TẾ
+                $actualCommission = 0;
+                if ($subTotal > 0 && $totalCommissionAmount > 0) {
+                    $ratio = max($subTotal - $discountAmount - $tierDiscountAmount, 0) / $subTotal;
+                    $actualCommission = $totalCommissionAmount * $ratio;
+                }
+
+                // TÌM ĐỐI TÁC GIỚI THIỆU
+                $affiliateUserId = null;
+                if ($request->filled('affiliate_code')) {
+                    $affiliateUser = \App\Models\User::where('affiliate_code', $request->affiliate_code)->where('is_affiliate', true)->first();
+                    // Không cho phép tự giới thiệu chính mình
+                    if ($affiliateUser && $affiliateUser->id !== $user->id) {
+                        $affiliateUserId = $affiliateUser->id;
+                    }
+                }
+
                 $order = Order::create([
-                    'order_code'           => 'SORA' . strtoupper(Str::random(8)),
+                    'order_code'           => 'ORD-' . now()->format('Ymd') . '-' . strtoupper(Str::random(5)),
                     'user_id'              => $user->id ?? null,
-                    'customer_name'        => $customerName,
-                    'customer_phone'       => $customerPhone,
+                    'affiliate_user_id'    => $affiliateUserId,
+                    'customer_name'        => $request->customer_name,
+                    'customer_phone'       => $request->customer_phone,
                     'customer_email'       => $request->customer_email,
-                    'customer_address'     => $customerAddress,
+                    'customer_address'     => $request->customer_address,
                     'order_note'           => $request->order_note,
                     'sub_total'            => $subTotal,
-                    'shipping_fee'         => $shippingFee,
                     'discount_amount'      => $discountAmount,
                     'tier_discount_amount' => $tierDiscountAmount,
+                    'shipping_fee'         => $shippingFee,
                     'total_amount'         => $totalAmount,
                     'coupon_id'            => $couponId,
                     'coupon_code'          => $request->coupon_code,
@@ -348,7 +367,6 @@ class ClientCheckoutController extends Controller
 
                 foreach ($orderItemsData as $itemData) {
                     $itemData['order_id'] = $order->id;
-                    $itemData['total_price'] = $itemData['price'] * $itemData['quantity'];
                     OrderItem::create($itemData);
                 }
 
@@ -365,37 +383,26 @@ class ClientCheckoutController extends Controller
                 OrderStatusHistory::create([
                     'order_id'        => $order->id,
                     'new_status'      => 'pending',
-                    'note'            => 'Khách hàng khởi tạo đơn hàng',
+                    'note'            => 'Khách hàng đặt đơn thành công',
                     'changed_by'      => $user->id ?? null,
                     'changed_by_type' => $user ? 'user' : 'guest',
                 ]);
 
-                // Logic xử lý Affiliate Commission (Hoa hồng 10%)
-                if ($request->filled('affiliate_code')) {
-                    $affiliateUser = \App\Models\User::where('affiliate_code', $request->affiliate_code)
-                        ->where('is_affiliate', true)
-                        ->first();
-
-                    // Không tự giới thiệu chính mình
-                    if ($affiliateUser && (!$user || $affiliateUser->id !== $user->id)) {
-                        $commissionRate = 0.10; // 10%
-                        $commissionAmount = $totalAmount * $commissionRate;
-
-                        if ($commissionAmount > 0) {
-                            \App\Models\CommissionHistory::create([
-                                'user_id' => $affiliateUser->id,
-                                'order_id' => $order->id,
-                                'amount' => $commissionAmount,
-                                'type' => 'earn',
-                                'description' => "Hoa hồng 10% từ đơn hàng " . $order->order_code,
-                                'created_at' => now()
-                            ]);
-
-                            $affiliateUser->commission_balance += $commissionAmount;
-                            $affiliateUser->save();
-                        }
-                    }
+                // GHI LỊCH SỬ HOA HỒNG (TRẠNG THÁI CHỜ - PENDING)
+                if ($affiliateUserId && $actualCommission > 0) {
+                    \App\Models\CommissionHistory::create([
+                        'user_id'     => $affiliateUserId,
+                        'order_id'    => $order->id,
+                        'amount'      => $actualCommission,
+                        'type'        => 'earn',
+                        'status'      => 'pending', // Chờ duyệt
+                        'description' => "Hoa hồng tạm tính từ đơn hàng " . $order->order_code,
+                        'created_at'  => now()
+                    ]);
                 }
+
+                $cart->items()->delete();
+                $cart->delete();
 
                 try {
                     broadcast(new NewOrderReceived($order->order_code, (float) $order->total_amount));
@@ -404,15 +411,15 @@ class ClientCheckoutController extends Controller
                 }
 
                 if ($request->payment_method === 'cod') {
-                    $cart->items()->delete();
-                    $cart->delete();
-
                     $this->sendOrderConfirmationEmail($order);
 
                     return response()->json([
                         'success' => true,
-                        'data' => $order,
-                        'message' => 'Đặt hàng thành công!'
+                        'message' => 'Đặt hàng thành công!',
+                        'data' => [
+                            'order_code'   => $order->order_code,
+                            'total_amount' => $order->total_amount
+                        ]
                     ]);
                 }
 
@@ -459,13 +466,11 @@ class ClientCheckoutController extends Controller
 
     private function generateMomoUrl($order)
     {
-        // Lấy thông tin từ file .env
         $endpoint = env('MOMO_ENDPOINT');
         $partnerCode = env('MOMO_PARTNER_CODE');
         $accessKey   = env('MOMO_ACCESS_KEY');
         $secretKey   = env('MOMO_SECRET_KEY');
 
-        // Validate required environment variables
         $missing = [];
         if (empty($endpoint)) $missing[] = 'MOMO_ENDPOINT';
         if (empty($partnerCode)) $missing[] = 'MOMO_PARTNER_CODE';
@@ -480,7 +485,6 @@ class ClientCheckoutController extends Controller
         $amount = (string) round($order->total_amount);
         $orderId = $order->order_code . "_" . time();
 
-        // Sử dụng hàm url() của Laravel để tự động lấy domain hiện tại (APP_URL)
         $redirectUrl = url('/api/client/checkout/momo-return');
         $ipnUrl = url('/api/client/checkout/momo-return');
 
