@@ -223,6 +223,34 @@ class AdminOrderController extends Controller
         }
     }
 
+
+    // Xử lý vòng đời Hoa Hồng Affiliate
+
+    private function handleAffiliateCommission(Order $order, $newStatus)
+    {
+        if (!$order->affiliate_user_id) return;
+
+        $commission = \App\Models\CommissionHistory::where('order_id', $order->id)->first();
+        if (!$commission) return;
+
+        // Kịch bản 1: Giao hàng thành công -> Duyệt hoa hồng
+        if ($newStatus === 'delivered' && $commission->status === 'pending') {
+            $commission->update(['status' => 'approved']);
+            User::where('id', $order->affiliate_user_id)->increment('commission_balance', $commission->amount);
+        } 
+        // Kịch bản 2: Đơn bị Hủy hoặc Trả hàng
+        elseif (in_array($newStatus, ['cancelled', 'returned'])) {
+            if ($commission->status === 'pending') {
+                // Đơn hủy trước khi giao -> Xóa sổ luôn
+                $commission->update(['status' => 'rejected']);
+            } elseif ($commission->status === 'approved') {
+                // Đơn bị hoàn sau khi đã giao -> Phải trừ lại tiền của Đối tác
+                $commission->update(['status' => 'rejected']);
+                User::where('id', $order->affiliate_user_id)->decrement('commission_balance', $commission->amount);
+            }
+        }
+    }
+
     public function updateStatus(AdminUpdateOrderRequest $request, $id)
     {
         DB::beginTransaction();
@@ -245,6 +273,9 @@ class AdminOrderController extends Controller
                     'changed_by'      => Auth::id(),
                     'changed_by_type' => 'admin'
                 ]);
+
+                // Xử lý tự động duyệt/hủy tiền hoa hồng Affiliate
+                $this->handleAffiliateCommission($order, $newStatus);
 
                 // Hoàn kho nếu đang giao mà Hủy hoặc Trả hàng
                 if (in_array($newStatus, ['cancelled', 'returned']) && !in_array($oldStatus, ['cancelled', 'returned'])) {
@@ -298,6 +329,9 @@ class AdminOrderController extends Controller
                 if ($order->status !== 'returned') {
                     $oldStatus = $order->status;
                     $order->status = 'returned'; 
+                    
+                    // Thu hồi hoa hồng vì đơn hoàn trả
+                    $this->handleAffiliateCommission($order, 'returned');
                     
                     if (!in_array($oldStatus, ['cancelled', 'returned'])) {
                         $this->restoreOrderResources($order);

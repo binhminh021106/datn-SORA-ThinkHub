@@ -35,7 +35,8 @@ class AdminProductController extends Controller
         // Bắt buộc phải có category_id và brand_id để Eloquent có thể map dữ liệu với hàm with()
         $products = $query->select(
                 'id', 'name', 'slug', 'base_price', 'promotional_price', 
-                'thumbnail_image', 'status', 'category_id', 'brand_id', 'deleted_at', 'created_at'
+                'thumbnail_image', 'status', 'category_id', 'brand_id', 'affiliate_commission_rate',
+                 'deleted_at', 'created_at'
             )
             ->with(['category:id,name', 'brand:id,name'])
             ->withCount('variants')
@@ -75,6 +76,8 @@ class AdminProductController extends Controller
         try {
             DB::beginTransaction();
             $data = $request->validated();
+
+            $data['affiliate_commission_rate'] = $data['affiliate_commission_rate'] ?? 0;
 
             $file = $request->file('thumbnail_image');
             $fileName = 'prod_' . Str::slug($data['name']) . '_' . time() . '.' . $file->getClientOriginalExtension();
@@ -124,6 +127,7 @@ class AdminProductController extends Controller
             $product = Product::findOrFail($id);
 
             $data = $request->validated();
+            $data['affiliate_commission_rate'] = $data['affiliate_commission_rate'] ?? 0;
             unset($data['variants_data']);
 
             if ($request->hasFile('thumbnail_image')) {
