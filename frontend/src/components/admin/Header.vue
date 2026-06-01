@@ -313,7 +313,8 @@ const qrModalRef = ref(null);
 
 const isSuperAdmin = computed(() => {
   const roleId = localStorage.getItem('admin_role');
-  return roleId == 1; 
+  const level = localStorage.getItem('admin_level');
+  return roleId == 1 || level == 1; 
 });
 
 const openStation = () => {
