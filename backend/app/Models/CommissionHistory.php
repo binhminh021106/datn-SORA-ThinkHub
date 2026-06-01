@@ -18,6 +18,7 @@ class CommissionHistory extends Model
         'order_id',
         'amount',
         'type',
+        'status',
         'description',
         'created_at'
     ];

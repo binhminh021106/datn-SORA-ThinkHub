@@ -27,7 +27,7 @@
 
       <div class="row">
         <div class="col-sm-9 offset-sm-3">
-          <button type="submit" class="btn btn-outline-main px-5 py-2 text-uppercase fw-medium rounded-0" :disabled="isChangingPassword" style="letter-spacing: 0.1em;">
+          <button type="submit" class="btn btn-main px-5 py-2 text-uppercase fw-medium tracking-wide" :disabled="isChangingPassword">
             <span v-if="isChangingPassword" class="spinner-border spinner-border-sm me-2" role="status"></span>
             Đổi Mật Khẩu
           </button>
@@ -116,14 +116,36 @@ const changePassword = async () => {
 </script>
 
 <style scoped>
+.btn-main {
+  background-color: #9f273b;
+  color: white;
+  border: 1px solid #9f273b;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+.btn-main:hover {
+  background-color: #7a1c2d;
+  border-color: #7a1c2d;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(159,39,59,0.3);
+}
+
 .btn-outline-main {
   color: #9f273b;
-  border-color: #9f273b;
+  border: 1px solid #9f273b;
+  border-radius: 4px;
+  background: transparent;
+  transition: all 0.3s ease;
 }
 .btn-outline-main:hover {
   background-color: #9f273b;
   color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(159,39,59,0.3);
 }
+
+.tracking-wide { letter-spacing: 0.1em; }
 
 .custom-input {
   border-radius: 4px;

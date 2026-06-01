@@ -57,7 +57,6 @@
                                                 v-model="form.slug" readonly>
                                         </div>
 
-                                        <!-- ĐỒNG BỘ STYLE DROPDOWN DANH MỤC SANG TRỌNG -->
                                         <div class="col-md-4">
                                             <label class="form-label fw-bold">Danh mục <span
                                                     class="text-danger">*</span></label>
@@ -76,7 +75,6 @@
                                             </div>
                                         </div>
 
-                                        <!-- ĐỒNG BỘ STYLE DROPDOWN THƯƠNG HIỆU SANG TRỌNG -->
                                         <div class="col-md-4">
                                             <label class="form-label fw-bold">Thương hiệu</label>
                                             <div class="position-relative select-wrapper">
@@ -99,6 +97,25 @@
                                             </div>
                                         </div>
 
+                                        <div class="col-md-6 mt-3">
+                                            <label class="form-label fw-bold text-dark">
+                                                <i class="bi bi-diagram-3-fill text-brand me-1"></i> Hoa hồng Affiliate
+                                            </label>
+                                            <div class="input-group">
+                                                <input type="number" 
+                                                    class="form-control fw-bold text-brand" 
+                                                    v-model.number="form.affiliate_commission_rate" 
+                                                    min="0" 
+                                                    max="100" 
+                                                    step="0.01" 
+                                                    placeholder="VD: 5.5">
+                                                <span class="input-group-text bg-light fw-bold">%</span>
+                                            </div>
+                                            <small class="text-muted fst-italic mt-1 d-block" style="font-size: 0.75rem;">
+                                                <i class="bi bi-info-circle me-1"></i>Để 0% nếu không áp dụng hoa hồng giới thiệu.
+                                            </small>
+                                        </div>
+
                                         <div class="col-md-12 mt-3">
                                             <div
                                                 class="alert alert-info small border-0 bg-info bg-opacity-10 text-muted m-0">
@@ -118,7 +135,6 @@
                                     </h6>
                                     <div class="mb-3 position-relative border rounded-4 overflow-hidden bg-white d-flex align-items-center justify-content-center"
                                         style="height: 250px;">
-                                        <!-- ÁP DỤNG SORA IMAGE CHO THUMBNAIL PREVIEW -->
                                         <SoraImage v-if="thumbnailPreview" :src="thumbnailPreview"
                                             imgClass="w-100 h-100 p-2" fit="contain" :placeholder="defaultPlaceholder" />
                                         <div v-else
@@ -228,7 +244,6 @@
                                                     class="variant-row" :class="{ 'row-error': v.hasDuplicateError }">
                                                     <td class="text-center position-relative">
                                                         <label class="cursor-pointer d-block m-0">
-                                                            <!-- ÁP DỤNG SORA IMAGE CHO ẢNH BIẾN THỂ -->
                                                             <SoraImage :src="v.preview"
                                                                 imgClass="img-preview-sm"
                                                                 :placeholder="defaultPlaceholder" />
@@ -323,7 +338,6 @@
             </div>
         </div>
 
-        <!-- LOGO SHIMMER KHỞI ĐẦU LUÔN CHẠY KHI VÀO TRANG -->
         <div v-else class="d-flex flex-column justify-content-center align-items-center w-100"
             style="min-height: 70vh;">
             <h1 class="logo-shimmer mb-3">ThinkHub</h1>
@@ -331,7 +345,6 @@
         </div>
 
 
-        <!-- MODALS -->
         <div class="modal fade" id="createAttrModal" tabindex="-1">
             <div class="modal-dialog modal-sm modal-dialog-centered">
                 <div class="modal-content border-0 shadow">
@@ -442,8 +455,9 @@ const isSaving = ref(false);
 const isProcessingSchema = ref(false);
 const currentStep = ref(1);
 
+// THÊM MỚI: Khởi tạo giá trị mặc định cho affiliate_commission_rate
 const form = ref({
-    category_id: '', brand_id: '', name: '', slug: '', base_price: 0, isPublished: true
+    category_id: '', brand_id: '', name: '', slug: '', base_price: 0, isPublished: true, affiliate_commission_rate: 0
 });
 const thumbnailFile = ref(null);
 const thumbnailPreview = ref(null);
@@ -917,6 +931,8 @@ const submitProduct = async () => {
     formData.append('slug', form.value.slug);
     formData.append('base_price', form.value.base_price);
     formData.append('status', form.value.isPublished ? 'published' : 'draft');
+    
+    formData.append('affiliate_commission_rate', form.value.affiliate_commission_rate);
 
     if (thumbnailFile.value) {
         formData.append('thumbnail_image', thumbnailFile.value);
@@ -960,6 +976,8 @@ const fetchData = async () => {
         form.value.brand_id = pData.brand_id || '';
         form.value.base_price = Math.round(pData.base_price || 0);
         form.value.isPublished = pData.status === 'published';
+
+        form.value.affiliate_commission_rate = parseFloat(pData.affiliate_commission_rate || 0);
 
         if (pData.thumbnail_image) {
             thumbnailPreview.value = getImageUrl(pData.thumbnail_image);

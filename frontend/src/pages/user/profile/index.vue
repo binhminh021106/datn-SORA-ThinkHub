@@ -12,7 +12,7 @@
       <div v-if="!isLoggedIn" class="text-center py-5 bg-white shadow-sm p-5 border border-light mb-5">
         <h4 class="text-danger-custom mb-3">Bạn chưa đăng nhập!</h4>
         <p class="text-secondary mb-4">Vui lòng đăng nhập để xem và chỉnh sửa thông tin cá nhân.</p>
-        <router-link to="/login" class="btn btn-main px-5 py-2 text-uppercase">Đăng nhập ngay</router-link>
+        <router-link to="/login" class="btn btn-main px-5 py-2 text-uppercase tracking-wide d-inline-flex align-items-center">Đăng nhập ngay</router-link>
       </div>
 
       <div v-else class="row g-4 g-lg-5">
@@ -261,13 +261,19 @@ const tierBorderColor = computed(() => {
 .btn-main {
   background-color: #9f273b;
   color: white;
-  border: none;
+  border: 1px solid #9f273b;
+  border-radius: 4px;
   transition: all 0.3s ease;
 }
 .btn-main:hover {
-  background-color: #832030;
+  background-color: #7a1c2d;
+  border-color: #7a1c2d;
   color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(159,39,59,0.3);
 }
+
+.tracking-wide { letter-spacing: 0.1em; }
 
 .avatar-tier-container {
   display: flex;

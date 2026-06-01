@@ -361,7 +361,25 @@ const admin = [
         name: 'AdminAffiliates',
         component: () => import('@/pages/admin/affiliate/index.vue'),
         meta: { title: 'Quản lý Đối tác' }
-      }
+      },
+      // ROUTE EMAIL CAMPAIGN (Chiến dịch Email)
+      { 
+        path: 'email-campaign', 
+        name: 'admin-email-campaign',
+        component: () => import('../pages/admin/email-campaign/Index.vue') 
+      },
+      { 
+        path: 'email-campaign/create', 
+        name: 'admin-email-campaign-create',
+        component: () => import('../pages/admin/email-campaign/Create.vue') 
+      },
+      { 
+        path: 'email-campaign/edit/:id', 
+        name: 'admin-email-campaign-edit',
+        component: () => import('../pages/admin/email-campaign/Edit.vue') 
+      },
+
+      
     ],
   },
 ]

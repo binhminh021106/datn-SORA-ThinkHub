@@ -26,7 +26,8 @@ class Product extends Model
         'rating_avg',
         'specifications',
         'is_featured',
-        'status'
+        'status',
+        'affiliate_commission_rate'
     ];
 
     protected function casts(): array
@@ -34,7 +35,8 @@ class Product extends Model
         return [
             'specifications' => 'array',
             'base_price' => 'decimal:2',
-            'promotional_price' => 'decimal:2'
+            'promotional_price' => 'decimal:2',
+            'affiliate_commission_rate' => 'decimal:2'
         ];
     }
 
