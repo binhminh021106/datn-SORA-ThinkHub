@@ -10,6 +10,7 @@ use App\Models\EmailLog;
 use App\Models\HolidayEvent;
 use App\Models\MembershipTier;
 use App\Models\User;
+use App\Services\AudienceFilterService; // Import Service lọc người dùng mới
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
@@ -123,6 +124,9 @@ class EmailCampaignService
         }
 
         $totalSentCount = 0;
+        
+        // Khởi tạo Service bộ lọc mảng từ Canvas
+        $audienceService = new AudienceFilterService();
 
         foreach ($eventsToday as $event) {
             $event = HolidayEvent::whereKey($event->id)
@@ -134,10 +138,35 @@ class EmailCampaignService
                 continue;
             }
 
-            $query = User::with('tier')->whereNotNull('email');
-            $this->applyTargetAudience($query, $event->target_audience);
+            // Lấy dữ liệu nguyên gốc từ Database để xử lý an toàn
+            $rawTarget = $event->getRawOriginal('target_audience');
+            $targets = [];
 
-            $targetUsers = $query->get();
+            if (!empty($rawTarget)) {
+                $decoded = json_decode($rawTarget, true);
+                // Nếu parse JSON thành công và là mảng (Dữ liệu sự kiện tạo mới)
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $targets = $decoded;
+                } else {
+                    // Nếu lỗi parse JSON -> Đây là dữ liệu sự kiện cũ lưu dạng chữ (VD: "male", "gold")
+                    $targets = [$rawTarget];
+                }
+            } elseif (is_array($event->target_audience)) {
+                $targets = $event->target_audience;
+            }
+
+            // Chắc chắn mảng không có giá trị rỗng 
+            $targets = array_filter($targets);
+            if (empty($targets)) {
+                $targets = ['all'];
+            }
+
+            // Gọi AudienceFilterService để quét danh sách Users
+            $targetUsers = $audienceService->getTargetedUsers($targets);
+            
+            // Tải thêm thông tin Hạng thành viên (tier) để Mail template sử dụng (tránh N+1 query)
+            $targetUsers->load('tier');
+
             $eventTypeKey = 'holiday_' . $event->id;
 
             foreach ($targetUsers as $user) {
@@ -254,36 +283,6 @@ class EmailCampaignService
         }
 
         return 5;
-    }
-
-    private function applyTargetAudience($query, string $targetAudience): void
-    {
-        if ($targetAudience === 'female' || $targetAudience === 'male') {
-            $query->where($this->genderColumn, $targetAudience);
-            return;
-        }
-
-        if ($targetAudience === 'member') {
-            $query->whereNotNull('tier_id');
-            return;
-        }
-
-        if (in_array($targetAudience, ['silver', 'gold', 'diamond'], true)) {
-            $query->whereHas('tier', function ($tierQuery) use ($targetAudience) {
-                $tierQuery->where('name', 'like', '%' . $targetAudience . '%')
-                    ->orWhere('name', 'like', '%' . $this->vietnameseTierKeyword($targetAudience) . '%');
-            });
-        }
-    }
-
-    private function vietnameseTierKeyword(string $targetAudience): string
-    {
-        return match ($targetAudience) {
-            'silver' => 'Bạc',
-            'gold' => 'Vàng',
-            'diamond' => 'Kim cương',
-            default => $targetAudience,
-        };
     }
 
     private function isSilverTierOrAbove(User $user): bool
