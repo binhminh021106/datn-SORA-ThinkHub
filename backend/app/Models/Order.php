@@ -26,6 +26,7 @@ class Order extends Model
         'shipping_fee',
         'total_amount',
         'coupon_id',
+        'affiliate_user_id',
         'coupon_code',
         'payment_method',
         'payment_status',

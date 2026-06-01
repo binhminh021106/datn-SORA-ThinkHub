@@ -93,6 +93,25 @@
                                             </div>
                                         </div>
 
+                                        <div class="col-md-6 mt-3">
+                                            <label class="form-label fw-bold text-dark">
+                                                <i class="bi bi-diagram-3-fill text-brand me-1"></i> Hoa hồng Affiliate
+                                            </label>
+                                            <div class="input-group">
+                                                <input type="number" 
+                                                    class="form-control fw-bold text-brand" 
+                                                    v-model.number="form.affiliate_commission_rate" 
+                                                    min="0" 
+                                                    max="100" 
+                                                    step="0.01" 
+                                                    placeholder="VD: 5.5">
+                                                <span class="input-group-text bg-light fw-bold">%</span>
+                                            </div>
+                                            <small class="text-muted fst-italic mt-1 d-block" style="font-size: 0.75rem;">
+                                                <i class="bi bi-info-circle me-1"></i>Để 0% nếu không áp dụng hoa hồng giới thiệu.
+                                            </small>
+                                        </div>
+
                                         <div class="col-md-12 mt-3">
                                             <div
                                                 class="alert alert-info small border-0 bg-info bg-opacity-10 text-muted m-0">
@@ -428,7 +447,7 @@ const systemAttributes = ref([]);
 const brands = ref([]);
 
 const form = ref({
-    category_id: '', brand_id: '', name: '', slug: '', base_price: 0, isPublished: true
+    category_id: '', brand_id: '', name: '', slug: '', base_price: 0, isPublished: true, affiliate_commission_rate: 0
 });
 const thumbnailFile = ref(null);
 const thumbnailPreview = ref(null);
@@ -573,7 +592,6 @@ const removeAttributeColumn = (attrId) => {
 };
 
 const addVariantRow = () => {
-    // ĐÃ FIX: Sinh ngẫu nhiên 4 số chống trùng lặp (Fix lỗi 1062)
     const randomCode = Math.floor(1000 + Math.random() * 9000);
     const prefix = form.value.slug ? form.value.slug.substring(0, 4).toUpperCase().replace(/-/g, '') : 'SKU';
     const newSku = `${prefix}${randomCode}-V${variants.value.length + 1}`;
@@ -789,6 +807,10 @@ const submitProduct = async () => {
         formData.append('slug', form.value.slug);
         formData.append('base_price', form.value.base_price);
         formData.append('status', form.value.isPublished ? 'published' : 'draft');
+        
+        // THÊM MỚI: Đẩy dữ liệu affiliate_commission_rate vào payload
+        formData.append('affiliate_commission_rate', form.value.affiliate_commission_rate);
+        
         formData.append('thumbnail_image', thumbnailFile.value);
 
         const variantsPayload = variants.value.map(v => ({

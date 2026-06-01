@@ -143,76 +143,133 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
-import Swal from 'sweetalert2';
+import { computed, ref, reactive, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import apiClient from '@/utils/apiClient'
+import { useToast } from 'vue-toastification'
 
-const router = useRouter();
-const route = useRoute();
-const eventId = route.params.id; // Lấy ID từ URL
+const router = useRouter()
+const route = useRoute()
+const toast = useToast()
 
-const isLoading = ref(true);
+const eventId = route.params.id // Lấy ID từ URL (VD: /admin/email-campaign/edit/5)
 
-const holidayForm = ref({
+const isFetching = ref(true)
+const isSubmitting = ref(false)
+const isLoading = computed(() => isFetching.value)
+
+// Khai báo Form state
+const holidayForm = reactive({
   name: '',
-  day: 1,
-  month: 1,
+  day: '',
+  month: '',
   target: 'all',
   subject: '',
   content: '',
   hasVoucher: false,
   voucherCode: '',
   discount: '',
-});
-
-// Giả lập Dữ liệu Cũ
-onMounted(() => {
-  // TODO: Call API GET detail Event theo `eventId` tại đây. (Ví dụ: axios.get(`/api/holidays/${eventId}`))
-  setTimeout(() => {
-    holidayForm.value = {
-      name: 'Quốc tế Phụ nữ 8/3',
-      day: 8,
-      month: 3,
-      target: 'female',
-      subject: 'SORA gửi bạn ưu đãi đặc biệt ngày 8/3',
-      content: 'Xin chào [Tên_Khách_Hàng],\n\nCảm ơn bạn đã tin tưởng đồng hành cùng chúng tôi. SORA xin dành tặng bạn một ưu đãi đặc biệt.',
-      hasVoucher: true,
-      voucherCode: 'SORA0803',
-      discount: '15%',
-    };
-    isLoading.value = false;
-  }, 500); // Fake delay load API
-});
-
-const mockCustomer = { name: 'Lê Thị Mỹ Duyên' };
+  status: 'active'
+})
 
 const previewHolidayContent = computed(() => {
-  let content = holidayForm.value.content || '';
-  const voucher = holidayForm.value.hasVoucher ? holidayForm.value.voucherCode : '';
-  content = content.replaceAll('[Tên_Khách_Hàng]', mockCustomer.name);
-  content = content.replaceAll('[Voucher_Code]', voucher);
-  return content.replace(/\n/g, '<br>');
-});
+  return replaceTokens(holidayForm.content || '').replace(/\n/g, '<br>')
+})
+
+// Lấy chi tiết sự kiện đổ vào Form
+const fetchEventDetail = async () => {
+  isFetching.value = true
+  try {
+    const response = await apiClient.get(`/admin/holiday-events/${eventId}`)
+    
+    if (response.data && response.data.success) {
+      const data = response.data.data
+      // Đổ dữ liệu cũ vào Form
+      holidayForm.name = data.name
+      const [day = '', month = ''] = String(data.event_date || '').split('/')
+      holidayForm.day = day
+      holidayForm.month = month
+      holidayForm.target = data.target_audience || 'all'
+      holidayForm.subject = data.email_subject
+      holidayForm.content = data.email_content
+      holidayForm.hasVoucher = !!data.voucher_code
+      holidayForm.voucherCode = data.voucher_code || ''
+      holidayForm.status = data.status || 'active'
+    } else {
+      toast.error('Không tìm thấy thông tin sự kiện.')
+      router.push({ path: '/admin/email-campaign' })
+    }
+  } catch (error) {
+    console.error('Lỗi fetch detail:', error)
+    toast.error('Lỗi tải dữ liệu. Sự kiện có thể đã bị xóa.')
+    router.push({ path: '/admin/email-campaign' })
+  } finally {
+    isFetching.value = false
+  }
+}
+
+// Cập nhật sự kiện
+const updateHoliday = async () => {
+  // Validate
+  if (!holidayForm.name || !holidayForm.day || !holidayForm.month || !holidayForm.subject || !holidayForm.content) {
+    toast.warning('Vui lòng nhập đầy đủ các trường thông tin bắt buộc (*).')
+    return
+  }
+
+  isSubmitting.value = true
+  try {
+    const response = await apiClient.put(`/admin/holiday-events/${eventId}`, buildPayload())
+    
+    if (response.data && response.data.success) {
+      toast.success('Cập nhật sự kiện thành công!')
+      router.push({ path: '/admin/email-campaign' }) // Quay lại trang index
+    } else {
+      toast.error(response.data.message || 'Lỗi khi cập nhật sự kiện.')
+    }
+  } catch (error) {
+    console.error('Lỗi Update Event:', error)
+    if (error.response && error.response.status === 422) {
+      toast.error('Dữ liệu cập nhật không hợp lệ.')
+    } else {
+      toast.error('Lỗi máy chủ khi cập nhật.')
+    }
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+function buildPayload() {
+  return {
+    name: holidayForm.name,
+    day: holidayForm.day,
+    month: holidayForm.month,
+    target_audience: holidayForm.target || 'all',
+    email_subject: holidayForm.subject,
+    email_content: holidayForm.content,
+    voucher_code: holidayForm.hasVoucher ? holidayForm.voucherCode : null,
+    status: holidayForm.status,
+  }
+}
 
 function insertToken(token) {
-  holidayForm.value.content = `${holidayForm.value.content}${holidayForm.value.content ? ' ' : ''}${token}`;
+  holidayForm.content = `${holidayForm.content}${holidayForm.content ? ' ' : ''}${token}`
 }
 
-async function updateHoliday() {
-  // TODO: Tích hợp API PUT update sự kiện tại đây
-  Swal.fire({
-    toast: true,
-    position: 'top-end',
-    icon: 'success',
-    title: 'Đã cập nhật sự kiện!',
-    showConfirmButton: false,
-    timer: 1500
-  });
-
-  setTimeout(() => {
-    router.push('/admin/email-campaign');
-  }, 1000);
+function replaceTokens(text) {
+  return text
+    .replaceAll('[TÃªn_KhÃ¡ch_HÃ ng]', 'Le Thi My Duyen')
+    .replaceAll('[Tên_Khách_Hàng]', 'Le Thi My Duyen')
+    .replaceAll('[Voucher_Code]', holidayForm.voucherCode || '')
 }
+
+onMounted(() => {
+  if (eventId) {
+    fetchEventDetail()
+  } else {
+    toast.error('Thiếu tham số ID.')
+    router.back()
+  }
+})
 </script>
 
 <style scoped>

@@ -6,26 +6,29 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
+    public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            if (!Schema::hasColumn('users', 'birthday')) {
-                $table->date('birthday')->nullable()->after('email');
+            // Kiểm tra và thêm cột ngày sinh
+            if (!Schema::hasColumn('users', 'date_of_birth')) {
+                $table->date('date_of_birth')->nullable()->after('email');
+            }
+            
+            // Kiểm tra và thêm cột giới tính (male / female)
+            if (!Schema::hasColumn('users', 'gender')) {
+                $table->string('gender')->nullable()->after('date_of_birth');
             }
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
+    public function down()
     {
         Schema::table('users', function (Blueprint $table) {
-            if (Schema::hasColumn('users', 'birthday')) {
-                // $table->dropColumn('birthday'); // Optional, since it might have existed before
+            if (Schema::hasColumn('users', 'date_of_birth')) {
+                $table->dropColumn('date_of_birth');
+            }
+            if (Schema::hasColumn('users', 'gender')) {
+                $table->dropColumn('gender');
             }
         });
     }
