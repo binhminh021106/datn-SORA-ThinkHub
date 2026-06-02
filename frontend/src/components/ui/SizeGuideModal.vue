@@ -11,19 +11,22 @@
 
         <div class="size-guide-modal-body">
           <div class="size-chart-section">
-            <h4 class="section-title">Bảng Kích Cỡ Tiêu Chuẩn</h4>
-            <p class="section-desc">Những kích cỡ bên dưới là những thông số tiêu chuẩn cho nhẫn nữ. Kích cỡ có thể thay đổi tùy theo yêu cầu riêng của từng khách hàng.</p>
+            <h4 class="section-title">{{ chartTitle }}</h4>
+            <p class="section-desc">{{ chartDescription }}</p>
 
             <div class="size-table">
               <div class="table-header">
-                <div class="table-cell">Kích Cỡ Nhẫn</div>
-                <div class="table-cell">Đường Kính (mm)</div>
-                <div class="table-cell">Chu Vi (mm)</div>
+                <div class="table-cell">Kích Cỡ</div>
+                <div class="table-cell">Đường Kính</div>
+                <div class="table-cell">Chu Vi</div>
               </div>
-              <div v-for="size in sizeGuideData" :key="size.size" class="table-row">
+              <div v-for="size in displayRows" :key="size.size" class="table-row">
                 <div class="table-cell">{{ size.size }}</div>
-                <div class="table-cell">{{ size.diameter }} mm</div>
-                <div class="table-cell">{{ size.circumference }} mm</div>
+                <div class="table-cell">{{ formatMeasure(size.diameter) }}</div>
+                <div class="table-cell">{{ formatMeasure(size.circumference) }}</div>
+              </div>
+              <div v-if="displayRows.length === 0" class="table-row">
+                <div class="table-cell table-cell-empty">Chưa có dữ liệu size cho sản phẩm này.</div>
               </div>
             </div>
           </div>
@@ -78,10 +81,18 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits } from 'vue';
+import { computed, defineProps, defineEmits } from 'vue';
 
-defineProps({
+const props = defineProps({
   show: {
+    type: Boolean,
+    default: false
+  },
+  rows: {
+    type: Array,
+    default: () => []
+  },
+  isAdminConfigured: {
     type: Boolean,
     default: false
   }
@@ -89,7 +100,7 @@ defineProps({
 
 defineEmits(['close']);
 
-const sizeGuideData = [
+const standardSizeData = [
   { size: '5', diameter: 15.7, circumference: 50 },
   { size: '6', diameter: 16.5, circumference: 52 },
   { size: '7', diameter: 17.4, circumference: 54 },
@@ -102,6 +113,36 @@ const sizeGuideData = [
   { size: '14', diameter: 23.5, circumference: 74 },
   { size: '15', diameter: 24.4, circumference: 76.5 },
 ];
+
+const normalizeSizeKey = (value) => String(value ?? '').match(/\d+(\.\d+)?/)?.[0] || String(value ?? '').trim().toLowerCase();
+
+const displayRows = computed(() => {
+  return props.rows
+    .map((row) => {
+      const size = row?.size ?? row?.name ?? row?.label ?? row?.value;
+      const fallback = standardSizeData.find(item => normalizeSizeKey(item.size) === normalizeSizeKey(size));
+
+      return {
+        size: size || fallback?.size || '',
+        diameter: row?.diameter ?? row?.diameter_mm ?? fallback?.diameter ?? '',
+        circumference: row?.circumference ?? row?.circumference_mm ?? fallback?.circumference ?? '',
+      };
+    })
+    .filter(row => row.size);
+});
+
+const chartTitle = computed(() => props.isAdminConfigured ? 'Bảng Kích Cỡ Theo Sản Phẩm' : 'Bảng Kích Cỡ Có Sẵn');
+const chartDescription = computed(() => {
+  if (props.isAdminConfigured) {
+    return 'Bảng kích cỡ này được cấu hình riêng cho sản phẩm bởi quản trị viên.';
+  }
+  return 'Bảng bên dưới chỉ hiển thị các size thực tế đang có trong biến thể của sản phẩm.';
+});
+
+const formatMeasure = (value) => {
+  if (value === null || value === undefined || value === '') return 'Đang cập nhật';
+  return String(value).includes('mm') ? value : `${value} mm`;
+};
 </script>
 
 <style scoped>
@@ -225,6 +266,12 @@ const sizeGuideData = [
   color: white;
   font-weight: 600;
   text-align: center;
+}
+
+.table-cell-empty {
+  grid-column: 1 / -1;
+  color: #777;
+  font-style: italic;
 }
 
 .table-row {
