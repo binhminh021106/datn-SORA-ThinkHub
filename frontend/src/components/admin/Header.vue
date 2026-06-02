@@ -4,14 +4,40 @@
        :class="isDarkMode ? 'bg-dark border-secondary' : 'bg-white'">
     <div class="container-fluid">
       
-      <!-- ĐỒNG HỒ DIGITAL (Bên trái) -->
+      <!-- ĐỒNG HỒ DIGITAL (Bên trái) - Đã thay bằng FLIP CLOCK -->
       <div class="d-none d-sm-flex align-items-center me-auto" v-if="isLoggedIn">
-        <div class="digital-clock-container d-flex align-items-center px-3 py-1 rounded shadow-sm" 
+        <div class="flip-clock-container d-flex align-items-center px-3 py-1 rounded shadow-sm transition-all" 
              :class="isDarkMode ? 'bg-black border border-secondary' : 'bg-dark border'">
-          <i class="bi bi-clock me-2" style="color: #00ff00;"></i>
-          <span class="digital-text" style="color: #00ff00; letter-spacing: 2px; text-shadow: 0 0 5px #00ff00;">
-            {{ currentTime.time }} <span class="ms-1" style="font-size: 0.6em;">{{ currentTime.ampm }}</span>
+          
+          <div class="flip-clock-mini">
+            <!-- GIỜ -->
+            <div class="flip-card-mini" ref="hoursRef">
+                <div class="half top static"><div class="num">00</div></div>
+                <div class="half bottom static"><div class="num">00</div></div>
+            </div>
+            
+            <div class="separator-mini"><div class="dot"></div><div class="dot"></div></div>
+
+            <!-- PHÚT -->
+            <div class="flip-card-mini" ref="minutesRef">
+                <div class="half top static"><div class="num">00</div></div>
+                <div class="half bottom static"><div class="num">00</div></div>
+            </div>
+
+            <div class="separator-mini"><div class="dot"></div><div class="dot"></div></div>
+
+            <!-- GIÂY -->
+            <div class="flip-card-mini" ref="secondsRef">
+                <div class="half top static"><div class="num">00</div></div>
+                <div class="half bottom static"><div class="num">00</div></div>
+            </div>
+          </div>
+          
+          <!-- AM/PM Indicator (Đã ép nằm xuống đáy và cách xa thẻ giây một chút) -->
+          <span class="ms-2 fw-bold align-self-end" style="color: #4ade80; font-size: 0.85rem; font-family: 'Oswald', sans-serif; letter-spacing: 1px; text-shadow: 0 1px 3px rgba(74, 222, 128, 0.4); line-height: 1; margin-bottom: 4px;">
+            {{ currentTime.ampm }}
           </span>
+
         </div>
       </div>
 
@@ -37,7 +63,7 @@
           </button>
         </li>
 
-        <!-- NÚT TOGGLE DARK MODE (MỚI THÊM) -->
+        <!-- NÚT TOGGLE DARK MODE -->
         <li class="nav-item me-3" v-if="isLoggedIn">
           <button @click="toggleTheme" 
                   class="btn rounded-circle shadow-sm d-flex align-items-center justify-content-center p-0 theme-toggle-btn"
@@ -52,7 +78,6 @@
         <li v-if="isLoggedIn" class="nav-item dropdown user-menu-container" ref="userMenuContainer">
           <a href="#" @click.prevent="toggleUserMenu" class="nav-link d-flex align-items-center dropdown-toggle text-decoration-none"
              :class="isDarkMode ? 'text-light' : 'text-dark'">
-            <!-- Sử dụng SoraImage thay cho thẻ img thường để tự động xử lý ảnh lỗi và fallback về defaultAvatar -->
             <SoraImage 
               :src="adminUser.avatar" 
               :placeholder="defaultAvatar"
@@ -66,7 +91,6 @@
           <ul class="dropdown-menu dropdown-menu-end shadow border mt-2 transition-all" 
               :class="[{ 'show': isUserMenuActive }, isDarkMode ? 'bg-dark border-secondary' : 'bg-white border-0']">
             <li class="user-header-modern text-white text-center p-3 rounded-top">
-              <!-- Áp dụng SoraImage cho ảnh trong dropdown menu -->
               <div class="d-flex justify-content-center mb-2">
                 <SoraImage 
                   :src="adminUser.avatar" 
@@ -81,7 +105,6 @@
             </li>
             
             <li class="mt-2">
-              <!-- Thêm @click="isUserMenuActive = false" để ẩn menu khi click -->
               <router-link :to="{ name: 'admin-profile' }" class="dropdown-item py-2" :class="isDarkMode ? 'text-light hover-dark' : ''" @click="isUserMenuActive = false">
                 <i class="bi bi-person me-2"></i> Hồ sơ cá nhân
               </router-link>
@@ -89,7 +112,6 @@
             
             <!-- LINK ĐẾN LỊCH SỬ CHẤM CÔNG -->
             <li>
-              <!-- Thêm @click="isUserMenuActive = false" để ẩn menu khi click -->
               <router-link :to="{ name: 'admin-attendance-history' }" class="dropdown-item py-2" :class="isDarkMode ? 'text-light hover-dark' : ''" @click="isUserMenuActive = false">
                 <i class="bi bi-calendar2-check me-2"></i> Lịch sử chấm công
               </router-link>
@@ -139,9 +161,47 @@ const isUserMenuActive = ref(false);
 const userMenuContainer = ref(null);
 const attendanceState = ref('ready'); // ready, working, completed, hanging
 
-// LOGIC ĐỒNG HỒ
-const currentTime = ref({ time: '', ampm: '' });
+// ----- LOGIC ĐỒNG HỒ FLIP CLOCK -----
+const currentTime = ref({ ampm: '' });
 let timeInterval = null;
+let isFirstRun = true;
+
+// Khai báo ref cho các thẻ số để JS tương tác
+const hoursRef = ref(null);
+const minutesRef = ref(null);
+const secondsRef = ref(null);
+
+const triggerFlip = (card, newValue) => {
+  if (!card) return;
+  const topStatic = card.querySelector('.top.static .num');
+  const bottomStatic = card.querySelector('.bottom.static .num');
+  
+  if (!topStatic || !bottomStatic) return;
+  const currentValue = topStatic.innerText;
+  if (currentValue === newValue) return;
+
+  const existingFlaps = card.querySelectorAll('.flap');
+  existingFlaps.forEach(flap => flap.remove());
+
+  topStatic.innerText = newValue;
+
+  const flapTop = document.createElement('div');
+  flapTop.className = 'half top flap';
+  flapTop.innerHTML = `<div class="num">${currentValue}</div>`;
+
+  const flapBottom = document.createElement('div');
+  flapBottom.className = 'half bottom flap';
+  flapBottom.innerHTML = `<div class="num">${newValue}</div>`;
+
+  card.appendChild(flapTop);
+  card.appendChild(flapBottom);
+
+  setTimeout(() => {
+    if (flapTop.parentNode) flapTop.remove();
+    if (flapBottom.parentNode) flapBottom.remove();
+    bottomStatic.innerText = newValue; 
+  }, 650); 
+};
 
 const updateTime = () => {
   const now = new Date();
@@ -149,14 +209,33 @@ const updateTime = () => {
   const ampm = hours >= 12 ? 'PM' : 'AM';
   hours = hours % 12;
   hours = hours ? hours : 12; 
+  
   const strHours = String(hours).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  const seconds = String(now.getSeconds()).padStart(2, '0');
-  currentTime.value = {
-    time: `${strHours}:${minutes}:${seconds}`,
-    ampm: ampm
-  };
+  const strMinutes = String(now.getMinutes()).padStart(2, '0');
+  const strSeconds = String(now.getSeconds()).padStart(2, '0');
+  
+  currentTime.value.ampm = ampm;
+
+  if (hoursRef.value && minutesRef.value && secondsRef.value) {
+    if (isFirstRun) {
+      hoursRef.value.querySelector('.top.static .num').innerText = strHours;
+      hoursRef.value.querySelector('.bottom.static .num').innerText = strHours;
+      
+      minutesRef.value.querySelector('.top.static .num').innerText = strMinutes;
+      minutesRef.value.querySelector('.bottom.static .num').innerText = strMinutes;
+      
+      secondsRef.value.querySelector('.top.static .num').innerText = strSeconds;
+      secondsRef.value.querySelector('.bottom.static .num').innerText = strSeconds;
+      
+      isFirstRun = false;
+    } else {
+      triggerFlip(hoursRef.value, strHours);
+      triggerFlip(minutesRef.value, strMinutes);
+      triggerFlip(secondsRef.value, strSeconds);
+    }
+  }
 };
+// ------------------------------------
 
 // LOGIC DARK MODE
 const isDarkMode = ref(false);
@@ -204,7 +283,6 @@ const fetchAttendanceState = async () => {
   }
 };
 
-// Hàm gọi API lấy thông tin profile admin bằng Axios
 const fetchAdminProfile = async () => {
   const token = localStorage.getItem('admin_token');
   if (!token) throw new Error('Không tìm thấy token xác thực');
@@ -217,7 +295,6 @@ const fetchAdminProfile = async () => {
   return response.data;
 };
 
-// Áp dụng TanStack Query
 const { data: adminProfileData } = useQuery({
   queryKey: ['adminProfile'],
   queryFn: fetchAdminProfile,
@@ -274,8 +351,6 @@ const handleLogout = () => {
       localStorage.removeItem('admin_token');
       localStorage.removeItem('admin_role');
       localStorage.removeItem('admin_info');
-
-      // Xóa toàn bộ cache của TanStack Query để tránh kẹt dữ liệu tài khoản cũ
       queryClient.clear();
 
       Swal.fire({
@@ -299,8 +374,10 @@ const closeUserMenu = (event) => {
 onMounted(() => {
   initTheme();
   document.addEventListener('click', closeUserMenu);
+  
   updateTime();
   timeInterval = setInterval(updateTime, 1000);
+  
   fetchAttendanceState();
 });
 
@@ -373,6 +450,130 @@ const handleScanClick = async () => {
 </script>
 
 <style scoped>
+/* --- FIX CSS DÀNH CHO MINI FLIP CLOCK TỶ LỆ CHUẨN --- */
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&display=swap');
+
+.flip-clock-container {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.flip-clock-mini {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  font-family: 'Oswald', sans-serif;
+  box-sizing: border-box; 
+}
+
+/* FIX: Mở rộng chiều ngang (width) để chữ không bị lẹm */
+.flip-card-mini {
+  position: relative;
+  width: 38px;      /* Cân đối lại chiều ngang, rộng hơn cũ 6px */
+  height: 42px;     
+  background: #111; 
+  border-radius: 6px;
+  font-size: 32px;  /* Giảm cỡ chữ 1 tẹo cho cân đối với width mới */
+  font-weight: 700;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+  perspective: 500px;
+  color: #4ade80;   
+}
+
+/* NỬA TRÊN VÀ DƯỚI */
+:deep(.half) {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  overflow: hidden;
+  background: #1e1e24; 
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+:deep(.half.top) {
+  top: 0;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  transform-origin: bottom center;
+  background: linear-gradient(to bottom, #3f3f46, #27272a);
+}
+
+:deep(.half.bottom) {
+  bottom: 0;
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+  transform-origin: top center;
+  background: linear-gradient(to bottom, #27272a, #18181b);
+}
+
+/* Đường cắt chia đôi */
+:deep(.half.top::after) {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+  height: 1px; background: rgba(0, 0, 0, 0.4);
+}
+
+:deep(.half.bottom::after) {
+  content: ''; position: absolute; top: 0; left: 0; right: 0;
+  height: 1px; background: rgba(255, 255, 255, 0.05);
+}
+
+/* FIX: Căn chỉnh chữ bên trong */
+:deep(.num) {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 42px !important;     
+  line-height: 42px !important; 
+  text-align: center;
+  text-shadow: 0 1px 4px rgba(74, 222, 128, 0.3);
+  margin: 0; padding: 0;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0px;
+  backface-visibility: hidden;
+  /* Thêm padding nhẹ nếu cần, nhưng mở width thường là đủ */
+}
+
+:deep(.half.top .num) { top: 0; }
+:deep(.half.bottom .num) { bottom: 0; }
+:deep(.flap) { z-index: 10; }
+
+:deep(.flap.top) {
+  animation: flipTopMini 0.3s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+}
+:deep(.flap.bottom) {
+  transform: rotateX(90deg);
+  animation: flipBottomMini 0.3s cubic-bezier(0.4, 0.0, 0.2, 1) 0.3s forwards;
+}
+
+@keyframes flipTopMini {
+  0% { transform: rotateX(0deg); filter: brightness(1); }
+  100% { transform: rotateX(-90deg); filter: brightness(0.3); }
+}
+
+@keyframes flipBottomMini {
+  0% { transform: rotateX(90deg); filter: brightness(0.3); }
+  100% { transform: rotateX(0deg); filter: brightness(1); }
+}
+
+/* Dấu : phân cách */
+.separator-mini {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 1px;
+}
+.separator-mini .dot {
+  width: 5px;
+  height: 5px;
+  background: #4ade80; 
+  border-radius: 50%;
+  box-shadow: 0 0 5px rgba(74, 222, 128, 0.6);
+}
+
+/* --- PHẦN CSS GỐC CỦA HEADER --- */
 .app-header {
   min-height: 60px;
   z-index: 1000;
