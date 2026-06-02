@@ -13,12 +13,14 @@ import {
   Dimensions,
   Modal,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../config/api";
 import { showCustomAlert } from "../components/CustomAlert";
+import { PRICE_FONT_FAMILY, PRICE_FONT_WEIGHT } from "../styles/typography";
 
 // Mock Alert to use CustomAlert globally in this screen
 const OriginalAlert = Alert;
@@ -36,6 +38,7 @@ export default function CheckoutScreen({ route }) {
   const navigation = useNavigation();
 
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   // Retrieve checkout items passed from Cart, fallback to dummy
@@ -46,6 +49,7 @@ export default function CheckoutScreen({ route }) {
   const [personalPhone, setPersonalPhone] = useState("");
   const [personalEmail, setPersonalEmail] = useState("");
   const [isEditingInfo, setIsEditingInfo] = useState(false);
+  const [isSavingPersonalInfo, setIsSavingPersonalInfo] = useState(false);
 
   // Address States
   const [addresses, setAddresses] = useState([]);
@@ -60,9 +64,9 @@ export default function CheckoutScreen({ route }) {
     fetchInitData();
   }, []);
 
-  const fetchInitData = async () => {
+  const fetchInitData = async ({ showFullScreenLoader = true } = {}) => {
     try {
-      setIsLoading(true);
+      if (showFullScreenLoader) setIsLoading(true);
       const token = await AsyncStorage.getItem("auth_token");
       const sessionId = await AsyncStorage.getItem("cart_session_id");
 
@@ -97,7 +101,13 @@ export default function CheckoutScreen({ route }) {
       console.log("Error fetching init data", error);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
+  };
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchInitData({ showFullScreenLoader: false });
   };
 
   // Add Address Modal States
@@ -116,6 +126,7 @@ export default function CheckoutScreen({ route }) {
 
   // Custom Modal for Order Success
   const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
+  const [isConfirmModalVisible, setIsConfirmModalVisible] = useState(false);
   const [orderId] = useState(
     () => "SORA-" + Math.floor(100000 + Math.random() * 900000),
   );
@@ -226,6 +237,150 @@ export default function CheckoutScreen({ route }) {
     showCustomAlert("Thành công", "Đã thêm và lựa chọn địa chỉ giao hàng mới!");
   };
 
+  const getCheckoutCustomerInfo = () => {
+    const selectedAddress = addresses.find((address) => address.id === selectedAddrId);
+    const addressParts = selectedAddress
+      ? [
+        selectedAddress.shipping_address || selectedAddress.detail,
+        selectedAddress.ward,
+        selectedAddress.district,
+        selectedAddress.city,
+      ].filter(Boolean)
+      : [];
+
+    return {
+      selectedAddress,
+      customerName: (selectedAddress?.customer_name || selectedAddress?.receiver || personalName).trim(),
+      customerPhone: (selectedAddress?.customer_phone || selectedAddress?.phone || personalPhone).trim(),
+      customerEmail: personalEmail.trim(),
+      customerAddress: addressParts.join(", "),
+    };
+  };
+
+  const validateCustomerContact = ({ customerName, customerPhone, customerEmail }) => {
+    if (!customerName) {
+      showCustomAlert("Thông tin khách hàng", "Vui lòng nhập họ tên người nhận hàng.");
+      return false;
+    }
+
+    if (!customerPhone) {
+      showCustomAlert("Thông tin khách hàng", "Vui lòng nhập số điện thoại người nhận hàng.");
+      return false;
+    }
+
+    if (!/^[0-9\s\-+()]{9,15}$/.test(customerPhone)) {
+      showCustomAlert("Thông tin khách hàng", "Số điện thoại không hợp lệ. Vui lòng nhập từ 9 đến 15 ký tự.");
+      return false;
+    }
+
+    if (!customerEmail) {
+      showCustomAlert("Thông tin khách hàng", "Vui lòng nhập email để nhận hóa đơn.");
+      return false;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+      showCustomAlert("Thông tin khách hàng", "Email không đúng định dạng.");
+      return false;
+    }
+
+    return true;
+  };
+
+  const validateCustomerInfo = (customerInfo) => {
+    if (!validateCustomerContact(customerInfo)) return false;
+
+    if (!customerInfo.customerAddress) {
+      showCustomAlert("Địa chỉ giao hàng", "Vui lòng chọn hoặc thêm địa chỉ giao hàng cụ thể.");
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleOpenOrderConfirm = () => {
+    if (checkoutItems.length === 0) {
+      showCustomAlert("Lỗi", "Giỏ hàng trống.");
+      return;
+    }
+
+    if (addresses.length > 0 && !selectedAddrId) {
+      showCustomAlert("Lỗi", "Vui lòng chọn địa chỉ giao hàng.");
+      return;
+    }
+
+    const customerInfo = getCheckoutCustomerInfo();
+    if (!validateCustomerInfo(customerInfo)) return;
+
+    setIsConfirmModalVisible(true);
+  };
+
+  const handleSavePersonalInfo = async () => {
+    const customerInfo = {
+      customerName: personalName.trim(),
+      customerPhone: personalPhone.trim(),
+      customerEmail: personalEmail.trim(),
+    };
+    if (!validateCustomerContact(customerInfo)) return;
+
+    const cleanPhone = customerInfo.customerPhone.replace(/[^0-9]/g, "");
+    if (!/^0[35789][0-9]{8}$/.test(cleanPhone)) {
+      showCustomAlert("Thông tin khách hàng", "Số điện thoại phải gồm 10 chữ số và đúng đầu số Việt Nam.");
+      return;
+    }
+
+    setIsSavingPersonalInfo(true);
+    try {
+      const token = await AsyncStorage.getItem("auth_token");
+      if (!token) {
+        showCustomAlert("Thông tin khách hàng", "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("fullName", customerInfo.customerName);
+      formData.append("phone", cleanPhone);
+      formData.append("contact_only", "1");
+
+      const response = await fetch(`${API_BASE_URL}/client/profile`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          "Content-Type": "multipart/form-data",
+        },
+        body: formData,
+      });
+      const result = await response.json();
+
+      if (!response.ok || result.status !== true) {
+        const message = result?.errors
+          ? Object.values(result.errors).flat().join("\n")
+          : result?.message || "Không thể cập nhật thông tin cá nhân.";
+        showCustomAlert("Không thể lưu", message);
+        return;
+      }
+
+      const updatedUser = result.data || {};
+      setPersonalName(updatedUser.fullName || customerInfo.customerName);
+      setPersonalPhone(updatedUser.phone || customerInfo.customerPhone);
+      try {
+        const cached = await AsyncStorage.getItem("user");
+        await AsyncStorage.setItem("user", JSON.stringify({
+          ...(cached ? JSON.parse(cached) : {}),
+          ...updatedUser,
+        }));
+      } catch (_) { }
+
+      setIsEditingInfo(false);
+      showCustomAlert("Thành công", "Thông tin cá nhân đã được cập nhật.");
+    } catch (error) {
+      console.log("Error saving checkout personal info", error);
+      showCustomAlert("Lỗi kết nối", "Không thể kết nối đến máy chủ. Vui lòng thử lại.");
+    } finally {
+      setIsSavingPersonalInfo(false);
+    }
+  };
+
   const handlePlaceOrder = async () => {
     if (checkoutItems.length === 0) {
       showCustomAlert("Lỗi", "Giỏ hàng trống.");
@@ -242,6 +397,9 @@ export default function CheckoutScreen({ route }) {
       return;
     }
 
+    const customerInfo = getCheckoutCustomerInfo();
+    if (!validateCustomerInfo(customerInfo)) return;
+
     try {
       setIsPlacingOrder(true);
       const token = await AsyncStorage.getItem("auth_token");
@@ -255,9 +413,10 @@ export default function CheckoutScreen({ route }) {
       if (sessionId) headers["X-Cart-Session-Id"] = sessionId;
 
       let payload = {
-        customer_name: personalName,
-        customer_phone: personalPhone,
-        customer_email: personalEmail,
+        customer_name: customerInfo.customerName,
+        customer_phone: customerInfo.customerPhone,
+        customer_email: customerInfo.customerEmail,
+        customer_address: customerInfo.customerAddress,
         order_note: note,
         payment_method: paymentMethod,
         shipping_fee: shippingFee,
@@ -267,7 +426,7 @@ export default function CheckoutScreen({ route }) {
         payload.coupon_code = appliedCode;
       }
 
-      const selectedAddress = addresses.find(a => a.id === selectedAddrId);
+      const selectedAddress = customerInfo.selectedAddress;
       if (selectedAddress?.is_local) {
         payload.customer_name = selectedAddress.receiver || personalName;
         payload.customer_phone = selectedAddress.phone || personalPhone;
@@ -286,6 +445,7 @@ export default function CheckoutScreen({ route }) {
 
       const json = await res.json();
       if (json.success) {
+        setIsConfirmModalVisible(false);
         if (json.payment_url) {
           showCustomAlert("Thành công", "Đang chuyển hướng thanh toán...");
           setCreatedOrder(json.data);
@@ -346,6 +506,14 @@ export default function CheckoutScreen({ route }) {
       <ScrollView
         style={s.scroll}
         contentContainerStyle={{ paddingBottom: 50 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            colors={["#9f273b"]}
+            tintColor="#9f273b"
+          />
+        }
       >
         {/* ── SECTION 1: THÔNG TIN KHÁCH HÀNG (LIÊN HỆ) ── */}
         <View style={s.section}>
@@ -365,29 +533,24 @@ export default function CheckoutScreen({ route }) {
               style={s.editInfoBtn}
               onPress={() => {
                 if (isEditingInfo) {
-                  // Validate before saving
-                  if (
-                    !personalName.trim() ||
-                    !personalPhone.trim() ||
-                    !personalEmail.trim()
-                  ) {
-                    showCustomAlert(
-                      "Lỗi",
-                      "Vui lòng nhập đầy đủ thông tin khách hàng!",
-                    );
-                    return;
-                  }
+                  handleSavePersonalInfo();
+                  return;
                 }
-                setIsEditingInfo(!isEditingInfo);
+                setIsEditingInfo(true);
               }}
+              disabled={isSavingPersonalInfo}
             >
-              <Ionicons
-                name={isEditingInfo ? "checkmark-circle" : "create-outline"}
-                size={14}
-                color="#9f273b"
-              />
+              {isSavingPersonalInfo ? (
+                <ActivityIndicator size="small" color="#9f273b" />
+              ) : (
+                <Ionicons
+                  name={isEditingInfo ? "checkmark-circle" : "create-outline"}
+                  size={14}
+                  color="#9f273b"
+                />
+              )}
               <Text style={s.editInfoBtnTxt}>
-                {isEditingInfo ? "LƯU" : "SỬA"}
+                {isSavingPersonalInfo ? "ĐANG LƯU" : isEditingInfo ? "LƯU" : "SỬA"}
               </Text>
             </TouchableOpacity>
           </View>
@@ -556,7 +719,7 @@ export default function CheckoutScreen({ route }) {
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                         <Text style={s.orderItemPrice}>{fmt(item.price)}</Text>
                         {item.oldPrice ? (
-                          <Text style={{ fontFamily: "Oswald_400Regular", fontSize: 10, color: "#999", textDecorationLine: "line-through" }}>
+                          <Text style={s.orderItemOldPrice}>
                             {fmt(item.oldPrice)}
                           </Text>
                         ) : null}
@@ -674,7 +837,7 @@ export default function CheckoutScreen({ route }) {
               </View>
               <View style={s.bankInfoRow}>
                 <Text style={s.bankInfoLabel}>Số tài khoản:</Text>
-                <Text style={s.bankInfoValCopy}>1023456789</Text>
+                <Text style={s.bankInfoValCopy}>1036153976</Text>
               </View>
               <View style={s.bankInfoRow}>
                 <Text style={s.bankInfoLabel}>Chủ tài khoản:</Text>
@@ -813,7 +976,7 @@ export default function CheckoutScreen({ route }) {
         {/* BUTTON ĐẶT HÀNG */}
         <TouchableOpacity
           style={[s.placeOrderBtn, isPlacingOrder && { opacity: 0.7 }]}
-          onPress={handlePlaceOrder}
+          onPress={handleOpenOrderConfirm}
           activeOpacity={0.9}
           disabled={isPlacingOrder}
         >
@@ -833,7 +996,96 @@ export default function CheckoutScreen({ route }) {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* ── MODAL ĐẶT HÀNG THÀNH CÔNG ── */}
+      {/* MODAL XAC NHAN DAT HANG */}
+      <Modal
+        visible={isConfirmModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => !isPlacingOrder && setIsConfirmModalVisible(false)}
+      >
+        <View style={s.modalBg}>
+          <View style={s.confirmModalContainer}>
+            <View style={s.confirmHeader}>
+              <View>
+                <Text style={s.confirmTitle}>Xác Nhận Đặt Hàng</Text>
+                <Text style={s.confirmSubtitle}>Kiểm tra thông tin trước khi thanh toán</Text>
+              </View>
+              <TouchableOpacity
+                style={s.confirmCloseBtn}
+                onPress={() => setIsConfirmModalVisible(false)}
+                disabled={isPlacingOrder}
+              >
+                <Ionicons name="close" size={21} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={s.confirmCustomerBox}>
+              <View style={s.confirmSectionHeading}>
+                <Ionicons name="person-outline" size={15} color="#9f273b" />
+                <Text style={s.confirmSectionTitle}>THÔNG TIN NHẬN HÀNG</Text>
+              </View>
+              <Text style={s.confirmCustomerName}>{getCheckoutCustomerInfo().customerName}</Text>
+              <Text style={s.confirmCustomerText}>{getCheckoutCustomerInfo().customerPhone}</Text>
+              <Text style={s.confirmCustomerText}>{getCheckoutCustomerInfo().customerAddress}</Text>
+            </View>
+
+            <View style={s.confirmProductsHeader}>
+              <View style={s.confirmSectionHeading}>
+                <Ionicons name="bag-handle-outline" size={15} color="#9f273b" />
+                <Text style={s.confirmSectionTitle}>SẢN PHẨM</Text>
+              </View>
+              <Text style={s.confirmProductCount}>{checkoutItems.length} sản phẩm</Text>
+            </View>
+
+            <ScrollView style={s.confirmProductsScroll} showsVerticalScrollIndicator={false}>
+              {checkoutItems.map((item, index) => {
+                const quantity = item.quantity || item.qty || 1;
+                return (
+                  <View key={`confirm-${item.id || index}`} style={s.confirmProductRow}>
+                    <Image source={{ uri: item.image }} style={s.confirmProductImage} />
+                    <View style={s.confirmProductInfo}>
+                      <Text style={s.confirmProductName} numberOfLines={2}>{item.name}</Text>
+                      {item.variant ? (
+                        <Text style={s.confirmProductVariant} numberOfLines={1}>{item.variant}</Text>
+                      ) : null}
+                      <Text style={s.confirmProductQuantity}>Số lượng: {quantity}</Text>
+                    </View>
+                    <Text style={s.confirmProductPrice}>{fmt(item.price * quantity)}</Text>
+                  </View>
+                );
+              })}
+            </ScrollView>
+
+            <View style={s.confirmTotalRow}>
+              <Text style={s.confirmTotalLabel}>TỔNG THANH TOÁN</Text>
+              <Text style={s.confirmTotalValue}>{fmt(total)}</Text>
+            </View>
+
+            <View style={s.confirmActions}>
+              <TouchableOpacity
+                style={[s.confirmActionBtn, s.confirmBackBtn]}
+                onPress={() => setIsConfirmModalVisible(false)}
+                disabled={isPlacingOrder}
+              >
+                <Text style={s.confirmBackText}>QUAY LẠI</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.confirmActionBtn, s.confirmSubmitBtn, isPlacingOrder && { opacity: 0.7 }]}
+                onPress={handlePlaceOrder}
+                disabled={isPlacingOrder}
+              >
+                {isPlacingOrder ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={s.confirmSubmitText}>XÁC NHẬN MUA</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL DAT HANG THANH CONG */}
       <Modal
         visible={isSuccessModalVisible}
         transparent={true}
@@ -856,7 +1108,7 @@ export default function CheckoutScreen({ route }) {
               </View>
               <View style={s.summaryRow}>
                 <Text style={s.summaryLabel}>Tổng thanh toán:</Text>
-                <Text style={s.summaryVal}>{fmt(total)}</Text>
+                <Text style={s.summaryPrice}>{fmt(total)}</Text>
               </View>
               <View style={s.summaryRow}>
                 <Text style={s.summaryLabel}>Phương thức:</Text>
@@ -1194,9 +1446,17 @@ const s = StyleSheet.create({
     marginTop: 3,
   },
   orderItemPrice: {
-    fontFamily: "PlayfairDisplay_700Bold",
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
     fontSize: 11,
     color: "#9f273b",
+  },
+  orderItemOldPrice: {
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
+    fontSize: 10,
+    color: "#999",
+    textDecorationLine: "line-through",
   },
   orderItemQty: {
     fontFamily: "Oswald_400Regular",
@@ -1204,7 +1464,8 @@ const s = StyleSheet.create({
     color: "#666",
   },
   orderItemTotal: {
-    fontFamily: "Oswald_500Medium",
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
     fontSize: 12,
     color: "#333",
   },
@@ -1383,7 +1644,8 @@ const s = StyleSheet.create({
     color: "#888",
   },
   costVal: {
-    fontFamily: "Oswald_500Medium",
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
     fontSize: 13,
     color: "#333",
   },
@@ -1393,7 +1655,8 @@ const s = StyleSheet.create({
     color: "#28a745",
   },
   costValDiscount: {
-    fontFamily: "Oswald_500Medium",
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
     fontSize: 13,
     color: "#dc3545",
   },
@@ -1409,7 +1672,8 @@ const s = StyleSheet.create({
     color: "#222",
   },
   costValTotal: {
-    fontFamily: "PlayfairDisplay_700Bold",
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
     fontSize: 18,
     color: "#9f273b",
   },
@@ -1435,6 +1699,175 @@ const s = StyleSheet.create({
     fontSize: 14,
     color: "#fff",
     letterSpacing: 1.5,
+  },
+
+  // MODAL CONFIRM ORDER
+  confirmModalContainer: {
+    width: width * 0.92,
+    maxWidth: 520,
+    maxHeight: "86%",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+  },
+  confirmHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+  confirmTitle: {
+    fontFamily: "PlayfairDisplay_700Bold",
+    fontSize: 20,
+    color: "#9f273b",
+  },
+  confirmSubtitle: {
+    marginTop: 3,
+    fontFamily: "Oswald_400Regular",
+    fontSize: 11,
+    color: "#777",
+  },
+  confirmCloseBtn: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmCustomerBox: {
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#eee",
+    borderRadius: 8,
+    backgroundColor: "#fafafa",
+    gap: 3,
+  },
+  confirmSectionHeading: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  confirmSectionTitle: {
+    fontFamily: "Oswald_600SemiBold",
+    fontSize: 11,
+    color: "#9f273b",
+  },
+  confirmCustomerName: {
+    marginTop: 5,
+    fontFamily: "Oswald_600SemiBold",
+    fontSize: 13,
+    color: "#333",
+  },
+  confirmCustomerText: {
+    fontFamily: "Oswald_400Regular",
+    fontSize: 12,
+    lineHeight: 17,
+    color: "#666",
+  },
+  confirmProductsHeader: {
+    marginTop: 14,
+    marginBottom: 3,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  confirmProductCount: {
+    fontFamily: "Oswald_400Regular",
+    fontSize: 11,
+    color: "#888",
+  },
+  confirmProductsScroll: {
+    maxHeight: 230,
+  },
+  confirmProductRow: {
+    minHeight: 72,
+    paddingVertical: 9,
+    flexDirection: "row",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#eee",
+  },
+  confirmProductImage: {
+    width: 54,
+    height: 54,
+    borderRadius: 6,
+    backgroundColor: "#f2f2f2",
+  },
+  confirmProductInfo: {
+    flex: 1,
+    marginLeft: 10,
+    marginRight: 8,
+  },
+  confirmProductName: {
+    fontFamily: "Oswald_500Medium",
+    fontSize: 12,
+    color: "#333",
+  },
+  confirmProductVariant: {
+    marginTop: 2,
+    fontFamily: "Oswald_400Regular",
+    fontSize: 10,
+    color: "#888",
+  },
+  confirmProductQuantity: {
+    marginTop: 3,
+    fontFamily: "Oswald_400Regular",
+    fontSize: 11,
+    color: "#666",
+  },
+  confirmProductPrice: {
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
+    fontSize: 12,
+    color: "#9f273b",
+  },
+  confirmTotalRow: {
+    marginTop: 12,
+    paddingTop: 11,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    borderTopWidth: 1,
+    borderTopColor: "#eee",
+  },
+  confirmTotalLabel: {
+    fontFamily: "Oswald_600SemiBold",
+    fontSize: 13,
+    color: "#333",
+  },
+  confirmTotalValue: {
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
+    fontSize: 17,
+    color: "#9f273b",
+  },
+  confirmActions: {
+    marginTop: 16,
+    flexDirection: "row",
+    gap: 10,
+  },
+  confirmActionBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 7,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmBackBtn: {
+    borderWidth: 1,
+    borderColor: "#9f273b",
+    backgroundColor: "#fff",
+  },
+  confirmSubmitBtn: {
+    backgroundColor: "#9f273b",
+  },
+  confirmBackText: {
+    fontFamily: "Oswald_600SemiBold",
+    fontSize: 12,
+    color: "#9f273b",
+  },
+  confirmSubmitText: {
+    fontFamily: "Oswald_600SemiBold",
+    fontSize: 12,
+    color: "#fff",
   },
 
   // MODAL SUCCESS
@@ -1512,6 +1945,12 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: "#333",
   },
+  summaryPrice: {
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
+    fontSize: 12,
+    color: "#333",
+  },
   summaryValHighlight: {
     fontFamily: "Oswald_600SemiBold",
     fontSize: 12,
@@ -1542,7 +1981,9 @@ const s = StyleSheet.create({
   editInfoBtn: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 4,
+    minWidth: 76,
     backgroundColor: "#fff",
     borderWidth: 1,
     borderColor: "#9f273b",

@@ -56,6 +56,18 @@ class ShopController extends Controller
             });
         }
 
+        $this->applyVariantAttributeFilter(
+            $query,
+            $request->input('dimension'),
+            ['Kích thước', 'Kich thuoc', 'Dimension', 'dimension']
+        );
+
+        $this->applyVariantAttributeFilter(
+            $query,
+            $request->input('size'),
+            ['Size', 'size', 'Kích cỡ', 'Kich co', 'Cỡ', 'Co', 'Ni tay']
+        );
+
         switch ($request->input('sort')) {
             case 'new':
                 $query->orderBy('created_at', 'desc');
@@ -169,6 +181,25 @@ class ShopController extends Controller
             $categoryQuery->whereIn('slug', $categoriesArr)
                 ->orWhereHas('parent', function ($parentQuery) use ($categoriesArr) {
                     $parentQuery->whereIn('slug', $categoriesArr);
+                });
+        });
+    }
+
+    private function applyVariantAttributeFilter($productQuery, ?string $values, array $attributeNames): void
+    {
+        if (empty($values)) {
+            return;
+        }
+
+        $attributeValues = array_filter(array_map('trim', explode(',', $values)));
+
+        $productQuery->whereHas('variants', function ($variantQuery) use ($attributeValues, $attributeNames) {
+            $variantQuery->where('stock_quantity', '>', 0)
+                ->whereHas('attributeValues', function ($attributeValueQuery) use ($attributeValues, $attributeNames) {
+                    $attributeValueQuery->whereIn('value', $attributeValues)
+                        ->whereHas('attribute', function ($attributeQuery) use ($attributeNames) {
+                            $attributeQuery->whereIn('name', $attributeNames);
+                        });
                 });
         });
     }

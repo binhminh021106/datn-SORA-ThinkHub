@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Image,
   SafeAreaView, StatusBar, ScrollView, ActivityIndicator,
@@ -10,6 +10,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MOBILE_AUTH_URL, API_BASE_URL } from '../config/api';
 import { showCustomAlert } from '../components/CustomAlert';
+import SmartImage from '../components/SmartImage';
+import { PRICE_FONT_FAMILY, PRICE_FONT_WEIGHT } from '../styles/typography';
 
 const Alert = {
   alert: (title, message, buttons) => showCustomAlert(title, message, buttons)
@@ -186,7 +188,7 @@ function TierCard({ user, allTiers }) {
         <View style={s.tierCardLeft}>
           <View style={[s.tierCardIconWrap, { backgroundColor: theme.iconWrapBg, borderColor: theme.border }]}>
             {user?.tier?.icon_url ? (
-              <Image
+              <SmartImage
                 source={{ uri: getStorageUrl(user.tier.icon_url) }}
                 style={s.tierCardIcon}
               />
@@ -292,11 +294,30 @@ export default function ProfileScreen() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const hasLoadedProfile = useRef(false);
+  const lastLoadedToken = useRef(null);
 
-  const loadProfile = useCallback(async (showOverlay = true) => {
+  const applyCachedProfile = useCallback(async () => {
+    try {
+      const cached = await AsyncStorage.getItem('user');
+      if (!cached) return false;
+
+      const cachedUser = JSON.parse(cached);
+      setUser(cachedUser);
+      setAllTiers(cachedUser?.all_tiers || []);
+      setIsLoggedIn(true);
+      setIsLoading(false);
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const loadProfile = useCallback(async ({ showOverlay = true, showRefresh = false } = {}) => {
     if (showOverlay) {
       setIsLoading(true);
-    } else {
+    }
+    if (showRefresh) {
       setRefreshing(true);
     }
     try {
@@ -309,7 +330,7 @@ export default function ProfileScreen() {
 
       if (!res.ok) {
         // Token hết hạn hoặc không hợp lệ -> xóa token
-        await AsyncStorage.multiRemove(['auth_token', 'user']);
+        await AsyncStorage.multiRemove(['auth_token', 'user', 'sora_wishlist_ids', 'sora_wishlist_items']);
         setIsLoggedIn(false);
         return;
       }
@@ -322,30 +343,19 @@ export default function ProfileScreen() {
       await AsyncStorage.setItem('user', JSON.stringify(data.user));
     } catch (e) {
       // Nếu lỗi mạng → lấy từ cache
-      try {
-        const cached = await AsyncStorage.getItem('user');
-        if (cached) {
-          const cachedUser = JSON.parse(cached);
-          setUser(cachedUser);
-          setAllTiers(cachedUser?.all_tiers || []);
-          setIsLoggedIn(true);
-        }
-        else setIsLoggedIn(false);
-      } catch { setIsLoggedIn(false); }
+      const hasCache = await applyCachedProfile();
+      if (!hasCache) setIsLoggedIn(false);
     } finally {
-      if (showOverlay) {
-        setIsLoading(false);
-      } else {
-        setRefreshing(false);
-      }
+      if (showOverlay) setIsLoading(false);
+      if (showRefresh) setRefreshing(false);
     }
-  }, []);
+  }, [applyCachedProfile]);
 
   const onRefresh = useCallback(() => {
-    loadProfile(false);
+    loadProfile({ showOverlay: false, showRefresh: true });
   }, [loadProfile]);
 
-  // Refresh khi quay lại tab
+  // Cache-first: only call the server on first visit, auth changes, or pull-to-refresh.
   useFocusEffect(
     useCallback(() => {
       StatusBar.setBarStyle('dark-content');
@@ -353,8 +363,27 @@ export default function ProfileScreen() {
         StatusBar.setBackgroundColor('transparent');
         StatusBar.setTranslucent(true);
       }
-      loadProfile(true);
-    }, [loadProfile])
+
+      let isActive = true;
+      const syncProfile = async () => {
+        const token = await AsyncStorage.getItem('auth_token');
+        const hasCache = await applyCachedProfile();
+        if (!isActive) return;
+
+        const shouldFetch = !hasLoadedProfile.current || token !== lastLoadedToken.current;
+        hasLoadedProfile.current = true;
+        lastLoadedToken.current = token;
+
+        if (shouldFetch) {
+          await loadProfile({ showOverlay: !hasCache, showRefresh: false });
+        }
+      };
+
+      syncProfile();
+      return () => {
+        isActive = false;
+      };
+    }, [applyCachedProfile, loadProfile])
   );
 
   const handleLogout = () => {
@@ -372,7 +401,8 @@ export default function ProfileScreen() {
         });
       }
     } catch { }
-    await AsyncStorage.multiRemove(['auth_token', 'user']);
+    await AsyncStorage.multiRemove(['auth_token', 'user', 'sora_wishlist_ids', 'sora_wishlist_items']);
+    lastLoadedToken.current = null;
     setIsLoggedIn(false);
     setUser(null);
   };
@@ -480,7 +510,8 @@ export default function ProfileScreen() {
         {/* ── Hero Card ── */}
         <View style={[s.heroCard, { backgroundColor: theme.bg, borderColor: theme.border, shadowColor: theme.border }]}>
           <View style={[s.heroAvatarWrap, { borderColor: theme.avatarBorder }]}>
-            <Image source={{ uri: avatarUri }} style={s.heroAvatar} />
+            <SmartImage source={{ uri: avatarUri }} style={s.heroAvatar}
+            />
           </View>
           <View style={s.heroInfo}>
             <Text style={[s.heroName, { color: theme.nameColor }]}>{user?.fullName || 'Thành viên SORA'}</Text>
@@ -699,8 +730,9 @@ const s = StyleSheet.create({
     color: '#8c826e',
   },
   tierSpentVal: {
+    fontFamily: PRICE_FONT_FAMILY,
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: PRICE_FONT_WEIGHT,
     color: '#9f273b',
   },
   tierProgressBar: {
@@ -792,7 +824,7 @@ const s = StyleSheet.create({
   statBox: { flex: 1.4, alignItems: 'center', paddingVertical: 18, paddingHorizontal: 4 },
   statBoxSide: { flex: 0.8, alignItems: 'center', paddingVertical: 18, paddingHorizontal: 4 },
   statBoxMid: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: '#ebd5a3' },
-  statVal: { fontSize: 15, fontWeight: '700', color: '#9f273b', marginBottom: 4, textAlign: 'center' },
+  statVal: { fontFamily: PRICE_FONT_FAMILY, fontSize: 15, fontWeight: PRICE_FONT_WEIGHT, color: '#9f273b', marginBottom: 4, textAlign: 'center' },
   statLabel: { fontFamily: 'Oswald_400Regular', fontSize: 11, color: '#8c826e', letterSpacing: 0.5 },
 
   // Menu Section

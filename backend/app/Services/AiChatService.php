@@ -40,7 +40,7 @@ class AiChatService
         $response = $this->postChatCompletions([
             [
                 'role' => 'system',
-                'content' => 'Bạn là trợ lý tư vấn của SORA, cửa hàng trang sức. Trả lời ngắn gọn, lịch sự, đúng trọng tâm và bằng tiếng Việt. Nếu khách hỏi về tồn kho, giá chính xác, đơn hàng hoặc chính sách chưa rõ, hãy hướng dẫn khách liên hệ nhân viên hỗ trợ.',
+                'content' => 'Bạn là trợ lý tư vấn của SORA, cửa hàng trang sức. Trả lời ngắn gọn, lịch sự, đúng trọng tâm và bằng tiếng Việt thuần, không dùng markdown. Nếu khách hỏi về tồn kho, giá chính xác, đơn hàng hoặc chính sách chưa rõ, hãy hướng dẫn khách liên hệ nhân viên hỗ trợ.',
             ],
             [
                 'role' => 'user',
@@ -78,6 +78,7 @@ class AiChatService
                     '- gold_price: hỏi bảng giá vàng, giá vàng hôm nay, vàng nguyên liệu, SJC, DOJI, mua vào/bán ra.',
                     '- product_search: muốn tìm/mua/gợi ý/xem sản phẩm trang sức trong cửa hàng.',
                     '- general: các câu hỏi còn lại.',
+                    'Với câu tư vấn có nhắc đến sản phẩm, ví dụ "theo bạn cưới nên mua nhẫn vàng hay kim cương", intent vẫn là product_search để hệ thống có thể gợi ý sản phẩm, nhưng reply_hint chỉ nên là câu dẫn ngắn, không thay thế phần tư vấn chính.',
                     'Nếu hỏi "vàng nguyên liệu 99.99 giá hôm nay" thì intent phải là gold_price, không phải product_search.',
                     'Nếu hỏi "nhẫn vàng dưới 50tr" thì intent là product_search, product_terms gồm nhẫn/vàng, price_max là 50000000.',
                     'Quy đổi giá: 50tr hoặc 50 triệu = 50000000.',
@@ -119,7 +120,10 @@ class AiChatService
 
     private function postChatCompletions(array $messages, float $temperature): array
     {
-        $response = Http::timeout(config('services.ai.timeout'))
+        $timeout = min(max((int) config('services.ai.timeout', 10), 1), 10);
+
+        $response = Http::connectTimeout(4)
+            ->timeout($timeout)
             ->withToken(config('services.ai.key'))
             ->acceptJson()
             ->post(config('services.ai.base_url') . '/chat/completions', [
