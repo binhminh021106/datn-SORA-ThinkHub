@@ -210,6 +210,8 @@ Route::prefix('client')->group(function () {
     Route::middleware('auth:sanctum')->prefix('affiliate')->group(function () {
         Route::get('/status', [ClientAffiliateController::class, 'status']);
         Route::post('/apply', [ClientAffiliateController::class, 'apply']);
+    
+        Route::post('/withdraw', [ClientAffiliateController::class, 'withdraw']); 
     });
 });
 
@@ -425,6 +427,10 @@ Route::prefix('admin')->group(function () {
             Route::get('/applications', 'index');
             Route::post('/applications/{id}/approve', 'approve');
             Route::post('/applications/{id}/reject', 'reject');
+            
+            Route::get('/withdrawals', 'withdrawals'); 
+            Route::post('/withdrawals/{id}/approve', 'approveWithdrawal');
+            Route::post('/withdrawals/{id}/reject', 'rejectWithdrawal');
         });
 
         // BỔ SUNG ROUTE REAL-TIME CHAT CHO ADMIN

@@ -158,7 +158,9 @@ class AdminAttendanceController extends Controller
             }
 
             $workShift = $assignment->workShift;
-            $weekdayIndex = $now->dayOfWeekIso - 1; 
+            // FIX BUG: Frontend lưu working_days theo mảng [CN, T2, T3, T4, T5, T6, T7] tương ứng index [0..6]
+            // Carbon dayOfWeek trả về 0 (CN), 1 (T2)... nên map hoàn toàn khớp, không cần dayOfWeekIso - 1.
+            $weekdayIndex = $now->dayOfWeek; 
 
             if (!is_array($workShift->working_days) || empty($workShift->working_days[$weekdayIndex])) {
                 return response()->json(['success' => false, 'message' => 'Hôm nay không phải là ngày làm việc theo lịch của bạn.'], 403);
@@ -430,7 +432,8 @@ class AdminAttendanceController extends Controller
         for ($day = 1; $day <= $totalDays; $day++) {
             $date = Carbon::create($year, $month, $day);
             $dateString = $date->format('Y-m-d');
-            $weekdayIndex = $date->dayOfWeek === 0 ? 6 : $date->dayOfWeek - 1; 
+            // FIX BUG: Đồng bộ với mảng index từ Frontend [0: CN, 1: T2, ..., 6: T7]
+            $weekdayIndex = $date->dayOfWeek; 
             $isFuture = $date->isAfter($today);
 
             $assignmentQuery = AdminShiftAssignment::whereIn('admin_id', $adminIds)

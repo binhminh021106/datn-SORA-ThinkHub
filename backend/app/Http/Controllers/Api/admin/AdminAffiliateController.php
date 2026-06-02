@@ -79,4 +79,76 @@ class AdminAffiliateController extends Controller
             return response()->json(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()], 500);
         }
     }
+
+    // quản lý hoa hồng của các đối tác
+    // 1. Lấy danh sách tất cả yêu cầu rút tiền
+    public function withdrawals()
+    {
+        $withdrawals = \App\Models\CommissionHistory::with('user:id,fullName,email,phone')
+            ->where('type', 'withdraw')
+            ->orderBy('created_at', 'desc')
+            ->get();
+            
+        return response()->json([
+            'success' => true,
+            'data' => $withdrawals
+        ]);
+    }
+
+    // 2. Admin/Kế toán duyệt lệnh rút tiền (Đã chuyển khoản)
+    public function approveWithdrawal($id)
+    {
+        $withdrawal = \App\Models\CommissionHistory::find($id);
+        
+        if (!$withdrawal || $withdrawal->type !== 'withdraw') {
+            return response()->json(['success' => false, 'message' => 'Không tìm thấy yêu cầu rút tiền này!'], 404);
+        }
+        
+        if ($withdrawal->status !== 'pending') {
+            return response()->json(['success' => false, 'message' => 'Yêu cầu này đã được xử lý trước đó!'], 400);
+        }
+
+        $withdrawal->status = 'approved';
+        $withdrawal->save();
+
+        return response()->json(['success' => true, 'message' => 'Đã duyệt yêu cầu rút tiền thành công!']);
+    }
+
+    // 3. Admin/Kế toán từ chối lệnh rút tiền (Sai STK, Lỗi ngân hàng...) -> Hoàn tiền lại cho user
+    public function rejectWithdrawal(Request $request, $id)
+    {
+        $withdrawal = \App\Models\CommissionHistory::find($id);
+        
+        if (!$withdrawal || $withdrawal->type !== 'withdraw') {
+            return response()->json(['success' => false, 'message' => 'Không tìm thấy yêu cầu rút tiền này!'], 404);
+        }
+        
+        if ($withdrawal->status !== 'pending') {
+            return response()->json(['success' => false, 'message' => 'Yêu cầu này đã được xử lý trước đó!'], 400);
+        }
+
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            $withdrawal->status = 'rejected';
+            $reason = $request->input('admin_notes', 'Thông tin ngân hàng không hợp lệ.');
+            $withdrawal->description .= " | Từ chối: " . $reason;
+            $withdrawal->save();
+
+            $user = \App\Models\User::find($withdrawal->user_id);
+            if (!$user) {
+                \Illuminate\Support\Facades\DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'Không tìm thấy người dùng để hoàn tiền!'], 404);
+            }
+
+            $user->commission_balance += $withdrawal->amount;
+            $user->save();
+
+            \Illuminate\Support\Facades\DB::commit();
+            return response()->json(['success' => true, 'message' => 'Đã từ chối lệnh rút và hoàn tiền lại vào ví cho đối tác!']);
+            
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Lỗi xử lý hệ thống: ' . $e->getMessage()], 500);
+        }
+    }
 }
