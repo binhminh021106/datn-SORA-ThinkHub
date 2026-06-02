@@ -44,7 +44,7 @@ class ChatbotController extends Controller
                     $userMessage,
                     'Dạ, tùy nhu cầu và ngân sách, Quý khách có thể cân nhắc mẫu phù hợp với phong cách sử dụng.'
                 )
-                    . "\n\nSORA cũng gợi ý thêm một vài mẫu nhẫn phù hợp để Quý khách tham khảo:";
+                    . "\n\nSORA cũng gợi ý thêm một vài mẫu sản phẩm phù hợp để Quý khách tham khảo:";
             } else {
                 $botReply = $products->isNotEmpty()
                     ? (($analysis['reply_hint'] ?? '') ?: 'Dạ, SORA tìm thấy một số sản phẩm phù hợp với nhu cầu của Quý khách:')
