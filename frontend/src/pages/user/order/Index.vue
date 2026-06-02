@@ -3,18 +3,8 @@
     style="min-height: 100vh; background-color: #f8f9fa; font-family: 'Lato', sans-serif;">
     <div class="bg-white py-5 mb-4 border-bottom shadow-sm">
       <div class="container text-center">
-        <nav aria-label="breadcrumb" class="mb-3 d-flex justify-content-center">
-          <ol class="breadcrumb mb-0 small text-uppercase fw-bold" style="letter-spacing: 0.15em;">
-            <li class="breadcrumb-item">
-              <a href="javascript:void(0)" v-on:click="router.push('/')"
-                class="text-decoration-none text-muted hover-primary">Trang chủ</a>
-            </li>
-            <li class="breadcrumb-item active text-primary-custom" aria-current="page">Lịch sử đơn hàng</li>
-          </ol>
-        </nav>
         <h2 class="display-5 text-dark mb-2" style="font-family: 'Playfair Display', serif; font-weight: 700;">Đơn hàng
           của bạn</h2>
-        <p class="text-secondary font-serif fst-italic mb-0">Theo dõi và quản lý những món trang sức bạn đã sở hữu</p>
       </div>
     </div>
 
