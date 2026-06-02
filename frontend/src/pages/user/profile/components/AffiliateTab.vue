@@ -304,8 +304,12 @@ const fetchStatus = async () => {
       }
 
       if (result.data.is_affiliate) {
-          dashboardStats.value = result.data.dashboard_stats;
-          histories.value = result.data.histories;
+          dashboardStats.value = result.data.dashboard_stats || { 
+              available_balance: 0, 
+              pending_balance: 0, 
+              total_withdrawn: 0 
+          };
+          histories.value = result.data.histories || [];
       }
     }
   } catch (error) {

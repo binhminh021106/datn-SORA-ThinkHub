@@ -133,16 +133,27 @@ class ClientAffiliateController extends Controller
             'amount.min' => 'Số tiền rút tối thiểu phải từ 200.000đ trở lên.'
         ]);
 
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
+        /** @var \App\Models\User $currentUser */
+        $currentUser = Auth::user();
 
-        // Kiểm tra xem số dư ví có đủ để rút không
-        if ((float)$user->commission_balance < (float)$request->amount) {
-            return response()->json(['success' => false, 'message' => 'Số dư khả dụng trong ví không đủ để thực hiện lệnh này.'], 400);
+        if (!$currentUser->is_affiliate) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Quyền truy cập bị từ chối. Bạn chưa phải là Đối tác chính thức của SORA.'
+            ], 403);
         }
 
         DB::beginTransaction();
         try {
+            /** @var \App\Models\User $user */
+            $user = \App\Models\User::where('id', $currentUser->id)->lockForUpdate()->first();
+
+            if ((float)$user->commission_balance < (float)$request->amount) {
+                // Nhớ RollBack nếu không đủ tiền nhé
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'Số dư khả dụng trong ví không đủ để thực hiện lệnh này.'], 400);
+            }
+
             $description = "Rút tiền về [{$request->bank_name}] - STK: {$request->account_number} - Tên: " . strtoupper($request->account_holder_name);
 
             CommissionHistory::create([
