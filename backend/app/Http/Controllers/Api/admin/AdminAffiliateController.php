@@ -135,10 +135,13 @@ class AdminAffiliateController extends Controller
             $withdrawal->save();
 
             $user = \App\Models\User::find($withdrawal->user_id);
-            if ($user) {
-                $user->commission_balance += $withdrawal->amount;
-                $user->save();
+            if (!$user) {
+                \Illuminate\Support\Facades\DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'Không tìm thấy người dùng để hoàn tiền!'], 404);
             }
+
+            $user->commission_balance += $withdrawal->amount;
+            $user->save();
 
             \Illuminate\Support\Facades\DB::commit();
             return response()->json(['success' => true, 'message' => 'Đã từ chối lệnh rút và hoàn tiền lại vào ví cho đối tác!']);
