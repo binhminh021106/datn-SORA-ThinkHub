@@ -1,12 +1,19 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, FlatList, SafeAreaView, TextInput, Dimensions, StatusBar, Animated, TouchableWithoutFeedback, RefreshControl, Modal, ActivityIndicator, PanResponder, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, FlatList, SafeAreaView, TextInput, Dimensions, useWindowDimensions, StatusBar, Animated, TouchableWithoutFeedback, RefreshControl, Modal, ActivityIndicator, PanResponder, Linking } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MOBILE_AUTH_URL, API_BASE_URL } from '../config/api';
 import { showCustomAlert } from '../components/CustomAlert';
+import ProductCard from '../components/ProductCard';
+import { PRICE_FONT_FAMILY, PRICE_FONT_WEIGHT } from '../styles/typography';
 
-const { width, height: SCREEN_H } = Dimensions.get('window');
+const { height: SCREEN_H } = Dimensions.get('window');
+const COMBO_CARD_GAP = 14;
+const COMBO_SIDE_SPACER = 24;
+
+// Top-level require để Metro bundler nhận đúng static asset
+const SORA_PLACEHOLDER = require('../../assets/Sora-placeholder.png');
 
 // Dummy Data
 const BANNERS = [
@@ -20,12 +27,12 @@ const BEST_SELLERS = [
 ];
 
 const CATEGORIES = [
-  { id: '1', name: 'Nhẫn', icon: 'https://images.unsplash.com/photo-1605100804763-247f67b854d4?q=80&w=300&auto=format&fit=crop' },
-  { id: '2', name: 'Dây Chuyền', icon: 'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?q=80&w=300&auto=format&fit=crop' },
-  { id: '3', name: 'Bông Tai', icon: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?q=80&w=300&auto=format&fit=crop' },
-  { id: '4', name: 'Lắc Tay', icon: 'https://images.unsplash.com/photo-1611652022419-a9419f74343d?q=80&w=300&auto=format&fit=crop' },
-  { id: '5', name: 'Vòng Cổ', icon: 'https://images.unsplash.com/photo-1602173574767-37ac01994b2a?q=80&w=300&auto=format&fit=crop' },
-  { id: '6', name: 'Ghim Cài', icon: 'https://images.unsplash.com/photo-1573408301185-9519df1f2c1f?q=80&w=300&auto=format&fit=crop' },
+  { id: '1', slug: 'rings', name: 'Nhẫn', icon: 'https://images.unsplash.com/photo-1605100804763-247f67b854d4?q=80&w=300&auto=format&fit=crop' },
+  { id: '2', slug: 'necklaces', name: 'Dây Chuyền', icon: 'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?q=80&w=300&auto=format&fit=crop' },
+  { id: '3', slug: 'earrings', name: 'Bông Tai', icon: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?q=80&w=300&auto=format&fit=crop' },
+  { id: '4', slug: 'bracelets', name: 'Lắc Tay', icon: 'https://images.unsplash.com/photo-1611652022419-a9419f74343d?q=80&w=300&auto=format&fit=crop' },
+  { id: '5', slug: 'necklaces', name: 'Vòng Cổ', icon: 'https://images.unsplash.com/photo-1602173574767-37ac01994b2a?q=80&w=300&auto=format&fit=crop' },
+  { id: '6', slug: 'brooches', name: 'Ghim Cài', icon: 'https://images.unsplash.com/photo-1573408301185-9519df1f2c1f?q=80&w=300&auto=format&fit=crop' },
 ];
 
 const NEWS = [
@@ -68,11 +75,57 @@ const getStorageUrl = (path) => {
       .replace('https://localhost:8000', origin);
     return formattedPath;
   }
+  if (path.startsWith('/storage/')) {
+    return `${origin}${path}`;
+  }
+  if (path.startsWith('storage/')) {
+    return `${origin}/${path}`;
+  }
+  if (path.startsWith('/')) {
+    formattedPath = path.slice(1);
+  }
   return `${origin}/storage/${formattedPath}`;
 };
 
 const formatCurrency = (v) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(v) || 0);
+
+const formatVoucherValue = (coupon) => (
+  coupon.discount_type === 'percent'
+    ? coupon.discount_value
+    : new Intl.NumberFormat('vi-VN').format(Number(coupon.discount_value) || 0)
+);
+
+const getAuthToken = async () => AsyncStorage.getItem('auth_token');
+
+const getFavouriteHeaders = (token) => ({
+  Accept: 'application/json',
+  Authorization: `Bearer ${token}`,
+});
+
+const mapProductToWishlistItem = (product) => {
+  const isDbProduct = !!product.thumbnail_image;
+  return {
+    id: product.id?.toString(),
+    slug: product.slug,
+    name: product.name,
+    category: isDbProduct ? (product.category?.name || 'Trang Suc SORA') : product.category,
+    variant: isDbProduct ? 'Chon phien ban tai trang chi tiet' : product.variant,
+    price: isDbProduct
+      ? (product.promotional_price > 0 ? product.promotional_price : product.base_price)
+      : product.price,
+    oldPrice: isDbProduct
+      ? (product.promotional_price > 0 ? product.base_price : null)
+      : product.oldPrice,
+    image: isDbProduct ? getStorageUrl(product.thumbnail_image) : product.image,
+  };
+};
+
+const saveLocalWishlist = async (nextItems) => {
+  const nextIds = nextItems.map((item) => item.id?.toString()).filter(Boolean);
+  await AsyncStorage.setItem('sora_wishlist_ids', JSON.stringify(nextIds));
+  await AsyncStorage.setItem('sora_wishlist_items', JSON.stringify(nextItems));
+};
 
 const TIER_CONFIG = {
   silver: { label: 'Bạc', icon: 'medal-outline', from: '#c0c0c0', to: '#a9a9a9', border: '#c8c8c8', text: '#555' },
@@ -182,12 +235,44 @@ function TierBadge({ tierName }) {
   );
 }
 
+function SoraFallbackImage({ uri, style, resizeMode = 'cover' }) {
+  const [hasError, setHasError] = useState(false);
+
+  if (!uri || hasError) {
+    return (
+      <View style={[{ overflow: 'hidden' }, style]}>
+        <Image
+          source={SORA_PLACEHOLDER}
+          style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]}
+          resizeMode="cover"
+        />
+      </View>
+    );
+  }
+
+  return (
+    <Image
+      source={{ uri }}
+      style={style}
+      resizeMode={resizeMode}
+      onError={() => setHasError(true)}
+    />
+  );
+}
+
 export default function HomeScreen({ navigation }) {
+  const { width: viewportWidth } = useWindowDimensions();
+  const bannerWidth = Math.min(viewportWidth, 720);
+  const bannerHeight = Math.min(bannerWidth * 0.62, 420);
+  const comboCardWidth = Math.min(Math.max(viewportWidth - 72, 248), 520);
+  const contentCardWidth = Math.min(Math.max(viewportWidth - 24, 0), 720);
+  const menuWidth = Math.min(viewportWidth * 0.8, 360);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [user, setUser] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const slideAnim = useRef(new Animated.Value(-width * 0.8)).current;
+  const [activeTopTab, setActiveTopTab] = useState('home');
+  const slideAnim = useRef(new Animated.Value(-360)).current;
 
   // Real-time search states
   const [searchQuery, setSearchQuery] = useState('');
@@ -210,10 +295,16 @@ export default function HomeScreen({ navigation }) {
   const [combos, setCombos] = useState([]);
   const [tiers, setTiers] = useState([]);
   const [wishlistIds, setWishlistIds] = useState([]);
+  const [wishlistLoadingIds, setWishlistLoadingIds] = useState([]);
   const [isHomeLoading, setIsHomeLoading] = useState(true);
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
+  const bannerDotAnimations = useRef([]).current;
   const bannerFlatListRef = useRef(null);
   const bannerIntervalRef = useRef(null);
+
+  useEffect(() => {
+    if (!isMenuOpen) slideAnim.setValue(-menuWidth);
+  }, [isMenuOpen, menuWidth, slideAnim]);
 
   const onBannerScroll = (event) => {
     const slideSize = event.nativeEvent.layoutMeasurement.width;
@@ -246,9 +337,14 @@ export default function HomeScreen({ navigation }) {
   };
 
   const handleToggleWishlist = async (product) => {
+    const productId = product.id?.toString();
+    if (!productId || wishlistLoadingIds.includes(productId)) return;
+
+    setWishlistLoadingIds((prev) => [...prev, productId]);
     try {
       let updatedIds;
       let updatedItems;
+      const token = await getAuthToken();
 
       const storedIds = await AsyncStorage.getItem('sora_wishlist_ids');
       const storedItems = await AsyncStorage.getItem('sora_wishlist_items');
@@ -256,30 +352,68 @@ export default function HomeScreen({ navigation }) {
       let currentIds = storedIds ? JSON.parse(storedIds) : [];
       let currentItems = storedItems ? JSON.parse(storedItems) : [];
 
-      const isFav = currentIds.includes(product.id);
-      
+      if (token) {
+        const response = await fetch(`${API_BASE_URL}/client/favourites/toggle`, {
+          method: 'POST',
+          headers: {
+            ...getFavouriteHeaders(token),
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ product_id: productId }),
+        });
+        const result = await response.json();
+
+        if (!response.ok || !(result.success || result.status)) {
+          showCustomAlert("YÊU THÍCH", result.message || "Không thể cập nhật danh sách yêu thích.", [{ text: "ĐỒNG Ý" }]);
+          return;
+        }
+
+        if (result.action === 'removed') {
+          updatedIds = currentIds.filter(id => id.toString() !== productId);
+          updatedItems = currentItems.filter(item => item.id.toString() !== productId);
+          showCustomAlert("YÊU THÍCH", `Đã xóa "${product.name}" khỏi danh sách yêu thích.`, [{ text: "ĐỒNG Ý" }]);
+        } else {
+          updatedIds = currentIds.some(id => id.toString() === productId)
+            ? currentIds
+            : [...currentIds, productId];
+          const mappedProduct = mapProductToWishlistItem(product);
+          updatedItems = [
+            ...currentItems.filter(item => item.id.toString() !== productId),
+            mappedProduct,
+          ];
+          showCustomAlert("YÊU THÍCH", `Đã thêm "${product.name}" vào danh sách yêu thích.`, [{ text: "OK" }]);
+        }
+
+        setWishlistIds(updatedIds.map(id => id.toString()));
+        await saveLocalWishlist(updatedItems);
+        return;
+      }
+
+      const isFav = currentIds.some(id => id.toString() === productId);
+
       if (isFav) {
-        updatedIds = currentIds.filter(id => id !== product.id);
-        updatedItems = currentItems.filter(item => item.id.toString() !== product.id.toString());
+        updatedIds = currentIds.filter(id => id.toString() !== productId);
+        updatedItems = currentItems.filter(item => item.id.toString() !== productId);
         showCustomAlert(
-          "YÊU THÍCH", 
-          `Đã xóa sản phẩm:\n"${product.name}"\nkhỏi danh sách Yêu Thích thành công!`, 
+          "YÊU THÍCH",
+          `Đã xóa sản phẩm:\n"${product.name}"\nkhỏi danh sách Yêu Thích thành công!`,
           [{ text: "ĐỒNG Ý", style: "default" }]
         );
       } else {
-        updatedIds = [...currentIds, product.id];
-        
+        updatedIds = [...currentIds, productId];
+
         // Map the product details correctly to the wishlist item structure
         const isDbProduct = !!product.thumbnail_image;
         const mappedProduct = {
           id: product.id.toString(),
+          slug: product.slug,
           name: product.name,
           category: isDbProduct ? (product.category?.name || 'Trang Sức SORA') : product.category,
           variant: isDbProduct ? 'Bản Giới Hạn SORA' : product.variant,
-          price: isDbProduct 
+          price: isDbProduct
             ? (product.promotional_price > 0 ? product.promotional_price : product.base_price)
             : product.price,
-          oldPrice: isDbProduct 
+          oldPrice: isDbProduct
             ? (product.promotional_price > 0 ? product.base_price : null)
             : product.oldPrice,
           image: isDbProduct ? getStorageUrl(product.thumbnail_image) : product.image,
@@ -288,27 +422,19 @@ export default function HomeScreen({ navigation }) {
         updatedItems = [...currentItems, mappedProduct];
 
         showCustomAlert(
-          "YÊU THÍCH", 
-          `Đã thêm sản phẩm:\n"${product.name}"\nvào danh sách Yêu Thích thành công!`, 
+          "YÊU THÍCH",
+          `Đã thêm sản phẩm:\n"${product.name}"\nvào danh sách Yêu Thích thành công!`,
           [{ text: "ĐỒNG Ý", style: "default" }]
         );
       }
-      
-      setWishlistIds(updatedIds);
-      await AsyncStorage.setItem('sora_wishlist_ids', JSON.stringify(updatedIds));
-      await AsyncStorage.setItem('sora_wishlist_items', JSON.stringify(updatedItems));
+
+      setWishlistIds(updatedIds.map(id => id.toString()));
+      await saveLocalWishlist(updatedItems);
     } catch (e) {
       console.log('Error saving wishlist in HomeScreen:', e);
+    } finally {
+      setWishlistLoadingIds((prev) => prev.filter((id) => id !== productId));
     }
-  };
-
-  const getProductDiscount = (prod) => {
-    if (prod.discount) return prod.discount;
-    if (prod.promotional_price > 0 && prod.base_price > 0) {
-      const pct = Math.round(((prod.base_price - prod.promotional_price) / prod.base_price) * 100);
-      return `-${pct}%`;
-    }
-    return null;
   };
 
   const formatDateString = (dateStr) => {
@@ -368,9 +494,46 @@ export default function HomeScreen({ navigation }) {
 
   const loadWishlist = async () => {
     try {
+      const token = await getAuthToken();
+      if (token) {
+        const response = await fetch(`${API_BASE_URL}/client/favourites`, {
+          headers: getFavouriteHeaders(token),
+        });
+        const result = await response.json();
+
+        if (response.ok && (result.success || result.status)) {
+          const serverItems = (result.data || [])
+            .map((fav) => fav.product)
+            .filter(Boolean)
+            .map(mapProductToWishlistItem);
+          const storedLocalItems = await AsyncStorage.getItem('sora_wishlist_items');
+          const localItems = storedLocalItems ? JSON.parse(storedLocalItems) : [];
+          const serverIds = new Set(serverItems.map((item) => item.id?.toString()));
+          const missingLocalItems = localItems.filter((item) => item.id && !serverIds.has(item.id.toString()));
+
+          if (missingLocalItems.length > 0) {
+            await Promise.all(missingLocalItems.map((item) => (
+              fetch(`${API_BASE_URL}/client/favourites/toggle`, {
+                method: 'POST',
+                headers: {
+                  ...getFavouriteHeaders(token),
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ product_id: item.id }),
+              })
+            )));
+          }
+
+          const mergedItems = [...serverItems, ...missingLocalItems];
+          setWishlistIds(mergedItems.map((item) => item.id));
+          await saveLocalWishlist(mergedItems);
+          return;
+        }
+      }
+
       const stored = await AsyncStorage.getItem('sora_wishlist_ids');
       if (stored) {
-        setWishlistIds(JSON.parse(stored));
+        setWishlistIds(JSON.parse(stored).map(id => id.toString()));
       }
     } catch (e) {
       console.log('Error loading wishlist ids in HomeScreen:', e);
@@ -474,11 +637,32 @@ export default function HomeScreen({ navigation }) {
 
   const handleSelectCategory = (cat) => {
     setShowSearchResults(false);
-    showCustomAlert(
-      "SORA JEWELRY",
-      `Bạn vừa chọn lọc danh mục:\n"${cat.name}"\n\nTính năng hiển thị sản phẩm theo danh mục đang được phát triển.`,
-      [{ text: "ĐỒNG Ý", style: "default" }]
-    );
+    navigation.navigate('Shop', {
+      categorySlug: cat.slug || cat.id,
+      categoryRequestId: Date.now(),
+    });
+  };
+
+  const bannerItems = banners.length > 0 ? banners : BANNERS;
+  while (bannerDotAnimations.length < bannerItems.length) {
+    bannerDotAnimations.push(new Animated.Value(bannerDotAnimations.length === activeBannerIndex ? 1 : 0));
+  }
+
+  useEffect(() => {
+    bannerDotAnimations.forEach((animation, index) => {
+      Animated.timing(animation, {
+        toValue: index === activeBannerIndex ? 1 : 0,
+        duration: 220,
+        useNativeDriver: false,
+      }).start();
+    });
+  }, [activeBannerIndex, bannerDotAnimations]);
+
+  const handleSelectCombo = (combo) => {
+    navigation.navigate('CollectionDetail', {
+      slug: combo.slug,
+      initialCollection: combo,
+    });
   };
 
   const handleSearchSubmit = () => {
@@ -551,6 +735,7 @@ export default function HomeScreen({ navigation }) {
       useNativeDriver: true,
     }).start(() => {
       setIsGoldModalVisible(false);
+      setActiveTopTab('home');
     });
   };
 
@@ -585,7 +770,7 @@ export default function HomeScreen({ navigation }) {
         setUser(null);
         return;
       }
-      
+
       const cached = await AsyncStorage.getItem('user');
       if (cached) {
         setUser(JSON.parse(cached));
@@ -602,7 +787,8 @@ export default function HomeScreen({ navigation }) {
         setIsLoggedIn(true);
         await AsyncStorage.setItem('user', JSON.stringify(data.user));
       } else {
-        await AsyncStorage.multiRemove(['auth_token', 'user']);
+        await AsyncStorage.multiRemove(['auth_token', 'user', 'sora_wishlist_ids', 'sora_wishlist_items']);
+        setWishlistIds([]);
         setIsLoggedIn(false);
         setUser(null);
       }
@@ -613,7 +799,9 @@ export default function HomeScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
+      setActiveTopTab('home');
       loadUser();
+      loadWishlist();
     }, [loadUser])
   );
 
@@ -625,7 +813,7 @@ export default function HomeScreen({ navigation }) {
   const toggleMenu = () => {
     if (isMenuOpen) {
       Animated.timing(slideAnim, {
-        toValue: -width * 0.8,
+        toValue: -menuWidth,
         duration: 300,
         useNativeDriver: true,
       }).start(() => setIsMenuOpen(false));
@@ -642,7 +830,7 @@ export default function HomeScreen({ navigation }) {
   const closeMenu = () => {
     if (isMenuOpen) {
       Animated.timing(slideAnim, {
-        toValue: -width * 0.8,
+        toValue: -menuWidth,
         duration: 300,
         useNativeDriver: true,
       }).start(() => setIsMenuOpen(false));
@@ -650,86 +838,18 @@ export default function HomeScreen({ navigation }) {
   };
 
   const renderProduct = ({ item }) => {
-    const isDbProduct = !!item.thumbnail_image;
-    const imageUrl = isDbProduct ? getStorageUrl(item.thumbnail_image) : item.image;
-    const name = item.name;
-    const category = isDbProduct ? (item.category?.name || 'Trang Sức SORA') : item.category;
-    
-    const discountText = getProductDiscount(item);
-    const hasDiscount = !!discountText;
-
-    const oldPriceText = isDbProduct 
-      ? (item.promotional_price > 0 ? formatCurrency(item.base_price) : null)
-      : item.oldPrice;
-
-    const newPriceText = isDbProduct 
-      ? formatCurrency(item.promotional_price > 0 ? item.promotional_price : item.base_price)
-      : item.price;
-
-    const isFav = wishlistIds.includes(item.id);
+    const isFav = wishlistIds.includes(item.id?.toString());
+    const isWishlistLoading = wishlistLoadingIds.includes(item.id?.toString());
 
     return (
-      <TouchableOpacity 
-        style={styles.productCard}
-        onPress={() => handleSelectProduct(item)}
-        activeOpacity={0.9}
-      >
-        {/* Discount Badge */}
-        {hasDiscount && (
-          <View style={styles.discountBadge}>
-            <Text style={styles.discountText}>{discountText}</Text>
-          </View>
-        )}
-
-        <Image source={{ uri: imageUrl }} style={styles.productImage} />
-
-        <View style={styles.productInfo}>
-          <View style={styles.productTopDetails}>
-            <Text style={styles.productName} numberOfLines={2}>{name}</Text>
-            <Text style={styles.productCategory} numberOfLines={1}>{category}</Text>
-          </View>
-          
-          <View style={styles.productBottomDetails}>
-            {oldPriceText ? (
-              <Text style={styles.oldPrice} numberOfLines={1}>{oldPriceText}</Text>
-            ) : (
-              <View style={{ height: 16 }} />
-            )}
-            
-            <Text 
-              style={styles.newPrice} 
-              numberOfLines={1} 
-              adjustsFontSizeToFit={true} 
-              minimumFontScale={0.8}
-            >
-              {newPriceText}
-            </Text>
-
-            <View style={styles.productFooter}>
-              <View style={styles.ratingContainer}>
-                {[1, 2, 3, 4, 5].map((star, index) => (
-                  <Ionicons 
-                    key={star}
-                    name={index < (item.rating || 5) ? "star" : "star-outline"} 
-                    size={11} 
-                    color="#f1c40f" 
-                  />
-                ))}
-              </View>
-              <TouchableOpacity onPress={(e) => {
-                e.stopPropagation();
-                handleToggleWishlist(item);
-              }}>
-                <Ionicons 
-                  name={isFav ? "heart" : "heart-outline"} 
-                  size={18} 
-                  color={isFav ? "#9f273b" : "#999"} 
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </TouchableOpacity>
+      <ProductCard
+        product={item}
+        style={styles.bestSellerProductCard}
+        onPress={handleSelectProduct}
+        onToggleWishlist={handleToggleWishlist}
+        isFavorite={isFav}
+        isWishlistLoading={isWishlistLoading}
+      />
     );
   };
 
@@ -778,8 +898,8 @@ export default function HomeScreen({ navigation }) {
         {/* Search Bar Wrapper */}
         <View style={styles.searchWrapper}>
           <View style={styles.searchContainer}>
-            <TouchableOpacity 
-              style={styles.searchDropdown} 
+            <TouchableOpacity
+              style={styles.searchDropdown}
               onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}
             >
               <Text style={styles.searchDropdownText} numberOfLines={1}>{selectedCategory}</Text>
@@ -896,8 +1016,8 @@ export default function HomeScreen({ navigation }) {
                             style={styles.searchProdRow}
                             onPress={() => handleSelectProduct(prod)}
                           >
-                            <Image
-                              source={{ uri: getStorageUrl(prod.thumbnail_image) }}
+                            <SoraFallbackImage
+                              uri={getStorageUrl(prod.thumbnail_image)}
                               style={styles.searchProdImg}
                             />
                             <View style={styles.searchProdInfo}>
@@ -928,14 +1048,35 @@ export default function HomeScreen({ navigation }) {
 
         {/* Top Tab Menu */}
         <View style={styles.topTabMenu}>
-          <TouchableOpacity style={styles.topTabItem}>
-            <Text style={styles.topTabText}>XU HƯỚNG</Text>
+          <TouchableOpacity
+            style={[styles.topTabItem, activeTopTab === 'gold' && styles.topTabItemActive]}
+            onPress={() => {
+              setActiveTopTab('gold');
+              openGoldModal();
+            }}
+          >
+            <Text style={[styles.topTabText, activeTopTab === 'gold' && styles.topTabTextActive]}>
+              BẢNG GIÁ
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.topTabItem, styles.topTabItemActive]}>
-            <Text style={[styles.topTabText, styles.topTabTextActive]}>TRANG CHỦ</Text>
+          <TouchableOpacity
+            style={[styles.topTabItem, activeTopTab === 'home' && styles.topTabItemActive]}
+            onPress={() => setActiveTopTab('home')}
+          >
+            <Text style={[styles.topTabText, activeTopTab === 'home' && styles.topTabTextActive]}>
+              TRANG CHỦ
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.topTabItem}>
-            <Text style={styles.topTabText}>BỘ SƯU TẬP</Text>
+          <TouchableOpacity
+            style={[styles.topTabItem, activeTopTab === 'collections' && styles.topTabItemActive]}
+            onPress={() => {
+              setActiveTopTab('collections');
+              navigation.navigate("Collections");
+            }}
+          >
+            <Text style={[styles.topTabText, activeTopTab === 'collections' && styles.topTabTextActive]}>
+              BỘ SƯU TẬP
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -943,6 +1084,7 @@ export default function HomeScreen({ navigation }) {
       {/* BODY SECTION */}
       <ScrollView
         style={styles.bodyContainer}
+        contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -955,7 +1097,7 @@ export default function HomeScreen({ navigation }) {
       >
 
         {/* Hero Banner Carousel */}
-        <View style={styles.bannerSection}>
+        <View style={[styles.bannerSection, { width: bannerWidth }]}>
           <FlatList
             ref={bannerFlatListRef}
             data={banners.length > 0 ? banners : BANNERS}
@@ -966,19 +1108,16 @@ export default function HomeScreen({ navigation }) {
             onScroll={onBannerScroll}
             scrollEventThrottle={16}
             getItemLayout={(data, index) => (
-              { length: width, offset: width * index, index }
+              { length: bannerWidth, offset: bannerWidth * index, index }
             )}
             renderItem={({ item }) => {
               const imgUrl = item.image_mobile ? getBannerUrl(item) : (item.image || getBannerUrl(item));
               return (
-                <View style={styles.bannerSlideWrapper}>
-                  <Image 
-                    source={{ uri: imgUrl }} 
-                    style={styles.heroBannerImage} 
-                  />
+                <View style={[styles.bannerSlideWrapper, { width: bannerWidth, height: bannerHeight }]}>
+                  <SoraFallbackImage uri={imgUrl} style={[styles.heroBannerImage, { width: bannerWidth, height: bannerHeight }]} />
                   {/* Dark overlay for readability */}
                   <View style={styles.heroBannerOverlay} />
-                  
+
                   {/* Campaign Information Caption */}
                   <View style={styles.heroBannerCaption}>
                     <View style={styles.bannerSubtitleContainer}>
@@ -986,12 +1125,12 @@ export default function HomeScreen({ navigation }) {
                       <Text style={styles.bannerSubtitleText}>SORA EXCLUSIVE</Text>
                       <View style={styles.bannerGoldDivider} />
                     </View>
-                    
+
                     <Text style={styles.heroBannerTitle} numberOfLines={2}>
                       {item.title || 'VẺ ĐẸP VĨNH CỬU'}
                     </Text>
-                    
-                    <TouchableOpacity 
+
+                    <TouchableOpacity
                       style={styles.bannerExploreButton}
                       onPress={() => handleBannerPress(item)}
                       activeOpacity={0.8}
@@ -1005,90 +1144,45 @@ export default function HomeScreen({ navigation }) {
           />
           {/* Pagination dots */}
           <View style={styles.paginationContainer}>
-            {(banners.length > 0 ? banners : BANNERS).map((b, idx) => (
-              <View 
-                key={b.id.toString()} 
-                style={[
-                  styles.dot, 
-                  idx === activeBannerIndex && styles.dotActive
-                ]} 
-              />
+            {bannerItems.map((b, idx) => (
+              <View
+                key={b.id.toString()}
+                style={styles.dotSlot}
+              >
+                <Animated.View
+                  style={[
+                    styles.dot,
+                    {
+                      width: bannerDotAnimations[idx].interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [6, 15],
+                      }),
+                      backgroundColor: bannerDotAnimations[idx].interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['#ddd', '#9f273b'],
+                      }),
+                    },
+                  ]}
+                />
+              </View>
             ))}
           </View>
         </View>
-
-        {/* Coupons/Voucher Section */}
-        {coupons.length > 0 && (
-          <View style={styles.couponsContainer}>
-            <View style={styles.sectionHeaderCompact}>
-              <Text style={styles.sectionGoldLabel}>ĐẶC QUYỀN MUA SẮM</Text>
-              <Text style={styles.sectionTitleLuxury}>Món Quà Từ SORA</Text>
-            </View>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false} 
-              contentContainerStyle={styles.couponsList}
-            >
-              {coupons.map((coupon) => (
-                <View key={coupon.id.toString()} style={styles.couponCard}>
-                  <View style={styles.couponCardInner}>
-                    <View style={styles.couponTop}>
-                      <Text style={styles.couponCode}>{coupon.code}</Text>
-                      <View style={styles.couponDividerLine} />
-                      <View style={styles.couponValueContainer}>
-                        <Text style={styles.couponValue}>
-                          {coupon.discount_type === 'percent' 
-                            ? coupon.discount_value 
-                            : coupon.discount_value >= 1000000 
-                              ? (coupon.discount_value / 1000000) + 'Tr'
-                              : coupon.discount_value >= 1000 
-                                ? (coupon.discount_value / 1000) + 'K'
-                                : coupon.discount_value
-                          }
-                        </Text>
-                        <Text style={styles.couponUnit}>
-                          {coupon.discount_type === 'percent' ? '%' : '₫'}
-                        </Text>
-                      </View>
-                    </View>
-                    
-                    <View style={styles.couponBottom}>
-                      <Text style={styles.couponMinSpend} numberOfLines={1}>
-                        Đơn từ {formatCurrency(coupon.min_order_value)}
-                      </Text>
-                      <TouchableOpacity 
-                        style={styles.couponSaveBtn}
-                        onPress={() => showCustomAlert(
-                          "SORA JEWELRY", 
-                          `Chúc mừng! Bạn đã lưu voucher mã "${coupon.code}" thành công vào ví ưu đãi cá nhân.`, 
-                          [{ text: "ĐỒNG Ý", style: "default" }]
-                        )}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={styles.couponSaveBtnTxt}>LƯU MÃ NGAY</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        )}
 
         {/* Categories Section */}
         <View style={styles.categoriesContainer}>
           <Text style={styles.sectionTitle}>DANH MỤC</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesList}>
             {(homeCategories.length > 0 ? homeCategories : CATEGORIES).map((cat) => (
-              <TouchableOpacity 
-                key={cat.id.toString()} 
-                style={styles.categoryItem} 
+              <TouchableOpacity
+                key={cat.id.toString()}
+                style={styles.categoryItem}
                 onPress={() => handleSelectCategory(cat)}
               >
                 <View style={styles.categoryCircle}>
-                  <Image 
-                    source={{ uri: cat.image ? getStorageUrl(cat.image) : (cat.icon || 'https://images.unsplash.com/photo-1605100804763-247f67b854d4?q=80&w=300') }} 
-                    style={styles.categoryImage} 
+                  <SoraFallbackImage
+                    uri={cat.image ? getStorageUrl(cat.image) : (cat.icon || 'https://images.unsplash.com/photo-1605100804763-247f67b854d4?q=80&w=300')}
+                    style={styles.categoryImage}
                   />
                   <View style={styles.categoryOverlay} />
                 </View>
@@ -1098,39 +1192,10 @@ export default function HomeScreen({ navigation }) {
           </ScrollView>
         </View>
 
-        {/* Brand Story / Artistic Section */}
-        <View style={styles.brandStoryContainer}>
-          <Image 
-            source={{ uri: 'https://images.unsplash.com/photo-1589674781759-c21c37956a44?q=80&w=800&auto=format&fit=crop' }} 
-            style={styles.brandStoryBgImage}
-          />
-          <View style={styles.brandStoryOverlay} />
-          
-          <View style={styles.brandStoryContent}>
-            <Text style={styles.brandStoryLabel}>NGHỆ THUẬT CHẾ TÁC</Text>
-            <Text style={styles.brandStoryTitle}>Tinh Hoa Hội Tụ</Text>
-            <Text style={styles.brandStorySubtitle}>TRONG TỪNG GIỌT VÀNG</Text>
-            <Text style={styles.brandStoryDesc}>
-              Tại SORA, mỗi tác phẩm là một di sản mang đậm dấu ấn cá nhân. Bằng đôi bàn tay tài hoa của nghệ nhân kim hoàn bậc thầy, chúng tôi gọt giũa trang sức thành biểu tượng của sự sang trọng và vẻ đẹp vượt thời gian.
-            </Text>
-            <TouchableOpacity 
-              style={styles.brandStoryBtn}
-              onPress={() => showCustomAlert(
-                "SORA JEWELRY", 
-                "Di sản chế tác SORA Jewelry được bảo hộ toàn cầu với chính sách bảo hành đá quý trọn đời.", 
-                [{ text: "ĐỒNG Ý", style: "default" }]
-              )}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.brandStoryBtnTxt}>KHÁM PHÁ DI SẢN</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>SẢN PHẨM BÁN CHẠY</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.viewMoreButton}
               onPress={() => showCustomAlert("SORA JEWELRY", "Tính năng xem toàn bộ sản phẩm đang được tích lũy cập nhật.", [{ text: "ĐỒNG Ý", style: "default" }])}
             >
@@ -1148,54 +1213,50 @@ export default function HomeScreen({ navigation }) {
           />
         </View>
 
-        {/* Limited Combos Section */}
-        {combos.length > 0 && (
-          <View style={styles.sectionContainer}>
+        {/* Coupons/Voucher Section */}
+        {coupons.length > 0 && (
+          <View style={styles.couponsContainer}>
             <View style={styles.sectionHeaderCompact}>
-              <Text style={styles.sectionGoldLabel}>ĐỒNG ĐIỆU</Text>
-              <Text style={styles.sectionTitleLuxury}>Bộ Sưu Tập Giới Hạn</Text>
+              <Text style={styles.sectionGoldLabel}>ĐẶC QUYỀN MUA SẮM</Text>
+              <Text style={styles.sectionTitleLuxury}>Món Quà Từ SORA</Text>
             </View>
-            
-            <ScrollView 
-              horizontal 
+            <ScrollView
+              horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.combosList}
+              contentContainerStyle={styles.couponsList}
             >
-              {combos.map((combo) => (
-                <View key={combo.id.toString()} style={styles.comboCard}>
-                  <Image 
-                    source={{ uri: getStorageUrl(combo.thumbnail_image || combo.image) }} 
-                    style={styles.comboCardImg}
-                  />
-                  <View style={styles.comboCardBody}>
-                    <Text style={styles.comboCardCollName}>SORA COLLECTION</Text>
-                    <Text style={styles.comboCardTitle} numberOfLines={1}>{combo.name}</Text>
-                    <Text style={styles.comboCardDesc} numberOfLines={2}>
-                      {combo.description || 'Sự kết hợp hoàn mỹ giữa nghệ thuật chế tác kim hoàn và vẻ đẹp vượt thời gian.'}
-                    </Text>
-                    
-                    <View style={styles.comboCardPriceRow}>
-                      <Text style={styles.comboPromoPrice}>
-                        {formatCurrency(combo.promotional_price)}
-                      </Text>
-                      {combo.base_price > 0 && (
-                        <Text style={styles.comboBasePrice}>
-                          {formatCurrency(combo.base_price)}
+              {coupons.map((coupon) => (
+                <View key={coupon.id.toString()} style={styles.couponCard}>
+                  <View style={styles.couponCardInner}>
+                    <View style={styles.couponTop}>
+                      <Text style={styles.couponCode}>{coupon.code}</Text>
+                      <View style={styles.couponDividerLine} />
+                      <View style={styles.couponValueContainer}>
+                        <Text style={styles.couponValue}>
+                          {formatVoucherValue(coupon)}
                         </Text>
-                      )}
+                        <Text style={styles.couponUnit}>
+                          {coupon.discount_type === 'percent' ? '%' : ' đ'}
+                        </Text>
+                      </View>
                     </View>
-                    
-                    <TouchableOpacity 
-                      style={styles.comboDetailBtn}
-                      onPress={() => showCustomAlert(
-                        "SORA JEWELRY", 
-                        `Bạn vừa chọn xem bộ sưu tập:\n"${combo.name}"\n\nTính năng xem chi tiết bộ sưu tập giới hạn đang được cập nhật.`, 
-                        [{ text: "ĐỒNG Ý", style: "default" }]
-                      )}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.comboDetailBtnTxt}>KHÁM PHÁ NGAY</Text>
-                    </TouchableOpacity>
+
+                    <View style={styles.couponBottom}>
+                      <Text style={styles.couponMinSpend} numberOfLines={1}>
+                        Đơn từ {formatCurrency(coupon.min_order_value)}
+                      </Text>
+                      <TouchableOpacity
+                        style={styles.couponSaveBtn}
+                        onPress={() => showCustomAlert(
+                          "SORA JEWELRY",
+                          `Chúc mừng! Bạn đã lưu voucher mã "${coupon.code}" thành công vào ví ưu đãi cá nhân.`,
+                          [{ text: "ĐỒNG Ý", style: "default" }]
+                        )}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.couponSaveBtnTxt}>LƯU MÃ NGAY</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
               ))}
@@ -1203,8 +1264,71 @@ export default function HomeScreen({ navigation }) {
           </View>
         )}
 
+        {/* Limited Combos Section */}
+        {combos.length > 0 && (
+          <View style={styles.sectionContainer}>
+            <View style={styles.sectionHeaderCompact}>
+              <Text style={styles.sectionGoldLabel}>ĐỒNG ĐIỆU</Text>
+              <Text style={styles.sectionTitleLuxury}>Bộ Sưu Tập Giới Hạn</Text>
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.combosList}
+              snapToInterval={comboCardWidth + COMBO_CARD_GAP}
+              snapToAlignment="start"
+              decelerationRate="fast"
+              disableIntervalMomentum={true}
+            >
+              {combos.map((combo) => {
+                const comboKey = combo.id.toString();
+                const comboImagePath = combo.thumbnail_image || combo.image || combo.products?.[0]?.thumbnail_image;
+                const comboImageUrl = comboImagePath ? getStorageUrl(comboImagePath) : '';
+
+                return (
+                  <TouchableOpacity
+                    key={comboKey}
+                    style={[styles.comboCard, { width: comboCardWidth }]}
+                    onPress={() => handleSelectCombo(combo)}
+                    activeOpacity={0.92}
+                  >
+                    <SoraFallbackImage uri={comboImageUrl} style={styles.comboCardImg} />
+                    <View style={styles.comboCardBody}>
+                      <Text style={styles.comboCardCollName}>SORA COLLECTION</Text>
+                      <Text style={styles.comboCardTitle} numberOfLines={1}>{combo.name}</Text>
+                      <Text style={styles.comboCardDesc} numberOfLines={2}>
+                        {combo.description || 'Sự kết hợp hoàn mỹ giữa nghệ thuật chế tác kim hoàn và vẻ đẹp vượt thời gian.'}
+                      </Text>
+
+                      <View style={styles.comboCardPriceRow}>
+                        <Text style={styles.comboPromoPrice}>
+                          {formatCurrency(combo.promotional_price)}
+                        </Text>
+                        {combo.base_price > 0 && (
+                          <Text style={styles.comboBasePrice}>
+                            {formatCurrency(combo.base_price)}
+                          </Text>
+                        )}
+                      </View>
+
+                      <TouchableOpacity
+                        style={styles.comboDetailBtn}
+                        onPress={() => handleSelectCombo(combo)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.comboDetailBtnTxt}>KHÁM PHÁ NGAY</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
         {/* Privilege Club Membership Section */}
-        <View style={styles.membershipSectionContainer}>
+        <View style={[styles.membershipSectionContainer, { width: contentCardWidth }]}>
           <View style={styles.membershipBgOverlay} />
           <View style={styles.membershipContent}>
             <MaterialCommunityIcons name="diamond" size={28} color="#e7ce7d" style={{ marginBottom: 10 }} />
@@ -1213,7 +1337,7 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.membershipDesc}>
               Đăng ký thành viên để tận hưởng đặc quyền chăm sóc trang sức trọn đời và chiết khấu VIP dành riêng cho bạn.
             </Text>
-            
+
             <View style={styles.membershipTiersList}>
               <View style={styles.membershipTierMiniCard}>
                 <Text style={styles.membershipTierNameGold}>BẠC</Text>
@@ -1231,9 +1355,9 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.membershipTierDiscount}>Chiết khấu 10%</Text>
               </View>
             </View>
-            
+
             {!isLoggedIn && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.membershipRegisterBtn}
                 onPress={() => navigation.navigate('Register')}
                 activeOpacity={0.8}
@@ -1241,6 +1365,35 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.membershipRegisterBtnTxt}>TẠO TÀI KHOẢN NGAY</Text>
               </TouchableOpacity>
             )}
+          </View>
+        </View>
+
+        {/* Brand Story / Artistic Section */}
+        <View style={[styles.brandStoryContainer, { width: contentCardWidth }]}>
+          <SoraFallbackImage
+            uri="https://images.unsplash.com/photo-1589674781759-c21c37956a44?q=80&w=800&auto=format&fit=crop"
+            style={styles.brandStoryBgImage}
+          />
+          <View style={styles.brandStoryOverlay} />
+
+          <View style={styles.brandStoryContent}>
+            <Text style={styles.brandStoryLabel}>NGHỆ THUẬT CHẾ TÁC</Text>
+            <Text style={styles.brandStoryTitle}>Tinh Hoa Hội Tụ</Text>
+            <Text style={styles.brandStorySubtitle}>TRONG TỪNG GIỌT VÀNG</Text>
+            <Text style={styles.brandStoryDesc}>
+              Tại SORA, mỗi tác phẩm là một di sản mang đậm dấu ấn cá nhân. Bằng đôi bàn tay tài hoa của nghệ nhân kim hoàn bậc thầy, chúng tôi gọt giũa trang sức thành biểu tượng của sự sang trọng và vẻ đẹp vượt thời gian.
+            </Text>
+            <TouchableOpacity
+              style={styles.brandStoryBtn}
+              onPress={() => showCustomAlert(
+                "SORA JEWELRY",
+                "Di sản chế tác SORA Jewelry được bảo hộ toàn cầu với chính sách bảo hành đá quý trọn đời.",
+                [{ text: "ĐỒNG Ý", style: "default" }]
+              )}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.brandStoryBtnTxt}>KHÁM PHÁ DI SẢN</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -1261,13 +1414,13 @@ export default function HomeScreen({ navigation }) {
             const dateText = isDbNews ? formatDateString(article.created_at) : article.date;
 
             return (
-              <TouchableOpacity 
-                key={article.id.toString()} 
+              <TouchableOpacity
+                key={article.id.toString()}
                 style={styles.newsCard}
                 onPress={() => handleSelectNews(article)}
                 activeOpacity={0.9}
               >
-                <Image source={{ uri: imgUrl }} style={styles.newsCardImage} />
+                <SoraFallbackImage uri={imgUrl} style={styles.newsCardImage} />
                 <View style={styles.newsCardBody}>
                   <Text style={styles.newsCardTag}>{tag}</Text>
                   <Text style={styles.newsCardTitle} numberOfLines={2}>{title}</Text>
@@ -1292,7 +1445,7 @@ export default function HomeScreen({ navigation }) {
           <TouchableWithoutFeedback onPress={toggleMenu}>
             <View style={styles.menuOverlay} />
           </TouchableWithoutFeedback>
-          <Animated.View style={[styles.menuContainer, { transform: [{ translateX: slideAnim }] }]}>
+          <Animated.View style={[styles.menuContainer, { width: menuWidth, transform: [{ translateX: slideAnim }] }]}>
             <SafeAreaView style={{ flex: 1 }}>
               {/* Menu Header */}
               <View style={styles.menuHeader}>
@@ -1323,12 +1476,11 @@ export default function HomeScreen({ navigation }) {
                       }}
                     >
                       <View style={[styles.heroAvatarWrap, { borderColor: theme.avatarBorder }]}>
-                        <Image
-                          source={{
-                            uri: user?.avatar_url
-                              ? getStorageUrl(user.avatar_url)
-                              : `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || 'U')}&background=9f273b&color=fff&size=200`
-                          }}
+                        <SoraFallbackImage
+                          uri={user?.avatar_url
+                            ? getStorageUrl(user.avatar_url)
+                            : `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || 'U')}&background=9f273b&color=fff&size=200`
+                          }
                           style={styles.heroAvatar}
                         />
                       </View>
@@ -1373,7 +1525,7 @@ export default function HomeScreen({ navigation }) {
                     <Ionicons name="sparkles-outline" size={22} color="#555" style={styles.menuItemIcon} />
                     <Text style={styles.menuItemText}>Bộ Sưu Tập Giới Hạn</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.menuItem}
                     onPress={() => {
                       closeMenu();
@@ -1387,7 +1539,7 @@ export default function HomeScreen({ navigation }) {
 
                 <View style={styles.menuSection}>
                   <Text style={styles.menuSectionTitle}>HỖ TRỢ & DỊCH VỤ</Text>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.menuItem}
                     onPress={() => {
                       closeMenu();
@@ -1397,7 +1549,7 @@ export default function HomeScreen({ navigation }) {
                     <Ionicons name="information-circle-outline" size={22} color="#555" style={styles.menuItemIcon} />
                     <Text style={styles.menuItemText}>Về SORA</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.menuItem}
                     onPress={() => {
                       closeMenu();
@@ -1407,7 +1559,7 @@ export default function HomeScreen({ navigation }) {
                     <Ionicons name="shield-checkmark-outline" size={22} color="#555" style={styles.menuItemIcon} />
                     <Text style={styles.menuItemText}>Chính sách bảo hành</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.menuItem}
                     onPress={() => {
                       closeMenu();
@@ -1441,7 +1593,7 @@ export default function HomeScreen({ navigation }) {
             <View style={StyleSheet.absoluteFillObject} />
           </TouchableWithoutFeedback>
 
-          <Animated.View 
+          <Animated.View
             style={[
               styles.goldModalContent,
               { transform: [{ translateY: goldTranslateY }] }
@@ -1456,7 +1608,7 @@ export default function HomeScreen({ navigation }) {
               </View>
               <View style={styles.goldDivider} />
               <Text style={styles.goldSubtitle}>Niêm Yết Hệ Thống SORA Jewelry</Text>
-              
+
               <View style={styles.goldUpdateTimeRow}>
                 <Ionicons name="time-outline" size={14} color="#e7ce7d" style={{ marginRight: 4 }} />
                 <Text style={styles.goldUpdateTime}>
@@ -1549,13 +1701,15 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff', // Match header color for safe area
+    backgroundColor: '#f6f3ef',
   },
   headerContainer: {
     backgroundColor: '#fff',
     paddingTop: 10,
     zIndex: 100,
     elevation: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0e9dd',
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -1568,20 +1722,20 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   logo: {
-    height: 55, // Tăng kích thước logo
-    width: 220,
+    height: 48,
+    width: 190,
 
   },
   searchContainer: {
     flexDirection: 'row',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#fbfaf8',
     marginHorizontal: 15,
-    height: 40,
-    borderRadius: 4,
+    height: 42,
+    borderRadius: 8,
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: '#eee2d0',
   },
   searchDropdown: {
     flexDirection: 'row',
@@ -1610,9 +1764,7 @@ const styles = StyleSheet.create({
   topTabMenu: {
     flexDirection: 'row',
     backgroundColor: '#fff',
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
-    paddingTop: 10,
+    paddingTop: 2,
   },
   topTabItem: {
     flex: 1,
@@ -1631,23 +1783,33 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   topTabTextActive: {
-    color: '#333',
-    fontFamily: 'Oswald_500Medium',
+    color: '#9f273b',
+    fontFamily: 'Oswald_600SemiBold',
   },
   bodyContainer: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f6f3ef',
+  },
+  bodyContent: {
+    paddingBottom: 18,
   },
   bannerSection: {
+    alignSelf: 'center',
+    maxWidth: 720,
     backgroundColor: '#fff',
-    paddingBottom: 15,
+    paddingBottom: 12,
+    overflow: 'hidden',
   },
   categoriesContainer: {
     backgroundColor: '#fff',
-    paddingTop: 15,
-    paddingBottom: 18,
+    paddingTop: 16,
+    paddingBottom: 16,
     paddingHorizontal: 15,
     marginTop: 10,
+    marginHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#f0e9dd',
   },
   categoriesList: {
     paddingHorizontal: 0,
@@ -1686,13 +1848,11 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   heroBannerImage: {
-    width: width,
-    height: width * 0.75,
+    width: '100%',
+    height: '100%',
     resizeMode: 'cover',
   },
   bannerSlideWrapper: {
-    width: width,
-    height: width * 0.75,
     position: 'relative',
   },
   heroBannerOverlay: {
@@ -1728,7 +1888,7 @@ const styles = StyleSheet.create({
   },
   heroBannerTitle: {
     fontFamily: 'PlayfairDisplay_700Bold',
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#fff',
     textAlign: 'center',
@@ -1758,18 +1918,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 10,
   },
+  dotSlot: {
+    width: 21,
+    height: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   dot: {
     width: 6,
     height: 6,
     borderRadius: 3,
     backgroundColor: '#ddd',
-    marginHorizontal: 3,
   },
-  dotActive: {
-    backgroundColor: '#9f273b',
-    width: 15,
-  },
-
   // === NEW HOME LUXURY SECTIONS ===
   sectionHeaderCompact: {
     alignItems: 'center',
@@ -1796,6 +1956,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginTop: 10,
     paddingVertical: 18,
+    marginHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#f0e9dd',
+    overflow: 'hidden',
   },
   couponsList: {
     paddingLeft: 15,
@@ -1845,16 +2010,16 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
   },
   couponValue: {
-    fontFamily: 'PlayfairDisplay_700Bold',
-    fontSize: 26,
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
+    fontSize: 21,
     color: '#9f273b',
-    fontWeight: 'bold',
   },
   couponUnit: {
-    fontFamily: 'PlayfairDisplay_700Bold',
-    fontSize: 14,
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
+    fontSize: 13,
     color: '#9f273b',
-    marginLeft: 1,
   },
   couponBottom: {
     flexDirection: 'row',
@@ -1884,11 +2049,15 @@ const styles = StyleSheet.create({
 
   // 2. Brand Story
   brandStoryContainer: {
-    width: width,
-    height: 280,
+    alignSelf: 'center',
+    maxWidth: 720,
+    height: 250,
     position: 'relative',
     backgroundColor: '#000',
-    marginTop: 10,
+    marginTop: 18,
+    marginHorizontal: 12,
+    borderRadius: 8,
+    overflow: 'hidden',
   },
   brandStoryBgImage: {
     width: '100%',
@@ -1953,13 +2122,11 @@ const styles = StyleSheet.create({
 
   // 3. Limited Combos
   combosList: {
-    paddingLeft: 15,
-    paddingRight: 10,
+    paddingHorizontal: COMBO_SIDE_SPACER,
     gap: 14,
     paddingVertical: 5,
   },
   comboCard: {
-    width: 280,
     backgroundColor: '#fff',
     borderRadius: 8,
     overflow: 'hidden',
@@ -1976,6 +2143,27 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 160,
     resizeMode: 'cover',
+  },
+  soraImageFallback: {
+    backgroundColor: '#f8f8f8',
+    borderWidth: 0.5,
+    borderColor: '#e8e8e8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  soraImageFallbackText: {
+    fontFamily: 'Oswald_400Regular',
+    fontSize: 18,
+    color: '#d0d0d0',
+    letterSpacing: 6,
+    textTransform: 'lowercase',
+  },
+  soraImageFallbackSub: {
+    fontFamily: 'Oswald_400Regular',
+    fontSize: 8,
+    color: '#d8d8d8',
+    letterSpacing: 3,
+    marginTop: 2,
   },
   comboCardBody: {
     padding: 14,
@@ -2006,16 +2194,19 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   comboPromoPrice: {
-    fontFamily: 'PlayfairDisplay_700Bold',
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
     fontSize: 15,
     color: '#9f273b',
     fontWeight: 'bold',
     marginRight: 10,
   },
   comboBasePrice: {
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
     fontSize: 12,
     color: '#999',
-    textDecorationLine: 'through',
+    textDecorationLine: 'line-through',
   },
   comboDetailBtn: {
     borderWidth: 1,
@@ -2035,12 +2226,17 @@ const styles = StyleSheet.create({
 
   // 4. Privilege Club
   membershipSectionContainer: {
-    width: width,
+    alignSelf: 'center',
+    maxWidth: 720,
     backgroundColor: '#111',
     paddingVertical: 32,
     position: 'relative',
     alignItems: 'center',
     marginTop: 10,
+    marginBottom: 14,
+    marginHorizontal: 12,
+    borderRadius: 8,
+    overflow: 'hidden',
   },
   membershipBgOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -2126,6 +2322,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginTop: 10,
     paddingVertical: 15,
+    marginHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#f0e9dd',
+    overflow: 'hidden',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -2142,8 +2343,13 @@ const styles = StyleSheet.create({
 
   // === NEWS SECTION ===
   newsSectionContainer: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#fff',
     marginTop: 10,
+    marginHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#f0e9dd',
+    overflow: 'hidden',
     paddingBottom: 10,
   },
   newsSectionHeader: {
@@ -2153,7 +2359,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
     marginBottom: 5,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#fff',
   },
   newsTagLabel: {
     fontSize: 11,
@@ -2232,89 +2438,9 @@ const styles = StyleSheet.create({
   productList: {
     paddingHorizontal: 10,
   },
-  productCard: {
+  bestSellerProductCard: {
     width: 165,
-    backgroundColor: '#fff',
     marginHorizontal: 5,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#eee',
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  discountBadge: {
-    position: 'absolute',
-    top: 5,
-    right: 5,
-    backgroundColor: '#cc1e2e',
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 3,
-    zIndex: 1,
-  },
-  discountText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  productImage: {
-    width: '100%',
-    height: 155,
-    resizeMode: 'cover',
-  },
-  productInfo: {
-    padding: 10,
-    flex: 1,
-    justifyContent: 'space-between',
-    minHeight: 140, // Fixed height area to guarantee that stars, heart icons, and prices align across cards
-  },
-  productTopDetails: {
-    marginBottom: 4,
-  },
-  productBottomDetails: {
-    marginTop: 'auto',
-  },
-  productName: {
-    fontSize: 12,
-    fontFamily: 'Oswald_500Medium',
-    textTransform: 'uppercase',
-    color: '#333',
-    lineHeight: 16,
-    marginBottom: 2,
-  },
-  productCategory: {
-    fontSize: 10.5,
-    fontFamily: 'PlayfairDisplay_400Regular_Italic',
-    color: '#888',
-    marginTop: 0,
-    marginBottom: 2,
-  },
-  oldPrice: {
-    fontSize: 10.5,
-    fontFamily: 'PlayfairDisplay_400Regular',
-    color: '#999',
-    textDecorationLine: 'line-through',
-    marginBottom: 1,
-  },
-  newPrice: {
-    fontSize: 14.5,
-    fontFamily: 'PlayfairDisplay_700Bold',
-    color: '#9f273b', // Red price matching website
-    marginBottom: 6,
-  },
-  productFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    gap: 1,
   },
   menuOverlayWrapper: {
     ...StyleSheet.absoluteFillObject,
@@ -2326,7 +2452,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   menuContainer: {
-    width: width * 0.8,
     height: '100%',
     backgroundColor: '#fff',
     zIndex: 1001,
@@ -2645,13 +2770,15 @@ const styles = StyleSheet.create({
     color: '#222',
   },
   tableDataCellPriceBuy: {
-    fontFamily: 'Oswald_600SemiBold',
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
     fontSize: 15,
     color: '#1e7e34', // Green for buying
     letterSpacing: 0.5,
   },
   tableDataCellPriceSell: {
-    fontFamily: 'Oswald_600SemiBold',
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
     fontSize: 15,
     color: '#c82333', // Red for selling
     letterSpacing: 0.5,
@@ -2688,7 +2815,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     letterSpacing: 2,
   },
-  
+
   // Real-time search dropdown styles
   searchWrapper: {
     position: 'relative',
@@ -2778,7 +2905,8 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   searchProdPrice: {
-    fontFamily: 'Oswald_600SemiBold',
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
     fontSize: 11,
     color: '#9f273b',
     marginTop: 2,
@@ -2811,7 +2939,7 @@ const styles = StyleSheet.create({
     color: '#9f273b',
     letterSpacing: 0.5,
   },
-  
+
   // Real-time category selector dropdown styles
   categoryDropdown: {
     position: 'absolute',

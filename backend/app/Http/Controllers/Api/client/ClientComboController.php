@@ -21,7 +21,7 @@ class ClientComboController extends Controller
             )
             ->with([
                 'items:id,combo_id,product_id,product_variant_id,quantity',
-                'items.product:id,name,base_price,thumbnail_image',
+                'items.product:id,name,slug,base_price,promotional_price,thumbnail_image',
                 'items.variant:id,product_id,sku,price,promotional_price'
             ])
             ->where('status', 'active')
