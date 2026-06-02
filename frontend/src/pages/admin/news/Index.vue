@@ -233,8 +233,13 @@ const getDisplayAuthor = (item) => item?.author_name || 'Không rõ';
 
 const getFullImageWithFallback = (imagePath) => {
     if (!imagePath) return defaultImage;
-    if (imagePath.startsWith('http')) return imagePath;
-    return `${BACKEND_URL}/storage/${imagePath}`;
+    if (imagePath.startsWith('http') || imagePath.startsWith('data:image')) return imagePath;
+
+    const cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
+    if (cleanPath.startsWith('storage/')) {
+        return `${BACKEND_URL}/${cleanPath}`;
+    }
+    return `${BACKEND_URL}/storage/${cleanPath}`;
 };
 
 const handleImageError = (e) => {
