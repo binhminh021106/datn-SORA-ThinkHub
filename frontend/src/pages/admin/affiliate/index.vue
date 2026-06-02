@@ -190,7 +190,7 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
-const getToken = () => localStorage.getItem('auth_token') || localStorage.getItem('access_token');
+const getToken = () => localStorage.getItem('admin_token') || localStorage.getItem('auth_token') || localStorage.getItem('access_token');
 
 // --- STATE QUẢN LÝ DỮ LIỆU ---
 const applications = ref([]);

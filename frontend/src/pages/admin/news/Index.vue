@@ -231,6 +231,16 @@ const getFormattedDate = (dateString) => {
 
 const getDisplayAuthor = (item) => item?.author_name || 'Không rõ';
 
+const getFullImageWithFallback = (imagePath) => {
+    if (!imagePath) return defaultImage;
+    if (imagePath.startsWith('http')) return imagePath;
+    return `${BACKEND_URL}/storage/${imagePath}`;
+};
+
+const handleImageError = (e) => {
+    e.target.src = defaultImage;
+};
+
 const getStatusInfo = (status) => {
     const map = {
         'published': { text: 'Xuất bản', class: 'bg-success bg-opacity-10 text-success border border-success', icon: 'bi-check-circle-fill' },
