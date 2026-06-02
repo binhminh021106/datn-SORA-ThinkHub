@@ -14,8 +14,11 @@
           <h2 class="fw-bold text-dark mb-1">Quản lý Ca làm việc</h2>
           <p class="text-muted mb-0">Thiết lập giờ làm và phân công lịch cố định cho nhân sự</p>
         </div>
-        <div v-if="mainTab === 'shifts' && shiftSubTab === 'active'">
-          <button class="btn btn-brand px-4 py-2 fw-semibold shadow-sm text-white" @click="openCreateShift()">
+        <div v-if="mainTab === 'shifts' && shiftSubTab === 'active'" class="d-flex gap-2">
+          <button class="btn bg-white border border-2 shadow-sm fw-bold text-brand d-flex align-items-center" @click="openAutoAssignModal()" style="border-color: #009981 !important; border-radius: 8px; transition: 0.2s;" onmouseover="this.style.backgroundColor='#009981'; this.style.color='white';" onmouseout="this.style.backgroundColor='white'; this.style.color='#009981';">
+            <i class="bi bi-magic me-2"></i> Tự động xếp ca
+          </button>
+          <button class="btn btn-brand px-4 py-2 fw-semibold shadow-sm text-white d-flex align-items-center" @click="openCreateShift()" style="border-radius: 8px;">
             <i class="bi bi-plus-lg me-2"></i> Tạo ca mới
           </button>
         </div>
