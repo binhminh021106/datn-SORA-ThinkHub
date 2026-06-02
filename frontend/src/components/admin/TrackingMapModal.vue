@@ -1,37 +1,54 @@
 <template>
-  <div class="modal fade glass-modal" id="mapTrackingModal" tabindex="-1" aria-hidden="true" style="z-index: 1070;" ref="modalRef">
+  <div class="modal fade glass-modal" id="mapTrackingModal" tabindex="-1" aria-hidden="true" style="z-index: 1070;"
+    ref="modalRef">
     <div class="modal-dialog modal-dialog-centered modal-xl">
       <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
         <div class="modal-header border-bottom bg-light p-3">
           <div class="d-flex align-items-center w-100">
-            <div class="bg-brand text-white rounded p-2 me-3 d-flex align-items-center justify-content-center shadow-sm">
+            <div
+              class="bg-brand text-white rounded p-2 me-3 d-flex align-items-center justify-content-center shadow-sm">
               <i class="bi bi-truck fs-5"></i>
             </div>
             <div class="flex-grow-1">
-              <h5 class="fw-bold text-dark mb-0">Hệ Thống Tracking SORA (Mapbox Premium)</h5>
-              <p class="text-muted small mb-0 font-monospace">Lộ trình: 
-                <span class="text-brand fw-bold">{{ mapData?.origin?.name || 'Đang tải...' }}</span> 
-                <i class="bi bi-arrow-right mx-1"></i> 
+              <h5 class="fw-bold text-dark mb-0">Hệ Thống Tracking SORA</h5>
+              <p class="text-muted small mb-0 font-monospace">Lộ trình:
+                <span class="text-brand fw-bold">{{ mapData?.origin?.name || 'Đang tải...' }}</span>
+                <i class="bi bi-arrow-right mx-1"></i>
                 <span class="text-brand fw-bold">{{ mapData?.destination?.name || 'Đang tải...' }}</span>
               </p>
             </div>
-            <select v-model="selectedWarehouseId" @change="initMap(true)" class="form-select form-select-sm border-brand text-brand fw-bold shadow-sm cursor-pointer bg-white me-3" style="width: auto; min-width: 140px; border-width: 2px;">
+            <select v-model="selectedWarehouseId" @change="initMap(true)"
+              class="form-select form-select-sm border-brand text-brand fw-bold shadow-sm cursor-pointer bg-white me-3"
+              style="width: auto; min-width: 140px; border-width: 2px;">
               <option v-for="wh in warehouses" :key="wh.id" :value="wh.id">Kho: {{ wh.name }}</option>
             </select>
             <button type="button" class="btn-close" @click="hide"></button>
           </div>
         </div>
-        
+
         <div class="modal-body p-0 position-relative map-container">
           <div id="tracking-map" style="height: 65vh; width: 100%; background-color: #f8f9fa; z-index: 1;"></div>
-          <div v-if="isMapLoading" class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-white bg-opacity-75" style="z-index: 10;">
+          
+          <!-- Lớp phủ cảnh báo zoom -->
+          <div v-if="showCtrlWarning" class="position-absolute top-50 start-50 translate-middle bg-dark text-white px-4 py-3 rounded shadow" style="z-index: 1000; opacity: 0.85; pointer-events: none; transition: opacity 0.3s;">
+            <i class="bi bi-info-circle me-2"></i> Sử dụng <b>Ctrl + Cuộn chuột</b> để thu phóng bản đồ
+          </div>
+
+          <div v-if="isMapLoading"
+            class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-white bg-opacity-75"
+            style="z-index: 10;">
             <div class="spinner-border text-brand mb-2" style="width: 3rem; height: 3rem;"></div>
             <div class="fw-bold text-brand text-uppercase tracking-widest small">Đang kết nối vệ tinh Mapbox...</div>
           </div>
         </div>
-        
+
         <div class="modal-footer border-top-0 bg-light p-3 justify-content-between align-items-center">
-          <div class="small text-muted"><i class="bi bi-shield-check text-success me-1"></i>Dữ liệu đường bộ thời gian thực từ Mapbox Premium.</div>
+          <div class="d-flex align-items-center">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/2/21/Flag_of_Vietnam.svg" width="36" height="24" alt="Cờ Việt Nam" class="me-2 rounded shadow-sm border border-light">
+            <span class="text-danger fw-bold fs-5" style="letter-spacing: 0.5px; text-shadow: 1px 1px 0px rgba(0,0,0,0.1);">
+              Quần đảo Hoàng Sa và Trường Sa là của Việt Nam.
+            </span>
+          </div>
           <button type="button" class="btn btn-secondary px-4 rounded-pill fw-bold shadow-sm" @click="hide">Đóng bản đồ</button>
         </div>
       </div>
@@ -52,13 +69,25 @@ const orderId = ref(null);
 const orderStatus = ref(null);
 const isMapLoading = ref(false);
 const mapData = ref(null);
+const showCtrlWarning = ref(false);
 
 let leafletMap = null;
 let routingLine = null;
 let truckMarker = null;
 let animationFrameId = null;
+let warningTimeout = null;
 
-// TOKEN MAPBOX CỦA BẠN
+const handleMapWheel = (e) => {
+  if (!e.ctrlKey) {
+    showCtrlWarning.value = true;
+    if (warningTimeout) clearTimeout(warningTimeout);
+    warningTimeout = setTimeout(() => { showCtrlWarning.value = false; }, 1500);
+  }
+};
+const handleKeyDown = (e) => { if (e.key === 'Control' && leafletMap) leafletMap.scrollWheelZoom.enable(); };
+const handleKeyUp = (e) => { if (e.key === 'Control' && leafletMap) leafletMap.scrollWheelZoom.disable(); };
+
+// TOKEN MAPBOX CỦA BẠN (Dùng để quét đường đi rất tốt)
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
 const warehouses = ref([
@@ -83,15 +112,10 @@ const stopAnimation = () => { if (animationFrameId) cancelAnimationFrame(animati
 // HÀM QUÉT ĐƯỜNG: ƯU TIÊN MAPBOX (ĐƯỜNG BỘ THẬT)
 const fetchRobustRoute = async (p1, p2) => {
   try {
-    // 1. Thử gọi Mapbox Directions API (Cực kỳ chính xác)
     const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${p1[1]},${p1[0]};${p2[1]},${p2[0]}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`;
     const res = await axios.get(url, { timeout: 8000 });
-    if (res.data?.routes?.[0]) {
-      return res.data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-    }
+    if (res.data?.routes?.[0]) return res.data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
   } catch (err) {
-    console.warn("Mapbox lỗi hoặc hết hạn, chuyển sang OSRM dự phòng...");
-    // 2. Dự phòng: OSRM (Đường bộ cộng đồng)
     const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${p1[1]},${p1[0]};${p2[1]},${p2[0]}?overview=full&geometries=geojson`;
     const resOsrm = await axios.get(osrmUrl);
     if (resOsrm.data?.routes?.[0]) return resOsrm.data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
@@ -105,9 +129,9 @@ const interpolateLine = (points, targetCount = 350) => {
   const newPoints = [];
   const segments = Math.max(2, Math.ceil(targetCount / Math.max(1, points.length - 1)));
   for (let i = 0; i < points.length - 1; i++) {
-    const start = points[i]; const end = points[i+1];
+    const start = points[i]; const end = points[i + 1];
     for (let j = 0; j < segments; j++) {
-      newPoints.push([ start[0] + (end[0] - start[0]) * (j / segments), start[1] + (end[1] - start[1]) * (j / segments) ]);
+      newPoints.push([start[0] + (end[0] - start[0]) * (j / segments), start[1] + (end[1] - start[1]) * (j / segments)]);
     }
   }
   newPoints.push(points[points.length - 1]);
@@ -120,8 +144,8 @@ const initMap = async (isAutoTriggered = false) => {
   stopAnimation();
 
   try {
-    const res = await axios.get(`${API_URL}/admin/orders/${orderId.value}/simulation`, { 
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` } 
+    const res = await axios.get(`${API_URL}/admin/orders/${orderId.value}/simulation`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` }
     });
     mapData.value = res.data.data;
 
@@ -135,8 +159,32 @@ const initMap = async (isAutoTriggered = false) => {
 
     if (!leafletMap) {
       leafletMap = window.L.map('tracking-map', { scrollWheelZoom: false }).setView(p1, 6);
-      window.L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(leafletMap);
+      
+      // Bản đồ Google Maps (Không cần API Key)
+      window.L.tileLayer('https://mt1.google.com/vt/lyrs=m&hl=vi&x={x}&y={y}&z={z}', {
+        attribution: '&copy; Google Maps'
+      }).addTo(leafletMap);
+      
+      leafletMap.getContainer().addEventListener('wheel', handleMapWheel);
+      window.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('keyup', handleKeyUp);
+
+      // Fix lỗi icon mặc định của Leaflet khi dùng với Vite/Webpack
+      const defaultIcon = window.L.icon({
+          iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+          shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+          iconSize: [25, 41],
+          iconAnchor: [12, 41],
+          popupAnchor: [1, -34],
+          shadowSize: [41, 41]
+      });
+
     } else {
+      leafletMap.eachLayer((layer) => {
+        if (layer !== routingLine && layer !== truckMarker && !layer._url) {
+          leafletMap.removeLayer(layer); // Xóa các marker rác cũ
+        }
+      });
       if (routingLine) leafletMap.removeLayer(routingLine);
       if (truckMarker) leafletMap.removeLayer(truckMarker);
     }
@@ -144,19 +192,16 @@ const initMap = async (isAutoTriggered = false) => {
     nextTick(() => { leafletMap.invalidateSize(); });
 
     let routeCoords = [];
-    try {
-      routeCoords = await fetchRobustRoute(p1, p2);
-    } catch (err) {
-      routeCoords = [p1, p2]; // Fallback chim bay nếu cả 2 API sập
-    }
-    
+    try { routeCoords = await fetchRobustRoute(p1, p2); } 
+    catch (err) { routeCoords = [p1, p2]; }
+
     routeCoords = interpolateLine(routeCoords, 400);
 
     routingLine = window.L.polyline(routeCoords, { color: '#009981', weight: 6, opacity: 0.9 }).addTo(leafletMap);
     leafletMap.fitBounds(routingLine.getBounds(), { padding: [50, 50] });
 
-    const iconA = window.L.divIcon({ html: `<div class="map-icon-point">A</div>`, className: '', iconSize: [32, 32], iconAnchor: [16, 16] });
-    const iconB = window.L.divIcon({ html: `<div class="map-icon-point">B</div>`, className: '', iconSize: [32, 32], iconAnchor: [16, 16] });
+    const iconA = window.L.divIcon({ html: `<div class="map-icon-point origin"><i class="bi bi-shop fs-5"></i><div class="point-label">Kho Xuất</div></div>`, className: '', iconSize: [44, 44], iconAnchor: [22, 22] });
+    const iconB = window.L.divIcon({ html: `<div class="map-icon-point destination"><i class="bi bi-geo-alt-fill fs-5"></i><div class="point-label">Điểm Nhận</div></div>`, className: '', iconSize: [44, 44], iconAnchor: [22, 22] });
     window.L.marker(p1, { icon: iconA }).bindPopup('Xuất phát').addTo(leafletMap);
     window.L.marker(p2, { icon: iconB }).bindPopup('Điểm nhận').addTo(leafletMap);
 
@@ -194,30 +239,106 @@ const initMap = async (isAutoTriggered = false) => {
 };
 
 const show = (id, whId = 'bmt', status = 'pending', autoRun = false) => {
-    orderId.value = id; selectedWarehouseId.value = whId; orderStatus.value = status;
-    if (!bsModal) {
-        bsModal = new window.bootstrap.Modal(modalRef.value, { backdrop: 'static' });
-        modalRef.value.addEventListener('hidden.bs.modal', stopAnimation);
-    }
-    bsModal.show();
-    initMap(autoRun);
+  orderId.value = id; selectedWarehouseId.value = whId; orderStatus.value = status;
+  if (!bsModal) {
+    bsModal = new window.bootstrap.Modal(modalRef.value, { backdrop: 'static' });
+    modalRef.value.addEventListener('hidden.bs.modal', stopAnimation);
+  }
+  bsModal.show();
+  initMap(autoRun);
 };
 
 const hide = () => { stopAnimation(); if (bsModal) bsModal.hide(); };
 
-onBeforeUnmount(() => { stopAnimation(); if (bsModal) bsModal.dispose(); });
+onBeforeUnmount(() => { 
+  stopAnimation(); 
+  if (bsModal) bsModal.dispose(); 
+  window.removeEventListener('keydown', handleKeyDown);
+  window.removeEventListener('keyup', handleKeyUp);
+});
 
 defineExpose({ show, hide });
 </script>
 
 <style scoped>
-.bg-brand { background-color: #009981 !important; }
-.text-brand { color: #009981 !important; }
-.tracking-widest { letter-spacing: 2px; }
-.glass-modal { backdrop-filter: blur(5px); background-color: rgba(0, 0, 0, 0.3); }
+.bg-brand {
+  background-color: #009981 !important;
+}
+
+.text-brand {
+  color: #009981 !important;
+}
+
+.tracking-widest {
+  letter-spacing: 2px;
+}
+
+.glass-modal {
+  backdrop-filter: blur(5px);
+  background-color: rgba(0, 0, 0, 0.3);
+}
 </style>
 
 <style>
-.map-icon-point { background-color: #212529; color: #fff; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 2px solid #e7ce7d; font-weight: bold; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4); }
-.map-icon-truck { background-color: #009981; color: #fff; border-radius: 8px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: 0 4px 12px rgba(0, 153, 129, 0.5); font-size: 20px; }
+.map-icon-point {
+  color: #fff;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #fff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  position: relative;
+}
+
+.map-icon-point.origin {
+  background-color: #0d6efd;
+}
+
+.map-icon-point.destination {
+  background-color: #dc3545;
+}
+
+.point-label {
+  position: absolute;
+  top: -30px;
+  background: white;
+  color: #333;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+  border: 1px solid #eee;
+}
+.point-label::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px 5px 0;
+  border-style: solid;
+  border-color: white transparent transparent transparent;
+  display: block;
+  width: 0;
+}
+
+.map-icon-truck {
+  background-color: #009981;
+  color: #fff;
+  border-radius: 8px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  box-shadow: 0 4px 12px rgba(0, 153, 129, 0.5);
+  font-size: 20px;
+}
+
 </style>
