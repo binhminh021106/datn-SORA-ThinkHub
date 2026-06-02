@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { API_BASE_URL } from '../config/api';
 import { showCustomAlert } from '../components/CustomAlert';
+import { PRICE_FONT_FAMILY, PRICE_FONT_WEIGHT } from '../styles/typography';
 
 const Alert = {
   alert: (title, message, buttons) => showCustomAlert(title, message, buttons)
@@ -39,7 +40,7 @@ const STATUS_CONFIG = {
   confirmed:        { label: 'Đã xác nhận',        color: '#9f273b', bg: '#eff6ff', icon: 'cube-outline' },
   shipping:         { label: 'Đang giao hàng',     color: '#9f273b', bg: '#eef2ff', icon: 'bicycle-outline' },
   delivered:        { label: 'Đã giao thành công', color: '#9f273b', bg: '#f0fdf4', icon: 'checkmark-circle-outline' },
-  cancelled:        { label: 'Đã huỷ',             color: '#ef4444', bg: '#fef2f2', icon: 'close-circle-outline' },
+  cancelled:        { label: 'Đã huỷ',             color: '#9f273b', bg: '#fff4f4', icon: 'close-circle-outline' },
   return_requested: { label: 'Yêu cầu trả hàng',  color: '#a855f7', bg: '#faf5ff', icon: 'return-down-back-outline' },
   returned:         { label: 'Đã hoàn trả',        color: '#6b7280', bg: '#f9fafb', icon: 'archive-outline' },
 };
@@ -61,6 +62,27 @@ const getPaymentStatusLabel = (ps) => ps === 'paid' ? { label: 'Đã thanh toán
 const getItemImage = (path) => {
   if (!path) return 'https://images.unsplash.com/photo-1605100804763-247f67b854d4?q=80&w=300';
   return path.startsWith('http') ? path : `${API_BASE_URL.replace('/api','')}/storage/${path}`;
+};
+
+const parseJsonSafely = async (response) => {
+  const text = await response.text();
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text);
+  } catch (_) {
+    return { message: text };
+  }
+};
+
+const getFirstValidationError = (result) => {
+  if (result?.errors && typeof result.errors === 'object') {
+    const firstError = Object.values(result.errors)[0];
+    if (Array.isArray(firstError)) return firstError[0];
+    if (typeof firstError === 'string') return firstError;
+  }
+
+  return result?.message;
 };
 
 // ─── Progress Timeline Component ─────────────────────────────────────────────
@@ -458,7 +480,7 @@ const DraggableDetailSheet = ({ visible, onClose, order, loading, reviewedOrders
             <View style={ds.actions}>
               {order.status === 'pending' && (
                 <TouchableOpacity style={[ds.actionBtn, ds.actionRed]} onPress={() => onOpenCancel(order.order_code)} activeOpacity={0.85}>
-                  <Ionicons name="close-circle-outline" size={16} color="#dc2626" />
+                  <Ionicons name="close-circle-outline" size={16} color="#9f273b" />
                   <Text style={ds.actionRedTxt}>Huỷ đơn hàng</Text>
                 </TouchableOpacity>
               )}
@@ -492,7 +514,7 @@ const DraggableDetailSheet = ({ visible, onClose, order, loading, reviewedOrders
 const SummaryRow = ({ label, value, valueColor, total, bold }) => (
   <View style={[ds.sumRow, total && ds.sumRowTotal]}>
     <Text style={[ds.sumKey, total && ds.sumKeyTotal]}>{label}</Text>
-    <Text style={[ds.sumVal, total && ds.sumValTotal, valueColor && { color: valueColor }, bold && { fontFamily: 'Oswald_600SemiBold' }]}>{value}</Text>
+    <Text style={[ds.sumVal, total && ds.sumValTotal, valueColor && { color: valueColor }, bold && { fontWeight: PRICE_FONT_WEIGHT }]}>{value}</Text>
   </View>
 );
 
@@ -532,16 +554,16 @@ const ds = StyleSheet.create({
   itemSku: { fontFamily: 'Oswald_400Regular', fontSize: 11, color: '#9ca3af', marginBottom: 2 },
   itemAttr: { fontFamily: 'Oswald_400Regular', fontSize: 11, color: '#6b7280', marginBottom: 4 },
   itemPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  itemPrice: { fontFamily: 'Oswald_400Regular', fontSize: 12, color: '#6b7280' },
+  itemPrice: { fontFamily: PRICE_FONT_FAMILY, fontWeight: PRICE_FONT_WEIGHT, fontSize: 12, color: '#6b7280' },
   itemQty: { fontFamily: 'Oswald_400Regular', fontSize: 12, color: '#6b7280' },
-  itemSubtotal: { fontFamily: 'PlayfairDisplay_700Bold', fontSize: 13, color: '#9f273b', marginLeft: 'auto' },
+  itemSubtotal: { fontFamily: PRICE_FONT_FAMILY, fontWeight: PRICE_FONT_WEIGHT, fontSize: 13, color: '#9f273b', marginLeft: 'auto' },
 
   sumRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
   sumRowTotal: { borderBottomWidth: 0, paddingTop: 12, marginTop: 4, borderTopWidth: 1, borderTopColor: '#e5e7eb' },
   sumKey: { fontFamily: 'Oswald_400Regular', fontSize: 12, color: '#6b7280', flex: 1 },
   sumKeyTotal: { fontFamily: 'Oswald_600SemiBold', fontSize: 14, color: '#111' },
-  sumVal: { fontFamily: 'Oswald_400Regular', fontSize: 13, color: '#111' },
-  sumValTotal: { fontFamily: 'PlayfairDisplay_700Bold', fontSize: 18, color: '#9f273b' },
+  sumVal: { fontFamily: PRICE_FONT_FAMILY, fontWeight: PRICE_FONT_WEIGHT, fontSize: 13, color: '#111' },
+  sumValTotal: { fontFamily: PRICE_FONT_FAMILY, fontWeight: PRICE_FONT_WEIGHT, fontSize: 18, color: '#9f273b' },
 
   histRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
   histDot: { width: 10, height: 10, borderRadius: 5, marginTop: 3, marginRight: 10 },
@@ -552,8 +574,8 @@ const ds = StyleSheet.create({
 
   actions: { marginHorizontal: 16, marginTop: 20, gap: 10 },
   actionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 46, borderRadius: 10, gap: 8 },
-  actionRed: { backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fca5a5' },
-  actionRedTxt: { fontFamily: 'Oswald_600SemiBold', fontSize: 13, color: '#dc2626' },
+  actionRed: { backgroundColor: '#fff4f4', borderWidth: 1, borderColor: '#e8b7be' },
+  actionRedTxt: { fontFamily: 'Oswald_600SemiBold', fontSize: 13, color: '#9f273b' },
   actionPurple: { backgroundColor: '#faf5ff', borderWidth: 1, borderColor: '#d8b4fe' },
   actionPurpleTxt: { fontFamily: 'Oswald_600SemiBold', fontSize: 13, color: '#9333ea' },
   actionPrimary: { backgroundColor: '#9f273b' },
@@ -581,6 +603,7 @@ export default function OrderHistoryScreen() {
   const [cancelCode, setCancelCode]           = useState(null);
   const [cancelReason, setCancelReason]       = useState('');
   const [isCancelling, setIsCancelling]       = useState(false);
+  const [cancelError, setCancelError]         = useState('');
 
   // Review
   const [showReviewModal, setShowReviewModal]     = useState(false);
@@ -596,6 +619,10 @@ export default function OrderHistoryScreen() {
   const [isSubmittingReturn, setIsSubmittingReturn]   = useState(false);
 
   useEffect(() => { fetchOrders(true); }, []);
+
+  useEffect(() => {
+    if (cancelError) setCancelError('');
+  }, [cancelReason]);
 
   const fetchOrders = async (overlay = true) => {
     overlay ? setIsLoading(true) : setRefreshing(true);
@@ -651,17 +678,61 @@ export default function OrderHistoryScreen() {
   };
 
   // ── Cancel ───────────────────────────────────────────────────────────────
-  const openCancel = (code) => { setShowDetail(false); setTimeout(() => { setCancelCode(code); setCancelReason(''); setShowCancelModal(true); }, 250); };
+  const openCancel = (code) => {
+    setShowDetail(false);
+    setTimeout(() => {
+      setCancelCode(code);
+      setCancelReason('');
+      setCancelError('');
+      setShowCancelModal(true);
+    }, 250);
+  };
   const submitCancel = async () => {
-    if (!cancelReason.trim()) { Alert.alert('Thông báo', 'Vui lòng nhập lý do huỷ.'); return; }
+    const reason = cancelReason.trim();
+    if (!reason) {
+      setCancelError('Vui lòng nhập lý do huỷ.');
+      return;
+    }
+    if (reason.length < 10) {
+      setCancelError('Lý do huỷ đơn cần chi tiết hơn, tối thiểu 10 ký tự.');
+      return;
+    }
+
     setIsCancelling(true);
+    setCancelError('');
+
     try {
       const token = await AsyncStorage.getItem('auth_token');
-      const res   = await fetch(`${API_BASE_URL}/client/orders/${cancelCode}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ cancel_reason: cancelReason.trim() }) });
-      const d = await res.json();
-      if (res.ok && d.success) { setShowCancelModal(false); Alert.alert('Thành công', 'Đã huỷ đơn hàng!'); fetchOrders(true); }
-      else Alert.alert('Thất bại', d.message || 'Không thể huỷ.');
-    } catch (_) { Alert.alert('Lỗi', 'Không thể kết nối.'); }
+      if (!token) {
+        setCancelError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        return;
+      }
+
+      const res = await fetch(`${API_BASE_URL}/client/orders/${cancelCode}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'cancel',
+          cancel_reason: reason,
+        }),
+      });
+      const d = await parseJsonSafely(res);
+      if (res.ok && d.success) {
+        setShowCancelModal(false);
+        setCancelReason('');
+        setCancelError('');
+        Alert.alert('Thành công', d.message || 'Đã huỷ đơn hàng!');
+        fetchOrders(true);
+      } else {
+        setCancelError(getFirstValidationError(d) || 'Không thể huỷ đơn hàng.');
+      }
+    } catch (_) {
+      setCancelError('Không thể kết nối đến máy chủ.');
+    }
     finally { setIsCancelling(false); }
   };
 
@@ -851,15 +922,21 @@ export default function OrderHistoryScreen() {
       <Modal visible={showCancelModal} transparent animationType="fade" onRequestClose={() => setShowCancelModal(false)}>
         <View style={s.dialogBg}>
           <View style={s.dialog}>
-            <View style={s.dialogIcon}><Ionicons name="alert-circle" size={28} color="#dc2626" /></View>
+            <View style={s.dialogIcon}><Ionicons name="alert-circle" size={28} color="#9f273b" /></View>
             <Text style={s.dialogTitle}>Huỷ Đơn Hàng</Text>
             <Text style={s.dialogMsg}>Vui lòng cho chúng tôi biết lý do bạn muốn huỷ đơn #{cancelCode}</Text>
             <TextInput style={s.dialogInput} value={cancelReason} onChangeText={setCancelReason} placeholder="Nhập lý do huỷ đơn..." placeholderTextColor="#9ca3af" multiline numberOfLines={3} />
+            {!!cancelError && (
+              <View style={s.dialogErrorBox}>
+                <Ionicons name="alert-circle-outline" size={16} color="#9f273b" />
+                <Text style={s.dialogErrorText}>{cancelError}</Text>
+              </View>
+            )}
             <View style={s.dialogBtnRow}>
               <TouchableOpacity style={[s.dialogBtn,s.dialogBtnGhost]} onPress={() => setShowCancelModal(false)} activeOpacity={0.8}>
                 <Text style={s.dialogBtnGhostTxt}>ĐÓNG</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[s.dialogBtn,{backgroundColor:'#dc2626'}]} onPress={submitCancel} disabled={isCancelling} activeOpacity={0.8}>
+              <TouchableOpacity style={[s.dialogBtn,s.dialogBtnDanger, isCancelling && s.dialogBtnDisabled]} onPress={submitCancel} disabled={isCancelling} activeOpacity={0.8}>
                 {isCancelling ? <ActivityIndicator size="small" color="#fff"/> : <Text style={s.dialogBtnSolidTxt}>HỦY ĐƠN</Text>}
               </TouchableOpacity>
             </View>
@@ -990,19 +1067,19 @@ const s = StyleSheet.create({
   itemName: { fontFamily:'Oswald_500Medium', fontSize:12, color:'#111', marginBottom:2 },
   itemSku: { fontFamily:'Oswald_400Regular', fontSize:10, color:'#9ca3af', marginBottom:4 },
   itemPriceRow: { flexDirection:'row', alignItems:'center', gap:8 },
-  itemPrice: { fontFamily:'PlayfairDisplay_700Bold', fontSize:13, color:'#9f273b' },
+  itemPrice: { fontFamily:PRICE_FONT_FAMILY, fontWeight:PRICE_FONT_WEIGHT, fontSize:13, color:'#9f273b' },
   itemQty: { fontFamily:'Oswald_400Regular', fontSize:12, color:'#6b7280' },
   moreItems: { fontFamily:'Oswald_400Regular', fontSize:11, color:'#9ca3af', textAlign:'center', paddingVertical:4 },
 
   cardFoot: { paddingHorizontal:14, paddingVertical:10, borderTopWidth:1, borderTopColor:'#f3f4f6' },
   totalRow: { flexDirection:'row', justifyContent:'space-between', marginBottom:8 },
   totalLabel: { fontFamily:'Oswald_400Regular', fontSize:12, color:'#6b7280' },
-  totalValue: { fontFamily:'PlayfairDisplay_700Bold', fontSize:15, color:'#111' },
+  totalValue: { fontFamily:PRICE_FONT_FAMILY, fontWeight:PRICE_FONT_WEIGHT, fontSize:15, color:'#111' },
   btnRow: { flexDirection:'row', flexWrap:'wrap', gap:6, alignItems:'center' },
 
   chip: { flexDirection:'row', alignItems:'center', paddingHorizontal:10, paddingVertical:5, borderRadius:20, gap:3 },
-  chipRed:     { borderWidth:1, borderColor:'#fca5a5', backgroundColor:'#fef2f2' },
-  chipRedTxt:  { fontFamily:'Oswald_600SemiBold', fontSize:10, color:'#dc2626' },
+  chipRed:     { borderWidth:1, borderColor:'#e8b7be', backgroundColor:'#fff4f4' },
+  chipRedTxt:  { fontFamily:'Oswald_600SemiBold', fontSize:10, color:'#9f273b' },
   chipPurple:    { borderWidth:1, borderColor:'#d8b4fe', backgroundColor:'#faf5ff' },
   chipPurpleTxt: { fontFamily:'Oswald_600SemiBold', fontSize:10, color:'#9333ea' },
   chipStar:    { borderWidth:1, borderColor:'#fde68a', backgroundColor:'#fffbeb' },
@@ -1028,12 +1105,16 @@ const s = StyleSheet.create({
   sheetFoot: { paddingHorizontal:16, paddingVertical:12, borderTopWidth:1, borderTopColor:'#f3f4f6' },
 
   dialog: { width:'88%', backgroundColor:'#fff', borderRadius:16, padding:22, elevation:8, shadowColor:'#000', shadowOffset:{width:0,height:4}, shadowOpacity:0.15, shadowRadius:12 },
-  dialogIcon: { width:52, height:52, borderRadius:26, backgroundColor:'#fef2f2', alignItems:'center', justifyContent:'center', alignSelf:'center', marginBottom:12 },
-  dialogTitle: { fontFamily:'PlayfairDisplay_700Bold', fontSize:18, color:'#dc2626', textAlign:'center', marginBottom:6 },
+  dialogIcon: { width:52, height:52, borderRadius:26, backgroundColor:'#fff4f4', alignItems:'center', justifyContent:'center', alignSelf:'center', marginBottom:12 },
+  dialogTitle: { fontFamily:'PlayfairDisplay_700Bold', fontSize:18, color:'#9f273b', textAlign:'center', marginBottom:6 },
   dialogMsg: { fontFamily:'Oswald_400Regular', fontSize:13, color:'#6b7280', textAlign:'center', marginBottom:14, lineHeight:18 },
   dialogInput: { borderWidth:1, borderColor:'#e5e7eb', backgroundColor:'#f9fafb', borderRadius:8, paddingHorizontal:12, paddingVertical:8, fontFamily:'Oswald_400Regular', fontSize:13, color:'#111', height:72, textAlignVertical:'top', marginBottom:16 },
+  dialogErrorBox: { flexDirection:'row', alignItems:'flex-start', gap:7, backgroundColor:'#fff4f4', borderWidth:1, borderColor:'#e8b7be', borderRadius:8, paddingHorizontal:10, paddingVertical:8, marginTop:-6, marginBottom:12 },
+  dialogErrorText: { flex:1, fontFamily:'Oswald_400Regular', fontSize:12, lineHeight:17, color:'#9f273b' },
   dialogBtnRow: { flexDirection:'row', gap:10 },
   dialogBtn: { flex:1, height:42, borderRadius:8, alignItems:'center', justifyContent:'center' },
+  dialogBtnDanger: { backgroundColor:'#9f273b' },
+  dialogBtnDisabled: { opacity:0.65 },
   dialogBtnGhost: { backgroundColor:'#f9fafb', borderWidth:1, borderColor:'#e5e7eb' },
   dialogBtnGhostTxt: { fontFamily:'Oswald_600SemiBold', fontSize:12, color:'#374151' },
   dialogBtnSolidTxt: { fontFamily:'Oswald_600SemiBold', fontSize:12, color:'#fff' },

@@ -18,7 +18,10 @@ import {
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import SmartImage from "../components/SmartImage";
 import { showCustomAlert } from '../components/CustomAlert';
+import { API_BASE_URL } from '../config/api';
+import { PRICE_FONT_FAMILY, PRICE_FONT_WEIGHT } from '../styles/typography';
 
 const Alert = {
   alert: (title, message, buttons) => showCustomAlert(title, message, buttons)
@@ -30,7 +33,7 @@ const REVEAL_THRESHOLD = width * 0.20;   // 20% → hiện nút xoá
 const DELETE_BTN_BASE  = 80;             // chiều rộng nút xoá
 
 // ── Swipeable Favorite Card ──────────────────────────────────────────────────
-function SwipeableWishlistItem({ item, isChecked, onToggle, onDelete, onAddToCart, onOpenImage, onSwipeStart, onSwipeEnd }) {
+function SwipeableWishlistItem({ item, isChecked, isAdding, onToggle, onDelete, onAddToCart, onOpenImage, onSwipeStart, onSwipeEnd }) {
   const translateX = useRef(new Animated.Value(0)).current;
   const [revealed, setRevealed] = useState(false);
 
@@ -95,6 +98,11 @@ function SwipeableWishlistItem({ item, isChecked, onToggle, onDelete, onAddToCar
     setRevealed(false);
   };
 
+  const toggleItemSelection = () => {
+    closeSwipe();
+    onToggle(item.id);
+  };
+
   return (
     <View style={sw.wrapper}>
       {/* Nền đỏ + nút XOÁ (phía sau, bên phải) */}
@@ -117,7 +125,7 @@ function SwipeableWishlistItem({ item, isChecked, onToggle, onDelete, onAddToCar
         {...panResponder.panHandlers}
       >
         {/* Checkbox */}
-        <TouchableOpacity style={sw.checkBox} onPress={() => { closeSwipe(); onToggle(item.id); }}>
+        <TouchableOpacity style={sw.checkBox} onPress={toggleItemSelection}>
           <Ionicons
             name={isChecked ? "checkbox" : "square-outline"}
             size={22}
@@ -126,7 +134,7 @@ function SwipeableWishlistItem({ item, isChecked, onToggle, onDelete, onAddToCar
         </TouchableOpacity>
 
         {/* Info */}
-        <View style={sw.info}>
+        <TouchableOpacity style={sw.info} onPress={toggleItemSelection} activeOpacity={0.9}>
           <Text style={sw.itemCategory}>{item.category}</Text>
           <Text style={sw.itemName} numberOfLines={2}>{item.name}</Text>
           <Text style={sw.itemVariant}>{item.variant}</Text>
@@ -138,18 +146,23 @@ function SwipeableWishlistItem({ item, isChecked, onToggle, onDelete, onAddToCar
 
           {/* Nút Thêm Vào Giỏ hàng riêng biệt vô cùng sang trọng */}
           <TouchableOpacity 
-            style={sw.addToCartBtn} 
+            style={[sw.addToCartBtn, isAdding && sw.addToCartBtnDisabled]}
             onPress={() => { closeSwipe(); onAddToCart(item); }}
+            disabled={isAdding}
             activeOpacity={0.8}
           >
-            <Ionicons name="cart-outline" size={14} color="#9f273b" style={{ marginRight: 4 }} />
+            <View style={sw.addToCartIconSlot}>
+              {isAdding
+                ? <ActivityIndicator size={12} color="#9f273b" />
+                : <Ionicons name="cart-outline" size={14} color="#9f273b" />}
+            </View>
             <Text style={sw.addToCartTxt}>THÊM VÀO GIỎ HÀNG</Text>
           </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
 
         {/* Thumbnail RIGHT */}
         <TouchableOpacity onPress={() => onOpenImage(item.image)} activeOpacity={0.85} style={sw.thumbWrapper}>
-          <Image source={{ uri: item.image }} style={sw.thumb} />
+          <SmartImage source={{ uri: item.image }} style={sw.thumb} />
           <View style={sw.thumbOverlay}>
             <Ionicons name="expand-outline" size={16} color="#fff" />
           </View>
@@ -232,8 +245,8 @@ const sw = StyleSheet.create({
   itemName: { fontFamily: 'Oswald_500Medium', fontSize: 12, color: '#222', textTransform: 'uppercase', lineHeight: 16, marginBottom: 3 },
   itemVariant: { fontFamily: 'Oswald_400Regular', fontSize: 11, color: '#888', marginBottom: 6 },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  newPrice: { fontFamily: 'PlayfairDisplay_700Bold', fontSize: 14, color: '#9f273b' },
-  oldPrice: { fontFamily: 'PlayfairDisplay_400Regular', fontSize: 11, color: '#bbb', textDecorationLine: 'line-through' },
+  newPrice: { fontFamily: PRICE_FONT_FAMILY, fontWeight: PRICE_FONT_WEIGHT, fontSize: 14, color: '#9f273b' },
+  oldPrice: { fontFamily: PRICE_FONT_FAMILY, fontWeight: PRICE_FONT_WEIGHT, fontSize: 11, color: '#bbb', textDecorationLine: 'line-through' },
   addToCartBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -246,6 +259,8 @@ const sw = StyleSheet.create({
     alignSelf: 'flex-start',
     backgroundColor: '#fffafa',
   },
+  addToCartBtnDisabled: { opacity: 0.6 },
+  addToCartIconSlot: { width: 18, height: 14, marginRight: 4, alignItems: 'center', justifyContent: 'center' },
   addToCartTxt: {
     fontFamily: 'Oswald_500Medium',
     fontSize: 10,
@@ -325,6 +340,8 @@ export default function WishlistScreen() {
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [addingItemIds, setAddingItemIds] = useState([]);
+  const [isAddingSelected, setIsAddingSelected] = useState(false);
 
   const loadWishlist = useCallback(async () => {
     setIsLoading(true);
@@ -428,13 +445,120 @@ export default function WishlistScreen() {
     );
   };
 
-  const addSingleToCart = (item) => {
-    Alert.alert("Giỏ hàng", `Đã thêm "${item.name}" vào giỏ hàng thành công!`);
+  const getCartHeaders = async () => {
+    const headers = { Accept: 'application/json' };
+    const token = await AsyncStorage.getItem('auth_token');
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    let sessionId = await AsyncStorage.getItem('cart_session_id');
+    if (!sessionId && !token) {
+      sessionId = `session_${Math.random().toString(36).slice(2, 11)}`;
+      await AsyncStorage.setItem('cart_session_id', sessionId);
+    }
+    if (sessionId) headers['X-Cart-Session-Id'] = sessionId;
+
+    return headers;
   };
 
-  const addSelectedToCart = () => {
-    if (selected.length === 0) return;
-    Alert.alert("Giỏ hàng", `Đã thêm ${selected.length} sản phẩm được chọn vào giỏ hàng thành công!`);
+  const getFirstValidationError = (result) => {
+    const errors = result?.errors;
+    if (!errors || typeof errors !== 'object') return null;
+    const firstError = Object.values(errors)[0];
+    return Array.isArray(firstError) ? firstError[0] : firstError;
+  };
+
+  const resolveWishlistVariantId = async (item) => {
+    if (item.variantId) return item.variantId;
+    if (!item.slug) {
+      throw new Error(`Sản phẩm "${item.name}" thiếu thông tin phiên bản.`);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/shop/sora/products/${item.slug}`, {
+      headers: { Accept: 'application/json' },
+    });
+    const result = await response.json();
+    const variants = Array.isArray(result?.data?.variants) ? result.data.variants : [];
+    const inStockVariant = variants.find((variant) => Number(variant.stock ?? variant.stock_quantity ?? 0) > 0);
+
+    if (!response.ok || !result.success || !inStockVariant?.id) {
+      throw new Error(result?.message || `Sản phẩm "${item.name}" hiện không có phiên bản còn hàng.`);
+    }
+
+    return inStockVariant.id;
+  };
+
+  const addWishlistItemToCart = async (item, headers) => {
+    const variantId = await resolveWishlistVariantId(item);
+    const response = await fetch(`${API_BASE_URL}/client/cart`, {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        product_variant_id: variantId,
+        quantity: 1,
+      }),
+    });
+    const result = await response.json();
+
+    if (!response.ok || (!result.success && !result.session_id)) {
+      throw new Error(getFirstValidationError(result) || result.message || 'Không thể thêm sản phẩm vào giỏ hàng.');
+    }
+
+    if (result.session_id) {
+      await AsyncStorage.setItem('cart_session_id', result.session_id);
+    }
+  };
+
+  const addSingleToCart = async (item) => {
+    const itemId = item.id.toString();
+    if (addingItemIds.includes(itemId)) return;
+
+    setAddingItemIds((prev) => [...prev, itemId]);
+    try {
+      const headers = await getCartHeaders();
+      await addWishlistItemToCart(item, headers);
+      Alert.alert("Giỏ hàng", `Đã thêm "${item.name}" vào giỏ hàng thành công!`);
+    } catch (error) {
+      console.log('Error adding wishlist item to cart:', error);
+      Alert.alert("Lỗi giỏ hàng", error.message || "Không thể thêm sản phẩm vào giỏ hàng.");
+    } finally {
+      setAddingItemIds((prev) => prev.filter((id) => id !== itemId));
+    }
+  };
+
+  const addSelectedToCart = async () => {
+    if (selected.length === 0 || isAddingSelected) return;
+    setIsAddingSelected(true);
+    try {
+      const headers = await getCartHeaders();
+      const failedItems = [];
+      let addedCount = 0;
+
+      for (const item of selectedItems) {
+        try {
+          await addWishlistItemToCart(item, headers);
+          addedCount += 1;
+        } catch (error) {
+          failedItems.push(item.name);
+          console.log(`Error adding wishlist item ${item.id} to cart:`, error);
+        }
+      }
+
+      if (failedItems.length === 0) {
+        Alert.alert("Giỏ hàng", `Đã thêm ${addedCount} sản phẩm được chọn vào giỏ hàng thành công!`);
+      } else if (addedCount > 0) {
+        Alert.alert("Giỏ hàng", `Đã thêm ${addedCount}/${selectedItems.length} sản phẩm. Không thể thêm: ${failedItems.join(', ')}.`);
+      } else {
+        Alert.alert("Lỗi giỏ hàng", "Không thể thêm các sản phẩm đã chọn. Vui lòng thử lại.");
+      }
+    } catch (error) {
+      console.log('Error adding selected wishlist items to cart:', error);
+      Alert.alert("Lỗi giỏ hàng", error.message || "Không thể kết nối tới máy chủ.");
+    } finally {
+      setIsAddingSelected(false);
+    }
   };
 
   const selectedItems = items.filter((i) => selected.includes(i.id.toString()));
@@ -453,8 +577,10 @@ export default function WishlistScreen() {
   }
 
   return (
-    <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
+    <>
+      <SafeAreaView style={{ flex: 0, backgroundColor: '#9f273b' }} />
+      <SafeAreaView style={s.safe}>
+        <StatusBar barStyle="light-content" backgroundColor="#9f273b" translucent={false} />
 
       {/* ── HEADER ── */}
       <View style={s.header}>
@@ -555,6 +681,7 @@ export default function WishlistScreen() {
                 key={item.id}
                 item={item}
                 isChecked={isChecked}
+                isAdding={addingItemIds.includes(item.id.toString())}
                 onToggle={toggleSelect}
                 onDelete={deleteWishlistItem}
                 onAddToCart={addSingleToCart}
@@ -579,14 +706,13 @@ export default function WishlistScreen() {
           <TouchableOpacity
             style={[s.checkoutBtn, selected.length === 0 && s.checkoutBtnDisabled]}
             onPress={addSelectedToCart}
-            disabled={selected.length === 0}
+            disabled={selected.length === 0 || isAddingSelected}
           >
-            <Ionicons
-              name="cart-outline"
-              size={18}
-              color="#fff"
-              style={{ marginRight: 8 }}
-            />
+            <View style={s.checkoutBtnIconSlot}>
+              {isAddingSelected
+                ? <ActivityIndicator size={16} color="#fff" />
+                : <Ionicons name="cart-outline" size={18} color="#fff" />}
+            </View>
             <Text style={s.checkoutBtnTxt}>THÊM VÀO GIỎ</Text>
           </TouchableOpacity>
         </View>
@@ -602,7 +728,7 @@ export default function WishlistScreen() {
             <Ionicons name="close" size={28} color="#fff" />
           </TouchableOpacity>
           {lightboxImg && (
-            <Image
+            <SmartImage
               source={{ uri: lightboxImg }}
               style={s.lightboxImg}
               resizeMode="contain"
@@ -611,6 +737,7 @@ export default function WishlistScreen() {
         </View>
       </Modal>
     </SafeAreaView>
+    </>
   );
 }
 
@@ -762,7 +889,8 @@ const s = StyleSheet.create({
     color: "#888",
   },
   checkoutTotal: {
-    fontFamily: "PlayfairDisplay_700Bold",
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
     fontSize: 18,
     color: "#9f273b",
   },
@@ -776,6 +904,13 @@ const s = StyleSheet.create({
   },
   checkoutBtnDisabled: {
     backgroundColor: "#ccc",
+  },
+  checkoutBtnIconSlot: {
+    width: 22,
+    height: 18,
+    marginRight: 8,
+    alignItems: "center",
+    justifyContent: "center",
   },
   checkoutBtnTxt: {
     fontFamily: "Oswald_600SemiBold",

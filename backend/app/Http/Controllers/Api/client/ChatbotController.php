@@ -38,9 +38,18 @@ class ChatbotController extends Controller
                 $products = $this->findRecommendedProducts($userMessage, $analysis);
             }
 
-            $botReply = $products->isNotEmpty()
-                ? (($analysis['reply_hint'] ?? '') ?: 'Dạ, SORA tìm thấy một số sản phẩm phù hợp với nhu cầu của Quý khách:')
-                : $aiChatService->reply($userMessage);
+            if ($products->isNotEmpty() && $this->shouldAnswerBeforeShowingProducts($userMessage)) {
+                $botReply = $this->replySafely(
+                    $aiChatService,
+                    $userMessage,
+                    'Dạ, tùy nhu cầu và ngân sách, Quý khách có thể cân nhắc mẫu phù hợp với phong cách sử dụng.'
+                )
+                    . "\n\nSORA cũng gợi ý thêm một vài mẫu sản phẩm phù hợp để Quý khách tham khảo:";
+            } else {
+                $botReply = $products->isNotEmpty()
+                    ? (($analysis['reply_hint'] ?? '') ?: 'Dạ, SORA tìm thấy một số sản phẩm phù hợp với nhu cầu của Quý khách:')
+                    : $this->replySafely($aiChatService, $userMessage);
+            }
 
             return response()->json([
                 'success' => true,
@@ -68,6 +77,20 @@ class ChatbotController extends Controller
             Log::warning('AI intent analysis failed: ' . $e->getMessage());
 
             return [];
+        }
+    }
+
+    private function replySafely(
+        AiChatService $aiChatService,
+        string $message,
+        string $fallback = 'Dạ, trợ lý AI đang tạm thời quá tải. Quý khách vui lòng thử lại sau ít phút hoặc liên hệ nhân viên SORA để được hỗ trợ.'
+    ): string {
+        try {
+            return $aiChatService->reply($message);
+        } catch (\Throwable $e) {
+            Log::warning('AI reply failed: ' . $e->getMessage());
+
+            return $fallback;
         }
     }
 
@@ -165,6 +188,25 @@ class ChatbotController extends Controller
         ];
 
         foreach ($keywords as $keyword) {
+            if (str_contains($normalized, $keyword)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function shouldAnswerBeforeShowingProducts(string $message): bool
+    {
+        $normalized = mb_strtolower($message, 'UTF-8');
+        $adviceKeywords = [
+            'theo bạn', 'theo ban', 'nên', 'nen', 'hay là', 'hay la', 'hay hơn', 'hay hon',
+            'tốt hơn', 'tot hon', 'phù hợp', 'phu hop', 'so sánh', 'so sanh',
+            'khác gì', 'khac gi', 'khác nhau', 'khac nhau', 'tư vấn', 'tu van',
+            'chọn', 'chon', 'lựa chọn', 'lua chon',
+        ];
+
+        foreach ($adviceKeywords as $keyword) {
             if (str_contains($normalized, $keyword)) {
                 return true;
             }

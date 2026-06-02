@@ -20,12 +20,15 @@ class ClientProfileUpdateRequest extends FormRequest
      */
     public function rules(): array
     {
+        $contactOnly = $this->boolean('contact_only');
+
         return [
             'fullName' => ['required', 'string', 'min:2', 'max:50', 'regex:/^[A-Za-zÀ-ỹ]+(?:\s+[A-Za-zÀ-ỹ]+)+$/u'],
             'phone' => ['required', 'numeric', 'regex:/^0[3|5|7|8|9][0-9]{8}$/'],
-            'birthday' => ['required', 'date', 'before_or_equal:today'],
-            'gender' => ['required', 'in:Nam,Nữ,Khác'],
+            'birthday' => [$contactOnly ? 'nullable' : 'required', 'date', 'before_or_equal:today'],
+            'gender' => [$contactOnly ? 'nullable' : 'required', 'in:Nam,Nữ,Khác'],
             'avatar' => ['nullable', 'image', 'max:5120'],
+            'contact_only' => ['nullable', 'boolean'],
         ];
     }
 
