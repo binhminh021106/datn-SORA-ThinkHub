@@ -21,6 +21,9 @@ import ShopScreen from '../screens/ShopScreen';
 import CollectionScreen from '../screens/CollectionScreen';
 import CollectionDetailScreen from '../screens/CollectionDetailScreen';
 import CompareScreen from '../screens/CompareScreen';
+import NewsScreen from '../screens/NewsScreen';
+import NewsDetailScreen from '../screens/NewsDetailScreen';
+import StaffAttendanceScreen from '../screens/StaffAttendanceScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -76,6 +79,9 @@ export default function TabNavigator() {
       <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
       <Stack.Screen name="Compare" component={CompareScreen} />
+      <Stack.Screen name="News" component={NewsScreen} />
+      <Stack.Screen name="NewsDetail" component={NewsDetailScreen} />
+      <Stack.Screen name="StaffAttendance" component={StaffAttendanceScreen} />
     </Stack.Navigator>
   );
 }

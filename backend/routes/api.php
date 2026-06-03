@@ -99,6 +99,7 @@ use App\Http\Controllers\Api\Auth\MobileAuthController;
 Route::prefix('mobile')->group(function () {
     Route::post('/register', [MobileAuthController::class, 'register']);
     Route::post('/login',    [MobileAuthController::class, 'login']);
+    Route::post('/google-login', [MobileAuthController::class, 'googleLogin']);
 
     // Routes cần xác thực
     Route::middleware('auth:sanctum')->group(function () {

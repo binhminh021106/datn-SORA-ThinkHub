@@ -7,8 +7,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL, MOBILE_AUTH_URL } from '../config/api';
+import { MOBILE_AUTH_URL } from '../config/api';
 import { showCustomAlert } from '../components/CustomAlert';
+import { loginWithGoogle } from '../services/googleAuth';
 
 const Alert = {
   alert: (title, message, buttons) => showCustomAlert(title, message, buttons)
@@ -41,6 +42,7 @@ const s = StyleSheet.create({
   divTxt: { fontFamily: 'Oswald_400Regular', fontSize: 12, color: '#aaa', marginHorizontal: 12 },
   socialRow: { flexDirection: 'row', gap: 12, marginBottom: 28 },
   socialBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 8 },
+  socialBtnOff: { opacity: 0.7 },
   socialLogo: { width: 20, height: 20 },
   socialTxt: { fontFamily: 'Oswald_500Medium', fontSize: 13, color: '#444' },
   switchRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
@@ -94,6 +96,7 @@ export default function RegisterScreen({ navigation }) {
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   useFocusEffect(
@@ -163,6 +166,29 @@ export default function RegisterScreen({ navigation }) {
     }
   };
 
+  const persistAuthSession = async (data) => {
+    await AsyncStorage.setItem('auth_token', data.access_token);
+    await AsyncStorage.setItem('user', JSON.stringify(data.user));
+  };
+
+  const handleGoogleRegister = async () => {
+    setIsGoogleLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const data = await loginWithGoogle();
+      await persistAuthSession(data);
+      setSuccessMsg('Đăng nhập Google thành công!');
+      setTimeout(() => {
+        navigation?.goBack();
+      }, 1000);
+    } catch (error) {
+      setErrorMsg(error.message || 'Không thể đăng nhập bằng Google.');
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
   const handleSocial = (p) => Alert.alert('Thông báo', `Đăng ký bằng ${p} đang phát triển!`);
 
   return (
@@ -199,9 +225,19 @@ export default function RegisterScreen({ navigation }) {
           </View>
 
           <View style={s.socialRow}>
-            <TouchableOpacity style={s.socialBtn} onPress={() => handleSocial('Google')}>
-              <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1280px-Google_%22G%22_logo.svg.png' }} style={s.socialLogo} resizeMode="contain" />
-              <Text style={s.socialTxt}>Google</Text>
+            <TouchableOpacity
+              style={[s.socialBtn, isGoogleLoading && s.socialBtnOff]}
+              onPress={handleGoogleRegister}
+              disabled={isGoogleLoading || isLoading}
+            >
+              {isGoogleLoading ? (
+                <ActivityIndicator size="small" color="#9f273b" />
+              ) : (
+                <>
+                  <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1280px-Google_%22G%22_logo.svg.png' }} style={s.socialLogo} resizeMode="contain" />
+                  <Text style={s.socialTxt}>Google</Text>
+                </>
+              )}
             </TouchableOpacity>
             <TouchableOpacity style={s.socialBtn} onPress={() => handleSocial('Facebook')}>
               <Image source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Facebook_Logo_%282019%29.png/250px-Facebook_Logo_%282019%29.png' }} style={s.socialLogo} resizeMode="contain" />

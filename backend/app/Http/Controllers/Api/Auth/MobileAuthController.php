@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -91,6 +92,82 @@ class MobileAuthController extends Controller
                 'fullName' => $user->fullName,
                 'email'    => $user->email,
                 'phone'    => $user->phone,
+            ],
+        ]);
+    }
+
+    public function googleLogin(Request $request)
+    {
+        $request->validate([
+            'id_token' => 'required|string',
+        ], [
+            'id_token.required' => 'Thiếu mã xác thực Google.',
+        ]);
+
+        $googleClientId = config('services.google.client_id');
+        if (!$googleClientId) {
+            return response()->json([
+                'message' => 'Máy chủ chưa cấu hình Google Client ID.',
+            ], 500);
+        }
+
+        $googleResponse = Http::timeout(10)->get('https://oauth2.googleapis.com/tokeninfo', [
+            'id_token' => $request->id_token,
+        ]);
+
+        if (!$googleResponse->ok()) {
+            throw ValidationException::withMessages([
+                'google' => ['Mã đăng nhập Google không hợp lệ hoặc đã hết hạn.'],
+            ]);
+        }
+
+        $googleUser = $googleResponse->json();
+        if (($googleUser['aud'] ?? null) !== $googleClientId) {
+            throw ValidationException::withMessages([
+                'google' => ['Google Client ID không khớp với hệ thống SORA.'],
+            ]);
+        }
+
+        if (($googleUser['email_verified'] ?? 'false') !== 'true') {
+            throw ValidationException::withMessages([
+                'google' => ['Email Google của bạn chưa được xác thực.'],
+            ]);
+        }
+
+        $email = $googleUser['email'] ?? null;
+        if (!$email) {
+            throw ValidationException::withMessages([
+                'google' => ['Không lấy được email từ tài khoản Google.'],
+            ]);
+        }
+
+        $user = User::firstOrNew(['email' => $email]);
+
+        if ($user->exists && $user->status !== 'active') {
+            throw ValidationException::withMessages([
+                'email' => ['Tài khoản của bạn đã bị khóa. Vui lòng liên hệ hỗ trợ.'],
+            ]);
+        }
+
+        $user->fullName = $user->fullName ?: ($googleUser['name'] ?? $email);
+        $user->google_id = $googleUser['sub'] ?? $user->google_id;
+        $user->avatar_url = $googleUser['picture'] ?? $user->avatar_url;
+        $user->email_verified_at = $user->email_verified_at ?: now();
+        $user->status = $user->status ?: 'active';
+        $user->save();
+
+        $token = $user->createToken('mobile_token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Đăng nhập Google thành công!',
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'user' => [
+                'id' => $user->id,
+                'fullName' => $user->fullName,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'avatar_url' => $user->avatar_url,
             ],
         ]);
     }
