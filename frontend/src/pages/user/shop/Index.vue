@@ -192,39 +192,18 @@
 
           <!-- LƯỚI SẢN PHẨM THỰC TẾ -->
           <div v-else class="product-grid">
-            <template v-for="product in allProducts" :key="product.id">
-              <div class="sora-luxury-card" @click="goToProductDetail(product.slug)">
-                  <!-- sora-img-container tự động làm nền là logo SORA chờ ảnh tải -->
-                  <div class="sora-card-image sora-img-container" :class="{'has-hover-image': hasHoverImage(product)}">
-                      <div class="sora-card-badges">
-                          <span v-if="product.is_new" class="sora-badge">MỚI</span>
-                          <span v-if="product.promotional_price" class="sora-badge sale-badge">SALE</span>
-                      </div>
-                      <img :src="getImageUrl(product.thumbnail_image)" loading="lazy" :alt="product.name" class="sora-main-img" @error="handleImageError">
-                      
-                      <!-- SỬA Ở ĐÂY: Dùng handleHoverImageError cho ảnh hover -->
-                      <img v-if="hasHoverImage(product)" :src="getImageUrl(product.hover_image)" loading="lazy" :alt="product.name + ' hover'" class="sora-hover-img" @error="handleHoverImageError">
-                  </div>
-
-                  <div class="sora-card-info">
-                      <h3 class="sora-card-title" :title="product.name">{{ product.name }}</h3>
-                      <p class="sora-card-category">{{ product.category?.name || 'Trang sức SORA' }}</p>
-                      
-                      <div class="sora-card-price d-flex align-items-center justify-content-center flex-wrap gap-1">
-                          <span v-if="product.promotional_price" class="sora-card-price-old">
-                            {{ formatPrice(product.base_price) }}
-                          </span>
-                          <span>{{ formatPrice(product.promotional_price || product.base_price) }}</span>
-                      </div>
-                  </div>
-
-                  <div class="sora-card-action">
-                      <button class="sora-action-btn" @click.stop="openQuickAdd(product)">
-                          <i class="bi bi-eye"></i> THÊM VÀO GIỎ
-                      </button>
-                  </div>
-              </div>
-            </template>
+            <ProductCard
+              v-for="product in allProducts"
+              :key="product.id"
+              :product="product"
+              :shop-slug="shopSlug"
+              :is-in-wishlist="isFavourited(product.id)"
+              :is-in-compare="isInCompare(product.id)"
+              :show-wishlist="true"
+              :show-compare="true"
+              :show-add-to-cart="true"
+              @toggle-wishlist="handleToggleWishlist"
+            />
           </div>
 
           <!-- Empty State -->
@@ -263,6 +242,12 @@
       </div>
     </div>
 
+    <QuickAddModal />
+    <CompareModal
+      :shop-slug="shopSlug"
+      @update-list="compareList = $event"
+    />
+
     <!-- MODAL QUICK ADD -->
     <div v-if="quickAddModal.isOpen" class="modal-overlay position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" @click.self="closeQuickAdd" style="z-index: 9999 !important; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(2px);">
       <div class="bg-white rounded shadow-lg d-flex flex-column position-relative" style="width: 90%; max-width: 480px; max-height: 90vh; overflow: hidden; animation: slideUp 0.3s ease-out; border-radius: 12px !important;">
@@ -282,7 +267,7 @@
               <span class="text-uppercase fw-bold mb-1" style="font-size: 0.7rem; color: #e7ce7d; letter-spacing: 2px;">{{ quickAddModal.product.category?.name || 'SẢN PHẨM' }}</span>
               <h6 class="fs-5 mb-2 fw-bold text-dark font-serif">{{ quickAddModal.product.name }}</h6>
               <div class="d-flex align-items-center flex-wrap gap-2">
-                <span class="fw-bold fs-5" style="color: #9f273b; font-family: 'Playfair Display', serif;">{{ displayPriceFormatted }}</span>
+                <span class="fw-bold fs-5" style="color: #9f273b;">{{ displayPriceFormatted }}</span>
                 <span v-if="modalOldPrice" class="text-muted text-decoration-line-through" style="font-size: 0.95rem;">
                   {{ formatPrice(modalOldPrice) }}
                 </span>
@@ -346,6 +331,10 @@
 import { ref, shallowRef, onMounted, reactive, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
+import ProductCard from '@/components/ui/ProductCard.vue';
+import QuickAddModal from '@/components/ui/QuickAddModal.vue';
+import CompareModal from '@/components/ui/CompareModal.vue';
+import { useWishlist } from '@/composables/useWishlist';
 
 const route = useRoute();
 const router = useRouter();
@@ -358,6 +347,8 @@ const soraAlert = Swal.mixin({
   customClass: { confirmButton: 'px-4 py-2 mx-2 rounded shadow-sm fw-bold font-oswald tracking-widest text-uppercase' },
   didOpen: (modal) => { if (modal.parentElement) modal.parentElement.style.zIndex = '10005'; }
 });
+
+const { fetchFavorites, isFavourited, toggleFavourite } = useWishlist();
 
 const Toast = Swal.mixin({
   toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true,
@@ -376,6 +367,7 @@ const showAllSidebarCategories = ref(false); // BIẾN QUẢN LÝ TRẠNG THÁI 
 const dynamicAttributes = ref([]); 
 const allProducts = shallowRef([]);
 const pagination = ref({ current_page: 1, last_page: 1, total: 0 });
+const compareList = ref([]);
 
 const selectedAttributes = ref([]); 
 const colorOptions = ref([]); 
@@ -474,6 +466,12 @@ const handleHoverImageError = (e) => {
 };
 
 const hasHoverImage = (product) => product.hover_image && product.hover_image !== product.thumbnail_image;
+
+const handleToggleWishlist = (product) => {
+  toggleFavourite(product, Toast, soraAlert, router);
+};
+
+const isInCompare = (id) => compareList.value.some(item => item.id === id);
 
 const isColorAttribute = (attrName) => {
   const name = attrName.toLowerCase();
@@ -851,6 +849,7 @@ const confirmAddToCart = async () => {
 onMounted(() => { 
   handleBirthdayCouponFromUrl();
   Promise.all([
+    fetchFavorites(),
     fetchCategories(), 
     fetchColors(),
     fetchAttributes(),
@@ -1078,8 +1077,6 @@ onMounted(() => {
 .sora-card-info { padding: 20px 15px 70px 15px; text-align: center; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
 .sora-card-title { font-family: 'Oswald', sans-serif; font-size: 1.1rem; font-weight: 600; color: #111; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .sora-card-category { font-family: 'Playfair Display', serif; font-style: italic; color: #666; font-size: 0.95rem; margin-bottom: 15px; }
-.sora-card-price { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: #9f273b; margin-top: auto; }
-.sora-card-price-old { font-size: 0.95rem; color: #999; text-decoration: line-through; margin-right: 10px; font-weight: 400; }
 .sora-card-action { position: absolute; bottom: 0; left: 0; width: 100%; transform: translateY(100%); transition: transform 0.4s; z-index: 10; }
 .sora-luxury-card:hover .sora-card-action { transform: translateY(0); }
 .sora-action-btn { width: 100%; padding: 14px 0; background: #731621; color: #ffffff; border: none; font-family: 'Oswald', sans-serif; font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: background 0.3s ease; }

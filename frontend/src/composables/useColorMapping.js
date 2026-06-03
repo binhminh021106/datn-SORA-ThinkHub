@@ -18,12 +18,18 @@ export const isLightColor = (colorName) => {
   return lightCodes.includes(code);
 };
 
+const normalizeAttributeName = (name) => String(name || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .trim();
+
 export const isColorAttribute = (name) => {
-  const lowerName = name.toLowerCase();
-  return lowerName.includes('màu') || lowerName.includes('color');
+  const lowerName = normalizeAttributeName(name);
+  return lowerName.includes('mau') || lowerName.includes('color');
 };
 
 export const isSizeAttribute = (name) => {
-  const lowerName = name.toLowerCase();
-  return lowerName.includes('size') || lowerName.includes('kích cỡ') || lowerName.includes('cỡ') || lowerName.includes('ni tay');
+  const lowerName = normalizeAttributeName(name);
+  return lowerName.includes('size') || lowerName.includes('kich co') || /\bco\b/.test(lowerName) || lowerName.includes('ni tay');
 };

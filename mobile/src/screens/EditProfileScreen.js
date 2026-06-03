@@ -19,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { API_BASE_URL } from '../config/api';
 import { showCustomAlert } from '../components/CustomAlert';
+import SmartImage from '../components/SmartImage';
 
 const Alert = {
   alert: (title, message, buttons) => showCustomAlert(title, message, buttons)
@@ -375,8 +376,8 @@ export default function EditProfileScreen() {
         // Update local cache
         try {
           const cached = await AsyncStorage.getItem('user');
-          if (cached && result.data) {
-            const u = JSON.parse(cached);
+          if (result.data) {
+            const u = cached ? JSON.parse(cached) : {};
             await AsyncStorage.setItem('user', JSON.stringify({ ...u, ...result.data }));
           }
         } catch (_) {}
@@ -439,7 +440,8 @@ export default function EditProfileScreen() {
         {/* ── AVATAR ── */}
         <View style={s.avatarSection}>
           <TouchableOpacity style={s.avatarTouchable} onPress={handlePickImage} activeOpacity={0.85}>
-            <Image source={{ uri: avatarSourceUri }} style={s.avatarImage} />
+            <SmartImage source={{ uri: avatarSourceUri }} style={s.avatarImage}
+            />
             <View style={s.avatarBadge}>
               <Ionicons name="camera" size={14} color="#fff" />
             </View>

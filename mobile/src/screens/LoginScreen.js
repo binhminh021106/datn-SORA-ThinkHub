@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Image, Dimensions, StatusBar, ActivityIndicator,
-  Modal, Platform,
+  ScrollView, Image, StatusBar, ActivityIndicator, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -13,8 +12,6 @@ import { showCustomAlert } from '../components/CustomAlert';
 const Alert = {
   alert: (title, message, buttons) => showCustomAlert(title, message, buttons)
 };
-
-const { width } = Dimensions.get('window');
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -94,6 +91,7 @@ export default function LoginScreen({ navigation }) {
           <Text style={s.bannerSlogan}>VẺ ĐẸP VƯỢT THỜI GIAN</Text>
         </View>
 
+        <View style={s.cardWrap}>
         <View style={s.card}>
           <Text style={s.title}>Chào Mừng Trở Lại</Text>
           <Text style={s.subtitle}>Đăng nhập để trải nghiệm mua sắm tuyệt vời</Text>
@@ -147,6 +145,7 @@ export default function LoginScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         </View>
+        </View>
       </ScrollView>
     </View>
   );
@@ -159,7 +158,8 @@ const s = StyleSheet.create({
   backBtn: { position: 'absolute', top: Platform.OS === 'ios' ? 55 : 40, left: 16, width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
   bannerLogo: { width: 200, height: 80, tintColor: '#fff', marginBottom: 8 },
   bannerSlogan: { fontFamily: 'Oswald_400Regular', fontSize: 11, letterSpacing: 3, color: '#e7ce7d' },
-  card: { width: width - 32, backgroundColor: '#fff', borderRadius: 16, padding: 28, marginTop: -30, shadowColor: '#9f273b', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 20, elevation: 10 },
+  cardWrap: { width: '100%', alignItems: 'center', paddingHorizontal: 16 },
+  card: { width: '100%', maxWidth: 520, backgroundColor: '#fff', borderRadius: 16, padding: 28, marginTop: -30, shadowColor: '#9f273b', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 20, elevation: 10 },
   title: { fontFamily: 'PlayfairDisplay_700Bold', fontSize: 24, color: '#9f273b', marginBottom: 6 },
   subtitle: { fontFamily: 'Oswald_400Regular', fontSize: 12, color: '#888', letterSpacing: 0.5, marginBottom: 24 },
   alertErr: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fcf0f0', borderLeftWidth: 4, borderLeftColor: '#cc1e2e', padding: 12, borderRadius: 6, marginBottom: 16 },

@@ -7,7 +7,6 @@ import {
   StatusBar,
   TouchableOpacity,
   ScrollView,
-  Image,
   Dimensions,
   ActivityIndicator,
   FlatList,
@@ -20,12 +19,31 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/api';
 import { showCustomAlert } from '../components/CustomAlert';
+import SmartImage from '../components/SmartImage';
+import ProductCard from '../components/ProductCard';
+import { PRICE_FONT_FAMILY, PRICE_FONT_WEIGHT } from '../styles/typography';
+import useWishlist from '../hooks/useWishlist';
 
 const { width, height: SCREEN_H } = Dimensions.get('window');
+const COMPARE_STORAGE_KEY = 'sora_compare_products';
+const MAX_COMPARE_PRODUCTS = 4;
 
 // Helper to format currency
 const formatCurrency = (v) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(v) || 0);
+
+const getAuthToken = async () => AsyncStorage.getItem('auth_token');
+
+const getFavouriteHeaders = (token) => ({
+  Accept: 'application/json',
+  Authorization: `Bearer ${token}`,
+});
+
+const saveLocalWishlist = async (nextItems) => {
+  const nextIds = nextItems.map((item) => item.id?.toString()).filter(Boolean);
+  await AsyncStorage.setItem('sora_wishlist_ids', JSON.stringify(nextIds));
+  await AsyncStorage.setItem('sora_wishlist_items', JSON.stringify(nextItems));
+};
 
 // Helper to format review image URLs
 const getReviewImageUrl = (url) => {
@@ -197,6 +215,12 @@ export default function ProductDetailScreen() {
 
   // Quantity selection state
   const [quantity, setQuantity] = useState(1);
+  const [isAddingToCompare, setIsAddingToCompare] = useState(false);
+  const {
+    wishlistIds: relatedWishlistIds,
+    wishlistLoadingIds: relatedWishlistLoadingIds,
+    toggleWishlist: handleToggleRelatedWishlist,
+  } = useWishlist();
 
   // Zoomed review image state
   const [zoomImageUrl, setZoomImageUrl] = useState(null);
@@ -255,10 +279,24 @@ export default function ProductDetailScreen() {
   const checkWishlistState = async () => {
     try {
       if (!product) return;
+      const token = await getAuthToken();
+      if (token) {
+        const response = await fetch(`${API_BASE_URL}/client/favourites/check/${product.id}`, {
+          headers: getFavouriteHeaders(token),
+        });
+        const result = await response.json();
+        if (response.ok) {
+          setIsFavorite(!!result.is_favourited);
+          return;
+        }
+      }
+
       const storedIds = await AsyncStorage.getItem('sora_wishlist_ids');
       if (storedIds) {
         const ids = JSON.parse(storedIds);
-        setIsFavorite(ids.includes(product.id));
+        setIsFavorite(ids.some(id => id.toString() === product.id.toString()));
+      } else {
+        setIsFavorite(false);
       }
     } catch (e) {
       console.log('Error checking wishlist state:', e);
@@ -286,23 +324,73 @@ export default function ProductDetailScreen() {
   const handleToggleFavorite = async () => {
     if (!product) return;
     try {
+      const productId = product.id.toString();
+      const token = await getAuthToken();
       const storedIds = await AsyncStorage.getItem('sora_wishlist_ids');
       const storedItems = await AsyncStorage.getItem('sora_wishlist_items');
 
       let currentIds = storedIds ? JSON.parse(storedIds) : [];
       let currentItems = storedItems ? JSON.parse(storedItems) : [];
 
-      const exists = currentIds.includes(product.id);
+      if (token) {
+        const response = await fetch(`${API_BASE_URL}/client/favourites/toggle`, {
+          method: 'POST',
+          headers: {
+            ...getFavouriteHeaders(token),
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ product_id: productId }),
+        });
+        const result = await response.json();
+
+        if (!response.ok || !(result.success || result.status)) {
+          showCustomAlert("YEU THICH", result.message || "Khong the cap nhat yeu thich.", [{ text: "OK" }]);
+          return;
+        }
+
+        if (result.action === 'removed') {
+          const updatedItems = currentItems.filter(item => item.id.toString() !== productId);
+          setIsFavorite(false);
+          await saveLocalWishlist(updatedItems);
+          showCustomAlert("YEU THICH", "Da xoa san pham khoi danh sach yeu thich.", [{ text: "OK" }]);
+          return;
+        }
+
+        const firstVariant = Array.isArray(product.variants) && product.variants.length > 0
+          ? product.variants[0]
+          : null;
+        const mappedProduct = {
+          id: productId,
+          slug: product.slug,
+          name: product.name,
+          category: product.category?.name || 'Trang Suc SORA',
+          variant: 'Chon phien ban tai trang chi tiet',
+          variantId: firstVariant?.id,
+          price: firstVariant ? (firstVariant.promotional_price || firstVariant.price) : 0,
+          oldPrice: firstVariant ? (firstVariant.promotional_price ? firstVariant.price : null) : null,
+          image: product.images && product.images.length > 0 ? product.images[0] : ''
+        };
+        const updatedItems = [
+          ...currentItems.filter(item => item.id.toString() !== productId),
+          mappedProduct,
+        ];
+        setIsFavorite(true);
+        await saveLocalWishlist(updatedItems);
+        showCustomAlert("YEU THICH", "Da them san pham vao danh sach yeu thich.", [{ text: "OK" }]);
+        return;
+      }
+
+      const exists = currentIds.some(id => id.toString() === productId);
       let updatedIds;
       let updatedItems;
 
       if (exists) {
-        updatedIds = currentIds.filter(id => id !== product.id);
-        updatedItems = currentItems.filter(item => item.id.toString() !== product.id.toString());
+        updatedIds = currentIds.filter(id => id.toString() !== productId);
+        updatedItems = currentItems.filter(item => item.id.toString() !== productId);
         setIsFavorite(false);
         showCustomAlert("YÊU THÍCH", `Đã xóa sản phẩm khỏi danh sách yêu thích thành công!`, [{ text: "ĐỒNG Ý" }]);
       } else {
-        updatedIds = [...currentIds, product.id];
+        updatedIds = [...currentIds, productId];
         const firstVariant = Array.isArray(product.variants) && product.variants.length > 0
           ? product.variants[0]
           : null;
@@ -310,9 +398,11 @@ export default function ProductDetailScreen() {
         // Map product details
         const mappedProduct = {
           id: product.id.toString(),
+          slug: product.slug,
           name: product.name,
           category: product.category?.name || 'Trang Sức SORA',
           variant: 'Bản Giới Hạn SORA',
+          variantId: firstVariant?.id,
           price: firstVariant
             ? (firstVariant.promotional_price || firstVariant.price)
             : 0,
@@ -327,8 +417,7 @@ export default function ProductDetailScreen() {
         showCustomAlert("YÊU THÍCH", `Đã thêm sản phẩm vào danh sách yêu thích thành công!`, [{ text: "ĐỒNG Ý" }]);
       }
 
-      await AsyncStorage.setItem('sora_wishlist_ids', JSON.stringify(updatedIds));
-      await AsyncStorage.setItem('sora_wishlist_items', JSON.stringify(updatedItems));
+      await saveLocalWishlist(updatedItems);
     } catch (e) {
       console.log('Error toggling favorite:', e);
     }
@@ -456,6 +545,67 @@ export default function ProductDetailScreen() {
     }
   };
 
+  const handleAddToCompare = async () => {
+    if (!product || isAddingToCompare) return;
+
+    setIsAddingToCompare(true);
+    try {
+      const storedItems = await AsyncStorage.getItem(COMPARE_STORAGE_KEY);
+      const parsedItems = storedItems ? JSON.parse(storedItems) : [];
+      const compareItems = Array.isArray(parsedItems) ? parsedItems : [];
+      const isAlreadyAdded = compareItems.some(
+        (item) => item.id?.toString() === product.id?.toString()
+      );
+      const alertButtons = [
+        { text: 'XEM TIẾP', style: 'cancel' },
+        { text: 'XEM SO SÁNH', onPress: () => navigation.navigate('Compare') },
+      ];
+
+      if (isAlreadyAdded) {
+        showCustomAlert(
+          'SO SÁNH SẢN PHẨM',
+          'Sản phẩm này đã có trong danh sách so sánh.',
+          alertButtons,
+          'git-compare-outline'
+        );
+        return;
+      }
+
+      if (compareItems.length >= MAX_COMPARE_PRODUCTS) {
+        showCustomAlert(
+          'SO SÁNH SẢN PHẨM',
+          `Bạn chỉ có thể so sánh tối đa ${MAX_COMPARE_PRODUCTS} sản phẩm.`,
+          alertButtons,
+          'git-compare-outline'
+        );
+        return;
+      }
+
+      await AsyncStorage.setItem(
+        COMPARE_STORAGE_KEY,
+        JSON.stringify([
+          ...compareItems,
+          { id: product.id, name: product.name, slug: product.slug },
+        ])
+      );
+
+      showCustomAlert(
+        'THÊM SO SÁNH THÀNH CÔNG',
+        'Sản phẩm đã được thêm vào danh sách so sánh.',
+        alertButtons,
+        'git-compare-outline'
+      );
+    } catch (error) {
+      console.log('Error adding product to compare:', error);
+      showCustomAlert(
+        'LỖI SO SÁNH',
+        'Không thể thêm sản phẩm vào danh sách so sánh. Vui lòng thử lại.'
+      );
+    } finally {
+      setIsAddingToCompare(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <View style={s.loadingContainer}>
@@ -498,8 +648,16 @@ export default function ProductDetailScreen() {
           <TouchableOpacity style={s.headerBtn} onPress={handleToggleFavorite}>
             <Ionicons name={isFavorite ? "heart" : "heart-outline"} size={22} color={isFavorite ? "#9f273b" : "#111"} />
           </TouchableOpacity>
-          <TouchableOpacity style={s.headerBtn} onPress={() => navigation.navigate("MainTabs", { screen: "Cart" })}>
-            <Ionicons name="cart-outline" size={22} color="#111" />
+          <TouchableOpacity
+            style={[s.headerBtn, isAddingToCompare && s.headerBtnDisabled]}
+            onPress={handleAddToCompare}
+            disabled={isAddingToCompare}
+          >
+            {isAddingToCompare ? (
+              <ActivityIndicator size="small" color="#9f273b" />
+            ) : (
+              <Ionicons name="git-compare-outline" size={22} color="#111" />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -525,7 +683,8 @@ export default function ProductDetailScreen() {
               setActiveImageIndex(index);
             }}
             renderItem={({ item }) => (
-              <Image source={{ uri: item }} style={s.galleryImg} />
+              <SmartImage source={{ uri: item }} style={s.galleryImg}
+              />
             )}
           />
           {/* Swiper dots */}
@@ -596,6 +755,7 @@ export default function ProductDetailScreen() {
               {isOutOfStock ? "Phiên bản này đã Hết hàng" : `Còn lại: ${currentStock} sản phẩm trong kho`}
             </Text>
           </View>
+
         </View>
 
         {/* 3. MULTI-ATTRIBUTES SELECTION GRID */}
@@ -713,11 +873,11 @@ export default function ProductDetailScreen() {
             product.reviews.map((rev) => (
               <View key={(rev.id || rev.created_at || rev.user_id || rev.comment || 'review').toString()} style={s.reviewCard}>
                 <View style={s.reviewHeader}>
-                  <Image 
+                  <SmartImage
                     source={{ uri: rev.user?.avatar_url 
                       ? getReviewImageUrl(rev.user.avatar_url) 
                       : `https://ui-avatars.com/api/?name=${encodeURIComponent(rev.user?.fullName || 'K')}&background=9f273b&color=fff` }} 
-                    style={s.reviewAvatar} 
+                    style={s.reviewAvatar}
                   />
                   <View style={s.reviewUserInfo}>
                     <View style={s.reviewUserRow}>
@@ -762,7 +922,8 @@ export default function ProductDetailScreen() {
                           onPress={() => setZoomImageUrl(fullImgUrl)}
                           activeOpacity={0.9}
                         >
-                          <Image source={{ uri: fullImgUrl }} style={s.reviewThumbnail} />
+                          <SmartImage source={{ uri: fullImgUrl }} style={s.reviewThumbnail}
+                          />
                         </TouchableOpacity>
                       );
                     })}
@@ -797,24 +958,17 @@ export default function ProductDetailScreen() {
             <View style={s.dividerGold} />
             
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.relatedGrid}>
-              {relatedProducts.map((p) => {
-                return (
-                  <TouchableOpacity 
-                    key={p.id.toString()} 
-                    style={s.relatedCard}
-                    onPress={() => navigation.navigate("ProductDetail", { slug: p.slug })}
-                    activeOpacity={0.9}
-                  >
-                    <Image source={{ uri: `${API_BASE_URL.replace('/api', '')}/storage/${p.thumbnail_image}` }} style={s.relatedCardImg} />
-                    <View style={s.relatedCardBody}>
-                      <Text style={s.relatedCardTitle} numberOfLines={2}>{p.name}</Text>
-                      <Text style={s.relatedCardPrice}>
-                        {formatCurrency(p.promotional_price > 0 ? p.promotional_price : p.base_price)}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
+              {relatedProducts.map((relatedProduct) => (
+                <ProductCard
+                  key={relatedProduct.id.toString()}
+                  product={relatedProduct}
+                  width={165}
+                  onToggleWishlist={handleToggleRelatedWishlist}
+                  isFavorite={relatedWishlistIds.includes(relatedProduct.id?.toString())}
+                  isWishlistLoading={relatedWishlistLoadingIds.includes(relatedProduct.id?.toString())}
+                  onPress={(selectedProduct) => navigation.navigate("ProductDetail", { slug: selectedProduct.slug })}
+                />
+              ))}
             </ScrollView>
           </View>
         )}
@@ -856,7 +1010,8 @@ export default function ProductDetailScreen() {
             <Ionicons name="close" size={28} color="#fff" />
           </TouchableOpacity>
           {zoomImageUrl && (
-            <Image source={{ uri: zoomImageUrl }} style={s.zoomFullImg} />
+            <SmartImage source={{ uri: zoomImageUrl }} style={s.zoomFullImg}
+            />
           )}
         </TouchableOpacity>
       </Modal>
@@ -999,16 +1154,20 @@ const s = StyleSheet.create({
     marginBottom: 16,
   },
   promoPrice: {
-    fontFamily: 'PlayfairDisplay_700Bold',
+    fontFamily: PRICE_FONT_FAMILY,
     fontSize: 24,
     color: '#9f273b',
-    fontWeight: 'bold',
+    fontWeight: PRICE_FONT_WEIGHT,
     marginRight: 10,
   },
+  headerBtnDisabled: {
+    opacity: 0.7,
+  },
   basePrice: {
-    fontFamily: 'PlayfairDisplay_400Regular',
+    fontFamily: PRICE_FONT_FAMILY,
     fontSize: 15,
     color: '#999',
+    fontWeight: PRICE_FONT_WEIGHT,
     textDecorationLine: 'line-through',
     marginRight: 10,
   },
@@ -1039,7 +1198,6 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: '#2ecc71',
   },
-
   // COMMON SECTIONS
   sectionContainer: {
     backgroundColor: '#fff',
@@ -1400,36 +1558,6 @@ const s = StyleSheet.create({
   relatedGrid: {
     gap: 12,
   },
-  relatedCard: {
-    width: 125,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#eee',
-    borderRadius: 6,
-    overflow: 'hidden',
-  },
-  relatedCardImg: {
-    width: '100%',
-    height: 125,
-    resizeMode: 'cover',
-  },
-  relatedCardBody: {
-    padding: 8,
-  },
-  relatedCardTitle: {
-    fontFamily: 'Oswald_500Medium',
-    fontSize: 11,
-    color: '#333',
-    lineHeight: 14,
-    marginBottom: 4,
-    textTransform: 'uppercase',
-  },
-  relatedCardPrice: {
-    fontFamily: 'PlayfairDisplay_700Bold',
-    fontSize: 11.5,
-    color: '#9f273b',
-  },
-
   // BOTTOM PURCHASING BAR
   bottomActionBar: {
     position: 'absolute',
@@ -1461,10 +1589,10 @@ const s = StyleSheet.create({
     letterSpacing: 0.5,
   },
   bottomTotalPrice: {
-    fontFamily: 'PlayfairDisplay_700Bold',
+    fontFamily: PRICE_FONT_FAMILY,
     fontSize: 18,
     color: '#9f273b',
-    fontWeight: 'bold',
+    fontWeight: PRICE_FONT_WEIGHT,
   },
   addToCartButton: {
     flexDirection: 'row',

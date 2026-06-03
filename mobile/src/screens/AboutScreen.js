@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import SmartImage from '../components/SmartImage';
 
 const { width } = Dimensions.get('window');
 
@@ -42,7 +43,8 @@ export default function AboutScreen() {
           style={s.heroSection}
           resizeMode="cover"
         >
-          <View style={s.heroOverlay} />
+          <View style={s.heroOverlay}
+          />
           <View style={s.heroContent}>
             <Text style={s.heroSub}>Câu Chuyện Thương Hiệu</Text>
             <Text style={s.heroTitleText}>SORA</Text>
@@ -66,7 +68,7 @@ export default function AboutScreen() {
           <View style={s.imgContainer}>
             <View style={s.imgBorder} />
             <View style={s.imgWrapper}>
-              <Image
+              <SmartImage
                 source={{ uri: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=800&auto=format&fit=crop' }}
                 style={s.storyImg}
                 resizeMode="cover"
@@ -157,7 +159,7 @@ export default function AboutScreen() {
           <View style={s.materialsGrid}>
             {/* Card 1 */}
             <View style={s.materialCard}>
-              <Image
+              <SmartImage
                 source={{ uri: 'https://images.unsplash.com/photo-1601121141461-9d6647bca1ed?q=80&w=600&auto=format&fit=crop' }}
                 style={s.materialImg}
               />
@@ -172,7 +174,7 @@ export default function AboutScreen() {
 
             {/* Card 2 */}
             <View style={s.materialCard}>
-              <Image
+              <SmartImage
                 source={{ uri: 'https://images.unsplash.com/photo-1596944924616-7b38e7cfac36?q=80&w=600&auto=format&fit=crop' }}
                 style={s.materialImg}
               />
@@ -187,7 +189,7 @@ export default function AboutScreen() {
 
             {/* Card 3 */}
             <View style={s.materialCard}>
-              <Image
+              <SmartImage
                 source={{ uri: 'https://images.unsplash.com/photo-1573408301145-b98c4af01158?q=80&w=600&auto=format&fit=crop' }}
                 style={s.materialImg}
               />

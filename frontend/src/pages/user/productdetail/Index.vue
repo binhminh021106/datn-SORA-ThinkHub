@@ -77,7 +77,7 @@
                 class="thumb-btn"
                 :class="{ 'active': img === mainImage }"
               >
-                <img :src="img" :alt="'Thumbnail ' + idx" class="thumb-img">
+                <img :src="img" :alt="'Thumbnail ' + idx" class="thumb-img" @error="handleImageError">
               </button>
             </div>
             
@@ -104,20 +104,11 @@
             <h1 class="product-title">{{ product.name }}</h1>
             
             <!-- PRICE DISPLAY -->
-            <div class="product-price mb-3" style="display: flex; align-items: center; gap: 15px;">
-              <template v-if="isAllAttributesSelected && currentVariant">
-                <span class="price-current" style="font-size: 24px; font-weight: 700; color: rgb(159,39,59);">{{ formatMoney(currentVariant.promotional_price || currentVariant.price) }}</span>
-                <span v-if="currentVariant.promotional_price" class="price-old" style="font-size: 16px; color: #999; text-decoration: line-through;">
-                  {{ formatMoney(currentVariant.price) }}
-                </span>
-                <span v-if="currentVariant.promotional_price" class="discount-badge" style="background: #fff0f2; color: rgb(159,39,59); padding: 3px 8px; font-size: 12px; font-weight: 600; border-radius: 4px;">
-                  -{{ Math.round((1 - currentVariant.promotional_price / currentVariant.price) * 100) }}%
-                </span>
-              </template>
-              <template v-else>
-                <span class="price-current" style="font-size: 24px; font-weight: 700; color: rgb(159,39,59);">{{ formatMoney(product.promotional_price || product.base_price || product.variants?.[0]?.price) }}</span>
-              </template>
-            </div>
+            <PriceDisplay
+              :is-all-attributes-selected="isAllAttributesSelected"
+              :current-variant="currentVariant"
+              :default-price="defaultDisplayPrice"
+            />
 
             <div class="flash-sale-countdown mb-4">
               <div class="countdown-text">Nhanh lên! Chương trình khuyến mãi kết thúc sau:</div>
@@ -140,8 +131,8 @@
                     </span>
                   </h3>
                   <button
-                    v-if="isSizeAttribute(attrName)"
-                    @click="showSizeGuideModal = true"
+                    v-if="isProductSizeAttribute(attrName)"
+                    @click="openSizeGuide"
                     class="size-guide-btn-compact"
                     type="button"
                     title="Xem hướng dẫn kích cỡ"
@@ -381,6 +372,7 @@
             <!-- Sử dụng ProductCard Đã Được Nâng Cấp -->
             <ProductCard
               :product="item"
+              :shop-slug="shopSlug"
               :is-in-wishlist="isFavourited(item.id)"
               :is-in-compare="isInCompare(item.id)"
               :show-wishlist="true"
@@ -471,7 +463,12 @@
     </template>
     
     <!-- SIZE GUIDE MODAL COMPONENT -->
-    <SizeGuideModal :show="showSizeGuideModal" @close="showSizeGuideModal = false" />
+    <SizeGuideModal
+      :show="showSizeGuideModal"
+      :rows="sizeGuideRows"
+      :is-admin-configured="hasAdminSizeGuide"
+      @close="showSizeGuideModal = false"
+    />
 
     <!-- GỌI COMPONENT SO SÁNH VÀ CHUYỀN DỮ LIỆU TỪ TRONG PAGE VÀO -->
     <CompareModal 
@@ -538,6 +535,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useQuery } from '@tanstack/vue-query';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import Toast from '@/utils/toastConfig';
@@ -566,6 +564,7 @@ const showSizeGuideModal = ref(false);
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || API_BASE_URL.replace(/\/api\/?$/, '');
 const shopSlug = route.params.shop_slug || 'aurora';
+const currentProductSlug = computed(() => route.params.slug || route.params.product_slug || '');
 const soraPlaceholder = '/Sora-placeholder.png';
 
 // Wishlist composable
@@ -614,6 +613,7 @@ const stockProgressWidth = computed(() => {
   const comp = getVariantsComposable();
   return comp ? comp.stockProgressWidth.value : 0;
 });
+const defaultDisplayPrice = computed(() => Number(product.value?.promotional_price || product.value?.base_price || product.value?.variants?.[0]?.price || 0));
 
 // Countdown & Recommendations
 const countdown = ref({ days: '00', hours: '00', minutes: '00', seconds: '00' });
@@ -635,6 +635,130 @@ let quickAddModalInstance = null;
 
 // Helper functions
 const isInCompare = (id) => compareList.value.some(item => item.id === id);
+
+const normalizeAttributeName = (name) => String(name || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .trim();
+
+const isProductSizeAttribute = (name) => {
+  const normalizedName = normalizeAttributeName(name);
+  return isSizeAttribute(name) || normalizedName.includes('size') || normalizedName.includes('kich co') || /\bco\b/.test(normalizedName) || normalizedName.includes('ni tay');
+};
+
+const openSizeGuide = () => {
+  showSizeGuideModal.value = true;
+};
+
+const extractImagePath = (image) => {
+  if (!image) return '';
+  if (typeof image === 'string') return image.trim();
+  if (typeof image !== 'object') return '';
+
+  return (
+    image.url ||
+    image.image_url ||
+    image.image ||
+    image.path ||
+    image.src ||
+    image.thumbnail_image ||
+    ''
+  );
+};
+
+const normalizeProductImage = (image) => {
+  const path = extractImagePath(image);
+  if (!path || path === '[object Object]') return '';
+  return getFullImage(path);
+};
+
+const normalizeGalleryImages = (images = []) => {
+  const sourceImages = Array.isArray(images) ? images : [images];
+  const normalized = sourceImages
+    .map(normalizeProductImage)
+    .filter(Boolean);
+
+  return [...new Set(normalized)];
+};
+
+const normalizeSizeGuideRows = (rows) => {
+  if (!rows) return [];
+  if (!Array.isArray(rows) && typeof rows === 'object') {
+    rows = rows.rows || rows.items || rows.data || Object.values(rows);
+  }
+  if (!Array.isArray(rows)) return [];
+  return rows
+    .map((row) => {
+      if (typeof row === 'string' || typeof row === 'number') {
+        return { size: String(row) };
+      }
+
+      return {
+        size: row?.size ?? row?.name ?? row?.label ?? row?.value,
+        diameter: row?.diameter ?? row?.diameter_mm,
+        circumference: row?.circumference ?? row?.circumference_mm,
+      };
+    })
+    .filter(row => row.size);
+};
+
+const configuredSizeGuideRows = computed(() => {
+  const source =
+    product.value?.size_guide ||
+    product.value?.sizeGuide ||
+    product.value?.size_chart ||
+    product.value?.sizeChart ||
+    product.value?.specifications?.size_guide ||
+    product.value?.specifications?.sizeGuide ||
+    product.value?.specifications?.size_chart ||
+    product.value?.specifications?.sizeChart;
+
+  if (typeof source === 'string') {
+    try {
+      return normalizeSizeGuideRows(JSON.parse(source));
+    } catch {
+      return [];
+    }
+  }
+
+  return normalizeSizeGuideRows(source);
+});
+
+const hasAdminSizeGuide = computed(() => configuredSizeGuideRows.value.length > 0);
+
+const availableSizeRows = computed(() => {
+  const rows = new Map();
+  const attributes = product.value?.attributes || {};
+  const sizeAttrName = Object.keys(attributes).find(attrName => isProductSizeAttribute(attrName));
+
+  if (sizeAttrName && Array.isArray(attributes[sizeAttrName])) {
+    attributes[sizeAttrName].forEach(option => {
+      const size = option?.name ?? option?.label ?? option?.value;
+      if (size) rows.set(String(size), { size: String(size) });
+    });
+  }
+
+  (product.value?.variants || []).forEach((variant) => {
+    const variantAttrs = variant.formatted_attributes || variant.attributes || {};
+    Object.entries(variantAttrs).forEach(([attrName, attrValue]) => {
+      if (!isProductSizeAttribute(attrName) || attrValue === null || attrValue === undefined || attrValue === '') return;
+
+      const attributeOptions = attributes[attrName] || attributes[sizeAttrName] || [];
+      const matchedOption = Array.isArray(attributeOptions)
+        ? attributeOptions.find(option => String(option.id) === String(attrValue) || String(option.value) === String(attrValue) || String(option.name) === String(attrValue))
+        : null;
+      const size = matchedOption?.name ?? matchedOption?.label ?? matchedOption?.value ?? attrValue;
+      if (size) rows.set(String(size), { size: String(size) });
+    });
+  });
+
+  return Array.from(rows.values());
+});
+
+const sizeGuideRows = computed(() => {
+  return hasAdminSizeGuide.value ? configuredSizeGuideRows.value : availableSizeRows.value;
+});
 
 const handleToggleCompare = (prod) => {
   if (compareModalRef.value) compareModalRef.value.toggleCompare(prod);
@@ -825,13 +949,13 @@ const viewFullImage = (url) => {
 
 // API & Data functions
 const fetchProductData = async () => {
-  const productSlug = route.params.slug || route.params.product_slug;
+  const productSlug = currentProductSlug.value;
   if (!productSlug) return isLoading.value = false;
 
   isLoading.value = true;
   try {
-    const response = await fetch(`${API_BASE_URL}/shop/${shopSlug}/products/${productSlug}`);
-    const result = await response.json();
+    const response = await axios.get(`${API_BASE_URL}/shop/${shopSlug}/products/${productSlug}`);
+    const result = response.data;
 
     if (result.success && result.data) {
       product.value = result.data;
@@ -847,14 +971,13 @@ const fetchProductData = async () => {
         });
       }
 
-      if (product.value.images) {
-        product.value.images = product.value.images.map(img => getFullImage(img));
-        if (product.value.images.length > 0) mainImage.value = product.value.images[0];
-      }
+      product.value.images = normalizeGalleryImages(product.value.images);
+      mainImage.value = product.value.images[0] || soraPlaceholder;
 
       saveToRecentlyViewed(product.value);
       fetchRecommendations('related_category');
       startCountdown();
+      return product.value;
     } else {
       router.push({ name: 'NotFound' });
     }
@@ -865,6 +988,17 @@ const fetchProductData = async () => {
     isLoading.value = false;
   }
 };
+
+const { isLoading: isProductQueryLoading, isFetching: isProductQueryFetching } = useQuery({
+  queryKey: ['userProductDetail', shopSlug, currentProductSlug],
+  queryFn: fetchProductData,
+  enabled: computed(() => !!currentProductSlug.value),
+  staleTime: 5 * 60 * 1000,
+});
+
+watch([isProductQueryLoading, isProductQueryFetching], ([loading, fetching]) => {
+  isLoading.value = loading || (fetching && !product.value);
+}, { immediate: true });
 
 const saveToRecentlyViewed = (prod) => {
   try {
@@ -905,8 +1039,8 @@ const fetchRecommendations = async (tab) => {
     if (tab === 'related_category' && product.value?.category?.slug) url.searchParams.append('categories', product.value.category.slug);
     else if (tab === 'new') url.searchParams.append('sort', 'new');
 
-    const response = await fetch(url.toString());
-    const result = await response.json();
+    const response = await axios.get(url.toString());
+    const result = response.data;
     if (result.success && result.data?.data) recommendedProducts.value = result.data.data;
   } catch (error) { } finally {
     isLoadingRecs.value = false;
@@ -931,9 +1065,7 @@ const selectAttribute = (attrName, optionId) => {
 
     if (comp.isAllAttributesSelected.value && comp.currentVariant.value) {
       const variantImage = comp.currentVariant.value.image || comp.currentVariant.value.image_url;
-      if (variantImage) {
-        setMainImage(getFullImage(variantImage));
-      }
+      if (variantImage) setMainImage(variantImage);
     }
   }
 };
@@ -1000,21 +1132,26 @@ const scrollRecSlider = (direction) => {
   if (recSliderRef.value) recSliderRef.value.scrollBy({ left: direction === 'left' ? -280 : 280, behavior: 'smooth' });
 };
 
-const setMainImage = (url) => mainImage.value = url;
+const setMainImage = (url) => {
+  mainImage.value = normalizeProductImage(url) || soraPlaceholder;
+};
 
-const handleImageError = (e) => e.target.src = soraPlaceholder;
+const handleImageError = (e) => {
+  const img = e?.target;
+  if (!img || img.src.endsWith(soraPlaceholder)) return;
+  img.src = soraPlaceholder;
+};
 
 // Lifecycle hooks
 onMounted(() => {
   fetchFavorites();
-  fetchProductData();
 });
 
 watch(() => route.params.slug, (newSlug, oldSlug) => {
   if (newSlug && newSlug !== oldSlug) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    showSizeGuideModal.value = false;
     if (timerInterval) clearInterval(timerInterval);
-    fetchProductData();
   }
 });
 
@@ -1065,11 +1202,6 @@ watch(() => route.params.slug, (newSlug, oldSlug) => {
 .product-brand-top .brand-name { color: var(--sora-text); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; }
 .product-brand-top .sku { color: #999; border-left: 1px solid #ddd; padding-left: 10px; }
 .product-title { font-size: 26px; font-weight: 500; color: #222; margin-bottom: 20px; line-height: 1.3; letter-spacing: 0.5px; }
-.product-price { display: flex; align-items: center; gap: 15px; }
-.price-current { font-size: 24px; font-weight: 700; color: rgb(159,39,59); }
-.price-old { font-size: 16px; color: #999; text-decoration: line-through; }
-.discount-badge { background: #fff0f2; color: rgb(159,39,59); padding: 3px 8px; font-size: 12px; font-weight: 600; border-radius: 4px; }
-
 /* FLASH SALE & PROGRESS */
 .flash-sale-countdown { display: flex; align-items: center; justify-content: space-between; background-color: #fdf0f0; border: 1px solid #fad4d4; border-radius: 6px; padding: 12px 16px; }
 .countdown-text { color: #F56C6C; font-size: 14px; font-weight: 500; }
