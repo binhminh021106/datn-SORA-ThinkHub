@@ -35,7 +35,7 @@
       </div>
 
       <router-link
-        :to="{ name: 'productDetail', params: { shop_slug: product.category?.slug || 'all', slug: product.slug } }"
+        :to="{ name: 'productDetail', params: { shop_slug: shopSlug, slug: product.slug } }"
         class="d-block w-100 text-decoration-none"
       >
         <div class="ratio ratio-1x1 w-100 overflow-hidden">
@@ -62,7 +62,7 @@
     <div class="position-relative flex-grow-1 bg-white d-flex flex-column">
       <div class="p-4 text-center d-flex flex-column flex-grow-1" style="padding-bottom: 64px !important;">
         <router-link
-          :to="{ name: 'productDetail', params: { shop_slug: product.category?.slug || 'all', slug: product.slug } }"
+          :to="{ name: 'productDetail', params: { shop_slug: shopSlug, slug: product.slug } }"
           class="text-decoration-none flex-grow-1 d-flex flex-column justify-content-center"
         >
           <h6 class="text-dark font-oswald text-uppercase tracking-widest fw-bold mb-2 text-truncate-2 fs-5 lh-base">{{ product.name }}</h6>
@@ -108,7 +108,8 @@ const props = defineProps({
   showHoverImage: { type: Boolean, default: true },
   showBadges: { type: Boolean, default: true },
   isInWishlist: { type: Boolean, default: false },
-  isInCompare: { type: Boolean, default: false } 
+  isInCompare: { type: Boolean, default: false },
+  shopSlug: { type: String, default: 'sora' }
 });
 
 const emit = defineEmits(['toggle-wishlist']);
@@ -133,7 +134,8 @@ const formatCurrencyNoSymbol = (val) => {
 };
 
 const formatCurrency = (val) => {
-  return 'VND ' + formatCurrencyNoSymbol(val);
+  if (!val || isNaN(val)) return 'Liên hệ';
+  return `${formatCurrencyNoSymbol(val)} đ`;
 };
 
 const getImageUrl = (path) => {
@@ -160,6 +162,7 @@ const hasHoverImage = (product) => {
 .bg-sora-primary { background-color: #9f273b !important; }
 .font-serif { font-family: 'Playfair Display', serif; }
 .font-oswald { font-family: 'Oswald', sans-serif; }
+.font-luxury { font-family: 'Playfair Display', serif; }
 .tracking-widest { letter-spacing: 2px; }
 .z-index-2 { z-index: 2; }
 .z-index-3 { z-index: 3; }

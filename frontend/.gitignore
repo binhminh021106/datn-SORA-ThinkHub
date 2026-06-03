@@ -11,6 +11,7 @@ node_modules
 .DS_Store
 dist
 dist-ssr
+dist-check/
 coverage
 *.local
 .env
@@ -42,4 +43,5 @@ __screenshots__/
 frontend/.env
 # backend/.env
 backend/.env
+
 
