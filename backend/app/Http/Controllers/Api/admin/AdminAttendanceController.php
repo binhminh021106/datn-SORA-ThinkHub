@@ -11,14 +11,34 @@ use App\Models\ShiftException;
 use App\Models\OvertimeRequest;
 use App\Models\Admin;
 use App\Models\Role;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Contracts\Encryption\DecryptException;
+use Throwable;
 
 class AdminAttendanceController extends Controller
 {
+    private function denyUnlessSuperAdmin(Request $request)
+    {
+        $admin = $request->user();
+
+        if (!$admin) {
+            return response()->json(['success' => false, 'message' => 'Bạn cần đăng nhập để thực hiện thao tác này.'], 401);
+        }
+
+        $admin->loadMissing('role');
+        $roleLevel = (int) ($admin->role?->level ?? 0);
+
+        if ((int) $admin->role_id !== 1 && $roleLevel !== 1) {
+            return response()->json(['success' => false, 'message' => 'Bạn không có quyền truy cập trạm phát mã chấm công.'], 403);
+        }
+
+        return null;
+    }
+
     public function getRoles()
     {
         $roles = Role::all(['id', 'value', 'label', 'badgeClass', 'level']);
@@ -36,6 +56,10 @@ class AdminAttendanceController extends Controller
      */
     public function generateQrToken(Request $request)
     {
+        if ($response = $this->denyUnlessSuperAdmin($request)) {
+            return $response;
+        }
+
         $payload = [
             'station_id' => $request->user()->id,
             'type' => 'station',
@@ -136,81 +160,88 @@ class AdminAttendanceController extends Controller
         $today = Carbon::today()->format('Y-m-d');
         $now = Carbon::now();
 
-        if (AdminAttendance::where('admin_id', $adminId)->where('attendance_date', $today)->exists()) {
-            return response()->json(['success' => false, 'message' => 'Bạn đã check-in hôm nay rồi.'], 400);
-        }
-
-        $workShift = null;
-        $exception = ShiftException::where('admin_id', $adminId)->where('date', $today)->first();
-
-        if ($exception) {
-            if ($exception->type === 'leave') {
-                return response()->json(['success' => false, 'message' => 'Hôm nay bạn đang trong lịch nghỉ phép được duyệt. Không thể điểm danh.'], 403);
-            }
-            if (in_array($exception->type, ['extra_shift', 'change_shift'])) {
-                $workShift = $exception->workShift;
-            }
-        } 
-        
-        if (!$workShift) {
-            $assignment = AdminShiftAssignment::where('admin_id', $adminId)->active($today)->first();
-            if (!$assignment) {
-                return response()->json(['success' => false, 'message' => 'Bạn chưa được phân ca làm việc.'], 403);
-            }
-
-            $workShift = $assignment->workShift;
-            // FIX BUG: Frontend lưu working_days theo mảng [CN, T2, T3, T4, T5, T6, T7] tương ứng index [0..6]
-            // Carbon dayOfWeek trả về 0 (CN), 1 (T2)... nên map hoàn toàn khớp, không cần dayOfWeekIso - 1.
-            $weekdayIndex = $now->dayOfWeek; 
-
-            if (!is_array($workShift->working_days) || empty($workShift->working_days[$weekdayIndex])) {
-                return response()->json(['success' => false, 'message' => 'Hôm nay không phải là ngày làm việc theo lịch của bạn.'], 403);
-            }
-        }
-
-        $lateMinutes = 0;
-        $status = 'present';
-
-        if ($workShift && $workShift->start_time) {
-            try {
-                $scheduledStart = Carbon::parse($today . ' ' . $workShift->start_time);
-                $diff = $scheduledStart->diffInMinutes($now, false); 
-                
-                $tolerance = intval($workShift->late_tolerance ?? 0);
-                
-                if ($diff > $tolerance) {
-                    $lateMinutes = max(0, $diff - $tolerance);
-                    $status = 'late';
-                }
-            } catch (\Exception $ex) {}
-        }
-
-        DB::beginTransaction();
         try {
-            $attendance = AdminAttendance::create([
-                'admin_id' => $adminId,
-                'work_shift_id' => $workShift ? $workShift->id : null,
-                'shift_start_time' => $workShift ? $workShift->start_time : null,
-                'shift_end_time' => $workShift ? $workShift->end_time : null,
-                'shift_late_tolerance' => $workShift ? ($workShift->late_tolerance ?? 0) : 0,
-                'attendance_date' => $today,
-                'clock_in' => $now,
-                'status' => $status,
-                'late_minutes' => $lateMinutes,
-                'checkout_status' => 'pending',
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'early_leave_minutes' => 0,
-                'is_ot_approved' => false,
-                'ot_minutes' => 0
-            ]);
+            return DB::transaction(function () use ($request, $adminId, $today, $now) {
+                Admin::whereKey($adminId)->lockForUpdate()->firstOrFail();
 
-            DB::commit();
-            return response()->json(['success' => true, 'message' => 'Check-in thành công!', 'data' => $attendance]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['success' => false, 'message' => 'Lỗi lưu dữ liệu: ' . $e->getMessage()], 500);
+                if (AdminAttendance::where('admin_id', $adminId)->where('attendance_date', $today)->exists()) {
+                    return response()->json(['success' => false, 'message' => 'Bạn đã check-in hôm nay rồi.'], 409);
+                }
+
+                $workShift = null;
+                $exception = ShiftException::where('admin_id', $adminId)->where('date', $today)->first();
+
+                if ($exception) {
+                    if ($exception->type === 'leave') {
+                        return response()->json(['success' => false, 'message' => 'Hôm nay bạn đang trong lịch nghỉ phép được duyệt. Không thể điểm danh.'], 403);
+                    }
+                    if (in_array($exception->type, ['extra_shift', 'change_shift'])) {
+                        $workShift = $exception->workShift;
+                    }
+                }
+
+                if (!$workShift) {
+                    $assignment = AdminShiftAssignment::where('admin_id', $adminId)->active($today)->first();
+                    if (!$assignment) {
+                        return response()->json(['success' => false, 'message' => 'Bạn chưa được phân ca làm việc.'], 403);
+                    }
+
+                    $workShift = $assignment->workShift;
+                    $weekdayIndex = $now->dayOfWeek;
+
+                    if (!is_array($workShift->working_days) || empty($workShift->working_days[$weekdayIndex])) {
+                        return response()->json(['success' => false, 'message' => 'Hôm nay không phải là ngày làm việc theo lịch của bạn.'], 403);
+                    }
+                }
+
+                $lateMinutes = 0;
+                $status = 'present';
+
+                if ($workShift && $workShift->start_time) {
+                    try {
+                        $scheduledStart = Carbon::parse($today . ' ' . $workShift->start_time);
+                        $diff = $scheduledStart->diffInMinutes($now, false);
+                        $tolerance = intval($workShift->late_tolerance ?? 0);
+
+                        if ($diff > $tolerance) {
+                            $lateMinutes = max(0, $diff - $tolerance);
+                            $status = 'late';
+                        }
+                    } catch (\Exception $ex) {
+                    }
+                }
+
+                $attendance = AdminAttendance::create([
+                    'admin_id' => $adminId,
+                    'work_shift_id' => $workShift ? $workShift->id : null,
+                    'shift_start_time' => $workShift ? $workShift->start_time : null,
+                    'shift_end_time' => $workShift ? $workShift->end_time : null,
+                    'shift_late_tolerance' => $workShift ? ($workShift->late_tolerance ?? 0) : 0,
+                    'attendance_date' => $today,
+                    'clock_in' => $now,
+                    'status' => $status,
+                    'late_minutes' => $lateMinutes,
+                    'checkout_status' => 'pending',
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'early_leave_minutes' => 0,
+                    'is_ot_approved' => false,
+                    'ot_minutes' => 0
+                ]);
+
+                return response()->json(['success' => true, 'message' => 'Check-in thành công!', 'data' => $attendance]);
+            });
+        } catch (QueryException $e) {
+            if ($this->isUniqueConstraintViolation($e)) {
+                return response()->json(['success' => false, 'message' => 'Bạn đã check-in hôm nay rồi.'], 409);
+            }
+
+            report($e);
+        } catch (Throwable $e) {
+            report($e);
         }
+
+        return response()->json(['success' => false, 'message' => 'Không thể lưu dữ liệu lúc này.'], 500);
     }
 
     public function checkOut(QrAttendanceRequest $request)
@@ -222,93 +253,44 @@ class AdminAttendanceController extends Controller
             return response()->json(['success' => false, 'message' => $e->getMessage()], 403);
         }
 
-        $now = Carbon::now();
-        $today = Carbon::today()->format('Y-m-d');
-        $yesterday = Carbon::yesterday()->format('Y-m-d');
+        try {
+            return DB::transaction(function () use ($adminId) {
+                $now = Carbon::now();
+                $today = Carbon::today()->format('Y-m-d');
+                $yesterday = Carbon::yesterday()->format('Y-m-d');
 
-        $shift = AdminAttendance::with('workShift')
-            ->where('admin_id', $adminId)
-            ->where('checkout_status', 'pending')
-            ->where(function ($query) use ($today, $yesterday) {
-                $query->where('attendance_date', $today)
-                    ->orWhere('attendance_date', $yesterday);
-            })
-            ->orderByDesc('attendance_date')
-            ->first();
-
-        if (!$shift) {
-            return response()->json(['success' => false, 'message' => 'Không tìm thấy ca làm việc đang mở.'], 404);
-        }
-
-        $earlyLeaveMinutes = 0;
-        $otMinutes = 0;
-        $isOtApproved = false;
-
-        $attendanceDateStr = Carbon::parse($shift->attendance_date)->format('Y-m-d');
-
-        if ($shift->shift_end_time) {
-            $shiftEnd = Carbon::parse($attendanceDateStr . ' ' . $shift->shift_end_time);
-            
-            if ($shift->shift_start_time && $shift->shift_end_time <= $shift->shift_start_time) {
-                $shiftEnd->addDay();
-            }
-
-            if ($now->lessThan($shiftEnd)) {
-                $earlyLeaveMinutes = $shiftEnd->diffInMinutes($now);
-            } elseif ($now->greaterThan($shiftEnd)) {
-                $rawOtMinutes = (int) $shiftEnd->diffInMinutes($now);
-                
-                $otRequest = OvertimeRequest::where('admin_id', $adminId)
-                    ->where('date', $attendanceDateStr)
-                    ->where('status', 'approved')
+                $shift = AdminAttendance::with('workShift')
+                    ->where('admin_id', $adminId)
+                    ->where('checkout_status', 'pending')
+                    ->where(function ($query) use ($today, $yesterday) {
+                        $query->where('attendance_date', $today)
+                            ->orWhere('attendance_date', $yesterday);
+                    })
+                    ->orderByDesc('attendance_date')
+                    ->lockForUpdate()
                     ->first();
 
-                if ($otRequest) {
-                    $isOtApproved = true;
-                    // FIX BUG: Xử lý khoảng thời gian OT có thể vắt qua nửa đêm
-                    $otStart = Carbon::parse($attendanceDateStr . ' ' . $otRequest->start_time);
-                    $otEnd = Carbon::parse($attendanceDateStr . ' ' . $otRequest->end_time);
-
-                    if ($otEnd->lessThan($otStart)) {
-                        $otEnd->addDay();
-                    }
-
-                    $requestedOtMinutes = $otStart->diffInMinutes($otEnd);
-                    $otMinutes = min($rawOtMinutes, $requestedOtMinutes);
-                } else {
-                    $otMinutes = $rawOtMinutes;
-                    $isOtApproved = false;
+                if (!$shift) {
+                    return response()->json(['success' => false, 'message' => 'Không tìm thấy ca làm việc đang mở.'], 409);
                 }
-            }
-        } elseif ($shift->workShift) {
-            $shiftStart = Carbon::parse($attendanceDateStr . ' ' . $shift->workShift->start_time);
-            $shiftEnd = Carbon::parse($attendanceDateStr . ' ' . $shift->workShift->end_time);
-            
-            if ($shift->workShift->end_time <= $shift->workShift->start_time) {
-                $shiftEnd->addDay();
-            }
 
-            if ($now->lessThan($shiftEnd)) {
-                $earlyLeaveMinutes = $shiftEnd->diffInMinutes($now);
-            }
+                [$earlyLeaveMinutes, $otMinutes, $isOtApproved] = $this->calculateCheckoutMetrics($shift, $adminId, $now);
+
+                $shift->update([
+                    'clock_out' => $now,
+                    'checkout_status' => 'completed',
+                    'early_leave_minutes' => $earlyLeaveMinutes,
+                    'ot_minutes' => $otMinutes,
+                    'is_ot_approved' => $isOtApproved
+                ]);
+
+                return response()->json(['success' => true, 'message' => 'Check-out thành công!', 'data' => $shift]);
+            });
+        } catch (Throwable $e) {
+            report($e);
         }
 
-        DB::beginTransaction();
-        try {
-            $shift->update([
-                'clock_out' => $now,
-                'checkout_status' => 'completed',
-                'early_leave_minutes' => $earlyLeaveMinutes,
-                'ot_minutes' => $otMinutes,
-                'is_ot_approved' => $isOtApproved
-            ]);
-
-            DB::commit();
-            return response()->json(['success' => true, 'message' => 'Check-out thành công!', 'data' => $shift]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['success' => false, 'message' => 'Lỗi lưu dữ liệu: ' . $e->getMessage()], 500);
-        }
+        return response()->json(['success' => false, 'message' => 'Không thể lưu dữ liệu lúc này.'], 500);
     }
 
     public function index(Request $request)
@@ -363,6 +345,10 @@ class AdminAttendanceController extends Controller
 
     public function dailyStatus(Request $request)
     {
+        if ($response = $this->denyUnlessSuperAdmin($request)) {
+            return $response;
+        }
+
         $date = $request->get('date', Carbon::today()->format('Y-m-d'));
         $roleId = $request->get('role_id', 'all');
         $workShiftId = $request->get('work_shift_id', 'all');
@@ -488,5 +474,70 @@ class AdminAttendanceController extends Controller
             'success' => true,
             'data' => $summary,
         ]);
+    }
+
+    private function calculateCheckoutMetrics(AdminAttendance $shift, int $adminId, Carbon $now): array
+    {
+        $earlyLeaveMinutes = 0;
+        $otMinutes = 0;
+        $isOtApproved = false;
+        $attendanceDateStr = Carbon::parse($shift->attendance_date)->format('Y-m-d');
+        $shiftStartTime = $shift->shift_start_time ?: $shift->workShift?->start_time;
+        $shiftEndTime = $shift->shift_end_time ?: $shift->workShift?->end_time;
+
+        if (!$shiftEndTime) {
+            return [$earlyLeaveMinutes, $otMinutes, $isOtApproved];
+        }
+
+        $shiftEnd = Carbon::parse($attendanceDateStr . ' ' . $shiftEndTime);
+        if ($shiftStartTime && $shiftEndTime <= $shiftStartTime) {
+            $shiftEnd->addDay();
+        }
+
+        if ($now->lessThan($shiftEnd)) {
+            return [$shiftEnd->diffInMinutes($now), $otMinutes, $isOtApproved];
+        }
+
+        if (!$now->greaterThan($shiftEnd)) {
+            return [$earlyLeaveMinutes, $otMinutes, $isOtApproved];
+        }
+
+        $rawOtMinutes = (int) $shiftEnd->diffInMinutes($now);
+        $otRequest = OvertimeRequest::where('admin_id', $adminId)
+            ->where('date', $attendanceDateStr)
+            ->where('status', 'approved')
+            ->first();
+
+        if (!$otRequest) {
+            return [$earlyLeaveMinutes, $rawOtMinutes, false];
+        }
+
+        $otStart = Carbon::parse($attendanceDateStr . ' ' . $otRequest->start_time);
+        $otEnd = Carbon::parse($attendanceDateStr . ' ' . $otRequest->end_time);
+        if ($otEnd->lessThan($otStart)) {
+            $otEnd->addDay();
+        }
+
+        $effectiveOtStart = $shiftEnd->greaterThan($otStart) ? $shiftEnd->copy() : $otStart->copy();
+        $effectiveOtEnd = $now->lessThan($otEnd) ? $now->copy() : $otEnd->copy();
+
+        if ($effectiveOtEnd->greaterThan($effectiveOtStart)) {
+            $isOtApproved = true;
+            $otMinutes = $effectiveOtStart->diffInMinutes($effectiveOtEnd);
+        }
+
+        return [$earlyLeaveMinutes, $otMinutes, $isOtApproved];
+    }
+
+    private function isUniqueConstraintViolation(QueryException $exception): bool
+    {
+        $sqlState = $exception->errorInfo[0] ?? (string) $exception->getCode();
+        $driverCode = $exception->errorInfo[1] ?? null;
+        $message = strtolower($exception->getMessage());
+
+        return $driverCode === 1062
+            || $sqlState === '23505'
+            || (($sqlState === '23000' || $sqlState === '19') && str_contains($message, 'unique'))
+            || str_contains($message, 'duplicate entry');
     }
 }

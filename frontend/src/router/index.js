@@ -28,4 +28,56 @@ const router = createRouter({
     }
 });
 
+const readAdminStorage = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
+
+const getStoredAdminInfo = () => {
+    const savedInfo = readAdminStorage('admin_info');
+    if (!savedInfo) return null;
+
+    try {
+        return JSON.parse(savedInfo);
+    } catch {
+        return null;
+    }
+};
+
+const hasAdminToken = () => Boolean(
+    readAdminStorage('admin_token') ||
+    readAdminStorage('adminToken')
+);
+
+const hasRequiredAdminLevel = (requiredLevel) => {
+    const storedInfo = getStoredAdminInfo();
+    const roleId = readAdminStorage('admin_role');
+    const roleLevel = Number(readAdminStorage('admin_level') || storedInfo?.role?.level || 0);
+    const storedRoleLevel = Number(storedInfo?.role?.level || 0);
+
+    return (
+        roleId == 1 ||
+        (roleLevel > 0 && roleLevel <= requiredLevel) ||
+        storedInfo?.role_id == 1 ||
+        storedInfo?.role?.id == 1 ||
+        (storedRoleLevel > 0 && storedRoleLevel <= requiredLevel)
+    );
+};
+
+router.beforeEach((to) => {
+    const superAdminRoute = to.matched.find((record) => record.meta?.requiresSuperAdmin);
+    if (!superAdminRoute) return true;
+
+    if (!hasAdminToken()) {
+        return {
+            name: 'admin-login',
+            query: { redirect: to.fullPath },
+        };
+    }
+
+    const requiredLevel = Number(superAdminRoute.meta.requiredAdminLevel || 1);
+    if (!hasRequiredAdminLevel(requiredLevel)) {
+        return { name: 'admin-dashboard' };
+    }
+
+    return true;
+});
+
 export default router;

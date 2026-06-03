@@ -11,6 +11,28 @@ class AdminFaceProfile extends Model
 
     protected $table = 'admin_face_profiles';
 
+    protected static function booted(): void
+    {
+        static::saving(function (AdminFaceProfile $profile) {
+            $descriptors = $profile->face_descriptors;
+
+            if (
+                !is_array($descriptors)
+                || count($descriptors) !== 1
+                || !is_array($descriptors[0] ?? null)
+                || count($descriptors[0]) !== 128
+            ) {
+                throw new \InvalidArgumentException('A face profile must contain exactly one 128-value descriptor.');
+            }
+
+            $profile->sample_count = 1;
+        });
+    }
+
+    protected $hidden = [
+        'face_descriptors',
+    ];
+
     protected $fillable = [
         'admin_id',
         'face_descriptors',

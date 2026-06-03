@@ -73,22 +73,25 @@
                     <select class="form-select mb-3" v-model="selectedAdminId" @change="fetchProfile">
                       <option disabled value="">Chọn tài khoản admin/nhân sự</option>
                       <option v-for="admin in admins" :key="admin.id" :value="admin.id">
-                        {{ admin.fullname || admin.email }} - {{ admin.face_profile?.sample_count || 0 }} mẫu
+                        {{ admin.fullname || admin.email }} - {{ faceProfileStatus(admin.face_profile) }}
                       </option>
                     </select>
 
                     <div class="profile-card rounded-4 border p-3 mb-3 flex-shrink-0">
                       <div class="d-flex align-items-center justify-content-between mb-2">
                         <span class="fw-bold text-dark">Hồ sơ khuôn mặt đang chọn</span>
-                        <span class="badge" :class="profile.has_profile ? 'bg-success' : 'bg-secondary'">
-                          {{ profile.has_profile ? 'Đã có mẫu' : 'Chưa có mẫu' }}
+                        <span class="badge" :class="profileBadgeClass">
+                          {{ profileStatusLabel }}
                         </span>
                       </div>
                       <div class="small text-muted">
                         Nhân sự: <strong class="text-dark">{{ selectedAdminLabel }}</strong>
                       </div>
                       <div class="small text-muted">
-                        Số mẫu đã lưu: <strong class="text-dark">{{ profile.sample_count || 0 }}/5</strong>
+                        Định danh đã lưu: <strong class="text-dark">{{ profile.sample_count || 0 }}/1</strong>
+                      </div>
+                      <div v-if="profile.requires_reset" class="small text-danger fw-semibold mt-2">
+                        Hồ sơ cũ có nhiều mẫu và cần được xóa trước khi đăng ký lại.
                       </div>
                       <div v-if="profile.last_verified_at" class="small text-muted mt-1">
                         Lần đối chiếu gần nhất: {{ formatDate(profile.last_verified_at) }}
@@ -140,7 +143,7 @@
                     </button>
                     <button v-if="isManageMode" class="btn btn-brand rounded-3 fw-bold text-white" @click="registerFace" :disabled="!canRegister">
                       <i class="bi bi-database-add me-2"></i>
-                      Ghi mẫu khuôn mặt
+                      Đăng ký định danh khuôn mặt
                     </button>
                     <button v-if="isManageMode" class="btn btn-outline-danger rounded-3 fw-bold" @click="resetFaceProfile" :disabled="!canResetProfile">
                       <i class="bi bi-trash3 me-2"></i>
@@ -170,8 +173,7 @@ import { computed, nextTick, onUnmounted, ref } from 'vue';
 import apiClient from '@/utils/apiClient';
 import Swal from 'sweetalert2';
 
-const FACE_API_SRC = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js';
-const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights';
+const MODEL_URL = '/face-api-models';
 const MODEL_NAME = 'face-api.js';
 const MODEL_VERSION = '0.22.2';
 const THRESHOLD = 0.48;
@@ -184,7 +186,7 @@ const videoRef = ref(null);
 const streamRef = ref(null);
 const admins = ref([]);
 const selectedAdminId = ref('');
-const profile = ref({ has_profile: false, sample_count: 0 });
+const profile = ref({ has_profile: false, sample_count: 0, requires_reset: false });
 const modalMode = ref('manage');
 const resultMessage = ref('');
 const resultType = ref('info');
@@ -195,15 +197,24 @@ const candidates = ref([]);
 const lastDistance = ref(null);
 
 let modelLoadPromise = null;
+let faceApiModule = null;
 
 const emit = defineEmits(['attendance-success']);
 const isManageMode = computed(() => modalMode.value === 'manage');
 const isAttendanceMode = computed(() => modalMode.value === 'attendance');
 const isReady = computed(() => isCameraActive.value && !isLoadingModels.value && !isProcessing.value);
-const canRegister = computed(() => isReady.value && !!selectedAdminId.value);
+const canRegister = computed(() => isReady.value && !!selectedAdminId.value && !profile.value?.has_profile);
 const canResetProfile = computed(() => !!selectedAdminId.value && !!profile.value?.has_profile && !isProcessing.value);
 const selectedAdmin = computed(() => admins.value.find((admin) => String(admin.id) === String(selectedAdminId.value)));
 const selectedAdminLabel = computed(() => selectedAdmin.value ? displayAdminName(selectedAdmin.value) : 'Chưa chọn');
+const profileStatusLabel = computed(() => {
+  if (profile.value?.requires_reset) return 'Cần đăng ký lại';
+  return profile.value?.has_profile ? 'Đã đăng ký' : 'Chưa đăng ký';
+});
+const profileBadgeClass = computed(() => {
+  if (profile.value?.requires_reset) return 'bg-warning text-dark';
+  return profile.value?.has_profile ? 'bg-success' : 'bg-secondary';
+});
 const cameraHint = computed(() => isLoadingModels.value ? 'Đang tải model nhận diện...' : 'Camera chưa bật');
 const loadingText = computed(() => isLoadingModels.value ? 'Đang tải face-api.js và model...' : 'Đang xử lý khuôn mặt...');
 const resultClass = computed(() => ({
@@ -226,7 +237,7 @@ const modalSubtitle = computed(() => (
 const helperText = computed(() => (
   isAttendanceMode.value
     ? 'Đưa khuôn mặt vào khung hình, giữ camera ổn định và bấm quét để chấm công.'
-    : 'Kết quả định danh phụ thuộc ánh sáng, góc mặt, camera và chất lượng mẫu đã lưu.'
+    : 'Mỗi tài khoản chỉ lưu một định danh khuôn mặt. Muốn thay đổi cần xóa hồ sơ cũ trước khi đăng ký lại.'
 ));
 
 const openModal = async (mode = 'manage') => {
@@ -271,7 +282,7 @@ const fetchAdmins = async () => {
 
 const fetchProfile = async () => {
   if (!selectedAdminId.value) {
-    profile.value = { has_profile: false, sample_count: 0 };
+    profile.value = { has_profile: false, sample_count: 0, requires_reset: false };
     return;
   }
 
@@ -279,45 +290,24 @@ const fetchProfile = async () => {
     const response = await apiClient.get('/admin/face-recognition/profile', {
       params: { admin_id: selectedAdminId.value },
     });
-    profile.value = response.data?.data || { has_profile: false, sample_count: 0 };
+    profile.value = response.data?.data || { has_profile: false, sample_count: 0, requires_reset: false };
   } catch (error) {
     errorMessage.value = error.response?.data?.message || 'Không thể tải trạng thái mẫu khuôn mặt.';
   }
 };
-
-const loadScript = () => new Promise((resolve, reject) => {
-  if (window.faceapi) {
-    resolve(window.faceapi);
-    return;
-  }
-
-  const existing = document.querySelector(`script[src="${FACE_API_SRC}"]`);
-  if (existing) {
-    existing.addEventListener('load', () => resolve(window.faceapi));
-    existing.addEventListener('error', reject);
-    return;
-  }
-
-  const script = document.createElement('script');
-  script.src = FACE_API_SRC;
-  script.async = true;
-  script.onload = () => resolve(window.faceapi);
-  script.onerror = () => reject(new Error('Không thể tải face-api.js từ CDN.'));
-  document.head.appendChild(script);
-});
 
 const loadModels = async () => {
   if (modelLoadPromise) return modelLoadPromise;
 
   modelLoadPromise = (async () => {
     isLoadingModels.value = true;
-    const faceapi = await loadScript();
+    faceApiModule = faceApiModule || await import('face-api.js');
     await Promise.all([
-      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+      faceApiModule.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+      faceApiModule.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+      faceApiModule.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
     ]);
-    return faceapi;
+    return faceApiModule;
   })()
     .catch((error) => {
       modelLoadPromise = null;
@@ -490,7 +480,7 @@ const resetFaceProfile = async () => {
 
   const result = await Swal.fire({
     title: 'Xóa hồ sơ khuôn mặt?',
-    text: `Toàn bộ mẫu khuôn mặt của ${selectedAdminLabel.value} sẽ bị xóa.`,
+    text: `Định danh khuôn mặt của ${selectedAdminLabel.value} sẽ bị xóa và cần đăng ký lại nếu muốn tiếp tục chấm công bằng khuôn mặt.`,
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#dc3545',
@@ -534,6 +524,11 @@ const runFaceAction = async (action) => {
   } finally {
     isProcessing.value = false;
   }
+};
+
+const faceProfileStatus = (faceProfile) => {
+  if (!faceProfile) return 'chưa đăng ký';
+  return faceProfile.requires_reset ? 'cần đăng ký lại' : 'đã đăng ký';
 };
 
 const displayAdminName = (admin) => {

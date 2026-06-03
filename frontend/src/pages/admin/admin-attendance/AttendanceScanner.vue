@@ -1,5 +1,5 @@
 <template>
-  <div class="station-wrapper d-flex flex-column vh-100 bg-dark text-white position-relative">
+  <div v-if="canAccess" class="station-wrapper d-flex flex-column vh-100 bg-dark text-white position-relative">
     
     <!-- HEADER -->
     <div class="station-header d-flex justify-content-between align-items-center p-3 border-bottom border-secondary">
@@ -94,6 +94,18 @@
       </div>
     </div>
   </div>
+  <div v-else class="station-wrapper d-flex align-items-center justify-content-center vh-100 bg-dark text-white p-4">
+    <div class="text-center">
+      <div class="mb-3">
+        <i class="bi bi-shield-lock" style="font-size: 4rem;"></i>
+      </div>
+      <h4 class="fw-bold mb-2">Bạn không có quyền truy cập trạm phát mã</h4>
+      <p class="text-white-50 mb-4">Tính năng này chỉ dành cho tài khoản quản trị cấp cao.</p>
+      <a href="javascript:history.back()" class="btn btn-outline-light rounded-pill px-4">
+        <i class="bi bi-arrow-left me-2"></i>Quay lại
+      </a>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -102,7 +114,34 @@ import axios from 'axios';
 import QrcodeVue from 'qrcode.vue'; 
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const token = localStorage.getItem('admin_token'); 
+const readAdminStorage = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
+const token = readAdminStorage('admin_token') || readAdminStorage('adminToken');
+
+const getStoredAdminInfo = () => {
+  const savedInfo = readAdminStorage('admin_info');
+  if (!savedInfo) return null;
+
+  try {
+    return JSON.parse(savedInfo);
+  } catch {
+    return null;
+  }
+};
+
+const canAccess = computed(() => {
+  const storedInfo = getStoredAdminInfo();
+  const roleId = readAdminStorage('admin_role');
+  const roleLevel = Number(readAdminStorage('admin_level') || storedInfo?.role?.level || 0);
+  const storedRoleLevel = Number(storedInfo?.role?.level || 0);
+
+  return (
+    roleId == 1 ||
+    (roleLevel > 0 && roleLevel <= 1) ||
+    storedInfo?.role_id == 1 ||
+    storedInfo?.role?.id == 1 ||
+    (storedRoleLevel > 0 && storedRoleLevel <= 1)
+  );
+});
 
 // --- QUẢN LÝ QR CODE ---
 const isLoading = ref(true);
@@ -118,6 +157,12 @@ const progressPercent = computed(() => {
 const fetchQrToken = async () => {
   isLoading.value = true;
   stopTimer(); 
+
+  if (!token || !canAccess.value) {
+    qrToken.value = 'ERROR';
+    isLoading.value = false;
+    return;
+  }
   
   try {
     const response = await axios.get(`${API_URL}/admin/attendances/qr-token`, {
@@ -204,6 +249,8 @@ const triggerStationAlert = (name, type) => {
 
 // Hàm "Lắng nghe" liên tục API Status
 const fetchLiveStatus = async () => {
+  if (!token || !canAccess.value) return;
+
   try {
     const res = await axios.get(`${API_URL}/admin/attendances/daily-status`, {
       headers: { Authorization: `Bearer ${token}` }
@@ -243,6 +290,11 @@ const fetchLiveStatus = async () => {
 };
 
 onMounted(() => {
+  if (!canAccess.value) {
+    isLoading.value = false;
+    return;
+  }
+
   fetchQrToken();
   // Khởi chạy Polling: Cứ 3 giây hỏi API một lần
   pollingInterval = setInterval(fetchLiveStatus, 3000);

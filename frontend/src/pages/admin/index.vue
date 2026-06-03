@@ -484,8 +484,9 @@ const paymentStats = ref({
 // Quick local permission check to avoid unnecessary loading when user lacks role
 const REQUIRED_ADMIN_LEVEL = 1; // adjust this value if your admin level scheme differs
 let _storedInfo = {};
-try { _storedInfo = JSON.parse(localStorage.getItem('admin_info') || '{}'); } catch (e) { _storedInfo = {}; }
-const storedLevel = Number(localStorage.getItem('admin_level') || _storedInfo?.role?.level || 0);
+const storedAdminInfo = localStorage.getItem('admin_info') || sessionStorage.getItem('admin_info');
+try { _storedInfo = JSON.parse(storedAdminInfo || '{}'); } catch (e) { _storedInfo = {}; }
+const storedLevel = Number(localStorage.getItem('admin_level') || sessionStorage.getItem('admin_level') || _storedInfo?.role?.level || 0);
 const hasAccess = ref(Boolean(
   localStorage.getItem('admin_token') ||
   sessionStorage.getItem('admin_token') ||

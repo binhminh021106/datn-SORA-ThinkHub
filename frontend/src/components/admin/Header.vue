@@ -163,7 +163,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
-import { getFullImage, getToken } from '@/composables/useUtilities';
+import { clearAdminAuthStorage, getAdminToken, getFullImage } from '@/composables/useUtilities';
 import axios from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import * as bootstrap from 'bootstrap';
@@ -301,18 +301,13 @@ const toggleTheme = () => {
 };
 
 const isLoggedIn = computed(() => {
-  return !!(
-    localStorage.getItem('admin_token') ||
-    sessionStorage.getItem('admin_token') ||
-    localStorage.getItem('adminToken') ||
-    sessionStorage.getItem('adminToken')
-  );
+  return !!getAdminToken();
 });
 
 const fetchAttendanceState = async () => {
   if (!isLoggedIn.value) return;
   try {
-    const token = getToken();
+    const token = getAdminToken();
     const response = await axios.get(`${API_URL}/admin/attendances/status`, {
       headers: { Authorization: `Bearer ${token}` }
     });
@@ -327,7 +322,7 @@ const fetchAttendanceState = async () => {
 };
 
 const fetchAdminProfile = async () => {
-  const token = getToken();
+  const token = getAdminToken();
   if (!token) throw new Error('Không tìm thấy token xác thực');
   
   const response = await axios.get(`${API_URL}/admin/profile`, {
@@ -406,10 +401,7 @@ const handleLogout = () => {
     cancelButtonText: 'Hủy'
   }).then((result) => {
     if (result.isConfirmed) {
-      ['admin_token', 'adminToken', 'admin_role', 'admin_level', 'admin_info', 'auth_token', 'token'].forEach((key) => {
-        localStorage.removeItem(key);
-        sessionStorage.removeItem(key);
-      });
+      clearAdminAuthStorage();
       queryClient.clear();
       window.dispatchEvent(new CustomEvent('admin-auth-changed'));
 
@@ -505,7 +497,7 @@ const openFaceAttendanceModal = () => {
 
 const isCheckingStatus = ref(false);
 const fetchLatestAttendanceState = async () => {
-  const token = getToken();
+  const token = getAdminToken();
   const response = await axios.get(`${API_URL}/admin/attendances/status`, {
     headers: { Authorization: `Bearer ${token}` }
   });

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { clearAdminAuthStorage, clearUserAuthStorage, getAdminToken, getUserToken } from '@/composables/useUtilities';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
 
@@ -16,10 +17,9 @@ const apiClient = axios.create({
 // Request Interceptor: Thêm token vào tất cả requests
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token') ||
-                  localStorage.getItem('adminToken') || sessionStorage.getItem('adminToken') ||
-                  localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token') ||
-                  localStorage.getItem('token') || sessionStorage.getItem('token');
+    const requestUrl = config.url || '';
+    const isAdminRequest = requestUrl.includes('/admin/');
+    const token = isAdminRequest ? getAdminToken() : getUserToken();
     
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -38,19 +38,20 @@ apiClient.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Unauthorized - xóa token và redirect phù hợp cho admin hoặc client
-      ['admin_token', 'adminToken', 'auth_token', 'token'].forEach((key) => {
-        localStorage.removeItem(key);
-        sessionStorage.removeItem(key);
-      });
+      const requestUrl = error.config?.url || '';
+      const currentPath = window.location.pathname || '';
+      const isAdminRequest = requestUrl.includes('/admin/');
+
+      if (isAdminRequest) {
+        clearAdminAuthStorage();
+      } else {
+        clearUserAuthStorage();
+      }
 
       if (error.config?.ignoreAuthRedirect) {
         return Promise.reject(error);
       }
 
-      const requestUrl = error.config?.url || '';
-      const currentPath = window.location.pathname || '';
-      const isAdminRequest = requestUrl.includes('/admin/') || currentPath.startsWith('/admin');
-      
       if (isAdminRequest) {
         if (!currentPath.includes('/admin/login')) {
           window.location.href = '/admin/login';

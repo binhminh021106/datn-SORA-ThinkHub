@@ -260,13 +260,19 @@ Route::prefix('admin')->group(function () {
         });
 
         Route::controller(AdminFaceRecognitionController::class)->prefix('face-recognition')->group(function () {
-            Route::get('/admins', 'admins');
-            Route::get('/profile', 'profile');
-            Route::post('/register', 'register');
-            Route::post('/verify', 'verify');
             Route::post('/attendance', 'attendance');
-            Route::delete('/profile/{adminId}', 'destroyProfile');
         });
+
+        Route::middleware(['check.module:admin_attendance'])
+            ->controller(AdminFaceRecognitionController::class)
+            ->prefix('face-recognition')
+            ->group(function () {
+                Route::get('/admins', 'admins');
+                Route::get('/profile', 'profile');
+                Route::post('/register', 'register');
+                Route::post('/verify', 'verify');
+                Route::delete('/profile/{adminId}', 'destroyProfile');
+            });
 
         // Quản lý Nhân viên (Mã: admin_staff)
         Route::middleware(['check.module:admin_staff'])->group(function () {

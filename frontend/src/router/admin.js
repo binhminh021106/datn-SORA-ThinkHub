@@ -25,6 +25,8 @@ const admin = [
     component: () => import('../pages/admin/admin-attendance/AttendanceScanner.vue'),
     meta: {
       moduleCode: 'admin_attendance',
+      requiresSuperAdmin: true,
+      requiredAdminLevel: 1,
       title: 'Máy quét điểm danh'
     },
   },

@@ -72,6 +72,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import { useQueryClient } from '@tanstack/vue-query';
+import { clearAdminAuthStorage } from '@/composables/useUtilities';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -98,10 +99,7 @@ const handleLogin = async () => {
       const storage = form.value.remember ? localStorage : sessionStorage;
 
       // Clear previous entries to avoid stale data in the other storage
-      ['admin_token', 'adminToken', 'auth_token', 'token', 'admin_role', 'admin_level', 'admin_info'].forEach((key) => {
-        localStorage.removeItem(key);
-        sessionStorage.removeItem(key);
-      });
+      clearAdminAuthStorage();
 
       storage.setItem('admin_token', data.token);
       storage.setItem('admin_role', data.admin.role_id);
