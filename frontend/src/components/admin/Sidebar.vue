@@ -136,7 +136,6 @@ const userLevel = computed(() => {
 
 const menuItems = ref([
   { name: 'Tổng quan', path: '/admin', icon: 'bi-grid-1x2-fill', moduleCode: null },
-  { name: 'Phân Quyền', path: '/admin/roles', icon: 'bi-shield-fill-check', moduleCode: 'admin_roles' },
   {
     name: 'Chấm công', icon: 'bi-clock-fill', stateKey: 'attendance',
     children: [
@@ -144,6 +143,7 @@ const menuItems = ref([
       { name: 'Ca làm việc', path: '/admin/attendance/shifts', moduleCode: 'admin_attendance' }
     ]
   },
+  { name: 'Phân Quyền', path: '/admin/roles', icon: 'bi-shield-fill-check', moduleCode: 'admin_roles' },
   {
     name: 'Tài khoản', icon: 'bi-people-fill', stateKey: 'users',
     children: [

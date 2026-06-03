@@ -51,4 +51,9 @@ class Admin extends Authenticatable
     {
         return $this->hasOne(AdminShiftAssignment::class, 'admin_id', 'id');
     }
+
+    public function faceProfile()
+    {
+        return $this->hasOne(AdminFaceProfile::class, 'admin_id', 'id');
+    }
 }

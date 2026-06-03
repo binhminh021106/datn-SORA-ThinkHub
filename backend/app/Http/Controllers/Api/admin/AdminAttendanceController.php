@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AdminAttendance\QrAttendanceRequest;
 use App\Models\AdminAttendance;
 use App\Models\AdminShiftAssignment;
 use App\Models\WorkShift;
@@ -123,7 +124,7 @@ class AdminAttendanceController extends Controller
         ]);
     }
 
-    public function checkIn(Request $request)
+    public function checkIn(QrAttendanceRequest $request)
     {
         try {
             $this->validateQrToken($request);
@@ -212,7 +213,7 @@ class AdminAttendanceController extends Controller
         }
     }
 
-    public function checkOut(Request $request)
+    public function checkOut(QrAttendanceRequest $request)
     {
         try {
             $this->validateQrToken($request);

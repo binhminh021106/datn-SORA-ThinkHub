@@ -20,6 +20,15 @@ const admin = [
     component: () => import('../pages/admin/auth/ResetPassword.vue'),
   },
   {
+    path: '/admin/attendance/scanner',
+    name: 'admin-attendance-scanner',
+    component: () => import('../pages/admin/admin-attendance/AttendanceScanner.vue'),
+    meta: {
+      moduleCode: 'admin_attendance',
+      title: 'Máy quét điểm danh'
+    },
+  },
+  {
     path: '/admin',
     component: () => import('../layouts/AdminLayout.vue'),
     children: [
@@ -165,17 +174,6 @@ const admin = [
           title: 'Quản lý ca làm việc'
         },
       },
-      // ROUTE MÁY QUÉT ĐIỂM DANH QR
-      {
-        path: 'attendance/scanner',
-        name: 'admin-attendance-scanner',
-        component: () => import('../pages/admin/admin-attendance/AttendanceScanner.vue'),
-        meta: {
-          moduleCode: 'admin_attendance',
-          title: 'Máy quét điểm danh'
-        },
-      },
-
       // ROUTE QUẢN LÝ BANNER (BANNERS) - THÊM MỚI
       {
         path: 'banners',

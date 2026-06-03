@@ -13,10 +13,6 @@
           <p class="mb-0 text-white-50 small">Nhân viên sử dụng tính năng "Quét Mã" trên điện thoại để quét mã này</p>
         </div>
       </div>
-      <!-- Nút Copy dùng cho sinh viên Test -->
-      <button class="btn btn-sm btn-outline-light rounded-pill px-3" @click="copyToken">
-        <i class="bi bi-clipboard me-2"></i>Copy Token Test
-      </button>
     </div>
 
     <!-- MAIN AREA -->
@@ -138,12 +134,6 @@ const fetchQrToken = async () => {
   } finally {
     isLoading.value = false;
   }
-};
-
-const copyToken = () => {
-  navigator.clipboard.writeText(qrToken.value).then(() => {
-    alert("Đã sao chép Token thành công! Bạn có thể dán vào Modal Quét trên thiết bị khác để test.");
-  });
 };
 
 const startTimer = () => {
