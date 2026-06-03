@@ -17,8 +17,10 @@ import WarrantyScreen from '../screens/WarrantyScreen';
 import ContactScreen from '../screens/ContactScreen';
 import AboutScreen from '../screens/AboutScreen';
 import ProductDetailScreen from '../screens/ProductDetailScreen';
-
-const RewardsScreen = () => null;
+import ShopScreen from '../screens/ShopScreen';
+import CollectionScreen from '../screens/CollectionScreen';
+import CollectionDetailScreen from '../screens/CollectionDetailScreen';
+import CompareScreen from '../screens/CompareScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -33,7 +35,7 @@ function BottomTabs() {
           if (route.name === 'Cart') iconName = focused ? 'cart' : 'cart-outline';
           else if (route.name === 'Wishlist') iconName = focused ? 'heart' : 'heart-outline';
           else if (route.name === 'Home') iconName = focused ? 'home' : 'home-outline';
-          else if (route.name === 'Rewards') iconName = focused ? 'gift' : 'gift-outline';
+          else if (route.name === 'Shop') iconName = focused ? 'storefront' : 'storefront-outline';
           else if (route.name === 'Profile') iconName = focused ? 'person' : 'person-outline';
           return <Ionicons name={iconName} size={size} color={color} />;
         },
@@ -51,7 +53,7 @@ function BottomTabs() {
       <Tab.Screen name="Cart" component={CartScreen} options={{ title: 'Giỏ hàng' }} />
       <Tab.Screen name="Wishlist" component={WishlistScreen} options={{ title: 'Yêu Thích' }} />
       <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Trang chủ' }} />
-      <Tab.Screen name="Rewards" component={RewardsScreen} options={{ title: 'Khuyến mãi' }} />
+      <Tab.Screen name="Shop" component={ShopScreen} options={{ title: 'Cửa hàng' }} />
       <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Cá nhân' }} />
     </Tab.Navigator>
   );
@@ -70,7 +72,10 @@ export default function TabNavigator() {
       <Stack.Screen name="Warranty" component={WarrantyScreen} />
       <Stack.Screen name="ContactCSKH" component={ContactScreen} />
       <Stack.Screen name="About" component={AboutScreen} />
+      <Stack.Screen name="Collections" component={CollectionScreen} />
+      <Stack.Screen name="CollectionDetail" component={CollectionDetailScreen} />
       <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
+      <Stack.Screen name="Compare" component={CompareScreen} />
     </Stack.Navigator>
   );
 }

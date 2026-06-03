@@ -23,6 +23,58 @@ const Alert = {
   alert: (title, message, buttons) => showCustomAlert(title, message, buttons)
 };
 
+const REQUEST_TIMEOUT_MS = 15000;
+
+const createTimeoutError = () => {
+  const error = new Error('Request timeout');
+  error.name = 'AbortError';
+  return error;
+};
+
+const fetchWithTimeout = async (url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) => {
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  let timeoutId = null;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      controller?.abort();
+      reject(createTimeoutError());
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([
+      fetch(url, {
+        ...options,
+        signal: controller?.signal,
+      }),
+      timeoutPromise,
+    ]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+};
+
+const parseJsonSafely = async (response) => {
+  const text = await response.text();
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return { message: text };
+  }
+};
+
+const getFirstValidationError = (result) => {
+  if (result?.errors && typeof result.errors === 'object') {
+    const firstError = Object.values(result.errors)[0];
+    if (Array.isArray(firstError)) return firstError[0];
+    if (typeof firstError === 'string') return firstError;
+  }
+
+  return result?.message;
+};
+
 const STATIC_PROVINCES = [
   { "code": "89", "name": "Tỉnh An Giang" },
   { "code": "77", "name": "Tỉnh Bà Rịa - Vũng Tàu" },
@@ -108,6 +160,7 @@ export default function AddressScreen() {
   const [isDefault, setIsDefault] = useState(false);
 
   const [isSaving, setIsSaving] = useState(false);
+  const [formError, setFormError] = useState('');
 
   // API Tỉnh Thành States
   const [provinces, setProvinces] = useState(STATIC_PROVINCES);
@@ -123,6 +176,10 @@ export default function AddressScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectorLoading, setSelectorLoading] = useState(false);
   const [isManualMode, setIsManualMode] = useState(false);
+
+  useEffect(() => {
+    if (formError) setFormError('');
+  }, [customerName, customerPhone, city, district, ward, shippingAddress, isDefault]);
 
   // Load Provinces
   const loadProvinces = async () => {
@@ -247,14 +304,14 @@ export default function AddressScreen() {
         return;
       }
 
-      const res = await fetch(`${API_BASE_URL}/client/profile/addresses`, {
+      const res = await fetchWithTimeout(`${API_BASE_URL}/client/profile/addresses`, {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: 'application/json',
         },
       });
 
-      const data = await res.json();
+      const data = await parseJsonSafely(res);
       if (res.ok && data.status) {
         setAddresses(data.data || []);
       }
@@ -268,6 +325,7 @@ export default function AddressScreen() {
   const handleOpenAddModal = () => {
     setIsEditing(false);
     setCurrentAddressId(null);
+    setFormError('');
     setCustomerName('');
     setCustomerPhone('');
     setCity('');
@@ -286,6 +344,7 @@ export default function AddressScreen() {
   const handleOpenEditModal = async (item) => {
     setIsEditing(true);
     setCurrentAddressId(item.id);
+    setFormError('');
     setCustomerName(item.customer_name || '');
     setCustomerPhone(item.customer_phone || '');
     setCity(item.city || '');
@@ -345,45 +404,58 @@ export default function AddressScreen() {
   };
 
   const validateForm = () => {
-    if (!customerName.trim()) {
-      Alert.alert('Thông báo', 'Vui lòng nhập tên người nhận.');
+    const normalizedName = customerName.trim().replace(/\s+/g, ' ');
+    const cleanPhone = customerPhone.replace(/[^0-9]/g, '');
+    const cleanShippingAddress = shippingAddress.trim();
+    const fail = (message) => {
+      setFormError(message);
       return false;
+    };
+
+    if (!normalizedName) {
+      return fail('Vui lòng nhập tên người nhận.');
+    }
+    if (!/^[A-Za-zÀ-ỹ]+(?:\s+[A-Za-zÀ-ỹ]+)+$/u.test(normalizedName)) {
+      return fail('Tên người nhận cần có ít nhất 2 từ và không chứa số hoặc ký tự đặc biệt.');
     }
     if (!customerPhone.trim()) {
-      Alert.alert('Thông báo', 'Vui lòng nhập số điện thoại.');
-      return false;
+      return fail('Vui lòng nhập số điện thoại.');
     }
-    const cleanPhone = customerPhone.replace(/[^0-9]/g, '');
-    if (cleanPhone.length !== 10 || !cleanPhone.startsWith('0')) {
-      Alert.alert('Thông báo', 'Số điện thoại không hợp lệ. Vui lòng nhập 10 chữ số bắt đầu bằng 0.');
-      return false;
+    if (!/^0[35789][0-9]{8}$/.test(cleanPhone)) {
+      return fail('Số điện thoại không hợp lệ. Vui lòng nhập số di động 10 chữ số bắt đầu bằng 03, 05, 07, 08 hoặc 09.');
     }
     if (!city.trim()) {
-      Alert.alert('Thông báo', 'Vui lòng nhập Tỉnh/Thành phố.');
-      return false;
+      return fail('Vui lòng nhập Tỉnh/Thành phố.');
     }
     if (!district.trim()) {
-      Alert.alert('Thông báo', 'Vui lòng nhập Quận/Huyện.');
-      return false;
+      return fail('Vui lòng nhập Quận/Huyện.');
     }
     if (!ward.trim()) {
-      Alert.alert('Thông báo', 'Vui lòng nhập Phường/Xã.');
-      return false;
+      return fail('Vui lòng nhập Phường/Xã.');
     }
-    if (!shippingAddress.trim()) {
-      Alert.alert('Thông báo', 'Vui lòng nhập địa chỉ chi tiết.');
-      return false;
+    if (!cleanShippingAddress) {
+      return fail('Vui lòng nhập địa chỉ chi tiết.');
     }
+    if (cleanShippingAddress.length < 10) {
+      return fail('Địa chỉ chi tiết cần tối thiểu 10 ký tự.');
+    }
+    setFormError('');
     return true;
   };
 
   const handleSave = async () => {
+    if (isSaving) return;
     if (!validateForm()) return;
 
     setIsSaving(true);
+    setFormError('');
+
     try {
       const token = await AsyncStorage.getItem('auth_token');
-      if (!token) return;
+      if (!token) {
+        setFormError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        return;
+      }
 
       const url = isEditing
         ? `${API_BASE_URL}/client/profile/addresses/${currentAddressId}`
@@ -391,7 +463,7 @@ export default function AddressScreen() {
 
       const method = isEditing ? 'PUT' : 'POST';
 
-      const response = await fetch(url, {
+      const response = await fetchWithTimeout(url, {
         method,
         headers: {
           Authorization: `Bearer ${token}`,
@@ -399,7 +471,7 @@ export default function AddressScreen() {
           Accept: 'application/json',
         },
         body: JSON.stringify({
-          customer_name: customerName.trim(),
+          customer_name: customerName.trim().replace(/\s+/g, ' '),
           customer_phone: customerPhone.replace(/[^0-9]/g, ''),
           city: city.trim(),
           district: district.trim(),
@@ -409,16 +481,22 @@ export default function AddressScreen() {
         }),
       });
 
-      const result = await response.json();
+      const result = await parseJsonSafely(response);
       if (response.ok && result.status) {
         setShowModal(false);
-        Alert.alert('Thành công', isEditing ? 'Cập nhật địa chỉ thành công!' : 'Thêm địa chỉ mới thành công!');
-        fetchAddresses();
+        await fetchAddresses();
+        setTimeout(() => {
+          Alert.alert('Thành công', isEditing ? 'Cập nhật địa chỉ thành công!' : 'Thêm địa chỉ mới thành công!');
+        }, 250);
       } else {
-        Alert.alert('Thất bại', result.message || 'Không thể lưu địa chỉ.');
+        setFormError(getFirstValidationError(result) || 'Không thể lưu địa chỉ.');
       }
     } catch (e) {
-      Alert.alert('Lỗi', 'Không thể kết nối đến máy chủ.');
+      if (e?.name === 'AbortError') {
+        setFormError('Lưu địa chỉ quá lâu. Vui lòng kiểm tra kết nối mạng rồi thử lại.');
+      } else {
+        setFormError('Không thể kết nối đến máy chủ.');
+      }
     } finally {
       setIsSaving(false);
     }
@@ -752,6 +830,13 @@ export default function AddressScreen() {
               </View>
             </ScrollView>
 
+            {!!formError && (
+              <View style={s.formErrorBox}>
+                <Ionicons name="alert-circle-outline" size={18} color="#9f273b" />
+                <Text style={s.formErrorText}>{formError}</Text>
+              </View>
+            )}
+
             {/* Modal Buttons */}
             <View style={s.modalBtnRow}>
               <TouchableOpacity
@@ -763,7 +848,7 @@ export default function AddressScreen() {
               </TouchableOpacity>
               
               <TouchableOpacity
-                style={[s.modalBtn, s.modalBtnConfirm]}
+                style={[s.modalBtn, s.modalBtnConfirm, isSaving && s.modalBtnDisabled]}
                 onPress={handleSave}
                 disabled={isSaving}
                 activeOpacity={0.8}
@@ -1110,6 +1195,25 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: '#333',
   },
+  formErrorBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: '#fff4f4',
+    borderWidth: 1,
+    borderColor: '#f2c8c8',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  formErrorText: {
+    flex: 1,
+    fontFamily: 'Oswald_400Regular',
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#9f273b',
+  },
 
   modalBtnRow: {
     flexDirection: 'row',
@@ -1129,6 +1233,9 @@ const s = StyleSheet.create({
   },
   modalBtnConfirm: {
     backgroundColor: '#9f273b',
+  },
+  modalBtnDisabled: {
+    opacity: 0.65,
   },
   modalBtnCancelTxt: {
     fontFamily: 'Oswald_600SemiBold',

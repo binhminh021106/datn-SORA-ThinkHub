@@ -231,6 +231,21 @@ const getFormattedDate = (dateString) => {
 
 const getDisplayAuthor = (item) => item?.author_name || 'Không rõ';
 
+const getFullImageWithFallback = (imagePath) => {
+    if (!imagePath) return defaultImage;
+    if (imagePath.startsWith('http') || imagePath.startsWith('data:image')) return imagePath;
+
+    const cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
+    if (cleanPath.startsWith('storage/')) {
+        return `${BACKEND_URL}/${cleanPath}`;
+    }
+    return `${BACKEND_URL}/storage/${cleanPath}`;
+};
+
+const handleImageError = (e) => {
+    e.target.src = defaultImage;
+};
+
 const getStatusInfo = (status) => {
     const map = {
         'published': { text: 'Xuất bản', class: 'bg-success bg-opacity-10 text-success border border-success', icon: 'bi-check-circle-fill' },

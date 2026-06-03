@@ -292,7 +292,7 @@ const fetchAdminProfile = async () => {
       Authorization: `Bearer ${token}`
     }
   });
-  return response.data;
+  return response.data?.data ?? response.data;
 };
 
 const { data: adminProfileData } = useQuery({

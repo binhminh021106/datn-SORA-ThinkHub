@@ -21,6 +21,8 @@ import { useNavigation, useIsFocused } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../config/api";
 import { showCustomAlert } from "../components/CustomAlert";
+import SmartImage from '../components/SmartImage';
+import { PRICE_FONT_FAMILY, PRICE_FONT_WEIGHT } from '../styles/typography';
 
 const { width, height } = Dimensions.get("window");
 
@@ -111,6 +113,11 @@ function SwipeableCartItem({
     setRevealed(false);
   };
 
+  const toggleItemSelection = () => {
+    closeSwipe();
+    onToggle(item.id);
+  };
+
   return (
     <View style={sw.wrapper}>
       {/* Nền đỏ + nút XOÁ (phía sau, bên phải) */}
@@ -138,10 +145,7 @@ function SwipeableCartItem({
         {/* Checkbox */}
         <TouchableOpacity
           style={sw.checkBox}
-          onPress={() => {
-            closeSwipe();
-            onToggle(item.id);
-          }}
+          onPress={toggleItemSelection}
         >
           <Ionicons
             name={isChecked ? "checkbox" : "square-outline"}
@@ -151,7 +155,7 @@ function SwipeableCartItem({
         </TouchableOpacity>
 
         {/* Info */}
-        <View style={sw.info}>
+        <TouchableOpacity style={sw.info} onPress={toggleItemSelection} activeOpacity={0.9}>
           <Text style={sw.itemCategory}>{item.category}</Text>
           <Text style={sw.itemName} numberOfLines={2}>
             {item.name}
@@ -177,7 +181,7 @@ function SwipeableCartItem({
             </TouchableOpacity>
             <Text style={sw.lineTotal}>{fmt(item.price * item.qty)}</Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* Thumbnail RIGHT */}
         <TouchableOpacity
@@ -185,7 +189,8 @@ function SwipeableCartItem({
           activeOpacity={0.85}
           style={sw.thumbWrapper}
         >
-          <Image source={{ uri: item.image }} style={sw.thumb} />
+          <SmartImage source={{ uri: item.image }} style={sw.thumb}
+          />
           <View style={sw.thumbOverlay}>
             <Ionicons name="expand-outline" size={16} color="#fff" />
           </View>
@@ -284,12 +289,14 @@ const sw = StyleSheet.create({
     marginBottom: 8,
   },
   newPrice: {
-    fontFamily: "PlayfairDisplay_700Bold",
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
     fontSize: 14,
     color: "#9f273b",
   },
   oldPrice: {
-    fontFamily: "PlayfairDisplay_400Regular",
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
     fontSize: 11,
     color: "#bbb",
     textDecorationLine: "line-through",
@@ -312,7 +319,8 @@ const sw = StyleSheet.create({
     textAlign: "center",
   },
   lineTotal: {
-    fontFamily: "Oswald_500Medium",
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
     fontSize: 12,
     color: "#555",
     marginLeft: 6,
@@ -419,6 +427,7 @@ export default function CartScreen() {
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const isMountedRef = useRef(true);
+  const hasLoadedCartRef = useRef(false);
 
   // Read auth token & guest session ID for API requests
   const getHeaders = async () => {
@@ -479,11 +488,14 @@ export default function CartScreen() {
     };
   }, []);
 
-  // Reload cart whenever screen comes into focus
+  // Keep the current cart visible when returning to the tab. Server changes
+  // still sync in the background so newly added products appear immediately.
   useEffect(() => {
-    if (isFocused) {
-      fetchCartItems();
-    }
+    if (!isFocused) return;
+
+    const isFirstLoad = !hasLoadedCartRef.current;
+    hasLoadedCartRef.current = true;
+    fetchCartItems(!isFirstLoad);
   }, [isFocused]);
 
   const onRefresh = useCallback(async () => {
@@ -651,8 +663,10 @@ export default function CartScreen() {
   }
 
   return (
-    <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
+    <>
+      <SafeAreaView style={{ flex: 0, backgroundColor: '#9f273b' }} />
+      <SafeAreaView style={s.safe}>
+        <StatusBar barStyle="light-content" backgroundColor="#9f273b" translucent={false} />
 
       {/* ── HEADER ── */}
       <View style={s.header}>
@@ -809,7 +823,7 @@ export default function CartScreen() {
             <Ionicons name="close" size={28} color="#fff" />
           </TouchableOpacity>
           {lightboxImg && (
-            <Image
+            <SmartImage
               source={{ uri: lightboxImg }}
               style={s.lightboxImg}
               resizeMode="contain"
@@ -818,6 +832,7 @@ export default function CartScreen() {
         </View>
       </Modal>
     </SafeAreaView>
+    </>
   );
 }
 
@@ -981,12 +996,14 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   newPrice: {
-    fontFamily: "PlayfairDisplay_700Bold",
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
     fontSize: 14,
     color: "#9f273b",
   },
   oldPrice: {
-    fontFamily: "PlayfairDisplay_400Regular",
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
     fontSize: 11,
     color: "#bbb",
     textDecorationLine: "line-through",
@@ -1011,7 +1028,8 @@ const s = StyleSheet.create({
     textAlign: "center",
   },
   lineTotal: {
-    fontFamily: "Oswald_500Medium",
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
     fontSize: 12,
     color: "#555",
     marginLeft: 6,
@@ -1077,7 +1095,8 @@ const s = StyleSheet.create({
     color: "#888",
   },
   checkoutTotal: {
-    fontFamily: "PlayfairDisplay_700Bold",
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
     fontSize: 18,
     color: "#9f273b",
   },
