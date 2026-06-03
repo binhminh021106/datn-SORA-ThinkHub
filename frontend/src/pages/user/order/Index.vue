@@ -73,7 +73,7 @@
             <div
               class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
               <div class="d-flex align-items-center gap-3">
-                <span class="fw-bold text-dark fs-5 font-serif" style="letter-spacing: 1px;">#<span
+                <span class="fw-bold text-dark fs-5 font-oswald" style="letter-spacing: 1px;">#<span
                     v-text="order.order_code"></span></span>
                 <span class="text-muted small d-none d-sm-inline">|</span>
                 <span class="text-muted small"><i class="bi bi-calendar-event me-1"></i> <span
@@ -133,7 +133,7 @@
 
 <div class="col-lg-4 text-lg-end mt-4 mt-lg-0 ps-lg-4">
   <p class="text-muted small mb-1 text-uppercase fw-bold" style="letter-spacing: 1px;">Thành tiền</p>
-  <h3 class="fw-bold text-primary-custom mb-4 font-serif" v-text="formatPrice(order.total_amount)"></h3>
+  <h3 class="fw-bold text-primary-custom mb-4 font-oswald" v-text="formatPrice(order.total_amount)"></h3>
 
   <div class="d-flex flex-column gap-2">
     <!-- Chi tiết đơn hàng - Màu trung tính -->
@@ -232,6 +232,7 @@ import { useRouter } from 'vue-router';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import Toast from '@/utils/toastConfig';
+import { createSoraAlert } from '@/utils/soraAlertConfig';
 import OrderDetailModal from './OrderDetailModal.vue';
 import ReviewModal from './ReviewModal.vue';
 import ViewReviewModal from './ViewReviewModal.vue';
@@ -280,10 +281,7 @@ const isStepCompleted = (currentStatus, stepValue) => {
   return currentIdx >= stepIdx;
 };
 
-const soraAlert = Swal.mixin({
-  buttonsStyling: true,
-  confirmButtonColor: '#9f273b',
-  cancelButtonColor: '#6c757d',
+const soraAlert = createSoraAlert({
   customClass: { confirmButton: 'px-4 py-2 mx-2 rounded-0 shadow-sm fw-bold', cancelButton: 'px-4 py-2 mx-2 rounded-0 fw-bold' }
 });
 
@@ -396,7 +394,7 @@ const handleReorder = async (order) => {
 
   try {
     // Hiện loading trước khi gọi API
-    Swal.fire({
+    soraAlert.fire({
       title: 'Đang xử lý...',
       text: 'Đang đẩy sản phẩm vào giỏ hàng...',
       allowOutsideClick: false,
@@ -486,7 +484,7 @@ const exportInvoice = async (order) => {
 
   } catch (err) {
     console.error(err);
-    Swal.fire({
+    soraAlert.fire({
       icon: 'error',
       title: 'Lỗi',
       text: err.response?.data?.message || 'Không thể tải hóa đơn',

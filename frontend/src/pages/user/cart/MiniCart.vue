@@ -145,7 +145,7 @@
                       </p>
                     </template>
                     
-                    <p class="text-sora-primary fw-bold m-0 mt-1 font-serif" style="font-size: 1.05rem;">
+                    <p class="text-sora-primary fw-bold m-0 mt-1 font-oswald" style="font-size: 1.05rem;">
                       {{ formatPrice(item.price) }}
                     </p>
                   </div>
@@ -186,7 +186,7 @@
           <div class="p-4 bg-light border-top border-light-subtle">
             <div class="d-flex justify-content-between align-items-center mb-4">
               <span class="tracking-widest font-oswald text-uppercase fw-bold text-dark">Tổng cộng:</span>
-              <span class="fs-5 fw-bold text-sora-primary font-serif">{{ formatPrice(summary.subtotal) }}</span>
+              <span class="fs-5 fw-bold text-sora-primary font-oswald">{{ formatPrice(summary.subtotal) }}</span>
             </div>
             
             <div class="d-flex flex-column gap-2">
@@ -208,9 +208,9 @@
 import { ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
-import Swal from 'sweetalert2';
 import ProductCard from '@/components/ui/ProductCard.vue';
 import { useWishlist } from '@/composables/useWishlist.js';
+import Toast from '@/utils/toastConfig';
 
 import { Swiper, SwiperSlide } from 'swiper/vue';
 import { Pagination, Navigation } from 'swiper/modules';
@@ -225,13 +225,6 @@ const BACKEND_URL = import.meta.env.VITE_API_BASE_URL;
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || BACKEND_URL.replace(/\/api\/?$/, '');
 
 const { isFavourited, toggleFavourite, fetchFavorites } = useWishlist();
-
-const Toast = Swal.mixin({
-  toast: true,
-  position: 'top-end',
-  showConfirmButton: false,
-  timer: 3000
-});
 
 const swiperModules = [Pagination, Navigation];
 
@@ -380,12 +373,9 @@ const updateQuantity = (item, newQuantity) => {
       }
     } catch (error) {
       await fetchCart(false);
-      Swal.fire({
-        toast: true,
-        position: 'top-end',
+      Toast.fire({
         icon: 'error',
         title: error.response?.data?.message || 'Có lỗi xảy ra',
-        showConfirmButton: false,
         timer: 3000
       });
     } finally {

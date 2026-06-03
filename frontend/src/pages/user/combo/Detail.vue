@@ -155,11 +155,11 @@
                              </div>
                              <div class="text-xl-end">
                                 <template v-if="!item.product_variant_id">
-                                    <div v-if="getSelectedVariant(item.id)" class="text-sora-primary fw-bold font-serif fs-5">{{ formatCurrency(getSelectedVariant(item.id).price) }}</div>
-                                    <div v-else class="text-muted fw-bold font-serif fs-6">Từ {{ formatCurrency(item.product?.base_price) }}</div>
+                                    <div v-if="getSelectedVariant(item.id)" class="text-sora-primary fw-bold font-oswald fs-5">{{ formatCurrency(getSelectedVariant(item.id).price) }}</div>
+                                    <div v-else class="text-muted fw-bold font-oswald fs-6">Từ {{ formatCurrency(item.product?.base_price) }}</div>
                                 </template>
                                 <template v-else>
-                                    <div class="text-sora-primary fw-bold font-serif fs-5">{{ formatCurrency(item.variant?.price) }}</div>
+                                    <div class="text-sora-primary fw-bold font-oswald fs-5">{{ formatCurrency(item.variant?.price) }}</div>
                                 </template>
                              </div>
                          </div>
@@ -222,7 +222,7 @@
             <div class="luxury-price-summary mb-5 p-4 bg-white border border-gold-light" style="border-radius: 2px;">
                 <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom border-light-subtle">
                   <span class="text-muted font-oswald text-uppercase tracking-wide">Giá Trị Gốc</span>
-                  <span class="text-muted text-decoration-line-through fs-5 font-serif">{{ formatCurrency(originalTotal) }}</span>
+                  <span class="text-muted text-decoration-line-through fs-5 font-oswald">{{ formatCurrency(originalTotal) }}</span>
                 </div>
                 <div class="text-end">
                   <span class="font-oswald text-warning tracking-widest text-uppercase small fw-bold" >
@@ -333,7 +333,7 @@
                  <div class="d-flex flex-column justify-content-center">
                     <small class="text-uppercase font-oswald tracking-widest text-gold fw-bold" style="font-size: 0.7rem;">{{ quickAddProduct.category?.name || 'Trang Sức SORA' }}</small>
                     <h6 class="font-serif fw-bold mb-1 text-dark fs-5">{{ quickAddProduct.name }}</h6>
-                    <span class="text-sora-primary fw-bold font-serif fs-5">{{ formatCurrency(quickAddSelectedPrice) }}</span>
+                    <span class="text-sora-primary fw-bold font-oswald fs-5">{{ formatCurrency(quickAddSelectedPrice) }}</span>
                  </div>
               </div>
 
@@ -382,9 +382,9 @@
 <script setup>
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import Swal from 'sweetalert2';
 import axios from 'axios';
 import Toast from '@/utils/toastConfig';
+import soraAlert from '@/utils/soraAlertConfig';
 import { Swiper, SwiperSlide } from 'swiper/vue';
 import { Navigation } from 'swiper/modules';
 import 'swiper/css';
@@ -587,9 +587,9 @@ const toggleWishlist = async (prod) => {
   const token = getToken();
   
   if (!token) {
-    Swal.fire({
+    soraAlert.fire({
       icon: 'warning', title: 'Bạn chưa đăng nhập!', text: 'Vui lòng đăng nhập để lưu trữ bộ sưu tập yêu thích của mình.',
-      confirmButtonText: 'Đăng Nhập Ngay', showCancelButton: true, cancelButtonText: 'Đóng', confirmButtonColor: '#9f273b'
+      confirmButtonText: 'Đăng Nhập Ngay', showCancelButton: true, cancelButtonText: 'Đóng'
     }).then((result) => {
       if (result.isConfirmed) router.push('/login');
     });
@@ -658,7 +658,7 @@ const getDisplayImage = (item) => {
 };
 
 const viewFullImage = (url) => {
-  Swal.fire({
+  soraAlert.fire({
     imageUrl: url, imageAlt: 'Product Image', width: 600, imageHeight: 600, padding: 0, 
     background: 'transparent', backdrop: 'rgba(0,0,0,0.85)', showConfirmButton: false, showCloseButton: true,
     customClass: { image: 'rounded-3 shadow-lg object-fit-contain bg-white', popup: 'p-0 bg-transparent' }
@@ -737,7 +737,7 @@ const openQuickAdd = async (product) => {
         }
     } catch (e) {
         quickAddModalInstance.hide();
-        Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể tải thông tin sản phẩm', confirmButtonColor: '#9f273b', background: '#fffafa', color: '#9f273b' });
+        soraAlert.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể tải thông tin sản phẩm' });
     }
 };
 
@@ -770,7 +770,7 @@ const confirmQuickAdd = async () => {
         Toast.fire({ icon: 'success', title: 'Đã thêm sản phẩm vào giỏ' });
     } catch (error) {
         const msg = error.response?.data?.message || 'Không thể thêm vào giỏ hàng!';
-        Swal.fire({icon: 'error', title: 'Lỗi', text: msg, confirmButtonColor: '#9f273b', background: '#fffafa', color: '#9f273b'});
+        soraAlert.fire({ icon: 'error', title: 'Lỗi', text: msg });
     }
 };
 
@@ -923,9 +923,9 @@ const validateSelections = () => {
 
 const checkValidationAndWarn = () => {
   if (!validateSelections()) {
-    Swal.fire({
+    soraAlert.fire({
       icon: 'warning', title: 'Thiếu tùy chọn!', text: 'Vui lòng định hình thiết kế cho tất cả các món trong bộ sưu tập.',
-      confirmButtonColor: '#9f273b', confirmButtonText: 'Chọn ngay', background: '#fffafa', color: '#9f273b'
+      confirmButtonText: 'Chọn ngay'
     });
     return false;
   }
@@ -963,7 +963,7 @@ const addToCart = async () => {
       
   } catch (error) {
       const msg = error.response?.data?.message || 'Không thể thêm vào giỏ hàng. Vui lòng thử lại!';
-      Swal.fire({ icon: 'error', title: 'Lỗi giỏ hàng', text: msg, confirmButtonColor: '#9f273b', background: '#fffafa', color: '#9f273b' });
+      soraAlert.fire({ icon: 'error', title: 'Lỗi giỏ hàng', text: msg });
   } finally {
       isAddingToCart.value = false;
   }

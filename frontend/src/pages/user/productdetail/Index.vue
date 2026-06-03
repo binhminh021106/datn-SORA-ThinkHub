@@ -492,7 +492,7 @@
                <div class="d-flex flex-column justify-content-center">
                   <small class="text-uppercase font-oswald tracking-widest text-gold fw-bold" style="font-size: 0.7rem;">{{ quickAddProduct.category?.name || 'Trang Sức SORA' }}</small>
                   <h6 class="font-serif fw-bold mb-1 text-dark fs-5">{{ quickAddProduct.name }}</h6>
-                  <span class="text-sora-primary fw-bold font-serif fs-5">{{ formatMoney(quickAddSelectedPrice) }}</span>
+                  <span class="text-sora-primary fw-bold font-oswald fs-5">{{ formatMoney(quickAddSelectedPrice) }}</span>
                </div>
             </div>
 
@@ -537,8 +537,8 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuery } from '@tanstack/vue-query';
 import axios from 'axios';
-import Swal from 'sweetalert2';
 import Toast from '@/utils/toastConfig';
+import { createSoraAlert } from '@/utils/soraAlertConfig';
 
 import ProductCard from '@/components/ui/ProductCard.vue';
 import CompareModal from '@/components/ui/CompareModal.vue';
@@ -886,10 +886,7 @@ const confirmQuickAdd = async () => {
 };
 
 // Swal utilities
-const soraAlert = Swal.mixin({
-  buttonsStyling: true,
-  confirmButtonColor: '#9f273b',
-  cancelButtonColor: '#6c757d',
+const soraAlert = createSoraAlert({
   customClass: { confirmButton: 'px-4 py-2 mx-2 rounded-pill shadow-sm fw-bold', cancelButton: 'px-4 py-2 mx-2 rounded-pill fw-bold' }
 });
 
@@ -930,7 +927,7 @@ onUnmounted(() => {
 }); 
 
 const viewFullImage = (url) => {
-  Swal.fire({
+  soraAlert.fire({
     imageUrl: url,
     imageAlt: 'Product Image',
     width: 600,

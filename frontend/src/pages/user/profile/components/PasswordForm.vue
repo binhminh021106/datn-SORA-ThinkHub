@@ -40,16 +40,14 @@
 <script setup>
 import { ref } from 'vue';
 import axios from 'axios';
-import Swal from 'sweetalert2';
+import { createSoraAlert } from '@/utils/soraAlertConfig';
 
 const isChangingPassword = ref(false);
 const passwordForm = ref({
   current_password: '', password: '', password_confirmation: ''
 });
 
-const soraAlert = Swal.mixin({
-  buttonsStyling: true,
-  confirmButtonColor: '#9f273b',
+const soraAlert = createSoraAlert({
   customClass: {
     confirmButton: 'px-4 py-2 mx-2 rounded-0 shadow-sm fw-bold font-oswald tracking-widest text-uppercase'
   }

@@ -135,16 +135,14 @@
 <script setup>
 import { ref, onMounted, nextTick } from 'vue';
 import axios from 'axios';
-import Swal from 'sweetalert2';
+import { createSoraAlert } from '@/utils/soraAlertConfig';
 
 const props = defineProps({
   userName: { type: String, default: '' },
   userPhone: { type: String, default: '' }
 });
 
-const soraAlert = Swal.mixin({
-  buttonsStyling: true,
-  confirmButtonColor: '#9f273b',
+const soraAlert = createSoraAlert({
   customClass: { confirmButton: 'px-4 py-2 mx-2 rounded-0 shadow-sm fw-bold text-uppercase' }
 });
 

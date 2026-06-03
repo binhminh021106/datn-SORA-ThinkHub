@@ -139,7 +139,7 @@
 <script setup>
 import { ref } from 'vue';
 import axios from 'axios';
-import Swal from 'sweetalert2';
+import { createSoraAlert } from '@/utils/soraAlertConfig';
 
 // 1. Quản lý trạng thái form
 const form = ref({
@@ -154,9 +154,7 @@ const isSubmitting = ref(false);
 const API_URL = `${import.meta.env.VITE_API_BASE_URL}/client/contact`;
 
 // 3. Cấu hình SweetAlert2 đồng bộ với toàn hệ thống
-const soraAlert = Swal.mixin({
-  buttonsStyling: true,
-  confirmButtonColor: '#9f273b',
+const soraAlert = createSoraAlert({
   customClass: {
     confirmButton: 'px-4 py-2 mx-2 rounded-0 shadow-sm fw-bold font-oswald tracking-widest text-uppercase'
   }

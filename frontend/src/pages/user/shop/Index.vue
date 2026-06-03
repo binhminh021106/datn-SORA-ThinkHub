@@ -297,7 +297,7 @@
             <div class="d-flex align-items-center gap-3">
                <div class="input-group" style="width: 140px;">
                  <button @click="updateQuickAddQty(-1)" class="btn btn-outline-secondary" type="button"><i class="bi bi-dash"></i></button>
-                 <input type="number" v-model.number="quickAddModal.quantity" @change="validateQuickAddQty" class="form-control text-center fw-bold text-dark" style="-moz-appearance: textfield;">
+                 <input type="number" v-model.number="quickAddModal.quantity" @change="validateQuickAddQty" class="form-control text-center fw-bold text-dark" style="appearance: textfield; -moz-appearance: textfield;">
                  <button @click="updateQuickAddQty(1)" class="btn btn-outline-secondary" type="button"><i class="bi bi-plus"></i></button>
                </div>
                <span v-if="isAllAttributesSelected && currentVariant" class="text-muted small fw-medium">
@@ -330,30 +330,24 @@
 <script setup>
 import { ref, shallowRef, onMounted, reactive, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import Swal from 'sweetalert2';
 import ProductCard from '@/components/ui/ProductCard.vue';
 import QuickAddModal from '@/components/ui/QuickAddModal.vue';
 import CompareModal from '@/components/ui/CompareModal.vue';
 import { useWishlist } from '@/composables/useWishlist';
+import Toast from '@/utils/toastConfig';
+import { createSoraAlert } from '@/utils/soraAlertConfig';
 
 const route = useRoute();
 const router = useRouter();
 const shopSlug = ref(route.params.shop_slug || 'aurora-jewelry');
 const API_BASE_URL = 'http://127.0.0.1:8000';
 
-const soraAlert = Swal.mixin({
-  buttonsStyling: true,
-  confirmButtonColor: '#9f273b',
+const soraAlert = createSoraAlert({
   customClass: { confirmButton: 'px-4 py-2 mx-2 rounded shadow-sm fw-bold font-oswald tracking-widest text-uppercase' },
   didOpen: (modal) => { if (modal.parentElement) modal.parentElement.style.zIndex = '10005'; }
 });
 
 const { fetchFavorites, isFavourited, toggleFavourite } = useWishlist();
-
-const Toast = Swal.mixin({
-  toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true,
-  didOpen: (toast) => { if (toast.parentElement) toast.parentElement.style.zIndex = '10005'; }
-});
 
 const isLoadingCategories = ref(true);
 const isLoadingProducts = ref(true);
@@ -1075,7 +1069,7 @@ onMounted(() => {
 .sora-badge { background: #ffffff; color: #222; font-family: 'Oswald', sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 2px; padding: 4px 10px; border-radius: 2px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 .sale-badge { background-color: #9f273b !important; color: white !important; }
 .sora-card-info { padding: 20px 15px 70px 15px; text-align: center; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
-.sora-card-title { font-family: 'Oswald', sans-serif; font-size: 1.1rem; font-weight: 600; color: #111; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sora-card-title { font-family: 'Oswald', sans-serif; font-size: 1.1rem; font-weight: 600; color: #111; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .sora-card-category { font-family: 'Playfair Display', serif; font-style: italic; color: #666; font-size: 0.95rem; margin-bottom: 15px; }
 .sora-card-action { position: absolute; bottom: 0; left: 0; width: 100%; transform: translateY(100%); transition: transform 0.4s; z-index: 10; }
 .sora-luxury-card:hover .sora-card-action { transform: translateY(0); }

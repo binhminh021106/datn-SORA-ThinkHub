@@ -348,7 +348,7 @@
                       <div class="card-body p-3 ps-4 d-flex align-items-center justify-content-between">
                           <div>
                               <h6 class="fw-bold font-oswald text-sora-primary tracking-wide text-uppercase mb-1">{{ coupon.name }}</h6>
-                              <div class="fw-bold text-dark fs-5 font-serif mb-1">
+                              <div class="fw-bold text-dark fs-5 font-oswald mb-1">
                                   Giảm {{ coupon.type === 'fixed' ? formatPrice(coupon.value) : coupon.value + '%' }}
                               </div>
                               <small class="text-muted d-block">Đơn tối thiểu: {{ formatPrice(coupon.min_spend) }}</small>
@@ -379,7 +379,8 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
-import Swal from 'sweetalert2';
+import Toast from '@/utils/toastConfig';
+import { createSoraAlert } from '@/utils/soraAlertConfig';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 
 const router = useRouter();
@@ -419,10 +420,7 @@ const form = ref({
     affiliate_code: '' // BỔ SUNG BIẾN CHỨA MÃ AFFILIATE
 });
 
-const soraAlert = Swal.mixin({
-  buttonsStyling: true,
-  confirmButtonColor: '#9f273b',
-  cancelButtonColor: '#6c757d',
+const soraAlert = createSoraAlert({
   customClass: {
     confirmButton: 'px-4 py-2 mx-2 rounded-0 shadow-sm fw-bold font-oswald tracking-widest text-uppercase',
     cancelButton: 'px-4 py-2 mx-2 rounded-0 fw-bold font-oswald tracking-widest text-uppercase'
@@ -769,11 +767,11 @@ const updateQuantity = async (item, delta) => {
             item.quantity = newQty;
             if (selectedCoupon.value && subTotal.value < selectedCoupon.value.min_spend) {
                 selectedCoupon.value = null;
-                Swal.fire({toast:true, position:'top', icon:'warning', title:'Đã hủy mã giảm giá vì chưa đạt giá trị tối thiểu', showConfirmButton:false, timer:2000});
+                Toast.fire({ icon: 'warning', title: 'Đã hủy mã giảm giá vì chưa đạt giá trị tối thiểu', timer: 2000 });
             }
         }
     } catch (error) {
-        Swal.fire({toast:true, position:'top', icon:'error', title:'Lỗi cập nhật', showConfirmButton:false, timer:2000});
+        Toast.fire({ icon: 'error', title: 'Lỗi cập nhật', timer: 2000 });
     } finally {
         item.isUpdating = false;
         isUpdatingCart.value = false;

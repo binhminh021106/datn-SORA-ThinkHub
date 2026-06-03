@@ -102,7 +102,7 @@
                <div class="d-flex flex-column justify-content-center">
                   <small class="text-uppercase font-oswald tracking-widest text-gold fw-bold" style="font-size: 0.7rem;">{{ quickAddProduct.category?.name || 'Trang Sức SORA' }}</small>
                   <h6 class="font-serif fw-bold mb-1 text-dark fs-5">{{ quickAddProduct.name }}</h6>
-                  <span class="text-sora-primary fw-bold font-serif fs-5">{{ formatCurrency(quickAddSelectedPrice) }}</span>
+                  <span class="text-sora-primary fw-bold font-oswald fs-5">{{ formatCurrency(quickAddSelectedPrice) }}</span>
                </div>
             </div>
 
@@ -146,8 +146,8 @@
 import { ref, onMounted, computed, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
-import Swal from 'sweetalert2';
 import Toast from '@/utils/toastConfig';
+import { createSoraAlert } from '@/utils/soraAlertConfig';
 import ProductCard from '@/components/ui/ProductCard.vue';
 import CompareModal from '@/components/ui/CompareModal.vue';
 import ProfileSidebar from '@/components/ui/ProfileSidebar.vue';
@@ -160,9 +160,7 @@ const isLoading = ref(true);
 const isToggling = ref(null);
 const isLoggedIn = ref(false);
 
-const soraAlert = Swal.mixin({
-  buttonsStyling: true,
-  confirmButtonColor: '#9f273b',
+const soraAlert = createSoraAlert({
   customClass: { confirmButton: 'px-4 py-2 mx-2 rounded shadow-sm fw-bold font-oswald tracking-widest text-uppercase' },
   didOpen: (modal) => { if (modal.parentElement) modal.parentElement.style.zIndex = '10005'; }
 });

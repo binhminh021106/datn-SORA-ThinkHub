@@ -117,8 +117,8 @@
 <script setup>
 import { ref, watch } from 'vue';
 import axios from 'axios';
-import Swal from 'sweetalert2';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
+import soraAlert from '@/utils/soraAlertConfig';
 
 const props = defineProps({
   isOpen: Boolean,
@@ -194,7 +194,7 @@ const handleFileUpload = (event, itemIndex) => {
   files.forEach(file => {
     // Check dung lượng (vd: < 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      Swal.fire({ icon: 'warning', title: 'File quá lớn', text: 'Vui lòng chọn ảnh dưới 5MB', confirmButtonColor: '#9f273b'});
+      soraAlert.fire({ icon: 'warning', title: 'File quá lớn', text: 'Vui lòng chọn ảnh dưới 5MB' });
       return;
     }
     
@@ -220,7 +220,7 @@ const submitReviews = async () => {
   // Validate
   const hasUnrated = reviewForms.value.some(r => r.rating === 0);
   if (hasUnrated) {
-    Swal.fire({ icon: 'error', title: 'Thiếu thông tin', text: 'Vui lòng đánh giá (chọn số sao) cho tất cả sản phẩm.', confirmButtonColor: '#9f273b'});
+    soraAlert.fire({ icon: 'error', title: 'Thiếu thông tin', text: 'Vui lòng đánh giá (chọn số sao) cho tất cả sản phẩm.' });
     return;
   }
 
@@ -244,22 +244,20 @@ const submitReviews = async () => {
   try {
     const response = await axios.post(`${API_BASE_URL}/${props.order.order_code}/review`, formData, { headers: getHeaders() });
     
-    Swal.fire({
+    soraAlert.fire({
       icon: 'success',
       title: 'Đánh giá thành công!',
       text: response.data.message,
-      confirmButtonColor: '#9f273b',
       timer: 2000
     });
     
     emit('review-success');
     emit('close');
   } catch (error) {
-    Swal.fire({ 
+    soraAlert.fire({
       icon: 'error', 
       title: 'Lỗi', 
-      text: error.response?.data?.message || 'Không thể gửi đánh giá lúc này',
-      confirmButtonColor: '#9f273b'
+      text: error.response?.data?.message || 'Không thể gửi đánh giá lúc này'
     });
   } finally {
     isSubmitting.value = false;

@@ -1,9 +1,5 @@
 <template>
-  <div v-if="isCheckingAuth" class="vh-100 d-flex flex-column justify-content-center align-items-center bg-light">
-    <div class="logo-pulse-wrapper mb-4">
-      <img src="@/assets/images/icon-logo.png" alt="SORA Logo" class="logo-pulse-img">
-    </div>
-  </div>
+  <div v-if="isCheckingAuth" class="app-auth-check-screen"></div>
 
   <div v-else>
     <router-view></router-view>
@@ -98,26 +94,9 @@ body {
   background-color: #f8f9fa;
 }
 
-.logo-pulse-wrapper {
-  display: inline-block;
-}
-
-.logo-pulse-img {
-  width: 140px; 
-  height: auto;
-  object-fit: contain;
-  animation: luxury-pulse 1.8s infinite alternate ease-in-out;
-}
-
-@keyframes luxury-pulse {
-  0% {
-    transform: scale(0.95);
-    filter: drop-shadow(0 0 5px rgba(159, 39, 59, 0.2)) brightness(1);
-  }
-  100% {
-    transform: scale(1.05);
-    filter: drop-shadow(0 0 25px rgba(159, 39, 59, 0.8)) brightness(1.15);
-  }
+.app-auth-check-screen {
+  min-height: 100vh;
+  background-color: #f8f9fa;
 }
 
 .tracking-widest {

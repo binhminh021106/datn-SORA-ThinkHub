@@ -135,7 +135,7 @@ const userLevel = computed(() => {
 });
 
 const menuItems = ref([
-  { name: 'Tổng quan', path: '/admin', icon: 'bi-grid-1x2-fill', moduleCode: null },
+  { name: 'Dashboard', path: '/admin', icon: 'bi-grid-1x2-fill', moduleCode: null },
   {
     name: 'Chấm công', icon: 'bi-clock-fill', stateKey: 'attendance',
     children: [
