@@ -121,8 +121,8 @@ const userLevel = computed(() => {
   }
 
   try {
-    const localAdmin = JSON.parse(localStorage.getItem('admin_info') || '{}');
-    const savedLevel = localStorage.getItem('admin_level') || localAdmin.role?.level;
+    const localAdmin = JSON.parse(localStorage.getItem('admin_info') || sessionStorage.getItem('admin_info') || '{}');
+    const savedLevel = localStorage.getItem('admin_level') || sessionStorage.getItem('admin_level') || localAdmin.role?.level;
 
     if (savedLevel) {
       return parseInt(savedLevel);

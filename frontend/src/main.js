@@ -8,6 +8,7 @@ import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 import axios from 'axios';
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
+import { getToken } from '@/composables/useUtilities';
 
 // 1. IMPORT VUE QUERY VÀO ĐÂY
 import { VueQueryPlugin } from '@tanstack/vue-query';
@@ -33,13 +34,7 @@ window.Echo = new Echo({
     authorizer: (channel, options) => {
         return {
             authorize: (socketId, callback) => {
-                const token = localStorage.getItem('admin_token') ||
-                              localStorage.getItem('adminToken') ||
-                              localStorage.getItem('auth_token') ||
-                              localStorage.getItem('access_token') ||
-                              localStorage.getItem('userToken') ||
-                              localStorage.getItem('user_token') ||
-                              localStorage.getItem('token');
+                const token = getToken();
                 if (!token) {
                     callback(true, { message: 'Missing auth token' });
                     return;
@@ -104,7 +99,12 @@ const getUserAuthToken = () => {
 
 const storedUser = tryGetStoredUser();
 const userAuthToken = getUserAuthToken();
-const hasAdminSession = !!(localStorage.getItem('admin_token') || localStorage.getItem('adminToken'));
+const hasAdminSession = !!(
+  localStorage.getItem('admin_token') ||
+  sessionStorage.getItem('admin_token') ||
+  localStorage.getItem('adminToken') ||
+  sessionStorage.getItem('adminToken')
+);
 if (window.Echo && storedUser && storedUser.id && userAuthToken && !hasAdminSession) {
     try {
         const userId = storedUser.id;

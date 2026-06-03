@@ -1,5 +1,5 @@
 export const getToken = () => {
-  const commonKeys = ['access_token', 'token', 'auth_token', 'userToken', 'user_token'];
+  const commonKeys = ['admin_token', 'adminToken', 'access_token', 'token', 'auth_token', 'userToken', 'user_token'];
   for (const k of commonKeys) {
     const val = localStorage.getItem(k) || sessionStorage.getItem(k);
     if (val && val.length > 15) return val;

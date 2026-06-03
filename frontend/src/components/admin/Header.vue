@@ -51,7 +51,7 @@
         </li>
 
         <!-- Nút bật Quét QR -->
-        <li class="nav-item me-2 d-flex align-items-center" v-if="isLoggedIn">
+        <li class="nav-item me-2 d-flex align-items-center" v-if="showAttendanceButton">
           <button class="btn btn-brand rounded-3 btn-sm fw-bold px-4 d-flex align-items-center text-white shadow-sm" style="background-color: #009981;" @click="handleScanClick" :disabled="isCheckingStatus">
             <span v-if="isCheckingStatus" class="spinner-border spinner-border-sm me-2"></span>
             <template v-else>
@@ -143,7 +143,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
-import { getFullImage } from '@/composables/useUtilities';
+import { getFullImage, getToken } from '@/composables/useUtilities';
 import axios from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import * as bootstrap from 'bootstrap';
@@ -160,6 +160,15 @@ const queryClient = useQueryClient();
 const isUserMenuActive = ref(false);
 const userMenuContainer = ref(null);
 const attendanceState = ref('ready'); // ready, working, completed, hanging
+const hasShiftAssignment = ref(true);
+
+const showAttendanceButton = computed(() => {
+  if (!isLoggedIn.value) return false;
+  if (attendanceState.value === 'ready') {
+    return hasShiftAssignment.value;
+  }
+  return true;
+});
 
 // ----- LOGIC ĐỒNG HỒ FLIP CLOCK -----
 const currentTime = ref({ ampm: '' });
@@ -267,24 +276,33 @@ const toggleTheme = () => {
 };
 
 const isLoggedIn = computed(() => {
-  return !!localStorage.getItem('admin_token');
+  return !!(
+    localStorage.getItem('admin_token') ||
+    sessionStorage.getItem('admin_token') ||
+    localStorage.getItem('adminToken') ||
+    sessionStorage.getItem('adminToken')
+  );
 });
 
 const fetchAttendanceState = async () => {
   if (!isLoggedIn.value) return;
   try {
-    const token = localStorage.getItem('admin_token');
+    const token = getToken();
     const response = await axios.get(`${API_URL}/admin/attendances/status`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    attendanceState.value = response.data.state;
+    const { state, shift_assignment } = response.data;
+    attendanceState.value = state;
+    hasShiftAssignment.value = !!shift_assignment;
   } catch (err) {
     console.error('Không thể lấy trạng thái điểm danh', err);
+    attendanceState.value = 'ready';
+    hasShiftAssignment.value = false;
   }
 };
 
 const fetchAdminProfile = async () => {
-  const token = localStorage.getItem('admin_token');
+  const token = getToken();
   if (!token) throw new Error('Không tìm thấy token xác thực');
   
   const response = await axios.get(`${API_URL}/admin/profile`, {
@@ -301,7 +319,7 @@ const { data: adminProfileData } = useQuery({
   enabled: isLoggedIn,
   staleTime: 5 * 60 * 1000,
   initialData: () => {
-      const savedInfo = localStorage.getItem('admin_info');
+      const savedInfo = localStorage.getItem('admin_info') || sessionStorage.getItem('admin_info');
       if (!savedInfo) return undefined;
       try {
         return JSON.parse(savedInfo);
@@ -348,10 +366,12 @@ const handleLogout = () => {
     cancelButtonText: 'Hủy'
   }).then((result) => {
     if (result.isConfirmed) {
-      localStorage.removeItem('admin_token');
-      localStorage.removeItem('admin_role');
-      localStorage.removeItem('admin_info');
+      ['admin_token', 'adminToken', 'admin_role', 'admin_level', 'admin_info', 'auth_token', 'token'].forEach((key) => {
+        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
+      });
       queryClient.clear();
+      window.dispatchEvent(new CustomEvent('admin-auth-changed'));
 
       Swal.fire({
         icon: 'success',

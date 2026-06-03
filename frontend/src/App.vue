@@ -14,7 +14,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, provide, watch } from 'vue';
+import { ref, onMounted, onBeforeUnmount, provide, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import apiClient from '@/utils/apiClient';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
@@ -43,9 +43,11 @@ watch(
 // ===== KẾT THÚC: LOGIC LƯU MÃ AFFILIATE TỰ ĐỘNG =====
 
 const checkAuthentication = async () => {
-  const token = localStorage.getItem('admin_token');
+  const token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token') ||
+                localStorage.getItem('adminToken') || sessionStorage.getItem('adminToken');
   
   if (!token) {
+    currentUser.value = null;
     isCheckingAuth.value = false;
     return;
   }
@@ -67,8 +69,17 @@ const checkAuthentication = async () => {
   }
 };
 
+const handleAdminAuthChanged = () => {
+  checkAuthentication();
+};
+
 onMounted(() => {
   checkAuthentication();
+  window.addEventListener('admin-auth-changed', handleAdminAuthChanged);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('admin-auth-changed', handleAdminAuthChanged);
 });
 
 useAdminRefreshListener((payload) => {
