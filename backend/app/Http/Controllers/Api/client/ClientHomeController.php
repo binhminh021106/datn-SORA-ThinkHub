@@ -21,7 +21,7 @@ class ClientHomeController extends Controller
     {
         try {
             // LẤY DỮ LIỆU TỪ CACHE (Hoặc truy vấn DB nếu chưa có Cache) - Tối ưu cực mạnh
-            $data = Cache::remember('sora_home_data_v2', 3600, function () {
+            $data = Cache::remember('sora_home_data_v3', 3600, function () {
                 $result = [
                     'banners' => [],
                     'coupons' => [],
@@ -147,7 +147,7 @@ class ClientHomeController extends Controller
                     $result['news'] = News::where('status', 'published')
                         ->orderBy('created_at', 'desc')
                         ->take(3)
-                        ->get(['id', 'title', 'slug', 'excerpt', 'content', 'image_url', 'category'])->toArray();
+                        ->get(['id', 'title', 'slug', 'excerpt', 'content', 'image_url', 'category', 'created_at'])->toArray();
                 } catch (\Exception $e) {
                     $result['news'] = [];
                 }

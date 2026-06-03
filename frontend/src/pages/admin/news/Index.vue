@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
+import { getFullImage } from '@/composables/useUtilities';
 import defaultImage from '@/assets/images/defaults/placeholder.png';
 
 // ==========================================
@@ -97,7 +98,7 @@ const currentPage = ref(1);
 const itemsPerPage = ref(10);
 
 // Fetch danh sách News qua TanStack Query
-const { data: newsData, isLoading, isFetching, refetch } = useQuery({
+const { data: newsData, isLoading, isFetching, isError, error, refetch } = useQuery({
     queryKey: ['admin-news-all'],
     queryFn: async () => {
         const response = await axios.get(`${apiUrl}/admin/news`, { headers: getHeaders() });
@@ -113,9 +114,20 @@ const news = ref([]);
 watch(newsData, (newVal) => {
     if (newVal) {
         news.value = newVal;
+    }
+}, { immediate: true });
+
+watch(isLoading, (loading) => {
+    if (!loading) {
         isFirstLoad.value = false;
     }
 }, { immediate: true });
+
+const newsLoadError = computed(() => (
+    error.value?.response?.data?.message
+    || error.value?.message
+    || 'Không thể tải danh sách tin tức.'
+));
 
 // Mutation cập nhật nhanh trạng thái
 const toggleStatusMutation = useMutation({
@@ -231,19 +243,10 @@ const getFormattedDate = (dateString) => {
 
 const getDisplayAuthor = (item) => item?.author_name || 'Không rõ';
 
-const getFullImageWithFallback = (imagePath) => {
-    if (!imagePath) return defaultImage;
-    if (imagePath.startsWith('http') || imagePath.startsWith('data:image')) return imagePath;
+const getFullImageWithFallback = (path) => path ? getFullImage(path) : defaultImage;
 
-    const cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
-    if (cleanPath.startsWith('storage/')) {
-        return `${BACKEND_URL}/${cleanPath}`;
-    }
-    return `${BACKEND_URL}/storage/${cleanPath}`;
-};
-
-const handleImageError = (e) => {
-    e.target.src = defaultImage;
+const handleImageError = (event) => {
+    event.target.src = defaultImage;
 };
 
 const getStatusInfo = (status) => {
@@ -369,6 +372,13 @@ useAdminRefreshListener((payload) => {
         </div>
 
         <div class="container-fluid py-4" v-else>
+            <div v-if="isError" class="alert alert-danger d-flex justify-content-between align-items-center gap-3 flex-wrap" role="alert">
+                <span><i class="bi bi-exclamation-triangle-fill me-2"></i>{{ newsLoadError }}</span>
+                <button class="btn btn-sm btn-outline-danger fw-semibold" type="button" @click="refetch">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Thử lại
+                </button>
+            </div>
+
             <div class="row mb-4 align-items-center">
                 <div class="col-md-6">
                     <h3 class="fw-bold text-dark mb-0">Quản lý Tin tức</h3>

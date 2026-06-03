@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar,
   ScrollView, ActivityIndicator, Platform, Image, RefreshControl,
-  TextInput, Modal, Animated, PanResponder, Dimensions,
+  TextInput, Modal, Animated, PanResponder, Dimensions, KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -610,6 +610,7 @@ export default function OrderHistoryScreen() {
   const [reviewOrder, setReviewOrder]             = useState(null);
   const [reviewItems, setReviewItems]             = useState([]);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const reviewTranslateY = useRef(new Animated.Value(SCREEN_H)).current;
 
   // Return
   const [showReturnModal, setShowReturnModal]         = useState(false);
@@ -623,6 +624,51 @@ export default function OrderHistoryScreen() {
   useEffect(() => {
     if (cancelError) setCancelError('');
   }, [cancelReason]);
+
+  useEffect(() => {
+    if (showReviewModal) {
+      reviewTranslateY.setValue(SCREEN_H);
+      Animated.spring(reviewTranslateY, {
+        toValue: 0,
+        damping: 22,
+        stiffness: 130,
+        mass: 0.8,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [reviewTranslateY, showReviewModal]);
+
+  const closeReviewModal = useCallback(() => {
+    Animated.timing(reviewTranslateY, {
+      toValue: SCREEN_H,
+      duration: 220,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowReviewModal(false);
+    });
+  }, [reviewTranslateY]);
+
+  const reviewPanResponder = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 5,
+    onPanResponderMove: (_, gestureState) => {
+      const clampedY = Math.max(0, gestureState.dy);
+      reviewTranslateY.setValue(clampedY);
+    },
+    onPanResponderRelease: (_, gestureState) => {
+      if (gestureState.dy > 120 || gestureState.vy > 0.5) {
+        closeReviewModal();
+        return;
+      }
+
+      Animated.spring(reviewTranslateY, {
+        toValue: 0,
+        damping: 22,
+        stiffness: 130,
+        useNativeDriver: true,
+      }).start();
+    },
+  })).current;
 
   const fetchOrders = async (overlay = true) => {
     overlay ? setIsLoading(true) : setRefreshing(true);
@@ -945,16 +991,28 @@ export default function OrderHistoryScreen() {
       </Modal>
 
       {/* ── REVIEW MODAL ── */}
-      <Modal visible={showReviewModal} transparent animationType="slide" onRequestClose={() => setShowReviewModal(false)}>
-        <View style={s.sheetBg}>
-          <View style={s.sheet90}>
-            <View style={s.handle2} />
+      <Modal visible={showReviewModal} transparent animationType="none" onRequestClose={closeReviewModal}>
+        <KeyboardAvoidingView
+          style={s.sheetBg}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
+        >
+          <Animated.View style={[s.sheet90, s.reviewSheet, { transform: [{ translateY: reviewTranslateY }] }]}>
+            <View style={s.reviewHandleArea} {...reviewPanResponder.panHandlers}>
+              <View style={s.handle2} />
+            </View>
             <View style={s.sheetHead2}>
               <Text style={s.sheetTitle2}>Đánh Giá Sản Phẩm</Text>
-              <TouchableOpacity onPress={() => setShowReviewModal(false)} style={s.closeBtn2}><Ionicons name="close" size={18} color="#6b7280"/></TouchableOpacity>
+              <TouchableOpacity onPress={closeReviewModal} style={s.closeBtn2}><Ionicons name="close" size={18} color="#6b7280"/></TouchableOpacity>
             </View>
             <Text style={s.sheetSub}>{reviewOrder?.order_code}</Text>
-            <ScrollView style={{ paddingHorizontal: 16 }} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={{ paddingHorizontal: 16 }}
+              contentContainerStyle={s.reviewScrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="interactive"
+            >
               {reviewItems.map((rItem, idx) => (
                 <View key={rItem.product_id || rItem.combo_id || rItem.name || idx} style={s.reviewCard}>
                   <View style={s.reviewHead}>
@@ -983,15 +1041,14 @@ export default function OrderHistoryScreen() {
                   </View>
                 </View>
               ))}
-              <View style={{ height:8 }}/>
             </ScrollView>
             <View style={s.sheetFoot}>
               <TouchableOpacity style={[s.submitBtn,isSubmittingReview&&{opacity:0.6}]} onPress={submitReview} disabled={isSubmittingReview}>
                 {isSubmittingReview ? <ActivityIndicator size="small" color="#fff"/> : <Text style={s.submitBtnTxt}>GỬI ĐÁNH GIÁ</Text>}
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </Animated.View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* ── RETURN MODAL ── */}
@@ -1098,6 +1155,8 @@ const s = StyleSheet.create({
 
   sheet90: { backgroundColor:'#fff', borderTopLeftRadius:20, borderTopRightRadius:20, maxHeight:'90%' },
   handle2: { width:36, height:4, backgroundColor:'#d1d5db', borderRadius:2, alignSelf:'center', marginTop:10, marginBottom:6 },
+  reviewSheet: { maxHeight:'82%' },
+  reviewHandleArea: { paddingBottom:2 },
   sheetHead2: { flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:16, paddingBottom:10, borderBottomWidth:1, borderBottomColor:'#f3f4f6' },
   sheetTitle2: { fontFamily:'PlayfairDisplay_700Bold', fontSize:17, color:'#111' },
   closeBtn2: { width:30, height:30, borderRadius:15, backgroundColor:'#f3f4f6', alignItems:'center', justifyContent:'center' },
@@ -1132,6 +1191,7 @@ const s = StyleSheet.create({
   reviewImgDel: { position:'absolute', top:-6, right:-6 },
   reviewImgAdd: { width:68, height:68, borderRadius:8, borderWidth:1.5, borderColor:'#d1d5db', borderStyle:'dashed', alignItems:'center', justifyContent:'center', backgroundColor:'#fff' },
   reviewImgAddTxt: { fontFamily:'Oswald_400Regular', fontSize:10, color:'#6b7280', marginTop:2 },
+  reviewScrollContent: { paddingBottom:22 },
 
   submitBtn: { backgroundColor:'#9f273b', height:48, borderRadius:10, alignItems:'center', justifyContent:'center' },
   submitBtnTxt: { fontFamily:'Oswald_600SemiBold', fontSize:13, color:'#fff', letterSpacing:1.5 },

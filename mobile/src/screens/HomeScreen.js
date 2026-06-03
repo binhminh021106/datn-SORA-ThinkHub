@@ -485,11 +485,11 @@ export default function HomeScreen({ navigation }) {
   };
 
   const handleSelectNews = (article) => {
-    showCustomAlert(
-      "BÀI VIẾT SORA",
-      `"${article.title}"\n\nTác giả: SORA Jewelry\n\nNội dung chi tiết bài viết đang được đồng bộ tải lên ứng dụng di động.`,
-      [{ text: "ĐỒNG Ý", style: "default" }]
-    );
+    if (article?.slug) {
+      navigation.navigate('NewsDetail', { slug: article.slug, article });
+      return;
+    }
+    navigation.navigate('News');
   };
 
   const loadWishlist = async () => {
@@ -1411,7 +1411,9 @@ export default function HomeScreen({ navigation }) {
             const tag = isDbNews ? (article.category || 'CẨM NANG') : article.tag;
             const title = article.title;
             const excerpt = article.excerpt;
-            const dateText = isDbNews ? formatDateString(article.created_at) : article.date;
+            const dateText = isDbNews
+              ? formatDateString(article.created_at || article.published_at || article.updated_at)
+              : article.date;
 
             return (
               <TouchableOpacity
@@ -1534,6 +1536,26 @@ export default function HomeScreen({ navigation }) {
                   >
                     <MaterialCommunityIcons name="gold" size={22} color="#555" style={styles.menuItemIcon} />
                     <Text style={styles.menuItemText}>Bảng Giá Vàng</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => {
+                      closeMenu();
+                      navigation.navigate('News');
+                    }}
+                  >
+                    <Ionicons name="newspaper-outline" size={22} color="#555" style={styles.menuItemIcon} />
+                    <Text style={styles.menuItemText}>Tin tức</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => {
+                      closeMenu();
+                      navigation.navigate('StaffAttendance');
+                    }}
+                  >
+                    <Ionicons name="qr-code-outline" size={22} color="#555" style={styles.menuItemIcon} />
+                    <Text style={styles.menuItemText}>Chấm công nhân viên</Text>
                   </TouchableOpacity>
                 </View>
 
