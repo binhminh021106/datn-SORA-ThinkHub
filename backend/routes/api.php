@@ -36,6 +36,7 @@ use App\Http\Controllers\Api\admin\AdminContactController;
 use App\Http\Controllers\Api\admin\AdminNewController;
 use App\Http\Controllers\Api\admin\AdminAttendanceController;
 use App\Http\Controllers\Api\admin\AdminAffiliateController;
+use App\Http\Controllers\Api\admin\AdminFaceRecognitionController;
 
 // Controllers Client
 use App\Http\Controllers\Api\client\ProductDetailController;
@@ -257,6 +258,21 @@ Route::prefix('admin')->group(function () {
             Route::post('profile', 'updateProfile');
             Route::put('profile/password', 'updatePassword');
         });
+
+        Route::controller(AdminFaceRecognitionController::class)->prefix('face-recognition')->group(function () {
+            Route::post('/attendance', 'attendance');
+        });
+
+        Route::middleware(['check.module:admin_attendance'])
+            ->controller(AdminFaceRecognitionController::class)
+            ->prefix('face-recognition')
+            ->group(function () {
+                Route::get('/admins', 'admins');
+                Route::get('/profile', 'profile');
+                Route::post('/register', 'register');
+                Route::post('/verify', 'verify');
+                Route::delete('/profile/{adminId}', 'destroyProfile');
+            });
 
         // Quản lý Nhân viên (Mã: admin_staff)
         Route::middleware(['check.module:admin_staff'])->group(function () {

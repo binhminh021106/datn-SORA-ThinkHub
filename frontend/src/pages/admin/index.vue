@@ -1,11 +1,20 @@
 <template>
   <div>
     <!-- Màn hình Loading -->
-    <div v-if="isLoading" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
+    <div v-if="isLoading && hasAccess" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
       <h1 class="logo-shimmer mb-3">ThinkHub</h1>
       <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">
         Đang tải dữ liệu tổng quan...
       </p>
+    </div>
+
+    <!-- Không có quyền truy cập: hiển thị ngay, không chờ load -->
+    <div v-else-if="!hasAccess" class="d-flex justify-content-center align-items-center w-100" style="min-height: 70vh;">
+      <div class="text-center">
+        <h3 class="text-danger">Bạn không có quyền truy cập</h3>
+        <p class="text-muted">Tài khoản của bạn không có cấp độ phù hợp để xem trang này.</p>
+        <router-link :to="{ name: 'admin-login' }" class="btn btn-brand mt-3">Đăng nhập bằng tài khoản khác</router-link>
+      </div>
     </div>
 
     <!-- Nội dung Dashboard -->
@@ -438,10 +447,16 @@ const maxDate = today.toISOString().split('T')[0];
 const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
 const getHeaders = () => {
-  return { 
-    'Accept': 'application/json', 
-    'Authorization': `Bearer ${localStorage.getItem('admin_token')}` 
-  };
+  const token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token') ||
+                localStorage.getItem('adminToken') || sessionStorage.getItem('adminToken') ||
+                localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token') ||
+                localStorage.getItem('token') || sessionStorage.getItem('token');
+
+  const headers = { 'Accept': 'application/json' };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
 };
 
 const isExporting = ref(false); 
@@ -466,6 +481,19 @@ const paymentStats = ref({
 // ==========================================
 // 1. TANSTACK QUERY: LẤY DỮ LIỆU CHÍNH
 // ==========================================
+// Quick local permission check to avoid unnecessary loading when user lacks role
+const REQUIRED_ADMIN_LEVEL = 1; // adjust this value if your admin level scheme differs
+let _storedInfo = {};
+const storedAdminInfo = localStorage.getItem('admin_info') || sessionStorage.getItem('admin_info');
+try { _storedInfo = JSON.parse(storedAdminInfo || '{}'); } catch (e) { _storedInfo = {}; }
+const storedLevel = Number(localStorage.getItem('admin_level') || sessionStorage.getItem('admin_level') || _storedInfo?.role?.level || 0);
+const hasAccess = ref(Boolean(
+  localStorage.getItem('admin_token') ||
+  sessionStorage.getItem('admin_token') ||
+  localStorage.getItem('adminToken') ||
+  sessionStorage.getItem('adminToken')
+) && storedLevel >= REQUIRED_ADMIN_LEVEL);
+
 const { data: dashboardData, isLoading, isFetching, refetch } = useQuery({
   queryKey: ['admin-dashboard-main'],
   queryFn: async () => {
@@ -473,7 +501,8 @@ const { data: dashboardData, isLoading, isFetching, refetch } = useQuery({
     return res.data.data;
   },
   staleTime: 5 * 60 * 1000, 
-  keepPreviousData: true
+  keepPreviousData: true,
+  enabled: hasAccess
 });
 
 const stats = computed(() => dashboardData.value?.stats || { 

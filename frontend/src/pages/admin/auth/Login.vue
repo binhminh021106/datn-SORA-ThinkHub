@@ -68,10 +68,11 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import { useQueryClient } from '@tanstack/vue-query';
+import { clearAdminAuthStorage } from '@/composables/useUtilities';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -93,17 +94,32 @@ const handleLogin = async () => {
     const data = await response.json();
 
     if (response.ok) {
-      localStorage.setItem('admin_token', data.token);
-      localStorage.setItem('admin_role', data.admin.role_id);
+      // Choose storage based on "remember me"
+      // If remembered -> persist in localStorage, otherwise keep in sessionStorage
+      const storage = form.value.remember ? localStorage : sessionStorage;
+
+      // Clear previous entries to avoid stale data in the other storage
+      clearAdminAuthStorage();
+
+      storage.setItem('admin_token', data.token);
+      storage.setItem('admin_role', data.admin.role_id);
 
       if (data.admin.role && data.admin.role.level) {
-        localStorage.setItem('admin_level', data.admin.role.level);
+        storage.setItem('admin_level', data.admin.role.level);
       }
 
-      localStorage.setItem('admin_info', JSON.stringify(data.admin));
+      storage.setItem('admin_info', JSON.stringify(data.admin));
+
+      // Remember email for future logins (UI convenience)
+      if (form.value.remember) {
+        localStorage.setItem('admin_remember_email', form.value.email);
+      } else {
+        localStorage.removeItem('admin_remember_email');
+      }
 
       // Xóa toàn bộ cache của TanStack Query để tránh kẹt dữ liệu từ phiên làm việc trước
       queryClient.clear();
+      window.dispatchEvent(new CustomEvent('admin-auth-changed'));
 
       Swal.fire({
         icon: 'success',
@@ -127,6 +143,14 @@ const handleLogin = async () => {
     isLoading.value = false;
   }
 };
+
+onMounted(() => {
+  const remembered = localStorage.getItem('admin_remember_email');
+  if (remembered) {
+    form.value.email = remembered;
+    form.value.remember = true;
+  }
+});
 </script>
 
 <style scoped>

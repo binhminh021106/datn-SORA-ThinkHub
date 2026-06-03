@@ -1,10 +1,43 @@
-export const getToken = () => {
-  const commonKeys = ['access_token', 'token', 'auth_token', 'userToken', 'user_token'];
-  for (const k of commonKeys) {
+export const ADMIN_AUTH_STORAGE_KEYS = ['admin_token', 'adminToken'];
+export const ADMIN_AUTH_STATE_KEYS = ['admin_role', 'admin_level', 'admin_info'];
+export const USER_AUTH_STORAGE_KEYS = ['access_token', 'token', 'auth_token', 'userToken', 'user_token'];
+export const AUTH_STORAGE_KEYS = [
+  ...ADMIN_AUTH_STORAGE_KEYS,
+  ...ADMIN_AUTH_STATE_KEYS,
+  ...USER_AUTH_STORAGE_KEYS,
+];
+
+const readTokenFromStorage = (keys) => {
+  for (const k of keys) {
     const val = localStorage.getItem(k) || sessionStorage.getItem(k);
     if (val && val.length > 15) return val;
   }
   return '';
+};
+
+export const getAdminToken = () => {
+  return readTokenFromStorage(ADMIN_AUTH_STORAGE_KEYS);
+};
+
+export const getUserToken = () => {
+  return readTokenFromStorage(USER_AUTH_STORAGE_KEYS);
+};
+
+export const getToken = () => getAdminToken() || getUserToken();
+
+export const clearAuthStorage = (keys = AUTH_STORAGE_KEYS) => {
+  keys.forEach((key) => {
+    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
+  });
+};
+
+export const clearAdminAuthStorage = () => {
+  clearAuthStorage([...ADMIN_AUTH_STORAGE_KEYS, ...ADMIN_AUTH_STATE_KEYS]);
+};
+
+export const clearUserAuthStorage = () => {
+  clearAuthStorage(USER_AUTH_STORAGE_KEYS);
 };
 
 export const getHeaders = () => {

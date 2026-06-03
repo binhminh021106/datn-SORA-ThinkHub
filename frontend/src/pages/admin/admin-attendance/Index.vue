@@ -13,15 +13,13 @@
     <div class="container-fluid py-4 px-4" v-show="!isFirstVisit || !isLoading">
 
       <div class="row mb-4 align-items-center gy-3">
-        <div class="col-lg-5">
-          <h3 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+        <div class="col-lg-6">
+          <h3 class="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
             <i class="bi bi-calendar3 text-brand"></i>
-            Tổng quan Chấm công Tháng
+            Chấm công tháng
           </h3>
-          <p class="text-muted small mb-0 mt-1">Hệ thống Heatmap cảnh báo sớm tỷ lệ đi muộn và vắng mặt</p>
+          <p class="text-muted small mb-0">Lọc nhanh theo tháng, ca làm và chức vụ.</p>
         </div>
-        <div class="col-lg-7 text-lg-end d-flex justify-content-lg-end">
-</div>
       </div>
 
       <div class="row g-3 mb-4" v-if="isSummaryLoading">
@@ -58,8 +56,7 @@
           
           <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center mb-3 gap-3">
             <div class="me-auto">
-              <h5 class="fw-bold text-dark mb-1">Lưới Giám Sát Chấm Công Tháng {{ formatMonthYear(selectedMonth) }}</h5>
-              <p class="text-muted small mb-0">Rê chuột xem nhanh thông số. Click chọn ngày để xem danh sách chi tiết.</p>
+              <h5 class="fw-bold text-dark mb-1">Chấm Công Tháng {{ formatMonthYear(selectedMonth) }}</h5>
             </div>
             
             <div class="d-flex gap-3 flex-wrap align-items-center">
@@ -98,29 +95,45 @@
 
               <div class="d-flex gap-2">
                 <button @click="refetchAll"
-                  class="btn btn-brand shadow-sm rounded-4 fw-bold text-white d-flex align-items-center px-3 py-2">
-                  <i class="bi bi-arrow-clockwise me-2" :class="{ 'fa-spin': isLoading }"></i> Reload
+                  class="btn btn-brand btn-icon shadow-sm rounded-circle text-white"
+                  type="button"
+                  title="Tải lại dữ liệu">
+                  <i class="bi bi-arrow-clockwise fs-5" :class="{ 'fa-spin': isLoading }"></i>
                 </button>
                 <button @click="resetFilters"
-                  class="btn btn-light border shadow-sm rounded-4 fw-bold text-dark d-flex align-items-center px-3 py-2">
-                  <i class="bi bi-eraser me-2 text-muted"></i> Clear
+                  class="btn btn-light btn-icon shadow-sm rounded-circle text-dark"
+                  type="button"
+                  title="Xóa bộ lọc">
+                  <i class="bi bi-eraser fs-5"></i>
                 </button>
               </div>
             </div>
           </div>
 
-          <div class="d-flex gap-4 align-items-center flex-wrap mb-3 px-1" style="font-size: 0.85rem;">
-            <span class="d-flex align-items-center gap-2 text-muted fw-semibold">
+          <div class="row mb-4">
+            <div class="col-12">
+              <div class="card border-0 shadow-sm rounded-4 bg-light-subtle p-3 mb-4">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-3 gap-3">
+                  <div>
+                    <h5 class="fw-bold text-dark mb-1">Xu hướng điểm danh</h5>
+                  </div>
+                </div>
+                <div class="position-relative" style="min-height: 280px;">
+                  <canvas id="attendanceTrendChart"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex gap-3 align-items-center flex-wrap mb-3 px-1" style="font-size: 0.8rem;">
+            <span class="d-flex align-items-center gap-2 text-muted">
               <span class="legend-dot bg-success shadow-sm"></span> Đúng giờ
             </span>
-            <span class="d-flex align-items-center gap-2 text-muted fw-semibold">
+            <span class="d-flex align-items-center gap-2 text-muted">
               <span class="legend-dot bg-warning shadow-sm"></span> Đi muộn
             </span>
-            <span class="d-flex align-items-center gap-2 text-muted fw-semibold">
-              <span class="legend-dot bg-danger shadow-sm"></span> Vắng / Chưa Check-in
-            </span>
-            <span class="d-flex align-items-center gap-2 text-muted fw-semibold">
-              <span class="legend-dot border border-warning border-dashed bg-light-warning"></span> Cảnh báo đi muộn (>10%)
+            <span class="d-flex align-items-center gap-2 text-muted">
+              <span class="legend-dot bg-danger shadow-sm"></span> Vắng
             </span>
           </div>
 
@@ -493,10 +506,11 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick, onUnmounted } from 'vue';
 import axios from 'axios';
 import { useQuery } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
+import Chart from 'chart.js/auto';
 
 import SoraImage from '@/components/ui/SoraImage.vue';
 import defaultAvatar from '@/assets/images/defaults/avatar1.png';
@@ -531,6 +545,7 @@ const itemsPerPage = 6;
 
 const historyModalRef = ref(null);
 const drillDownSection = ref(null);
+let attendanceChartInstance = null;
 
 // Reset tất cả các bộ lọc về mặc định ban đầu
 const resetFilters = () => {
@@ -802,6 +817,132 @@ const monthlyGrid = computed(() => {
   }
   return weeks;
 });
+
+const attendanceChartData = computed(() => {
+  const data = monthlySummaryData.value || {};
+  if (!selectedMonth.value) {
+    return { labels: [], datasets: [] };
+  }
+
+  const [yearStr, monthStr] = selectedMonth.value.split('-');
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const daysInMonth = new Date(year, month, 0).getDate();
+
+  const labels = [];
+  const present = [];
+  const late = [];
+  const absent = [];
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateKey = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    labels.push(String(day));
+    present.push(data[dateKey]?.present || 0);
+    late.push(data[dateKey]?.late || 0);
+    absent.push(data[dateKey]?.absent || 0);
+  }
+
+  return {
+    labels,
+    datasets: [
+      {
+        label: 'Đúng giờ',
+        data: present,
+        backgroundColor: '#009981',
+        borderColor: '#009981',
+        borderWidth: 0,
+        borderRadius: 6,
+        barPercentage: 0.75,
+        categoryPercentage: 0.85
+      },
+      {
+        label: 'Đi muộn',
+        data: late,
+        backgroundColor: '#ffb703',
+        borderColor: '#ffb703',
+        borderWidth: 0,
+        borderRadius: 6,
+        barPercentage: 0.75,
+        categoryPercentage: 0.85
+      },
+      {
+        label: 'Vắng',
+        data: absent,
+        backgroundColor: '#ef4444',
+        borderColor: '#ef4444',
+        borderWidth: 0,
+        borderRadius: 6,
+        barPercentage: 0.75,
+        categoryPercentage: 0.85
+      }
+    ]
+  };
+});
+
+const initOrUpdateAttendanceChart = () => {
+  const ctx = document.getElementById('attendanceTrendChart');
+  if (!ctx) return;
+  const chartData = attendanceChartData.value;
+
+  if (attendanceChartInstance) {
+    attendanceChartInstance.data.labels = chartData.labels;
+    attendanceChartInstance.data.datasets = chartData.datasets;
+    attendanceChartInstance.update();
+    return;
+  }
+
+  attendanceChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: chartData,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: {
+            usePointStyle: true,
+            pointStyle: 'circle'
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: (tooltipItem) => `${tooltipItem.dataset.label}: ${tooltipItem.parsed.y}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          stacked: true,
+          grid: { display: false },
+          ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 15 }
+        },
+        y: {
+          stacked: true,
+          beginAtZero: true,
+          ticks: { precision: 0 }
+        }
+      }
+    }
+  });
+};
+
+onUnmounted(() => {
+  if (attendanceChartInstance) {
+    attendanceChartInstance.destroy();
+    attendanceChartInstance = null;
+  }
+});
+
+watch([attendanceChartData, isSummaryLoading], () => {
+  if (!isSummaryLoading.value) {
+    initOrUpdateAttendanceChart();
+  }
+}, { immediate: true });
 
 const kpiSummaries = computed(() => {
   let totalStaff = 0;
@@ -1124,6 +1265,15 @@ const getCheckoutStatusBadgeClass = (status) => ({
   color: #fff;
 }
 
+.btn-icon {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .attendance-dashboard-wrapper {
   width: 100%;
 }
@@ -1226,26 +1376,27 @@ const getCheckoutStatusBadgeClass = (status) => ({
 }
 
 .calendar-container {
-  border: 1px solid #dee2e6;
-  border-radius: 12px;
+  border: 1px solid rgba(0, 153, 129, 0.16);
+  border-radius: 16px;
   overflow: hidden;
-  background-color: #fff;
+  background-color: #f6fbf8;
 }
 
 .calendar-header-row {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  border-bottom: 2px solid #dee2e6;
+  border-bottom: 1px solid rgba(0, 153, 129, 0.16);
+  background-color: rgba(0, 153, 129, 0.04);
 }
 
 .calendar-header-col {
   padding: 14px 0;
   text-align: center;
-  font-weight: 800;
+  font-weight: 700;
   font-size: 0.85rem;
   text-transform: uppercase;
-  color: #495057;
-  border-right: 1px solid #e9ecef;
+  color: #3f5d53;
+  border-right: 1px solid rgba(0, 153, 129, 0.1);
 }
 
 .calendar-header-col:last-child {
@@ -1260,7 +1411,7 @@ const getCheckoutStatusBadgeClass = (status) => ({
 .calendar-week {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 1px solid rgba(0, 153, 129, 0.08);
 }
 
 .calendar-week:last-child {
@@ -1269,13 +1420,13 @@ const getCheckoutStatusBadgeClass = (status) => ({
 
 .calendar-day-summary {
   min-height: 105px;
-  border-right: 1px solid #e9ecef;
-  padding: 10px;
+  border-right: 1px solid rgba(0, 153, 129, 0.06);
+  padding: 12px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   transition: all 0.2s;
-  background-color: #fff;
+  background-color: #ffffff;
   cursor: pointer;
 }
 
@@ -1284,33 +1435,35 @@ const getCheckoutStatusBadgeClass = (status) => ({
 }
 
 .calendar-day-summary:hover:not(.not-current-month) {
-  background-color: #f0fcf9;
+  background-color: #ecf7f0;
   transform: translateY(-2px);
   z-index: 5;
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.08);
-  border-radius: 6px;
+  box-shadow: 0 0.5rem 1rem rgba(0, 153, 129, 0.14);
+  border-radius: 8px;
 }
 
 .day-number-row {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 700;
-  color: #adb5bd;
+  color: #0f5132;
 }
 
 .is-selected-day {
   border: 2px solid #009981 !important;
-  background-color: #f0fcf9 !important;
-  box-shadow: inset 0 0 8px rgba(0, 153, 129, 0.1);
-  border-radius: 6px;
+  background-color: #eaf7ee !important;
+  box-shadow: inset 0 0 10px rgba(0, 153, 129, 0.12);
+  border-radius: 8px;
 }
 
 /* Hiệu ứng Pulse cảnh báo */
 .heatmap-warning {
-  background-color: #fff9e6 !important;
+  background-color: rgba(255, 193, 7, 0.16) !important;
 }
 
 .alert-pulse-badge {
-  background-color: #ffeeba;
+  background-color: #fff4e5;
+  color: #8a6d3b;
+  border: 1px solid rgba(255, 193, 7, 0.35);
   animation: pulse-border 2s infinite;
 }
 

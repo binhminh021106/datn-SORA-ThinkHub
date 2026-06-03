@@ -41,29 +41,48 @@
         </div>
       </div>
 
-      <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+      <ul class="navbar-nav header-actions ms-auto mb-2 mb-lg-0">
         <!-- NÚT MỞ TRẠM QUÉT (Chỉ dành cho Super Admin) -->
         <li class="nav-item me-2 d-flex align-items-center" v-if="isLoggedIn && isSuperAdmin">
-          <button class="btn btn-outline-info rounded-3 btn-sm fw-bold px-3 d-flex align-items-center" @click="openStation">
+          <button class="btn station-qr-btn rounded-3 btn-sm fw-bold px-3 d-flex align-items-center" @click="openStation">
             <i class="bi bi-display me-2 fs-6"></i>
-            QR (Lễ tân)
+            Lấy QR lễ tân
           </button>
         </li>
 
-        <!-- Nút bật Quét QR -->
-        <li class="nav-item me-2 d-flex align-items-center" v-if="isLoggedIn">
-          <button class="btn btn-brand rounded-3 btn-sm fw-bold px-4 d-flex align-items-center text-white shadow-sm" style="background-color: #009981;" @click="handleScanClick" :disabled="isCheckingStatus">
+        <!-- Nút chấm công -->
+        <li class="nav-item attendance-menu-container position-relative d-flex align-items-center" v-if="showAttendanceButton" ref="attendanceMenuContainer">
+          <button class="btn btn-brand attendance-main-btn rounded-3 btn-sm fw-bold px-3 d-flex align-items-center text-white shadow-sm" @click="toggleAttendanceMenu" :disabled="isCheckingStatus">
             <span v-if="isCheckingStatus" class="spinner-border spinner-border-sm me-2"></span>
             <template v-else>
               <i v-if="attendanceState === 'working'" class="bi bi-box-arrow-right me-2 fs-5"></i>
               <i v-else-if="attendanceState === 'completed'" class="bi bi-check-circle me-2 fs-5"></i>
               <i v-else class="bi bi-box-arrow-in-right me-2 fs-5"></i>
-              {{ attendanceState === 'working' ? 'Check-out' : (attendanceState === 'completed' ? 'Hoàn thành' : 'Check-in') }}
+              {{ attendanceActionLabel }}
+              <i class="bi bi-chevron-down ms-2 small"></i>
             </template>
           </button>
+
+          <div class="attendance-menu dropdown-menu dropdown-menu-end shadow border-0 mt-2" :class="{ show: isAttendanceMenuActive }">
+            <button class="dropdown-item d-flex align-items-center gap-2 py-2" type="button" @click="handleAttendanceOption('qr')">
+              <i class="bi bi-qr-code-scan text-brand"></i>
+              <span>QR</span>
+            </button>
+            <button class="dropdown-item d-flex align-items-center gap-2 py-2" type="button" @click="handleAttendanceOption('face')">
+              <i class="bi bi-person-bounding-box text-brand"></i>
+              <span>FACE ID</span>
+            </button>
+          </div>
         </li>
 
         <!-- NÚT TOGGLE DARK MODE -->
+        <li class="nav-item me-2 d-flex align-items-center" v-if="isLoggedIn && isSuperAdmin">
+          <button class="btn face-manage-btn rounded-3 btn-sm fw-bold px-3 d-flex align-items-center" @click="openFaceRecognitionTest">
+            <i class="bi bi-person-bounding-box me-2 fs-6"></i>
+            Quản lý khuôn mặt
+          </button>
+        </li>
+
         <li class="nav-item me-3" v-if="isLoggedIn">
           <button @click="toggleTheme" 
                   class="btn rounded-circle shadow-sm d-flex align-items-center justify-content-center p-0 theme-toggle-btn"
@@ -136,6 +155,7 @@
     </div>
     
     <QrGeneratorModal ref="qrModalRef" @success="fetchAttendanceState" />
+    <FaceRecognitionTestModal ref="faceRecognitionModalRef" @attendance-success="fetchAttendanceState" />
   </nav>
 </template>
 
@@ -143,7 +163,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
-import { getFullImage } from '@/composables/useUtilities';
+import { clearAdminAuthStorage, getAdminToken, getFullImage } from '@/composables/useUtilities';
 import axios from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import * as bootstrap from 'bootstrap';
@@ -152,14 +172,28 @@ import * as bootstrap from 'bootstrap';
 import SoraImage from '@/components/ui/SoraImage.vue';
 import defaultAvatar from '@/assets/images/defaults/avatar1.png';
 import QrGeneratorModal from './QrGeneratorModal.vue';
+import FaceRecognitionTestModal from './FaceRecognitionTestModal.vue';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 const router = useRouter();
 const queryClient = useQueryClient();
 const isUserMenuActive = ref(false);
+const isAttendanceMenuActive = ref(false);
 const userMenuContainer = ref(null);
+const attendanceMenuContainer = ref(null);
 const attendanceState = ref('ready'); // ready, working, completed, hanging
+const hasShiftAssignment = ref(true);
+
+const showAttendanceButton = computed(() => {
+  return isLoggedIn.value;
+});
+
+const attendanceActionLabel = computed(() => {
+  if (attendanceState.value === 'working') return 'Chấm công: Check-out';
+  if (attendanceState.value === 'completed') return 'Đã hoàn thành';
+  return 'Chấm công: Check-in';
+});
 
 // ----- LOGIC ĐỒNG HỒ FLIP CLOCK -----
 const currentTime = ref({ ampm: '' });
@@ -267,24 +301,28 @@ const toggleTheme = () => {
 };
 
 const isLoggedIn = computed(() => {
-  return !!localStorage.getItem('admin_token');
+  return !!getAdminToken();
 });
 
 const fetchAttendanceState = async () => {
   if (!isLoggedIn.value) return;
   try {
-    const token = localStorage.getItem('admin_token');
+    const token = getAdminToken();
     const response = await axios.get(`${API_URL}/admin/attendances/status`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-    attendanceState.value = response.data.state;
+    const { state, shift_assignment } = response.data;
+    attendanceState.value = state;
+    hasShiftAssignment.value = !!shift_assignment;
   } catch (err) {
     console.error('Không thể lấy trạng thái điểm danh', err);
+    attendanceState.value = 'ready';
+    hasShiftAssignment.value = false;
   }
 };
 
 const fetchAdminProfile = async () => {
-  const token = localStorage.getItem('admin_token');
+  const token = getAdminToken();
   if (!token) throw new Error('Không tìm thấy token xác thực');
   
   const response = await axios.get(`${API_URL}/admin/profile`, {
@@ -301,7 +339,7 @@ const { data: adminProfileData } = useQuery({
   enabled: isLoggedIn,
   staleTime: 5 * 60 * 1000,
   initialData: () => {
-      const savedInfo = localStorage.getItem('admin_info');
+      const savedInfo = localStorage.getItem('admin_info') || sessionStorage.getItem('admin_info');
       if (!savedInfo) return undefined;
       try {
         return JSON.parse(savedInfo);
@@ -332,6 +370,21 @@ const adminUser = computed(() => {
 
 const toggleUserMenu = () => {
   isUserMenuActive.value = !isUserMenuActive.value;
+  if (isUserMenuActive.value) {
+    isAttendanceMenuActive.value = false;
+  }
+};
+
+const toggleAttendanceMenu = async () => {
+  if (attendanceState.value === 'completed') {
+    Swal.fire('Đã hoàn thành', 'Bạn đã hoàn thành ca làm việc hôm nay rồi.', 'info');
+    return;
+  }
+
+  isAttendanceMenuActive.value = !isAttendanceMenuActive.value;
+  if (isAttendanceMenuActive.value) {
+    isUserMenuActive.value = false;
+  }
 };
 
 const handleLogout = () => {
@@ -348,10 +401,9 @@ const handleLogout = () => {
     cancelButtonText: 'Hủy'
   }).then((result) => {
     if (result.isConfirmed) {
-      localStorage.removeItem('admin_token');
-      localStorage.removeItem('admin_role');
-      localStorage.removeItem('admin_info');
+      clearAdminAuthStorage();
       queryClient.clear();
+      window.dispatchEvent(new CustomEvent('admin-auth-changed'));
 
       Swal.fire({
         icon: 'success',
@@ -368,6 +420,10 @@ const handleLogout = () => {
 const closeUserMenu = (event) => {
   if (userMenuContainer.value && !userMenuContainer.value.contains(event.target)) {
     isUserMenuActive.value = false;
+  }
+
+  if (attendanceMenuContainer.value && !attendanceMenuContainer.value.contains(event.target)) {
+    isAttendanceMenuActive.value = false;
   }
 };
 
@@ -387,10 +443,33 @@ onUnmounted(() => {
 });
 
 const qrModalRef = ref(null);
+const faceRecognitionModalRef = ref(null);
 
 const isSuperAdmin = computed(() => {
-  const roleId = localStorage.getItem('admin_role');
-  return roleId == 1; 
+  const roleId = localStorage.getItem('admin_role') || sessionStorage.getItem('admin_role');
+  const roleLevel = localStorage.getItem('admin_level') || sessionStorage.getItem('admin_level');
+  const profile = adminProfileData.value;
+  const savedInfo = localStorage.getItem('admin_info') || sessionStorage.getItem('admin_info');
+  let storedInfo = null;
+
+  if (savedInfo) {
+    try {
+      storedInfo = JSON.parse(savedInfo);
+    } catch {
+      storedInfo = null;
+    }
+  }
+
+  return (
+    roleId == 1 ||
+    roleLevel == 1 ||
+    storedInfo?.role_id == 1 ||
+    storedInfo?.role?.id == 1 ||
+    storedInfo?.role?.level == 1 ||
+    profile?.role_id == 1 ||
+    profile?.role?.id == 1 ||
+    profile?.role?.level == 1
+  );
 });
 
 const openStation = () => {
@@ -404,45 +483,72 @@ const openQrModal = () => {
   }
 };
 
+const openFaceRecognitionTest = () => {
+  if (faceRecognitionModalRef.value) {
+    faceRecognitionModalRef.value.openModal('manage');
+  }
+};
+
+const openFaceAttendanceModal = () => {
+  if (faceRecognitionModalRef.value) {
+    faceRecognitionModalRef.value.openModal('attendance');
+  }
+};
+
 const isCheckingStatus = ref(false);
-const handleScanClick = async () => {
+const fetchLatestAttendanceState = async () => {
+  const token = getAdminToken();
+  const response = await axios.get(`${API_URL}/admin/attendances/status`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  const { state, shift_assignment } = response.data;
+  attendanceState.value = state;
+  hasShiftAssignment.value = !!shift_assignment;
+
+  return state;
+};
+
+const handleAttendanceOption = async (method) => {
   if (isCheckingStatus.value) return;
+  isAttendanceMenuActive.value = false;
   isCheckingStatus.value = true;
-  
+
   try {
-    const token = localStorage.getItem('admin_token');
-    const response = await axios.get(`${API_URL}/admin/attendances/status`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    
-    const state = response.data.state;
-    
-    if (state === 'working') {
-      const result = await Swal.fire({
-        title: 'Xác nhận Tan ca?',
-        text: 'Bạn hiện đang trong ca làm việc. Bạn có muốn quét mã QR để xác nhận Tan ca không?',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#dc3545',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Có, Quét mã Tan ca',
-        cancelButtonText: 'Đóng'
-      });
-      
-      if (result.isConfirmed) {
-        openQrModal();
-      }
+    const state = await fetchLatestAttendanceState();
+
+    if (state === 'completed') {
+      Swal.fire('Đã hoàn thành', 'Bạn đã hoàn thành ca làm việc hôm nay rồi.', 'info');
+      return;
     } else if (state === 'hanging') {
       Swal.fire('Lỗi Ca Treo', 'Bạn đang có một ca làm việc chưa được chốt từ ngày trước. Vui lòng báo cáo Quản lý để xử lý trước khi điểm danh mới.', 'error');
-    } else if (state === 'completed') {
-      Swal.fire('Đã hoàn thành', 'Bạn đã hoàn thành ca làm việc hôm nay rồi.', 'info');
-    } else {
-      openQrModal();
+      return;
     }
-    
+
+    if (method === 'qr') {
+      if (state === 'working') {
+        const result = await Swal.fire({
+          title: 'Xác nhận Tan ca?',
+          text: 'Bạn hiện đang trong ca làm việc. Bạn có muốn quét mã QR để xác nhận Tan ca không?',
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonColor: '#dc3545',
+          cancelButtonColor: '#6c757d',
+          confirmButtonText: 'Có, Quét mã Tan ca',
+          cancelButtonText: 'Đóng'
+        });
+
+        if (!result.isConfirmed) return;
+      }
+
+      openQrModal();
+      return;
+    }
+
+    openFaceAttendanceModal();
   } catch (error) {
     console.error('Lỗi check status:', error);
-    openQrModal();
+    method === 'qr' ? openQrModal() : openFaceAttendanceModal();
   } finally {
     isCheckingStatus.value = false;
   }
@@ -577,6 +683,66 @@ const handleScanClick = async () => {
 .app-header {
   min-height: 60px;
   z-index: 1000;
+}
+
+.header-actions {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.header-actions .nav-item {
+  margin-right: 0 !important;
+}
+
+.header-actions .btn {
+  min-height: 38px;
+  white-space: nowrap;
+}
+
+.station-qr-btn {
+  color: #212529;
+  border: 1.5px solid #212529;
+  background: #fff;
+}
+
+.station-qr-btn:hover {
+  color: #fff;
+  background: #212529;
+  border-color: #212529;
+}
+
+.attendance-main-btn {
+  min-width: 190px;
+  background-color: #009981;
+  border-color: #009981;
+}
+
+.attendance-menu-container {
+  z-index: 1002;
+}
+
+.attendance-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 190px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.face-manage-btn {
+  color: #007a67;
+  border: 1.5px solid #009981;
+  background: #fff;
+}
+
+.face-manage-btn:hover {
+  color: #fff;
+  background: #009981;
+  border-color: #009981;
 }
 
 .transition-all {
