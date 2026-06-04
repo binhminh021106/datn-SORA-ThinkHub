@@ -24,6 +24,7 @@ import CompareScreen from '../screens/CompareScreen';
 import NewsScreen from '../screens/NewsScreen';
 import NewsDetailScreen from '../screens/NewsDetailScreen';
 import StaffAttendanceScreen from '../screens/StaffAttendanceScreen';
+import AffiliateScreen from '../screens/AffiliateScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -82,6 +83,7 @@ export default function TabNavigator() {
       <Stack.Screen name="News" component={NewsScreen} />
       <Stack.Screen name="NewsDetail" component={NewsDetailScreen} />
       <Stack.Screen name="StaffAttendance" component={StaffAttendanceScreen} />
+      <Stack.Screen name="Affiliate" component={AffiliateScreen} />
     </Stack.Navigator>
   );
 }
