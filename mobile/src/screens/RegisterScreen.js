@@ -110,6 +110,13 @@ export default function RegisterScreen({ navigation }) {
   );  // useCallback để tránh tạo lại hàm mỗi render
   const set = useCallback((k) => (v) => setForm(prev => ({ ...prev, [k]: v })), []);
 
+  const goToAppAfterAuth = useCallback(() => {
+    navigation?.reset({
+      index: 0,
+      routes: [{ name: 'MainTabs' }],
+    });
+  }, [navigation]);
+
   const handleRegister = async () => {
     if (!form.fullName || !form.email || !form.password) {
       setErrorMsg('Vui lòng điền đầy đủ thông tin bắt buộc.');
@@ -151,12 +158,10 @@ export default function RegisterScreen({ navigation }) {
       }
 
       setSuccessMsg('Đăng ký thành công! Đang tự động đăng nhập...');
-      // Lưu token và user vào AsyncStorage
-      await AsyncStorage.setItem('auth_token', data.access_token);
-      await AsyncStorage.setItem('user', JSON.stringify(data.user));
+      await persistAuthSession(data);
 
       setTimeout(() => {
-        navigation?.goBack();
+        goToAppAfterAuth();
       }, 1500);
 
     } catch (e) {
@@ -180,7 +185,7 @@ export default function RegisterScreen({ navigation }) {
       await persistAuthSession(data);
       setSuccessMsg('Đăng nhập Google thành công!');
       setTimeout(() => {
-        navigation?.goBack();
+        goToAppAfterAuth();
       }, 1000);
     } catch (error) {
       setErrorMsg(error.message || 'Không thể đăng nhập bằng Google.');

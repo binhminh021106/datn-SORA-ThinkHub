@@ -12,6 +12,7 @@ import {
   Modal,
   TextInput,
   Switch,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -669,10 +670,21 @@ export default function AddressScreen() {
         onRequestClose={() => setShowModal(false)}
       >
         <View style={s.modalOverlay}>
-          <View style={s.modalContainer}>
-            <Text style={s.modalTitle}>{isEditing ? 'Sửa Địa Chỉ' : 'Thêm Địa Chỉ Mới'}</Text>
+          <KeyboardAvoidingView
+            style={s.modalKeyboardAvoid}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
+          >
+            <View style={s.modalContainer}>
+              <Text style={s.modalTitle}>{isEditing ? 'Sửa Địa Chỉ' : 'Thêm Địa Chỉ Mới'}</Text>
             
-            <ScrollView showsVerticalScrollIndicator={false} style={s.modalForm}>
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                style={s.modalForm}
+                contentContainerStyle={s.modalFormContent}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+              >
               {/* Receiver Name */}
               <View style={s.inputGroup}>
                 <Text style={s.inputLabel}>TÊN NGƯỜI NHẬN</Text>
@@ -828,39 +840,40 @@ export default function AddressScreen() {
                   disabled={!isEditing && addresses.length === 0} // Always default if first
                 />
               </View>
-            </ScrollView>
+              </ScrollView>
 
-            {!!formError && (
-              <View style={s.formErrorBox}>
-                <Ionicons name="alert-circle-outline" size={18} color="#9f273b" />
-                <Text style={s.formErrorText}>{formError}</Text>
-              </View>
-            )}
+              {!!formError && (
+                <View style={s.formErrorBox}>
+                  <Ionicons name="alert-circle-outline" size={18} color="#9f273b" />
+                  <Text style={s.formErrorText}>{formError}</Text>
+                </View>
+              )}
 
-            {/* Modal Buttons */}
-            <View style={s.modalBtnRow}>
-              <TouchableOpacity
-                style={[s.modalBtn, s.modalBtnCancel]}
-                onPress={() => setShowModal(false)}
-                activeOpacity={0.8}
-              >
-                <Text style={s.modalBtnCancelTxt}>HỦY</Text>
-              </TouchableOpacity>
+              {/* Modal Buttons */}
+              <View style={s.modalBtnRow}>
+                <TouchableOpacity
+                  style={[s.modalBtn, s.modalBtnCancel]}
+                  onPress={() => setShowModal(false)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={s.modalBtnCancelTxt}>HỦY</Text>
+                </TouchableOpacity>
               
-              <TouchableOpacity
-                style={[s.modalBtn, s.modalBtnConfirm, isSaving && s.modalBtnDisabled]}
-                onPress={handleSave}
-                disabled={isSaving}
-                activeOpacity={0.8}
-              >
-                {isSaving ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={s.modalBtnConfirmTxt}>LƯU LẠI</Text>
-                )}
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={[s.modalBtn, s.modalBtnConfirm, isSaving && s.modalBtnDisabled]}
+                  onPress={handleSave}
+                  disabled={isSaving}
+                  activeOpacity={0.8}
+                >
+                  {isSaving ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={s.modalBtnConfirmTxt}>LƯU LẠI</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </View>
 
         {/* ── SELECTOR OVERLAY (Inside the same Modal to avoid multi-modal conflict) ── */}
@@ -1135,6 +1148,10 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.45)',
     justifyContent: 'flex-end', // Slide up from bottom
   },
+  modalKeyboardAvoid: {
+    width: '100%',
+    justifyContent: 'flex-end',
+  },
   modalContainer: {
     backgroundColor: '#fffdf9',
     borderTopLeftRadius: 24,
@@ -1159,6 +1176,9 @@ const s = StyleSheet.create({
   },
   modalForm: {
     marginBottom: 20,
+  },
+  modalFormContent: {
+    paddingBottom: 8,
   },
   inputGroup: {
     marginBottom: 16,

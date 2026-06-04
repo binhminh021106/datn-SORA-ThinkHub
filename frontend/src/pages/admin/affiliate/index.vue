@@ -115,9 +115,22 @@
                   </td>
 
                   <td class="px-4">
-                    <a :href="app.social_links" target="_blank" class="text-brand text-decoration-none text-truncate d-inline-block w-100 fw-medium" title="Click để xem">
-                      <i class="bi bi-link-45deg me-1"></i>{{ app.social_links }}
-                    </a>
+                    <div v-if="parseSocialLinks(app.social_links).length" class="social-link-list">
+                      <a
+                        v-for="(link, index) in parseSocialLinks(app.social_links)"
+                        :key="`${app.id}-social-${index}`"
+                        :href="link.url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="social-link-pill"
+                        :title="link.url"
+                      >
+                        <i class="bi bi-link-45deg me-1"></i>
+                        <span class="social-link-platform">{{ link.platform }}</span>
+                        <span class="social-link-url">{{ link.url }}</span>
+                      </a>
+                    </div>
+                    <span v-else class="text-muted small">Chưa có link</span>
                   </td>
 
                   <td class="px-4">
@@ -356,6 +369,32 @@ const displayApps = computed(() => {
 });
 
 // --- FORMATTERS ---
+const ensureHttpUrl = (value) => {
+  if (!value) return '';
+  if (/^https?:\/\//i.test(value)) return value;
+  return `https://${value.replace(/^\/+/, '')}`;
+};
+
+const parseSocialLinks = (value) => {
+  if (!value) return [];
+
+  return String(value)
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const matched = /^https?:\/\//i.test(line) ? null : line.match(/^([^:]+):\s*(.+)$/);
+      const platform = matched ? matched[1].trim() : 'Link';
+      const rawUrl = matched ? matched[2].trim() : line;
+
+      return {
+        platform,
+        url: ensureHttpUrl(rawUrl),
+      };
+    })
+    .filter((item) => item.url);
+};
+
 const formatDate = (dateString) => {
   if (!dateString) return '';
   const d = new Date(dateString);
@@ -420,6 +459,50 @@ onMounted(() => {
 .bg-brand { background-color: #009981 !important; } 
 .text-brand { color: #009981 !important; } 
 .border-brand { border-color: #009981 !important; }
+
+.social-link-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.social-link-pill {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgba(0, 153, 129, 0.18);
+  border-radius: 999px;
+  background: rgba(0, 153, 129, 0.06);
+  color: #009981;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: all 0.18s ease;
+}
+
+.social-link-pill:hover {
+  color: #007a67;
+  border-color: rgba(0, 153, 129, 0.38);
+  background: rgba(0, 153, 129, 0.1);
+}
+
+.social-link-platform {
+  flex: 0 0 auto;
+  margin-right: 0.35rem;
+}
+
+.social-link-url {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #53615f;
+  font-weight: 500;
+}
 
 .btn-brand-solid { background-color: #009981 !important; color: white !important; transition: all 0.2s ease; border: none; }
 .btn-brand-solid:hover { background-color: #007a67 !important; color: white !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }

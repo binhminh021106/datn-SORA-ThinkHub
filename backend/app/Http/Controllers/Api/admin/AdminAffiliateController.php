@@ -80,6 +80,53 @@ class AdminAffiliateController extends Controller
         }
     }
 
+    // Vô hiệu hóa tư cách affiliate và mã giới thiệu của khách hàng
+    public function revoke($id)
+    {
+        \Illuminate\Support\Facades\DB::beginTransaction();
+
+        try {
+            $application = AffiliateApplication::with('user')->findOrFail($id);
+
+            if ($application->status !== 'approved') {
+                \Illuminate\Support\Facades\DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Chỉ có thể vô hiệu hóa đơn affiliate đã được duyệt.',
+                ], 400);
+            }
+
+            $user = $application->user;
+            if (!$user) {
+                \Illuminate\Support\Facades\DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không tìm thấy khách hàng của đơn affiliate này.',
+                ], 404);
+            }
+
+            $application->update([
+                'status' => 'revoked',
+                'admin_notes' => 'Admin đã vô hiệu hóa tư cách affiliate.',
+            ]);
+
+            $user->is_affiliate = false;
+            $user->affiliate_code = null;
+            $user->save();
+
+            \Illuminate\Support\Facades\DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Đã vô hiệu hóa mã affiliate của khách hàng.',
+                'data' => $application->fresh('user'),
+            ], 200);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()], 500);
+        }
+    }
+
     // quản lý hoa hồng của các đối tác
     // 1. Lấy danh sách tất cả yêu cầu rút tiền
     public function withdrawals()

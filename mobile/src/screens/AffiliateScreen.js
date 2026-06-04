@@ -21,6 +21,40 @@ const formatCurrency = (v) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(v) || 0);
 
 const WITHDRAW_MIN = 200000;
+const SOCIAL_PLATFORMS = ['TikTok', 'Facebook', 'Instagram', 'YouTube', 'Shopee', 'Khác'];
+const createSocialChannel = () => ({
+  id: `channel-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  platform: 'TikTok',
+  value: '',
+});
+const isUrl = (value) => /^https?:\/\//i.test(value);
+const normalizeSocialChannelValue = (platform, value) => {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) return '';
+  if (isUrl(trimmedValue)) return trimmedValue;
+
+  if (platform === 'TikTok') {
+    const username = trimmedValue.replace(/^@+/, '').replace(/^tiktok\.com\/@?/i, '').split(/[/?#]/)[0];
+    return username ? `https://www.tiktok.com/@${username}?lang=en` : trimmedValue;
+  }
+
+  if (platform === 'Facebook') {
+    const username = trimmedValue.replace(/^\/+/, '').replace(/^facebook\.com\/?/i, '').split(/[/?#]/)[0];
+    return username ? `https://www.facebook.com/${username}` : trimmedValue;
+  }
+
+  if (platform === 'YouTube') {
+    const username = trimmedValue.replace(/^@+/, '').replace(/^youtube\.com\/@?/i, '').split(/[/?#]/)[0];
+    return username ? `https://www.youtube.com/@${username}` : trimmedValue;
+  }
+
+  if (platform === 'Instagram') {
+    const username = trimmedValue.replace(/^@+/, '').replace(/^instagram\.com\/?/i, '').split(/[/?#]/)[0];
+    return username ? `https://www.instagram.com/${username}/` : trimmedValue;
+  }
+
+  return trimmedValue;
+};
 
 // Status badge config for commission histories
 const STATUS_CONFIG = {
@@ -63,7 +97,8 @@ export default function AffiliateScreen() {
   // Forms
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [withdrawForm, setWithdrawForm] = useState({ amount: '', bank_name: '', account_number: '', account_holder_name: '' });
-  const [apply, setApply] = useState({ social_links: '', introduce_message: '' });
+  const [apply, setApply] = useState({ introduce_message: '' });
+  const [socialChannels, setSocialChannels] = useState([createSocialChannel()]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
 
@@ -124,6 +159,18 @@ export default function AffiliateScreen() {
 
   const onRefresh = useCallback(() => fetchStatus({ showOverlay: false, showRefresh: true }), [fetchStatus]);
 
+  const addSocialChannel = () => {
+    setSocialChannels((prev) => [...prev, createSocialChannel()]);
+  };
+
+  const removeSocialChannel = (id) => {
+    setSocialChannels((prev) => (prev.length > 1 ? prev.filter((item) => item.id !== id) : prev));
+  };
+
+  const updateSocialChannel = (id, patch) => {
+    setSocialChannels((prev) => prev.map((item) => (item.id === id ? { ...item, ...patch } : item)));
+  };
+
   // ── Actions ──
   const handleShare = async () => {
     if (!info.affiliate_code) return;
@@ -140,7 +187,12 @@ export default function AffiliateScreen() {
   };
 
   const submitApplication = async () => {
-    if (!apply.social_links.trim() || !apply.introduce_message.trim()) {
+    const cleanedChannels = socialChannels
+      .map((item) => ({ platform: item.platform, value: normalizeSocialChannelValue(item.platform, item.value) }))
+      .filter((item) => item.value);
+    const socialLinks = cleanedChannels.map((item) => `${item.platform}: ${item.value}`).join('\n');
+
+    if (!socialLinks || !apply.introduce_message.trim()) {
       Alert.alert('Thiếu thông tin', 'Vui lòng nhập liên kết mạng xã hội và lời giới thiệu.');
       return;
     }
@@ -150,12 +202,13 @@ export default function AffiliateScreen() {
       const res = await fetch(`${API_BASE_URL}/client/affiliate/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, Accept: 'application/json' },
-        body: JSON.stringify({ social_links: apply.social_links, introduce_message: apply.introduce_message }),
+        body: JSON.stringify({ social_links: socialLinks, introduce_message: apply.introduce_message.trim() }),
       });
       const result = await res.json();
       if (result.success) {
         Alert.alert('Thành công!', result.message || 'Nộp đơn đăng ký thành công! Vui lòng chờ SORA xét duyệt.');
-        setApply({ social_links: '', introduce_message: '' });
+        setApply({ introduce_message: '' });
+        setSocialChannels([createSocialChannel()]);
         setApplicationStatus('pending');
         setShowApplyForm(false);
       } else {
@@ -231,72 +284,165 @@ export default function AffiliateScreen() {
 
   // ── APPLY: form đăng ký ──
   const renderApplyForm = () => (
-    <ScrollView
-      contentContainerStyle={{ paddingBottom: 40 }}
-      showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#9f273b']} tintColor="#9f273b" />}
+    <KeyboardAvoidingView
+      style={s.keyboardAvoid}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
     >
-      <View style={s.heroBanner}>
-        <View style={s.heroIconWrap}>
-          <Ionicons name="megaphone" size={30} color="#e7ce7d" />
+      <ScrollView
+        contentContainerStyle={s.applyScrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#9f273b']} tintColor="#9f273b" />}
+      >
+      <LinearGradient
+        colors={['#9f273b', '#7d1d2e']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={s.applyHero}
+      >
+        <View style={s.applyHeroGlow} />
+        <View style={s.applyHeroTop}>
+          <View style={s.applyHeroIconWrap}>
+            <Ionicons name="diamond-outline" size={27} color="#e7ce7d" />
+          </View>
+          <View style={s.applyHeroText}>
+            <Text style={s.applyHeroKicker}>SORA PARTNER</Text>
+            <Text style={s.applyHeroTitle}>Trở thành đối tác giới thiệu</Text>
+          </View>
         </View>
-        <Text style={s.heroBannerTitle}>Trở thành Đối tác SORA</Text>
-        <Text style={s.heroBannerSub}>
-          Giới thiệu trang sức SORA tới cộng đồng của bạn và nhận hoa hồng hấp dẫn trên mỗi đơn hàng thành công.
+        <Text style={s.applyHeroSub}>
+          Chia sẻ sản phẩm SORA bằng mã riêng của bạn và nhận hoa hồng khi đơn hàng hoàn tất.
         </Text>
-      </View>
+      </LinearGradient>
 
-      <View style={s.sectionTitle}>
-        <Ionicons name="sparkles-outline" size={18} color="#9f273b" />
-        <Text style={s.sectionTitleTxt}>Quyền Lợi Đối Tác</Text>
-      </View>
-      <View style={s.benefitCard}>
+      <View style={s.applyStepsCard}>
         {[
-          { icon: 'cash-outline', title: 'Hoa hồng theo đơn', desc: 'Nhận % hoa hồng trên mỗi sản phẩm bán ra qua mã của bạn.' },
-          { icon: 'wallet-outline', title: 'Rút tiền linh hoạt', desc: `Rút về tài khoản ngân hàng từ ${formatCurrency(WITHDRAW_MIN)}.` },
-          { icon: 'stats-chart-outline', title: 'Theo dõi minh bạch', desc: 'Xem lịch sử hoa hồng và số dư ví theo thời gian thực.' },
-        ].map((b, i) => (
-          <View key={i} style={[s.benefitRow, i === 0 && { borderTopWidth: 0 }]}>
-            <View style={s.benefitIconWrap}>
-              <Ionicons name={b.icon} size={20} color="#9f273b" />
+          { icon: 'create-outline', title: 'Gửi hồ sơ', desc: 'Điền kênh mạng xã hội và vài dòng giới thiệu.' },
+          { icon: 'shield-checkmark-outline', title: 'SORA duyệt', desc: 'Đội ngũ kiểm tra sự phù hợp của hồ sơ.' },
+          { icon: 'cash-outline', title: 'Nhận hoa hồng', desc: 'Có mã riêng để chia sẻ và theo dõi thu nhập.' },
+        ].map((step, index) => (
+          <View key={step.title} style={s.applyStepItem}>
+            <View style={s.applyStepIconWrap}>
+              <Ionicons name={step.icon} size={18} color="#9f273b" />
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.benefitTitle}>{b.title}</Text>
-              <Text style={s.benefitDesc}>{b.desc}</Text>
+            <View style={s.applyStepText}>
+              <Text style={s.applyStepTitle}>{step.title}</Text>
+              <Text style={s.applyStepDesc}>{step.desc}</Text>
             </View>
+            {index < 2 && <View style={s.applyStepDivider} />}
           </View>
         ))}
       </View>
 
-      <View style={s.sectionTitle}>
-        <Ionicons name="create-outline" size={18} color="#9f273b" />
-        <Text style={s.sectionTitleTxt}>Đăng Ký Tham Gia</Text>
+      <View style={s.applySectionHeader}>
+        <View>
+          <Text style={s.applySectionKicker}>QUYỀN LỢI</Text>
+          <Text style={s.applySectionTitle}>Bạn sẽ nhận được gì?</Text>
+        </View>
+        <Ionicons name="sparkles-outline" size={22} color="#e7ce7d" />
       </View>
-      <View style={s.formCard}>
-        <Text style={s.inputLabel}>Liên kết mạng xã hội</Text>
-        <TextInput
-          style={s.input}
-          placeholder="Facebook, TikTok, Instagram..."
-          placeholderTextColor="#b9b3a6"
-          value={apply.social_links}
-          onChangeText={(t) => setApply((p) => ({ ...p, social_links: t }))}
-        />
-        <Text style={s.inputLabel}>Lời giới thiệu</Text>
-        <TextInput
-          style={[s.input, s.textArea]}
-          placeholder="Giới thiệu ngắn gọn về bạn và lý do muốn trở thành đối tác SORA..."
-          placeholderTextColor="#b9b3a6"
-          multiline
-          maxLength={1000}
-          value={apply.introduce_message}
-          onChangeText={(t) => setApply((p) => ({ ...p, introduce_message: t }))}
-        />
-        <TouchableOpacity style={[s.primaryBtn, isSubmitting && { opacity: 0.6 }]} activeOpacity={0.85} onPress={submitApplication} disabled={isSubmitting}>
+      <View style={s.applyBenefitGrid}>
+        {[
+          { icon: 'cash-outline', title: 'Hoa hồng theo đơn', desc: 'Nhận phần trăm hoa hồng khi khách mua qua mã của bạn.' },
+          { icon: 'wallet-outline', title: 'Rút tiền linh hoạt', desc: `Rút về tài khoản ngân hàng từ ${formatCurrency(WITHDRAW_MIN)}.` },
+          { icon: 'stats-chart-outline', title: 'Theo dõi minh bạch', desc: 'Xem số dư và lịch sử hoa hồng ngay trong ứng dụng.' },
+        ].map((b) => (
+          <View key={b.title} style={s.applyBenefitItem}>
+            <View style={s.applyBenefitIconWrap}>
+              <Ionicons name={b.icon} size={20} color="#9f273b" />
+            </View>
+            <Text style={s.applyBenefitTitle}>{b.title}</Text>
+            <Text style={s.applyBenefitDesc}>{b.desc}</Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={s.applySectionHeader}>
+        <View>
+          <Text style={s.applySectionKicker}>HỒ SƠ ĐĂNG KÝ</Text>
+          <Text style={s.applySectionTitle}>Thông tin tham gia</Text>
+        </View>
+        <Ionicons name="create-outline" size={22} color="#e7ce7d" />
+      </View>
+      <View style={s.applyFormCard}>
+        <Text style={s.applyFormHint}>
+          Hãy gửi những kênh bạn đang hoạt động. SORA sẽ xem xét phong cách nội dung và mức độ phù hợp với thương hiệu.
+        </Text>
+
+        <Text style={s.applyInputLabel}>Kênh mạng xã hội</Text>
+        {socialChannels.map((channel, index) => (
+          <View key={channel.id} style={s.applyChannelCard}>
+            <View style={s.applyChannelHeader}>
+              <View style={s.applyChannelTitleWrap}>
+                <Ionicons name="share-social-outline" size={16} color="#9f273b" />
+                <Text style={s.applyChannelTitle}>Kênh {index + 1}</Text>
+              </View>
+              {socialChannels.length > 1 && (
+                <TouchableOpacity style={s.applyRemoveBtn} activeOpacity={0.75} onPress={() => removeSocialChannel(channel.id)}>
+                  <Ionicons name="close" size={16} color="#9f273b" />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.platformList}>
+              {SOCIAL_PLATFORMS.map((platform) => {
+                const isActive = channel.platform === platform;
+                return (
+                  <TouchableOpacity
+                    key={platform}
+                    style={[s.platformChip, isActive && s.platformChipActive]}
+                    activeOpacity={0.78}
+                    onPress={() => updateSocialChannel(channel.id, { platform })}
+                  >
+                    <Text style={[s.platformChipText, isActive && s.platformChipTextActive]}>{platform}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            <View style={s.applyInputBox}>
+              <Ionicons name="at-outline" size={18} color="#9f273b" />
+              <TextInput
+                style={s.applyInput}
+                placeholder="Ví dụ: @sora_jewelry, sora_jewelry hoặc dán link"
+                placeholderTextColor="#b9b3a6"
+                value={channel.value}
+                autoCapitalize="none"
+                autoCorrect={false}
+                onChangeText={(text) => updateSocialChannel(channel.id, { value: text })}
+              />
+            </View>
+          </View>
+        ))}
+        <TouchableOpacity style={s.applyAddChannelBtn} activeOpacity={0.8} onPress={addSocialChannel}>
+          <Ionicons name="add-circle-outline" size={18} color="#9f273b" />
+          <Text style={s.applyAddChannelText}>Thêm kênh khác</Text>
+        </TouchableOpacity>
+
+        <Text style={s.applyInputLabel}>Lời giới thiệu</Text>
+        <View style={[s.applyInputBox, s.applyTextAreaBox]}>
+          <Ionicons name="chatbox-ellipses-outline" size={18} color="#9f273b" style={{ marginTop: 2 }} />
+          <TextInput
+            style={[s.applyInput, s.applyTextArea]}
+            placeholder="Bạn đang xây dựng cộng đồng nào? Vì sao bạn muốn giới thiệu SORA?"
+            placeholderTextColor="#b9b3a6"
+            multiline
+            maxLength={1000}
+            value={apply.introduce_message}
+            onChangeText={(t) => setApply((p) => ({ ...p, introduce_message: t }))}
+          />
+        </View>
+        <Text style={s.applyCounter}>{apply.introduce_message.length}/1000 ký tự</Text>
+
+        <TouchableOpacity style={[s.applySubmitBtn, isSubmitting && { opacity: 0.65 }]} activeOpacity={0.85} onPress={submitApplication} disabled={isSubmitting}>
           {isSubmitting ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="paper-plane-outline" size={16} color="#fff" />}
-          <Text style={s.primaryBtnTxt}>{isSubmitting ? 'ĐANG GỬI...' : 'NỘP ĐƠN ĐĂNG KÝ'}</Text>
+          <Text style={s.applySubmitTxt}>{isSubmitting ? 'ĐANG GỬI...' : 'NỘP ĐƠN ĐĂNG KÝ'}</Text>
         </TouchableOpacity>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 
   // ── PENDING ──
@@ -528,7 +674,7 @@ const s = StyleSheet.create({
   codeCard: { marginHorizontal: 16, marginTop: 16, borderRadius: 18, padding: 22, overflow: 'hidden', shadowColor: '#9f273b', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.25, shadowRadius: 14, elevation: 6 },
   codeGlow: { position: 'absolute', top: -40, right: -30, width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(231, 206, 125, 0.18)' },
   codeLabel: { fontFamily: 'Oswald_500Medium', fontSize: 11, color: '#e7ce7d', letterSpacing: 1.5 },
-  codeValue: { fontFamily: 'PlayfairDisplay_700Bold', fontSize: 30, color: '#fff', letterSpacing: 2, marginTop: 6, marginBottom: 18 },
+  codeValue: { fontFamily: PRICE_FONT_FAMILY, fontWeight: PRICE_FONT_WEIGHT, fontSize: 30, color: '#fff', letterSpacing: 0.5, marginTop: 6, marginBottom: 18 },
   codeActions: { flexDirection: 'row', gap: 10 },
   codeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', height: 42, borderRadius: 10 },
   codeBtnOutline: { backgroundColor: 'transparent', borderWidth: 1.2, borderColor: 'rgba(255,255,255,0.5)' },
@@ -565,6 +711,169 @@ const s = StyleSheet.create({
   emptyTxt: { fontFamily: 'Oswald_400Regular', fontSize: 13, color: '#9c9c9c', marginTop: 10, letterSpacing: 0.5 },
 
   // Apply hero banner
+  keyboardAvoid: { flex: 1 },
+  applyScrollContent: { paddingBottom: 42 },
+  applyHero: {
+    position: 'relative',
+    overflow: 'hidden',
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 8,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(231,206,125,0.28)',
+    shadowColor: '#9f273b',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 5,
+  },
+  applyHeroGlow: {
+    position: 'absolute',
+    right: -42,
+    top: -48,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: 'rgba(231,206,125,0.16)',
+  },
+  applyHeroTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+  applyHeroIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 13,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(231,206,125,0.42)',
+  },
+  applyHeroText: { flex: 1 },
+  applyHeroKicker: { color: '#e7ce7d', fontFamily: 'Oswald_500Medium', fontSize: 10, letterSpacing: 1.7, marginBottom: 3 },
+  applyHeroTitle: { color: '#fff', fontFamily: 'PlayfairDisplay_700Bold', fontSize: 24, lineHeight: 30 },
+  applyHeroSub: { color: 'rgba(255,255,255,0.84)', fontFamily: 'PlayfairDisplay_400Regular', fontSize: 13, lineHeight: 21 },
+  applyStepsCard: {
+    marginHorizontal: 16,
+    marginTop: 14,
+    paddingVertical: 4,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#eee2dd',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  applyStepItem: { minHeight: 72, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center' },
+  applyStepIconWrap: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', marginRight: 12, backgroundColor: '#fdf5f6' },
+  applyStepText: { flex: 1 },
+  applyStepTitle: { color: '#2f2929', fontFamily: 'Oswald_600SemiBold', fontSize: 13, letterSpacing: 0.4 },
+  applyStepDesc: { marginTop: 2, color: '#817878', fontFamily: 'Oswald_400Regular', fontSize: 12, lineHeight: 17 },
+  applyStepDivider: { position: 'absolute', left: 64, right: 14, bottom: 0, height: 1, backgroundColor: '#f3ebe6' },
+  applySectionHeader: {
+    marginHorizontal: 16,
+    marginTop: 22,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  applySectionKicker: { color: '#9f273b', fontFamily: 'Oswald_500Medium', fontSize: 10, letterSpacing: 1.5, marginBottom: 2 },
+  applySectionTitle: { color: '#252020', fontFamily: 'PlayfairDisplay_700Bold', fontSize: 21, lineHeight: 27 },
+  applyBenefitGrid: { marginHorizontal: 16, gap: 10 },
+  applyBenefitItem: {
+    padding: 14,
+    minHeight: 116,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#eee2dd',
+  },
+  applyBenefitIconWrap: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginBottom: 10, backgroundColor: '#fdf5f6' },
+  applyBenefitTitle: { color: '#2f2929', fontFamily: 'Oswald_600SemiBold', fontSize: 14, letterSpacing: 0.4 },
+  applyBenefitDesc: { marginTop: 4, color: '#817878', fontFamily: 'Oswald_400Regular', fontSize: 12, lineHeight: 18 },
+  applyFormCard: {
+    marginHorizontal: 16,
+    padding: 16,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#eee2dd',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  applyFormHint: { color: '#7b706d', fontFamily: 'PlayfairDisplay_400Regular', fontSize: 13, lineHeight: 20, marginBottom: 14 },
+  applyInputLabel: { color: '#4b4343', fontFamily: 'Oswald_500Medium', fontSize: 11, letterSpacing: 0.9, marginBottom: 8, textTransform: 'uppercase' },
+  applyChannelCard: {
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#eee2dd',
+    backgroundColor: '#fffaf7',
+  },
+  applyChannelHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  applyChannelTitleWrap: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  applyChannelTitle: { color: '#4b4343', fontFamily: 'Oswald_500Medium', fontSize: 12, letterSpacing: 0.5 },
+  applyRemoveBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fdf0f2',
+  },
+  platformList: { gap: 8, paddingRight: 4, marginBottom: 10 },
+  platformChip: {
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#eadfd8',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  platformChipActive: { borderColor: '#9f273b', backgroundColor: '#9f273b' },
+  platformChipText: { color: '#746966', fontFamily: 'Oswald_500Medium', fontSize: 11, letterSpacing: 0.4 },
+  platformChipTextActive: { color: '#fff' },
+  applyInputBox: {
+    minHeight: 50,
+    marginBottom: 14,
+    paddingHorizontal: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    borderWidth: 1,
+    borderColor: '#eadfd8',
+    borderRadius: 8,
+    backgroundColor: '#fffdfb',
+  },
+  applyInput: { flex: 1, paddingVertical: 10, color: '#252020', fontFamily: 'Oswald_400Regular', fontSize: 14 },
+  applyAddChannelBtn: {
+    height: 42,
+    marginBottom: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ead4d8',
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+  },
+  applyAddChannelText: { color: '#9f273b', fontFamily: 'Oswald_600SemiBold', fontSize: 12, letterSpacing: 0.6 },
+  applyTextAreaBox: { minHeight: 112, alignItems: 'flex-start', paddingVertical: 10 },
+  applyTextArea: { minHeight: 90, textAlignVertical: 'top' },
+  applyCounter: { marginTop: -6, marginBottom: 14, textAlign: 'right', color: '#a0938b', fontFamily: 'Oswald_400Regular', fontSize: 11 },
+  applySubmitBtn: { height: 48, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#9f273b' },
+  applySubmitTxt: { color: '#fff', fontFamily: 'Oswald_600SemiBold', fontSize: 12, letterSpacing: 1.4 },
   heroBanner: { backgroundColor: '#111', marginHorizontal: 16, marginTop: 16, borderRadius: 18, padding: 24, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 5 },
   heroIconWrap: { width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(231, 206, 125, 0.12)', borderWidth: 1, borderColor: 'rgba(231, 206, 125, 0.4)', alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   heroBannerTitle: { fontFamily: 'PlayfairDisplay_700Bold', fontSize: 22, color: '#e7ce7d', marginBottom: 8, textAlign: 'center' },

@@ -500,7 +500,10 @@ export default function CollectionDetailScreen() {
                   key={product.id.toString()}
                   product={product}
                   width={165}
-                  onPress={(selectedProduct) => navigation.navigate('ProductDetail', { slug: selectedProduct.slug })}
+                  onPress={(selectedProduct) => navigation.navigate('ProductDetail', {
+                    slug: selectedProduct.slug,
+                    previewImage: selectedProduct.previewImage || selectedProduct.image || null,
+                  })}
                   onToggleWishlist={toggleWishlist}
                   isFavorite={wishlistIds.includes(product.id?.toString())}
                   isWishlistLoading={wishlistLoadingIds.includes(product.id?.toString())}
