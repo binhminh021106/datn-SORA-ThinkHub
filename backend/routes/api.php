@@ -444,6 +444,7 @@ Route::prefix('admin')->group(function () {
             Route::get('/applications', 'index');
             Route::post('/applications/{id}/approve', 'approve');
             Route::post('/applications/{id}/reject', 'reject');
+            Route::post('/applications/{id}/revoke', 'revoke');
             
             Route::get('/withdrawals', 'withdrawals'); 
             Route::post('/withdrawals/{id}/approve', 'approveWithdrawal');

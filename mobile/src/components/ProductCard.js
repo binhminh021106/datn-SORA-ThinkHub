@@ -67,7 +67,7 @@ export default function ProductCard({
   return (
     <TouchableOpacity
       style={[styles.card, { width }, style]}
-      onPress={() => onPress?.(product)}
+      onPress={() => onPress?.({ ...product, previewImage: imageUrl })}
       activeOpacity={0.9}
     >
       {discount && (

@@ -14,6 +14,8 @@ import {
   Modal,
   ActivityIndicator,
   RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -33,6 +35,11 @@ const CustomAlertShim = {
 const { width } = Dimensions.get("window");
 
 const fmt = (n) => n.toLocaleString("vi-VN") + "đ";
+const ADDRESS_API_BASE = "https://esgoo.net/api-tinhthanh";
+const mapAddressItems = (items = []) => items.map((item) => ({
+  code: item.id,
+  name: item.full_name || item.name,
+}));
 
 export default function CheckoutScreen({ route }) {
   const navigation = useNavigation();
@@ -116,6 +123,19 @@ export default function CheckoutScreen({ route }) {
   const [newReceiver, setNewReceiver] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newDetail, setNewDetail] = useState("");
+  const [newCity, setNewCity] = useState("");
+  const [newDistrict, setNewDistrict] = useState("");
+  const [newWard, setNewWard] = useState("");
+  const [addressProvinces, setAddressProvinces] = useState([]);
+  const [addressDistricts, setAddressDistricts] = useState([]);
+  const [addressWards, setAddressWards] = useState([]);
+  const [selectedProvinceCode, setSelectedProvinceCode] = useState(null);
+  const [selectedDistrictCode, setSelectedDistrictCode] = useState(null);
+  const [addressSelectorType, setAddressSelectorType] = useState(null);
+  const [isAddressSelectorVisible, setIsAddressSelectorVisible] = useState(false);
+  const [addressSearchQuery, setAddressSearchQuery] = useState("");
+  const [isAddressSelectorLoading, setIsAddressSelectorLoading] = useState(false);
+  const [isManualAddressMode, setIsManualAddressMode] = useState(false);
 
   // States
   const [promoCode, setPromoCode] = useState("");
@@ -205,11 +225,143 @@ export default function CheckoutScreen({ route }) {
     );
   };
 
+  const resetNewAddressForm = () => {
+    setNewLabel("");
+    setNewReceiver("");
+    setNewPhone("");
+    setNewDetail("");
+    setNewCity("");
+    setNewDistrict("");
+    setNewWard("");
+    setSelectedProvinceCode(null);
+    setSelectedDistrictCode(null);
+    setAddressDistricts([]);
+    setAddressWards([]);
+    setAddressSearchQuery("");
+    setAddressSelectorType(null);
+    setIsAddressSelectorVisible(false);
+    setIsManualAddressMode(false);
+  };
+
+  const loadAddressProvinces = async () => {
+    setIsAddressSelectorLoading(true);
+    try {
+      const res = await fetch(`${ADDRESS_API_BASE}/1/0.htm`);
+      const data = await res.json();
+      if (data?.error === 0 && Array.isArray(data.data)) {
+        setAddressProvinces(mapAddressItems(data.data));
+      } else {
+        throw new Error("Province data is empty");
+      }
+    } catch (error) {
+      setIsManualAddressMode(true);
+      setIsAddressSelectorVisible(false);
+      showCustomAlert("Địa chỉ", "Không thể tải danh sách Tỉnh / Thành phố. Bạn có thể tự nhập tay địa chỉ.");
+    } finally {
+      setIsAddressSelectorLoading(false);
+    }
+  };
+
+  const loadAddressDistricts = async (provinceCode) => {
+    if (!provinceCode) return;
+    setIsAddressSelectorLoading(true);
+    try {
+      const res = await fetch(`${ADDRESS_API_BASE}/2/${provinceCode}.htm`);
+      const data = await res.json();
+      if (data?.error === 0 && Array.isArray(data.data)) {
+        setAddressDistricts(mapAddressItems(data.data));
+      } else {
+        throw new Error("District data is empty");
+      }
+    } catch (error) {
+      setIsManualAddressMode(true);
+      setIsAddressSelectorVisible(false);
+      showCustomAlert("Địa chỉ", "Không thể tải danh sách Quận / Huyện. Bạn có thể tự nhập tay địa chỉ.");
+    } finally {
+      setIsAddressSelectorLoading(false);
+    }
+  };
+
+  const loadAddressWards = async (districtCode) => {
+    if (!districtCode) return;
+    setIsAddressSelectorLoading(true);
+    try {
+      const res = await fetch(`${ADDRESS_API_BASE}/3/${districtCode}.htm`);
+      const data = await res.json();
+      if (data?.error === 0 && Array.isArray(data.data)) {
+        setAddressWards(mapAddressItems(data.data));
+      } else {
+        throw new Error("Ward data is empty");
+      }
+    } catch (error) {
+      setIsManualAddressMode(true);
+      setIsAddressSelectorVisible(false);
+      showCustomAlert("Địa chỉ", "Không thể tải danh sách Phường / Xã. Bạn có thể tự nhập tay địa chỉ.");
+    } finally {
+      setIsAddressSelectorLoading(false);
+    }
+  };
+
+  const handleOpenAddressSelector = (type) => {
+    setAddressSelectorType(type);
+    setAddressSearchQuery("");
+    setIsAddressSelectorVisible(true);
+
+    if (type === "city") {
+      loadAddressProvinces();
+    } else if (type === "district") {
+      loadAddressDistricts(selectedProvinceCode);
+    } else if (type === "ward") {
+      loadAddressWards(selectedDistrictCode);
+    }
+  };
+
+  const getFilteredAddressItems = () => {
+    const query = addressSearchQuery.trim().toLowerCase();
+    const source =
+      addressSelectorType === "city"
+        ? addressProvinces
+        : addressSelectorType === "district"
+          ? addressDistricts
+          : addressWards;
+
+    if (!query) return source;
+    return source.filter((item) => item.name.toLowerCase().includes(query));
+  };
+
+  const handleSelectAddressItem = (item) => {
+    if (addressSelectorType === "city") {
+      if (item.name !== newCity) {
+        setNewCity(item.name);
+        setSelectedProvinceCode(item.code);
+        setNewDistrict("");
+        setNewWard("");
+        setSelectedDistrictCode(null);
+        setAddressDistricts([]);
+        setAddressWards([]);
+      }
+    } else if (addressSelectorType === "district") {
+      if (item.name !== newDistrict) {
+        setNewDistrict(item.name);
+        setSelectedDistrictCode(item.code);
+        setNewWard("");
+        setAddressWards([]);
+      }
+    } else if (addressSelectorType === "ward") {
+      setNewWard(item.name);
+    }
+
+    setIsAddressSelectorVisible(false);
+  };
+
   const handleAddNewAddress = () => {
     if (
       !newLabel.trim() ||
       !newReceiver.trim() ||
       !newPhone.trim() ||
+      !newCity.trim() ||
+      !newDistrict.trim() ||
+      !newWard.trim() ||
       !newDetail.trim()
     ) {
       showCustomAlert("Lỗi", "Vui lòng điền đầy đủ tất cả thông tin!");
@@ -223,15 +375,15 @@ export default function CheckoutScreen({ route }) {
       receiver: newReceiver.trim(),
       phone: newPhone.trim(),
       detail: newDetail.trim(),
+      city: newCity.trim(),
+      district: newDistrict.trim(),
+      ward: newWard.trim(),
     };
     setAddresses((prev) => [...prev, newAddr]);
     setSelectedAddrId(newId);
 
     // Clear and Close
-    setNewLabel("");
-    setNewReceiver("");
-    setNewPhone("");
-    setNewDetail("");
+    resetNewAddressForm();
     setIsAddAddrVisible(false);
 
     showCustomAlert("Thành công", "Đã thêm và lựa chọn địa chỉ giao hàng mới!");
@@ -430,7 +582,12 @@ export default function CheckoutScreen({ route }) {
       if (selectedAddress?.is_local) {
         payload.customer_name = selectedAddress.receiver || personalName;
         payload.customer_phone = selectedAddress.phone || personalPhone;
-        payload.customer_address = selectedAddress.detail || "Chưa có địa chỉ chi tiết";
+        payload.customer_address = [
+          selectedAddress.detail,
+          selectedAddress.ward,
+          selectedAddress.district,
+          selectedAddress.city,
+        ].filter(Boolean).join(", ") || "Chưa có địa chỉ chi tiết";
       } else if (selectedAddress) {
         payload.user_address_id = selectedAddress.id;
       } else {
@@ -1148,12 +1305,20 @@ export default function CheckoutScreen({ route }) {
         animationType="slide"
       >
         <View style={s.modalBg}>
+          <KeyboardAvoidingView
+            style={s.addrKeyboardAvoid}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 12 : 0}
+          >
           <View style={s.addrModalContainer}>
             <Text style={s.addrModalTitle}>Thêm Địa Chỉ Giao Hàng</Text>
 
             <ScrollView
               style={{ width: "100%" }}
+              contentContainerStyle={s.addrModalScrollContent}
               showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
             >
               <View style={s.modalInputGroup}>
                 <Text style={s.modalInputLabel}>
@@ -1188,15 +1353,108 @@ export default function CheckoutScreen({ route }) {
                 />
               </View>
 
+              <View style={s.addressModeRow}>
+                <Text style={s.addressModeLabel}>Cách nhập địa chỉ</Text>
+                <TouchableOpacity
+                  style={s.addressModeBtn}
+                  activeOpacity={0.75}
+                  onPress={() => setIsManualAddressMode((prev) => !prev)}
+                >
+                  <Ionicons name={isManualAddressMode ? "list-outline" : "create-outline"} size={14} color="#9f273b" />
+                  <Text style={s.addressModeBtnTxt}>
+                    {isManualAddressMode ? "Chọn từ danh sách" : "Tự nhập tay"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {isManualAddressMode ? (
+                <>
+                  <View style={s.modalInputGroup}>
+                    <Text style={s.modalInputLabel}>Tỉnh / Thành phố</Text>
+                    <TextInput
+                      style={s.modalTextInput}
+                      value={newCity}
+                      onChangeText={setNewCity}
+                      placeholder="Nhập Tỉnh / Thành phố"
+                      placeholderTextColor="#aaa"
+                    />
+                  </View>
+
+                  <View style={s.modalInputGroup}>
+                    <Text style={s.modalInputLabel}>Quận / Huyện</Text>
+                    <TextInput
+                      style={s.modalTextInput}
+                      value={newDistrict}
+                      onChangeText={setNewDistrict}
+                      placeholder="Nhập Quận / Huyện"
+                      placeholderTextColor="#aaa"
+                    />
+                  </View>
+
+                  <View style={s.modalInputGroup}>
+                    <Text style={s.modalInputLabel}>Phường / Xã</Text>
+                    <TextInput
+                      style={s.modalTextInput}
+                      value={newWard}
+                      onChangeText={setNewWard}
+                      placeholder="Nhập Phường / Xã"
+                      placeholderTextColor="#aaa"
+                    />
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={s.modalInputGroup}>
+                    <Text style={s.modalInputLabel}>Tỉnh / Thành phố</Text>
+                    <TouchableOpacity style={s.addressSelectTrigger} activeOpacity={0.75} onPress={() => handleOpenAddressSelector("city")}>
+                      <Text style={[s.addressSelectTxt, !newCity && s.addressSelectPlaceholder]}>
+                        {newCity || "Chọn Tỉnh / Thành phố"}
+                      </Text>
+                      <Ionicons name="chevron-down" size={16} color="#8c826e" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={s.modalInputGroup}>
+                    <Text style={s.modalInputLabel}>Quận / Huyện</Text>
+                    <TouchableOpacity
+                      style={[s.addressSelectTrigger, !selectedProvinceCode && s.addressSelectDisabled]}
+                      activeOpacity={0.75}
+                      disabled={!selectedProvinceCode}
+                      onPress={() => handleOpenAddressSelector("district")}
+                    >
+                      <Text style={[s.addressSelectTxt, !newDistrict && s.addressSelectPlaceholder]}>
+                        {newDistrict || "Chọn Quận / Huyện"}
+                      </Text>
+                      <Ionicons name="chevron-down" size={16} color="#8c826e" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={s.modalInputGroup}>
+                    <Text style={s.modalInputLabel}>Phường / Xã</Text>
+                    <TouchableOpacity
+                      style={[s.addressSelectTrigger, !selectedDistrictCode && s.addressSelectDisabled]}
+                      activeOpacity={0.75}
+                      disabled={!selectedDistrictCode}
+                      onPress={() => handleOpenAddressSelector("ward")}
+                    >
+                      <Text style={[s.addressSelectTxt, !newWard && s.addressSelectPlaceholder]}>
+                        {newWard || "Chọn Phường / Xã"}
+                      </Text>
+                      <Ionicons name="chevron-down" size={16} color="#8c826e" />
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+
               <View style={s.modalInputGroup}>
                 <Text style={s.modalInputLabel}>
-                  Địa chỉ chi tiết (Số nhà, đường, quận, tp...)
+                  Địa chỉ chi tiết (Số nhà, tên đường...)
                 </Text>
                 <TextInput
                   style={[s.modalTextInput, { minHeight: 60 }]}
                   value={newDetail}
                   onChangeText={setNewDetail}
-                  placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/tp..."
+                  placeholder="Số nhà, tên đường..."
                   multiline={true}
                   numberOfLines={2}
                   textAlignVertical="top"
@@ -1209,10 +1467,7 @@ export default function CheckoutScreen({ route }) {
                 style={[s.modalBtn, s.modalBtnCancel]}
                 onPress={() => {
                   setIsAddAddrVisible(false);
-                  setNewLabel("");
-                  setNewReceiver("");
-                  setNewPhone("");
-                  setNewDetail("");
+                  resetNewAddressForm();
                 }}
               >
                 <Text style={s.modalBtnCancelTxt}>HUỶ</Text>
@@ -1225,6 +1480,75 @@ export default function CheckoutScreen({ route }) {
               </TouchableOpacity>
             </View>
           </View>
+          </KeyboardAvoidingView>
+
+          {isAddressSelectorVisible && (
+            <View style={s.addressSelectorOverlay}>
+              <View style={s.addressSelectorContainer}>
+                <View style={s.addressSelectorHeader}>
+                  <Text style={s.addressSelectorTitle}>
+                    {addressSelectorType === "city"
+                      ? "Chọn Tỉnh / Thành phố"
+                      : addressSelectorType === "district"
+                        ? "Chọn Quận / Huyện"
+                        : "Chọn Phường / Xã"}
+                  </Text>
+                  <TouchableOpacity onPress={() => setIsAddressSelectorVisible(false)} style={s.addressSelectorCloseBtn}>
+                    <Ionicons name="close" size={22} color="#333" />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={s.addressSelectorSearchWrap}>
+                  <Ionicons name="search-outline" size={17} color="#8c826e" style={{ marginRight: 8 }} />
+                  <TextInput
+                    style={s.addressSelectorSearchInput}
+                    value={addressSearchQuery}
+                    onChangeText={setAddressSearchQuery}
+                    placeholder="Tìm kiếm..."
+                    placeholderTextColor="#aaa"
+                  />
+                  {!!addressSearchQuery && (
+                    <TouchableOpacity onPress={() => setAddressSearchQuery("")}>
+                      <Ionicons name="close-circle" size={16} color="#bbb" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {isAddressSelectorLoading ? (
+                  <View style={s.addressSelectorCenter}>
+                    <ActivityIndicator size="large" color="#9f273b" />
+                  </View>
+                ) : (
+                  <ScrollView style={s.addressSelectorList} keyboardShouldPersistTaps="handled">
+                    {getFilteredAddressItems().length === 0 ? (
+                      <View style={s.addressSelectorEmpty}>
+                        <Text style={s.addressSelectorEmptyTxt}>Không tìm thấy kết quả phù hợp</Text>
+                      </View>
+                    ) : (
+                      getFilteredAddressItems().map((item) => {
+                        const isSelected =
+                          (addressSelectorType === "city" && item.name === newCity) ||
+                          (addressSelectorType === "district" && item.name === newDistrict) ||
+                          (addressSelectorType === "ward" && item.name === newWard);
+
+                        return (
+                          <TouchableOpacity
+                            key={item.code}
+                            style={[s.addressSelectorItem, isSelected && s.addressSelectorItemActive]}
+                            activeOpacity={0.75}
+                            onPress={() => handleSelectAddressItem(item)}
+                          >
+                            <Text style={[s.addressSelectorItemTxt, isSelected && s.addressSelectorItemTxtActive]}>{item.name}</Text>
+                            {isSelected && <Ionicons name="checkmark-circle" size={18} color="#9f273b" />}
+                          </TouchableOpacity>
+                        );
+                      })
+                    )}
+                  </ScrollView>
+                )}
+              </View>
+            </View>
+          )}
         </View>
       </Modal>
     </SafeAreaView>
@@ -2021,9 +2345,15 @@ const s = StyleSheet.create({
   },
 
   // ADD ADDRESS MODAL STYLES
+  addrKeyboardAvoid: {
+    flex: 1,
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   addrModalContainer: {
     width: width * 0.9,
-    maxHeight: "80%",
+    maxHeight: "76%",
     backgroundColor: "#fff",
     borderRadius: 16,
     padding: 20,
@@ -2040,6 +2370,9 @@ const s = StyleSheet.create({
     color: "#9f273b",
     marginBottom: 16,
     textAlign: "center",
+  },
+  addrModalScrollContent: {
+    paddingBottom: 8,
   },
   modalInputGroup: {
     marginBottom: 12,
@@ -2062,6 +2395,162 @@ const s = StyleSheet.create({
     color: "#333",
     backgroundColor: "#fafafa",
     width: "100%",
+  },
+  addressModeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    marginBottom: 12,
+    paddingVertical: 4,
+  },
+  addressModeLabel: {
+    fontFamily: "Oswald_500Medium",
+    fontSize: 12,
+    color: "#555",
+  },
+  addressModeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    borderWidth: 1,
+    borderColor: "#ead4d8",
+    backgroundColor: "#fff7f8",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 8,
+  },
+  addressModeBtnTxt: {
+    fontFamily: "Oswald_500Medium",
+    fontSize: 11,
+    color: "#9f273b",
+  },
+  addressSelectTrigger: {
+    minHeight: 42,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    borderRadius: 8,
+    backgroundColor: "#fafafa",
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  addressSelectDisabled: {
+    opacity: 0.55,
+    backgroundColor: "#f1f1f1",
+  },
+  addressSelectTxt: {
+    flex: 1,
+    fontFamily: "Oswald_400Regular",
+    fontSize: 13,
+    color: "#333",
+    marginRight: 8,
+  },
+  addressSelectPlaceholder: {
+    color: "#aaa",
+  },
+  addressSelectorOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  addressSelectorContainer: {
+    width: "100%",
+    maxHeight: "74%",
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 18,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 12,
+  },
+  addressSelectorHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+    paddingBottom: 11,
+    marginBottom: 12,
+  },
+  addressSelectorTitle: {
+    fontFamily: "PlayfairDisplay_700Bold",
+    fontSize: 16,
+    color: "#9f273b",
+  },
+  addressSelectorCloseBtn: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 16,
+    backgroundColor: "#f7f7f7",
+  },
+  addressSelectorSearchWrap: {
+    height: 42,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    borderRadius: 8,
+    backgroundColor: "#fafafa",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    marginBottom: 12,
+  },
+  addressSelectorSearchInput: {
+    flex: 1,
+    fontFamily: "Oswald_400Regular",
+    fontSize: 13,
+    color: "#333",
+    paddingVertical: 0,
+  },
+  addressSelectorCenter: {
+    paddingVertical: 42,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addressSelectorList: {
+    maxHeight: 320,
+  },
+  addressSelectorItem: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottomWidth: 1,
+    borderBottomColor: "#f5f5f5",
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+  },
+  addressSelectorItemActive: {
+    backgroundColor: "#fff7f8",
+    borderRadius: 8,
+  },
+  addressSelectorItemTxt: {
+    flex: 1,
+    fontFamily: "Oswald_400Regular",
+    fontSize: 13,
+    color: "#444",
+    marginRight: 10,
+  },
+  addressSelectorItemTxtActive: {
+    fontFamily: "Oswald_500Medium",
+    color: "#9f273b",
+  },
+  addressSelectorEmpty: {
+    paddingVertical: 30,
+    alignItems: "center",
+  },
+  addressSelectorEmptyTxt: {
+    fontFamily: "Oswald_400Regular",
+    fontSize: 13,
+    color: "#888",
   },
   modalBtnRow: {
     flexDirection: "row",
