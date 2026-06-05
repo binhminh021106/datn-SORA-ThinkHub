@@ -28,19 +28,42 @@ class MessageSent implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         $channels = [
+            // Kênh người nhận (user hoặc admin)
             new PrivateChannel('chat.' . $this->message->receiver_id),
         ];
 
-        // Nếu sender khác receiver thì thêm kênh của sender (để sender thấy confirm)
+        // Thêm kênh người gửi nếu khác người nhận
         if ($this->message->sender_id !== $this->message->receiver_id) {
             $channels[] = new PrivateChannel('chat.' . $this->message->sender_id);
         }
 
+        // Nếu tin nhắn được gửi bởi người dùng (không phải admin) → thông báo toàn cục cho admin
+        if ($this->message->sender_id !== 1) {
+            $channels[] = new PrivateChannel('admin.chat');
+        }
+
         return $channels;
     }
+
     
+    public function broadcastWith()
+    {
+        return [
+            'message' => $this->message,
+            'sender_id' => $this->message->sender_id,
+            'receiver_id' => $this->message->receiver_id,
+            'content' => $this->message->content,
+            // Assuming Message has sender relationship
+            'sender_name' => $this->message->sender->name ?? null,
+            'sender_avatar' => $this->message->sender->avatar ?? null,
+        ];
+    }
+
     public function broadcastAs()
     {
         return 'MessageSent';
     }
+
+
+
 }
