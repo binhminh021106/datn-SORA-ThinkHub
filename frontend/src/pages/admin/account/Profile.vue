@@ -114,28 +114,13 @@
                                                 class="text-muted fw-normal fs-7">(Tùy chọn)</span></label>
                                         <div class="card border border-light-subtle shadow-none bg-light p-3 rounded-3">
                                             <div class="row g-3">
-                                                <div class="col-md-4">
-                                                    <select class="form-select" v-model="addressSelector.province">
-                                                        <option value="">-- Tỉnh / Thành phố --</option>
-                                                        <option v-for="p in provinces" :key="p.code" :value="p.name">{{
-                                                            p.name }}</option>
-                                                    </select>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <select class="form-select" v-model="addressSelector.district"
-                                                        :disabled="!addressSelector.province">
-                                                        <option value="">-- Quận / Huyện --</option>
-                                                        <option v-for="d in availableDistricts" :key="d.code"
-                                                            :value="d.name">{{ d.name }}</option>
-                                                    </select>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <select class="form-select" v-model="addressSelector.ward"
-                                                        :disabled="!addressSelector.district">
-                                                        <option value="">-- Phường / Xã --</option>
-                                                        <option v-for="w in availableWards" :key="w.code"
-                                                            :value="w.name">{{ w.name }}</option>
-                                                    </select>
+                                                <div class="col-12">
+                                                    <VietnamAddressPicker
+                                                        v-model:province="addressSelector.province"
+                                                        v-model:district="addressSelector.district"
+                                                        v-model:ward="addressSelector.ward"
+                                                        input-class="bg-white"
+                                                    />
                                                 </div>
                                                 <div class="col-12">
                                                     <input type="text" class="form-control"
@@ -227,11 +212,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch, inject } from 'vue';
+import { ref, onMounted, inject } from 'vue';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import { getFullImage } from '@/composables/useUtilities';
 import defaultAvatar from '../../../assets/images/defaults/avatar1.png';
+import VietnamAddressPicker from '@/components/ui/VietnamAddressPicker.vue';
 
 const activeTab = ref('info');
 const isLoading = ref(false);
@@ -279,41 +265,7 @@ const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
 
 const handleImageError = (e) => { e.target.src = defaultAvatar; };
 
-const provinces = ref([]);
 const addressSelector = ref({ province: '', district: '', ward: '', street: '' });
-
-const fetchProvinces = async () => {
-    try {
-        // Dùng fetch thay vì axios để tránh lỗi dính Header Auth/CORS
-        const response = await fetch('https://provinces.open-api.vn/api/?depth=3');
-        
-        if (!response.ok) {
-            throw new Error('Lỗi lấy dữ liệu từ API mở');
-        }
-        
-        const data = await response.json();
-        provinces.value = data;
-    } catch (error) {
-        console.error("Lỗi tải dữ liệu địa chỉ:", error);
-    }
-};
-
-const availableDistricts = computed(() => {
-    const p = provinces.value.find(x => x.name === addressSelector.value.province);
-    return p ? p.districts : [];
-});
-
-const availableWards = computed(() => {
-    const d = availableDistricts.value.find(x => x.name === addressSelector.value.district);
-    return d ? d.wards : [];
-});
-
-watch(() => addressSelector.value.province, () => {
-    addressSelector.value.district = ''; addressSelector.value.ward = '';
-});
-watch(() => addressSelector.value.district, () => {
-    addressSelector.value.ward = '';
-});
 
 const validatePhone = (e) => {
     adminData.value.phone = e.target.value.replace(/\D/g, '').slice(0, 11);
@@ -324,7 +276,6 @@ const getRoleName = (id) => {
 };
 
 onMounted(() => {
-    fetchProvinces();
     const savedInfo = localStorage.getItem('admin_info');
     if (savedInfo) {
         const data = JSON.parse(savedInfo);
@@ -361,9 +312,13 @@ const updateProfile = async () => {
     isLoading.value = true;
 
     let finalAddress = adminData.value.address;
-    if (addressSelector.value.province && addressSelector.value.district && addressSelector.value.ward) {
-        const streetPart = addressSelector.value.street ? `${addressSelector.value.street}, ` : '';
-        finalAddress = `${streetPart}${addressSelector.value.ward}, ${addressSelector.value.district}, ${addressSelector.value.province}`;
+    if (addressSelector.value.province && addressSelector.value.ward) {
+        finalAddress = [
+            addressSelector.value.street,
+            addressSelector.value.ward,
+            addressSelector.value.district,
+            addressSelector.value.province,
+        ].filter(Boolean).join(', ');
     }
 
     const formData = new FormData();

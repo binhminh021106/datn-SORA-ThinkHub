@@ -1,11 +1,37 @@
 <template>
   <div class="storefront-wrapper font-luxury bg-white">
-    <div>
+    <Transition name="home-logo-loader">
+      <div v-if="showHomeLogoLoader" class="home-logo-loader vh-100 d-flex flex-column justify-content-center align-items-center bg-light">
+        <div class="logo-pulse-wrapper mb-4">
+          <img src="@/assets/images/icon-logo.png" alt="SORA Logo" class="logo-pulse-img">
+        </div>
+      </div>
+    </Transition>
+
+    <div class="home-page-content" :class="{ 'home-page-content-loading': showHomeLogoLoader }">
       <section class="hero-carousel position-relative">
         <div id="homeBannerCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel">
+          <div v-if="showHeroSkeleton" class="hero-loading-layer d-flex align-items-center justify-content-center">
+            <div class="hero-loading-content text-center position-relative z-index-2">
+              <div class="hero-loading-brand font-serif fw-bold mb-3">SORA</div>
+              <div class="hero-loading-line mx-auto mb-3"></div>
+              <p class="font-oswald tracking-widest text-uppercase mb-0">Đang chuẩn bị không gian mua sắm</p>
+            </div>
+          </div>
+
           <div class="carousel-inner">
             <div v-for="(banner, index) in data.banners" :key="banner.id" class="carousel-item" :class="{ active: index === 0 }">
-              <img :src="getImageUrl(banner.image_desktop)" class="d-block w-100 hero-img object-fit-cover" alt="Banner" @error="handleImageError">
+              <img
+                :src="getImageUrl(banner.image_desktop)"
+                class="d-block w-100 hero-img object-fit-cover"
+                :class="{ 'hero-img-visible': index !== 0 || isHeroImageReady }"
+                alt="Banner"
+                decoding="async"
+                :loading="index === 0 ? 'eager' : 'lazy'"
+                :fetchpriority="index === 0 ? 'high' : 'auto'"
+                @load="markHeroImageReady(index)"
+                @error="handleHeroImageError($event, index)"
+              >
               <div class="carousel-overlay"></div>
               <div class="carousel-caption d-none d-md-flex flex-column justify-content-center align-items-center h-100 text-center px-5">
                 <div class="d-flex align-items-center gap-3 mb-3">
@@ -22,16 +48,19 @@
                 </div>
               </div>
             </div>
-            <div v-if="data.banners.length === 0" class="carousel-item active bg-dark d-flex align-items-center justify-content-center" style="height: 80vh;">
-              <h2 class="text-gold font-serif tracking-widest display-4">SORA JEWELRY</h2>
+            <div v-if="showHeroFallback" class="carousel-item active hero-empty-state d-flex align-items-center justify-content-center">
+              <div class="text-center px-4">
+                <h2 class="text-primary-luxury font-serif fw-bold display-4 mb-3">SORA JEWELRY</h2>
+                <p class="font-oswald tracking-widest text-uppercase text-muted mb-0">Không gian trang sức cao cấp</p>
+              </div>
             </div>
           </div>
-          <button class="carousel-control-prev w-auto px-4" type="button" data-bs-target="#homeBannerCarousel" data-bs-slide="prev">
+          <button v-if="data.banners.length > 1" class="carousel-control-prev w-auto px-4" type="button" data-bs-target="#homeBannerCarousel" data-bs-slide="prev">
             <div class="nav-icon-wrapper rounded-circle d-flex justify-content-center align-items-center transition-all">
               <i class="bi bi-chevron-left fs-2 text-white fw-light"></i>
             </div>
           </button>
-          <button class="carousel-control-next w-auto px-4" type="button" data-bs-target="#homeBannerCarousel" data-bs-slide="next">
+          <button v-if="data.banners.length > 1" class="carousel-control-next w-auto px-4" type="button" data-bs-target="#homeBannerCarousel" data-bs-slide="next">
             <div class="nav-icon-wrapper rounded-circle d-flex justify-content-center align-items-center transition-all">
               <i class="bi bi-chevron-right fs-2 text-white fw-light"></i>
             </div>
@@ -41,46 +70,42 @@
 
       <section class="coupons-section py-5 position-relative bg-white" v-if="data.coupons.length > 0">
         <div class="container py-5 position-relative z-index-2">
-          <div class="text-center mb-5">
-            <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
-              <span class="divider-gold" style="width: 30px;"></span>
-              <h6 class="text-gold tracking-widest text-uppercase fw-bold mb-0 font-oswald" style="font-size: 0.85rem;">Đặc Quyền Mua Sắm</h6>
-              <span class="divider-gold" style="width: 30px;"></span>
-            </div>
-            <h3 class="font-serif fw-bold text-dark display-6">Món Quà Từ SORA</h3>
+          <div class="coupon-section-heading text-center mx-auto mb-4">
+              <div class="d-flex align-items-center justify-content-center gap-3 mb-2">
+                <span class="divider-gold" style="width: 30px;"></span>
+                <h6 class="text-gold tracking-widest text-uppercase fw-bold mb-0 font-oswald" style="font-size: 0.85rem;">Đặc Quyền Mua Sắm</h6>
+                <span class="divider-gold" style="width: 30px;"></span>
+              </div>
+              <h3 class="font-serif fw-bold text-dark display-6 mb-0">Ưu đãi dành riêng cho bạn</h3>
           </div>
 
-          <div class="coupon-scroll-container d-flex gap-4 pb-4 px-2 justify-content-lg-center">
-            <div v-for="coupon in data.coupons" :key="coupon.id" class="flex-shrink-0 position-relative transition-transform hover-translate-up" style="width: 300px;">
-
-              <div class="d-flex flex-column h-100 position-relative overflow-hidden p-1" style="background: linear-gradient(135deg, #dfbc68 0%, #fef3ce 45%, #c59b46 100%); box-shadow: 0 15px 35px rgba(0,0,0,0.12); border-radius: 10px;">
-
-                <div class="d-flex flex-column flex-grow-1 p-3 position-relative" style="border: 1px solid rgba(255,255,255,0.7); border-radius: 8px;">
-
-                  <i class="bi bi-gem position-absolute text-white opacity-50" style="font-size: 10rem; right: -20px; top: -20px; z-index: 0; pointer-events: none; transform: rotate(15deg);"></i>
-
-                  <div class="position-relative z-index-1 text-center mb-3">
-                    <h5 class="fw-bold text-dark font-serif tracking-widest text-uppercase mb-2" style="font-size: 1.25rem;">{{ coupon.code }}</h5>
-                    <div class="mx-auto mb-2" style="height: 2px; width: 40px; background-color: rgba(0,0,0,0.15);"></div>
-
-                    <div class="d-flex justify-content-center align-items-start" style="color: #9f273b; text-shadow: 1px 1px 0px rgba(255,255,255,0.8);">
-                      <span class="fw-bold font-serif lh-1" style="font-size: 3.5rem;">{{ coupon.discount_type === 'percent' ? coupon.discount_value : formatShortCurrency(coupon.discount_value) }}</span>
-                      <span class="fw-bold ms-1 mt-2 fs-4 font-serif">{{ coupon.discount_type === 'percent' ? '%' : '₫' }}</span>
-                    </div>
+          <div class="coupon-scroll-container d-flex gap-3 pb-4 px-2 justify-content-lg-center">
+            <div v-for="coupon in data.coupons" :key="coupon.id" class="sora-voucher-card flex-shrink-0">
+              <div class="voucher-side-label font-oswald">SORA</div>
+              <div class="voucher-body">
+                <div class="d-flex justify-content-between align-items-start gap-3 mb-3 position-relative z-index-1">
+                  <div>
+                    <span class="voucher-eyebrow font-oswald">Voucher</span>
+                    <h5 class="voucher-code font-oswald text-uppercase mb-0">{{ coupon.code }}</h5>
                   </div>
-
-                  <div class="position-relative z-index-1 text-center mt-auto">
-                    <p class="text-dark fst-italic font-serif mb-3 fw-medium" style="font-size: 0.9rem;">
-                      Áp dụng cho đơn từ {{ formatCurrency(coupon.min_order_value) }}
-                    </p>
-
-                    <button @click="saveCoupon(coupon.code)" class="btn w-100 py-2 fw-bold tracking-widest text-uppercase font-oswald shadow-sm d-flex justify-content-center align-items-center gap-2 transition-all hover-translate-up" style="background-color: #9f273b; color: #fef3ce; border: 2px solid #7a1d2d; border-radius: 6px; font-size: 0.85rem;">
-                      <i class="bi bi-bookmark-star-fill fs-6"></i>
-                      LƯU MÃ NGAY
-                    </button>
-                  </div>
-
+                  <span class="voucher-badge font-oswald">
+                    {{ coupon.discount_type === 'percent' ? 'Giảm %' : 'Giảm tiền' }}
+                  </span>
                 </div>
+
+                <div class="voucher-value font-oswald position-relative z-index-1 mb-3">
+                  <span>{{ coupon.discount_type === 'percent' ? coupon.discount_value : formatShortCurrency(coupon.discount_value) }}</span>
+                  <small>{{ coupon.discount_type === 'percent' ? '%' : 'đ' }}</small>
+                </div>
+
+                <p class="voucher-condition mb-4 position-relative z-index-1">
+                  Áp dụng cho đơn từ <strong class="font-oswald">{{ formatCurrency(coupon.min_order_value) }}</strong>
+                </p>
+
+                <button @click="saveCoupon(coupon.code)" class="btn voucher-save-btn w-100 py-2 fw-bold tracking-widest text-uppercase font-oswald d-flex justify-content-center align-items-center gap-2 transition-all">
+                  <i class="bi bi-bookmark-star-fill fs-6"></i>
+                  Lưu mã ngay
+                </button>
               </div>
             </div>
           </div>
@@ -234,8 +259,8 @@
                   </p>
 
                   <div class="d-flex align-items-center justify-content-center justify-content-md-start gap-3 mb-4">
-                    <span class="text-primary-luxury fw-bold fs-3 font-serif">{{ formatCurrency(combo.promotional_price || combo.price) }}</span>
-                    <span v-if="combo.base_price || combo.old_price" class="text-muted text-decoration-line-through small fw-light font-serif">{{ formatCurrency(combo.base_price || combo.old_price) }}</span>
+                    <span class="text-primary-luxury fw-bold fs-3 font-oswald">{{ formatCurrency(combo.promotional_price || combo.price) }}</span>
+                    <span v-if="combo.base_price || combo.old_price" class="text-muted text-decoration-line-through small fw-light font-oswald">{{ formatCurrency(combo.base_price || combo.old_price) }}</span>
                   </div>
                   
                   <router-link :to="'/combos/' + combo.slug" class="btn-luxury-slide btn-luxury-primary rounded-pill d-inline-block position-relative text-uppercase tracking-widest fw-bold text-decoration-none px-5 py-3 border border-1 overflow-hidden font-oswald shadow-sm" style="font-size: 0.85rem;">
@@ -360,10 +385,10 @@
 </template>
 
 <script setup>
-import { reactive, onMounted, ref, computed } from 'vue';
+import { reactive, onMounted, ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import Swal from 'sweetalert2';
 import Toast from '@/utils/toastConfig';
+import soraAlert from '@/utils/soraAlertConfig';
 
 import { Swiper, SwiperSlide } from 'swiper/vue';
 import { Pagination, Navigation, Autoplay } from 'swiper/modules';
@@ -376,7 +401,13 @@ import CompareModal from '@/components/ui/CompareModal.vue';
 import NewsPostCard from '@/components/ui/NewsPostCard.vue';
 
 const swiperModules = [Pagination, Navigation, Autoplay];
+const HOME_INTRO_SESSION_KEY = 'sora_home_intro_seen';
+const navigationEntry = performance.getEntriesByType('navigation')[0];
+const isHardReload = navigationEntry?.type === 'reload';
 const isLoading = ref(true);
+const shouldShowHomeIntro = ref(isHardReload || sessionStorage.getItem(HOME_INTRO_SESSION_KEY) !== '1');
+const isLogoLoaderMinTimeDone = ref(!shouldShowHomeIntro.value);
+const isHeroImageReady = ref(false);
 const router = useRouter();
 
 const comboSwiperRef = ref(null);
@@ -436,6 +467,19 @@ const displayGalleries = computed(() => {
   return arr;
 });
 
+const hasHeroBanners = computed(() => data.banners.length > 0);
+const showHeroFallback = computed(() => !isLoading.value && !hasHeroBanners.value);
+const showHeroSkeleton = computed(() => isLoading.value || (hasHeroBanners.value && !isHeroImageReady.value));
+const isHomeReady = computed(() => !isLoading.value && (!hasHeroBanners.value || isHeroImageReady.value));
+const showHomeLogoLoader = computed(() => shouldShowHomeIntro.value && (!isHomeReady.value || !isLogoLoaderMinTimeDone.value));
+
+watch(showHomeLogoLoader, (isShown) => {
+  if (!isShown && shouldShowHomeIntro.value && isHomeReady.value && isLogoLoaderMinTimeDone.value) {
+    sessionStorage.setItem(HOME_INTRO_SESSION_KEY, '1');
+    shouldShowHomeIntro.value = false;
+  }
+});
+
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
 const soraPlaceholder = '/Sora-placeholder.png';
 
@@ -449,6 +493,17 @@ const getImageUrl = (path) => {
 const handleImageError = (e) => { 
   e.target.onerror = null; 
   e.target.src = soraPlaceholder; 
+};
+
+const markHeroImageReady = (index) => {
+  if (index === 0) {
+    isHeroImageReady.value = true;
+  }
+};
+
+const handleHeroImageError = (event, index) => {
+  handleImageError(event);
+  markHeroImageReady(index);
 };
 
 const formatCurrency = (value) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0);
@@ -527,14 +582,17 @@ const toggleWishlist = async (product) => {
     showWishlistNotification(isAdded);
   } catch (error) {
     if (error?.response?.status === 401) {
-      Swal.fire({ icon: 'warning', title: 'Vui lòng đăng nhập để sử dụng chức năng yêu thích', confirmButtonColor: '#9f273b' });
+      soraAlert.fire({ icon: 'warning', title: 'Vui lòng đăng nhập để sử dụng chức năng yêu thích' });
       return;
     }
-    Swal.fire({ icon: 'error', title: 'Không thể cập nhật yêu thích', text: error.message || 'Xin thử lại sau.' });
+    soraAlert.fire({ icon: 'error', title: 'Không thể cập nhật yêu thích', text: error.message || 'Xin thử lại sau.' });
   }
 };
 
 const fetchHomepageData = async () => {
+  isLoading.value = true;
+  isHeroImageReady.value = false;
+
   try {
     const response = await fetch(`${API_BASE}/api/client/home-data`, { headers: { 'Accept': 'application/json' } });
     const result = await response.json();
@@ -563,12 +621,19 @@ const saveCoupon = (code) => {
 };
 
 onMounted(() => {
+  if (shouldShowHomeIntro.value) {
+    window.setTimeout(() => {
+      isLogoLoaderMinTimeDone.value = true;
+    }, 1000);
+  }
   fetchHomepageData();
   loadWishlist(); 
 });
 </script>
 
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Montserrat:wght@300;400;500;600&family=Oswald:wght@400;500;600;700&display=swap');
+
 :root {
   --color-primary: #9f273b; 
   --color-gold: #e7ce7d;    
@@ -576,15 +641,62 @@ onMounted(() => {
   --sora-primary: #9f273b;
   --sora-secondary: #e7ce7d;
   --sora-accent: #cc1e2e;
+  --sora-primary-rgb: 159, 39, 59;
+  --sora-secondary-rgb: 231, 206, 125;
+  --sora-accent-rgb: 204, 30, 46;
 }
 </style>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Montserrat:wght@300;400;500;600&family=Oswald:wght@400;500;600;700&display=swap');
-
 .font-luxury { font-family: 'Montserrat', sans-serif; }
 .font-serif { font-family: 'Playfair Display', serif; }
 .font-oswald { font-family: 'Oswald', sans-serif; }
+
+.home-logo-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(var(--sora-secondary-rgb), 0.12), transparent 26%),
+    #f8f9fa !important;
+}
+.home-page-content {
+  opacity: 1;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.home-page-content-loading {
+  opacity: 0.96;
+  transform: scale(0.996);
+}
+.logo-pulse-wrapper {
+  display: inline-block;
+}
+.logo-pulse-img {
+  width: 140px;
+  height: auto;
+  object-fit: contain;
+  animation: luxury-pulse 1.8s infinite alternate ease-in-out;
+}
+.home-logo-loader-enter-active,
+.home-logo-loader-leave-active {
+  transition: opacity 0.5s ease, transform 0.5s ease, filter 0.5s ease;
+}
+.home-logo-loader-enter-from,
+.home-logo-loader-leave-to {
+  opacity: 0;
+  transform: scale(1.035);
+  filter: blur(8px);
+}
+@keyframes luxury-pulse {
+  0% {
+    transform: scale(0.95);
+    filter: drop-shadow(0 0 5px rgba(var(--sora-primary-rgb), 0.2)) brightness(1);
+  }
+  100% {
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 25px rgba(var(--sora-primary-rgb), 0.8)) brightness(1.15);
+  }
+}
 
 .tracking-widest { letter-spacing: 0.15em; }
 .text-truncate-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -620,23 +732,156 @@ onMounted(() => {
 .btn-luxury-gold:hover span { color: #111 !important; }
 
 /* UTILITIES */
-.hero-carousel { height: 85vh; min-height: 600px; background: #111; }
-.hero-img { height: 85vh; min-height: 600px; opacity: 0.6; }
-.carousel-overlay { position: absolute; inset: 0; background: radial-gradient(circle, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.8) 100%); }
+.hero-carousel { height: 85vh; min-height: 600px; background: #fffafa; overflow: hidden; }
+.hero-loading-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: linear-gradient(135deg, #fffafa 0%, #fbf2ef 45%, #f8efe4 100%);
+}
+.hero-loading-layer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 20%, rgba(255,255,255,0.7) 45%, transparent 70%);
+  transform: translateX(-100%);
+  animation: heroShimmer 1.6s ease-in-out infinite;
+}
+.hero-loading-brand {
+  color: #9f273b;
+  font-size: clamp(3.2rem, 8vw, 6rem);
+  letter-spacing: 0.18em;
+}
+.hero-loading-line {
+  width: 90px;
+  height: 2px;
+  background: #e7ce7d;
+}
+.hero-loading-content p { color: #6c3b43; font-size: 0.85rem; }
+.hero-img { height: 85vh; min-height: 600px; opacity: 0; transition: opacity 0.45s ease; }
+.hero-img-visible { opacity: 1; }
+.hero-empty-state {
+  height: 85vh;
+  min-height: 600px;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(231, 206, 125, 0.26), transparent 35%),
+    linear-gradient(135deg, #fffafa 0%, #f8efe4 100%);
+}
+.carousel-overlay { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,0.46) 0%, rgba(0,0,0,0.18) 48%, rgba(0,0,0,0.4) 100%); }
 .shadow-text { text-shadow: 2px 2px 8px rgba(0,0,0,0.7); }
 .nav-icon-wrapper { width: 50px; height: 50px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); }
 .nav-icon-wrapper:hover { background: #e7ce7d; border-color: #e7ce7d; }
 .nav-icon-wrapper:hover i { color: #111 !important; }
+@keyframes heroShimmer { 100% { transform: translateX(100%); } }
 
-/* VIP TICKET COUPONS */
+/* SORA VOUCHERS */
+.coupons-section {
+  background: linear-gradient(180deg, #fff 0%, #fffafa 100%) !important;
+}
+.coupon-section-heading {
+  max-width: 760px;
+}
 .coupon-scroll-container { overflow-x: auto; scrollbar-width: none; }
 .coupon-scroll-container::-webkit-scrollbar { display: none; }
-.vip-ticket-card { border: 1px solid rgba(231, 206, 125, 0.4) !important; }
-.ticket-cutout { position: absolute; width: 24px; height: 24px; background-color: #faf8f5; border-radius: 50%; right: -12px; z-index: 4; border: 1px solid rgba(231, 206, 125, 0.4); }
-.ticket-cutout.top { top: -12px; border-bottom-color: transparent; border-right-color: transparent; transform: rotate(-45deg); }
-.ticket-cutout.bottom { bottom: -12px; border-top-color: transparent; border-right-color: transparent; transform: rotate(45deg); }
-.group-hover-target:hover .underline-hover { width: 100% !important; }
-.underline-base { border-color: rgba(159, 39, 59, 0.2) !important; }
+.sora-voucher-card {
+  width: 335px;
+  min-height: 225px;
+  display: flex;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid rgba(var(--sora-primary-rgb), 0.12);
+  border-radius: 18px;
+  box-shadow: 0 18px 45px rgba(33, 37, 41, 0.08);
+  transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+}
+.sora-voucher-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(var(--sora-primary-rgb), 0.28);
+  box-shadow: 0 24px 60px rgba(var(--sora-primary-rgb), 0.14);
+}
+.voucher-side-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  background: linear-gradient(180deg, rgb(var(--sora-primary-rgb)) 0%, rgb(132, 31, 48) 100%);
+  color: #fff;
+  letter-spacing: 0.22em;
+  padding: 18px 12px;
+  font-size: 0.78rem;
+}
+.voucher-body {
+  flex: 1;
+  position: relative;
+  padding: 24px;
+}
+.voucher-body::after {
+  content: '';
+  position: absolute;
+  width: 145px;
+  height: 145px;
+  right: -58px;
+  top: -46px;
+  border: 1px solid rgba(var(--sora-secondary-rgb), 0.45);
+  border-radius: 50%;
+}
+.voucher-eyebrow {
+  display: block;
+  color: rgb(var(--sora-primary-rgb));
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.voucher-code {
+  color: #212529;
+  font-size: 1.12rem;
+  letter-spacing: 0.08em;
+}
+.voucher-badge {
+  flex-shrink: 0;
+  color: rgb(122, 29, 45);
+  background: rgba(var(--sora-secondary-rgb), 0.22);
+  border: 1px solid rgba(var(--sora-secondary-rgb), 0.55);
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.72rem;
+  line-height: 1;
+}
+.voucher-value {
+  color: rgb(var(--sora-primary-rgb));
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+.voucher-value span {
+  font-size: clamp(2.4rem, 5vw, 3.45rem);
+  font-weight: 700;
+}
+.voucher-value small {
+  margin-left: 0.25rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-transform: lowercase;
+}
+.voucher-condition {
+  color: #6c757d;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.voucher-save-btn {
+  position: relative;
+  z-index: 1;
+  color: #fff;
+  background: linear-gradient(135deg, rgb(var(--sora-primary-rgb)) 0%, rgb(var(--sora-accent-rgb)) 100%);
+  border: 1px solid rgba(var(--sora-secondary-rgb), 0.72);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  box-shadow: 0 10px 22px rgba(var(--sora-primary-rgb), 0.18);
+}
+.voucher-save-btn:hover {
+  color: #fff;
+  background: linear-gradient(135deg, rgb(132, 31, 48) 0%, rgb(var(--sora-primary-rgb)) 100%);
+  border-color: rgb(var(--sora-secondary-rgb));
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(var(--sora-primary-rgb), 0.26);
+}
 
 /* CATEGORY GENTLE ZOOM */
 .category-img-box { max-width: 85%; }

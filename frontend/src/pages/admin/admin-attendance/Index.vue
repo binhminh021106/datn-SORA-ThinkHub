@@ -448,8 +448,8 @@
                   </td>
                   <td>
                     <span v-if="admin.attendance"
-                      :class="getCheckoutStatusBadgeClass(admin.attendance.checkout_status)">{{
-                        getCheckoutStatusLabel(admin.attendance.checkout_status) }}</span>
+                      :class="getCheckoutStatusBadgeClass(getDisplayCheckoutStatus(admin.attendance, drillDownDate))">{{
+                        getCheckoutStatusLabel(getDisplayCheckoutStatus(admin.attendance, drillDownDate)) }}</span>
                     <div v-if="admin.attendance && getRealEarlyLeave(admin.attendance) > 0" class="mt-1">
                       <span class="badge bg-warning-subtle text-warning-emphasis border border-warning"
                         style="font-size: 0.65rem;">Về sớm {{ formatDuration(getRealEarlyLeave(admin.attendance))
@@ -458,9 +458,14 @@
                     <span v-else-if="!admin.attendance" class="text-muted small">--</span>
                   </td>
                   <td>
-                    <button class="btn btn-sm btn-outline-primary shadow-sm rounded-3" @click="openHistoryModal(admin)">
-                      <i class="bi bi-calendar-check me-1"></i>Xem lịch tháng
-                    </button>
+                    <div class="d-flex flex-wrap gap-2">
+                      <button class="btn btn-sm btn-outline-primary shadow-sm rounded-3" @click="openHistoryModal(admin)">
+                        <i class="bi bi-calendar-check me-1"></i>Xem lịch tháng
+                      </button>
+                      <button class="btn btn-sm btn-outline-success shadow-sm rounded-3" @click="openAdjustmentModal(admin)">
+                        <i class="bi bi-pencil-square me-1"></i>Điều chỉnh
+                      </button>
+                    </div>
                   </td>
                 </tr>
                 <tr v-if="paginatedDrillDownList.length === 0">
@@ -499,15 +504,73 @@
         </div>
       </div>
 
+      <div class="card border-0 shadow-sm rounded-4 bg-white table-card mt-4">
+        <div class="card-body p-4">
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+            <div>
+              <h5 class="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                <i class="bi bi-clock-history text-brand"></i>
+                Lịch sử điều chỉnh giờ công
+              </h5>
+              <p class="text-muted small mb-0">Các lần chỉnh sửa trong tháng đang chọn, phục vụ đối soát và truy vết.</p>
+            </div>
+            <button class="btn btn-light btn-sm rounded-3 shadow-sm" @click="refetchAdjustments">
+              <i class="bi bi-arrow-clockwise me-1"></i>Tải lại
+            </button>
+          </div>
+
+          <div v-if="isAdjustmentsLoading" class="d-flex flex-column gap-2">
+            <div v-for="i in 3" :key="'adjustment-skel-' + i" class="skeleton rounded-3" style="height: 58px;"></div>
+          </div>
+          <div v-else-if="adjustmentLogs.length === 0" class="text-center py-4 text-muted">
+            <i class="bi bi-journal-check fs-2 d-block mb-2 opacity-50"></i>
+            Chưa có điều chỉnh nào trong tháng này.
+          </div>
+          <div v-else class="adjustment-log-list">
+            <div v-for="log in adjustmentLogs" :key="log.id" class="adjustment-log-item">
+              <div class="d-flex flex-column flex-lg-row justify-content-between gap-3">
+                <div>
+                  <div class="fw-bold text-dark">
+                    {{ log.admin?.fullname || 'Nhân sự' }}
+                    <span class="text-muted fw-normal small">({{ log.admin?.email || '--' }})</span>
+                  </div>
+                  <div class="small text-muted">
+                    Ngày {{ formatDateVN(log.attendance_date?.split?.('T')?.[0] || log.attendance_date) }}
+                    • {{ log.work_shift?.name || 'Không có ca' }}
+                    • Sửa bởi {{ log.adjusted_by?.fullname || 'Quản lý' }}
+                  </div>
+                  <div class="small text-secondary mt-1">Lý do: {{ log.reason }}</div>
+                </div>
+                <div class="text-lg-end small flex-shrink-0">
+                  <div>
+                    <span class="text-muted">Vào:</span>
+                    <strong>{{ formatTimeOnly(log.old_clock_in) }}</strong>
+                    <i class="bi bi-arrow-right mx-1 text-muted"></i>
+                    <strong class="text-success">{{ formatTimeOnly(log.new_clock_in) }}</strong>
+                  </div>
+                  <div>
+                    <span class="text-muted">Ra:</span>
+                    <strong>{{ formatTimeOnly(log.old_clock_out) }}</strong>
+                    <i class="bi bi-arrow-right mx-1 text-muted"></i>
+                    <strong class="text-warning-emphasis">{{ formatTimeOnly(log.new_clock_out) }}</strong>
+                  </div>
+                  <div class="text-muted mt-1">{{ formatDateTimeVN(log.created_at) }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <AttendanceHistoryModal ref="historyModalRef" />
+    <AttendanceAdjustmentModal ref="adjustmentModalRef" :work-shifts="availableShifts" @saved="handleAdjustmentSaved" />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick, onUnmounted } from 'vue';
-import axios from 'axios';
+import { ref, computed, watch, nextTick, onMounted, onActivated, onUnmounted } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
 import Chart from 'chart.js/auto';
@@ -515,9 +578,9 @@ import Chart from 'chart.js/auto';
 import SoraImage from '@/components/ui/SoraImage.vue';
 import defaultAvatar from '@/assets/images/defaults/avatar1.png';
 import { getFullImage } from '@/composables/useUtilities';
+import adminApiClient from '@/utils/adminApiClient';
 import AttendanceHistoryModal from './AttendanceHistoryModal.vue';
-
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+import AttendanceAdjustmentModal from './AttendanceAdjustmentModal.vue';
 
 // Cấu hình Toast thông báo
 const Toast = Swal.mixin({
@@ -532,10 +595,25 @@ const Toast = Swal.mixin({
   }
 });
 
+function getVietnamDateString(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === 'year')?.value;
+  const month = parts.find((part) => part.type === 'month')?.value;
+  const day = parts.find((part) => part.type === 'day')?.value;
+
+  return `${year}-${month}-${day}`;
+}
+
 // State chính
 const isFirstVisit = ref(sessionStorage.getItem('visited_attendance_dashboard') !== 'true');
-const selectedMonth = ref(new Date().toISOString().substring(0, 7)); 
-const drillDownDate = ref(new Date().toISOString().split('T')[0]); 
+const selectedMonth = ref(getVietnamDateString().substring(0, 7)); 
+const drillDownDate = ref(getVietnamDateString()); 
 const searchQuery = ref('');
 const statusFilter = ref('all'); 
 const selectedRole = ref('all'); 
@@ -544,13 +622,14 @@ const currentPage = ref(1);
 const itemsPerPage = 6; 
 
 const historyModalRef = ref(null);
+const adjustmentModalRef = ref(null);
 const drillDownSection = ref(null);
 let attendanceChartInstance = null;
 
 // Reset tất cả các bộ lọc về mặc định ban đầu
 const resetFilters = () => {
-  selectedMonth.value = new Date().toISOString().substring(0, 7);
-  drillDownDate.value = new Date().toISOString().split('T')[0];
+  selectedMonth.value = getVietnamDateString().substring(0, 7);
+  drillDownDate.value = getVietnamDateString();
   searchQuery.value = '';
   statusFilter.value = 'all';
   selectedRole.value = 'all';
@@ -570,10 +649,7 @@ const { data: rolesList } = useQuery({
   queryKey: ['rolesListForFilter'],
   queryFn: async () => {
     try {
-      const token = localStorage.getItem('admin_token');
-      const response = await axios.get(`${API_URL}/admin/attendances/roles`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await adminApiClient.get('/attendances/roles');
       return response.data.success ? response.data.data : [];
     } catch (e) {
       console.warn("API lỗi roles, dùng Fallback");
@@ -589,10 +665,7 @@ const { data: workShiftsList } = useQuery({
   queryKey: ['workShiftsForFilter'],
   queryFn: async () => {
     try {
-      const token = localStorage.getItem('admin_token');
-      const response = await axios.get(`${API_URL}/admin/attendances/work-shifts`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await adminApiClient.get('/attendances/work-shifts');
       return response.data.success ? response.data.data : [];
     } catch (e) {
       console.warn("API lỗi work-shifts, dùng Fallback");
@@ -608,10 +681,8 @@ const { data: monthlySummaryData, isLoading: isSummaryLoading, refetch: refetchS
   queryKey: ['monthlySummary', selectedMonth, selectedRole, selectedShift], // Theo dõi thêm selectedShift
   queryFn: async () => {
     try {
-      const token = localStorage.getItem('admin_token');
       const [year, month] = selectedMonth.value.split('-');
-      const response = await axios.get(`${API_URL}/admin/attendances/monthly-summary`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await adminApiClient.get('/attendances/monthly-summary', {
         params: { 
           month, 
           year, 
@@ -629,8 +700,8 @@ const { data: monthlySummaryData, isLoading: isSummaryLoading, refetch: refetchS
     }
   },
   keepPreviousData: true,
-  refetchOnWindowFocus: true, 
-  refetchInterval: 30000,     
+  staleTime: 1000 * 60,
+  refetchOnWindowFocus: false,
 });
 
 // 3. QUERY API CHI TIẾT NGÀY ĐƯỢC CHỌN (DRILL-DOWN)
@@ -638,9 +709,7 @@ const { data: dailyData, isLoading: isDailyLoading, refetch: refetchDailyDetail 
   queryKey: ['dailyAttendanceAll', drillDownDate, selectedRole, selectedShift], // Theo dõi thêm selectedShift
   queryFn: async () => {
     try {
-      const token = localStorage.getItem('admin_token');
-      const response = await axios.get(`${API_URL}/admin/attendances/daily-status`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await adminApiClient.get('/attendances/daily-status', {
         params: {
           date: drillDownDate.value,
           role_id: selectedRole.value !== 'all' ? selectedRole.value : undefined,
@@ -654,11 +723,31 @@ const { data: dailyData, isLoading: isDailyLoading, refetch: refetchDailyDetail 
     }
   },
   keepPreviousData: true,
-  refetchOnWindowFocus: true,
-  refetchInterval: 30000,     
+  staleTime: 1000 * 30,
+  refetchOnWindowFocus: false,
 });
 
 // --- CƠ CHẾ FALLBACK TẠO DROPDOWN NẾU API LỖI ROUTE ---
+const { data: adjustmentsData, isLoading: isAdjustmentsLoading, refetch: refetchAdjustments } = useQuery({
+  queryKey: ['attendanceAdjustments', selectedMonth],
+  queryFn: async () => {
+    const [year, month] = selectedMonth.value.split('-');
+    const endDay = new Date(Number(year), Number(month), 0).getDate();
+    const response = await adminApiClient.get('/attendances/adjustments', {
+      params: {
+        start_date: `${year}-${month}-01`,
+        end_date: `${year}-${month}-${String(endDay).padStart(2, '0')}`,
+        limit: 20
+      }
+    });
+    return response.data?.success ? response.data.data : [];
+  },
+  initialData: [],
+  keepPreviousData: true,
+  staleTime: 1000 * 60,
+  refetchOnWindowFocus: false,
+});
+
 const extractedRolesMap = ref(new Map());
 const extractedShiftsMap = ref(new Map());
 
@@ -701,6 +790,7 @@ watch(isLoading, (newVal) => {
 const refetchAll = () => {
   refetchSummary();
   refetchDailyDetail();
+  refetchAdjustments();
 };
 
 // Removed adminHistoryData Query
@@ -919,7 +1009,11 @@ const initOrUpdateAttendanceChart = () => {
         x: {
           stacked: true,
           grid: { display: false },
-          ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 15 }
+          ticks: {
+            maxRotation: 0,
+            autoSkip: false,
+            font: { size: 11 }
+          }
         },
         y: {
           stacked: true,
@@ -931,6 +1025,17 @@ const initOrUpdateAttendanceChart = () => {
   });
 };
 
+const scheduleAttendanceChartRender = () => {
+  nextTick(() => {
+    if (!isSummaryLoading.value) {
+      initOrUpdateAttendanceChart();
+    }
+  });
+};
+
+onMounted(scheduleAttendanceChartRender);
+onActivated(scheduleAttendanceChartRender);
+
 onUnmounted(() => {
   if (attendanceChartInstance) {
     attendanceChartInstance.destroy();
@@ -938,11 +1043,10 @@ onUnmounted(() => {
   }
 });
 
-watch([attendanceChartData, isSummaryLoading], () => {
-  if (!isSummaryLoading.value) {
-    initOrUpdateAttendanceChart();
-  }
-}, { immediate: true });
+watch([attendanceChartData, isSummaryLoading], scheduleAttendanceChartRender, {
+  immediate: true,
+  flush: 'post',
+});
 
 const kpiSummaries = computed(() => {
   let totalStaff = 0;
@@ -982,6 +1086,7 @@ const handleDayClick = (day) => {
 };
 
 const drillDownList = computed(() => dailyData.value?.data || []);
+const adjustmentLogs = computed(() => adjustmentsData.value || []);
 
 const getCountByStatus = (status) => {
   if (status === 'absent') {
@@ -1027,6 +1132,18 @@ function openHistoryModal(admin) {
   }
 }
 
+function openAdjustmentModal(admin) {
+  if (adjustmentModalRef.value) {
+    adjustmentModalRef.value.openModal(admin, drillDownDate.value);
+  }
+}
+
+const handleAdjustmentSaved = () => {
+  refetchSummary();
+  refetchDailyDetail();
+  refetchAdjustments();
+};
+
 const isWeekend = (dateStr) => {
   if (!dateStr) return false;
   const day = new Date(dateStr).getDay();
@@ -1067,16 +1184,12 @@ const isStaffWorkingDay = (dateStr, day = null) => {
 
 const isToday = (dateStr) => {
   if (!dateStr) return false;
-  const today = new Date();
-  return dateStr === `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  return getAttendanceDateOnly(dateStr) === getVietnamDateString();
 };
 
 const isPastOrToday = (dateStr) => {
   if (!dateStr) return false;
-  const targetDate = new Date(dateStr);
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
-  return targetDate <= today;
+  return getAttendanceDateOnly(dateStr) <= getVietnamDateString();
 };
 
 const getAttendanceCellLabel = (day) => {
@@ -1131,6 +1244,19 @@ const formatDateVN = (dateStr) => {
   return `${day}/${month}/${year}`;
 };
 
+const formatDateTimeVN = (dateString) => {
+  if (!dateString) return '--';
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return '--';
+  return date.toLocaleString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+};
+
 const formatMonthYear = (monthStr) => {
   if (!monthStr) return '';
   const [year, month] = monthStr.split('-');
@@ -1165,14 +1291,68 @@ const getStatusBadgeClassGrid = (status) => ({
   on_leave: 'badge bg-info text-white shadow-sm'
 }[status] || 'badge bg-secondary');
 
+const getDisplayCheckoutStatus = (attendance, fallbackDate = null) => {
+  if (!attendance) return null;
+  if (shouldShowMissCheckout(attendance, fallbackDate)) {
+    return 'miss_checkout';
+  }
+  return attendance.checkout_status;
+};
+
+const shouldShowMissCheckout = (attendance, fallbackDate = null) => {
+  if (!attendance || attendance.checkout_status !== 'pending') return false;
+  if (!attendance.clock_in || attendance.clock_out) return false;
+
+  const dateOnly = getAttendanceDateOnly(fallbackDate || attendance.attendance_date);
+  if (!isPastAttendanceDate(dateOnly)) return false;
+
+  const shiftEnd = getAttendanceShiftEndDate(attendance, dateOnly);
+  if (!shiftEnd) return true;
+
+  return new Date() > shiftEnd;
+};
+
+const getAttendanceShiftEndDate = (attendance, fallbackDate = null) => {
+  const dateOnly = getAttendanceDateOnly(fallbackDate || attendance.attendance_date);
+  const startTime = attendance.shift_start_time || attendance.work_shift?.start_time;
+  const endTime = attendance.shift_end_time || attendance.work_shift?.end_time;
+
+  if (!dateOnly || !endTime) return null;
+
+  const shiftEnd = new Date(`${dateOnly}T${normalizeTimeForDate(endTime)}`);
+  if (Number.isNaN(shiftEnd.getTime())) return null;
+
+  if (startTime && normalizeTimeForCompare(endTime) <= normalizeTimeForCompare(startTime)) {
+    shiftEnd.setDate(shiftEnd.getDate() + 1);
+  }
+
+  return shiftEnd;
+};
+
+const normalizeTimeForDate = (time) => {
+  const value = String(time || '');
+  return value.length === 5 ? `${value}:00` : value;
+};
+
+const normalizeTimeForCompare = (time) => String(time || '').substring(0, 5);
+
+const getAttendanceDateOnly = (value) => String(value || '').split('T')[0].split(' ')[0];
+
+const isPastAttendanceDate = (value) => {
+  if (!value) return false;
+  const dateOnly = getAttendanceDateOnly(value);
+  return dateOnly < getVietnamDateString();
+};
+
 const getCheckoutStatusLabel = (status) => ({
-  pending: 'Đang làm', completed: 'Đã về', forgotten: 'Quên Checkout'
+  pending: 'Đang làm', completed: 'Đã về', forgotten: 'Quên Checkout', miss_checkout: 'Miss checkout'
 }[status] || status);
 
 const getCheckoutStatusBadgeClass = (status) => ({
   pending: 'badge bg-info-subtle text-info border border-info',
   completed: 'badge bg-success-subtle text-success border border-success',
-  forgotten: 'badge bg-danger-subtle text-danger border border-danger'
+  forgotten: 'badge bg-danger-subtle text-danger border border-danger',
+  miss_checkout: 'badge bg-danger-subtle text-danger border border-danger'
 }[status] || 'badge bg-secondary');
 
 </script>
@@ -1592,6 +1772,25 @@ const getCheckoutStatusBadgeClass = (status) => ({
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.adjustment-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.adjustment-log-item {
+  border: 1px solid rgba(0, 153, 129, 0.14);
+  border-radius: 14px;
+  padding: 1rem;
+  background: #fbfffe;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.adjustment-log-item:hover {
+  border-color: rgba(0, 153, 129, 0.32);
+  box-shadow: 0 0.5rem 1rem rgba(0, 153, 129, 0.08);
 }
 
 /* DARK MODE OVERRIDES */

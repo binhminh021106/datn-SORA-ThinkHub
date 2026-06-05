@@ -31,7 +31,7 @@
               :class="{ 'active-tab': activeTab === 'all' }" @click.prevent="switchTab('all')">
               <i class="bi bi-grid-fill me-2"></i> Tất cả
               <span class="badge ms-2 rounded-pill tab-badge" :class="{ 'active-badge': activeTab === 'all' }">{{
-                products.filter(p => !p.deleted_at).length }}</span>
+                productCounts.active }}</span>
             </a>
           </li>
           <li class="nav-item">
@@ -39,7 +39,7 @@
               :class="{ 'active-tab': activeTab === 'published' }" @click.prevent="switchTab('published')">
               <i class="bi bi-check-circle-fill me-2 text-success"></i> Đang bán
               <span class="badge ms-2 rounded-pill tab-badge" :class="{ 'active-badge': activeTab === 'published' }">{{
-                products.filter(p => p.status === 'published' && !p.deleted_at).length }}</span>
+                productCounts.published }}</span>
             </a>
           </li>
           <li class="nav-item">
@@ -47,7 +47,7 @@
               :class="{ 'active-tab': activeTab === 'draft' }" @click.prevent="switchTab('draft')">
               <i class="bi bi-pencil-square me-2 text-warning"></i> Bản nháp
               <span class="badge ms-2 rounded-pill tab-badge" :class="{ 'active-badge': activeTab === 'draft' }">{{
-                products.filter(p => p.status === 'draft' && !p.deleted_at).length }}</span>
+                productCounts.draft }}</span>
             </a>
           </li>
           <li class="nav-item">
@@ -55,14 +55,14 @@
               :class="{ 'active-tab': activeTab === 'hidden' }" @click.prevent="switchTab('hidden')">
               <i class="bi bi-eye-slash-fill me-2 text-secondary"></i> Đang ẩn
               <span class="badge ms-2 rounded-pill tab-badge" :class="{ 'active-badge': activeTab === 'hidden' }">{{
-                products.filter(p => p.status === 'hidden' && !p.deleted_at).length }}</span>
+                productCounts.hidden }}</span>
             </a>
           </li>
           <li class="nav-item ms-auto">
             <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab text-danger" href="#"
               :class="{ 'active-tab': activeTab === 'deleted' }" @click.prevent="switchTab('deleted')">
               <i class="bi bi-trash3-fill me-2"></i> Đã xóa
-              <span class="badge ms-2 rounded-pill bg-danger text-white">{{products.filter(p => p.deleted_at).length
+              <span class="badge ms-2 rounded-pill bg-danger text-white">{{ productCounts.deleted
                 }}</span>
             </a>
           </li>
@@ -369,22 +369,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { ref, onBeforeUnmount, computed, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
-import axios from 'axios';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 import { useQuery } from '@tanstack/vue-query';
+import adminApiClient from '@/utils/adminApiClient';
 
 import SoraImage from '@/components/ui/SoraImage.vue';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL;
-
 const route = useRoute();
-const router = useRouter();
 
 const searchQuery = ref('');
+const debouncedSearchQuery = ref('');
 const activeTab = ref('all');
 const selectedCategoryFilter = ref('all');
 const selectedBrandFilter = ref('all');
@@ -401,14 +399,34 @@ const isFirstLoad = ref(true);
 
 let quickViewModalInstance = null;
 let isUnmounted = false;
+let searchDebounceTimer = null;
+let productRefreshTimer = null;
+const productDetailCache = new Map();
 
 onBeforeUnmount(() => {
   isUnmounted = true;
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+  if (productRefreshTimer) clearTimeout(productRefreshTimer);
   if (quickViewModalInstance) quickViewModalInstance.hide();
   document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
   document.body.className = '';
   document.body.style = '';
 });
+
+const scheduleProductRefresh = () => {
+  if (productRefreshTimer) clearTimeout(productRefreshTimer);
+  productRefreshTimer = setTimeout(() => {
+    fetchData(true);
+  }, 500);
+};
+
+watch(searchQuery, (value) => {
+  currentPage.value = 1;
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => {
+    debouncedSearchQuery.value = value;
+  }, 220);
+}, { immediate: true });
 
 const removeAccents = (str) => {
   if (!str) return '';
@@ -417,8 +435,6 @@ const removeAccents = (str) => {
     .replace(/đ/g, 'd').replace(/Đ/g, 'D')
     .toLowerCase();
 };
-
-const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
 
 const formatCurrency = (val) => {
   if (val === null || val === undefined || val === '' || isNaN(val)) return '---';
@@ -460,12 +476,11 @@ const saveProductStatus = async (product) => {
   formData.append('variants_data', '[]');
 
   try {
-    await axios.post(`${API_URL}/admin/products/${product.id}`, formData, {
-      headers: getHeaders()
-    });
+    await adminApiClient.post(`/products/${product.id}`, formData);
 
     product.status = product.localStatus;
     product.isStatusChanged = false;
+    productDetailCache.delete(product.id);
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
   } catch (error) {
     cancelStatusChange(product);
@@ -489,31 +504,54 @@ const getStatusSelectClass = (status) => {
 };
 
 const fetchProducts = async () => {
-  const res = await axios.get(`${API_URL}/admin/products`, { headers: getHeaders() });
+  const res = await adminApiClient.get('/products');
   return res.data.data.map(p => ({
     ...p,
     localStatus: p.status,
     isStatusChanged: false,
     isUpdatingStatus: false,
     review_count: p.review_count || 0,
-    rating_avg: p.rating_avg || 0
+    rating_avg: p.rating_avg || 0,
+    _searchText: removeAccents(`${p.name || ''} ${p.slug || ''} ${p.sku || ''}`)
   }));
 };
 
-const { data: productsData, isFetching: isTableLoading, refetch: refetchProducts } = useQuery({
+const { data: productsData, isLoading: isProductsInitialLoading, isFetching: isTableLoading, refetch: refetchProducts } = useQuery({
   queryKey: ['adminProducts'],
   queryFn: fetchProducts,
   staleTime: 5 * 60 * 1000,
+  refetchOnWindowFocus: false,
 });
 
 const products = computed(() => productsData.value || []);
 
+const productCounts = computed(() => {
+  return products.value.reduce((counts, product) => {
+    if (product.deleted_at) {
+      counts.deleted += 1;
+      return counts;
+    }
+
+    counts.active += 1;
+    if (product.status === 'published') counts.published += 1;
+    if (product.status === 'draft') counts.draft += 1;
+    if (product.status === 'hidden') counts.hidden += 1;
+    return counts;
+  }, {
+    active: 0,
+    published: 0,
+    draft: 0,
+    hidden: 0,
+    deleted: 0,
+  });
+});
+
 const fetchSystemMeta = async () => {
   const [resCats, resAttr, resModules, resBrands] = await Promise.all([
-    axios.get(`${API_URL}/admin/categories`, { headers: getHeaders() }),
-    axios.get(`${API_URL}/admin/attributes`, { headers: getHeaders() }),
-    axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() }),
-    axios.get(`${API_URL}/admin/brands`, { headers: getHeaders() })
+    adminApiClient.get('/categories'),
+    adminApiClient.get('/attributes'),
+    adminApiClient.get('/modules'),
+    adminApiClient.get('/brands')
   ]);
 
   return {
@@ -528,6 +566,7 @@ const { data: metaData } = useQuery({
   queryKey: ['adminSystemMeta'],
   queryFn: fetchSystemMeta,
   staleTime: 30 * 60 * 1000,
+  refetchOnWindowFocus: false,
 });
 
 const activeProductData = computed(() => {
@@ -574,11 +613,23 @@ watch(() => metaData.value?.modules, (sysModules) => {
 const isSilentLoading = ref(false);
 const fetchData = async (silent = false) => {
   if (silent) isSilentLoading.value = true;
-  await refetchProducts();
-  if (silent) isSilentLoading.value = false;
+  try {
+    await refetchProducts();
+    productDetailCache.clear();
+  } finally {
+    if (silent) isSilentLoading.value = false;
+  }
 };
 
 const openQuickView = async (id) => {
+  const cachedDetail = productDetailCache.get(id);
+  if (cachedDetail) {
+    selectedProduct.value = cachedDetail;
+    if (!quickViewModalInstance) quickViewModalInstance = new window.bootstrap.Modal(document.getElementById('quickViewProductModal'));
+    quickViewModalInstance.show();
+    return;
+  }
+
   const cachedProduct = products.value.find(p => p.id === id);
   if (cachedProduct) {
     selectedProduct.value = { ...cachedProduct, isPartial: true };
@@ -588,9 +639,10 @@ const openQuickView = async (id) => {
 
   isFetchingDetail.value = true;
   try {
-    const res = await axios.get(`${API_URL}/admin/products/${id}`, { headers: getHeaders() });
+    const res = await adminApiClient.get(`/products/${id}`);
     if (!isUnmounted) {
       selectedProduct.value = res.data.data;
+      productDetailCache.set(id, res.data.data);
       if (!cachedProduct) {
         if (!quickViewModalInstance) quickViewModalInstance = new window.bootstrap.Modal(document.getElementById('quickViewProductModal'));
         quickViewModalInstance.show();
@@ -620,13 +672,9 @@ const processedProducts = computed(() => {
   if (selectedCategoryFilter.value !== 'all') result = result.filter(r => r.category_id == selectedCategoryFilter.value);
   if (selectedBrandFilter.value !== 'all') result = result.filter(r => r.brand_id == selectedBrandFilter.value);
 
-  if (searchQuery.value) {
-    const q = removeAccents(searchQuery.value);
-    result = result.filter(r => {
-      const normalizedName = removeAccents(r.name);
-      const normalizedSku = removeAccents(r.sku);
-      return normalizedName.includes(q) || normalizedSku.includes(q);
-    });
+  if (debouncedSearchQuery.value) {
+    const q = removeAccents(debouncedSearchQuery.value);
+    result = result.filter(r => (r._searchText || '').includes(q));
   }
   return result;
 });
@@ -639,7 +687,8 @@ const confirmDelete = (id, name) => {
     if (result.isConfirmed) {
       isSilentLoading.value = true;
       try {
-        await axios.delete(`${API_URL}/admin/products/${id}`, { headers: getHeaders() });
+        await adminApiClient.delete(`/products/${id}`);
+        productDetailCache.delete(id);
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã đưa vào thùng rác', showConfirmButton: false, timer: 1500 });
         await refetchProducts();
       } catch (e) {
@@ -653,7 +702,7 @@ const confirmDelete = (id, name) => {
 
 useAdminRefreshListener((payload) => {
   if (payload.module === 'products') {
-    fetchData(true);
+    scheduleProductRefresh();
     Swal.fire({ toast: true, position: 'bottom-end', icon: 'info', title: 'Sản phẩm đã được cập nhật', showConfirmButton: false, timer: 2000 });
   }
 });
@@ -663,7 +712,8 @@ const restoreProduct = (id) => {
     if (result.isConfirmed) {
       isSilentLoading.value = true;
       try {
-        await axios.post(`${API_URL}/admin/products/${id}/restore`, {}, { headers: getHeaders() });
+        await adminApiClient.post(`/products/${id}/restore`);
+        productDetailCache.delete(id);
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã khôi phục thành công', showConfirmButton: false, timer: 1500 });
         await refetchProducts();
       } catch (e) {
@@ -676,13 +726,18 @@ const restoreProduct = (id) => {
 };
 
 // Đảm bảo chạy màn hình chào mượt mà mỗi khi component được Mount (vào lại trang)
-onMounted(async () => {
+const startInitialLoaderTimer = () => {
   isFirstLoad.value = true;
-  await fetchData();
   setTimeout(() => {
     isFirstLoad.value = false;
   }, 450); // Chờ 450ms tạo cảm giác loading mượt mà, dễ chịu
-});
+};
+
+watch(isProductsInitialLoading, (loading) => {
+  if (!loading && isFirstLoad.value) {
+    startInitialLoaderTimer();
+  }
+}, { immediate: true });
 </script>
 
 <style scoped>

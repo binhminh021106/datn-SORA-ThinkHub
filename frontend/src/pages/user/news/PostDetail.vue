@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
-import Swal from 'sweetalert2';
+import Toast from '@/utils/toastConfig';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 
 const route = useRoute();
@@ -89,7 +89,7 @@ const updateSeoTags = (postData) => {
 
 const copyToClipboard = () => {
     navigator.clipboard.writeText(window.location.href).then(() => {
-        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã copy link bài viết!', showConfirmButton: false, timer: 1500 });
+        Toast.fire({ icon: 'success', title: 'Đã copy link bài viết!', timer: 1500 });
     });
 };
 

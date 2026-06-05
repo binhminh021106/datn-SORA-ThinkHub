@@ -270,7 +270,6 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
-import Swal from 'sweetalert2';
 import Toast from '@/utils/toastConfig';
 
 const route = useRoute();

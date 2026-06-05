@@ -11,7 +11,7 @@ use App\Models\User;
 use App\Models\MembershipTier;
 use App\Models\TierHistory;
 use App\Models\TierServiceUsage;
-use App\Http\Requests\AdminUpdateOrderRequest;
+use App\Http\Requests\Admin\Order\AdminUpdateOrderRequest;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;

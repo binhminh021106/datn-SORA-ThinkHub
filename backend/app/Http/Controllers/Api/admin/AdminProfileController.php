@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
-use App\Http\Requests\AdminUpdateAdminProfileRequest;
-use App\Http\Requests\AdminUpdateAdminPasswordRequest;
+use App\Http\Requests\Admin\Profile\AdminUpdateAdminProfileRequest;
+use App\Http\Requests\Admin\Profile\AdminUpdateAdminPasswordRequest;
 use Illuminate\Support\Str;
 
 class AdminProfileController extends Controller

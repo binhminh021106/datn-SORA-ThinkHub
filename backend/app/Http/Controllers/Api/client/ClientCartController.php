@@ -9,8 +9,8 @@ use App\Models\ProductVariant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use App\Http\Requests\UserStoreCartItemRequest;
-use App\Http\Requests\UserUpdateCartItemRequest;
+use App\Http\Requests\Client\Cart\UserStoreCartItemRequest;
+use App\Http\Requests\Client\Cart\UserUpdateCartItemRequest;
 use App\Models\Coupon;
 use App\Models\MembershipTier;
 

@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
-use App\Http\Requests\AdminStoreBrandRequest;
-use App\Http\Requests\AdminUpdateBrandRequest;
+use App\Http\Requests\Admin\Brand\AdminStoreBrandRequest;
+use App\Http\Requests\Admin\Brand\AdminUpdateBrandRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;

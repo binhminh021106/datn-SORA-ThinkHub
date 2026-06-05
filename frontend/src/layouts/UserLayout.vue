@@ -82,7 +82,6 @@ onUnmounted(() => {
   transition: opacity 0.4s ease;
 }
 
-.fade-enter-from,
 .fade-leave-to {
   opacity: 0;
 }

@@ -124,26 +124,14 @@
                             <div class="card-body p-4">
                                 <h5 class="fw-bold mb-4 text-brand"><i class="bi bi-geo-alt-fill me-2"></i>Địa chỉ mặc định (Tùy chọn)</h5>
                                 <div class="row">
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label fw-bold">Tỉnh/Thành phố</label>
-                                        <select class="form-select" v-model="selectedCityId" @change="onCityChange">
-                                            <option value="">-- Chọn Tỉnh/Thành --</option>
-                                            <option v-for="p in provinces" :key="p.id" :value="p.id">{{ p.full_name }}</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label fw-bold">Quận/Huyện</label>
-                                        <select class="form-select" v-model="selectedDistrictId" @change="onDistrictChange" :disabled="!selectedCityId">
-                                            <option value="">-- Chọn Quận/Huyện --</option>
-                                            <option v-for="d in districts" :key="d.id" :value="d.id">{{ d.full_name }}</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label fw-bold">Phường/Xã</label>
-                                        <select class="form-select" v-model="selectedWardId" @change="onWardChange" :disabled="!selectedDistrictId">
-                                            <option value="">-- Chọn Phường/Xã --</option>
-                                            <option v-for="w in wards" :key="w.id" :value="w.id">{{ w.full_name }}</option>
-                                        </select>
+                                    <div class="col-12 mb-3">
+                                        <VietnamAddressPicker
+                                            v-model:province="form.city"
+                                            v-model:district="form.district"
+                                            v-model:ward="form.ward"
+                                            input-class="bg-white"
+                                            label-class="fw-bold"
+                                        />
                                     </div>
                                     <div class="col-md-12 mb-3">
                                         <label class="form-label fw-bold">Địa chỉ chi tiết (Số nhà, đường)</label>
@@ -169,11 +157,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import defaultAvatar from '../../../../assets/images/defaults/avatar1.png';
+import VietnamAddressPicker from '@/components/ui/VietnamAddressPicker.vue';
 
 const router = useRouter();
 const isSaving = ref(false);
@@ -190,13 +179,6 @@ const form = ref({
     fullName: '', email: '', password: '', password_confirmation: '', phone: '', status: 'active', gender: '', birthday: '',
     shipping_address: '', city: '', district: '', ward: ''
 });
-
-const provinces = ref([]);
-const districts = ref([]);
-const wards = ref([]);
-const selectedCityId = ref('');
-const selectedDistrictId = ref('');
-const selectedWardId = ref('');
 
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
 
@@ -218,55 +200,6 @@ const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
   } else {
     Swal.fire('Lỗi', 'Mất kết nối Server', 'error');
   }
-};
-
-const fetchProvinces = async () => {
-  try {
-    // Dùng fetch thay vì axios
-    const res = await fetch('https://esgoo.net/api-tinhthanh/1/0.htm');
-    if (!res.ok) throw new Error('Network response was not ok');
-    const data = await res.json();
-    if (data.error === 0) provinces.value = data.data;
-  } catch (e) {
-    console.error("Lỗi lấy Tỉnh/Thành:", e);
-  }
-};
-
-const onCityChange = async () => {
-  districts.value = []; wards.value = [];
-  selectedDistrictId.value = ''; selectedWardId.value = '';
-  addrForm.value.city = provinces.value.find(p => p.id === selectedCityId.value)?.full_name || '';
-  if (selectedCityId.value) {
-    try {
-      // Dùng fetch thay vì axios
-      const res = await fetch(`https://esgoo.net/api-tinhthanh/2/${selectedCityId.value}.htm`);
-      if (!res.ok) throw new Error('Network response was not ok');
-      const data = await res.json();
-      if (data.error === 0) districts.value = data.data;
-    } catch (e) {
-      console.error("Lỗi lấy Quận/Huyện:", e);
-    }
-  }
-};
-
-const onDistrictChange = async () => {
-  wards.value = []; selectedWardId.value = '';
-  addrForm.value.district = districts.value.find(d => d.id === selectedDistrictId.value)?.full_name || '';
-  if (selectedDistrictId.value) {
-    try {
-      // Dùng fetch thay vì axios
-      const res = await fetch(`https://esgoo.net/api-tinhthanh/3/${selectedDistrictId.value}.htm`);
-      if (!res.ok) throw new Error('Network response was not ok');
-      const data = await res.json();
-      if (data.error === 0) wards.value = data.data;
-    } catch (e) {
-      console.error("Lỗi lấy Phường/Xã:", e);
-    }
-  }
-};
-
-const onWardChange = () => {
-  form.value.ward = wards.value.find(w => w.id === selectedWardId.value)?.full_name || '';
 };
 
 const handleAvatarChange = (e) => {
@@ -318,7 +251,6 @@ const saveUser = async () => {
     }
 };
 
-onMounted(() => fetchProvinces());
 </script>
 
 <style scoped>

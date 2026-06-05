@@ -159,8 +159,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
-import Swal from 'sweetalert2';
 import Toast from '@/utils/toastConfig';
+import { createSoraAlert } from '@/utils/soraAlertConfig';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 
 const router = useRouter();
@@ -170,10 +170,7 @@ const backendSummary = ref(null);
 
 const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/client/cart`;
 
-const soraAlert = Swal.mixin({
-  buttonsStyling: true,
-  confirmButtonColor: '#9f273b',
-  cancelButtonColor: '#6c757d',
+const soraAlert = createSoraAlert({
   customClass: {
     confirmButton: 'px-4 py-2 mx-2 rounded-pill shadow-sm fw-bold',
     cancelButton: 'px-4 py-2 mx-2 rounded-pill fw-bold'

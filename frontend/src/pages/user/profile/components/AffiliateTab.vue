@@ -46,7 +46,7 @@
                             </div>
                             <h6 class="mb-0 fw-semibold text-white-50 font-luxury">Số dư Khả dụng</h6>
                         </div>
-                        <h2 class="fw-bold mb-0 font-serif">{{ formatCurrency(dashboardStats.available_balance) }}</h2>
+                        <h2 class="fw-bold mb-0 font-oswald">{{ formatCurrency(dashboardStats.available_balance) }}</h2>
                         <small class="text-gold mt-2 d-block font-luxury"><i class="bi bi-check2-circle me-1"></i>Có thể rút ngay</small>
                     </div>
                     <i class="bi bi-stars position-absolute text-white opacity-10" style="font-size: 8rem; bottom: -20px; right: -20px;"></i>
@@ -62,7 +62,7 @@
                             </div>
                             <h6 class="mb-0 fw-semibold text-muted font-luxury">Hoa hồng Chờ duyệt</h6>
                         </div>
-                        <h2 class="fw-bold text-dark mb-0 font-serif">{{ formatCurrency(dashboardStats.pending_balance) }}</h2>
+                        <h2 class="fw-bold text-dark mb-0 font-oswald">{{ formatCurrency(dashboardStats.pending_balance) }}</h2>
                         <small class="text-muted mt-2 d-block font-luxury">Đơn hàng đang giao dịch</small>
                     </div>
                 </div>
@@ -77,7 +77,7 @@
                             </div>
                             <h6 class="mb-0 fw-semibold text-muted font-luxury">Tổng tiền Đã rút</h6>
                         </div>
-                        <h2 class="fw-bold text-dark mb-0 font-serif">{{ formatCurrency(dashboardStats.total_withdrawn) }}</h2>
+                        <h2 class="fw-bold text-dark mb-0 font-oswald">{{ formatCurrency(dashboardStats.total_withdrawn) }}</h2>
                         <small class="text-muted mt-2 d-block font-luxury">Từ trước đến nay</small>
                     </div>
                 </div>
@@ -241,7 +241,8 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
-import Swal from 'sweetalert2';
+import Toast from '@/utils/toastConfig';
+import soraAlert from '@/utils/soraAlertConfig';
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
 const getToken = () => localStorage.getItem('auth_token') || localStorage.getItem('access_token');
@@ -343,13 +344,13 @@ const submitApplication = async () => {
     const result = await res.json();
     
     if (result.success) {
-      Swal.fire({ icon: 'success', title: 'Thành công!', text: result.message, confirmButtonColor: '#9f273b' });
+      soraAlert.fire({ icon: 'success', title: 'Thành công!', text: result.message });
       applicationStatus.value = 'pending'; 
     } else {
-      Swal.fire({ icon: 'error', title: 'Lỗi', text: result.message });
+      soraAlert.fire({ icon: 'error', title: 'Lỗi', text: result.message });
     }
   } catch (error) {
-    Swal.fire({ icon: 'error', title: 'Lỗi hệ thống', text: 'Vui lòng thử lại sau.' });
+    soraAlert.fire({ icon: 'error', title: 'Lỗi hệ thống', text: 'Vui lòng thử lại sau.' });
   } finally {
     isSubmitting.value = false;
   }
@@ -360,11 +361,11 @@ const submitApplication = async () => {
 // ==========================================
 const submitWithdraw = async () => {
   if (withdrawForm.amount < 200000) {
-    Swal.fire('Chú ý', 'Số tiền rút tối thiểu phải từ 200.000đ trở lên.', 'warning');
+    soraAlert.fire('Chú ý', 'Số tiền rút tối thiểu phải từ 200.000đ trở lên.', 'warning');
     return;
   }
   if (withdrawForm.amount > dashboardStats.value.available_balance) {
-    Swal.fire('Thất bại', 'Số dư tài khoản của bạn không đủ để rút số tiền này.', 'error');
+    soraAlert.fire('Thất bại', 'Số dư tài khoản của bạn không đủ để rút số tiền này.', 'error');
     return;
   }
 
@@ -388,7 +389,7 @@ const submitWithdraw = async () => {
       const modalInstance = window.bootstrap.Modal.getInstance(modalEl);
       if (modalInstance) modalInstance.hide();
 
-      Swal.fire({ icon: 'success', title: 'Đã gửi yêu cầu!', text: result.message, confirmButtonColor: '#9f273b' });
+      soraAlert.fire({ icon: 'success', title: 'Đã gửi yêu cầu!', text: result.message });
       
       // Reset form rút tiền
       withdrawForm.amount = '';
@@ -399,10 +400,10 @@ const submitWithdraw = async () => {
       // Tải lại bảng thống kê số dư mới sau khi đã bị đóng băng trừ tiền
       fetchStatus(); 
     } else {
-      Swal.fire({ icon: 'error', title: 'Lỗi', text: result.message });
+      soraAlert.fire({ icon: 'error', title: 'Lỗi', text: result.message });
     }
   } catch (error) {
-    Swal.fire({ icon: 'error', title: 'Lỗi kết nối', text: 'Không thể kết nối tới máy chủ. Vui lòng thử lại sau.' });
+    soraAlert.fire({ icon: 'error', title: 'Lỗi kết nối', text: 'Không thể kết nối tới máy chủ. Vui lòng thử lại sau.' });
   } finally {
     isWithdrawing.value = false;
   }
@@ -424,13 +425,13 @@ const generateAffiliateLink = () => {
 
 const copyLink = () => {
   navigator.clipboard.writeText(generateAffiliateLink());
-  Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã copy link!', showConfirmButton: false, timer: 1500 });
+  Toast.fire({ icon: 'success', title: 'Đã copy link!', timer: 1500 });
 };
 
 // Mở modal rút tiền bằng Bootstrap
 const openWithdrawModal = () => {
   if (dashboardStats.value.available_balance < 200000) {
-    Swal.fire('Hạn mức không đủ', 'Số dư ví khả dụng phải có tối thiểu từ 200.000đ trở lên để làm lệnh rút tiền.', 'warning');
+    soraAlert.fire('Hạn mức không đủ', 'Số dư ví khả dụng phải có tối thiểu từ 200.000đ trở lên để làm lệnh rút tiền.', 'warning');
     return;
   }
   const m = new window.bootstrap.Modal(document.getElementById('withdrawModal'));

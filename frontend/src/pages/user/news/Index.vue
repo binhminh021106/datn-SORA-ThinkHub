@@ -148,7 +148,7 @@
                                     <i class="bi bi-chevron-left"></i>
                                 </button>
                                 <div class="page-numbers">
-                                    <button v-for="page in totalPages" :key="page" class="page-btn fw-bold font-serif"
+                                    <button v-for="page in totalPages" :key="page" class="page-btn fw-bold font-oswald"
                                         :class="{ active: currentPage === page }" @click="changePage(page)">
                                         {{ page }}
                                     </button>

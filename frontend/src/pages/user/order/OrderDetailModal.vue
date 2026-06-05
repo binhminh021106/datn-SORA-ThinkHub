@@ -8,7 +8,7 @@
             <div
                 class="p-3 p-md-4 d-flex justify-content-between align-items-center bg-sora-primary text-white rounded-top-4 flex-shrink-0">
                 <div>
-                    <h4 class="mb-1 fw-bold font-serif tracking-wider">ĐƠN HÀNG #{{ order?.order_code }}</h4>
+                    <h4 class="mb-1 fw-bold font-oswald tracking-wider">ĐƠN HÀNG #{{ order?.order_code }}</h4>
                     <span class="opacity-75 small font-oswald tracking-wide"><i class="bi bi-calendar3 me-2"></i>Ngày
                         đặt: {{ formatDateTime(order?.created_at) }}</span>
                 </div>
@@ -254,7 +254,7 @@
                                 <div
                                     class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top border-2 border-dark">
                                     <span class="fw-bold text-dark text-uppercase font-oswald">Tổng cộng:</span>
-                                    <h4 class="fw-bold text-sora-primary mb-0 font-serif">{{
+                                    <h4 class="fw-bold text-sora-primary mb-0 font-oswald">{{
                                         formatPrice(order?.total_amount) }}</h4>
                                 </div>
                             </div>
@@ -320,6 +320,7 @@ import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
+import soraAlert from '@/utils/soraAlertConfig';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -444,7 +445,7 @@ const getPaymentStatusClass = (status) => {
 
 const handleReview = () => {
     if (!props.order?.items?.length) {
-        Swal.fire({ icon: 'info', title: 'Không có sản phẩm để đánh giá' });
+        soraAlert.fire({ icon: 'info', title: 'Không có sản phẩm để đánh giá' });
         return;
     }
     emit('open-review', props.order);
@@ -481,15 +482,13 @@ const handleReturn = async () => {
         </div>
     `;
 
-    const { value: noteText, isDismissed } = await Swal.fire({
+    const { value: noteText, isDismissed } = await soraAlert.fire({
         title: 'Yêu cầu Hoàn trả',
         html: `
             <p class="mb-2 text-muted font-serif fs-6">Đơn hàng <strong class="text-sora-primary font-monospace">#${props.order.order_code}</strong></p>
             ${radiosHtml}
         `,
         showCancelButton: true,
-        confirmButtonColor: '#9f273b',
-        cancelButtonColor: '#212529',
         confirmButtonText: 'Gửi yêu cầu',
         cancelButtonText: 'Hủy bỏ',
         customClass: {
@@ -537,42 +536,42 @@ const handleReturn = async () => {
 
     if (isDismissed || !noteText) return;
 
-    Swal.fire({ title: 'Đang gửi...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    soraAlert.fire({ title: 'Đang gửi...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
     try {
         await axios.post(`${API_URL}/client/orders/${props.order.order_code}/return`, {
             return_reason: noteText
         }, { headers: getHeaders() });
 
-        Swal.fire({
+        soraAlert.fire({
             icon: 'success', title: 'Thành công',
-            text: 'Đã gửi yêu cầu. SORA sẽ liên hệ trong 24h!', confirmButtonColor: '#9f273b'
+            text: 'Đã gửi yêu cầu. SORA sẽ liên hệ trong 24h!'
         });
         emit('refresh');
         emit('close');
     } catch (e) {
-        Swal.fire('Lỗi', e.response?.data?.message || 'Không thể gửi yêu cầu lúc này.', 'error');
+        soraAlert.fire('Lỗi', e.response?.data?.message || 'Không thể gửi yêu cầu lúc này.', 'error');
     }
 };
 
 const handleReorder = async () => {
-    Swal.fire({ title: 'Đang xử lý...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    soraAlert.fire({ title: 'Đang xử lý...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
     try {
         await axios.post(`${API_URL}/client/orders/${props.order.order_code}/reorder`, {}, { headers: getHeaders() });
-        Swal.fire({
+        soraAlert.fire({
             icon: 'success', title: 'Thành công', text: 'Sản phẩm đã được thêm vào Giỏ hàng!',
-            confirmButtonColor: '#9f273b', timer: 2000, showConfirmButton: false
+            timer: 2000, showConfirmButton: false
         }).then(() => {
             emit('close');
             router.push('/cart');
         });
     } catch (e) {
-        Swal.fire('Lỗi', e.response?.data?.message || 'Sản phẩm đã ngừng kinh doanh.', 'error');
+        soraAlert.fire('Lỗi', e.response?.data?.message || 'Sản phẩm đã ngừng kinh doanh.', 'error');
     }
 };
 
 const handleDownloadInvoice = async () => {
-    Swal.fire({ title: 'Đang xuất PDF...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    soraAlert.fire({ title: 'Đang xuất PDF...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
     try {
         const res = await axios.get(`${API_URL}/client/orders/${props.order.order_code}/invoice`, {
             headers: getHeaders(), responseType: 'blob'
@@ -587,7 +586,7 @@ const handleDownloadInvoice = async () => {
         document.body.removeChild(link);
         Swal.close();
     } catch (e) {
-        Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Chưa thể xuất hóa đơn lúc này.', confirmButtonColor: '#9f273b' });
+        soraAlert.fire({ icon: 'error', title: 'Lỗi', text: 'Chưa thể xuất hóa đơn lúc này.' });
     }
 };
 </script>

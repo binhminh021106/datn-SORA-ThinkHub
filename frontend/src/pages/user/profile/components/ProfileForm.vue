@@ -29,7 +29,7 @@
         </div>
         <div class="text-md-end bg-white bg-opacity-10 p-3 px-4 rounded-3 border border-white border-opacity-25" style="backdrop-filter: blur(4px);">
           <p class="mb-1 font-sans small text-uppercase opacity-75 fw-medium">Tổng chi tiêu</p>
-          <h4 class="font-serif fw-bold mb-0 text-white">{{ new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(form.accumulated_spent || 0) }}</h4>
+          <h4 class="font-oswald fw-bold mb-0 text-white">{{ new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(form.accumulated_spent || 0) }}</h4>
           <p class="mb-0 font-sans small opacity-75 mt-1"><i class="bi bi-bag-check-fill me-1"></i> {{ form.accumulated_orders || 0 }} đơn hàng thành công</p>
         </div>
       </div>
@@ -150,7 +150,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
-import Swal from 'sweetalert2';
+import { createSoraAlert } from '@/utils/soraAlertConfig';
 
 const props = defineProps({
   initialForm: {
@@ -165,9 +165,7 @@ const props = defineProps({
 
 const emit = defineEmits(['profile-updated', 'go-address-book']);
 
-const soraAlert = Swal.mixin({
-  buttonsStyling: true,
-  confirmButtonColor: '#9f273b',
+const soraAlert = createSoraAlert({
   customClass: {
     confirmButton: 'px-4 py-2 mx-2 rounded-0 shadow-sm fw-bold font-oswald tracking-widest text-uppercase'
   }

@@ -135,7 +135,7 @@ const userLevel = computed(() => {
 });
 
 const menuItems = ref([
-  { name: 'Tổng quan', path: '/admin', icon: 'bi-grid-1x2-fill', moduleCode: null },
+  { name: 'Dashboard', path: '/admin', icon: 'bi-grid-1x2-fill', moduleCode: null },
   {
     name: 'Chấm công', icon: 'bi-clock-fill', stateKey: 'attendance',
     children: [
@@ -175,7 +175,7 @@ const menuItems = ref([
       { name: 'Banner', path: '/admin/banners', moduleCode: 'admin_banners' },
       { name: 'Mã Giảm Giá', path: '/admin/coupons', moduleCode: 'admin_coupons' },
       { name: 'Email tự động', path: '/admin/email-campaigns', moduleCode: 'admin_coupons' },
-      { name: 'Chân dung SORA', path: '/admin/gallery', moduleCode: 'admin_banners' },
+      { name: 'Chân dung SORA', path: '/admin/gallery', moduleCode: 'admin_gallery' },
       { name: 'Đánh giá', path: '/admin/reviews', moduleCode: 'admin_reviews' },
       { name: 'Tin tức', path: '/admin/news', moduleCode: 'admin_news' },
       { name: 'Đối tác Affiliate', path: '/admin/affiliates', moduleCode: 'admin_affiliates' }

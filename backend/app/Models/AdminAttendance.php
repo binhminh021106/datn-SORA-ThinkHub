@@ -57,4 +57,9 @@ class AdminAttendance extends Model
     {
         return $this->belongsTo(WorkShift::class, 'work_shift_id');
     }
+
+    public function adjustments()
+    {
+        return $this->hasMany(AdminAttendanceAdjustment::class, 'attendance_id');
+    }
 }

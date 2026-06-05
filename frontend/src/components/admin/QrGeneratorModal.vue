@@ -16,14 +16,20 @@
           </div>
 
           <!-- Body -->
-          <div class="modal-body text-center p-4">
+          <div class="modal-body qr-modal-body text-center p-4">
             <p class="text-muted small fw-semibold mb-3">
               Hướng Camera về phía <span class="text-brand fw-bold">Màn hình Máy Chủ (Lễ tân)</span> hoặc tải ảnh lên để điểm danh.
             </p>
 
             <!-- Khung Camera -->
-            <div class="scanner-container mx-auto position-relative rounded-4 overflow-hidden bg-dark mb-3" style="max-width: 300px; height: 300px; box-shadow: inset 0 0 20px rgba(0,0,0,0.5);">
-              <div id="reader" width="300px"></div>
+            <div class="scanner-container mx-auto position-relative rounded-4 overflow-hidden bg-dark mb-3">
+              <div id="reader"></div>
+              <div class="qr-scan-frame" aria-hidden="true">
+                <span class="qr-scan-corner corner-top-left"></span>
+                <span class="qr-scan-corner corner-top-right"></span>
+                <span class="qr-scan-corner corner-bottom-left"></span>
+                <span class="qr-scan-corner corner-bottom-right"></span>
+              </div>
               <!-- Hiệu ứng Scanning (Chỉ hiện khi đang quét) -->
               <div v-if="isScanning" class="scan-line"></div>
               
@@ -34,8 +40,11 @@
             </div>
 
             <!-- Công cụ test (Upload / Paste) -->
-            <div class="test-controls p-3 bg-light rounded-3 border">
-              <input type="file" ref="fileInput" class="form-control form-control-sm mx-auto shadow-none" style="max-width: 250px;" accept="image/*" @change="handleFileUpload">
+            <div class="test-controls qr-upload-panel p-3 rounded-3 border">
+              <label class="small fw-bold text-dark d-block mb-2" for="qr-upload-input">
+                Tải ảnh QR hoặc paste ảnh bằng Ctrl+V
+              </label>
+              <input id="qr-upload-input" type="file" ref="fileInput" class="form-control form-control-sm mx-auto shadow-none" accept="image/*" @change="handleFileUpload">
             </div>
           </div>
         </div>
@@ -303,12 +312,129 @@ onUnmounted(() => {
 }
 
 .custom-qr-modal {
-  width: 100%;
-  max-width: 450px;
+  width: min(450px, calc(100vw - 1rem));
   max-height: calc(100vh - 2rem);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
   display: flex;
   flex-direction: column;
+}
+
+.qr-modal-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+#reader {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+#reader > * {
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+}
+
+.scanner-container {
+  width: 100%;
+  max-width: 300px;
+  aspect-ratio: 1 / 1;
+  min-height: 0;
+  position: relative;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+}
+
+.qr-scan-frame {
+  position: absolute;
+  inset: 12%;
+  z-index: 6;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.25));
+}
+
+.qr-scan-frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.qr-scan-corner {
+  position: absolute;
+  width: 38px;
+  height: 38px;
+  border-color: rgba(255, 255, 255, 0.96);
+  border-style: solid;
+}
+
+.corner-top-left {
+  top: 0;
+  left: 0;
+  border-width: 4px 0 0 4px;
+}
+
+.corner-top-right {
+  top: 0;
+  right: 0;
+  border-width: 4px 4px 0 0;
+}
+
+.corner-bottom-left {
+  bottom: 0;
+  left: 0;
+  border-width: 0 0 4px 4px;
+}
+
+.corner-bottom-right {
+  right: 0;
+  bottom: 0;
+  border-width: 0 4px 4px 0;
+}
+
+.qr-upload-panel {
+  background: #f8fffd;
+  border-color: rgba(0, 153, 129, 0.16) !important;
+}
+
+.qr-upload-panel .form-control {
+  max-width: 280px;
+  border-color: rgba(0, 153, 129, 0.2);
+}
+
+.qr-upload-panel .form-control:focus {
+  border-color: #009981;
+  box-shadow: 0 0 0 0.2rem rgba(0, 153, 129, 0.12);
+}
+
+#reader video,
+#reader canvas,
+#reader .html5-qrcode-video,
+#reader .html5-qrcode-canvas,
+#reader .html5-qrcode-root {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+@media (max-width: 575.98px) {
+  .custom-qr-overlay {
+    padding: 0.5rem;
+  }
+
+  .custom-qr-modal {
+    max-height: calc(100vh - 1rem);
+  }
+
+  .qr-modal-body {
+    padding: 1rem !important;
+  }
+
+  .scanner-container {
+    max-width: 260px;
+  }
 }
 
 /* Transitions */

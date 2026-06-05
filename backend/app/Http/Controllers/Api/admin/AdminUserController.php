@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Http\Requests\AdminStoreUserRequest;
-use App\Http\Requests\AdminUpdateUserRequest;
+use App\Http\Requests\Admin\User\AdminStoreUserRequest;
+use App\Http\Requests\Admin\User\AdminUpdateUserRequest;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;

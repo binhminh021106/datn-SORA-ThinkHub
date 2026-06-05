@@ -33,7 +33,7 @@ class AdminFaceRecognitionController extends Controller
             ->with('faceProfile')
             ->whereNull('deleted_at')
             ->orderBy('fullname')
-            ->get(['id', 'fullname', 'email', 'avatar_url', 'role_id']);
+            ->get(['id', 'fullname', 'email', 'phone', 'avatar_url', 'role_id']);
 
         return response()->json([
             'success' => true,
@@ -41,6 +41,7 @@ class AdminFaceRecognitionController extends Controller
                 'id' => $admin->id,
                 'fullname' => $admin->fullname,
                 'email' => $admin->email,
+                'phone' => $admin->phone,
                 'avatar_url' => $admin->avatar_url,
                 'role' => $admin->role,
                 'face_profile' => $admin->faceProfile ? [
@@ -98,7 +99,7 @@ class AdminFaceRecognitionController extends Controller
                         'success' => false,
                         'message' => 'Tài khoản này đã có định danh khuôn mặt. Hãy xóa hồ sơ cũ trước khi đăng ký lại.',
                         'data' => [
-                            'admin' => $targetAdmin->only(['id', 'fullname', 'email', 'avatar_url']),
+                            'admin' => $targetAdmin->only(['id', 'fullname', 'email', 'phone', 'avatar_url']),
                             'sample_count' => $existingProfile->sample_count,
                             'requires_reset' => !$this->isProfileUsable($existingProfile),
                         ],
@@ -164,7 +165,7 @@ class AdminFaceRecognitionController extends Controller
                     'success' => true,
                     'message' => 'Đã lưu định danh khuôn mặt cho ' . $targetAdmin->fullname . '.',
                     'data' => [
-                        'admin' => $targetAdmin->only(['id', 'fullname', 'email', 'avatar_url']),
+                        'admin' => $targetAdmin->only(['id', 'fullname', 'email', 'phone', 'avatar_url']),
                         'sample_count' => $profile->sample_count,
                         'registered_at' => $profile->registered_at,
                     ],
@@ -250,7 +251,7 @@ class AdminFaceRecognitionController extends Controller
                 ? 'Đã xóa hồ sơ khuôn mặt của ' . $targetAdmin->fullname . '.'
                 : 'Nhân sự này chưa có hồ sơ khuôn mặt để xóa.',
             'data' => [
-                'admin' => $targetAdmin->only(['id', 'fullname', 'email', 'avatar_url']),
+                'admin' => $targetAdmin->only(['id', 'fullname', 'email', 'phone', 'avatar_url']),
                 'deleted' => (bool) $deleted,
             ],
         ]);
@@ -540,12 +541,30 @@ class AdminFaceRecognitionController extends Controller
         return AdminAttendance::with('workShift')
             ->where('admin_id', $adminId)
             ->where('checkout_status', 'pending')
-            ->where(function ($query) use ($today, $yesterday) {
-                $query->where('attendance_date', $today)
-                    ->orWhere('attendance_date', $yesterday);
-            })
+            ->whereIn('attendance_date', [$today, $yesterday])
             ->orderByDesc('attendance_date')
-            ->first();
+            ->get()
+            ->first(function (AdminAttendance $attendance) use ($today, $yesterday) {
+                $attendanceDate = Carbon::parse($attendance->attendance_date)->format('Y-m-d');
+
+                if ($attendanceDate === $today) {
+                    return true;
+                }
+
+                return $attendanceDate === $yesterday && $this->isOvernightAttendance($attendance);
+            });
+    }
+
+    private function isOvernightAttendance(AdminAttendance $attendance): bool
+    {
+        if ($attendance->workShift?->is_overnight) {
+            return true;
+        }
+
+        $startTime = $attendance->shift_start_time ?: $attendance->workShift?->start_time;
+        $endTime = $attendance->shift_end_time ?: $attendance->workShift?->end_time;
+
+        return $startTime && $endTime && $endTime <= $startTime;
     }
 
     private function attendancePayload(array $match, array $extra = []): array
@@ -633,7 +652,7 @@ class AdminFaceRecognitionController extends Controller
         bool $includeLegacyProfiles = false
     ): array
     {
-        $profilesQuery = AdminFaceProfile::with('admin:id,fullname,email,avatar_url')
+        $profilesQuery = AdminFaceProfile::with('admin:id,fullname,email,phone,avatar_url')
             ->where('is_active', true)
             ->whereHas('admin', fn ($query) => $query->whereNull('deleted_at'));
 

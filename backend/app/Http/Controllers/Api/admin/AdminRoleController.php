@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Api\admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Role;
-use App\Http\Requests\AdminStoreRoleRequest;
+use App\Http\Requests\Admin\Role\AdminStoreRoleRequest;
 use App\Events\AdminRefresh;
-use App\Http\Requests\AdminUpdateRoleRequest;
+use App\Http\Requests\Admin\Role\AdminUpdateRoleRequest;
 use Illuminate\Support\Facades\Log;
 
 class AdminRoleController extends Controller

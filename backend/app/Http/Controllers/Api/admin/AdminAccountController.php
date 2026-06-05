@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\AdminStoreAdminRequest;
+use App\Http\Requests\Admin\AdminAccount\AdminStoreAdminRequest;
 use App\Models\Admin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;

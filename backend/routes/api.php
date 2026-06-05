@@ -198,16 +198,6 @@ Route::prefix('client')->group(function () {
     Route::get('orders/{order_code}/invoice', [App\Http\Controllers\Api\client\ClientOrderController::class, 'invoice'])
         ->name('client.orders.invoice');
 
-    // THÊM VÀO ĐÂY (trước hoặc sau các route khác đều được)
-    Route::middleware('auth:sanctum')->prefix('messages')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Api\MessageController::class, 'history']);
-        Route::post('/', [\App\Http\Controllers\Api\MessageController::class, 'store']);
-    }); // THÊM VÀO ĐÂY (trước hoặc sau các route khác đều được)
-    Route::middleware('auth:sanctum')->prefix('messages')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Api\MessageController::class, 'history']);
-        Route::post('/', [\App\Http\Controllers\Api\MessageController::class, 'store']);
-    });
-
     // CHƯƠNG TRÌNH ĐỐI TÁC (AFFILIATE)
     Route::middleware('auth:sanctum')->prefix('affiliate')->group(function () {
         Route::get('/status', [ClientAffiliateController::class, 'status']);
@@ -472,9 +462,12 @@ Route::prefix('admin')->group(function () {
             Route::controller(\App\Http\Controllers\Api\admin\AdminAttendanceController::class)->prefix('attendances')->group(function () {
                 // ĐẶT CÁC ROUTE TĨNH LÊN TRƯỚC (Tránh bị route động nuốt)
                 Route::get('/work-shifts', 'getWorkShifts');
+                Route::get('/roles', 'getRoles');
                 Route::get('/qr-token', 'generateQrToken'); // Lấy mã QR 25s
                 Route::get('/daily-status', 'dailyStatus'); // Kiosk gọi liên tục (Polling) để hiện Live Feed
                 Route::get('/monthly-summary', 'monthlySummary'); // Lấy báo cáo chấm công tháng
+                Route::get('/adjustments', 'adjustmentHistory');
+                Route::post('/adjustments', 'adjustAttendance');
 
                 // ĐẶT CÁC ROUTE ĐỘNG {id} XUỐNG DƯỚI CÙNG
                 Route::get('/history/{adminId}', 'history');

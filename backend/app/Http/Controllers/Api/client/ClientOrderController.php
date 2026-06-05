@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api\Client;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\UserStoreOrderRequest;
-use App\Http\Requests\UserUpdateOrderRequest;
+use App\Http\Requests\Client\Order\UserStoreOrderRequest;
+use App\Http\Requests\Client\Order\UserUpdateOrderRequest;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;

@@ -55,11 +55,11 @@
               <div class="col-12">
                 <label class="form-label fw-semibold">Ngày làm việc chính <span class="text-muted fw-normal small">(Click để chọn)</span></label>
                 <div class="d-flex gap-2 flex-wrap">
-                  <button type="button" v-for="(day, index) in daysOfWeek" :key="'w'+index"
+                  <button type="button" v-for="day in displayDayOptions" :key="'w'+day.label"
                           class="btn flex-fill fw-bold rounded-pill shadow-none transition-all"
-                          :class="formShift.working_days[index] ? 'btn-brand text-white' : 'btn-outline-secondary bg-light'"
-                          @click="formShift.working_days[index] = !formShift.working_days[index]">
-                    {{ day }}
+                          :class="formShift.working_days[day.index] ? 'btn-brand text-white' : 'btn-outline-secondary bg-light'"
+                          @click="formShift.working_days[day.index] = !formShift.working_days[day.index]">
+                    {{ day.label }}
                   </button>
                 </div>
                 <div class="text-danger small mt-1" v-if="errors.working_days">{{ errors.working_days[0] }}</div>
@@ -68,11 +68,11 @@
               <div class="col-12 mb-2">
                 <label class="form-label fw-semibold">Ngày cho phép Đăng ký Tăng ca (OT)</label>
                 <div class="d-flex gap-2 flex-wrap">
-                  <button type="button" v-for="(day, index) in daysOfWeek" :key="'o'+index"
+                  <button type="button" v-for="day in displayDayOptions" :key="'o'+day.label"
                           class="btn flex-fill fw-bold rounded-pill shadow-none transition-all"
-                          :class="formShift.overtime_days[index] ? 'btn-warning text-dark border-warning' : 'btn-outline-secondary bg-light'"
-                          @click="formShift.overtime_days[index] = !formShift.overtime_days[index]">
-                    {{ day }}
+                          :class="formShift.overtime_days[day.index] ? 'btn-warning text-dark border-warning' : 'btn-outline-secondary bg-light'"
+                          @click="formShift.overtime_days[day.index] = !formShift.overtime_days[day.index]">
+                    {{ day.label }}
                   </button>
                 </div>
               </div>
@@ -94,18 +94,23 @@
 
 <script setup>
 import { ref, computed, onBeforeUnmount } from 'vue';
-import axios from 'axios';
 import Swal from 'sweetalert2';
 import * as bootstrap from 'bootstrap';
-
-const API_URL = import.meta.env.VITE_API_BASE_URL;
-const token = localStorage.getItem('admin_token');
+import adminApiClient from '@/utils/adminApiClient';
 
 const emit = defineEmits(['saved']);
 const modalRef = ref(null);
 let bootstrapModalInstance = null;
 
-const daysOfWeek = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+const displayDayOptions = [
+  { label: 'T2', index: 1 },
+  { label: 'T3', index: 2 },
+  { label: 'T4', index: 3 },
+  { label: 'T5', index: 4 },
+  { label: 'T6', index: 5 },
+  { label: 'T7', index: 6 },
+  { label: 'CN', index: 0 },
+];
 const isEditing = ref(false);
 const formSubmitting = ref(false);
 const errors = ref({});
@@ -184,9 +189,9 @@ async function saveShift() {
 
   try {
     if (isEditing.value) {
-      await axios.put(`${API_URL}/admin/work-shifts/${payload.id}`, payload, { headers: { Authorization: `Bearer ${token}` } });
+      await adminApiClient.put(`/work-shifts/${payload.id}`, payload);
     } else {
-      await axios.post(`${API_URL}/admin/work-shifts`, payload, { headers: { Authorization: `Bearer ${token}` } });
+      await adminApiClient.post('/work-shifts', payload);
     }
     
     emit('saved'); // Báo cho Cha refresh Data
