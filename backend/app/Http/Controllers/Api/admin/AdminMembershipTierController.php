@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\MembershipTier;
-use App\Http\Requests\AdminStoreMembershipTierRequest;
-use App\Http\Requests\AdminUpdateMembershipTierRequest;
+use App\Http\Requests\Admin\MembershipTier\AdminStoreMembershipTierRequest;
+use App\Http\Requests\Admin\MembershipTier\AdminUpdateMembershipTierRequest;
 use Illuminate\Support\Facades\Storage;
 
 class AdminMembershipTierController extends Controller

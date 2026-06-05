@@ -114,27 +114,19 @@
                                 <input type="tel" class="form-control luxury-input" v-model="form.customer_phone" placeholder="SĐT liên hệ" :required="useNewAddress || addresses.length === 0">
                             </div>
 
-                            <div class="col-md-4">
-                                <label class="form-label font-oswald text-muted text-uppercase tracking-wide small fw-bold">Tỉnh/Thành phố <span class="text-danger">*</span></label>
-                                <select class="form-select luxury-input" v-model="selectedProvinceCode" @change="fetchDistricts" :required="useNewAddress || addresses.length === 0">
-                                    <option value="" disabled>Chọn Tỉnh/Thành</option>
-                                    <option v-for="p in provinces" :key="p.code" :value="p.code">{{ p.name }}</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label font-oswald text-muted text-uppercase tracking-wide small fw-bold">Quận/Huyện <span class="text-danger">*</span></label>
-                                <select class="form-select luxury-input" v-model="selectedDistrictCode" @change="fetchWards" :disabled="!selectedProvinceCode" :required="useNewAddress || addresses.length === 0">
-                                    <option value="" disabled>Chọn Quận/Huyện</option>
-                                    <option v-for="d in districts" :key="d.code" :value="d.code">{{ d.name }}</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label font-oswald text-muted text-uppercase tracking-wide small fw-bold">Phường/Xã <span class="text-danger">*</span></label>
-                                <select class="form-select luxury-input" v-model="selectedWardCode" :disabled="!selectedDistrictCode" :required="useNewAddress || addresses.length === 0">
-                                    <option value="" disabled>Chọn Phường/Xã</option>
-                                    <option v-for="w in wards" :key="w.code" :value="w.code">{{ w.name }}</option>
-                                </select>
-                            </div>
+                            <VietnamAddressPicker
+                                v-model:province="selectedProvinceName"
+                                v-model:district="selectedDistrictName"
+                                v-model:ward="selectedWardName"
+                                v-model:province-code="selectedProvinceCode"
+                                v-model:district-code="selectedDistrictCode"
+                                v-model:ward-code="selectedWardCode"
+                                :address-text="specificAddress"
+                                :required="useNewAddress || addresses.length === 0"
+                                input-class="luxury-input"
+                                label-class="font-oswald text-muted text-uppercase tracking-wide small fw-bold"
+                                @change="handleAddressPickerChange"
+                            />
                             <div class="col-md-12">
                                 <label class="form-label font-oswald text-muted text-uppercase tracking-wide small fw-bold">Số nhà, Tên đường <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control luxury-input" v-model="specificAddress" placeholder="VD: 123 Đường Lê Lợi" :required="useNewAddress || addresses.length === 0">
@@ -382,6 +374,7 @@ import axios from 'axios';
 import Toast from '@/utils/toastConfig';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
+import VietnamAddressPicker from '@/components/ui/VietnamAddressPicker.vue';
 
 const router = useRouter();
 
@@ -401,13 +394,13 @@ const showAddressDropdown = ref(false);
 const selectedCoupon = ref(null);
 let couponModalInstance = null;
 
-// BIẾN CHO CHỌN TỈNH THÀNH
-const provinces = ref([]);
-const districts = ref([]);
-const wards = ref([]);
 const selectedProvinceCode = ref('');
 const selectedDistrictCode = ref('');
 const selectedWardCode = ref('');
+const selectedProvinceName = ref('');
+const selectedDistrictName = ref('');
+const selectedWardName = ref('');
+const addressHasDistrictLevel = ref(true);
 const specificAddress = ref(''); 
 
 const form = ref({
@@ -443,53 +436,34 @@ const getHeaders = () => {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
 const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'http://127.0.0.1:8000/storage';
 
-const fetchProvinces = async () => {
-    try {
-        const response = await fetch('https://esgoo.net/api-tinhthanh/1/0.htm');
-        const data = await response.json();
-        if (data.error === 0) {
-            provinces.value = data.data.map(item => ({ code: item.id, name: item.full_name }));
-        }
-    } catch (error) {
-        console.error("Lỗi lấy danh sách tỉnh thành", error);
-    }
-};
-
-const fetchDistricts = async () => {
-    selectedDistrictCode.value = '';
-    selectedWardCode.value = '';
-    districts.value = [];
-    wards.value = [];
-    if (!selectedProvinceCode.value) return;
-    try {
-        const response = await fetch(`https://esgoo.net/api-tinhthanh/2/${selectedProvinceCode.value}.htm`);
-        const data = await response.json();
-        if (data.error === 0) {
-            districts.value = data.data.map(item => ({ code: item.id, name: item.full_name }));
-        }
-    } catch (error) {
-        console.error("Lỗi lấy danh sách quận huyện", error);
-    }
-};
-
-const fetchWards = async () => {
-    selectedWardCode.value = '';
-    wards.value = [];
-    if (!selectedDistrictCode.value) return;
-    try {
-        const response = await fetch(`https://esgoo.net/api-tinhthanh/3/${selectedDistrictCode.value}.htm`);
-        const data = await response.json();
-        if (data.error === 0) {
-            wards.value = data.data.map(item => ({ code: item.id, name: item.full_name }));
-        }
-    } catch (error) {
-        console.error("Lỗi lấy danh sách phường xã", error);
-    }
-};
-
 const SHOP_LAT = 12.6675;
 const SHOP_LNG = 108.0378;
-const DAKLAK_PROVINCE_CODE = '66';
+const FREE_SHIPPING_PROVINCE_CODES = ['66', '12'];
+
+const handleAddressPickerChange = ({ hasDistrictLevel }) => {
+    addressHasDistrictLevel.value = hasDistrictLevel;
+};
+
+const normalizeLocationText = (value) => String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase()
+    .trim();
+
+const isFreeShippingProvince = () => {
+    const provinceCode = String(selectedProvinceCode.value || '');
+    const provinceName = normalizeLocationText(selectedProvinceName.value);
+    return FREE_SHIPPING_PROVINCE_CODES.includes(provinceCode) || provinceName.includes('dak lak');
+};
+
+const getNewAddressParts = () => [
+    specificAddress.value?.trim(),
+    selectedWardName.value,
+    selectedDistrictName.value,
+    selectedProvinceName.value,
+].filter(Boolean);
 
 const haversineDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371;
@@ -557,6 +531,9 @@ watch(
         selectedProvinceCode,
         selectedDistrictCode,
         selectedWardCode,
+        selectedProvinceName,
+        selectedDistrictName,
+        selectedWardName,
         specificAddress,
         useNewAddress,
         () => form.value.customer_address
@@ -567,7 +544,7 @@ watch(
         shippingTimeout = setTimeout(async () => {
             shippingNote.value = 'Đang tính phí vận chuyển...';
 
-            if (selectedProvinceCode.value === '66' || selectedProvinceCode.value === '12') {
+            if ((useNewAddress.value || addresses.value.length === 0) && isFreeShippingProvince()) {
                 shippingFee.value = 0;
                 shippingNote.value = 'Miễn phí (nội tỉnh Đắk Lắk)';
                 return;
@@ -575,13 +552,7 @@ watch(
 
             let addressParts = [];
             if (useNewAddress.value || addresses.value.length === 0) {
-                if (specificAddress.value) addressParts.push(specificAddress.value.trim());
-                const wName = wards.value.find(w => w.code === selectedWardCode.value)?.name || '';
-                const dName = districts.value.find(d => d.code === selectedDistrictCode.value)?.name || '';
-                const pName = provinces.value.find(p => p.code === selectedProvinceCode.value)?.name || '';
-                if (wName) addressParts.push(wName);
-                if (dName) addressParts.push(dName);
-                if (pName) addressParts.push(pName);
+                addressParts = getNewAddressParts();
             } else {
                 addressParts = [form.value.customer_address];
             }
@@ -860,16 +831,13 @@ const submitOrder = async () => {
     }
 
     if (useNewAddress.value || addresses.value.length === 0) {
-        if (!selectedProvinceCode.value || !selectedDistrictCode.value || !selectedWardCode.value || !specificAddress.value) {
-            soraAlert.fire({ icon: 'warning', title: 'Thiếu thông tin', text: 'Vui lòng chọn đầy đủ Tỉnh/Huyện/Xã và nhập số nhà!' });
+        const isMissingDistrict = addressHasDistrictLevel.value && !selectedDistrictName.value;
+        if (!selectedProvinceName.value || isMissingDistrict || !selectedWardName.value || !specificAddress.value) {
+            soraAlert.fire({ icon: 'warning', title: 'Thiếu thông tin', text: 'Vui lòng chọn đầy đủ Tỉnh/Thành, Phường/Xã và nhập số nhà!' });
             return;
         }
-        
-        const pName = provinces.value.find(p => p.code === selectedProvinceCode.value)?.name || '';
-        const dName = districts.value.find(d => d.code === selectedDistrictCode.value)?.name || '';
-        const wName = wards.value.find(w => w.code === selectedWardCode.value)?.name || '';
 
-        form.value.customer_address = `${specificAddress.value}, ${wName}, ${dName}, ${pName}`;
+        form.value.customer_address = getNewAddressParts().join(', ');
     }
 
     const payload = {
@@ -946,7 +914,6 @@ onMounted(async () => {
     await checkDirectBuy();
     await fetchInitData(); 
     autoApplyStoredBirthdayCoupon();
-    await fetchProvinces();
     isInitializing.value = false;
     window.scrollTo({ top: 0, behavior: 'smooth' });
 });

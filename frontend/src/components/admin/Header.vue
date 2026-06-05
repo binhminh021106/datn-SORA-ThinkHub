@@ -46,7 +46,7 @@
         <li class="nav-item me-2 d-flex align-items-center" v-if="isLoggedIn && isSuperAdmin">
           <button class="btn station-qr-btn rounded-3 btn-sm fw-bold px-3 d-flex align-items-center" @click="openStation">
             <i class="bi bi-display me-2 fs-6"></i>
-            Lấy QR lễ tân
+            QR điểm danh
           </button>
         </li>
 
@@ -164,7 +164,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import { clearAdminAuthStorage, getAdminToken, getFullImage } from '@/composables/useUtilities';
-import axios from 'axios';
+import adminApiClient from '@/utils/adminApiClient';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import * as bootstrap from 'bootstrap';
 
@@ -173,8 +173,6 @@ import SoraImage from '@/components/ui/SoraImage.vue';
 import defaultAvatar from '@/assets/images/defaults/avatar1.png';
 import QrGeneratorModal from './QrGeneratorModal.vue';
 import FaceRecognitionTestModal from './FaceRecognitionTestModal.vue';
-
-const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 const router = useRouter();
 const queryClient = useQueryClient();
@@ -191,7 +189,7 @@ const showAttendanceButton = computed(() => {
 
 const attendanceActionLabel = computed(() => {
   if (attendanceState.value === 'working') return 'Chấm công: Check-out';
-  if (attendanceState.value === 'completed') return 'Đã hoàn thành';
+  if (attendanceState.value === 'completed') return 'Đã check-out ca làm';
   return 'Chấm công: Check-in';
 });
 
@@ -307,10 +305,7 @@ const isLoggedIn = computed(() => {
 const fetchAttendanceState = async () => {
   if (!isLoggedIn.value) return;
   try {
-    const token = getAdminToken();
-    const response = await axios.get(`${API_URL}/admin/attendances/status`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const response = await adminApiClient.get('/attendances/status');
     const { state, shift_assignment } = response.data;
     attendanceState.value = state;
     hasShiftAssignment.value = !!shift_assignment;
@@ -325,11 +320,7 @@ const fetchAdminProfile = async () => {
   const token = getAdminToken();
   if (!token) throw new Error('Không tìm thấy token xác thực');
   
-  const response = await axios.get(`${API_URL}/admin/profile`, {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  });
+  const response = await adminApiClient.get('/profile');
   return response.data?.data ?? response.data;
 };
 
@@ -497,10 +488,7 @@ const openFaceAttendanceModal = () => {
 
 const isCheckingStatus = ref(false);
 const fetchLatestAttendanceState = async () => {
-  const token = getAdminToken();
-  const response = await axios.get(`${API_URL}/admin/attendances/status`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+  const response = await adminApiClient.get('/attendances/status');
 
   const { state, shift_assignment } = response.data;
   attendanceState.value = state;
@@ -520,7 +508,7 @@ const handleAttendanceOption = async (method) => {
     if (state === 'completed') {
       Swal.fire('Đã hoàn thành', 'Bạn đã hoàn thành ca làm việc hôm nay rồi.', 'info');
       return;
-    } else if (state === 'hanging') {
+    } else if (false && state === 'hanging') {
       Swal.fire('Lỗi Ca Treo', 'Bạn đang có một ca làm việc chưa được chốt từ ngày trước. Vui lòng báo cáo Quản lý để xử lý trước khi điểm danh mới.', 'error');
       return;
     }

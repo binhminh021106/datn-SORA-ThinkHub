@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api\admin;
 use App\Http\Controllers\Controller;
 use App\Models\ProductVariant;
 use App\Models\Combo;
-use App\Http\Requests\AdminUpdateInventoryRequest;
+use App\Http\Requests\Admin\Inventory\AdminUpdateInventoryRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Events\InventoryUpdated;

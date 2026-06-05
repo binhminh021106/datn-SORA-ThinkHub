@@ -153,7 +153,6 @@ const admin = [
         name: 'admin-attendance-history',
         component: () => import('../pages/admin/admin-attendance/History.vue'),
         meta: {
-          moduleCode: 'admin_attendance',
           title: 'Lịch sử chấm công'
         },
       },
@@ -201,19 +200,19 @@ const admin = [
         path: 'gallery',
         name: 'admin-gallery',
         component: () => import('../pages/admin/gallery/Index.vue'),
-        meta: { moduleCode: 'admin_banners' },
+        meta: { moduleCode: 'admin_gallery' },
       },
       {
         path: 'gallery/create',
         name: 'admin-gallery-create',
         component: () => import('../pages/admin/gallery/Create.vue'),
-        meta: { moduleCode: 'admin_banners' },
+        meta: { moduleCode: 'admin_gallery' },
       },
       {
         path: 'gallery/:id/edit',
         name: 'admin-gallery-edit',
         component: () => import('../pages/admin/gallery/Edit.vue'),
-        meta: { moduleCode: 'admin_banners' },
+        meta: { moduleCode: 'admin_gallery' },
       },
 
       // ROUTE QUẢN LÝ ĐƠN HÀNG (ORDERS)

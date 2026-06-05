@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Admin;
-use App\Http\Requests\AdminStoreAdminRequest;
-use App\Http\Requests\AdminUpdateAdminRequest;
+use App\Http\Requests\Admin\AdminAccount\AdminStoreAdminRequest;
+use App\Http\Requests\Admin\AdminAccount\AdminUpdateAdminRequest;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;

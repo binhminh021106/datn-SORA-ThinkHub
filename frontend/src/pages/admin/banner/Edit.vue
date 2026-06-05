@@ -1,4 +1,5 @@
 <template>
+  <div class="banner-edit-page">
   <!-- SKELETON CHỜ KHI KHÔNG CÓ CACHE (F5 MÀN HÌNH) -->
   <div v-if="isLoading" class="container-fluid py-4">
     <div class="row mb-4"><div class="col-6"><span class="placeholder col-8 rounded" style="height: 40px;"></span></div></div>
@@ -107,6 +108,7 @@
       </div>
     </div>
   </div>
+  </div>
 </template>
 
 <script setup>
@@ -204,12 +206,12 @@ const { mutate: updateBanner, isPending: isUpdating } = useMutation({
     if (!res.ok) { const err = await res.json(); throw new Error(err.message || 'Lỗi dữ liệu'); }
     return (await res.json()).data;
   },
-  onSuccess: (updatedData) => {
-    // Ép Cache của Detail và List cập nhật bằng Data thực trả về từ Server
+  onSuccess: async (updatedData) => {
+    // Keep the detail cache current, then reload the list from the server.
     queryClient.setQueryData(['admin', 'banner', bannerId], updatedData);
-    queryClient.setQueryData(['admin', 'banners'], (oldList) => {
-      if(!oldList) return oldList;
-      return oldList.map(b => b.id == bannerId ? updatedData : b);
+    await queryClient.invalidateQueries({
+      queryKey: ['admin', 'banners'],
+      refetchType: 'all'
     });
     
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật thành công', showConfirmButton: false, timer: 1500 });

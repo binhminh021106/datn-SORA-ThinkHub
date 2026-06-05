@@ -76,26 +76,14 @@
                     <label class="form-label fw-bold text-dark border-bottom pb-2 w-100"><i class="bi bi-geo-alt-fill text-brand me-1"></i> Địa chỉ thường trú</label>
                   </div>
                   
-                  <div class="col-md-4 mb-3">
-                    <label class="form-label fw-semibold text-dark small">Tỉnh/Thành phố</label>
-                    <select class="form-select bg-white border-secondary-subtle shadow-none fw-medium" v-model="selectedCityId" @change="onCityChange">
-                      <option value="">-- Chọn Tỉnh/Thành --</option>
-                      <option v-for="p in provinces" :key="p.id" :value="p.id">{{ p.full_name }}</option>
-                    </select>
-                  </div>
-                  <div class="col-md-4 mb-3">
-                    <label class="form-label fw-semibold text-dark small">Quận/Huyện</label>
-                    <select class="form-select bg-white border-secondary-subtle shadow-none fw-medium" v-model="selectedDistrictId" @change="onDistrictChange" :disabled="!selectedCityId">
-                      <option value="">-- Chọn Quận/Huyện --</option>
-                      <option v-for="d in districts" :key="d.id" :value="d.id">{{ d.full_name }}</option>
-                    </select>
-                  </div>
-                  <div class="col-md-4 mb-3">
-                    <label class="form-label fw-semibold text-dark small">Phường/Xã</label>
-                    <select class="form-select bg-white border-secondary-subtle shadow-none fw-medium" v-model="selectedWardId" @change="onWardChange" :disabled="!selectedDistrictId">
-                      <option value="">-- Chọn Phường/Xã --</option>
-                      <option v-for="w in wards" :key="w.id" :value="w.id">{{ w.full_name }}</option>
-                    </select>
+                  <div class="col-12 mb-3">
+                    <VietnamAddressPicker
+                      v-model:province="selectedCityName"
+                      v-model:district="selectedDistrictName"
+                      v-model:ward="selectedWardName"
+                      input-class="bg-white border-secondary-subtle shadow-none fw-medium"
+                      label-class="fw-semibold text-dark small"
+                    />
                   </div>
                   <div class="col-md-12 mb-4">
                     <label class="form-label fw-semibold text-dark small">Địa chỉ cụ thể (Số nhà, đường)</label>
@@ -134,6 +122,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import defaultAvatar from '../../../../assets/images/defaults/avatar1.png';
+import VietnamAddressPicker from '@/components/ui/VietnamAddressPicker.vue';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -145,46 +134,10 @@ const selectedFile = ref(null);
 
 const form = ref({ fullname: '', email: '', password: '', phone: '', address: '', role_id: '', status: 'active' });
 
-const provinces = ref([]);
-const districts = ref([]);
-const wards = ref([]);
-const selectedCityId = ref('');
-const selectedDistrictId = ref('');
-const selectedWardId = ref('');
+const selectedCityName = ref('');
+const selectedDistrictName = ref('');
+const selectedWardName = ref('');
 const specificAddress = ref('');
-
-const fetchProvinces = async () => {
-  try {
-    const res = await fetch('https://esgoo.net/api-tinhthanh/1/0.htm');
-    const data = await res.json();
-    if(data.error === 0) provinces.value = data.data;
-  } catch(e) {}
-};
-
-const onCityChange = async () => {
-  districts.value = []; wards.value = [];
-  selectedDistrictId.value = ''; selectedWardId.value = '';
-  if (selectedCityId.value) {
-    try {
-      const res = await fetch(`https://esgoo.net/api-tinhthanh/2/${selectedCityId.value}.htm`);
-      const data = await res.json();
-      if(data.error === 0) districts.value = data.data;
-    } catch(e) {}
-  }
-};
-
-const onDistrictChange = async () => {
-  wards.value = []; selectedWardId.value = '';
-  if (selectedDistrictId.value) {
-    try {
-      const res = await fetch(`https://esgoo.net/api-tinhthanh/3/${selectedDistrictId.value}.htm`);
-      const data = await res.json();
-      if(data.error === 0) wards.value = data.data;
-    } catch(e) {}
-  }
-};
-
-const onWardChange = () => {};
 
 const fetchRoles = async () => {
   const res = await fetch(`${API_URL}/admin/roles`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` } });
@@ -203,14 +156,12 @@ const handleAvatarChange = (e) => {
 const saveStaff = async () => {
   isSaving.value = true;
 
-  let finalAddress = specificAddress.value;
-  const cityName = provinces.value.find(p => p.id === selectedCityId.value)?.full_name || '';
-  const distName = districts.value.find(d => d.id === selectedDistrictId.value)?.full_name || '';
-  const wardName = wards.value.find(w => w.id === selectedWardId.value)?.full_name || '';
-
-  if (cityName || distName || wardName) {
-    finalAddress = `${specificAddress.value ? specificAddress.value + ', ' : ''}${wardName ? wardName + ', ' : ''}${distName ? distName + ', ' : ''}${cityName}`;
-  }
+  const finalAddress = [
+    specificAddress.value,
+    selectedWardName.value,
+    selectedDistrictName.value,
+    selectedCityName.value,
+  ].filter(Boolean).join(', ');
   form.value.address = finalAddress.replace(/(^, )|(,$)/g, '').trim();
 
   const formData = new FormData();
@@ -238,7 +189,6 @@ const saveStaff = async () => {
 
 onMounted(() => {
   fetchRoles();
-  fetchProvinces();
 });
 </script>
 

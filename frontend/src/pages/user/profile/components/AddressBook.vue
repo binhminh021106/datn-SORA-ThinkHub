@@ -73,29 +73,24 @@
         </div>
 
         <div class="row g-4 mb-4">
-          <div class="col-md-4">
-            <label class="form-label text-secondary small fw-medium">Tỉnh / Thành phố <span class="text-danger">*</span></label>
-            <select class="form-select custom-input bg-white" :class="{'is-invalid': errs.city}" v-model="addrForm.city" @change="onCityChange(); validateField('city')" required>
-              <option value="" disabled>-- Chọn Tỉnh/TP --</option>
-              <option v-for="p in provincesData" :key="p.Id" :value="p.Name">{{ p.Name }}</option>
-            </select>
-            <div v-if="errs.city" class="invalid-feedback">{{ errs.city }}</div>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label text-secondary small fw-medium">Quận / Huyện <span class="text-danger">*</span></label>
-            <select class="form-select custom-input bg-white" :class="{'is-invalid': errs.district}" v-model="addrForm.district" @change="onDistrictChange(); validateField('district')" :disabled="!addrForm.city" required>
-              <option value="" disabled>-- Chọn Quận/Huyện --</option>
-              <option v-for="d in districtsData" :key="d.Id" :value="d.Name">{{ d.Name }}</option>
-            </select>
-            <div v-if="errs.district" class="invalid-feedback">{{ errs.district }}</div>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label text-secondary small fw-medium">Phường / Xã <span class="text-danger">*</span></label>
-            <select class="form-select custom-input bg-white" :class="{'is-invalid': errs.ward}" v-model="addrForm.ward" @change="validateField('ward')" :disabled="!addrForm.district" required>
-              <option value="" disabled>-- Chọn Phường/Xã --</option>
-              <option v-for="w in wardsData" :key="w.Id" :value="w.Name">{{ w.Name }}</option>
-            </select>
-            <div v-if="errs.ward" class="invalid-feedback">{{ errs.ward }}</div>
+          <div class="col-12">
+            <VietnamAddressPicker
+              ref="addressPickerRef"
+              v-model:province="addrForm.city"
+              v-model:district="addrForm.district"
+              v-model:ward="addrForm.ward"
+              :address-text="addrForm.shipping_address"
+              :required="true"
+              input-class="custom-input bg-white"
+              label-class="text-secondary small fw-medium"
+              :invalid-province="Boolean(errs.city)"
+              :invalid-district="Boolean(errs.district)"
+              :invalid-ward="Boolean(errs.ward)"
+              @change="handleAddressPickerChange"
+            />
+            <div v-if="errs.city || errs.district || errs.ward" class="invalid-feedback d-block mt-2">
+              {{ errs.city || errs.district || errs.ward }}
+            </div>
           </div>
         </div>
 
@@ -133,9 +128,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue';
+import { ref, onMounted } from 'vue';
 import axios from 'axios';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
+import VietnamAddressPicker from '@/components/ui/VietnamAddressPicker.vue';
 
 const props = defineProps({
   userName: { type: String, default: '' },
@@ -185,10 +181,9 @@ const isEditing = ref(false);
 const isSaving = ref(false);
 const isLocating = ref(false);
 const mapUrl = ref('');
+const addressPickerRef = ref(null);
 
-const provincesData = ref([]);
-const districtsData = ref([]);
-const wardsData = ref([]);
+const addressHasDistrictLevel = ref(true);
 
 const addrForm = ref({
   id: null, customer_name: '', customer_phone: '',
@@ -200,15 +195,11 @@ const errs = ref({
   shipping_address: '', city: '', district: '', ward: ''
 });
 
-// === FETCH ===
-const fetchProvinces = async () => {
-  try {
-    const res = await fetch('https://raw.githubusercontent.com/kenzouno1/DiaGioiHanhChinhVN/master/data.json');
-    if (!res.ok) throw new Error('Network');
-    provincesData.value = await res.json();
-  } catch (e) {
-    console.error('Lỗi lấy dữ liệu hành chính:', e);
-  }
+const handleAddressPickerChange = ({ hasDistrictLevel }) => {
+  addressHasDistrictLevel.value = hasDistrictLevel;
+  validateField('city');
+  validateField('district');
+  validateField('ward');
 };
 
 const fetchAddresses = async () => {
@@ -225,29 +216,6 @@ const fetchAddresses = async () => {
   }
 };
 
-// === DROPDOWN LOGIC ===
-const onCityChange = () => {
-  addrForm.value.district = '';
-  addrForm.value.ward = '';
-  updateDistricts();
-  wardsData.value = [];
-};
-
-const onDistrictChange = () => {
-  addrForm.value.ward = '';
-  updateWards();
-};
-
-const updateDistricts = () => {
-  const prov = provincesData.value.find(p => p.Name === addrForm.value.city);
-  districtsData.value = prov ? prov.Districts : [];
-};
-
-const updateWards = () => {
-  const dist = districtsData.value.find(d => d.Name === addrForm.value.district);
-  wardsData.value = dist ? dist.Wards : [];
-};
-
 // === FORM OPEN / CLOSE ===
 const openAddForm = () => {
   isEditing.value = false;
@@ -258,8 +226,7 @@ const openAddForm = () => {
     shipping_address: '', city: '', district: '', ward: '',
     is_default: addresses.value.length === 0
   };
-  districtsData.value = [];
-  wardsData.value = [];
+  addressHasDistrictLevel.value = true;
   mapUrl.value = '';
   Object.keys(errs.value).forEach(k => errs.value[k] = '');
   showAddressForm.value = true;
@@ -268,32 +235,12 @@ const openAddForm = () => {
 const openEditForm = async (addr) => {
   isEditing.value = true;
   showAddressForm.value = true;
-  
-  await nextTick();
-  
+
   addrForm.value = { 
     ...addr, 
-    is_default: addr.is_default === 1 || addr.is_default === true,
-    city: '',
-    district: '',
-    ward: ''
+    is_default: addr.is_default === 1 || addr.is_default === true
   };
-  
-  const matchedProvince = findBestMatch(provincesData.value, addr.city);
-  addrForm.value.city = matchedProvince ? matchedProvince.Name : (addr.city || '');
-  
-  updateDistricts();
-  await nextTick();
-  
-  const matchedDistrict = findBestMatch(districtsData.value, addr.district);
-  addrForm.value.district = matchedDistrict ? matchedDistrict.Name : (addr.district || '');
-  
-  updateWards();
-  await nextTick();
-  
-  const matchedWard = findBestMatch(wardsData.value, addr.ward);
-  addrForm.value.ward = matchedWard ? matchedWard.Name : (addr.ward || '');
-  
+  addressHasDistrictLevel.value = true;
   mapUrl.value = '';
   Object.keys(errs.value).forEach(k => errs.value[k] = '');
 };
@@ -328,39 +275,8 @@ const validateField = (field) => {
     else errs.value.shipping_address = '';
   }
   if (field === 'city') errs.value.city = v.city ? '' : 'Vui lòng chọn Tỉnh/TP';
-  if (field === 'district') errs.value.district = v.district ? '' : 'Vui lòng chọn Quận/Huyện';
+  if (field === 'district') errs.value.district = (!addressHasDistrictLevel.value || v.district) ? '' : 'Vui lòng chọn Quận/Huyện';
   if (field === 'ward') errs.value.ward = v.ward ? '' : 'Vui lòng chọn Phường/Xã';
-};
-
-// === GEO LOCATION — AUTO FILL DROPDOWN ===
-const normalizeStr = (s) => (s || '').normalize('NFC').trim();
-
-const findBestMatch = (list, target) => {
-  if (!target || !list || list.length === 0) return null;
-  const t = normalizeStr(target).toLowerCase();
-  
-  // Exact match
-  let found = list.find(item => normalizeStr(item.Name).toLowerCase() === t);
-  if (found) return found;
-  
-  const stripPrefix = (s) => s.replace(/^(thành phố|tỉnh|quận|huyện|thị xã|thị trấn|phường|xã)\s+/i, '').trim();
-  const tStripped = stripPrefix(t);
-  
-  // Exact match without prefix
-  found = list.find(item => stripPrefix(normalizeStr(item.Name).toLowerCase()) === tStripped);
-  if (found) return found;
-
-  // Target includes item name or vice versa
-  found = list.find(item => t.includes(normalizeStr(item.Name).toLowerCase()));
-  if (found) return found;
-  found = list.find(item => normalizeStr(item.Name).toLowerCase().includes(t));
-  if (found) return found;
-
-  // Partial word match without prefix
-  found = list.find(item => stripPrefix(normalizeStr(item.Name).toLowerCase()).includes(tStripped));
-  if (found) return found;
-  found = list.find(item => tStripped.includes(stripPrefix(normalizeStr(item.Name).toLowerCase())));
-  return found || null;
 };
 
 const getCurrentLocation = () => {
@@ -393,51 +309,33 @@ const getCurrentLocation = () => {
 
       mapUrl.value = `https://maps.google.com/maps?q=${lat},${lon}&hl=vi&z=15&output=embed`;
 
-      const findInDisplayName = (list, dName) => {
-        if (!dName) return null;
-        const parts = dName.toLowerCase().split(',').map(s => s.trim());
-        for (const item of list) {
-          const nameL = item.Name.toLowerCase();
-          const stripped = nameL.replace(/^(thành phố|tỉnh|quận|huyện|thị xã|thị trấn|phường|xã)\s+/i, '').trim();
-          if (parts.some(p => {
-             const pStripped = p.replace(/^(thành phố|tỉnh|quận|huyện|thị xã|thị trấn|phường|xã)\s+/i, '').trim();
-             return p === nameL || p === stripped || pStripped === stripped;
-          })) {
-             return item;
-          }
-        }
-        return null;
-      };
-
-      let matchedWard = null;
-
       const result = geoRes.data.results[0];
-      const fullAddr = result.formatted_address;
-      let matchedProvince = findInDisplayName(provincesData.value, fullAddr);
-      if (matchedProvince) {
-        addrForm.value.city = matchedProvince.Name;
-        districtsData.value = matchedProvince.Districts || [];
-        await nextTick();
-        let matchedDistrict = findInDisplayName(districtsData.value, fullAddr);
-        if (matchedDistrict) {
-          addrForm.value.district = matchedDistrict.Name;
-          wardsData.value = matchedDistrict.Wards || [];
-          await nextTick();
-          matchedWard = findInDisplayName(wardsData.value, fullAddr);
-          if (matchedWard) {
-            addrForm.value.ward = matchedWard.Name;
-          }
-        }
-      }
+      const fullAddr = result.formatted_address || result.description || '';
+      const compound = result.compound || result.address || {};
       addrForm.value.shipping_address = fullAddr;
+
+      const provinceName = compound.province || compound.city || addrForm.value.city;
+      const districtName = compound.district || addrForm.value.district;
+      const wardName = compound.commune || compound.ward || addrForm.value.ward;
+      const resolvedAddress = await addressPickerRef.value?.resolveAddress({
+        province: provinceName,
+        district: districtName,
+        ward: wardName,
+        addressText: fullAddr,
+      });
+
+      addrForm.value.city = resolvedAddress?.province?.name || provinceName || addrForm.value.city;
+      addrForm.value.district = resolvedAddress?.district?.name || '';
+      addrForm.value.ward = resolvedAddress?.ward?.name || wardName || addrForm.value.ward;
+      addressHasDistrictLevel.value = Boolean(resolvedAddress?.hasDistrictLevel);
 
       validateField('shipping_address');
       validateField('city');
       validateField('district');
       validateField('ward');
       
-      if (!matchedWard) {
-        showToast('Đã lấy vị trí, nhưng bản đồ khu vực này thiếu dữ liệu Phường/Xã. Vui lòng chọn thủ công!', 'warning');
+      if (!addrForm.value.city || !addrForm.value.ward) {
+        showToast('Đã lấy vị trí, vui lòng kiểm tra lại Tỉnh/Thành và Phường/Xã trước khi lưu.', 'warning');
       } else {
         showToast('Đã lấy vị trí hiện tại và tự động điền địa chỉ', 'success');
       }
@@ -522,7 +420,6 @@ const setDefault = async (id) => {
 };
 
 onMounted(() => {
-  fetchProvinces();
   fetchAddresses();
 });
 </script>

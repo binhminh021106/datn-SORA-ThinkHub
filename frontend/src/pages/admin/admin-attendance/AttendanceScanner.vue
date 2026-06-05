@@ -110,10 +110,9 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import axios from 'axios';
 import QrcodeVue from 'qrcode.vue'; 
+import adminApiClient from '@/utils/adminApiClient';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL;
 const readAdminStorage = (key) => localStorage.getItem(key) || sessionStorage.getItem(key);
 const token = readAdminStorage('admin_token') || readAdminStorage('adminToken');
 
@@ -165,9 +164,7 @@ const fetchQrToken = async () => {
   }
   
   try {
-    const response = await axios.get(`${API_URL}/admin/attendances/qr-token`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const response = await adminApiClient.get('/attendances/qr-token');
     
     if (response.data.success) {
       qrToken.value = response.data.data.qr_token;
@@ -252,9 +249,7 @@ const fetchLiveStatus = async () => {
   if (!token || !canAccess.value) return;
 
   try {
-    const res = await axios.get(`${API_URL}/admin/attendances/daily-status`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const res = await adminApiClient.get('/attendances/daily-status');
     
     if (res.data.success) {
       const currentAdmins = res.data.data;

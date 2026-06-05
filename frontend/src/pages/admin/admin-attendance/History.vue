@@ -25,6 +25,32 @@
         </div>
       </div>
 
+      <!-- THÔNG TIN NGƯỜI DÙNG HIỆN TẠI -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="card border-0 shadow-sm rounded-4 bg-light">
+            <div class="card-body p-3 p-md-4">
+              <div class="d-flex flex-wrap align-items-center gap-4">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="bg-brand rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style="width: 50px; height: 50px; font-size: 1.5rem;">
+                    {{ (currentUserInfo.fullname || 'User').charAt(0).toUpperCase() }}
+                  </div>
+                  <div>
+                    <h5 class="mb-1 fw-bold text-dark">{{ currentUserInfo.fullname || 'Chưa có tên' }}</h5>
+                    <small class="text-muted d-block"><i class="bi bi-envelope me-1"></i>{{ currentUserInfo.email || 'Chưa có email' }}</small>
+                    <small class="text-muted d-block"><i class="bi bi-telephone me-1"></i>{{ currentUserInfo.phone || 'Chưa có sdt' }}</small>
+                  </div>
+                </div>
+                <div class="ms-auto text-end d-none d-md-block">
+                  <small class="text-muted d-block">Lịch làm việc của</small>
+                  <span class="badge bg-brand text-white px-3 py-2">{{ currentUserInfo.fullname || 'User' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- BẢNG ĐIỀU HƯỚNG CHÚ THÍCH & KPI CÁ NHÂN -->
       <div class="row g-3 mb-4">
         <div class="col-xl-3 col-md-6" v-for="kpi in kpiSummaries" :key="kpi.title">
@@ -149,6 +175,8 @@
                         Về sớm {{ formatDuration(getRealEarlyLeave(day.data)) }}
                       </span>
                       <span v-if="day.data.checkout_status === 'forgotten'" class="badge bg-danger shadow-sm">Quên Checkout</span>
+                      <span v-if="getDisplayCheckoutStatus(day) === 'miss_checkout'" class="badge bg-danger shadow-sm">Miss checkout</span>
+                      <span v-else-if="getDisplayCheckoutStatus(day) === 'pending'" class="badge bg-info text-white shadow-sm">Đang làm</span>
                       
                       <!-- Chỉ hiển thị Tăng ca nếu không về sớm -->
                       <span v-if="!isStaffWorkingDay(day.date, day) && getRealEarlyLeave(day.data) <= 0" class="badge bg-dark text-white shadow-sm">Tăng ca</span>
@@ -186,11 +214,26 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue';
-import axios from 'axios';
 import { useQuery } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
+import { getAdminToken } from '@/composables/useUtilities';
+import adminApiClient from '@/utils/adminApiClient';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+function getVietnamDateString(date = new Date()) {
+  // FIXED: Dùng cách giống Index.vue - extract từng field trực tiếp theo VN timezone
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === 'year')?.value;
+  const month = parts.find((part) => part.type === 'month')?.value;
+  const day = parts.find((part) => part.type === 'day')?.value;
+
+  return `${year}-${month}-${day}`;
+}
 
 // Cấu hình Toast 
 const Toast = Swal.mixin({
@@ -212,7 +255,8 @@ const isFirstVisit = ref(sessionStorage.getItem('visited_history_page') !== 'tru
 const currentDate = ref(new Date());
 const currentMonth = computed(() => currentDate.value.getMonth() + 1);
 const currentYear = computed(() => currentDate.value.getFullYear());
-const isLoggedIn = computed(() => !!localStorage.getItem('admin_token'));
+const adminToken = computed(() => getAdminToken());
+const isLoggedIn = computed(() => !!adminToken.value);
 
 // Tính khoảng ngày đầu - cuối tháng để gọi API
 const dateRange = computed(() => {
@@ -229,14 +273,11 @@ const dateRange = computed(() => {
 });
 
 // Lấy thông tin cơ bản của user hiện tại
-const { data: currentUserData } = useQuery({
-  queryKey: ['currentUserProfile'],
+const { data: currentUserData, isLoading: isCurrentUserLoading } = useQuery({
+  queryKey: ['currentUserProfile', adminToken],
   queryFn: async () => {
     try {
-      const token = localStorage.getItem('admin_token');
-      const response = await axios.get(`${API_URL}/admin/me`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await adminApiClient.get('/me');
       return response.data.success ? response.data.data : response.data;
     } catch (e) {
       return null;
@@ -249,40 +290,57 @@ const { data: currentUserData } = useQuery({
 // Xóa phần fetch toàn bộ `assignmentsData` không cần thiết.
 // Các assignments cắt qua tháng sẽ được trả về kèm theo trong API điểm danh.
 
+// Lấy thông tin user hiện tại để hiển thị
+const currentUserInfo = computed(() => {
+  const user = currentUserData.value;
+  if (!user) return { fullname: '', email: '', phone: '' };
+  
+  // Xử lý các trường hợp khác nhau của response từ API
+  const userData = user.admin || user.data || user;
+  
+  return {
+    fullname: userData?.fullname || userData?.name || 'User',
+    email: userData?.email || 'Chưa cập nhật',
+    phone: userData?.phone || 'Chưa cập nhật'
+  };
+});
+
 // Lấy cấu hình ngày nghỉ toàn hệ thống của doanh nghiệp (Làm Fallback cuối cùng)
+const currentUserId = computed(() => {
+  const user = currentUserData.value?.admin || currentUserData.value?.data || currentUserData.value;
+  return user?.id || null;
+});
+
 const { data: workDaySettings } = useQuery({
   queryKey: ['globalWorkDaySettings'],
   queryFn: async () => {
     try {
-      const token = localStorage.getItem('admin_token');
-      const response = await axios.get(`${API_URL}/admin/settings/work-days`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await adminApiClient.get('/settings/work-days');
       return response.data.success ? response.data.data : null;
     } catch (e) {
       return null;
     }
   },
-  enabled: isLoggedIn,
+  enabled: false,
   staleTime: 1000 * 60 * 10,
 });
 
 // 2. Fetch API qua TanStack Query điểm danh trong tháng
-const { data: attendanceResponse, isLoading, refetch } = useQuery({
-  queryKey: ['attendanceMonthHistory', currentMonth, currentYear],
+const { data: attendanceResponse, isLoading: isAttendanceLoading, refetch } = useQuery({
+  queryKey: ['attendanceMonthHistory', adminToken, currentUserId, currentMonth, currentYear],
   queryFn: async () => {
     try {
-      const token = localStorage.getItem('admin_token');
+      const token = adminToken.value;
       if(!token) throw new Error("Chưa đăng nhập");
 
-      const response = await axios.get(`${API_URL}/admin/attendances`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await adminApiClient.get(`/attendances/history/${currentUserId.value}`, {
         params: {
           start_date: dateRange.value.start,
           end_date: dateRange.value.end,
           per_page: 100
         }
       });
+
       return response.data;
     } catch (error) {
       Toast.fire({
@@ -292,11 +350,13 @@ const { data: attendanceResponse, isLoading, refetch } = useQuery({
       throw error;
     }
   },
-  enabled: isLoggedIn,
-  staleTime: 1000 * 60 * 5, 
-  keepPreviousData: true,
-  refetchOnWindowFocus: true, 
+  enabled: computed(() => isLoggedIn.value && !!currentUserId.value),
+  staleTime: 0,
+  gcTime: 1000 * 60 * 5,
+  refetchOnWindowFocus: false,
 });
+
+const isLoading = computed(() => isCurrentUserLoading.value || isAttendanceLoading.value);
 
 // Lắng nghe khi tải xong lần đầu thì tắt Shimmer và lưu Session
 watch(isLoading, (newVal) => {
@@ -308,19 +368,32 @@ watch(isLoading, (newVal) => {
 
 // Lấy mảng assignments cắt qua tháng từ Response
 const historyAssignments = computed(() => {
-  return attendanceResponse.value?.data?.assignments || [];
+  return attendanceResponse.value?.assignments || attendanceResponse.value?.data?.assignments || [];
 });
 
 // Map dữ liệu thành dạng Dictionary Key-Value với Key là YYYY-MM-DD
 const attendanceMap = computed(() => {
   const map = {};
   const items = attendanceResponse.value?.data?.data || [];
+
   items.forEach(item => {
-    const dateStr = item.attendance_date.split('T')[0];
+    const dateField = item.attendance_date || item.date;
+    const dateStr = getAttendanceDateKey(dateField);
+
     map[dateStr] = item;
   });
+
   return map;
 });
+
+const getAttendanceDateOnly = (value) => String(value || '').split('T')[0].split(' ')[0];
+
+const getAttendanceDateKey = (value) => {
+  const raw = String(value || '');
+  if (!raw) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  return getVietnamDateString(new Date(raw));
+};
 
 // 5. Helpers logic nhận diện ngày nghỉ/đi làm chính xác 100%
 const getWeekdayIndex = (dateStr) => {
@@ -334,22 +407,15 @@ const getWeekdayIndex = (dateStr) => {
 // Chuẩn hóa hàm kiểm tra ngày hiện tại và quá khứ 
 const isToday = (dateStr) => {
   if (!dateStr) return false;
-  // FIX: Tránh timezone shift bằng cách bóc tách năm, tháng, ngày
-  const [year, month, day] = dateStr.split('-');
-  const targetDate = new Date(year, month - 1, day);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return targetDate.getTime() === today.getTime();
+  return getAttendanceDateOnly(dateStr) === getVietnamDateString();
 };
 
 const isPastOrToday = (dateStr) => {
   if (!dateStr) return false;
-  // FIX: Tránh timezone shift bằng cách bóc tách năm, tháng, ngày
-  const [year, month, day] = dateStr.split('-');
-  const targetDate = new Date(year, month - 1, day);
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
-  return targetDate <= today;
+  const attendanceDateOnly = getAttendanceDateOnly(dateStr);
+  const todayVN = getVietnamDateString();
+  
+  return attendanceDateOnly <= todayVN;
 };
 
 // Ưu tiên lấy ca làm việc được lưu trong lịch sử điểm danh của ngày đó (nếu có)
@@ -360,17 +426,20 @@ const getDayWorkShift = (day) => {
   }
   
   if (day.date && historyAssignments.value.length > 0) {
-    const dateObj = new Date(day.date);
+    const [dayYear, dayMonth, dayNumber] = day.date.split('-').map(Number);
+    const dateObj = new Date(dayYear, dayMonth - 1, dayNumber);
     dateObj.setHours(0,0,0,0);
     
     // Tìm kiếm trong mảng assignments
     const matchingAssignment = historyAssignments.value.find(a => {
-      const from = new Date(a.valid_from);
+      const [fromYear, fromMonth, fromDay] = getAttendanceDateKey(a.valid_from).split('-').map(Number);
+      const from = new Date(fromYear, fromMonth - 1, fromDay);
       from.setHours(0,0,0,0);
       
       let to = null;
       if (a.valid_to) {
-        to = new Date(a.valid_to);
+        const [toYear, toMonth, toDay] = getAttendanceDateKey(a.valid_to).split('-').map(Number);
+        to = new Date(toYear, toMonth - 1, toDay);
         to.setHours(23,59,59,999);
       }
       
@@ -528,11 +597,13 @@ const calendarGrid = computed(() => {
   // Những ngày của tháng này
   for (let i = 1; i <= daysInMonth; i++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+    const attendanceData = attendanceMap.value[dateStr] || null;
+    
     days.push({
       dayNumber: i,
       isCurrentMonth: true,
       date: dateStr,
-      data: attendanceMap.value[dateStr] || null
+      data: attendanceData
     });
   }
 
@@ -584,6 +655,52 @@ const getAttendanceCellBadgeClass = (day) => {
       : 'd-none';
   }
 };
+
+const getDisplayCheckoutStatus = (day) => {
+  if (!day?.data) return null;
+  if (shouldShowMissCheckout(day)) return 'miss_checkout';
+  return day.data.checkout_status;
+};
+
+const shouldShowMissCheckout = (day) => {
+  const attendance = day?.data;
+  if (!attendance || attendance.checkout_status !== 'pending') return false;
+  if (!attendance.clock_in || attendance.clock_out) return false;
+
+  const dateOnly = getAttendanceDateOnly(day.date || attendance.attendance_date);
+  if (dateOnly >= getVietnamDateString()) return false;
+
+  const shiftEnd = getAttendanceShiftEndDate(day);
+  if (!shiftEnd) return true;
+
+  return new Date() > shiftEnd;
+};
+
+const getAttendanceShiftEndDate = (day) => {
+  const attendance = day?.data;
+  const dateOnly = getAttendanceDateOnly(day?.date || attendance?.attendance_date);
+  const shift = getDayWorkShift(day);
+  const startTime = attendance?.shift_start_time || shift?.start_time;
+  const endTime = attendance?.shift_end_time || shift?.end_time;
+
+  if (!dateOnly || !endTime) return null;
+
+  const shiftEnd = new Date(`${dateOnly}T${normalizeTimeForDate(endTime)}`);
+  if (Number.isNaN(shiftEnd.getTime())) return null;
+
+  if (startTime && normalizeTimeForCompare(endTime) <= normalizeTimeForCompare(startTime)) {
+    shiftEnd.setDate(shiftEnd.getDate() + 1);
+  }
+
+  return shiftEnd;
+};
+
+const normalizeTimeForDate = (time) => {
+  const value = String(time || '');
+  return value.length === 5 ? `${value}:00` : value;
+};
+
+const normalizeTimeForCompare = (time) => String(time || '').substring(0, 5);
 
 const formatTime = (timeString) => {
   if (!timeString) return '--:--';

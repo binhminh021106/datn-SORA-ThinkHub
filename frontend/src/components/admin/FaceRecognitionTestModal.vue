@@ -11,11 +11,37 @@
             <button type="button" class="btn-close btn-close-white" aria-label="Close" @click="closeModal"></button>
           </div>
 
-          <div class="face-test-body p-4">
-            <div class="row g-4 h-100">
-              <div class="col-lg-7 d-flex flex-column">
-                <div class="camera-panel position-relative rounded-4 overflow-hidden bg-dark">
-                  <video ref="videoRef" class="camera-video" autoplay muted playsinline></video>
+          <div class="face-test-body">
+            <div class="face-workspace">
+              <section class="face-camera-card">
+                <div class="camera-toolbar">
+                  <div class="d-flex align-items-center gap-2 min-w-0">
+                    <span class="camera-live-dot" :class="{ 'is-active': isCameraActive }"></span>
+                    <div class="min-w-0">
+                      <div class="fw-bold text-dark text-truncate">Khung camera định danh</div>
+                      <div class="small text-muted text-truncate">{{ helperText }}</div>
+                    </div>
+                  </div>
+                  <span class="camera-status-pill" :class="{ 'is-active': isReady }">
+                    {{ isReady ? 'Sẵn sàng quét' : 'Đang chuẩn bị' }}
+                  </span>
+                </div>
+
+                <div class="camera-panel position-relative overflow-hidden" :style="cameraPanelStyle">
+                  <video
+                    ref="videoRef"
+                    class="camera-video"
+                    autoplay
+                    muted
+                    playsinline
+                    @loadedmetadata="syncVideoAspect"
+                  ></video>
+                  <div class="scan-frame" aria-hidden="true">
+                    <span class="scan-corner corner-top-left"></span>
+                    <span class="scan-corner corner-top-right"></span>
+                    <span class="scan-corner corner-bottom-left"></span>
+                    <span class="scan-corner corner-bottom-right"></span>
+                  </div>
 
                   <div v-if="!isCameraActive" class="camera-empty text-white text-center px-4">
                     <i class="bi bi-person-bounding-box display-4 d-block mb-3"></i>
@@ -29,17 +55,37 @@
                   </div>
                 </div>
 
-                <div class="camera-result-area mt-3">
-                  <div v-if="matchedAdmin || nearestAdmin" class="recognition-summary rounded-4 p-3 mb-3" :class="matchedAdmin ? 'is-match' : 'is-near'">
+                <div class="message-stack">
+                  <div class="alert mb-0" :class="resultClass" v-if="resultMessage">
+                    {{ resultMessage }}
+                  </div>
+
+                  <div class="alert alert-danger mb-0" v-if="errorMessage">
+                    {{ errorMessage }}
+                  </div>
+                </div>
+
+                <div class="scan-feedback-grid">
+                  <div v-if="matchedAdmin || nearestAdmin" class="recognition-summary" :class="matchedAdmin ? 'is-match' : 'is-near'">
                     <div class="d-flex align-items-start gap-3">
                       <div class="summary-icon rounded-circle d-flex align-items-center justify-content-center">
                         <i class="bi" :class="matchedAdmin ? 'bi-check-lg' : 'bi-exclamation-lg'"></i>
                       </div>
-                      <div class="min-w-0">
+                      <div class="min-w-0 flex-grow-1">
                         <div class="small text-uppercase fw-bold opacity-75 mb-1">
                           {{ matchedAdmin ? 'Đã định danh' : 'Chưa đủ ngưỡng định danh' }}
                         </div>
                         <h4 class="fw-bold mb-1 text-truncate">{{ displayAdminName(matchedAdmin || nearestAdmin) }}</h4>
+                        <div class="identity-detail small d-flex flex-column gap-1 mb-2">
+                          <span class="d-flex align-items-center gap-2 min-w-0">
+                            <i class="bi bi-envelope"></i>
+                            <span class="text-truncate">{{ displayAdminEmail(matchedAdmin || nearestAdmin) }}</span>
+                          </span>
+                          <span class="d-flex align-items-center gap-2 min-w-0">
+                            <i class="bi bi-telephone"></i>
+                            <span class="text-truncate">{{ displayAdminPhone(matchedAdmin || nearestAdmin) }}</span>
+                          </span>
+                        </div>
                         <div class="small">
                           Khoảng cách: <strong>{{ formattedDistance }}</strong>
                           <span class="opacity-75 ms-1">ngưỡng {{ THRESHOLD }}</span>
@@ -48,118 +94,158 @@
                     </div>
                   </div>
 
-                  <div class="alert mb-3" :class="resultClass" v-if="resultMessage">
-                    {{ resultMessage }}
-                  </div>
-
-                  <div class="alert alert-danger mb-3" v-if="errorMessage">
-                    {{ errorMessage }}
-                  </div>
-
-                  <div v-if="isManageMode && candidates.length" class="candidate-list rounded-4 border p-3">
-                    <div class="fw-bold text-dark mb-2">Top khoảng cách gần nhất</div>
-                    <div v-for="candidate in candidates" :key="candidate.admin?.id || candidate.distance" class="d-flex justify-content-between gap-3 small py-1">
-                      <span class="text-truncate">{{ displayAdminName(candidate.admin) }}</span>
-                      <strong>{{ Number(candidate.distance).toFixed(4) }}</strong>
+                  <div class="activity-card">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                      <div class="fw-bold text-dark">Nhật ký xử lý</div>
+                      <span class="small text-muted">{{ formatDate(new Date()) }}</span>
+                    </div>
+                    <div class="activity-list">
+                      <div class="activity-row">
+                        <span class="activity-dot" :class="{ 'is-success': isCameraActive }"></span>
+                        <div>
+                          <div class="fw-semibold">Camera</div>
+                          <small class="text-muted">{{ isCameraActive ? 'Đang nhận hình ảnh trực tiếp.' : 'Chưa bật hoặc chưa được cấp quyền.' }}</small>
+                        </div>
+                      </div>
+                      <div class="activity-row">
+                        <span class="activity-dot" :class="{ 'is-success': !isLoadingModels, 'is-warning': isLoadingModels }"></span>
+                        <div>
+                          <div class="fw-semibold">Face model</div>
+                          <small class="text-muted">{{ isLoadingModels ? 'Đang tải model nhận diện.' : 'Model đã sẵn sàng.' }}</small>
+                        </div>
+                      </div>
+                      <div class="activity-row">
+                        <span class="activity-dot" :class="{ 'is-warning': isProcessing, 'is-success': resultMessage && !errorMessage, 'is-danger': errorMessage }"></span>
+                        <div class="min-w-0">
+                          <div class="fw-semibold">Kết quả gần nhất</div>
+                          <small class="text-muted d-block text-truncate">{{ errorMessage || resultMessage || 'Chưa có lượt quét nào trong phiên này.' }}</small>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div class="col-lg-5 d-flex flex-column min-h-0">
-                <div class="face-result-panel d-flex flex-column min-h-0">
-                  <template v-if="isManageMode">
+              </section>
+
+              <aside class="face-control-card">
+                <template v-if="isManageMode">
+                  <div class="control-section">
                     <label class="form-label fw-bold text-dark">Chọn nhân sự để quản lý định danh</label>
-                    <select class="form-select mb-3" v-model="selectedAdminId" @change="fetchProfile">
+                    <select class="form-select" v-model="selectedAdminId" @change="fetchProfile">
                       <option disabled value="">Chọn tài khoản admin/nhân sự</option>
                       <option v-for="admin in admins" :key="admin.id" :value="admin.id">
                         {{ admin.fullname || admin.email }} - {{ faceProfileStatus(admin.face_profile) }}
                       </option>
                     </select>
-
-                    <div class="profile-card rounded-4 border p-3 mb-3 flex-shrink-0">
-                      <div class="d-flex align-items-center justify-content-between mb-2">
-                        <span class="fw-bold text-dark">Hồ sơ khuôn mặt đang chọn</span>
-                        <span class="badge" :class="profileBadgeClass">
-                          {{ profileStatusLabel }}
-                        </span>
-                      </div>
-                      <div class="small text-muted">
-                        Nhân sự: <strong class="text-dark">{{ selectedAdminLabel }}</strong>
-                      </div>
-                      <div class="small text-muted">
-                        Định danh đã lưu: <strong class="text-dark">{{ profile.sample_count || 0 }}/1</strong>
-                      </div>
-                      <div v-if="profile.requires_reset" class="small text-danger fw-semibold mt-2">
-                        Hồ sơ cũ có nhiều mẫu và cần được xóa trước khi đăng ký lại.
-                      </div>
-                      <div v-if="profile.last_verified_at" class="small text-muted mt-1">
-                        Lần đối chiếu gần nhất: {{ formatDate(profile.last_verified_at) }}
-                      </div>
-                    </div>
-                  </template>
-
-                  <template v-else>
-                    <div class="profile-card attendance-card rounded-4 border p-3 mb-3 flex-shrink-0">
-                      <div class="d-flex align-items-start gap-3">
-                        <div class="summary-icon rounded-circle d-flex align-items-center justify-content-center">
-                          <i class="bi bi-person-check"></i>
-                        </div>
-                        <div>
-                          <div class="fw-bold text-dark mb-1">Chấm công bằng khuôn mặt</div>
-                          <div class="small text-muted">
-                            Camera sẽ định danh nhân sự từ hồ sơ đã đăng ký và ghi nhận vào ca làm hợp lệ.
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="attendance-guidance rounded-4 border p-3 mb-3">
-                      <div class="d-flex gap-2 small text-muted mb-2">
-                        <i class="bi bi-check2-circle text-brand"></i>
-                        <span>Check-in được ghi nhận ngay sau khi định danh thành công.</span>
-                      </div>
-                      <div class="d-flex gap-2 small text-muted mb-2">
-                        <i class="bi bi-shield-check text-brand"></i>
-                        <span>Check-out sẽ hỏi xác nhận tan ca trước khi lưu.</span>
-                      </div>
-                      <div class="d-flex gap-2 small text-muted">
-                        <i class="bi bi-calendar2-check text-brand"></i>
-                        <span>Không tạo bản ghi nếu nhân sự chưa có ca làm hợp lệ.</span>
-                      </div>
-                    </div>
-                  </template>
-
-                  <div class="face-scroll-area">
-                    <p class="small text-muted mb-0">
-                      {{ helperText }}
-                    </p>
                   </div>
 
-                  <div class="face-action-bar d-grid gap-2 mt-3">
-                    <button class="btn btn-outline-secondary rounded-3 fw-semibold" @click="startCamera" :disabled="isLoadingModels || isProcessing">
+                  <div class="profile-card">
+                    <div class="d-flex align-items-center justify-content-between mb-2 gap-3">
+                      <span class="fw-bold text-dark">Hồ sơ khuôn mặt</span>
+                      <span class="badge" :class="profileBadgeClass">
+                        {{ profileStatusLabel }}
+                      </span>
+                    </div>
+                    <div class="small text-muted">
+                      Nhân sự: <strong class="text-dark">{{ selectedAdminLabel }}</strong>
+                    </div>
+                    <div class="small text-muted">
+                      Định danh đã lưu: <strong class="text-dark">{{ profile.sample_count || 0 }}/1</strong>
+                    </div>
+                    <div v-if="profile.requires_reset" class="small text-danger fw-semibold mt-2">
+                      Hồ sơ cũ có nhiều mẫu và cần được xóa trước khi đăng ký lại.
+                    </div>
+                    <div v-if="profile.last_verified_at" class="small text-muted mt-1">
+                      Lần đối chiếu gần nhất: {{ formatDate(profile.last_verified_at) }}
+                    </div>
+                  </div>
+                </template>
+
+                <template v-else>
+                  <div class="profile-card attendance-card">
+                    <div class="d-flex align-items-start gap-3">
+                      <div class="summary-icon rounded-circle d-flex align-items-center justify-content-center">
+                        <i class="bi bi-person-check"></i>
+                      </div>
+                      <div>
+                        <div class="fw-bold text-dark mb-1">Chấm công bằng khuôn mặt</div>
+                        <div class="small text-muted">
+                          Camera sẽ định danh nhân sự từ hồ sơ đã đăng ký và ghi nhận vào ca làm hợp lệ.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="attendance-guidance">
+                    <div class="d-flex gap-2 small text-muted mb-2">
+                      <i class="bi bi-check2-circle text-brand"></i>
+                      <span>Check-in được ghi nhận ngay sau khi định danh thành công.</span>
+                    </div>
+                    <div class="d-flex gap-2 small text-muted mb-2">
+                      <i class="bi bi-shield-check text-brand"></i>
+                      <span>Check-out sẽ hỏi xác nhận tan ca trước khi lưu.</span>
+                    </div>
+                    <div class="d-flex gap-2 small text-muted">
+                      <i class="bi bi-calendar2-check text-brand"></i>
+                      <span>Không tạo bản ghi nếu nhân sự chưa có ca làm hợp lệ.</span>
+                    </div>
+                  </div>
+                </template>
+
+                <div class="face-action-panel">
+                  <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                    <div>
+                      <div class="fw-bold text-dark">Thao tác nhanh</div>
+                      <div class="small text-muted">Bật camera rồi thực hiện quét hoặc ghi mẫu.</div>
+                    </div>
+                    <span class="camera-status-pill" :class="{ 'is-active': isReady }">
+                      {{ isReady ? 'Online' : 'Offline' }}
+                    </span>
+                  </div>
+
+                  <div class="face-action-bar">
+                    <button class="btn btn-outline-secondary fw-semibold" @click="startCamera" :disabled="isLoadingModels || isProcessing">
                       <i class="bi bi-camera-video me-2"></i>
                       Bật camera
                     </button>
-                    <button v-if="isManageMode" class="btn btn-brand rounded-3 fw-bold text-white" @click="registerFace" :disabled="!canRegister">
+                    <button
+                      v-if="isAttendanceMode"
+                      class="btn fw-bold"
+                      :class="isAutoScanEnabled ? 'btn-outline-danger' : 'btn-outline-brand'"
+                      @click="toggleAutoScan"
+                      :disabled="!isCameraActive || isLoadingModels"
+                    >
+                      <i class="bi me-2" :class="isAutoScanEnabled ? 'bi-pause-circle' : 'bi-radar'"></i>
+                      {{ isAutoScanEnabled ? 'Dừng tự quét' : 'Tự động quét' }}
+                    </button>
+                    <button v-if="isManageMode" class="btn btn-brand fw-bold text-white" @click="registerFace" :disabled="!canRegister">
                       <i class="bi bi-database-add me-2"></i>
-                      Đăng ký định danh khuôn mặt
+                      Đăng ký
                     </button>
-                    <button v-if="isManageMode" class="btn btn-outline-danger rounded-3 fw-bold" @click="resetFaceProfile" :disabled="!canResetProfile">
-                      <i class="bi bi-trash3 me-2"></i>
-                      Xóa hồ sơ khuôn mặt
-                    </button>
-                    <button v-if="isManageMode" class="btn btn-outline-brand rounded-3 fw-bold" @click="verifyFace" :disabled="!isReady">
+                    <button v-if="isManageMode" class="btn btn-outline-brand fw-bold" @click="verifyFace" :disabled="!isReady">
                       <i class="bi bi-search me-2"></i>
-                      Đối chiếu định danh
+                      Đối chiếu
                     </button>
-                    <button v-else class="btn btn-brand rounded-3 fw-bold text-white" @click="attendanceByFace()" :disabled="!isReady">
+                    <button v-if="isManageMode" class="btn btn-outline-danger fw-bold" @click="resetFaceProfile" :disabled="!canResetProfile">
+                      <i class="bi bi-trash3 me-2"></i>
+                      Xóa hồ sơ
+                    </button>
+                    <button v-else class="btn btn-brand fw-bold text-white primary-scan-action" @click="attendanceByFace()" :disabled="!isReady">
                       <i class="bi bi-person-check me-2"></i>
-                      Quét mặt để chấm công
+                      Quét chấm công
                     </button>
                   </div>
                 </div>
-              </div>
+
+                <div v-if="isManageMode && candidates.length" class="candidate-list">
+                  <div class="fw-bold text-dark mb-2">Đối chiếu gần nhất</div>
+                  <div v-for="candidate in candidates" :key="candidate.admin?.id || candidate.distance" class="candidate-row">
+                    <span class="text-truncate">{{ displayAdminName(candidate.admin) }}</span>
+                    <strong>{{ Number(candidate.distance).toFixed(4) }}</strong>
+                  </div>
+                </div>
+
+              </aside>
             </div>
           </div>
         </div>
@@ -184,6 +270,7 @@ const isProcessing = ref(false);
 const isCameraActive = ref(false);
 const videoRef = ref(null);
 const streamRef = ref(null);
+const cameraAspectRatio = ref('4 / 3');
 const admins = ref([]);
 const selectedAdminId = ref('');
 const profile = ref({ has_profile: false, sample_count: 0, requires_reset: false });
@@ -195,14 +282,19 @@ const matchedAdmin = ref(null);
 const nearestAdmin = ref(null);
 const candidates = ref([]);
 const lastDistance = ref(null);
+const isAutoScanEnabled = ref(false);
 
 let modelLoadPromise = null;
 let faceApiModule = null;
+let autoScanTimer = null;
 
 const emit = defineEmits(['attendance-success']);
 const isManageMode = computed(() => modalMode.value === 'manage');
 const isAttendanceMode = computed(() => modalMode.value === 'attendance');
 const isReady = computed(() => isCameraActive.value && !isLoadingModels.value && !isProcessing.value);
+const cameraPanelStyle = computed(() => ({
+  aspectRatio: cameraAspectRatio.value,
+}));
 const canRegister = computed(() => isReady.value && !!selectedAdminId.value && !profile.value?.has_profile);
 const canResetProfile = computed(() => !!selectedAdminId.value && !!profile.value?.has_profile && !isProcessing.value);
 const selectedAdmin = computed(() => admins.value.find((admin) => String(admin.id) === String(selectedAdminId.value)));
@@ -237,11 +329,12 @@ const modalSubtitle = computed(() => (
 const helperText = computed(() => (
   isAttendanceMode.value
     ? 'Đưa khuôn mặt vào khung hình, giữ camera ổn định và bấm quét để chấm công.'
-    : 'Mỗi tài khoản chỉ lưu một định danh khuôn mặt. Muốn thay đổi cần xóa hồ sơ cũ trước khi đăng ký lại.'
+    : 'Mỗi tài khoản chỉ lưu một định danh. Muốn thay đổi cần xóa định danh cũ.'
 ));
 
 const openModal = async (mode = 'manage') => {
   modalMode.value = mode;
+  stopAutoScan();
   isVisible.value = true;
   clearMessages();
   await nextTick();
@@ -252,6 +345,7 @@ const openModal = async (mode = 'manage') => {
 };
 
 const closeModal = () => {
+  stopAutoScan();
   stopCamera();
   isVisible.value = false;
 };
@@ -328,6 +422,7 @@ const startCamera = async () => {
 
     if (streamRef.value) {
       isCameraActive.value = true;
+      syncVideoAspect();
       return;
     }
 
@@ -340,6 +435,7 @@ const startCamera = async () => {
     if (videoRef.value) {
       videoRef.value.srcObject = stream;
       await videoRef.value.play();
+      syncVideoAspect();
     }
     isCameraActive.value = true;
   } catch (error) {
@@ -348,7 +444,19 @@ const startCamera = async () => {
   }
 };
 
+const syncVideoAspect = () => {
+  const video = videoRef.value;
+  if (!video?.videoWidth || !video?.videoHeight) {
+    cameraAspectRatio.value = '4 / 3';
+    return;
+  }
+
+  cameraAspectRatio.value = `${video.videoWidth} / ${video.videoHeight}`;
+};
+
 const stopCamera = () => {
+  stopAutoScan();
+
   if (streamRef.value) {
     streamRef.value.getTracks().forEach((track) => track.stop());
     streamRef.value = null;
@@ -359,6 +467,36 @@ const stopCamera = () => {
   }
 
   isCameraActive.value = false;
+  cameraAspectRatio.value = '4 / 3';
+};
+
+const toggleAutoScan = () => {
+  if (isAutoScanEnabled.value) {
+    stopAutoScan();
+    return;
+  }
+
+  startAutoScan();
+};
+
+const startAutoScan = () => {
+  if (!isAttendanceMode.value || !isCameraActive.value || autoScanTimer) return;
+
+  isAutoScanEnabled.value = true;
+  autoScanTimer = window.setInterval(async () => {
+    if (!isVisible.value || !isAttendanceMode.value || !isReady.value || Swal.isVisible()) return;
+
+    await attendanceByFace(false, { source: 'auto' });
+  }, 3500);
+};
+
+const stopAutoScan = () => {
+  if (autoScanTimer) {
+    window.clearInterval(autoScanTimer);
+    autoScanTimer = null;
+  }
+
+  isAutoScanEnabled.value = false;
 };
 
 const getDescriptor = async () => {
@@ -413,11 +551,18 @@ const verifyFace = async () => {
     applyRecognitionData(data);
     resultType.value = data.is_matched ? 'success' : 'warning';
     resultMessage.value = response.data?.message || 'Đã quét thử khuôn mặt.';
+    if (data.is_matched && data.matched_admin) {
+      await showRecognitionAlert(data.matched_admin, {
+        title: 'Định danh thành công',
+        message: resultMessage.value,
+        distance: data.distance,
+      });
+    }
     await fetchAdmins();
   });
 };
 
-const attendanceByFace = async (confirmCheckout = false) => {
+const attendanceByFace = async (confirmCheckout = false, options = {}) => {
   await runFaceAction(async () => {
     const descriptor = await getDescriptor();
     const response = await apiClient.post('/admin/face-recognition/attendance', {
@@ -430,12 +575,13 @@ const attendanceByFace = async (confirmCheckout = false) => {
     applyRecognitionData(data);
 
     if (data.requires_confirmation) {
+      stopAutoScan();
       resultType.value = 'warning';
       resultMessage.value = response.data?.message || 'Cần xác nhận tan ca.';
 
       const result = await Swal.fire({
         title: 'Xác nhận tan ca?',
-        text: `Bạn có chắc muốn tan ca cho ${displayAdminName(data.matched_admin)} không?`,
+        html: identityConfirmHtml(data.matched_admin, 'Bạn có chắc muốn tan ca cho nhân sự này không?'),
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#dc3545',
@@ -454,6 +600,11 @@ const attendanceByFace = async (confirmCheckout = false) => {
         applyRecognitionData(confirmedData);
         resultType.value = 'success';
         resultMessage.value = confirmedResponse.data?.message || 'Đã check-out bằng khuôn mặt.';
+        await showRecognitionAlert(confirmedData.matched_admin || data.matched_admin, {
+          title: 'Check-out thành công',
+          message: resultMessage.value,
+          distance: confirmedData.distance ?? data.distance,
+        });
         emit('attendance-success');
         if (isManageMode.value) {
           await fetchAdmins();
@@ -466,6 +617,12 @@ const attendanceByFace = async (confirmCheckout = false) => {
     resultMessage.value = response.data?.message || 'Đã xử lý chấm công bằng khuôn mặt.';
 
     if (response.data?.success && data.action) {
+      stopAutoScan();
+      await showRecognitionAlert(data.matched_admin, {
+        title: data.action === 'check_out' ? 'Check-out thành công' : 'Check-in thành công',
+        message: resultMessage.value,
+        distance: data.distance,
+      });
       emit('attendance-success');
     }
 
@@ -536,6 +693,83 @@ const displayAdminName = (admin) => {
   return admin.fullname || admin.email || `Admin #${admin.id}`;
 };
 
+const displayAdminEmail = (admin) => admin?.email || 'Chưa có email';
+
+const displayAdminPhone = (admin) => admin?.phone || 'Chưa có số điện thoại';
+
+const escapeHtml = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#039;');
+
+const identityConfirmHtml = (admin, message) => `
+  <div class="text-start">
+    <p class="mb-3 text-center">${escapeHtml(message)}</p>
+    <div class="rounded-3 border bg-light p-3">
+      <div class="fw-bold fs-5 text-dark mb-2">${escapeHtml(displayAdminName(admin))}</div>
+      <div class="small text-muted mb-1">
+        <i class="bi bi-envelope me-2"></i>${escapeHtml(displayAdminEmail(admin))}
+      </div>
+      <div class="small text-muted">
+        <i class="bi bi-telephone me-2"></i>${escapeHtml(displayAdminPhone(admin))}
+      </div>
+      <div class="small text-muted mt-1">
+        <i class="bi bi-clock me-2"></i>${escapeHtml(formatDate(new Date()))}
+      </div>
+    </div>
+  </div>
+`;
+
+const recognitionAlertHtml = (admin, options = {}) => `
+  <div class="face-alert-result text-start">
+    <div class="face-alert-card">
+      <div class="face-alert-avatar">
+        <i class="bi bi-person-check"></i>
+      </div>
+      <div class="min-w-0">
+        <div class="text-muted small mb-1">Xin chào</div>
+        <div class="fw-bold fs-4 text-dark mb-2">${escapeHtml(displayAdminName(admin))}</div>
+        <div class="face-alert-line">
+          <i class="bi bi-envelope"></i>
+          <span>${escapeHtml(displayAdminEmail(admin))}</span>
+        </div>
+        <div class="face-alert-line">
+          <i class="bi bi-telephone"></i>
+          <span>${escapeHtml(displayAdminPhone(admin))}</span>
+        </div>
+        <div class="face-alert-line">
+          <i class="bi bi-clock"></i>
+          <span>${escapeHtml(formatDate(new Date()))}</span>
+        </div>
+        ${options.distance !== undefined && options.distance !== null ? `
+          <div class="face-alert-line">
+            <i class="bi bi-bullseye"></i>
+            <span>Khoảng cách ${escapeHtml(Number(options.distance).toFixed(4))} / ngưỡng ${escapeHtml(THRESHOLD)}</span>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+    ${options.message ? `<div class="face-alert-note">${escapeHtml(options.message)}</div>` : ''}
+  </div>
+`;
+
+const showRecognitionAlert = async (admin, options = {}) => {
+  if (!admin) return;
+
+  await Swal.fire({
+    icon: 'success',
+    title: options.title || 'Định danh thành công',
+    html: recognitionAlertHtml(admin, options),
+    confirmButtonText: 'Đã rõ',
+    confirmButtonColor: '#009981',
+    customClass: {
+      popup: 'face-alert-popup',
+    },
+  });
+};
+
 const formatDate = (value) => {
   if (!value) return '';
   return new Date(value).toLocaleString('vi-VN');
@@ -562,9 +796,63 @@ onUnmounted(() => {
   z-index: 3005 !important;
 }
 
+:global(.face-alert-popup) {
+  border-radius: 1.25rem !important;
+  padding: 1.5rem !important;
+}
+
+:global(.face-alert-result) {
+  color: #343a40;
+}
+
+:global(.face-alert-card) {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(0, 153, 129, 0.18);
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #e8f8f4 0%, #fbfffe 100%);
+}
+
+:global(.face-alert-avatar) {
+  width: 54px;
+  height: 54px;
+  flex: 0 0 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: #009981;
+  border-radius: 999px;
+  font-size: 1.5rem;
+  box-shadow: 0 10px 24px rgba(0, 153, 129, 0.2);
+}
+
+:global(.face-alert-line) {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #42635d;
+  font-size: 0.95rem;
+  margin-top: 0.35rem;
+}
+
+:global(.face-alert-line i) {
+  color: #009981;
+}
+
+:global(.face-alert-note) {
+  margin-top: 0.85rem;
+  padding: 0.75rem 0.9rem;
+  color: #006b5b;
+  background: rgba(0, 153, 129, 0.08);
+  border-radius: 0.85rem;
+  font-size: 0.95rem;
+}
+
 .face-test-modal {
-  width: min(1080px, 100%);
-  height: min(820px, calc(100vh - 2rem));
+  width: min(1180px, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
   display: flex;
   flex-direction: column;
 }
@@ -575,7 +863,11 @@ onUnmounted(() => {
 
 .face-test-body {
   flex: 1 1 auto;
-  overflow: hidden;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1.25rem;
+  background: #f4f8f7;
 }
 
 .min-h-0 {
@@ -611,9 +903,86 @@ onUnmounted(() => {
   border-color: #009981;
 }
 
+.face-workspace {
+  display: grid;
+  grid-template-columns: minmax(420px, 650px) minmax(330px, 390px);
+  gap: 1rem;
+  justify-content: center;
+  min-height: 0;
+  width: min(100%, 1060px);
+  margin: 0 auto;
+}
+
+.face-camera-card,
+.face-control-card,
+.activity-card {
+  border: 1px solid rgba(0, 153, 129, 0.14);
+  background: #fff;
+  border-radius: 1.25rem;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+}
+
+.face-camera-card {
+  min-width: 0;
+  padding: 1rem;
+}
+
+.face-control-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+  padding: 1rem;
+}
+
+.camera-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.camera-live-dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex: 0 0 0.75rem;
+  border-radius: 999px;
+  background: #adb5bd;
+  box-shadow: 0 0 0 4px rgba(173, 181, 189, 0.16);
+}
+
+.camera-live-dot.is-active {
+  background: #009981;
+  box-shadow: 0 0 0 4px rgba(0, 153, 129, 0.14);
+}
+
+.camera-status-pill {
+  flex: 0 0 auto;
+  color: #6c757d;
+  background: #f1f3f5;
+  border: 1px solid #e9ecef;
+  border-radius: 999px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.camera-status-pill.is-active {
+  color: #006b5b;
+  background: #e4f8f3;
+  border-color: rgba(0, 153, 129, 0.22);
+}
+
 .camera-panel {
-  height: min(430px, calc(100vh - 360px));
-  min-height: 300px;
+  aspect-ratio: 4 / 3;
+  width: min(100%, 620px);
+  min-height: 0;
+  margin: 0 auto;
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.12), transparent 28%),
+    #0f1418;
 }
 
 .camera-video {
@@ -622,6 +991,53 @@ onUnmounted(() => {
   display: block;
   object-fit: cover;
   transform: scaleX(-1);
+}
+
+.scan-frame {
+  position: absolute;
+  inset: 8%;
+  z-index: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.28));
+}
+
+.scan-frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.scan-corner {
+  position: absolute;
+  width: clamp(38px, 8vw, 62px);
+  height: clamp(38px, 8vw, 62px);
+  border-color: rgba(255, 255, 255, 0.95);
+  border-style: solid;
+}
+
+.corner-top-left {
+  top: 0;
+  left: 0;
+  border-width: 5px 0 0 5px;
+}
+
+.corner-top-right {
+  top: 0;
+  right: 0;
+  border-width: 5px 5px 0 0;
+}
+
+.corner-bottom-left {
+  bottom: 0;
+  left: 0;
+  border-width: 0 0 5px 5px;
+}
+
+.corner-bottom-right {
+  right: 0;
+  bottom: 0;
+  border-width: 0 5px 5px 0;
 }
 
 .camera-empty,
@@ -639,33 +1055,13 @@ onUnmounted(() => {
   z-index: 2;
 }
 
-.face-result-panel {
-  height: 100%;
-}
-
-.camera-result-area {
-  min-height: 0;
-  overflow-y: auto;
-  padding-right: 0.25rem;
-}
-
-.face-scroll-area {
-  min-height: 0;
-  overflow-y: auto;
-  padding-right: 0.25rem;
-}
-
-.face-action-bar {
-  flex: 0 0 auto;
-  padding-top: 0.75rem;
-  border-top: 1px solid rgba(0, 153, 129, 0.14);
-  background: #fff;
-}
-
 .profile-card,
 .candidate-list,
 .attendance-guidance {
   background: #f8fffd;
+  border: 1px solid rgba(0, 153, 129, 0.14);
+  border-radius: 1rem;
+  padding: 1rem;
 }
 
 .attendance-card {
@@ -675,8 +1071,10 @@ onUnmounted(() => {
 .recognition-summary {
   color: #063f34;
   border: 1px solid rgba(0, 153, 129, 0.25);
+  border-radius: 1rem;
   background: linear-gradient(135deg, #dff8f1 0%, #f6fffc 100%);
   box-shadow: 0 10px 24px rgba(0, 153, 129, 0.12);
+  padding: 1rem;
 }
 
 .recognition-summary.is-near {
@@ -699,8 +1097,115 @@ onUnmounted(() => {
   background: #f59f00;
 }
 
+.identity-detail {
+  color: rgba(6, 63, 52, 0.78);
+}
+
+.recognition-summary.is-near .identity-detail {
+  color: rgba(95, 63, 0, 0.78);
+}
+
 .min-w-0 {
   min-width: 0;
+}
+
+.scan-feedback-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.9fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.activity-card {
+  padding: 1rem;
+}
+
+.activity-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.activity-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: start;
+  font-size: 0.9rem;
+}
+
+.activity-dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  margin-top: 0.38rem;
+  border-radius: 999px;
+  background: #adb5bd;
+}
+
+.activity-dot.is-success {
+  background: #009981;
+  box-shadow: 0 0 0 4px rgba(0, 153, 129, 0.12);
+}
+
+.activity-dot.is-warning {
+  background: #f59f00;
+  box-shadow: 0 0 0 4px rgba(245, 159, 0, 0.12);
+}
+
+.activity-dot.is-danger {
+  background: #dc3545;
+  box-shadow: 0 0 0 4px rgba(220, 53, 69, 0.12);
+}
+
+.message-stack {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.face-action-panel {
+  border: 1px solid rgba(0, 153, 129, 0.16);
+  border-radius: 1rem;
+  padding: 1rem;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+}
+
+.candidate-list {
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.candidate-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.45rem 0;
+  border-top: 1px solid rgba(0, 153, 129, 0.1);
+  font-size: 0.9rem;
+}
+
+.candidate-row:first-of-type {
+  border-top: 0;
+}
+
+.face-action-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.face-action-bar .btn {
+  min-height: 44px;
+  border-radius: 0.8rem;
+}
+
+.face-action-bar .btn:only-child {
+  grid-column: 1 / -1;
+}
+
+.face-action-bar .primary-scan-action {
+  grid-column: 1 / -1;
 }
 
 .face-fade-enter-active,
@@ -715,20 +1220,19 @@ onUnmounted(() => {
 
 @media (max-width: 991.98px) {
   .face-test-modal {
-    height: calc(100vh - 1rem);
+    max-height: calc(100vh - 1rem);
   }
 
   .face-test-body {
     overflow-y: auto;
   }
 
-  .camera-panel {
-    height: 300px;
-    min-height: 300px;
+  .face-workspace {
+    grid-template-columns: 1fr;
   }
 
-  .face-result-panel {
-    height: auto;
+  .camera-panel {
+    max-height: none;
   }
 }
 
@@ -747,9 +1251,27 @@ onUnmounted(() => {
     padding-right: 1rem !important;
   }
 
+  .face-test-body {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+  }
+
+  .camera-toolbar,
+  .scan-feedback-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .camera-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .camera-panel {
-    height: 240px;
-    min-height: 240px;
+    border-radius: 0.85rem;
+  }
+
+  .face-action-bar {
+    grid-template-columns: 1fr;
   }
 }
 </style>

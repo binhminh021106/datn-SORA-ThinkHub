@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api\admin;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\AdminStoreBannerRequest;
-use App\Http\Requests\AdminUpdateBannerRequest;
+use App\Http\Requests\Admin\Banner\AdminStoreBannerRequest;
+use App\Http\Requests\Admin\Banner\AdminUpdateBannerRequest;
 use App\Models\Banner;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;

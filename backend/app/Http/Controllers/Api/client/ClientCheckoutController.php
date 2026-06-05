@@ -14,7 +14,7 @@ use App\Models\Combo;
 use App\Models\Admin;
 use App\Models\TierServiceUsage;
 use App\Models\MembershipTier;
-use App\Http\Requests\UserCheckoutRequest;
+use App\Http\Requests\Client\Checkout\UserCheckoutRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;

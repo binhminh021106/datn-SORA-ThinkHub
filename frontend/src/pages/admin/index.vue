@@ -18,10 +18,10 @@
     </div>
 
     <!-- Nội dung Dashboard -->
-    <div v-else class="dashboard-wrapper min-vh-100 p-4">
+    <div v-else class="dashboard-wrapper min-vh-100 p-3 p-xl-4">
       
       <!-- Tiêu đề trang -->
-      <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-5 pb-2">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-1">
         <div class="mb-3 mb-md-0 d-flex align-items-center gap-3">
           <div>
             <h1 class="h3 fw-bolder text-dark mb-2 tracking-tight">Bảng điều khiển</h1>
@@ -38,10 +38,10 @@
       </div>
 
       <!-- Hàng 1: Các thẻ thống kê tổng quan -->
-      <div class="row g-4 mb-5">
+      <div class="row g-3 g-xl-4 mb-4">
         <div class="col-12 col-md-6 col-xl-3">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4">
-            <div class="card-body p-4 d-flex flex-column">
+            <div class="card-body p-3 p-xxl-4 d-flex flex-column">
               <div class="d-flex align-items-center justify-content-between mb-3">
                 <p class="text-muted fw-bold font-size-sm mb-0 text-uppercase letter-spacing-1 text-truncate pe-2">Tổng Doanh Thu</p>
                 <div class="icon-circle bg-brand-soft text-brand flex-shrink-0">
@@ -65,7 +65,7 @@
 
         <div class="col-12 col-md-6 col-xl-3">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4">
-            <div class="card-body p-4 d-flex flex-column">
+            <div class="card-body p-3 p-xxl-4 d-flex flex-column">
               <div class="d-flex align-items-center justify-content-between mb-3">
                 <p class="text-muted fw-bold font-size-sm mb-0 text-uppercase letter-spacing-1 text-truncate pe-2">Đơn hàng mới</p>
                 <div class="icon-circle bg-info-soft text-info flex-shrink-0">
@@ -89,7 +89,7 @@
 
         <div class="col-12 col-md-6 col-xl-3">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4">
-            <div class="card-body p-4 d-flex flex-column">
+            <div class="card-body p-3 p-xxl-4 d-flex flex-column">
               <div class="d-flex align-items-center justify-content-between mb-3">
                 <p class="text-muted fw-bold font-size-sm mb-0 text-uppercase letter-spacing-1 text-truncate pe-2">Tổng Tồn Kho</p>
                 <div class="icon-circle bg-warning-soft text-warning flex-shrink-0">
@@ -111,7 +111,7 @@
 
         <div class="col-12 col-md-6 col-xl-3">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4">
-            <div class="card-body p-4 d-flex flex-column">
+            <div class="card-body p-3 p-xxl-4 d-flex flex-column">
               <div class="d-flex align-items-center justify-content-between mb-3">
                 <p class="text-muted fw-bold font-size-sm mb-0 text-uppercase letter-spacing-1 text-truncate pe-2">Khách hàng</p>
                 <div class="icon-circle bg-danger-soft text-danger flex-shrink-0">
@@ -135,10 +135,10 @@
       </div>
 
       <!-- Hàng 2: Biểu đồ Doanh thu & Phương thức -->
-      <div class="row g-4 mb-5">
+      <div class="row g-3 g-xl-4 mb-4">
         <div class="col-12 col-xl-8">
           <div class="card custom-card border-0 shadow-sm rounded-4 h-100">
-            <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4 d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+            <div class="card-header bg-transparent border-0 pt-3 pb-0 px-3 px-xxl-4 d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
               <div>
                 <h5 class="fw-bold text-dark mb-0">Thống kê doanh thu</h5>
                 <span class="text-muted font-size-xs">Dữ liệu doanh thu thực tế từ luồng đơn hàng được kiểm duyệt</span>
@@ -169,7 +169,7 @@
                 </button>
               </div>
             </div>
-            <div class="card-body px-4 pb-4 pt-4">
+            <div class="card-body p-3 p-xxl-4">
               <div style="height: 350px; width: 100%;">
                 <canvas id="revenueChart" ref="chartCanvas"></canvas>
               </div>
@@ -179,11 +179,11 @@
 
         <div class="col-12 col-xl-4">
           <div class="card custom-card border-0 shadow-sm rounded-4 h-100">
-            <div class="card-header bg-transparent border-bottom pt-4 pb-2 px-4">
+            <div class="card-header bg-transparent border-bottom pt-3 pb-2 px-3 px-xxl-4">
               <h5 class="fw-bold mb-0 text-dark">Phương thức thanh toán</h5>
               <span class="text-muted font-size-xs">Tỷ lệ thanh toán trong kỳ được lọc</span>
             </div>
-            <div class="card-body d-flex flex-column align-items-center justify-content-center p-4">
+            <div class="card-body d-flex flex-column align-items-center justify-content-center p-3 p-xxl-4">
               <div style="height: 220px; width: 100%; max-width: 220px;" class="mb-4 position-relative">
                 <canvas id="paymentMethodChart"></canvas>
               </div>
@@ -212,10 +212,10 @@
       </div>
 
       <!-- Hàng 3: Danh sách Giao dịch & Sản phẩm -->
-      <div class="row g-4 mb-5">
+      <div class="row g-3 g-xl-4 mb-4">
         <div class="col-12 col-xl-8">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4">
-            <div class="card-header bg-transparent border-bottom pt-4 pb-3 px-4 d-flex justify-content-between align-items-center">
+            <div class="card-header bg-transparent border-bottom pt-3 pb-3 px-3 px-xxl-4 d-flex justify-content-between align-items-center">
               <h5 class="fw-bold mb-0 text-dark">Đơn hàng mới nhất</h5>
               <router-link :to="{ path: '/admin/orders' }" class="btn btn-sm bg-brand-soft text-brand fw-bold rounded-pill px-3 transition-all border border-light">
                 Xem tất cả
@@ -264,13 +264,13 @@
 
         <div class="col-12 col-xl-4">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4">
-            <div class="card-header bg-transparent border-bottom pt-4 pb-3 px-4">
+            <div class="card-header bg-transparent border-bottom pt-3 pb-3 px-3 px-xxl-4">
               <h5 class="fw-bold mb-0 text-dark">Top Bán Chạy</h5>
             </div>
-            <div class="card-body px-4 pt-4 pb-4">
+            <div class="card-body p-3 p-xxl-4">
               <p v-if="topProducts.length === 0" class="text-center text-muted py-3">Chưa có sản phẩm nào được bán.</p>
               
-              <ul v-else class="list-unstyled mb-0 d-flex flex-column gap-4">
+              <ul v-else class="list-unstyled mb-0 d-flex flex-column gap-3">
                 <li v-for="(product, index) in topProducts" :key="product.id" class="d-flex align-items-center product-item">
                   <div class="rank-badge fw-bolder shadow-sm flex-shrink-0" :class="getRankClass(index)">{{ index + 1 }}</div>
                   
@@ -302,7 +302,7 @@
       </div>
 
       <!-- Hàng 4: Thống kê Khuyến mãi & Mã giảm giá -->
-      <div class="row g-4 mt-2">
+      <div class="row g-3 g-xl-4 mt-1">
         <div class="col-12">
           <div class="d-flex justify-content-between align-items-center mb-2">
             <h4 class="fw-bolder text-dark mb-0 d-flex align-items-center gap-2">
@@ -320,7 +320,7 @@
         <!-- Các thẻ Coupon -->
         <div class="col-12 col-md-6 col-xl-4" v-for="coupon in couponData.list" :key="coupon.id">
           <div class="card coupon-card h-100 bg-white shadow-sm rounded-4 position-relative overflow-hidden" :class="getCouponCardClass(coupon.status)">
-            <div class="card-body p-4">
+            <div class="card-body p-3 p-xxl-4">
               <!-- Header thẻ: Icon & Status -->
               <div class="d-flex justify-content-between align-items-start mb-3">
                 <div class="coupon-icon border border-light rounded-circle d-flex align-items-center justify-content-center text-dark bg-light" style="width: 36px; height: 36px;">
@@ -334,7 +334,7 @@
 
               <!-- Thông tin chính -->
               <h5 class="fw-bolder text-dark mb-1 font-size-lg tracking-tight">{{ coupon.name }}</h5>
-              <p class="text-muted font-size-sm mb-4">{{ coupon.desc }}</p>
+              <p class="text-muted font-size-sm mb-3">{{ coupon.desc }}</p>
 
               <!-- Các dòng thuộc tính -->
               <div class="d-flex justify-content-between align-items-center mb-3">
@@ -345,13 +345,13 @@
                 <span class="text-secondary font-size-sm">Loại mã</span>
                 <span class="badge bg-light text-dark border border-light fw-semibold px-2 py-1">{{ coupon.type }}</span>
               </div>
-              <div class="d-flex justify-content-between align-items-center mb-4">
+              <div class="d-flex justify-content-between align-items-center mb-3">
                 <span class="text-secondary font-size-sm">Danh mục</span>
                 <span class="badge bg-light text-dark border border-light fw-semibold px-2 py-1">{{ coupon.category || 'Khuyến mãi hệ thống' }}</span>
               </div>
 
               <!-- Thanh Usage -->
-              <div class="mb-4">
+              <div class="mb-3">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                   <span class="text-secondary font-size-sm">Đã sử dụng</span>
                   <span class="fw-bold text-dark font-size-sm">{{ coupon.usage_count }} / {{ coupon.usage_limit || '∞' }}</span>
@@ -363,7 +363,7 @@
               </div>
 
               <!-- Thời gian & Nút chức năng -->
-              <div class="d-flex align-items-center gap-2 mb-4 bg-light-soft rounded-3 p-2 border border-light">
+              <div class="d-flex align-items-center gap-2 mb-3 bg-light-soft rounded-3 p-2 border border-light">
                 <i class="bi bi-calendar3 text-secondary"></i>
                 <span class="text-secondary font-size-xs fw-medium">{{ formatCouponDate(coupon.expires_at) }}</span>
               </div>
@@ -385,13 +385,13 @@
         </div>
 
         <div v-if="!couponData.list || couponData.list.length === 0" class="col-12">
-            <div class="text-center text-muted p-5 bg-white rounded-4 shadow-sm">Hiện chưa có mã giảm giá nào.</div>
+            <div class="text-center text-muted p-4 bg-white rounded-4 shadow-sm">Hiện chưa có mã giảm giá nào.</div>
         </div>
 
         <!-- Thanh tóm tắt thống kê -->
-        <div class="col-12 mt-4">
+        <div class="col-12 mt-3">
           <div class="card border-0 bg-light-purple rounded-4 shadow-sm">
-            <div class="card-body p-4 row text-center">
+            <div class="card-body p-3 p-xxl-4 row text-center">
               <div class="col-3 border-end border-light">
                 <h3 class="fw-bolder text-success mb-1">{{ couponData.summary.active || 0 }}</h3>
                 <span class="text-secondary font-size-sm">Hoạt động</span>
@@ -413,15 +413,15 @@
         </div>
 
         <!-- Biểu đồ sử dụng Coupon -->
-        <div class="col-12 mt-4">
+        <div class="col-12 mt-3">
           <div class="card custom-card border-0 shadow-sm rounded-4 h-100">
-            <div class="card-header bg-transparent border-0 pt-4 pb-0 px-4">
+            <div class="card-header bg-transparent border-0 pt-3 pb-0 px-3 px-xxl-4">
               <h5 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
                 <span class="badge p-1 rounded bg-purple">&nbsp;</span> Biểu đồ sử dụng mã giảm giá
               </h5>
               <span class="text-muted font-size-xs">Hiển thị lịch sử sử dụng mã giảm giá qua các đơn hàng</span>
             </div>
-            <div class="card-body px-4 pb-4 pt-4">
+            <div class="card-body p-3 p-xxl-4">
               <div style="height: 300px; width: 100%;">
                 <canvas id="couponChart" ref="couponChartCanvas"></canvas>
               </div>

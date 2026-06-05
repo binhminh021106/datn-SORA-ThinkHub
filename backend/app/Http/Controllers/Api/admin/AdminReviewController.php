@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Review;
 use App\Models\Product;
 use App\Models\Combo;
-use App\Http\Requests\AdminUpdateReviewRequest;
+use App\Http\Requests\Admin\Review\AdminUpdateReviewRequest;
 use Illuminate\Http\Request;
 
 class AdminReviewController extends Controller

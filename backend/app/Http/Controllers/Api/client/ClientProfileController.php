@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api\client;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\ClientProfileUpdateRequest;
-use App\Http\Requests\ClientPasswordUpdateRequest;
-use App\Http\Requests\ClientAddressStoreRequest;
-use App\Http\Requests\ClientAddressUpdateRequest;
+use App\Http\Requests\Client\Profile\ClientProfileUpdateRequest;
+use App\Http\Requests\Client\Profile\ClientPasswordUpdateRequest;
+use App\Http\Requests\Client\Address\ClientAddressStoreRequest;
+use App\Http\Requests\Client\Address\ClientAddressUpdateRequest;
 use App\Models\User; 
 use App\Models\UserAddress; // BẮT BUỘC IMPORT MODEL NÀY
 use App\Models\MembershipTier;

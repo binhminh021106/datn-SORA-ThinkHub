@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
-use App\Http\Requests\AdminStoreCategoryRequest;
-use App\Http\Requests\AdminUpdateCategoryRequest;
+use App\Http\Requests\Admin\Category\AdminStoreCategoryRequest;
+use App\Http\Requests\Admin\Category\AdminUpdateCategoryRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;

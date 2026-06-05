@@ -128,9 +128,9 @@
                 <div class="mb-3 shift-meta py-3 px-3 rounded-4 bg-white border">
                   <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
                     <span class="small text-muted fw-semibold">Lịch làm:</span>
-                    <span v-for="(day, idx) in daysOfWeek" :key="'badge-day-'+idx" class="badge badge-day shadow-sm"
-                          :class="shift.working_days && shift.working_days[idx] ? 'badge-active' : 'badge-inactive'">
-                      {{ day }}
+                    <span v-for="day in displayDayOptions" :key="'badge-day-'+day.label" class="badge badge-day shadow-sm"
+                          :class="shift.working_days && shift.working_days[day.index] ? 'badge-active' : 'badge-inactive'">
+                      {{ day.label }}
                     </span>
                   </div>
                   <div class="small text-muted border-top pt-2 mt-2">
@@ -697,15 +697,13 @@
 <script setup>
 import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
-import axios from 'axios';
 import Swal from 'sweetalert2';
 import * as bootstrap from 'bootstrap';
 import ShiftModal from './ShiftModal.vue'; // Import Component con vừa tách
 import AttendanceHistoryModal from './AttendanceHistoryModal.vue';
+import adminApiClient from '@/utils/adminApiClient';
 
 // --- CONFIG & TOKENS ---
-const API_URL = import.meta.env.VITE_API_BASE_URL;
-const token = localStorage.getItem('admin_token');
 const queryClient = useQueryClient();
 
 const Toast = Swal.mixin({
@@ -726,7 +724,15 @@ const mainTab = ref('shifts'); // 'shifts' | 'assignments'
 const shiftSubTab = ref('active'); // 'active' | 'deleted'
 const assignmentSubTab = ref('assigned'); // 'assigned' | 'unassigned'
 
-const daysOfWeek = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+const displayDayOptions = [
+  { label: 'T2', index: 1 },
+  { label: 'T3', index: 2 },
+  { label: 'T4', index: 3 },
+  { label: 'T5', index: 4 },
+  { label: 'T6', index: 5 },
+  { label: 'T7', index: 6 },
+  { label: 'CN', index: 0 },
+];
 const searchQuery = ref('');
 const currentPage = ref(1);
 const itemsPerPage = 10;
@@ -746,24 +752,18 @@ const openHistoryModal = (admin, assignment = null) => {
 // --- API QUERIES ---
 const fetchShifts = async () => {
   const isTrashed = shiftSubTab.value === 'deleted' ? 'true' : 'false';
-  const res = await axios.get(`${API_URL}/admin/work-shifts?trashed=${isTrashed}`, { 
-    headers: { Authorization: `Bearer ${token}` } 
-  });
+  const res = await adminApiClient.get('/work-shifts', { params: { trashed: isTrashed } });
   return res.data.success ? res.data.data : [];
 };
 
 const fetchAdmins = async () => {
-  const res = await axios.get(`${API_URL}/admin/staff?per_page=1000`, { 
-    headers: { Authorization: `Bearer ${token}` } 
-  });
+  const res = await adminApiClient.get('/staff', { params: { per_page: 1000 } });
   return res.data.success ? (res.data.data.data || res.data.data) : [];
 };
 
 const fetchRoles = async () => {
   try {
-    const res = await axios.get(`${API_URL}/admin/roles`, { 
-      headers: { Authorization: `Bearer ${token}` } 
-    });
+    const res = await adminApiClient.get('/roles');
     return res.data.success ? res.data.data : [];
   } catch (e) {
     return []; // Fallback nếu API chưa sẵn sàng
@@ -771,9 +771,7 @@ const fetchRoles = async () => {
 };
 
 const fetchActiveShifts = async () => {
-  const res = await axios.get(`${API_URL}/admin/work-shifts?trashed=false`, { 
-    headers: { Authorization: `Bearer ${token}` } 
-  });
+  const res = await adminApiClient.get('/work-shifts', { params: { trashed: false } });
   return res.data.success ? res.data.data : [];
 };
 
@@ -918,7 +916,9 @@ const formatDateUI = (dateStr) => {
 };
 const formatOTDays = (otArr) => {
   if (!otArr || !Array.isArray(otArr)) return 'Chưa cấu hình';
-  const selectedDays = daysOfWeek.filter((_, idx) => otArr[idx]);
+  const selectedDays = displayDayOptions
+    .filter((day) => otArr[day.index])
+    .map((day) => day.label);
   if (selectedDays.length === 7) return 'Cả tuần';
   if (selectedDays.length === 0) return 'Không có';
   return selectedDays.join(', ');
@@ -978,7 +978,7 @@ async function removeShift(shift) {
   });
   if (result.isConfirmed) {
     try {
-      await axios.delete(`${API_URL}/admin/work-shifts/${shift.id}`, { headers: { Authorization: `Bearer ${token}` } });
+      await adminApiClient.delete(`/work-shifts/${shift.id}`);
       queryClient.invalidateQueries({ queryKey: ['workShifts'] });
       Toast.fire({ icon: 'success', title: 'Đã xóa ca làm việc.' });
     } catch (err) { Toast.fire({ icon: 'error', title: 'Xóa ca thất bại.' }); }
@@ -986,7 +986,7 @@ async function removeShift(shift) {
 }
 async function restoreShift(shift) {
   try {
-    await axios.post(`${API_URL}/admin/work-shifts/${shift.id}/restore`, {}, { headers: { Authorization: `Bearer ${token}` } });
+    await adminApiClient.post(`/work-shifts/${shift.id}/restore`);
     queryClient.invalidateQueries({ queryKey: ['workShifts'] });
     Toast.fire({ icon: 'success', title: 'Khôi phục thành công!' });
   } catch (err) { Toast.fire({ icon: 'error', title: 'Khôi phục thất bại.' }); }
@@ -1040,10 +1040,10 @@ async function applyAssignments() {
   }
   assignLoading.value = true;
   try {
-    await axios.post(`${API_URL}/admin/work-shifts/assign-multiple`, {
+    await adminApiClient.post('/work-shifts/assign-multiple', {
       admin_ids: selectedAdmins.value, work_shift_id: formAssign.value.work_shift_id,
       valid_from: formAssign.value.valid_from, valid_to: assignDurationType.value === 'forever' ? undefined : formAssign.value.valid_to,
-    }, { headers: { Authorization: `Bearer ${token}` } });
+    });
     queryClient.invalidateQueries({ queryKey: ['workShifts'] });
     Toast.fire({ icon: 'success', title: 'Phân công thành công.' });
     closeModal('assignModal');
@@ -1055,8 +1055,8 @@ async function removeAssignment(adminId, shiftId) {
   isRemovingAssign.value = true;
   try {
     // Không dùng SweetAlert bắt confirm thủ công để thao tác ĐƯỢC NHANH HƠN 
-    await axios.delete(`${API_URL}/admin/work-shifts/assignments/${adminId}`, {
-      params: { work_shift_id: shiftId }, headers: { Authorization: `Bearer ${token}` }
+    await adminApiClient.delete(`/work-shifts/assignments/${adminId}`, {
+      params: { work_shift_id: shiftId }
     });
     queryClient.invalidateQueries({ queryKey: ['workShifts'] });
     Toast.fire({ icon: 'success', title: 'Đã gỡ ca làm việc' });
@@ -1075,8 +1075,8 @@ async function removeBulkAssignments() {
     try {
       // Loop bắn API gỡ từng người (có thể gộp API bulk delete ở BE nếu muốn tối ưu hơn)
       const deletePromises = bulkSelectedAssignments.value.map(item => 
-        axios.delete(`${API_URL}/admin/work-shifts/assignments/${item.adminId}`, {
-          params: { work_shift_id: item.shiftId }, headers: { Authorization: `Bearer ${token}` }
+        adminApiClient.delete(`/work-shifts/assignments/${item.adminId}`, {
+          params: { work_shift_id: item.shiftId }
         })
       );
       await Promise.all(deletePromises);
@@ -1155,9 +1155,7 @@ async function runAutoAssign() {
   
   isAutoAssigning.value = true;
   try {
-    const res = await axios.post(`${API_URL}/admin/work-shifts/auto-assign`, formAutoAssign.value, { 
-      headers: { Authorization: `Bearer ${token}` } 
-    });
+    const res = await adminApiClient.post('/work-shifts/auto-assign', formAutoAssign.value);
     queryClient.invalidateQueries({ queryKey: ['workShifts'] });
     Swal.fire({ icon: 'success', title: 'Xếp ca thành công!', text: res.data.message || 'Hoàn tất.', confirmButtonColor: '#009981' });
     closeModal('autoAssignModal');

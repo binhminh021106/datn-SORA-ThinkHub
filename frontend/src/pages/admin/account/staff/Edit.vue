@@ -115,26 +115,14 @@
                     <label class="form-label fw-bold text-dark border-bottom pb-2 w-100"><i class="bi bi-geo-alt-fill text-brand me-1"></i> Địa chỉ thường trú</label>
                   </div>
                   
-                  <div class="col-md-4 mb-3">
-                    <label class="form-label fw-semibold text-dark small">Tỉnh/Thành phố</label>
-                    <select class="form-select bg-white border-secondary-subtle shadow-none fw-medium" v-model="selectedCityId" @change="onCityChange">
-                      <option value="">-- Chọn Tỉnh/Thành --</option>
-                      <option v-for="p in provinces" :key="p.id" :value="p.id">{{ p.full_name }}</option>
-                    </select>
-                  </div>
-                  <div class="col-md-4 mb-3">
-                    <label class="form-label fw-semibold text-dark small">Quận/Huyện</label>
-                    <select class="form-select bg-white border-secondary-subtle shadow-none fw-medium" v-model="selectedDistrictId" @change="onDistrictChange" :disabled="!selectedCityId">
-                      <option value="">-- Chọn Quận/Huyện --</option>
-                      <option v-for="d in districts" :key="d.id" :value="d.id">{{ d.full_name }}</option>
-                    </select>
-                  </div>
-                  <div class="col-md-4 mb-3">
-                    <label class="form-label fw-semibold text-dark small">Phường/Xã</label>
-                    <select class="form-select bg-white border-secondary-subtle shadow-none fw-medium" v-model="selectedWardId" @change="onWardChange" :disabled="!selectedDistrictId">
-                      <option value="">-- Chọn Phường/Xã --</option>
-                      <option v-for="w in wards" :key="w.id" :value="w.id">{{ w.full_name }}</option>
-                    </select>
+                  <div class="col-12 mb-3">
+                    <VietnamAddressPicker
+                      v-model:province="selectedCityName"
+                      v-model:district="selectedDistrictName"
+                      v-model:ward="selectedWardName"
+                      input-class="bg-white border-secondary-subtle shadow-none fw-medium"
+                      label-class="fw-semibold text-dark small"
+                    />
                   </div>
                   <div class="col-md-12 mb-4">
                     <label class="form-label fw-semibold text-dark small">Địa chỉ cụ thể (Số nhà, đường)</label>
@@ -175,7 +163,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
@@ -184,6 +172,7 @@ import { getFullImage } from '@/composables/useUtilities';
 
 // Tái sử dụng SoraImage và defaultAvatar đồng bộ thống nhất
 import SoraImage from '@/components/ui/SoraImage.vue';
+import VietnamAddressPicker from '@/components/ui/VietnamAddressPicker.vue';
 import defaultAvatar from '@/assets/images/defaults/avatar1.png';
 
 const route = useRoute();
@@ -201,12 +190,9 @@ const isRemoveAvatar = ref(false);
 
 const form = ref({ fullname: '', email: '', password: '', phone: '', address: '', role_id: '', status: '' });
 
-const provinces = ref([]);
-const districts = ref([]);
-const wards = ref([]);
-const selectedCityId = ref('');
-const selectedDistrictId = ref('');
-const selectedWardId = ref('');
+const selectedCityName = ref('');
+const selectedDistrictName = ref('');
+const selectedWardName = ref('');
 const specificAddress = ref('');
 
 const currentAdmin = JSON.parse(localStorage.getItem('admin_info') || '{}');
@@ -234,81 +220,20 @@ const getLevelColor = (level) => {
   }
 };
 
-const findLocationByName = (list, name) => {
-  if (!name || !list) return null;
-  return list.find(item => item.full_name === name || item.name === name || name.includes(item.name));
-};
-
-/* =========================================================
-   FIX LỖI CORS: Bắt buộc dùng native fetch() cho esgoo.net
-   (Không dùng axios vì nó sẽ tự động thêm 'X-Requested-With' gây lỗi)
-========================================================= */
-const fetchProvinces = async () => {
-  try {
-    const res = await fetch('https://esgoo.net/api-tinhthanh/1/0.htm');
-    if (res.ok) {
-      const data = await res.json();
-      if(data.error === 0) provinces.value = data.data;
-    }
-  } catch(e) { console.error("Lỗi lấy Tỉnh/Thành phố:", e); }
-};
-
-const onCityChange = async () => {
-  districts.value = []; wards.value = [];
-  selectedDistrictId.value = ''; selectedWardId.value = '';
-  if (selectedCityId.value) {
-    try {
-      const res = await fetch(`https://esgoo.net/api-tinhthanh/2/${selectedCityId.value}.htm`);
-      if (res.ok) {
-        const data = await res.json();
-        if(data.error === 0) districts.value = data.data;
-      }
-    } catch(e) { console.error("Lỗi lấy Quận/Huyện:", e); }
-  }
-};
-
-const onDistrictChange = async () => {
-  wards.value = []; selectedWardId.value = '';
-  if (selectedDistrictId.value) {
-    try {
-      const res = await fetch(`https://esgoo.net/api-tinhthanh/3/${selectedDistrictId.value}.htm`);
-      if (res.ok) {
-        const data = await res.json();
-        if(data.error === 0) wards.value = data.data;
-      }
-    } catch(e) { console.error("Lỗi lấy Phường/Xã:", e); }
-  }
-};
-
-const onWardChange = () => {};
-
 const parseAddressToDropdowns = async (fullAddress) => {
   if (!fullAddress) return;
-  const parts = fullAddress.split(', ').map(p => p.trim());
+  const parts = fullAddress.split(',').map(p => p.trim()).filter(Boolean);
   
-  if (parts.length >= 3) {
-    const cityStr = parts[parts.length - 1];
-    const distStr = parts[parts.length - 2];
-    const wardStr = parts[parts.length - 3];
-    const specStr = parts.slice(0, parts.length - 3).join(', ');
-    
-    specificAddress.value = specStr;
-    
-    await fetchProvinces();
-    const cityObj = findLocationByName(provinces.value, cityStr);
-    if (cityObj) {
-      selectedCityId.value = cityObj.id;
-      await onCityChange();
-      
-      const distObj = findLocationByName(districts.value, distStr);
-      if (distObj) {
-        selectedDistrictId.value = distObj.id;
-        await onDistrictChange();
-        
-        const wardObj = findLocationByName(wards.value, wardStr);
-        if (wardObj) selectedWardId.value = wardObj.id;
-      }
-    }
+  if (parts.length >= 4) {
+    selectedCityName.value = parts[parts.length - 1] || '';
+    selectedDistrictName.value = parts[parts.length - 2] || '';
+    selectedWardName.value = parts[parts.length - 3] || '';
+    specificAddress.value = parts.slice(0, parts.length - 3).join(', ');
+  } else if (parts.length === 3) {
+    selectedCityName.value = parts[2] || '';
+    selectedDistrictName.value = '';
+    selectedWardName.value = parts[1] || '';
+    specificAddress.value = parts[0] || '';
   } else {
     specificAddress.value = fullAddress; 
   }
@@ -364,7 +289,7 @@ const { data: staffResponse, isLoading: isStaffLoading } = useQuery({
 const rawStaffData = computed(() => staffResponse.value?.data);
 
 // Thiết lập trạng thái load màn hình hoàn thành
-const isLoaded = computed(() => !isStaffLoading.value && provinces.value.length > 0);
+const isLoaded = computed(() => !isStaffLoading.value);
 
 // Đồng bộ hóa thông tin nhân viên từ TanStack Query vào Form an toàn sau khi load xong các danh mục tỉnh thành
 watch(rawStaffData, async (newVal) => {
@@ -449,14 +374,12 @@ const updateStaffMutation = useMutation({
 });
 
 const updateStaff = async () => {
-  let finalAddress = specificAddress.value;
-  const cityName = provinces.value.find(p => p.id === selectedCityId.value)?.full_name || '';
-  const distName = districts.value.find(d => d.id === selectedDistrictId.value)?.full_name || '';
-  const wardName = wards.value.find(w => w.id === selectedWardId.value)?.full_name || '';
-
-  if (cityName || distName || wardName) {
-    finalAddress = `${specificAddress.value ? specificAddress.value + ', ' : ''}${wardName ? wardName + ', ' : ''}${distName ? distName + ', ' : ''}${cityName}`;
-  }
+  const finalAddress = [
+    specificAddress.value,
+    selectedWardName.value,
+    selectedDistrictName.value,
+    selectedCityName.value,
+  ].filter(Boolean).join(', ');
   form.value.address = finalAddress.replace(/(^, )|(,$)/g, '').trim();
 
   const formData = new FormData();
@@ -476,10 +399,6 @@ const updateStaff = async () => {
   updateStaffMutation.mutate(formData);
 };
 
-// Khởi chạy nạp danh mục tỉnh thành lúc hiển thị màn hình
-onMounted(() => {
-  fetchProvinces();
-});
 </script>
 
 <style scoped>

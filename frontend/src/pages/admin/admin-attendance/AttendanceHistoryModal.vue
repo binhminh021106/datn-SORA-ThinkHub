@@ -90,6 +90,7 @@
 
                         <span v-if="day.data.checkout_status === 'forgotten'" class="badge bg-danger shadow-sm">Quên
                           Checkout</span>
+                        <span v-if="getDisplayCheckoutStatus(day) === 'miss_checkout'" class="badge bg-danger shadow-sm">Miss checkout</span>
                         <span v-if="!isStaffWorkingDay(day.date, day) && getRealEarlyLeave(day.data) <= 0"
                           class="badge bg-dark text-white shadow-sm">Tăng ca</span>
                       </div>
@@ -111,16 +112,29 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import axios from 'axios';
 import { useQuery } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
+import adminApiClient from '@/utils/adminApiClient';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+function getVietnamDateString(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === 'year')?.value;
+  const month = parts.find((part) => part.type === 'month')?.value;
+  const day = parts.find((part) => part.type === 'day')?.value;
+
+  return `${year}-${month}-${day}`;
+}
 
 const showHistoryModal = ref(false);
 const activeHistoryAdmin = ref(null);
-const drillDownDate = ref(new Date().toISOString().split('T')[0]);
-const selectedMonth = ref(new Date().toISOString().substring(0, 7));
+const drillDownDate = ref(getVietnamDateString());
+const selectedMonth = ref(getVietnamDateString().substring(0, 7));
 const activeAssignment = ref(null);
 
 const formatDateUI = (dateStr) => {
@@ -138,8 +152,8 @@ const openModal = (admin, date = null, assignment = null) => {
     drillDownDate.value = date;
     selectedMonth.value = date.substring(0, 7);
   } else {
-    drillDownDate.value = new Date().toISOString().split('T')[0];
-    selectedMonth.value = new Date().toISOString().substring(0, 7);
+    drillDownDate.value = getVietnamDateString();
+    selectedMonth.value = getVietnamDateString().substring(0, 7);
   }
   showHistoryModal.value = true;
   document.body.style.overflow = 'hidden';
@@ -166,13 +180,11 @@ const { data: adminHistoryData, isFetching: historyLoading } = useQuery({
   queryKey: computed(() => ['adminAttendanceHistory', activeHistoryAdmin.value?.id, drillDownDate.value]),
   queryFn: async () => {
     try {
-      const token = localStorage.getItem('admin_token');
-      const date = new Date(drillDownDate.value);
-      const start = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
-      const end = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()).padStart(2, '0')}`;
+      const [year, month] = drillDownDate.value.split('-').map(Number);
+      const start = `${year}-${String(month).padStart(2, '0')}-01`;
+      const end = `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`;
 
-      const response = await axios.get(`${API_URL}/admin/attendances/history/${activeHistoryAdmin.value.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await adminApiClient.get(`/attendances/history/${activeHistoryAdmin.value.id}`, {
         params: { start_date: start, end_date: end }
       });
       return response.data;
@@ -201,15 +213,14 @@ const historyAssignments = computed(() => {
 const adminHistoryMap = computed(() => {
   const map = {};
   const items = adminHistoryData.value?.data?.data || [];
-  items.forEach(item => { map[item.attendance_date.split('T')[0]] = item; });
+  items.forEach(item => { map[getAttendanceDateKey(item.attendance_date)] = item; });
   return map;
 });
 
 const historyGrid = computed(() => {
   if (!drillDownDate.value) return [];
-  const date = new Date(drillDownDate.value);
-  const year = date.getFullYear();
-  const month = date.getMonth();
+  const [year, monthNumber] = drillDownDate.value.split('-').map(Number);
+  const month = monthNumber - 1;
 
   const firstDayOfMonth = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -296,6 +307,69 @@ const getRealStatus = (att) => {
   return 'present'; 
 };
 
+const getDisplayCheckoutStatus = (day) => {
+  if (!day?.data) return null;
+  if (shouldShowMissCheckout(day)) {
+    return 'miss_checkout';
+  }
+  return day.data.checkout_status;
+};
+
+const shouldShowMissCheckout = (day) => {
+  const attendance = day?.data;
+  if (!attendance || attendance.checkout_status !== 'pending') return false;
+  if (!attendance.clock_in || attendance.clock_out) return false;
+
+  const dateOnly = getAttendanceDateOnly(day?.date || attendance.attendance_date);
+  if (!isPastAttendanceDate(dateOnly)) return false;
+
+  const shiftEnd = getAttendanceShiftEndDate(day);
+  if (!shiftEnd) return true;
+
+  return new Date() > shiftEnd;
+};
+
+const getAttendanceShiftEndDate = (day) => {
+  const attendance = day?.data;
+  const dateOnly = getAttendanceDateOnly(day?.date || attendance?.attendance_date);
+  const shift = getDayWorkShift(day);
+  const startTime = attendance?.shift_start_time || shift?.start_time;
+  const endTime = attendance?.shift_end_time || shift?.end_time;
+
+  if (!dateOnly || !endTime) return null;
+
+  const shiftEnd = new Date(`${dateOnly}T${normalizeTimeForDate(endTime)}`);
+  if (Number.isNaN(shiftEnd.getTime())) return null;
+
+  if (startTime && normalizeTimeForCompare(endTime) <= normalizeTimeForCompare(startTime)) {
+    shiftEnd.setDate(shiftEnd.getDate() + 1);
+  }
+
+  return shiftEnd;
+};
+
+const normalizeTimeForDate = (time) => {
+  const value = String(time || '');
+  return value.length === 5 ? `${value}:00` : value;
+};
+
+const normalizeTimeForCompare = (time) => String(time || '').substring(0, 5);
+
+const getAttendanceDateOnly = (value) => String(value || '').split('T')[0].split(' ')[0];
+
+const getAttendanceDateKey = (value) => {
+  const raw = String(value || '');
+  if (!raw) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  return getVietnamDateString(new Date(raw));
+};
+
+const isPastAttendanceDate = (value) => {
+  if (!value) return false;
+  const dateOnly = getAttendanceDateOnly(value);
+  return dateOnly < getVietnamDateString();
+};
+
 const getStatusLabel = (status) => ({
   present: 'Đúng giờ', late: 'Đi muộn', absent: 'Vắng', on_leave: 'Nghỉ phép'
 }[status] || status);
@@ -309,7 +383,8 @@ const getStatusBadgeClassGrid = (status) => ({
 
 const getWeekdayIndex = (dateStr) => {
   if (!dateStr) return null;
-  const dayOfWeek = new Date(dateStr).getDay();
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const dayOfWeek = new Date(year, month - 1, day).getDay();
   return dayOfWeek === 0 ? 6 : dayOfWeek - 1;
 };
 
@@ -331,17 +406,20 @@ const getDayWorkShift = (day) => {
   }
   
   if (day.date && historyAssignments.value.length > 0) {
-    const dateObj = new Date(day.date);
+    const [dayYear, dayMonth, dayNumber] = day.date.split('-').map(Number);
+    const dateObj = new Date(dayYear, dayMonth - 1, dayNumber);
     dateObj.setHours(0,0,0,0);
     
     // Tìm kiếm trong mảng assignments
     const matchingAssignment = historyAssignments.value.find(a => {
-      const from = new Date(a.valid_from);
+      const [fromYear, fromMonth, fromDay] = getAttendanceDateKey(a.valid_from).split('-').map(Number);
+      const from = new Date(fromYear, fromMonth - 1, fromDay);
       from.setHours(0,0,0,0);
       
       let to = null;
       if (a.valid_to) {
-        to = new Date(a.valid_to);
+        const [toYear, toMonth, toDay] = getAttendanceDateKey(a.valid_to).split('-').map(Number);
+        to = new Date(toYear, toMonth - 1, toDay);
         to.setHours(23,59,59,999);
       }
       
@@ -370,16 +448,12 @@ const isStaffWorkingDay = (dateStr, day = null) => {
 
 const isToday = (dateStr) => {
   if (!dateStr) return false;
-  const today = new Date();
-  return dateStr === `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  return getAttendanceDateOnly(dateStr) === getVietnamDateString();
 };
 
 const isPastOrToday = (dateStr) => {
   if (!dateStr) return false;
-  const targetDate = new Date(dateStr);
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
-  return targetDate <= today;
+  return getAttendanceDateOnly(dateStr) <= getVietnamDateString();
 };
 
 const getAttendanceCellLabel = (day) => {

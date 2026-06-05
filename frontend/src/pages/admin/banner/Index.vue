@@ -178,7 +178,8 @@ const formatDate = (dateString) => {
 const fetchBanners = async () => {
   const res = await fetch(`${API_URL}/admin/banners`, { headers: getHeaders() });
   if (!res.ok) throw new Error('Network error');
-  return (await res.json()).data;
+  const result = await res.json();
+  return Array.isArray(result.data) ? result.data.filter(Boolean) : [];
 };
 
 const { data: rawBanners, isLoading, isFetching, refetch } = useQuery({
@@ -190,8 +191,8 @@ const { data: rawBanners, isLoading, isFetching, refetch } = useQuery({
 
 // Sync data thô ra view, tách riêng logic Reorder
 const displayBanners = computed(() => {
-  if (isReorderMode.value) return reorderList.value;
-  return rawBanners.value || [];
+  if (isReorderMode.value) return reorderList.value.filter(Boolean);
+  return Array.isArray(rawBanners.value) ? rawBanners.value.filter(Boolean) : [];
 });
 
 // --- MUTATIONS: CẬP NHẬT TRẠNG THÁI (OPTIMISTIC UPDATE) ---
@@ -204,12 +205,12 @@ const statusMutation = useMutation({
   },
   onMutate: async ({ id, status }) => {
     isMutating.value = true;
-    await queryClient.cancelQueries(['admin', 'banners']);
+    await queryClient.cancelQueries({ queryKey: ['admin', 'banners'] });
     const previousBanners = queryClient.getQueryData(['admin', 'banners']);
     // Cập nhật Cache tức thời
-    if (previousBanners) {
+    if (Array.isArray(previousBanners)) {
       queryClient.setQueryData(['admin', 'banners'], old => 
-        old.map(b => b.id === id ? { ...b, status: status, sort_order: status === 'active' ? 999 : null } : b)
+        Array.isArray(old) ? old.filter(Boolean).map(b => b.id === id ? { ...b, status: status, sort_order: status === 'active' ? 999 : null } : b) : []
       );
     }
     return { previousBanners };
@@ -218,7 +219,7 @@ const statusMutation = useMutation({
     if (context?.previousBanners) queryClient.setQueryData(['admin', 'banners'], context.previousBanners);
     Swal.fire('Lỗi', 'Không thể cập nhật trạng thái', 'error');
   },
-  onSettled: () => { isMutating.value = false; queryClient.invalidateQueries(['admin', 'banners']); }
+  onSettled: () => { isMutating.value = false; queryClient.invalidateQueries({ queryKey: ['admin', 'banners'] }); }
 });
 
 const onStatusChange = (banner, newStatus) => {
@@ -235,14 +236,18 @@ const deleteMutation = useMutation({
   },
   onMutate: async (id) => {
     isMutating.value = true;
-    await queryClient.cancelQueries(['admin', 'banners']);
+    await queryClient.cancelQueries({ queryKey: ['admin', 'banners'] });
     const prev = queryClient.getQueryData(['admin', 'banners']);
     // Optimistic Delete
-    if (prev) queryClient.setQueryData(['admin', 'banners'], old => old.map(b => b.id === id ? { ...b, deleted_at: new Date().toISOString(), sort_order: null } : b));
+    if (Array.isArray(prev)) {
+      queryClient.setQueryData(['admin', 'banners'], old => (
+        Array.isArray(old) ? old.filter(Boolean).map(b => b.id === id ? { ...b, deleted_at: new Date().toISOString(), sort_order: null } : b) : []
+      ));
+    }
     return { prev };
   },
   onError: (err, id, ctx) => { if (ctx?.prev) queryClient.setQueryData(['admin', 'banners'], ctx.prev); Swal.fire('Lỗi', 'Xóa thất bại', 'error'); },
-  onSettled: () => { isMutating.value = false; queryClient.invalidateQueries(['admin', 'banners']); }
+  onSettled: () => { isMutating.value = false; queryClient.invalidateQueries({ queryKey: ['admin', 'banners'] }); }
 });
 
 const confirmDelete = (id) => {
@@ -264,18 +269,20 @@ const restoreMutation = useMutation({
   onMutate: () => { isMutating.value = true; },
   onSuccess: (data) => {
     // Cập nhật record bằng data thật từ server trả về để cache chuẩn
-    queryClient.setQueryData(['admin', 'banners'], old => old.map(b => b.id === data.id ? data : b));
+    queryClient.setQueryData(['admin', 'banners'], old => (
+      Array.isArray(old) ? old.filter(Boolean).map(b => b.id === data.id ? data : b) : []
+    ));
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã khôi phục', showConfirmButton: false, timer: 1500 });
   },
   onError: () => Swal.fire('Lỗi', 'Khôi phục thất bại', 'error'),
-  onSettled: () => { isMutating.value = false; queryClient.invalidateQueries(['admin', 'banners']); }
+  onSettled: () => { isMutating.value = false; queryClient.invalidateQueries({ queryKey: ['admin', 'banners'] }); }
 });
 const handleRestore = (id) => restoreMutation.mutate(id);
 
 // --- KÉO THẢ (REORDER) ---
 const toggleReorderMode = () => {
   isReorderMode.value = !isReorderMode.value;
-  if (isReorderMode.value && rawBanners.value) {
+  if (isReorderMode.value && Array.isArray(rawBanners.value)) {
     reorderList.value = JSON.parse(JSON.stringify(rawBanners.value.filter(b => !b.deleted_at && b.status === 'active')));
   }
 };
@@ -300,7 +307,7 @@ const saveReorder = async () => {
     if(res.ok) {
         Swal.fire({icon: 'success', title: 'Đã lưu thứ tự!', timer: 1500, showConfirmButton: false});
         isReorderMode.value = false; 
-        queryClient.invalidateQueries(['admin', 'banners']); // Fetch lại lấy thứ tự chuẩn từ DB
+        queryClient.invalidateQueries({ queryKey: ['admin', 'banners'] }); // Fetch lại lấy thứ tự chuẩn từ DB
     }
   } catch (e) {
     Swal.fire('Lỗi', 'Không thể lưu thứ tự', 'error');
@@ -309,7 +316,7 @@ const saveReorder = async () => {
 
 useAdminRefreshListener((payload) => {
   if (payload.module === 'banners') {
-    queryClient.invalidateQueries(['admin', 'banners']);
+    queryClient.invalidateQueries({ queryKey: ['admin', 'banners'] });
     Swal.fire({ toast: true, position: 'bottom-end', icon: 'info', title: 'Dữ liệu được cập nhật từ máy chủ', showConfirmButton: false, timer: 2000 });
   }
 });
