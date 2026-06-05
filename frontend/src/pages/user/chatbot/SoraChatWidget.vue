@@ -342,7 +342,7 @@ const fetchHistory = async () => {
         renderedIds.add(m.id);
         return {
           id: m.id,
-          type: m.sender_id === userId.value ? 'user' : 'admin',
+          type: Number(m.sender_id) === Number(userId.value) ? 'user' : 'admin',
           message_type: m.message_type || 'text',
           text: m.content,
           file_url: m.file_url || null,
@@ -350,6 +350,7 @@ const fetchHistory = async () => {
           file_size: m.file_size || null,
           time: formatTimeFromTs(m.created_at)
         };
+
       });
 
       if (messages.value.length === 0) {
@@ -514,7 +515,7 @@ onMounted(() => {
           const msg = e.message;
           if (renderedIds.has(msg.id)) return;
           renderedIds.add(msg.id);
-          if (msg.sender_id === 1) {
+          if (Number(msg.sender_id) === 1) {
             messages.value.push({
               id: msg.id,
               type: 'admin',
@@ -530,6 +531,7 @@ onMounted(() => {
           }
         });
     }
+
   }
 });
 

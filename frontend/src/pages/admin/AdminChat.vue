@@ -124,22 +124,22 @@
                 v-for="(msg, index) in messages"
                 :key="index"
                 class="message-row"
-                :class="msg.sender_id === 1 ? 'message-sent' : 'message-received'"
+                :class="Number(msg.sender_id) === 1 ? 'message-sent' : 'message-received'"
               >
                 <!-- Avatar (chỉ show khi không phải admin) -->
-                <div v-if="msg.sender_id !== 1" class="msg-avatar">
+                <div v-if="Number(msg.sender_id) !== 1" class="msg-avatar">
                   {{ (activeUser.fullName || 'K').charAt(0).toUpperCase() }}
                 </div>
 
                 <div class="message-group">
                   <!-- File/Image message -->
                   <template v-if="msg.message_type === 'image'">
-                    <div class="message-bubble img-bubble" :class="msg.sender_id === 1 ? 'bubble-sent' : 'bubble-received'">
+                    <div class="message-bubble img-bubble" :class="Number(msg.sender_id) === 1 ? 'bubble-sent' : 'bubble-received'">
                       <img :src="msg.file_url" :alt="msg.file_name" class="chat-image" @click="openImage(msg.file_url)" />
                     </div>
                   </template>
                   <template v-else-if="msg.message_type === 'file'">
-                    <div class="message-bubble file-bubble" :class="msg.sender_id === 1 ? 'bubble-sent' : 'bubble-received'">
+                    <div class="message-bubble file-bubble" :class="Number(msg.sender_id) === 1 ? 'bubble-sent' : 'bubble-received'">
                       <a :href="msg.file_url" target="_blank" download class="file-download-link">
                         <div class="file-icon">
                           <i class="bi bi-file-earmark-arrow-down-fill"></i>
@@ -153,7 +153,7 @@
                   </template>
                   <!-- Text/Emoji message -->
                   <template v-else>
-                    <div class="message-bubble" :class="msg.sender_id === 1 ? 'bubble-sent' : 'bubble-received'">
+                    <div class="message-bubble" :class="Number(msg.sender_id) === 1 ? 'bubble-sent' : 'bubble-received'">
                       {{ msg.content }}
                     </div>
                   </template>
@@ -162,7 +162,7 @@
                     <span v-if="msg.created_at">
                       {{ formatTime(msg.created_at) }}
                     </span>
-                    <span v-if="msg.sender_id === 1" class="ms-1">
+                    <span v-if="Number(msg.sender_id) === 1" class="ms-1">
                       <i class="bi bi-check2-all text-primary" style="font-size: 0.7rem;"></i>
                     </span>
                   </div>
@@ -444,6 +444,16 @@ const fetchContacts = async () => {
   }
 };
 
+const moveContactToTop = (partnerId) => {
+  const index = contacts.value.findIndex(c => Number(c.id) === Number(partnerId));
+  if (index > 0) {
+    const contact = contacts.value.splice(index, 1)[0];
+    contacts.value.unshift(contact);
+  } else if (index === -1) {
+    fetchContacts();
+  }
+};
+
 const selectUser = async (user) => {
   activeUserId.value = user.id;
   activeUser.value = user;
@@ -543,6 +553,7 @@ const sendMessage = async () => {
     messages.value.push(optimisticMsg);
     renderedIds.value.add(tempId);
     scrollToBottom();
+    moveContactToTop(activeUserId.value);
 
     try {
       const res = await axios.post(`${API_URL}/admin/messages`, {
@@ -616,8 +627,8 @@ onMounted(() => {
 
         if (renderedIds.value.has(msg.id)) return;
 
-        if (activeUserId.value && (msg.sender_id === activeUserId.value || msg.receiver_id === activeUserId.value)) {
-          if (msg.sender_id === 1) {
+        if (activeUserId.value && (Number(msg.sender_id) === Number(activeUserId.value) || Number(msg.receiver_id) === Number(activeUserId.value))) {
+          if (Number(msg.sender_id) === 1) {
             const tempIdx = messages.value.findIndex(m => String(m.id).startsWith('temp_') && m.content === msg.content);
             if (tempIdx !== -1) {
               renderedIds.value.delete(messages.value[tempIdx].id);
@@ -630,11 +641,10 @@ onMounted(() => {
           renderedIds.value.add(msg.id);
           messages.value.push(msg);
           scrollToBottom();
-        } else if (msg.sender_id !== 1) {
+          moveContactToTop(activeUserId.value);
+        } else if (Number(msg.sender_id) !== 1) {
           unreadMap.value[msg.sender_id] = (unreadMap.value[msg.sender_id] || 0) + 1;
-          if (!contacts.value.find(c => c.id === msg.sender_id)) {
-            fetchContacts();
-          }
+          moveContactToTop(msg.sender_id);
         }
       });
   }

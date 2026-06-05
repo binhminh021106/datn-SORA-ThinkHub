@@ -304,21 +304,22 @@ const loadProvinces = async () => {
   if (provincesCache) return provincesCache;
   if (!provincesPromise) {
     provincesPromise = (async () => {
+      // Ưu tiên legacy API để province ID khớp với district API (legacy/2/{id}.htm)
       try {
-        const payload = await fetchJson(`${NEW_API_BASE}/1/0.htm`);
-        const data = normalizeItems(responseData(payload), 'new');
-        if (data.length) {
-          provincesCache = data;
-          return data;
+        const legacyPayload = await fetchJson(`${LEGACY_API_BASE}/1/0.htm`);
+        const legacyData = normalizeItems(responseData(legacyPayload), 'legacy');
+        if (legacyData.length) {
+          provincesCache = legacyData;
+          return legacyData;
         }
       } catch (error) {
-        // Fallback giúp form vẫn sống nếu endpoint mới tạm lỗi.
+        // Fallback sang new API nếu legacy lỗi.
       }
 
-      const legacyPayload = await fetchJson(`${LEGACY_API_BASE}/1/0.htm`);
-      const legacyData = normalizeItems(responseData(legacyPayload), 'legacy');
-      provincesCache = legacyData;
-      return legacyData;
+      const payload = await fetchJson(`${NEW_API_BASE}/1/0.htm`);
+      const data = normalizeItems(responseData(payload), 'new');
+      provincesCache = data;
+      return data;
     })();
   }
 
@@ -354,9 +355,12 @@ const loadChildren = async (provinceItem) => {
     return result;
   }
 
-  const attempts = provinceItem.source === 'legacy'
-    ? [{ url: `${LEGACY_API_BASE}/2/${provinceItem.id}.htm`, kind: 'districts', source: 'legacy' }]
-    : [{ url: `${NEW_API_BASE}/2/${provinceItem.id}.htm`, kind: 'wards', source: 'new' }];
+  // Luôn thử legacy API trước (có districts) để giữ hasDistrictLevel=true cho các tỉnh còn quận/huyện.
+  // Nếu legacy trả về rỗng (tỉnh đã sáp nhập hoàn toàn), mới fall back sang new API (trả về wards trực tiếp).
+  const attempts = [
+    { url: `${LEGACY_API_BASE}/2/${provinceItem.id}.htm`, kind: 'districts', source: 'legacy' },
+    { url: `${NEW_API_BASE}/2/${provinceItem.id}.htm`, kind: 'wards', source: 'new' },
+  ];
 
   for (const attempt of attempts) {
     try {
@@ -575,9 +579,24 @@ const resolveAddress = async ({ province = '', district = '', ward = '', address
     await selectProvince(provinceItem, true);
 
     let districtItem = null;
-    if (hasDistrictLevel.value) {
-      const districtCandidates = buildAddressCandidates(district, addressText);
-      districtItem = findBestOption(districts.value, districtCandidates, props.districtCode);
+    if (hasDistrictLevel.value && districts.value.length) {
+      // Try matching district name directly first (without noisy addressText)
+      if (district) {
+        const directCandidates = buildAddressCandidates(district);
+        districtItem = findBestOption(districts.value, directCandidates, props.districtCode);
+      }
+      // If direct match failed, try extracting district from addressText parts
+      if (!districtItem && addressText) {
+        const addressParts = splitAddressText(addressText);
+        // Try each part individually to avoid matching noise
+        for (const part of addressParts) {
+          const candidate = findBestOption(districts.value, [part], '');
+          if (candidate) {
+            districtItem = candidate;
+            break;
+          }
+        }
+      }
       if (districtItem) {
         await selectDistrict(districtItem, true);
       }
@@ -648,7 +667,8 @@ const syncFromProps = async () => {
     }
 
     if (hasDistrictLevel.value) {
-      const districtItem = findOption(districts.value, props.district, props.districtCode);
+      const districtItem = findOption(districts.value, props.district, props.districtCode)
+        || (props.district ? findBestOption(districts.value, buildAddressCandidates(props.district), props.districtCode) : null);
       if (districtItem && districtItem.id !== selectedDistrict.value?.id) {
         await selectDistrict(districtItem, true);
       }

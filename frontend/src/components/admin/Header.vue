@@ -50,6 +50,17 @@
           </button>
         </li>
 
+        <!-- NÚT CHAT HỖ TRỢ với badge thông báo -->
+        <li class="nav-item me-2 d-flex align-items-center" v-if="isLoggedIn">
+          <router-link :to="{ name: 'admin-chat' }" class="btn btn-chat-notify rounded-3 btn-sm fw-bold px-3 d-flex align-items-center position-relative" @click="unreadChatCount = 0">
+            <i class="bi bi-chat-dots-fill me-2 fs-6"></i>
+            Chat
+            <span v-if="unreadChatCount > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
+              {{ unreadChatCount > 9 ? '9+' : unreadChatCount }}
+            </span>
+          </router-link>
+        </li>
+
         <!-- Nút chấm công -->
         <li class="nav-item attendance-menu-container position-relative d-flex align-items-center" v-if="showAttendanceButton" ref="attendanceMenuContainer">
           <button class="btn btn-brand attendance-main-btn rounded-3 btn-sm fw-bold px-3 d-flex align-items-center text-white shadow-sm" @click="toggleAttendanceMenu" :disabled="isCheckingStatus">
@@ -418,6 +429,10 @@ const closeUserMenu = (event) => {
   }
 };
 
+// ===== GLOBAL CHAT NOTIFICATION =====
+const unreadChatCount = ref(0);
+let chatEchoChannel = null;
+
 onMounted(() => {
   initTheme();
   document.addEventListener('click', closeUserMenu);
@@ -426,11 +441,33 @@ onMounted(() => {
   timeInterval = setInterval(updateTime, 1000);
   
   fetchAttendanceState();
+
+  // Lắng nghe tin nhắn mới từ users dù đang ở trang nào
+  if (window.Echo && getAdminToken()) {
+    chatEchoChannel = window.Echo.private('admin.chat')
+      .listen('.MessageSent', (e) => {
+        const msg = e.message;
+        if (msg && msg.sender_id !== 1) {
+          unreadChatCount.value++;
+          // Toast thông báo góc phải
+          const toast = document.createElement('div');
+          toast.className = 'admin-chat-toast';
+          toast.innerHTML = `<i class="bi bi-chat-dots-fill me-2"></i><strong>Tin nhắn mới</strong><br><small>Khách hàng #${msg.sender_id} vừa nhắn tin</small>`;
+          document.body.appendChild(toast);
+          setTimeout(() => toast.classList.add('show'), 10);
+          setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+          }, 4000);
+        }
+      });
+  }
 });
 
 onUnmounted(() => {
   document.removeEventListener('click', closeUserMenu);
   if (timeInterval) clearInterval(timeInterval);
+  if (chatEchoChannel) window.Echo?.leaveChannel('admin.chat');
 });
 
 const qrModalRef = ref(null);
@@ -802,5 +839,40 @@ const handleAttendanceOption = async (method) => {
 @keyframes slideInUp {
   from { opacity: 0; transform: translateY(10px) scale(0.95); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ===== NÚT CHAT + BADGE ===== */
+.btn-chat-notify {
+  color: #1e3a5f;
+  border: 1.5px solid #1e3a5f;
+  background: #fff;
+  transition: all 0.2s;
+}
+.btn-chat-notify:hover {
+  background: #1e3a5f;
+  color: #fff;
+}
+
+/* ===== TOAST THÔNG BÁO CHAT ===== */
+:global(.admin-chat-toast) {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: linear-gradient(135deg, #1e3a5f, #2d6a4f);
+  color: white;
+  padding: 14px 18px;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(30, 58, 95, 0.4);
+  font-size: 0.88rem;
+  z-index: 99999;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+  max-width: 280px;
+  pointer-events: none;
+}
+:global(.admin-chat-toast.show) {
+  opacity: 1;
+  transform: translateY(0);
 }
 </style>
