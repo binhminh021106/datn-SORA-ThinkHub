@@ -632,7 +632,10 @@ export default function HomeScreen({ navigation }) {
 
   const handleSelectProduct = (prod) => {
     setShowSearchResults(false);
-    navigation.navigate("ProductDetail", { slug: prod.slug });
+    navigation.navigate("ProductDetail", {
+      slug: prod.slug,
+      previewImage: prod.previewImage || prod.image || null,
+    });
   };
 
   const handleSelectCategory = (cat) => {

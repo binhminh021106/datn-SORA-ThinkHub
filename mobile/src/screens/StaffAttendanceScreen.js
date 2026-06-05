@@ -68,6 +68,61 @@ const parseQrToken = (rawValue) => {
   return value;
 };
 
+const getAttendanceStatusConfig = (status) => {
+  switch (status?.state) {
+    case 'ready':
+      if (!status?.shift_assignment) {
+        return {
+          label: 'Chưa có ca làm',
+          icon: 'calendar-clear-outline',
+          color: '#8b6f43',
+          bg: '#fff8e6',
+          border: '#f1ddb2',
+        };
+      }
+      return {
+        label: 'Chưa check-in',
+        icon: 'time-outline',
+        color: '#9f273b',
+        bg: '#fff4f6',
+        border: '#f0cdd3',
+      };
+    case 'working':
+    case 'hanging':
+      return {
+        label: 'Đang trong ca làm',
+        icon: 'play-circle-outline',
+        color: '#15803d',
+        bg: '#f0fdf4',
+        border: '#bbf7d0',
+      };
+    case 'completed':
+      return {
+        label: 'Đã check-in',
+        icon: 'checkmark-circle-outline',
+        color: '#2563eb',
+        bg: '#eff6ff',
+        border: '#bfdbfe',
+      };
+    case 'loading':
+      return {
+        label: 'Đang kiểm tra',
+        icon: 'sync-outline',
+        color: '#6b7280',
+        bg: '#f9fafb',
+        border: '#e5e7eb',
+      };
+    default:
+      return {
+        label: 'Chưa check-in',
+        icon: 'help-circle-outline',
+        color: '#6b7280',
+        bg: '#f9fafb',
+        border: '#e5e7eb',
+      };
+  }
+};
+
 export default function StaffAttendanceScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isFocused = useIsFocused();
@@ -84,18 +139,63 @@ export default function StaffAttendanceScreen({ navigation }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasScanned, setHasScanned] = useState(false);
   const [lastQrToken, setLastQrToken] = useState('');
+  const [attendanceStatus, setAttendanceStatus] = useState({ state: 'loading' });
   const pagePadding = width >= 720 ? 24 : 16;
 
   const adminName = useMemo(() => (
     adminInfo?.fullname || adminInfo?.name || adminInfo?.fullName || adminInfo?.email || 'Nhân viên SORA'
   ), [adminInfo]);
   const adminAvatarUrl = useMemo(() => getStorageUrl(adminInfo?.avatar_url), [adminInfo?.avatar_url]);
+  const attendanceStatusConfig = useMemo(() => getAttendanceStatusConfig(attendanceStatus), [attendanceStatus]);
 
   useEffect(() => {
     if (adminInfo?.avatar_url) {
       console.log('Staff avatar URL:', adminAvatarUrl);
     }
   }, [adminAvatarUrl, adminInfo?.avatar_url]);
+
+  const refreshAttendanceStatus = useCallback(async (token) => {
+    if (!token) {
+      setAttendanceStatus({ state: 'ready' });
+      return null;
+    }
+
+    setAttendanceStatus((current) => current?.state ? current : { state: 'loading' });
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/admin/attendances/status`, {
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 401) {
+        return null;
+      }
+
+      if (!response.ok) {
+        setAttendanceStatus({ state: 'ready' });
+        return null;
+      }
+
+      const payload = await response.json();
+      if (payload?.success && isMountedRef.current) {
+        setAttendanceStatus({
+          state: payload.state,
+          data: payload.data || null,
+          shift_assignment: payload.shift_assignment || null,
+        });
+      }
+
+      return payload;
+    } catch {
+      if (isMountedRef.current) {
+        setAttendanceStatus({ state: 'ready' });
+      }
+      return null;
+    }
+  }, []);
 
   const refreshAdminProfile = useCallback(async (token) => {
     if (!token) return null;
@@ -139,6 +239,7 @@ export default function StaffAttendanceScreen({ navigation }) {
         setAdminInfo(storedInfo ? JSON.parse(storedInfo) : null);
         if (storedToken) {
           refreshAdminProfile(storedToken);
+          refreshAttendanceStatus(storedToken);
         }
       } catch {
         if (!isMountedRef.current) return;
@@ -154,7 +255,7 @@ export default function StaffAttendanceScreen({ navigation }) {
       isMountedRef.current = false;
       processingRef.current = false;
     };
-  }, [refreshAdminProfile]);
+  }, [refreshAdminProfile, refreshAttendanceStatus]);
 
   const loginAdmin = async () => {
     const normalizedEmail = email.trim();
@@ -188,6 +289,7 @@ export default function StaffAttendanceScreen({ navigation }) {
       setAdminToken(payload.token);
       setAdminInfo(payload.admin || null);
       refreshAdminProfile(payload.token);
+      refreshAttendanceStatus(payload.token);
       setPassword('');
       showCustomAlert('Đăng nhập thành công', 'Bạn có thể quét QR chấm công ngay bây giờ.', [{ text: 'BẮT ĐẦU QUÉT' }], 'checkmark-circle-outline');
     } catch (error) {
@@ -201,6 +303,7 @@ export default function StaffAttendanceScreen({ navigation }) {
     await AsyncStorage.multiRemove([ADMIN_TOKEN_KEY, ADMIN_INFO_KEY]);
     setAdminToken('');
     setAdminInfo(null);
+    setAttendanceStatus({ state: 'ready' });
     setHasScanned(false);
     setLastQrToken('');
   }, []);
@@ -281,6 +384,14 @@ export default function StaffAttendanceScreen({ navigation }) {
 
       const attendancePayload = await attendanceResponse.json();
       const message = attendancePayload?.message || fallbackMessage;
+      if (isMountedRef.current) {
+        setAttendanceStatus((current) => ({
+          ...current,
+          state: endpoint === 'check-in' ? 'working' : 'completed',
+          data: attendancePayload?.data || current?.data || null,
+        }));
+      }
+      refreshAttendanceStatus(adminToken);
       showCustomAlert(
         'Chấm công thành công',
         message,
@@ -303,7 +414,7 @@ export default function StaffAttendanceScreen({ navigation }) {
       }
       processingRef.current = false;
     }
-  }, [adminToken, logoutAdmin, navigation, resetScanner]);
+  }, [adminToken, logoutAdmin, navigation, refreshAttendanceStatus, resetScanner]);
 
   const handleBarcodeScanned = ({ data }) => {
     if (hasScanned || isProcessing || !data) return;
@@ -441,6 +552,20 @@ export default function StaffAttendanceScreen({ navigation }) {
                 <Text style={styles.staffRole} numberOfLines={1}>
                   {adminInfo?.role?.label || adminInfo?.role?.value || 'Nhân viên'}
                 </Text>
+                <View
+                  style={[
+                    styles.staffStatusPill,
+                    {
+                      backgroundColor: attendanceStatusConfig.bg,
+                      borderColor: attendanceStatusConfig.border,
+                    },
+                  ]}
+                >
+                  <Ionicons name={attendanceStatusConfig.icon} size={13} color={attendanceStatusConfig.color} />
+                  <Text style={[styles.staffStatusText, { color: attendanceStatusConfig.color }]}>
+                    {attendanceStatusConfig.label}
+                  </Text>
+                </View>
               </View>
               <TouchableOpacity
                 style={styles.logoutButton}
@@ -644,6 +769,22 @@ const styles = StyleSheet.create({
   staffLabel: { color: '#8b7d7d', fontFamily: 'Oswald_400Regular', fontSize: 11, letterSpacing: 0.5 },
   staffName: { color: '#2b2525', fontFamily: 'PlayfairDisplay_700Bold', fontSize: 18, marginTop: 1 },
   staffRole: { color: BRAND_RED, fontFamily: 'Oswald_500Medium', fontSize: 11, letterSpacing: 0.5, marginTop: 3 },
+  staffStatusPill: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginTop: 7,
+  },
+  staffStatusText: {
+    fontFamily: 'Oswald_500Medium',
+    fontSize: 10,
+    letterSpacing: 0.35,
+  },
   logoutButton: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff5f6' },
   scannerCard: {
     padding: 14,

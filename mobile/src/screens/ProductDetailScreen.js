@@ -197,7 +197,7 @@ const renderLuxuryHTML = (html) => {
 export default function ProductDetailScreen() {
   const route = useRoute();
   const navigation = useNavigation();
-  const { slug } = route.params;
+  const { slug, previewImage } = route.params || {};
 
   const [isLoading, setIsLoading] = useState(true);
   const [product, setProduct] = useState(null);
@@ -630,7 +630,10 @@ export default function ProductDetailScreen() {
     : (Number(product.rating_avg) || 0);
 
   // Swiper rendering
-  const imagesToRender = product.images && product.images.length > 0 ? product.images : ['https://images.unsplash.com/photo-1617038220319-276d3cfab638?q=80&w=800'];
+  const detailImages = product.images && product.images.length > 0 ? product.images : [];
+  const imagesToRender = detailImages.length > 0
+    ? detailImages
+    : [previewImage || 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?q=80&w=800'];
 
   return (
     <SafeAreaView style={s.safe}>
@@ -682,8 +685,11 @@ export default function ProductDetailScreen() {
               const index = Math.round(offsetX / width);
               setActiveImageIndex(index);
             }}
-            renderItem={({ item }) => (
-              <SmartImage source={{ uri: item }} style={s.galleryImg}
+            renderItem={({ item, index }) => (
+              <SmartImage
+                source={{ uri: item }}
+                previewSource={index === 0 && previewImage && previewImage !== item ? { uri: previewImage } : undefined}
+                style={s.galleryImg}
               />
             )}
           />
@@ -966,7 +972,10 @@ export default function ProductDetailScreen() {
                   onToggleWishlist={handleToggleRelatedWishlist}
                   isFavorite={relatedWishlistIds.includes(relatedProduct.id?.toString())}
                   isWishlistLoading={relatedWishlistLoadingIds.includes(relatedProduct.id?.toString())}
-                  onPress={(selectedProduct) => navigation.navigate("ProductDetail", { slug: selectedProduct.slug })}
+                  onPress={(selectedProduct) => navigation.navigate("ProductDetail", {
+                    slug: selectedProduct.slug,
+                    previewImage: selectedProduct.previewImage || selectedProduct.image || null,
+                  })}
                 />
               ))}
             </ScrollView>

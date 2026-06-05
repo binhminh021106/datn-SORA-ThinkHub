@@ -94,23 +94,19 @@ const handleLogin = async () => {
     const data = await response.json();
 
     if (response.ok) {
-      // Choose storage based on "remember me"
-      // If remembered -> persist in localStorage, otherwise keep in sessionStorage
-      const storage = form.value.remember ? localStorage : sessionStorage;
-
-      // Clear previous entries to avoid stale data in the other storage
+      // Admin pages read the token from localStorage, so keep auth state there consistently.
       clearAdminAuthStorage();
 
-      storage.setItem('admin_token', data.token);
-      storage.setItem('admin_role', data.admin.role_id);
+      localStorage.setItem('admin_token', data.token);
+      localStorage.setItem('admin_role', data.admin.role_id);
 
       if (data.admin.role && data.admin.role.level) {
-        storage.setItem('admin_level', data.admin.role.level);
+        localStorage.setItem('admin_level', data.admin.role.level);
       }
 
-      storage.setItem('admin_info', JSON.stringify(data.admin));
+      localStorage.setItem('admin_info', JSON.stringify(data.admin));
 
-      // Remember email for future logins (UI convenience)
+      // "Ghi nhớ tôi" chỉ nhớ email để tiện đăng nhập lần sau.
       if (form.value.remember) {
         localStorage.setItem('admin_remember_email', form.value.email);
       } else {
@@ -137,7 +133,7 @@ const handleLogin = async () => {
         confirmButtonColor: '#009981'
       });
     }
-  } catch (error) {
+  } catch {
     Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể kết nối máy chủ!', confirmButtonColor: '#009981' });
   } finally {
     isLoading.value = false;

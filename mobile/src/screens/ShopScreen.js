@@ -464,7 +464,10 @@ export default function ShopScreen({ navigation, route }) {
 
   const handleOpenProductDetail = (product) => {
     if (!product.slug) return;
-    navigation.navigate('ProductDetail', { slug: product.slug });
+    navigation.navigate('ProductDetail', {
+      slug: product.slug,
+      previewImage: product.previewImage || product.image || null,
+    });
   };
 
   return (
