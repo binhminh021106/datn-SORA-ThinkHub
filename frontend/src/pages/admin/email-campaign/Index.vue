@@ -39,22 +39,32 @@
       </div>
 
       <!-- TAB 1: BẢNG ĐIỀU KHIỂN GỬI -->
-      <section v-if="activeTab === 'dashboard'" class="row g-3">
+      <section v-if="activeTab === 'dashboard'" class="row g-3 align-items-start dashboard-grid">
         <div class="col-xl-4">
-          <div class="card border-0 shadow-sm h-100">
+          <div class="card border-0 shadow-sm dashboard-action-card">
             <div class="card-header bg-white border-0 pt-3 px-3 pb-0">
               <h6 class="fw-bold mb-1">Bảng điều khiển gửi</h6>
               <p class="text-muted small mb-0" style="font-size: 0.8rem;">Kiểm tra và gửi thủ công theo ngày hiện tại.</p>
             </div>
             <div class="card-body p-3 d-grid gap-2">
-              <button class="action-button birthday" :disabled="isSending" @click="runBirthdayCampaign">
+              <button
+                class="action-button birthday"
+                :class="{ 'is-running': sendingCampaign === 'birthday' }"
+                :disabled="sendingCampaign === 'birthday'"
+                @click="runBirthdayCampaign"
+              >
                 <i class="bi bi-cake2"></i>
                 <span>
                   <strong>Kiểm tra & Gửi Sinh Nhật</strong>
                   <small>Quét khách có sinh nhật hôm nay</small>
                 </span>
               </button>
-              <button class="action-button holiday" :disabled="isSending" @click="runHolidayCampaign">
+              <button
+                class="action-button holiday"
+                :class="{ 'is-running': sendingCampaign === 'holiday' }"
+                :disabled="sendingCampaign === 'holiday'"
+                @click="runHolidayCampaign"
+              >
                 <i class="bi bi-calendar2-heart"></i>
                 <span>
                   <strong>Kiểm tra & Gửi Sự Kiện</strong>
@@ -97,10 +107,14 @@
                     </tr>
                     <tr v-for="log in emailLogs" :key="log.id">
                       <td class="px-3 py-2 small fw-semibold">{{ formatDateTime(log.sent_at) }}</td>
-                      <td class="px-3 py-2"><span class="badge bg-secondary bg-opacity-10 text-secondary border">{{ formatEventType(log.event_type) }}</span></td>
                       <td class="px-3 py-2">
-                        <div class="fw-bold small">{{ log.user?.name || 'N/A' }}</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">{{ log.user?.email || 'N/A' }}</div>
+                        <span class="event-type-badge badge bg-secondary bg-opacity-10 text-secondary border">
+                          {{ formatEventType(log.event_type) }}
+                        </span>
+                      </td>
+                      <td class="px-3 py-2 recipient-cell">
+                        <div class="recipient-name">{{ log.user?.name || 'N/A' }}</div>
+                        <div class="recipient-email">{{ log.user?.email || 'N/A' }}</div>
                       </td>
                       <td class="px-3 py-2">
                         <span class="text-muted" style="font-size: 0.75rem;">Theo sự kiện</span>
@@ -353,7 +367,7 @@ import apiClient from '@/utils/apiClient';
 
 const router = useRouter();
 const activeTab = ref('dashboard');
-const isSending = ref(false);
+const sendingCampaign = ref(null);
 const holidaySearch = ref('');
 
 const today = new Date();
@@ -460,11 +474,12 @@ const previewBirthdayContent = computed(() => replaceTokens(birthdaySettings.val
 
 // Gửi Email Sinh Nhật (Luồng A)
 async function runBirthdayCampaign() {
+  if (sendingCampaign.value) return;
   if (!birthdaySettings.value.enabled) {
     Swal.fire('Đã tắt tính năng', 'Email sinh nhật đang tắt nên hệ thống bỏ qua.', 'info');
     return;
   }
-  isSending.value = true;
+  sendingCampaign.value = 'birthday';
   try {
     const response = await apiClient.post('/admin/email-campaign/trigger-birthday');
     if (response.data?.success) {
@@ -476,13 +491,14 @@ async function runBirthdayCampaign() {
   } catch (error) {
     showToast('Lỗi máy chủ! Không thể gửi email.', 'error');
   } finally {
-    isSending.value = false;
+    sendingCampaign.value = null;
   }
 }
 
 // Gửi Email Sự Kiện (Luồng B)
 async function runHolidayCampaign() {
-  isSending.value = true;
+  if (sendingCampaign.value) return;
+  sendingCampaign.value = 'holiday';
   try {
     const response = await apiClient.post('/admin/email-campaign/trigger-holiday');
     if (response.data?.success) {
@@ -494,7 +510,7 @@ async function runHolidayCampaign() {
   } catch (error) {
     showToast('Lỗi máy chủ! Không thể gửi email sự kiện.', 'error');
   } finally {
-    isSending.value = false;
+    sendingCampaign.value = null;
   }
 }
 
@@ -656,11 +672,52 @@ function showToast(title, icon = 'success') {
 
 /* Card & Tables */
 .form-card, .card { border-radius: 10px; }
+.dashboard-grid { position: relative; }
+.dashboard-action-card {
+  height: auto;
+  position: relative;
+  z-index: 1;
+  overflow: visible;
+}
+.dashboard-action-card .card-header,
+.dashboard-action-card .card-body {
+  position: relative;
+  z-index: 2;
+}
+.dashboard-action-card .card-body {
+  background: #fff;
+  border-radius: 0 0 10px 10px;
+}
 .search-box { width: 240px; max-width: 100%; }
 .search-box .form-control { padding-left: 16px; font-size: 0.85rem; }
 .holiday-table { min-width: 700px; }
 .log-table { min-width: 700px; }
 .text-sm th, .text-sm td { font-size: 0.85rem; }
+.event-type-badge {
+  min-height: 24px;
+  min-width: 92px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.2;
+  white-space: normal;
+  padding: 5px 8px;
+}
+.recipient-cell { min-width: 170px; }
+.recipient-name {
+  color: #212529;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.recipient-email {
+  color: #8a94a3;
+  font-size: 0.74rem;
+  line-height: 1.25;
+  margin-top: 2px;
+  word-break: break-word;
+}
 
 /* Custom Editor */
 .custom-editor-wrapper:focus-within { border-color: #009981 !important; box-shadow: 0 0 0 0.2rem rgba(0, 153, 129, 0.15); }
@@ -688,11 +745,21 @@ function showToast(title, icon = 'success') {
 /* Action Buttons for Dashboard */
 .action-button { border: 1px solid #e8ecef; border-radius: 10px; background: #fff; padding: 14px; display: flex; align-items: center; gap: 14px; text-align: left; transition: all 0.2s ease; width: 100%; }
 .action-button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(33, 37, 41, 0.08); border-color: #dee2e6; }
-.action-button:disabled { opacity: 0.65; cursor: not-allowed; }
+.action-button:disabled { cursor: not-allowed; }
+.action-button.is-running {
+  opacity: 0.62;
+  background: #f8f9fa;
+  border-color: #e9ecef;
+}
 .action-button i:first-child { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 8px; font-size: 1.25rem; }
+.action-button span {
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
 .action-button.birthday i:first-child { background: #fde8f1; color: #c23b6e; }
 .action-button.holiday i:first-child { background: #e5f6f2; color: #00856f; }
-.action-button strong, .action-button small { display: block; font-size: 0.9rem;}
+.action-button strong, .action-button small { display: block; font-size: 0.9rem; overflow-wrap: anywhere; }
 .action-button small { color: #6c757d; margin-top: 2px; font-size: 0.75rem;}
 .today-box { border-radius: 8px; background: #f8faf9; border: 1px solid #edf0f2; padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
 

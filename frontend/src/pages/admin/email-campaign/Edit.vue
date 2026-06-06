@@ -28,20 +28,28 @@
             </div>
             <div class="card-body p-4">
               <form @submit.prevent="updateHoliday">
+                
+                <!-- Tên sự kiện -->
                 <div class="mb-3">
-                  <label class="form-label fw-bold small text-muted text-uppercase">Tên sự kiện / ngày lễ</label>
-                  <input v-model.trim="holidayForm.name" type="text" class="form-control" required>
+                  <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Tên sự kiện / ngày lễ</label>
+                  <input v-model.trim="holidayForm.name" type="text" class="form-control form-control-sm bg-light border-0" placeholder="Ví dụ: Quốc tế Phụ nữ 8/3" required>
                 </div>
-                <div class="row g-3 mb-3">
-                  <div class="col-sm-6">
-                    <label class="form-label fw-bold small text-muted text-uppercase">Ngày</label>
-                    <input v-model="holidayForm.day" type="number" min="1" max="31" class="form-control" required>
+                
+                <!-- Chọn ngày diễn ra (Datepicker) -->
+                <div class="mb-4">
+                  <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Ngày diễn ra (Hàng năm)</label>
+                  <div class="input-group input-group-sm bg-light border-0 rounded-2 overflow-hidden focus-within-brand">
+                    <span class="input-group-text bg-transparent border-0 text-muted"><i class="bi bi-calendar-event"></i></span>
+                    <input 
+                      v-model="displayDate" 
+                      type="date" 
+                      class="form-control form-control-sm bg-transparent border-0 shadow-none ps-0 cursor-pointer" 
+                      required
+                    >
                   </div>
-                  <div class="col-sm-6">
-                    <label class="form-label fw-bold small text-muted text-uppercase">Tháng</label>
-                    <input v-model="holidayForm.month" type="number" min="1" max="12" class="form-control" required>
-                  </div>
+                  <small class="text-muted mt-1 d-block" style="font-size: 0.7rem;">Hệ thống chỉ lưu lại ngày và tháng để lặp lại vào mỗi năm.</small>
                 </div>
+
                 <div class="mb-3">
                   <label class="form-label fw-bold small text-muted text-uppercase">Đối tượng nhận</label>
                   <select v-model="holidayForm.target" class="form-select">
@@ -172,6 +180,30 @@ const holidayForm = reactive({
   status: 'active'
 })
 
+// Computed Property biến đổi Day/Month thành chuẩn YYYY-MM-DD cho thẻ <input type="date">
+const displayDate = computed({
+  get() {
+    if (!holidayForm.month || !holidayForm.day) return ''
+    // Lấy năm hiện tại để làm năm ảo hiển thị trên lịch
+    const yy = new Date().getFullYear()
+    // Đảm bảo định dạng 2 chữ số (VD: 03 thay vì 3)
+    const mm = String(holidayForm.month).padStart(2, '0')
+    const dd = String(holidayForm.day).padStart(2, '0')
+    return `${yy}-${mm}-${dd}`
+  },
+  set(val) {
+    if (val) {
+      // val trả về định dạng YYYY-MM-DD, ta cắt ra lấy tháng và ngày
+      const parts = val.split('-')
+      holidayForm.month = parseInt(parts[1], 10)
+      holidayForm.day = parseInt(parts[2], 10)
+    } else {
+      holidayForm.month = ''
+      holidayForm.day = ''
+    }
+  }
+})
+
 const previewHolidayContent = computed(() => {
   return replaceTokens(holidayForm.content || '').replace(/\n/g, '<br>')
 })
@@ -293,4 +325,16 @@ onMounted(() => {
 .sora-tp-table .text-danger { color: #a42637 !important; }
 .sora-tp-btn { background-color: #a42637; color: #fff; border: none; padding: 14px 24px; font-weight: bold; border-radius: 4px; display: block; margin: 0 auto; font-size: 14px; cursor: pointer; transition: opacity 0.2s; }
 .sora-tp-btn:hover { opacity: 0.9; }
+
+/* CSS Đồng bộ từ Create.vue cho Datepicker */
+.cursor-pointer { cursor: pointer; }
+.focus-within-brand {
+  transition: box-shadow 0.2s, border-color 0.2s;
+  border: 1px solid transparent;
+}
+.focus-within-brand:focus-within {
+  border-color: #009981 !important;
+  background-color: #fff !important;
+  box-shadow: 0 0 0 0.2rem rgba(0, 153, 129, 0.15);
+}
 </style>

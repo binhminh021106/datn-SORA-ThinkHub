@@ -20,20 +20,43 @@
             </div>
             <div class="card-body p-4">
               <form @submit.prevent="saveHoliday">
+                <div class="mb-4 bg-light p-3 rounded-3 border border-light">
+                  <label class="form-label fw-semibold small text-muted text-uppercase mb-2 d-flex align-items-center gap-2">
+                    <i class="bi bi-magic text-warning fs-6"></i> Gợi ý sự kiện phổ biến
+                  </label>
+                  <div class="d-flex flex-wrap gap-2">
+                    <button 
+                      type="button" 
+                      v-for="(item, index) in popularHolidays" 
+                      :key="index"
+                      @click="applySuggestion(item)"
+                      class="btn btn-sm bg-white border border-secondary border-opacity-25 rounded-pill px-3 py-1 text-dark shadow-sm custom-hover-btn"
+                      style="font-size: 0.75rem;"
+                    >
+                      {{ item.name }} <span class="text-brand fw-bold ms-1">({{ item.day }}/{{ item.month }})</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Tên sự kiện -->
                 <div class="mb-3">
                   <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Tên sự kiện / ngày lễ</label>
-                  <input v-model.trim="holidayForm.name" type="text" class="form-control form-control-sm bg-light border-0" placeholder="Ví dụ: Quốc tế Phụ nữ 8/3" required>
+                  <input v-model.trim="holidayForm.name" type="text" class="form-control form-control-sm bg-light border-0" placeholder="Ví dụ: Quốc tế Phụ nữ 8/3" >
                 </div>
                 
-                <div class="row g-3 mb-3">
-                  <div class="col-sm-6">
-                    <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Ngày</label>
-                    <input v-model="holidayForm.day" type="number" min="1" max="31" class="form-control form-control-sm bg-light border-0" required>
+                <!-- CẬP NHẬT: Chọn ngày diễn ra (Datepicker) -->
+                <div class="mb-4">
+                  <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Ngày diễn ra (Hàng năm)</label>
+                  <div class="input-group input-group-sm bg-light border-0 rounded-2 overflow-hidden focus-within-brand">
+                    <span class="input-group-text bg-transparent border-0 text-muted"><i class="bi bi-calendar-event"></i></span>
+                    <input 
+                      v-model="displayDate" 
+                      type="date" 
+                      class="form-control form-control-sm bg-transparent border-0 shadow-none ps-0 cursor-pointer" 
+                      
+                    >
                   </div>
-                  <div class="col-sm-6">
-                    <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Tháng</label>
-                    <input v-model="holidayForm.month" type="number" min="1" max="12" class="form-control form-control-sm bg-light border-0" required>
-                  </div>
+                  <small class="text-muted mt-1 d-block" style="font-size: 0.7rem;">Hệ thống chỉ lưu lại ngày và tháng để lặp lại vào mỗi năm.</small>
                 </div>
 
                 <div class="mb-3">
@@ -206,12 +229,55 @@ const holidayForm = reactive({
   name: '',
   day: '',
   month: '',
-  target: ['all'],
+  target: ['all'], // Mảng chứa nhiều đối tượng
   content: '',
   hasVoucher: false,
   voucherCode: '',
   discount: '',
   status: 'active'
+})
+
+
+ const popularHolidays = [
+  { name: 'Lễ Tình nhân (Valentine)', day: 14, month: 2 },
+  { name: 'Quốc tế Phụ nữ', day: 8, month: 3 },
+  { name: 'Giải phóng Miền Nam', day: 30, month: 4 },
+  { name: 'Quốc tế Lao động', day: 1, month: 5 },
+  { name: 'Tết Trung thu', day: 15, month: 8 }, // Lấy ngày dương lịch làm ví dụ, hoặc ghi chú Âm lịch
+  { name: 'Phụ nữ Việt Nam', day: 20, month: 10 },
+  { name: 'Nhà giáo Việt Nam', day: 20, month: 11 },
+  { name: 'Lễ Giáng sinh', day: 24, month: 12 },
+]
+
+// 2. Hàm áp dụng gợi ý khi user click
+const applySuggestion = (holiday) => {
+  holidayForm.name = holiday.name
+  holidayForm.day = holiday.day
+  holidayForm.month = holiday.month
+}
+
+// 3. Computed Property biến đổi Day/Month thành chuẩn YYYY-MM-DD cho thẻ <input type="date">
+const displayDate = computed({
+  get() {
+    if (!holidayForm.month || !holidayForm.day) return ''
+    // Lấy năm hiện tại để làm năm ảo hiển thị trên lịch
+    const yy = new Date().getFullYear()
+    // Đảm bảo định dạng 2 chữ số (VD: 03 thay vì 3)
+    const mm = String(holidayForm.month).padStart(2, '0')
+    const dd = String(holidayForm.day).padStart(2, '0')
+    return `${yy}-${mm}-${dd}`
+  },
+  set(val) {
+    if (val) {
+      // val trả về định dạng YYYY-MM-DD, ta cắt ra lấy tháng và ngày
+      const parts = val.split('-')
+      holidayForm.month = parseInt(parts[1], 10)
+      holidayForm.day = parseInt(parts[2], 10)
+    } else {
+      holidayForm.month = ''
+      holidayForm.day = ''
+    }
+  }
 })
 
 const previewHolidayContent = computed(() => {
@@ -224,20 +290,21 @@ const holidaySubject = computed(() => {
 
 // Xử lý lưu sự kiện mới
 const saveHoliday = async () => {
-  // 1. Validate cơ bản
   if (!holidayForm.name || !holidayForm.day || !holidayForm.month || !holidayForm.content) {
     toast.warning('Vui lòng nhập đầy đủ các trường thông tin bắt buộc (*).')
     return
   }
+  if (holidayForm.hasVoucher && (!holidayForm.voucherCode || !holidayForm.discount)) {
+    toast.warning('Vui lòng nhập đầy đủ Mã quà tặng và Mức ưu đãi.')
+    return
+  }
 
-  // 2. Gửi API
   isSubmitting.value = true
   try {
     const response = await apiClient.post('/admin/holiday-events', buildPayload())
     
     if (response.data && response.data.success) {
       toast.success('Thêm mới sự kiện thành công!')
-      // Trở về trang danh sách (Lưu ý: đổi tên route phù hợp với cấu hình router/admin.js của bạn)
       router.push({ path: '/admin/email-campaign' }) 
     } else {
       toast.error(response.data.message || 'Lỗi khi thêm mới sự kiện.')
@@ -259,24 +326,13 @@ function buildPayload() {
     name: holidayForm.name,
     day: holidayForm.day,
     month: holidayForm.month,
-    target_audience: normalizeTarget(),
+ target_audience: holidayForm.target.length > 0 ? holidayForm.target.join(',') : 'all',
     email_subject: holidaySubject.value,
     email_content: holidayForm.content,
     voucher_code: holidayForm.hasVoucher ? holidayForm.voucherCode : null,
+    discount: holidayForm.hasVoucher ? holidayForm.discount : null, // BỔ SUNG DÒNG NÀY
     status: holidayForm.status,
   }
-}
-
-function normalizeTarget() {
-  if (!Array.isArray(holidayForm.target) || holidayForm.target.length === 0) {
-    return 'all'
-  }
-
-  if (holidayForm.target.includes('all')) {
-    return 'all'
-  }
-
-  return holidayForm.target[0]
 }
 
 function insertToken(token) {
@@ -290,131 +346,56 @@ function replaceTokens(text) {
 
 <style scoped>
 /* Base Colors & Utilities */
-.text-brand {
-  color: #009981;
-}
-.bg-brand {
-  background-color: #009981;
-}
-.border-brand-focus:focus {
-  border-color: #009981 !important;
-  box-shadow: 0 0 0 0.2rem rgba(0, 153, 129, 0.15) !important;
-}
-.cursor-pointer {
-  cursor: pointer;
-}
-.btn-brand {
-  background: #009981;
-  border-color: #009981;
-}
-.btn-brand:hover {
-  background: #00856f;
-  border-color: #00856f;
-}
-
-/* Card */
-.form-card, .card {
-  border-radius: 10px;
-}
-
-/* Custom Editor */
-.custom-editor-wrapper:focus-within {
-  border-color: #009981 !important;
-  box-shadow: 0 0 0 0.2rem rgba(0, 153, 129, 0.15);
-}
-.custom-editor-wrapper textarea:focus {
-  box-shadow: none;
-  outline: none;
-}
-
-/* Checkboxes */
-.form-check-input:checked {
-  background-color: #009981;
-  border-color: #009981;
-}
-
-/* SORA EMAIL PREVIEW - Window Style */
-.preview-card-bg {
-  background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);
-}
-.mail-window-preview {
-  border-radius: 8px;
-  overflow: hidden;
-  background: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  border: 1px solid #e0e4e8;
-}
-.mail-window-header {
-  background: #f1f3f5;
-  border-bottom: 1px solid #dee2e6;
-}
-.window-dots .dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-/* SORA EMAIL PREVIEW - HOLIDAY EDITION */
-.sora-tp-header {
-  background-color: #343a40;
-  color: #fff;
-  text-align: center;
-  padding: 14px;
-  font-weight: 700;
-  font-size: 14px;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
-.sora-tp-body {
-  padding: 20px;
-  background: #fff;
-}
-.sora-tp-banner-holiday {
-  background: linear-gradient(135deg, #9b111e 0%, #720b15 100%);
-  color: #fff;
-  padding: 20px;
-  border: 1px solid #5a0911;
-}
-.text-holiday {
-  color: #f8d7da;
-}
-.sora-tp-content {
-  color: #495057;
-  line-height: 1.6;
-  font-size: 13px;
-  margin-bottom: 20px;
-}
-.sora-tp-voucher-box-holiday {
-  background: #fff0f3;
-  border: 1px dashed #dc3545;
-  position: relative;
-}
-.sora-tp-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-.sora-tp-btn-holiday {
-  background: linear-gradient(135deg, #dc3545 0%, #a71d2a 100%);
-  color: #fff;
-  border: none;
-  padding: 12px 20px;
-  font-weight: 800;
-  border-radius: 6px;
-  font-size: 13px;
-  transition: all 0.2s;
-  box-shadow: 0 4px 10px rgba(220, 53, 69, 0.2);
-}
-.sora-tp-btn-holiday:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 15px rgba(220, 53, 69, 0.3);
-}
+.text-brand { color: #009981; }
+.bg-brand { background-color: #009981; }
+.border-brand-focus:focus { border-color: #009981 !important; box-shadow: 0 0 0 0.2rem rgba(0, 153, 129, 0.15) !important; }
+.cursor-pointer { cursor: pointer; }
+.btn-brand { background: #009981; border-color: #009981; }
+.btn-brand:hover { background: #00856f; border-color: #00856f; }
+.form-card, .card { border-radius: 10px; }
+.custom-editor-wrapper:focus-within { border-color: #009981 !important; box-shadow: 0 0 0 0.2rem rgba(0, 153, 129, 0.15); }
+.custom-editor-wrapper textarea:focus { box-shadow: none; outline: none; }
+.form-check-input:checked { background-color: #009981; border-color: #009981; }
+.preview-card-bg { background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%); }
+.mail-window-preview { border-radius: 8px; overflow: hidden; background: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; border: 1px solid #e0e4e8; }
+.mail-window-header { background: #f1f3f5; border-bottom: 1px solid #dee2e6; }
+.window-dots .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.sora-tp-header { background-color: #343a40; color: #fff; text-align: center; padding: 14px; font-weight: 700; font-size: 14px; letter-spacing: 0.5px; text-transform: uppercase; }
+.sora-tp-body { padding: 20px; background: #fff; }
+.sora-tp-banner-holiday { background: linear-gradient(135deg, #9b111e 0%, #720b15 100%); color: #fff; padding: 20px; border: 1px solid #5a0911; }
+.text-holiday { color: #f8d7da; }
+.sora-tp-content { color: #495057; line-height: 1.6; font-size: 13px; margin-bottom: 20px; }
+.sora-tp-voucher-box-holiday { background: #fff0f3; border: 1px dashed #dc3545; position: relative; }
+.sora-tp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.sora-tp-btn-holiday { background: linear-gradient(135deg, #dc3545 0%, #a71d2a 100%); color: #fff; border: none; padding: 12px 20px; font-weight: 800; border-radius: 6px; font-size: 13px; transition: all 0.2s; box-shadow: 0 4px 10px rgba(220, 53, 69, 0.2); }
+.sora-tp-btn-holiday:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 15px rgba(220, 53, 69, 0.3); }
 
 @media (max-width: 575.98px) {
-  .sora-tp-body {
-    padding: 16px;
-  }
+  .sora-tp-body { padding: 16px; }
+}
+
+
+/* Custom hover cho nút gợi ý */
+.custom-hover-btn {
+  transition: all 0.2s ease;
+}
+.custom-hover-btn:hover {
+  background-color: #009981 !important;
+  color: #fff !important;
+  border-color: #009981 !important;
+}
+.custom-hover-btn:hover .text-brand {
+  color: #fff !important;
+}
+
+/* Hiệu ứng viền xanh khi click vào ô Datepicker */
+.focus-within-brand {
+  transition: box-shadow 0.2s, border-color 0.2s;
+  border: 1px solid transparent;
+}
+.focus-within-brand:focus-within {
+  border-color: #009981 !important;
+  background-color: #fff !important;
+  box-shadow: 0 0 0 0.2rem rgba(0, 153, 129, 0.15);
 }
 </style>
