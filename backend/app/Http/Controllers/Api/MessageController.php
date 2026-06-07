@@ -126,12 +126,13 @@ class MessageController extends Controller
             return response()->json(['status' => true, 'data' => []]);
         }
 
-        $idString = implode(',', $userIds);
-        
         $users = User::whereIn('id', $userIds)
-            ->select('id', 'fullName', 'email')
-            ->orderByRaw("FIELD(id, $idString)")
-            ->get();
+     ->select('id', 'fullName', 'email')
+     ->get()
+     ->sortBy(function ($user) use ($userIds) {
+        return array_search($user->id, $userIds);
+    })
+      ->values();
 
         return response()->json(['status' => true, 'data' => $users]);
     }

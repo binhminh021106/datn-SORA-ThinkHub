@@ -24,7 +24,7 @@ class GeoController extends Controller
         }
 
         if ($this->apiKey) {
-            $response = Http::get("{$this->baseUrl}/places/autocomplete", [
+            $response = Http::timeout(8)->retry(2, 200)->get("{$this->baseUrl}/places/autocomplete", [
                 'input' => $query,
                 'api_key' => $this->apiKey,
             ]);
@@ -136,7 +136,7 @@ class GeoController extends Controller
         // Fallback to Nominatim
         $response = Http::withHeaders([
             'User-Agent' => 'Laravel/SORA-ThinkHub'
-        ])->get('https://nominatim.openstreetmap.org/search', [
+        ])->timeout(8)->retry(2, 200)->get('https://nominatim.openstreetmap.org/search', [
             'format' => 'jsonv2',
             'q' => $address,
             'addressdetails' => 1,
@@ -162,8 +162,8 @@ class GeoController extends Controller
                         'formatted_address' => $item['display_name'] ?? '',
                         'geometry' => [
                             'location' => [
-                                'lat' => $item['lat'],
-                                'lng' => $item['lon'],
+                                'lat' => isset($item['lat']) ? (float) $item['lat'] : null,
+      'lng' => isset($item['lon']) ? (float) $item['lon'] : null,
                             ]
                         ],
                         'compound' => [
