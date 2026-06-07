@@ -145,7 +145,12 @@ const soraAlert = createSoraAlert({
 const showToast = (message, type = 'success') => {
   soraAlert.fire({
     icon: type,
-    title: type === 'success' ? 'Thành Công!' : 'Có Lỗi Xảy Ra!',
+    title:
+type === 'success'
+? 'Thành Công!'
+: type === 'warning'
+? 'Lưu Ý'
+: 'Có Lỗi Xảy Ra!',
     text: message,
     timer: type === 'success' ? 2500 : undefined,
     showConfirmButton: type !== 'success'
@@ -314,9 +319,6 @@ const getCurrentLocation = () => {
       const compound = result.compound || result.address || {};
       addrForm.value.shipping_address = fullAddr;
 
-      // Debug: log toàn bộ compound để biết Goong trả về tên huyện dạng gì
-      console.log('[GEO] compound:', compound);
-      console.log('[GEO] formatted_address:', fullAddr);
 
       const provinceName = compound.province || compound.city || '';
       // Goong có thể trả về district với nhiều key khác nhau
@@ -329,7 +331,6 @@ const getCurrentLocation = () => {
         addressText: fullAddr,
       });
 
-      console.log('[GEO] resolvedAddress:', resolvedAddress);
 
       addrForm.value.city = resolvedAddress?.province?.name || provinceName || addrForm.value.city;
       // Ưu tiên kết quả đã resolve; nếu không match được thì dùng tên raw từ Goong để user thấy và chọn lại

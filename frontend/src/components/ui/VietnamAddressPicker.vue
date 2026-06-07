@@ -320,7 +320,10 @@ const loadProvinces = async () => {
       const data = normalizeItems(responseData(payload), 'new');
       provincesCache = data;
       return data;
-    })();
+    })().catch((error) => {
+    provincesPromise = null;
+     throw error;
+   });
   }
 
   return provincesPromise;

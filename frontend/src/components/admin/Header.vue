@@ -447,7 +447,7 @@ onMounted(() => {
     chatEchoChannel = window.Echo.private('admin.chat')
       .listen('.MessageSent', (e) => {
         const msg = e.message;
-        if (msg && msg.sender_id !== 1) {
+        if (msg && Number(msg.sender_id) !== 1) {
           unreadChatCount.value++;
           // Toast thông báo góc phải
           const toast = document.createElement('div');
@@ -467,7 +467,7 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('click', closeUserMenu);
   if (timeInterval) clearInterval(timeInterval);
-  if (chatEchoChannel) window.Echo?.leaveChannel('admin.chat');
+  if (chatEchoChannel) window.Echo?.leave('admin.chat');
 });
 
 const qrModalRef = ref(null);
