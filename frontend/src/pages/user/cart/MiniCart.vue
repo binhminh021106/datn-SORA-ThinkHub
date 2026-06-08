@@ -10,7 +10,8 @@
         ></div>
       </transition>
 
-      <div class="cart-wrapper d-flex" :class="isOpen ? 'open' : ''">
+      <transition name="cart-slide">
+        <div v-if="isOpen" class="cart-wrapper d-flex">
         
         <!-- ========================================== -->
         <!-- BẢNG GỢI Ý SẢN PHẨM BÊN TRÁI -->
@@ -199,7 +200,8 @@
             </div>
           </div>
         </div>
-      </div>
+        </div>
+      </transition>
     </div>
   </Teleport>
 </template>
@@ -467,11 +469,21 @@ defineExpose({ openCart, fetchCart });
   display: flex;
   justify-content: flex-end;
   width: 100vw;
-  transform: translateX(100%);
+  transform: translateX(0);
+}
+
+.cart-slide-enter-active,
+.cart-slide-leave-active {
   transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-.cart-wrapper.open {
+.cart-slide-enter-from,
+.cart-slide-leave-to {
+  transform: translateX(100%);
+}
+
+.cart-slide-enter-to,
+.cart-slide-leave-from {
   transform: translateX(0);
 }
 

@@ -188,6 +188,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick, computed, watch, defineProps, defineEmits } from 'vue';
 import axios from 'axios';
+import { getUserToken } from '@/composables/useUtilities';
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -219,7 +220,7 @@ const activeCategory = ref('smileys');
 const lightboxUrl = ref(null);
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const getToken = () => localStorage.getItem('auth_token') || localStorage.getItem('token');
+const getToken = () => getUserToken();
 const axiosConfig = () => ({
   headers: { Authorization: `Bearer ${getToken()}`, Accept: 'application/json' }
 });

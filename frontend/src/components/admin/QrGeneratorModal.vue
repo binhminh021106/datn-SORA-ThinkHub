@@ -285,9 +285,9 @@ onUnmounted(() => {
 /* Hiệu ứng tia quét xanh lá */
 .scan-line {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
+  top: 12%;
+  left: 12%;
+  width: 76%;
   height: 3px;
   background-color: #009981;
   box-shadow: 0 0 10px #009981, 0 0 20px #009981;
@@ -296,10 +296,10 @@ onUnmounted(() => {
 }
 
 @keyframes scan {
-  0% { top: 0; opacity: 0; }
+  0% { top: 12%; opacity: 0; }
   10% { opacity: 1; }
   90% { opacity: 1; }
-  100% { top: 100%; opacity: 0; }
+  100% { top: 88%; opacity: 0; }
 }
 
 /* Custom Vue Overlay Modal */
@@ -336,6 +336,10 @@ onUnmounted(() => {
   width: 100% !important;
   height: 100% !important;
   display: block !important;
+}
+
+:deep(#reader #qr-shaded-region) {
+  display: none !important;
 }
 
 .scanner-container {

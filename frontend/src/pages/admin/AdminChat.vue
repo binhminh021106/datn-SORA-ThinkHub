@@ -124,22 +124,22 @@
                 v-for="(msg, index) in messages"
                 :key="index"
                 class="message-row"
-                :class="Number(msg.sender_id) === 1 ? 'message-sent' : 'message-received'"
+                :class="isAdminMessage(msg) ? 'message-sent' : 'message-received'"
               >
                 <!-- Avatar (chỉ show khi không phải admin) -->
-                <div v-if="Number(msg.sender_id) !== 1" class="msg-avatar">
+                <div v-if="!isAdminMessage(msg)" class="msg-avatar">
                   {{ (activeUser.fullName || 'K').charAt(0).toUpperCase() }}
                 </div>
 
                 <div class="message-group">
                   <!-- File/Image message -->
                   <template v-if="msg.message_type === 'image'">
-                    <div class="message-bubble img-bubble" :class="Number(msg.sender_id) === 1 ? 'bubble-sent' : 'bubble-received'">
+                    <div class="message-bubble img-bubble" :class="isAdminMessage(msg) ? 'bubble-sent' : 'bubble-received'">
                       <img :src="msg.file_url" :alt="msg.file_name" class="chat-image" @click="openImage(msg.file_url)" />
                     </div>
                   </template>
                   <template v-else-if="msg.message_type === 'file'">
-                    <div class="message-bubble file-bubble" :class="Number(msg.sender_id) === 1 ? 'bubble-sent' : 'bubble-received'">
+                    <div class="message-bubble file-bubble" :class="isAdminMessage(msg) ? 'bubble-sent' : 'bubble-received'">
                       <a :href="msg.file_url" target="_blank" download class="file-download-link">
                         <div class="file-icon">
                           <i class="bi bi-file-earmark-arrow-down-fill"></i>
@@ -153,7 +153,7 @@
                   </template>
                   <!-- Text/Emoji message -->
                   <template v-else>
-                    <div class="message-bubble" :class="Number(msg.sender_id) === 1 ? 'bubble-sent' : 'bubble-received'">
+                    <div class="message-bubble" :class="isAdminMessage(msg) ? 'bubble-sent' : 'bubble-received'">
                       {{ msg.content }}
                     </div>
                   </template>
@@ -162,7 +162,7 @@
                     <span v-if="msg.created_at">
                       {{ formatTime(msg.created_at) }}
                     </span>
-                    <span v-if="Number(msg.sender_id) === 1" class="ms-1">
+                    <span v-if="isAdminMessage(msg)" class="ms-1">
                       <i class="bi bi-check2-all text-primary" style="font-size: 0.7rem;"></i>
                     </span>
                   </div>
@@ -290,8 +290,8 @@
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue';
 import axios from 'axios';
+import { getAdminToken } from '@/composables/useUtilities';
 
-const adminId = ref(1);
 const contacts = ref([]);
 const activeUserId = ref(null);
 const activeUser = ref(null);
@@ -325,7 +325,8 @@ const isDeletingConv = ref(false);
 const lightboxUrl = ref(null);
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
-const getToken = () => localStorage.getItem('admin_token') || localStorage.getItem('auth_token');
+const ADMIN_CHAT_CHANNEL = 'admin.chat';
+const getToken = () => getAdminToken();
 const axiosConfig = () => ({
   headers: { Authorization: `Bearer ${getToken()}`, Accept: 'application/json' }
 });
@@ -389,6 +390,7 @@ const scrollToBottom = async () => {
 };
 
 const openImage = (url) => { lightboxUrl.value = url; };
+const isAdminMessage = (msg) => Number(msg.receiver_id) === Number(activeUserId.value);
 
 // ===== EMOJI =====
 const toggleEmojiPicker = () => {
@@ -621,14 +623,14 @@ onMounted(() => {
   if (window.Echo) {
     isSocketActive.value = true;
 
-    window.Echo.private(`chat.1`)
+    window.Echo.private(ADMIN_CHAT_CHANNEL)
       .listen('.MessageSent', (e) => {
         const msg = e.message;
 
         if (renderedIds.value.has(msg.id)) return;
 
         if (activeUserId.value && (Number(msg.sender_id) === Number(activeUserId.value) || Number(msg.receiver_id) === Number(activeUserId.value))) {
-          if (Number(msg.sender_id) === 1) {
+          if (isAdminMessage(msg)) {
             const tempIdx = messages.value.findIndex(m => String(m.id).startsWith('temp_') && m.content === msg.content);
             if (tempIdx !== -1) {
               renderedIds.value.delete(messages.value[tempIdx].id);
@@ -642,7 +644,7 @@ onMounted(() => {
           messages.value.push(msg);
           scrollToBottom();
           moveContactToTop(activeUserId.value);
-        } else if (Number(msg.sender_id) !== 1) {
+        } else if (msg.sender_id) {
           unreadMap.value[msg.sender_id] = (unreadMap.value[msg.sender_id] || 0) + 1;
           moveContactToTop(msg.sender_id);
         }
@@ -652,7 +654,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (window.Echo) {
-    window.Echo.leaveChannel(`chat.1`);
+    window.Echo.leave(ADMIN_CHAT_CHANNEL);
   }
 });
 </script>

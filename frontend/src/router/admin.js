@@ -153,7 +153,8 @@ const admin = [
         name: 'admin-attendance-history',
         component: () => import('../pages/admin/admin-attendance/History.vue'),
         meta: {
-          title: 'Lịch sử chấm công'
+          title: 'Lịch sử chấm công',
+          sidebarPath: null
         },
       },
       // ROUTE QUẢN LÝ CHẤM CÔNG (ATTENDANCE)
