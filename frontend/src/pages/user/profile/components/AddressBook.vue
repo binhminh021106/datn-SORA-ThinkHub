@@ -145,7 +145,12 @@ const soraAlert = createSoraAlert({
 const showToast = (message, type = 'success') => {
   soraAlert.fire({
     icon: type,
-    title: type === 'success' ? 'Thành Công!' : 'Có Lỗi Xảy Ra!',
+    title:
+type === 'success'
+? 'Thành Công!'
+: type === 'warning'
+? 'Lưu Ý'
+: 'Có Lỗi Xảy Ra!',
     text: message,
     timer: type === 'success' ? 2500 : undefined,
     showConfirmButton: type !== 'success'
@@ -314,9 +319,11 @@ const getCurrentLocation = () => {
       const compound = result.compound || result.address || {};
       addrForm.value.shipping_address = fullAddr;
 
-      const provinceName = compound.province || compound.city || addrForm.value.city;
-      const districtName = compound.district || addrForm.value.district;
-      const wardName = compound.commune || compound.ward || addrForm.value.ward;
+
+      const provinceName = compound.province || compound.city || '';
+      // Goong có thể trả về district với nhiều key khác nhau
+      const districtName = compound.district || compound.district_name || '';
+      const wardName = compound.commune || compound.ward || compound.commune_name || '';
       const resolvedAddress = await addressPickerRef.value?.resolveAddress({
         province: provinceName,
         district: districtName,
@@ -324,8 +331,10 @@ const getCurrentLocation = () => {
         addressText: fullAddr,
       });
 
+
       addrForm.value.city = resolvedAddress?.province?.name || provinceName || addrForm.value.city;
-      addrForm.value.district = resolvedAddress?.district?.name || '';
+      // Ưu tiên kết quả đã resolve; nếu không match được thì dùng tên raw từ Goong để user thấy và chọn lại
+      addrForm.value.district = resolvedAddress?.district?.name || districtName || addrForm.value.district;
       addrForm.value.ward = resolvedAddress?.ward?.name || wardName || addrForm.value.ward;
       addressHasDistrictLevel.value = Boolean(resolvedAddress?.hasDistrictLevel);
 
@@ -334,8 +343,11 @@ const getCurrentLocation = () => {
       validateField('district');
       validateField('ward');
       
+      const missingDistrict = addressHasDistrictLevel.value && !resolvedAddress?.district;
       if (!addrForm.value.city || !addrForm.value.ward) {
         showToast('Đã lấy vị trí, vui lòng kiểm tra lại Tỉnh/Thành và Phường/Xã trước khi lưu.', 'warning');
+      } else if (missingDistrict) {
+        showToast('Đã lấy vị trí! Vui lòng chọn lại Quận/Huyện từ danh sách.', 'warning');
       } else {
         showToast('Đã lấy vị trí hiện tại và tự động điền địa chỉ', 'success');
       }

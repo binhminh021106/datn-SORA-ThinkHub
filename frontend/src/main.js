@@ -24,7 +24,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000
 // Cấu hình bắt sóng Real-time
 window.Echo = new Echo({
     broadcaster: 'reverb',
-    key: 'sorajewelrykey123', // Khớp 100% với backend
+    key: import.meta.env.VITE_REVERB_APP_KEY,
     wsHost: '127.0.0.1',
     wsPort: 8080,
     wssPort: 8080,
