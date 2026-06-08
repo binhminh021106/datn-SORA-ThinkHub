@@ -118,6 +118,12 @@ export default function RegisterScreen({ navigation }) {
     });
   }, [navigation]);
 
+  const handlePostAuthCacheRefresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['cart'] });
+    await queryClient.invalidateQueries({ queryKey: ['checkout', 'init'] });
+    queryClient.removeQueries({ queryKey: ['profile'] });
+  }, [queryClient]);
+
   const registerMutation = useMutation({
     mutationFn: async (payload) => {
       const response = await fetch(`${MOBILE_AUTH_URL}/register`, {
@@ -143,7 +149,7 @@ export default function RegisterScreen({ navigation }) {
     onSuccess: async (data) => {
       setSuccessMsg('Đăng ký thành công! Đang tự động đăng nhập...');
       await persistAuthSession(data);
-      queryClient.removeQueries({ queryKey: ['profile'] });
+      await handlePostAuthCacheRefresh();
 
       setTimeout(() => {
         goToAppAfterAuth();
@@ -187,6 +193,7 @@ export default function RegisterScreen({ navigation }) {
     try {
       const data = await loginWithGoogle();
       await persistAuthSession(data);
+      await handlePostAuthCacheRefresh();
       setSuccessMsg('Đăng nhập Google thành công!');
       setTimeout(() => {
         goToAppAfterAuth();

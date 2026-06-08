@@ -22,6 +22,21 @@ const SORA_PLACEHOLDER = require('../../assets/Sora-placeholder.png');
 const BANNERS = [
   { id: '1', image: 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?q=80&w=1000&auto=format&fit=crop' },
 ];
+const HOME_FETCH_TIMEOUT_MS = 12000;
+
+const fetchWithTimeout = async (url, options = {}, timeoutMs = HOME_FETCH_TIMEOUT_MS) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const getStorageUrl = (path) => {
@@ -89,7 +104,7 @@ const saveLocalWishlist = async (nextItems) => {
 };
 
 const fetchHomeQueryData = async () => {
-  const response = await fetch(`${API_BASE_URL}/client/home-data`, {
+  const response = await fetchWithTimeout(`${API_BASE_URL}/client/home-data`, {
     headers: { Accept: 'application/json' },
   });
   const result = await response.json();
@@ -119,7 +134,7 @@ const fetchHomeQueryData = async () => {
 };
 
 const fetchHeaderQueryData = async () => {
-  const response = await fetch(`${API_BASE_URL}/client/header-data`, {
+  const response = await fetchWithTimeout(`${API_BASE_URL}/client/header-data`, {
     headers: { Accept: 'application/json' },
   });
   const result = await response.json();

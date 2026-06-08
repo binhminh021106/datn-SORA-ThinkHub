@@ -68,6 +68,14 @@ const getTierKey = (tierName) => {
   return 'default';
 };
 
+const getUserInitials = (name) => {
+  const normalizedName = String(name || 'U').trim();
+  const parts = normalizedName.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'U';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+};
+
 const TierBadge = ({ tierName }) => {
   const key = getTierKey(tierName);
   const cfg = TIER_CONFIG[key];
@@ -103,7 +111,8 @@ export default function HomeSideMenu({
   const theme = TIER_THEMES[tierKey];
   const avatarUri = user?.avatar_url
     ? getStorageUrl(user.avatar_url)
-    : `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || 'U')}&background=9f273b&color=fff&size=200`;
+    : '';
+  const userInitials = getUserInitials(user?.fullName);
 
   return (
     <View style={styles.menuOverlayWrapper}>
@@ -131,7 +140,13 @@ export default function HomeSideMenu({
                 onPress={() => closeAndNavigate('Profile')}
               >
                 <View style={[styles.heroAvatarWrap, { borderColor: theme.avatarBorder }]}>
-                  <SmartImage source={{ uri: avatarUri }} style={styles.heroAvatar} resizeMode="cover" />
+                  {avatarUri ? (
+                    <SmartImage source={{ uri: avatarUri }} style={styles.heroAvatar} resizeMode="cover" />
+                  ) : (
+                    <View style={[styles.heroAvatar, styles.heroAvatarFallback]}>
+                      <Text style={styles.heroAvatarInitials}>{userInitials}</Text>
+                    </View>
+                  )}
                 </View>
                 <View style={styles.heroInfo}>
                   <Text style={[styles.heroName, { color: theme.nameColor }]} numberOfLines={1}>
@@ -339,6 +354,17 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   heroAvatar: { width: '100%', height: '100%' },
+  heroAvatarFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#9f273b',
+  },
+  heroAvatarInitials: {
+    fontFamily: 'Oswald_600SemiBold',
+    fontSize: 20,
+    color: '#fff',
+    letterSpacing: 0.6,
+  },
   heroInfo: { flex: 1 },
   heroName: {
     fontFamily: 'PlayfairDisplay_700Bold',

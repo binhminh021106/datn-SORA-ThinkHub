@@ -545,12 +545,17 @@ class ClientCheckoutController extends Controller
         $frontendUrl = rtrim(env('FRONTEND_URL', 'http://localhost:5173'), '/');
 
         if ($request->resultCode == 0) {
-            Order::where('order_code', $orderCode)->update(['payment_status' => 'paid']);
-
             $order = Order::with('items')->where('order_code', $orderCode)->first();
             if ($order) {
-                $this->clearCartAfterPaidOrder($order, $cartId);
-                $this->sendOrderConfirmationEmail($order);
+                $alreadyPaid = $order->payment_status === 'paid';
+
+                if (!$alreadyPaid) {
+                    $order->payment_status = 'paid';
+                    $order->save();
+
+                    $this->clearCartAfterPaidOrder($order, $cartId);
+                    $this->sendOrderConfirmationEmail($order);
+                }
             }
 
             if ($isMobileCheckout) {

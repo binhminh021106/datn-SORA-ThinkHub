@@ -56,8 +56,18 @@ const normalizeArticleContent = (content) => {
     .replace(/src=(["'])storage\//gi, `src=$1${origin}/storage/`);
 };
 
+const sanitizeArticleHtml = (html) => String(html || '')
+  .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+  .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+  .replace(/<(iframe|object|embed|form|input|button|textarea|select|option|link|meta)\b[^>]*>.*?<\/\1>/gis, '')
+  .replace(/<(iframe|object|embed|form|input|button|textarea|select|option|link|meta)\b[^>]*\/?>/gi, '')
+  .replace(/\s+on[a-z]+\s*=\s*(['"]).*?\1/gi, '')
+  .replace(/\s+on[a-z]+\s*=\s*[^\s>]+/gi, '')
+  .replace(/\s+(href|src)\s*=\s*(['"])\s*(javascript:|data:)[^'"]*\2/gi, '')
+  .replace(/\s+(href|src)\s*=\s*(javascript:|data:)[^\s>]*/gi, '');
+
 const buildHtml = (content) => {
-  const normalizedContent = normalizeArticleContent(content);
+  const normalizedContent = sanitizeArticleHtml(normalizeArticleContent(content));
 
   return `
     <!DOCTYPE html>
@@ -105,7 +115,7 @@ const renderWebArticleContent = (content) => (
       lineHeight: 1.78,
       width: '100%',
     },
-    dangerouslySetInnerHTML: { __html: normalizeArticleContent(content) },
+    dangerouslySetInnerHTML: { __html: sanitizeArticleHtml(normalizeArticleContent(content)) },
   })
 );
 

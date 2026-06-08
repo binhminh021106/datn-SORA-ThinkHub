@@ -34,6 +34,12 @@ const COLOR_FILTERS = [
 ];
 const MATERIAL_FILTERS = ['Kim cương', 'Vàng 18K', 'Ngọc trai', 'Sapphire', 'Ruby'];
 const PRICE_FILTERS = ['Dưới 10 triệu', '10 - 20 triệu', '20 - 40 triệu', 'Trên 40 triệu'];
+const PRICE_FILTER_RANGES = {
+  'Dưới 10 triệu': { max: 10000000 },
+  '10 - 20 triệu': { min: 10000000, max: 20000000 },
+  '20 - 40 triệu': { min: 20000000, max: 40000000 },
+  'Trên 40 triệu': { min: 40000000 },
+};
 
 const DIMENSION_FILTERS = ['1', '2'];
 const SIZE_FILTERS = ['14 – 2', '16 cm', '18 cm', '45 cm', '50 cm', '8 – 14', 'Ni 10', 'Ni 12', 'Ni 14'];
@@ -108,6 +114,7 @@ const fetchShopProducts = async ({
   selectedMaterials,
   selectedDimensions,
   selectedSizes,
+  selectedPrice,
 }) => {
   const params = new URLSearchParams({
     page: page.toString(),
@@ -142,6 +149,14 @@ const fetchShopProducts = async ({
 
   if (selectedSizes.length > 0) {
     params.set('size', selectedSizes.join(','));
+  }
+
+  const priceRange = selectedPrice ? PRICE_FILTER_RANGES[selectedPrice] : null;
+  if (priceRange?.min !== undefined) {
+    params.set('min_price', String(priceRange.min));
+  }
+  if (priceRange?.max !== undefined) {
+    params.set('max_price', String(priceRange.max));
   }
 
   const response = await fetch(`${API_BASE_URL}/shop/sora/products?${params.toString()}`, {
@@ -203,6 +218,7 @@ export default function ShopScreen({ navigation, route }) {
       selectedMaterials,
       selectedDimensions,
       selectedSizes,
+      selectedPrice,
     ],
     queryFn: () => fetchShopProducts({
       page: currentPage,
@@ -213,6 +229,7 @@ export default function ShopScreen({ navigation, route }) {
       selectedMaterials,
       selectedDimensions,
       selectedSizes,
+      selectedPrice,
     }),
     staleTime: 2 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
@@ -373,7 +390,7 @@ export default function ShopScreen({ navigation, route }) {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeCategory, activeFilter, searchKeyword, selectedColors, selectedMaterials, selectedDimensions, selectedSizes]);
+  }, [activeCategory, activeFilter, searchKeyword, selectedColors, selectedMaterials, selectedDimensions, selectedSizes, selectedPrice]);
 
   useFocusEffect(
     useCallback(() => {

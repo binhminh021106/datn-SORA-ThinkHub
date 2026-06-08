@@ -28,21 +28,7 @@ export const getProductReviewStats = (product) => {
   const reviews = Array.isArray(product.reviews) ? product.reviews : [];
   const localReviewCount = reviews.length;
   const serverReviewCount = getServerReviewCount(product);
-  const count = serverReviewCount > 0 ? serverReviewCount : localReviewCount;
-
-  if (count <= 0) {
-    return { count: 0, average: 0 };
-  }
-
-  if (localReviewCount > 0 && (!serverReviewCount || localReviewCount >= serverReviewCount)) {
-    const totalRating = reviews.reduce((sum, review) => sum + toFiniteNumber(review.rating), 0);
-    return {
-      count,
-      average: Math.min(Math.max(totalRating / localReviewCount, 0), 5),
-    };
-  }
-
-  const average = [
+  const serverAverage = [
     product.reviews_avg_rating,
     product.rating_avg,
     product.rating_average,
@@ -52,17 +38,17 @@ export const getProductReviewStats = (product) => {
     .map(toFiniteNumber)
     .find((value) => value > 0);
 
-  if (average > 0) {
+  if (serverReviewCount > 0) {
     return {
-      count,
-      average: Math.min(Math.max(average, 0), 5),
+      count: serverReviewCount,
+      average: Math.min(Math.max(serverAverage || 0, 0), 5),
     };
   }
 
   if (localReviewCount > 0) {
     const totalRating = reviews.reduce((sum, review) => sum + toFiniteNumber(review.rating), 0);
     return {
-      count,
+      count: localReviewCount,
       average: Math.min(Math.max(totalRating / localReviewCount, 0), 5),
     };
   }

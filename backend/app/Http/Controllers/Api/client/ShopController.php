@@ -70,15 +70,17 @@ class ShopController extends Controller
             ['Size', 'size', 'Kích cỡ', 'Kich co', 'Cỡ', 'Co', 'Ni tay']
         );
 
+        $this->applyPriceRangeFilter($query, $request);
+
         switch ($request->input('sort')) {
             case 'new':
                 $query->orderBy('created_at', 'desc');
                 break;
             case 'price_asc':
-                $query->orderByRaw('COALESCE(promotional_price, base_price) ASC');
+                $query->orderByRaw('COALESCE(NULLIF(promotional_price, 0), base_price) ASC');
                 break;
             case 'price_desc':
-                $query->orderByRaw('COALESCE(promotional_price, base_price) DESC');
+                $query->orderByRaw('COALESCE(NULLIF(promotional_price, 0), base_price) DESC');
                 break;
             case 'recommended':
             default:
@@ -206,5 +208,23 @@ class ShopController extends Controller
                         });
                 });
         });
+    }
+
+    private function applyPriceRangeFilter($productQuery, Request $request): void
+    {
+        $minPrice = $request->filled('min_price') ? max(0, (float) $request->input('min_price')) : null;
+        $maxPrice = $request->filled('max_price') ? max(0, (float) $request->input('max_price')) : null;
+
+        if ($minPrice === null && $maxPrice === null) {
+            return;
+        }
+
+        if ($minPrice !== null) {
+            $productQuery->whereRaw('COALESCE(NULLIF(promotional_price, 0), base_price) >= ?', [$minPrice]);
+        }
+
+        if ($maxPrice !== null) {
+            $productQuery->whereRaw('COALESCE(NULLIF(promotional_price, 0), base_price) <= ?', [$maxPrice]);
+        }
     }
 }

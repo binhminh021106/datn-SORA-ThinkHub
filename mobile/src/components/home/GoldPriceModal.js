@@ -17,6 +17,21 @@ import { API_BASE_URL } from '../../config/api';
 import { PRICE_FONT_FAMILY, PRICE_FONT_WEIGHT } from '../../styles/typography';
 
 const { height: SCREEN_H } = Dimensions.get('window');
+const GOLD_PRICE_TIMEOUT_MS = 10000;
+
+const fetchWithTimeout = async (url, options = {}, timeoutMs = GOLD_PRICE_TIMEOUT_MS) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
 
 export default function GoldPriceModal({ visible, onClose }) {
   const [prices, setPrices] = useState([]);
@@ -29,7 +44,7 @@ export default function GoldPriceModal({ visible, onClose }) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE_URL}/client/gold-prices`, {
+      const response = await fetchWithTimeout(`${API_BASE_URL}/client/gold-prices`, {
         headers: { Accept: 'application/json' },
       });
       const result = await response.json();
@@ -41,6 +56,10 @@ export default function GoldPriceModal({ visible, onClose }) {
       }
     } catch (e) {
       console.log('Error fetching gold prices:', e);
+      if (e?.name === 'AbortError') {
+        setError('Kết nối giá vàng quá lâu. Vui lòng thử lại sau.');
+        return;
+      }
       setError('Không thể kết nối đến máy chủ SORA. Vui lòng kiểm tra mạng!');
     } finally {
       setLoading(false);
@@ -57,7 +76,7 @@ export default function GoldPriceModal({ visible, onClose }) {
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 5,
       onPanResponderMove: (_, gestureState) => {
         const clampedY = Math.max(0, gestureState.dy);
