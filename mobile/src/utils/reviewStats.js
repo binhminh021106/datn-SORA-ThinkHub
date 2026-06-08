@@ -54,7 +54,7 @@ export const getProductReviewStats = (product) => {
   }
 
   return {
-    count,
+    count: 0,
     average: 0,
   };
 };
