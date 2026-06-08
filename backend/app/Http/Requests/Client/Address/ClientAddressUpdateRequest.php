@@ -23,7 +23,7 @@ class ClientAddressUpdateRequest extends FormRequest
             'customer_name' => ['required', 'string', 'min:2', 'max:50', 'regex:/^[A-Za-zÀ-ỹ]+(?:\s+[A-Za-zÀ-ỹ]+)+$/u'],
             'customer_phone' => ['required', 'numeric', 'regex:/^0[3|5|7|8|9][0-9]{8}$/'],
             'city' => 'required|string|max:100',
-            'district' => 'required|string|max:100',
+            'district' => 'nullable|string|max:100',
             'ward' => 'required|string|max:100',
             'shipping_address' => 'required|string|min:10|max:255',
             'is_default' => 'nullable|boolean',
@@ -73,6 +73,12 @@ class ClientAddressUpdateRequest extends FormRequest
         if ($this->has('customer_phone') && $this->customer_phone) {
             $this->merge([
                 'customer_phone' => $this->normalizeVietnamesePhone($this->customer_phone)
+            ]);
+        }
+
+        if ($this->has('district') && trim((string) $this->district) === '') {
+            $this->merge([
+                'district' => null,
             ]);
         }
     }

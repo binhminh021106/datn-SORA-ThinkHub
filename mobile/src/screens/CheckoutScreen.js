@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -16,10 +16,12 @@ import {
   RefreshControl,
   KeyboardAvoidingView,
   Platform,
+  Linking,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { API_BASE_URL } from "../config/api";
 import { showCustomAlert } from "../components/CustomAlert";
 import { PRICE_FONT_FAMILY, PRICE_FONT_WEIGHT } from "../styles/typography";
@@ -35,21 +37,134 @@ const CustomAlertShim = {
 const { width } = Dimensions.get("window");
 
 const fmt = (n) => n.toLocaleString("vi-VN") + "đ";
-const ADDRESS_API_BASE = "https://esgoo.net/api-tinhthanh";
-const mapAddressItems = (items = []) => items.map((item) => ({
+const MOMO_MIN_AMOUNT = 10000;
+const MOMO_MAX_AMOUNT = 50000000;
+const NEW_ADDRESS_API_URL = "https://esgoo.net/api-tinhthanh-new/4/0.htm";
+const mapNewAddressProvinces = (items = []) => items.map((item) => ({
   code: item.id,
   name: item.full_name || item.name,
+  wards: (item.data2 || []).map((ward) => ({
+    code: ward.id,
+    name: ward.full_name || ward.name,
+  })),
 }));
+
+const fetchCheckoutInitData = async () => {
+  const token = await AsyncStorage.getItem("auth_token");
+  const sessionId = await AsyncStorage.getItem("cart_session_id");
+
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (sessionId) headers["X-Cart-Session-Id"] = sessionId;
+
+  const res = await fetch(`${API_BASE_URL}/client/checkout/init`, { headers });
+  const json = await res.json();
+
+  if (!res.ok || !json.success) {
+    throw new Error(json.message || "Unable to load checkout init data");
+  }
+
+  return json;
+};
+
+const fetchNewAddressProvinces = async () => {
+  const res = await fetch(NEW_ADDRESS_API_URL);
+  const data = await res.json();
+
+  if (data?.error === 0 && Array.isArray(data.data)) {
+    return mapNewAddressProvinces(data.data);
+  }
+
+  throw new Error("Province data is empty");
+};
+
+const getCheckoutHeaders = async () => {
+  const token = await AsyncStorage.getItem("auth_token");
+  const sessionId = await AsyncStorage.getItem("cart_session_id");
+
+  const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (sessionId) headers["X-Cart-Session-Id"] = sessionId;
+
+  return headers;
+};
+
+const fetchOrderStatus = async (orderCode) => {
+  if (!orderCode) return null;
+
+  const headers = await getCheckoutHeaders();
+  const res = await fetch(`${API_BASE_URL}/client/orders/${orderCode}`, { headers });
+  const json = await res.json();
+
+  if (!res.ok || !json.success) {
+    throw new Error(json.message || "Khong the kiem tra trang thai don hang.");
+  }
+
+  return json.data;
+};
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const fetchOrderStatusWithRetry = async (orderCode, attempts = 3) => {
+  let latestOrder = null;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    latestOrder = await fetchOrderStatus(orderCode);
+    if (latestOrder?.payment_status === "paid") return latestOrder;
+    if (attempt < attempts - 1) await wait(1500);
+  }
+
+  return latestOrder;
+};
+
+const fetchWithTimeout = async (url, options = {}, timeoutMs = 30000, controller = new AbortController()) => {
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
 
 export default function CheckoutScreen({ route }) {
   const navigation = useNavigation();
+  const queryClient = useQueryClient();
+  const checkoutRequestControllerRef = useRef(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
   // Retrieve checkout items passed from Cart, fallback to dummy
   const [checkoutItems, setCheckoutItems] = useState(route?.params?.checkoutItems || []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const requireLogin = async () => {
+      const token = await AsyncStorage.getItem("auth_token");
+      if (!isMounted) return;
+
+      if (!token) {
+        navigation.replace("Login");
+        return;
+      }
+
+      setIsCheckingAuth(false);
+    };
+
+    requireLogin();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [checkoutItems, navigation]);
 
   // Personal Info States
   const [personalName, setPersonalName] = useState("");
@@ -67,55 +182,45 @@ export default function CheckoutScreen({ route }) {
   const [tierDiscountInfo, setTierDiscountInfo] = useState(null);
   const [createdOrder, setCreatedOrder] = useState(null);
 
+  const checkoutInitQuery = useQuery({
+    queryKey: ["checkout", "init"],
+    queryFn: fetchCheckoutInitData,
+    enabled: !isCheckingAuth,
+    staleTime: 1000 * 60 * 3,
+    gcTime: 1000 * 60 * 15,
+  });
+
   useEffect(() => {
-    fetchInitData();
-  }, []);
+    const json = checkoutInitQuery.data;
+    if (!json?.success) return;
 
-  const fetchInitData = async ({ showFullScreenLoader = true } = {}) => {
-    try {
-      if (showFullScreenLoader) setIsLoading(true);
-      const token = await AsyncStorage.getItem("auth_token");
-      const sessionId = await AsyncStorage.getItem("cart_session_id");
-
-      const headers = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-      if (sessionId) headers["X-Cart-Session-Id"] = sessionId;
-
-      const res = await fetch(`${API_BASE_URL}/client/checkout/init`, { headers });
-      const json = await res.json();
-
-      if (json.success) {
-        // We do not override checkoutItems with json.cart_items because they are raw unmapped items.
-        // We rely on the pre-mapped checkoutItems passed via navigation route params.
-        if (json.addresses) {
-          setAddresses(json.addresses);
-          const defaultAddr = json.addresses.find((a) => a.is_default);
-          if (defaultAddr) {
-            setSelectedAddrId(defaultAddr.id);
-          } else if (json.addresses.length > 0) {
-            setSelectedAddrId(json.addresses[0].id);
-          }
+    if (Array.isArray(json.addresses)) {
+      setAddresses(json.addresses);
+      setSelectedAddrId((currentId) => {
+        if (currentId && json.addresses.some((address) => address.id === currentId)) {
+          return currentId;
         }
-        if (json.user) {
-          setPersonalName(json.user.name || "");
-          setPersonalPhone(json.user.phone || "");
-          setPersonalEmail(json.user.email || "");
-        }
-        if (json.coupons) setApiCoupons(json.coupons);
-        if (json.tier_discount) setTierDiscountInfo(json.tier_discount);
-      }
-    } catch (error) {
-      console.log("Error fetching init data", error);
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
+        const defaultAddr = json.addresses.find((address) => address.is_default);
+        return defaultAddr?.id || json.addresses[0]?.id || null;
+      });
     }
-  };
+
+    if (json.user && !isEditingInfo) {
+      setPersonalName(json.user.name || "");
+      setPersonalPhone(json.user.phone || "");
+      setPersonalEmail(json.user.email || "");
+    }
+
+    setApiCoupons(json.coupons || []);
+    setTierDiscountInfo(json.tier_discount || null);
+  }, [checkoutInitQuery.data, isEditingInfo]);
 
   const handleRefresh = () => {
-    setIsRefreshing(true);
-    fetchInitData({ showFullScreenLoader: false });
+    checkoutInitQuery.refetch();
   };
+
+  const isLoading = checkoutInitQuery.isLoading && !checkoutInitQuery.data;
+  const isRefreshing = checkoutInitQuery.isRefetching && !!checkoutInitQuery.data;
 
   // Add Address Modal States
   const [isAddAddrVisible, setIsAddAddrVisible] = useState(false);
@@ -127,18 +232,46 @@ export default function CheckoutScreen({ route }) {
   const [newDistrict, setNewDistrict] = useState("");
   const [newWard, setNewWard] = useState("");
   const [addressProvinces, setAddressProvinces] = useState([]);
-  const [addressDistricts, setAddressDistricts] = useState([]);
   const [addressWards, setAddressWards] = useState([]);
   const [selectedProvinceCode, setSelectedProvinceCode] = useState(null);
-  const [selectedDistrictCode, setSelectedDistrictCode] = useState(null);
   const [addressSelectorType, setAddressSelectorType] = useState(null);
   const [isAddressSelectorVisible, setIsAddressSelectorVisible] = useState(false);
   const [addressSearchQuery, setAddressSearchQuery] = useState("");
-  const [isAddressSelectorLoading, setIsAddressSelectorLoading] = useState(false);
   const [isManualAddressMode, setIsManualAddressMode] = useState(false);
+
+  const addressProvinceQuery = useQuery({
+    queryKey: ["address", "vietnam-34-provinces"],
+    queryFn: fetchNewAddressProvinces,
+    enabled: isAddressSelectorVisible && addressSelectorType === "city" && !isManualAddressMode,
+    staleTime: 1000 * 60 * 60 * 24,
+    gcTime: 1000 * 60 * 60 * 24 * 7,
+  });
+
+  useEffect(() => {
+    if (addressProvinceQuery.data) {
+      setAddressProvinces(addressProvinceQuery.data);
+    }
+  }, [addressProvinceQuery.data]);
+
+  useEffect(() => {
+    if (!addressProvinceQuery.isError) return;
+    setIsManualAddressMode(true);
+    setIsAddressSelectorVisible(false);
+    showCustomAlert("Địa chỉ", "Không thể tải danh sách Tỉnh / Thành phố. Bạn có thể tự nhập tay địa chỉ.");
+  }, [addressProvinceQuery.isError]);
+
+  useEffect(() => {
+    return () => {
+      if (checkoutRequestControllerRef.current) {
+        checkoutRequestControllerRef.current.abort();
+        checkoutRequestControllerRef.current = null;
+      }
+    };
+  }, []);
 
   // States
   const [promoCode, setPromoCode] = useState("");
+  const [affiliateCode, setAffiliateCode] = useState("");
   const [discountAmount, setDiscountAmount] = useState(0);
   const [appliedCode, setAppliedCode] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cod"); // vnpay, momo, cod, bank
@@ -234,72 +367,11 @@ export default function CheckoutScreen({ route }) {
     setNewDistrict("");
     setNewWard("");
     setSelectedProvinceCode(null);
-    setSelectedDistrictCode(null);
-    setAddressDistricts([]);
     setAddressWards([]);
     setAddressSearchQuery("");
     setAddressSelectorType(null);
     setIsAddressSelectorVisible(false);
     setIsManualAddressMode(false);
-  };
-
-  const loadAddressProvinces = async () => {
-    setIsAddressSelectorLoading(true);
-    try {
-      const res = await fetch(`${ADDRESS_API_BASE}/1/0.htm`);
-      const data = await res.json();
-      if (data?.error === 0 && Array.isArray(data.data)) {
-        setAddressProvinces(mapAddressItems(data.data));
-      } else {
-        throw new Error("Province data is empty");
-      }
-    } catch (error) {
-      setIsManualAddressMode(true);
-      setIsAddressSelectorVisible(false);
-      showCustomAlert("Địa chỉ", "Không thể tải danh sách Tỉnh / Thành phố. Bạn có thể tự nhập tay địa chỉ.");
-    } finally {
-      setIsAddressSelectorLoading(false);
-    }
-  };
-
-  const loadAddressDistricts = async (provinceCode) => {
-    if (!provinceCode) return;
-    setIsAddressSelectorLoading(true);
-    try {
-      const res = await fetch(`${ADDRESS_API_BASE}/2/${provinceCode}.htm`);
-      const data = await res.json();
-      if (data?.error === 0 && Array.isArray(data.data)) {
-        setAddressDistricts(mapAddressItems(data.data));
-      } else {
-        throw new Error("District data is empty");
-      }
-    } catch (error) {
-      setIsManualAddressMode(true);
-      setIsAddressSelectorVisible(false);
-      showCustomAlert("Địa chỉ", "Không thể tải danh sách Quận / Huyện. Bạn có thể tự nhập tay địa chỉ.");
-    } finally {
-      setIsAddressSelectorLoading(false);
-    }
-  };
-
-  const loadAddressWards = async (districtCode) => {
-    if (!districtCode) return;
-    setIsAddressSelectorLoading(true);
-    try {
-      const res = await fetch(`${ADDRESS_API_BASE}/3/${districtCode}.htm`);
-      const data = await res.json();
-      if (data?.error === 0 && Array.isArray(data.data)) {
-        setAddressWards(mapAddressItems(data.data));
-      } else {
-        throw new Error("Ward data is empty");
-      }
-    } catch (error) {
-      setIsManualAddressMode(true);
-      setIsAddressSelectorVisible(false);
-      showCustomAlert("Địa chỉ", "Không thể tải danh sách Phường / Xã. Bạn có thể tự nhập tay địa chỉ.");
-    } finally {
-      setIsAddressSelectorLoading(false);
-    }
   };
 
   const handleOpenAddressSelector = (type) => {
@@ -308,22 +380,17 @@ export default function CheckoutScreen({ route }) {
     setIsAddressSelectorVisible(true);
 
     if (type === "city") {
-      loadAddressProvinces();
-    } else if (type === "district") {
-      loadAddressDistricts(selectedProvinceCode);
-    } else if (type === "ward") {
-      loadAddressWards(selectedDistrictCode);
+      queryClient.prefetchQuery({
+        queryKey: ["address", "vietnam-34-provinces"],
+        queryFn: fetchNewAddressProvinces,
+        staleTime: 1000 * 60 * 60 * 24,
+      });
     }
   };
 
   const getFilteredAddressItems = () => {
     const query = addressSearchQuery.trim().toLowerCase();
-    const source =
-      addressSelectorType === "city"
-        ? addressProvinces
-        : addressSelectorType === "district"
-          ? addressDistricts
-          : addressWards;
+    const source = addressSelectorType === "city" ? addressProvinces : addressWards;
 
     if (!query) return source;
     return source.filter((item) => item.name.toLowerCase().includes(query));
@@ -336,16 +403,7 @@ export default function CheckoutScreen({ route }) {
         setSelectedProvinceCode(item.code);
         setNewDistrict("");
         setNewWard("");
-        setSelectedDistrictCode(null);
-        setAddressDistricts([]);
-        setAddressWards([]);
-      }
-    } else if (addressSelectorType === "district") {
-      if (item.name !== newDistrict) {
-        setNewDistrict(item.name);
-        setSelectedDistrictCode(item.code);
-        setNewWard("");
-        setAddressWards([]);
+        setAddressWards(item.wards || []);
       }
     } else if (addressSelectorType === "ward") {
       setNewWard(item.name);
@@ -360,7 +418,6 @@ export default function CheckoutScreen({ route }) {
       !newReceiver.trim() ||
       !newPhone.trim() ||
       !newCity.trim() ||
-      !newDistrict.trim() ||
       !newWard.trim() ||
       !newDetail.trim()
     ) {
@@ -376,7 +433,7 @@ export default function CheckoutScreen({ route }) {
       phone: newPhone.trim(),
       detail: newDetail.trim(),
       city: newCity.trim(),
-      district: newDistrict.trim(),
+      district: "",
       ward: newWard.trim(),
     };
     setAddresses((prev) => [...prev, newAddr]);
@@ -395,7 +452,6 @@ export default function CheckoutScreen({ route }) {
       ? [
         selectedAddress.shipping_address || selectedAddress.detail,
         selectedAddress.ward,
-        selectedAddress.district,
         selectedAddress.city,
       ].filter(Boolean)
       : [];
@@ -463,6 +519,7 @@ export default function CheckoutScreen({ route }) {
     const customerInfo = getCheckoutCustomerInfo();
     if (!validateCustomerInfo(customerInfo)) return;
 
+    setIsPlacingOrder(false);
     setIsConfirmModalVisible(true);
   };
 
@@ -515,6 +572,18 @@ export default function CheckoutScreen({ route }) {
       const updatedUser = result.data || {};
       setPersonalName(updatedUser.fullName || customerInfo.customerName);
       setPersonalPhone(updatedUser.phone || customerInfo.customerPhone);
+      queryClient.setQueryData(["checkout", "init"], (oldData) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          user: {
+            ...(oldData.user || {}),
+            ...updatedUser,
+            name: updatedUser.fullName || customerInfo.customerName,
+            phone: updatedUser.phone || cleanPhone,
+          },
+        };
+      });
       try {
         const cached = await AsyncStorage.getItem("user");
         await AsyncStorage.setItem("user", JSON.stringify({
@@ -552,17 +621,21 @@ export default function CheckoutScreen({ route }) {
     const customerInfo = getCheckoutCustomerInfo();
     if (!validateCustomerInfo(customerInfo)) return;
 
+    if (paymentMethod === "momo" && (total < MOMO_MIN_AMOUNT || total > MOMO_MAX_AMOUNT)) {
+      setIsConfirmModalVisible(false);
+      setTimeout(() => {
+        showCustomAlert(
+          "Không thể thanh toán MoMo",
+          `MoMo chỉ hỗ trợ đơn hàng từ ${fmt(MOMO_MIN_AMOUNT)} đến ${fmt(MOMO_MAX_AMOUNT)}. Vui lòng chọn phương thức thanh toán khác hoặc điều chỉnh giá trị đơn hàng.`
+        );
+      }, 250);
+      return;
+    }
     try {
       setIsPlacingOrder(true);
-      const token = await AsyncStorage.getItem("auth_token");
-      const sessionId = await AsyncStorage.getItem("cart_session_id");
-
-      const headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json"
-      };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-      if (sessionId) headers["X-Cart-Session-Id"] = sessionId;
+      const checkoutController = new AbortController();
+      checkoutRequestControllerRef.current = checkoutController;
+      const headers = await getCheckoutHeaders();
 
       let payload = {
         customer_name: customerInfo.customerName,
@@ -572,10 +645,16 @@ export default function CheckoutScreen({ route }) {
         order_note: note,
         payment_method: paymentMethod,
         shipping_fee: shippingFee,
+        checkout_source: "mobile",
       };
 
       if (appliedCode) {
         payload.coupon_code = appliedCode;
+      }
+
+      const normalizedAffiliateCode = affiliateCode.trim();
+      if (normalizedAffiliateCode) {
+        payload.affiliate_code = normalizedAffiliateCode;
       }
 
       const selectedAddress = customerInfo.selectedAddress;
@@ -585,7 +664,6 @@ export default function CheckoutScreen({ route }) {
         payload.customer_address = [
           selectedAddress.detail,
           selectedAddress.ward,
-          selectedAddress.district,
           selectedAddress.city,
         ].filter(Boolean).join(", ") || "Chưa có địa chỉ chi tiết";
       } else if (selectedAddress) {
@@ -594,19 +672,25 @@ export default function CheckoutScreen({ route }) {
         payload.customer_address = newDetail || "Chưa có địa chỉ chi tiết";
       }
 
-      const res = await fetch(`${API_BASE_URL}/client/checkout`, {
+      const res = await fetchWithTimeout(`${API_BASE_URL}/client/checkout`, {
         method: "POST",
         headers,
         body: JSON.stringify(payload)
-      });
+      }, 18000, checkoutController);
 
       const json = await res.json();
+      console.log("Checkout response:", json);
       if (json.success) {
         setIsConfirmModalVisible(false);
         if (json.payment_url) {
-          showCustomAlert("Thành công", "Đang chuyển hướng thanh toán...");
-          setCreatedOrder(json.data);
-          setIsSuccessModalVisible(true);
+          setIsPlacingOrder(false);
+          handleMomoPayment({
+            paymentUrl: json.payment_url,
+            order: json.data,
+          });
+          return;
+        } else if (paymentMethod === "momo") {
+          showCustomAlert("Lỗi thanh toán", json.message || "MoMo chưa trả về đường dẫn thanh toán. Vui lòng thử lại.");
         } else {
           setCreatedOrder(json.data);
           setIsSuccessModalVisible(true);
@@ -616,12 +700,84 @@ export default function CheckoutScreen({ route }) {
       }
     } catch (error) {
       console.log("Error placing order", error);
-      showCustomAlert("Lỗi", "Không thể kết nối đến máy chủ.");
+      if (error?.name !== "AbortError") {
+        showCustomAlert("Lỗi", "Không thể kết nối đến máy chủ.");
+      }
     } finally {
+      checkoutRequestControllerRef.current = null;
       setIsPlacingOrder(false);
     }
   };
 
+  const handleCloseOrderConfirm = () => {
+    if (checkoutRequestControllerRef.current) {
+      checkoutRequestControllerRef.current.abort();
+      checkoutRequestControllerRef.current = null;
+    }
+    setIsPlacingOrder(false);
+    setIsConfirmModalVisible(false);
+  };
+
+  async function handleMomoPayment({ paymentUrl, order }) {
+    const orderCode = order?.order_code;
+
+    try {
+      await Linking.openURL(paymentUrl);
+    } catch (error) {
+      console.log("Error opening MoMo payment URL", error);
+      showCustomAlert("Lỗi thanh toán", "Không thể mở cổng thanh toán MoMo. Vui lòng thử lại.");
+      return;
+    }
+
+    if (!orderCode) {
+      showCustomAlert(
+        "Đơn hàng đang xử lý",
+        "Đơn hàng MoMo đã được tạo nhưng app chưa nhận được mã đơn để kiểm tra tự động. Bạn có thể vào lịch sử đơn hàng để theo dõi.",
+        [
+          { text: "Ở lại", style: "cancel" },
+          { text: "Lịch sử đơn", onPress: () => navigation.navigate("OrderHistory") },
+        ],
+        "time-outline"
+      );
+      return;
+    }
+
+    setTimeout(async () => {
+      try {
+        const latestOrder = await fetchOrderStatusWithRetry(orderCode);
+        queryClient.invalidateQueries({ queryKey: ["cart"] });
+        queryClient.invalidateQueries({ queryKey: ["checkout", "init"] });
+        queryClient.invalidateQueries({ queryKey: ["orders"] });
+
+        if (latestOrder?.payment_status === "paid") {
+          setCreatedOrder(latestOrder);
+          setIsSuccessModalVisible(true);
+          return;
+        }
+
+        showCustomAlert(
+          "Đơn hàng đang chờ thanh toán",
+          "MoMo chưa xác nhận thanh toán cho đơn hàng này. Bạn có thể vào lịch sử đơn hàng để kiểm tra lại sau.",
+          [
+            { text: "Ở lại", style: "cancel" },
+            { text: "Lịch sử đơn", onPress: () => navigation.navigate("OrderHistory") },
+          ],
+          "time-outline"
+        );
+      } catch (error) {
+        console.log("Error checking MoMo order status", error);
+        showCustomAlert(
+          "Chưa kiểm tra được thanh toán",
+          "App chưa kiểm tra được trạng thái MoMo. Vui lòng vào lịch sử đơn hàng để theo dõi đơn vừa tạo.",
+          [
+            { text: "Ở lại", style: "cancel" },
+            { text: "Lịch sử đơn", onPress: () => navigation.navigate("OrderHistory") },
+          ],
+          "warning-outline"
+        );
+      }
+    }, 2500);
+  }
   const handleCloseSuccess = () => {
     setIsSuccessModalVisible(false);
     navigation.reset({
@@ -630,7 +786,7 @@ export default function CheckoutScreen({ route }) {
     });
   };
 
-  if (isLoading) {
+  if (isCheckingAuth || isLoading) {
     return (
       <SafeAreaView style={[s.safe, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color="#9f273b" />
@@ -640,8 +796,10 @@ export default function CheckoutScreen({ route }) {
   }
 
   return (
+    <>
+    <SafeAreaView style={s.topSafe} />
     <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f5f5f5" />
+      <StatusBar barStyle="light-content" backgroundColor="#9f273b" translucent={false} />
 
       {/* ── HEADER ── */}
       <View style={s.header}>
@@ -843,7 +1001,7 @@ export default function CheckoutScreen({ route }) {
                     {addr.customer_name || addr.receiver || personalName}{" "}
                     <Text style={s.addrPhone}>• {addr.customer_phone || addr.phone || personalPhone}</Text>
                   </Text>
-                  <Text style={s.addrDetail}>{addr.shipping_address || addr.detail}{addr.ward ? `, ${addr.ward}, ${addr.district}, ${addr.city}` : ""}</Text>
+                  <Text style={s.addrDetail}>{addr.shipping_address || addr.detail}{addr.ward ? `, ${addr.ward}, ${addr.city}` : ""}</Text>
                 </View>
               </TouchableOpacity>
             );
@@ -928,6 +1086,14 @@ export default function CheckoutScreen({ route }) {
             </View>
             <Text style={s.payBadge}>Tự động</Text>
           </TouchableOpacity>
+          {paymentMethod === "momo" && (
+            <View style={s.momoPaymentHint}>
+              <Ionicons name="information-circle-outline" size={14} color="#9f273b" />
+              <Text style={s.momoPaymentHintText}>
+                App sẽ mở cổng MoMo. Thanh toán xong, quay lại ứng dụng để kiểm tra đơn hàng.
+              </Text>
+            </View>
+          )}
 
           {/* CỔNG VNPAY */}
           <TouchableOpacity
@@ -1100,6 +1266,19 @@ export default function CheckoutScreen({ route }) {
               dụng mã thành công!
             </Text>
           ) : null}
+          <View style={s.affiliateBox}>
+            <View style={s.affiliateHeader}>
+              <Ionicons name="people-outline" size={16} color="#9f273b" />
+              <Text style={s.affiliateTitle}>Mã người giới thiệu</Text>
+            </View>
+            <TextInput
+              style={s.affiliateInput}
+              placeholder="Nhập mã affiliate nếu có"
+              value={affiliateCode}
+              onChangeText={setAffiliateCode}
+              autoCapitalize="characters"
+            />
+          </View>
         </View>
 
         {/* ── SECTION 7: TỔNG KẾT CHI PHÍ ── */}
@@ -1158,7 +1337,7 @@ export default function CheckoutScreen({ route }) {
         visible={isConfirmModalVisible}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => !isPlacingOrder && setIsConfirmModalVisible(false)}
+        onRequestClose={handleCloseOrderConfirm}
       >
         <View style={s.modalBg}>
           <View style={s.confirmModalContainer}>
@@ -1169,8 +1348,7 @@ export default function CheckoutScreen({ route }) {
               </View>
               <TouchableOpacity
                 style={s.confirmCloseBtn}
-                onPress={() => setIsConfirmModalVisible(false)}
-                disabled={isPlacingOrder}
+                onPress={handleCloseOrderConfirm}
               >
                 <Ionicons name="close" size={21} color="#666" />
               </TouchableOpacity>
@@ -1221,8 +1399,7 @@ export default function CheckoutScreen({ route }) {
             <View style={s.confirmActions}>
               <TouchableOpacity
                 style={[s.confirmActionBtn, s.confirmBackBtn]}
-                onPress={() => setIsConfirmModalVisible(false)}
-                disabled={isPlacingOrder}
+                onPress={handleCloseOrderConfirm}
               >
                 <Text style={s.confirmBackText}>QUAY LẠI</Text>
               </TouchableOpacity>
@@ -1265,7 +1442,7 @@ export default function CheckoutScreen({ route }) {
               </View>
               <View style={s.summaryRow}>
                 <Text style={s.summaryLabel}>Tổng thanh toán:</Text>
-                <Text style={s.summaryPrice}>{fmt(total)}</Text>
+                <Text style={s.summaryPrice}>{fmt(createdOrder?.total_amount || total)}</Text>
               </View>
               <View style={s.summaryRow}>
                 <Text style={s.summaryLabel}>Phương thức:</Text>
@@ -1381,17 +1558,6 @@ export default function CheckoutScreen({ route }) {
                   </View>
 
                   <View style={s.modalInputGroup}>
-                    <Text style={s.modalInputLabel}>Quận / Huyện</Text>
-                    <TextInput
-                      style={s.modalTextInput}
-                      value={newDistrict}
-                      onChangeText={setNewDistrict}
-                      placeholder="Nhập Quận / Huyện"
-                      placeholderTextColor="#aaa"
-                    />
-                  </View>
-
-                  <View style={s.modalInputGroup}>
                     <Text style={s.modalInputLabel}>Phường / Xã</Text>
                     <TextInput
                       style={s.modalTextInput}
@@ -1415,26 +1581,11 @@ export default function CheckoutScreen({ route }) {
                   </View>
 
                   <View style={s.modalInputGroup}>
-                    <Text style={s.modalInputLabel}>Quận / Huyện</Text>
+                    <Text style={s.modalInputLabel}>Phường / Xã</Text>
                     <TouchableOpacity
                       style={[s.addressSelectTrigger, !selectedProvinceCode && s.addressSelectDisabled]}
                       activeOpacity={0.75}
                       disabled={!selectedProvinceCode}
-                      onPress={() => handleOpenAddressSelector("district")}
-                    >
-                      <Text style={[s.addressSelectTxt, !newDistrict && s.addressSelectPlaceholder]}>
-                        {newDistrict || "Chọn Quận / Huyện"}
-                      </Text>
-                      <Ionicons name="chevron-down" size={16} color="#8c826e" />
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={s.modalInputGroup}>
-                    <Text style={s.modalInputLabel}>Phường / Xã</Text>
-                    <TouchableOpacity
-                      style={[s.addressSelectTrigger, !selectedDistrictCode && s.addressSelectDisabled]}
-                      activeOpacity={0.75}
-                      disabled={!selectedDistrictCode}
                       onPress={() => handleOpenAddressSelector("ward")}
                     >
                       <Text style={[s.addressSelectTxt, !newWard && s.addressSelectPlaceholder]}>
@@ -1489,9 +1640,7 @@ export default function CheckoutScreen({ route }) {
                   <Text style={s.addressSelectorTitle}>
                     {addressSelectorType === "city"
                       ? "Chọn Tỉnh / Thành phố"
-                      : addressSelectorType === "district"
-                        ? "Chọn Quận / Huyện"
-                        : "Chọn Phường / Xã"}
+                      : "Chọn Phường / Xã"}
                   </Text>
                   <TouchableOpacity onPress={() => setIsAddressSelectorVisible(false)} style={s.addressSelectorCloseBtn}>
                     <Ionicons name="close" size={22} color="#333" />
@@ -1514,7 +1663,7 @@ export default function CheckoutScreen({ route }) {
                   )}
                 </View>
 
-                {isAddressSelectorLoading ? (
+                {addressProvinceQuery.isFetching && addressSelectorType === "city" ? (
                   <View style={s.addressSelectorCenter}>
                     <ActivityIndicator size="large" color="#9f273b" />
                   </View>
@@ -1527,8 +1676,7 @@ export default function CheckoutScreen({ route }) {
                     ) : (
                       getFilteredAddressItems().map((item) => {
                         const isSelected =
-                          (addressSelectorType === "city" && item.name === newCity) ||
-                          (addressSelectorType === "district" && item.name === newDistrict) ||
+                          (addressSelectorType === "city" && item.name === newCity)  ||
                           (addressSelectorType === "ward" && item.name === newWard);
 
                         return (
@@ -1552,16 +1700,18 @@ export default function CheckoutScreen({ route }) {
         </View>
       </Modal>
     </SafeAreaView>
+    </>
   );
 }
 
 const s = StyleSheet.create({
+  topSafe: { flex: 0, backgroundColor: "#9f273b" },
   safe: { flex: 1, backgroundColor: "#f5f5f5" },
 
   // HEADER
   header: {
     backgroundColor: "#9f273b",
-    paddingTop: 16,
+    paddingTop: 14,
     paddingBottom: 20,
     flexDirection: "row",
     alignItems: "center",
@@ -1834,6 +1984,38 @@ const s = StyleSheet.create({
     color: "green",
     marginTop: 6,
   },
+  affiliateBox: {
+    marginTop: 14,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ead9dc",
+    backgroundColor: "#fffafa",
+  },
+  affiliateHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  affiliateTitle: {
+    fontFamily: "Oswald_500Medium",
+    fontSize: 12,
+    color: "#9f273b",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  affiliateInput: {
+    height: 42,
+    borderWidth: 1,
+    borderColor: "#ead9dc",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 13,
+    fontFamily: "Oswald_400Regular",
+    color: "#333",
+    backgroundColor: "#fff",
+  },
 
   // PAYMENT METHODS
   payMethodRow: {
@@ -1887,6 +2069,26 @@ const s = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
+  },
+  momoPaymentHint: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    marginTop: -2,
+    marginBottom: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "#fffafa",
+    borderWidth: 1,
+    borderColor: "#ead9dc",
+  },
+  momoPaymentHintText: {
+    flex: 1,
+    fontFamily: "Oswald_400Regular",
+    fontSize: 11,
+    lineHeight: 16,
+    color: "#6f3b45",
   },
 
   // BANK BOX DYNAMIC

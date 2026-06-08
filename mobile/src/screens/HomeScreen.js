@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, FlatList, SafeAreaView, TextInput, Dimensions, useWindowDimensions, StatusBar, Animated, TouchableWithoutFeedback, RefreshControl, Modal, ActivityIndicator, PanResponder, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, FlatList, SafeAreaView, TextInput, useWindowDimensions, StatusBar, Animated, TouchableWithoutFeedback, RefreshControl, ActivityIndicator, Linking } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQuery } from '@tanstack/react-query';
 import { MOBILE_AUTH_URL, API_BASE_URL } from '../config/api';
 import { showCustomAlert } from '../components/CustomAlert';
 import ProductCard from '../components/ProductCard';
+import HomeSideMenu from '../components/home/HomeSideMenu';
+import GoldPriceModal from '../components/home/GoldPriceModal';
 import { PRICE_FONT_FAMILY, PRICE_FONT_WEIGHT } from '../styles/typography';
+import { prefetchImageUrls } from '../utils/imagePrefetch';
 
-const { height: SCREEN_H } = Dimensions.get('window');
 const COMBO_CARD_GAP = 14;
 const COMBO_SIDE_SPACER = 24;
 
@@ -18,48 +21,6 @@ const SORA_PLACEHOLDER = require('../../assets/Sora-placeholder.png');
 // Dummy Data
 const BANNERS = [
   { id: '1', image: 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?q=80&w=1000&auto=format&fit=crop' },
-];
-
-const BEST_SELLERS = [
-  { id: '1', name: 'Nhẫn Kim Cương Eternal Trắng 18K', category: 'Nhẫn Cao Cấp', price: '25.000.000đ', oldPrice: '30.500.000đ', discount: '-18%', image: 'https://images.unsplash.com/photo-1605100804763-247f67b854d4?q=80&w=600&auto=format&fit=crop', rating: 5 },
-  { id: '2', name: 'Dây Chuyền Ngọc Trai Tự Nhiên Biển Nam', category: 'Dây Chuyền', price: '12.500.000đ', oldPrice: '15.000.000đ', discount: '-16%', image: 'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?q=80&w=600&auto=format&fit=crop', rating: 4 },
-  { id: '3', name: 'Bông Tai Sapphire Xanh Cao Cấp', category: 'Bông Tai', price: '18.200.000đ', oldPrice: '22.000.000đ', discount: '-20%', image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?q=80&w=600&auto=format&fit=crop', rating: 5 },
-];
-
-const CATEGORIES = [
-  { id: '1', slug: 'rings', name: 'Nhẫn', icon: 'https://images.unsplash.com/photo-1605100804763-247f67b854d4?q=80&w=300&auto=format&fit=crop' },
-  { id: '2', slug: 'necklaces', name: 'Dây Chuyền', icon: 'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?q=80&w=300&auto=format&fit=crop' },
-  { id: '3', slug: 'earrings', name: 'Bông Tai', icon: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?q=80&w=300&auto=format&fit=crop' },
-  { id: '4', slug: 'bracelets', name: 'Lắc Tay', icon: 'https://images.unsplash.com/photo-1611652022419-a9419f74343d?q=80&w=300&auto=format&fit=crop' },
-  { id: '5', slug: 'necklaces', name: 'Vòng Cổ', icon: 'https://images.unsplash.com/photo-1602173574767-37ac01994b2a?q=80&w=300&auto=format&fit=crop' },
-  { id: '6', slug: 'brooches', name: 'Ghim Cài', icon: 'https://images.unsplash.com/photo-1573408301185-9519df1f2c1f?q=80&w=300&auto=format&fit=crop' },
-];
-
-const NEWS = [
-  {
-    id: '1',
-    tag: 'Cẩm Nang',
-    title: 'Hướng dẫn chọn nhẫn kim cương cưới phù hợp',
-    excerpt: 'Kiến thức cần biết giúp bạn lựa chọn cặp nhẫn cưới đẹp và ý nghĩa, phù hợp với tài chính và thẩm mỹ riêng.',
-    date: '15 Tháng 5, 2025',
-    image: 'https://images.unsplash.com/photo-1605100804763-247f67b854d4?q=80&w=600&auto=format&fit=crop',
-  },
-  {
-    id: '2',
-    tag: 'Xu Hướng',
-    title: 'Top 5 xu hướng trang sức năm 2025 bạn không thể bỏ lỡ',
-    excerpt: 'Từ phong trào tả năng đến tối giản sang trọng, khám phá những điều dần xuất hiện trên bản thảm đỏ tính đến tháng 6.',
-    date: '10 Tháng 5, 2025',
-    image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?q=80&w=600&auto=format&fit=crop',
-  },
-  {
-    id: '3',
-    tag: 'Chăm Sóc',
-    title: 'Cách bảo quản trang sức vàng & đá quý đúng cách',
-    excerpt: 'Những mẹo nhỏ giúp trang sức của bạn luôn sáng bóng và bền đẹp theo thời gian dù sử dụng hàng ngày.',
-    date: '05 Tháng 5, 2025',
-    image: 'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?q=80&w=600&auto=format&fit=crop',
-  },
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -127,116 +88,55 @@ const saveLocalWishlist = async (nextItems) => {
   await AsyncStorage.setItem('sora_wishlist_items', JSON.stringify(nextItems));
 };
 
-const TIER_CONFIG = {
-  silver: { label: 'Bạc', icon: 'medal-outline', from: '#c0c0c0', to: '#a9a9a9', border: '#c8c8c8', text: '#555' },
-  gold: { label: 'Vàng', icon: 'trophy-outline', from: '#ffd700', to: '#f5a623', border: '#e7ce7d', text: '#7a5800' },
-  diamond: { label: 'Kim cương', icon: 'diamond-outline', from: '#76d7f5', to: '#4dd0e1', border: '#4dd0e1', text: '#006080' },
-  default: { label: 'Thành viên', icon: 'person-circle-outline', from: '#e0e0e0', to: '#bdbdbd', border: '#e7ce7d', text: '#555' },
+const fetchHomeQueryData = async () => {
+  const response = await fetch(`${API_BASE_URL}/client/home-data`, {
+    headers: { Accept: 'application/json' },
+  });
+  const result = await response.json();
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || 'Không thể tải dữ liệu trang chủ.');
+  }
+  const data = result.data || {};
+  prefetchImageUrls([
+    ...(data.banners || []).map((banner) => (
+      banner.image_url ? getStorageUrl(banner.image_url) : banner.image
+    )),
+    ...(data.categories || []).map((category) => (
+      category.thumbnail ? getStorageUrl(category.thumbnail) : category.image
+    )),
+    ...(data.products || []).map((product) => (
+      product.thumbnail_image ? getStorageUrl(product.thumbnail_image) : product.image
+    )),
+    ...(data.combos || []).map((combo) => {
+      const imagePath = combo.thumbnail_image || combo.image || combo.products?.[0]?.thumbnail_image;
+      return imagePath ? getStorageUrl(imagePath) : '';
+    }),
+    ...(data.news || []).map((article) => (
+      article.thumbnail ? getStorageUrl(article.thumbnail) : article.image
+    )),
+  ]);
+  return data;
 };
 
-const getTierConfig = (tierName) => {
-  if (!tierName) return TIER_CONFIG.default;
-  const n = tierName.toLowerCase();
-  if (n.includes('kim') || n.includes('diamond')) return TIER_CONFIG.diamond;
-  if (n.includes('vàng') || n.includes('gold')) return TIER_CONFIG.gold;
-  if (n.includes('bạc') || n.includes('silver')) return TIER_CONFIG.silver;
-  return TIER_CONFIG.default;
+const fetchHeaderQueryData = async () => {
+  const response = await fetch(`${API_BASE_URL}/client/header-data`, {
+    headers: { Accept: 'application/json' },
+  });
+  const result = await response.json();
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || 'Không thể tải dữ liệu danh mục.');
+  }
+  return result.data || {};
 };
-
-const TIER_THEMES = {
-  silver: {
-    bg: '#f8f9fa',
-    safeBg: '#f1f5f9',
-    cardBg: '#ffffff',
-    headerBg: '#ffffff',
-    border: '#cbd5e1',
-    shadow: 'rgba(71, 85, 105, 0.15)',
-    text: '#475569',
-    accent: '#475569',
-    iconWrapBg: '#e2e8f0',
-    glow1: '#e2e8f0',
-    glow2: '#f1f5f9',
-    progressColors: ['#64748b', '#cbd5e1'],
-    avatarBorder: '#cbd5e1',
-    labelColor: '#64748b',
-    nameColor: '#334155',
-  },
-  gold: {
-    bg: '#fffdf6',
-    safeBg: '#fffbf0',
-    cardBg: '#ffffff',
-    headerBg: '#ffffff',
-    border: '#ebd5a3',
-    shadow: 'rgba(235, 213, 163, 0.5)',
-    text: '#92400e',
-    accent: '#9f273b',
-    iconWrapBg: '#fef4cb',
-    glow1: '#fde9b8',
-    glow2: '#fef4cb',
-    progressColors: ['#9f273b', '#ebd5a3'],
-    avatarBorder: '#ebd5a3',
-    labelColor: '#8c826e',
-    nameColor: '#1a1a1a',
-  },
-  diamond: {
-    bg: '#f4fdff',
-    safeBg: '#ecfeff',
-    cardBg: '#ffffff',
-    headerBg: '#ffffff',
-    border: '#a5f3fc',
-    shadow: 'rgba(6, 182, 212, 0.2)',
-    text: '#0369a1',
-    accent: '#0891b2',
-    iconWrapBg: '#e0f7fa',
-    glow1: '#cffafe',
-    glow2: '#ecfeff',
-    progressColors: ['#0891b2', '#a5f3fc'],
-    avatarBorder: '#a5f3fc',
-    labelColor: '#0e7490',
-    nameColor: '#0f172a',
-  },
-  default: {
-    bg: '#fafafa',
-    safeBg: '#f5f5f5',
-    cardBg: '#ffffff',
-    headerBg: '#ffffff',
-    border: '#e5e7eb',
-    shadow: 'rgba(0, 0, 0, 0.05)',
-    text: '#555555',
-    accent: '#9f273b',
-    iconWrapBg: '#f3f4f6',
-    glow1: '#f3f4f6',
-    glow2: '#f9fafb',
-    progressColors: ['#9f273b', '#d1d5db'],
-    avatarBorder: '#d1d5db',
-    labelColor: '#6b7280',
-    nameColor: '#1f2937',
-  },
-};
-
-const getTierTheme = (tierName) => {
-  if (!tierName) return TIER_THEMES.default;
-  const n = tierName.toLowerCase();
-  if (n.includes('kim') || n.includes('diamond')) return TIER_THEMES.diamond;
-  if (n.includes('vàng') || n.includes('gold')) return TIER_THEMES.gold;
-  if (n.includes('bạc') || n.includes('silver')) return TIER_THEMES.silver;
-  return TIER_THEMES.default;
-};
-
-// ─── TierBadge ───────────────────────────────────────────────────────────────
-function TierBadge({ tierName }) {
-  const cfg = getTierConfig(tierName);
-  const theme = getTierTheme(tierName);
-  return (
-    <View style={[styles.tierBadge, { backgroundColor: theme.iconWrapBg, borderColor: theme.border }]}>
-      <Ionicons name={cfg.icon} size={13} color={theme.text} />
-      <Text style={[styles.tierBadgeTxt, { color: theme.text }]}>{tierName || 'Thành viên'}</Text>
-    </View>
-  );
-}
 
 function SoraFallbackImage({ uri, style, resizeMode = 'cover' }) {
   const [hasError, setHasError] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    setHasError(false);
+    setIsLoaded(false);
+  }, [uri]);
 
   if (!uri || hasError) {
     return (
@@ -251,12 +151,23 @@ function SoraFallbackImage({ uri, style, resizeMode = 'cover' }) {
   }
 
   return (
-    <Image
-      source={{ uri }}
-      style={style}
-      resizeMode={resizeMode}
-      onError={() => setHasError(true)}
-    />
+    <View style={[{ overflow: 'hidden', backgroundColor: '#fff' }, style]}>
+      <Image
+        source={SORA_PLACEHOLDER}
+        style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]}
+        resizeMode="cover"
+      />
+      <Image
+        source={{ uri }}
+        style={[
+          StyleSheet.absoluteFill,
+          { width: '100%', height: '100%', opacity: isLoaded ? 1 : 0 },
+        ]}
+        resizeMode={resizeMode}
+        onLoadEnd={() => setIsLoaded(true)}
+        onError={() => setHasError(true)}
+      />
+    </View>
   );
 }
 
@@ -283,20 +194,36 @@ export default function HomeScreen({ navigation }) {
   const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Tất cả');
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
-  const [dbCategories, setDbCategories] = useState([]);
   const searchDebounce = useRef(null);
 
-  // Dynamic homepage states
-  const [banners, setBanners] = useState([]);
-  const [homeCategories, setHomeCategories] = useState([]);
-  const [bestSellers, setBestSellers] = useState([]);
-  const [newsList, setNewsList] = useState([]);
-  const [coupons, setCoupons] = useState([]);
-  const [combos, setCombos] = useState([]);
-  const [tiers, setTiers] = useState([]);
+  const {
+    data: homeData,
+    isLoading: isHomeQueryLoading,
+    refetch: refetchHomeData,
+  } = useQuery({
+    queryKey: ['home-data'],
+    queryFn: fetchHomeQueryData,
+    staleTime: 1000 * 60 * 3,
+  });
+  const {
+    data: headerData,
+    refetch: refetchHeaderData,
+  } = useQuery({
+    queryKey: ['client-header-data'],
+    queryFn: fetchHeaderQueryData,
+    staleTime: 1000 * 60 * 10,
+  });
+
+  const banners = homeData?.banners || [];
+  const homeCategories = homeData?.categories || [];
+  const bestSellers = homeData?.products || [];
+  const newsList = homeData?.news || [];
+  const coupons = homeData?.coupons || [];
+  const combos = homeData?.combos || [];
+  const tiers = homeData?.tiers || [];
+  const dbCategories = headerData?.categories || [];
   const [wishlistIds, setWishlistIds] = useState([]);
   const [wishlistLoadingIds, setWishlistLoadingIds] = useState([]);
-  const [isHomeLoading, setIsHomeLoading] = useState(true);
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
   const bannerDotAnimations = useRef([]).current;
   const bannerFlatListRef = useRef(null);
@@ -447,43 +374,6 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
-  const fetchCategories = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/client/header-data`, {
-        headers: { Accept: 'application/json' },
-      });
-      const result = await response.json();
-      if (result.success) {
-        setDbCategories(result.data.categories || []);
-      }
-    } catch (e) {
-      console.log('Error fetching categories from DB:', e);
-    }
-  };
-
-  const fetchHomeData = async () => {
-    setIsHomeLoading(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/client/home-data`, {
-        headers: { Accept: 'application/json' },
-      });
-      const result = await response.json();
-      if (result.success) {
-        setBanners(result.data.banners || []);
-        setHomeCategories(result.data.categories || []);
-        setBestSellers(result.data.products || []);
-        setNewsList(result.data.news || []);
-        setCoupons(result.data.coupons || []);
-        setCombos(result.data.combos || []);
-        setTiers(result.data.tiers || []);
-      }
-    } catch (e) {
-      console.log('Error fetching home data:', e);
-    } finally {
-      setIsHomeLoading(false);
-    }
-  };
-
   const handleSelectNews = (article) => {
     if (article?.slug) {
       navigation.navigate('NewsDetail', { slug: article.slug, article });
@@ -541,8 +431,6 @@ export default function HomeScreen({ navigation }) {
   };
 
   useEffect(() => {
-    fetchCategories();
-    fetchHomeData();
     loadWishlist();
   }, []);
 
@@ -635,6 +523,7 @@ export default function HomeScreen({ navigation }) {
     navigation.navigate("ProductDetail", {
       slug: prod.slug,
       previewImage: prod.previewImage || prod.image || null,
+      previewProduct: prod.previewProduct || null,
     });
   };
 
@@ -644,6 +533,12 @@ export default function HomeScreen({ navigation }) {
       categorySlug: cat.slug || cat.id,
       categoryRequestId: Date.now(),
     });
+  };
+
+  const getSelectedCategorySlug = () => {
+    if (selectedCategory === 'Tất cả') return '';
+    const matchedCategory = dbCategories.find((cat) => cat.name === selectedCategory);
+    return matchedCategory?.slug || matchedCategory?.id || '';
   };
 
   const bannerItems = banners.length > 0 ? banners : BANNERS;
@@ -671,11 +566,12 @@ export default function HomeScreen({ navigation }) {
   const handleSearchSubmit = () => {
     if (!searchQuery.trim()) return;
     setShowSearchResults(false);
-    showCustomAlert(
-      "SORA JEWELRY",
-      `Tìm kiếm từ khóa: "${searchQuery}"\n\nDanh mục lọc: "${selectedCategory}"\n\nĐã lọc danh sách sản phẩm thành công!`,
-      [{ text: "ĐỒNG Ý", style: "default" }]
-    );
+    setShowCategoryDropdown(false);
+    navigation.navigate('Shop', {
+      keyword: searchQuery.trim(),
+      categorySlug: getSelectedCategorySlug(),
+      searchRequestId: Date.now(),
+    });
   };
 
   useEffect(() => {
@@ -684,86 +580,16 @@ export default function HomeScreen({ navigation }) {
     }
   }, [selectedCategory]);
 
-  // Gold prices state
   const [isGoldModalVisible, setIsGoldModalVisible] = useState(false);
-  const [goldPrices, setGoldPrices] = useState([]);
-  const [goldLastUpdated, setGoldLastUpdated] = useState('');
-  const [isGoldLoading, setIsGoldLoading] = useState(false);
-  const [goldError, setGoldError] = useState(null);
 
-  // Drag animation for gold prices modal
-  const goldTranslateY = useRef(new Animated.Value(SCREEN_H)).current;
-
-  const fetchGoldPrices = async () => {
-    setIsGoldLoading(true);
-    setGoldError(null);
-    try {
-      const response = await fetch(`${API_BASE_URL}/client/gold-prices`, {
-        headers: { Accept: 'application/json' },
-      });
-      const result = await response.json();
-      if (result.success) {
-        setGoldPrices(result.data.prices || []);
-        setGoldLastUpdated(result.data.last_updated || '');
-      } else {
-        setGoldError(result.message || 'Lỗi tải giá vàng từ hệ thống.');
-      }
-    } catch (e) {
-      console.log('Error fetching gold prices:', e);
-      setGoldError('Không thể kết nối đến máy chủ SORA. Vui lòng kiểm tra mạng!');
-    } finally {
-      setIsGoldLoading(false);
-    }
-  };
-
-  // Open modal with slide up animation
   const openGoldModal = () => {
     setIsGoldModalVisible(true);
-    goldTranslateY.setValue(SCREEN_H);
-    fetchGoldPrices();
-    Animated.spring(goldTranslateY, {
-      toValue: 0,
-      damping: 22,
-      stiffness: 130,
-      mass: 0.8,
-      useNativeDriver: true,
-    }).start();
   };
 
-  // Close modal with slide down animation
   const closeGoldModal = () => {
-    Animated.timing(goldTranslateY, {
-      toValue: SCREEN_H,
-      duration: 250,
-      useNativeDriver: true,
-    }).start(() => {
-      setIsGoldModalVisible(false);
-      setActiveTopTab('home');
-    });
+    setIsGoldModalVisible(false);
+    setActiveTopTab('home');
   };
-
-  const goldPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 5,
-      onPanResponderMove: (_, gestureState) => {
-        const clampedY = Math.max(0, gestureState.dy);
-        goldTranslateY.setValue(clampedY);
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dy > 120 || gestureState.vy > 0.5) {
-          closeGoldModal();
-        } else {
-          Animated.spring(goldTranslateY, {
-            toValue: 0,
-            damping: 22,
-            stiffness: 130,
-            useNativeDriver: true,
-          }).start();
-        }
-      },
-    })
-  ).current;
 
   const loadUser = useCallback(async () => {
     try {
@@ -810,8 +636,8 @@ export default function HomeScreen({ navigation }) {
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    Promise.all([loadUser(), fetchHomeData()]).finally(() => setRefreshing(false));
-  }, [loadUser]);
+    Promise.all([loadUser(), refetchHomeData(), refetchHeaderData()]).finally(() => setRefreshing(false));
+  }, [loadUser, refetchHeaderData, refetchHomeData]);
 
   const toggleMenu = () => {
     if (isMenuOpen) {
@@ -856,7 +682,7 @@ export default function HomeScreen({ navigation }) {
     );
   };
 
-  if (isHomeLoading && !refreshing && banners.length === 0) {
+  if (isHomeQueryLoading && !refreshing && banners.length === 0) {
     return (
       <SafeAreaView style={[styles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color="#9f273b" />
@@ -1176,7 +1002,7 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.categoriesContainer}>
           <Text style={styles.sectionTitle}>DANH MỤC</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesList}>
-            {(homeCategories.length > 0 ? homeCategories : CATEGORIES).map((cat) => (
+            {homeCategories.map((cat) => (
               <TouchableOpacity
                 key={cat.id.toString()}
                 style={styles.categoryItem}
@@ -1184,7 +1010,7 @@ export default function HomeScreen({ navigation }) {
               >
                 <View style={styles.categoryCircle}>
                   <SoraFallbackImage
-                    uri={cat.image ? getStorageUrl(cat.image) : (cat.icon || 'https://images.unsplash.com/photo-1605100804763-247f67b854d4?q=80&w=300')}
+                    uri={cat.thumbnail ? getStorageUrl(cat.thumbnail) : (cat.image ? getStorageUrl(cat.image) : cat.icon)}
                     style={styles.categoryImage}
                   />
                   <View style={styles.categoryOverlay} />
@@ -1207,7 +1033,7 @@ export default function HomeScreen({ navigation }) {
           </View>
 
           <FlatList
-            data={bestSellers.length > 0 ? bestSellers : BEST_SELLERS}
+            data={bestSellers}
             renderItem={renderProduct}
             keyExtractor={item => item.id.toString()}
             horizontal
@@ -1444,280 +1270,19 @@ export default function HomeScreen({ navigation }) {
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* SIDE MENU (DRAWER OVERLAY) */}
-      {isMenuOpen && (
-        <View style={styles.menuOverlayWrapper}>
-          <TouchableWithoutFeedback onPress={toggleMenu}>
-            <View style={styles.menuOverlay} />
-          </TouchableWithoutFeedback>
-          <Animated.View style={[styles.menuContainer, { width: menuWidth, transform: [{ translateX: slideAnim }] }]}>
-            <SafeAreaView style={{ flex: 1 }}>
-              {/* Menu Header */}
-              <View style={styles.menuHeader}>
-                <Image source={require('../../assets/logo1.png')} style={styles.menuLogo} resizeMode="contain" />
-                <TouchableOpacity onPress={toggleMenu} style={styles.menuCloseBtn}>
-                  <Ionicons name="close" size={28} color="#333" />
-                </TouchableOpacity>
-              </View>
+      <HomeSideMenu
+        visible={isMenuOpen}
+        width={menuWidth}
+        translateX={slideAnim}
+        isLoggedIn={isLoggedIn}
+        user={user}
+        navigation={navigation}
+        onClose={closeMenu}
+        onOpenGold={openGoldModal}
+        getStorageUrl={getStorageUrl}
+      />
 
-              <ScrollView style={styles.menuBody} showsVerticalScrollIndicator={false}>
-                {/* User Section */}
-                {isLoggedIn ? (() => {
-                  const theme = getTierTheme(user?.tier?.name);
-                  return (
-                    <TouchableOpacity
-                      style={[
-                        styles.heroCard,
-                        {
-                          backgroundColor: theme.bg,
-                          borderColor: theme.border,
-                          shadowColor: theme.border,
-                        }
-                      ]}
-                      activeOpacity={0.8}
-                      onPress={() => {
-                        toggleMenu();
-                        navigation.navigate('Profile');
-                      }}
-                    >
-                      <View style={[styles.heroAvatarWrap, { borderColor: theme.avatarBorder }]}>
-                        <SoraFallbackImage
-                          uri={user?.avatar_url
-                            ? getStorageUrl(user.avatar_url)
-                            : `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.fullName || 'U')}&background=9f273b&color=fff&size=200`
-                          }
-                          style={styles.heroAvatar}
-                        />
-                      </View>
-                      <View style={styles.heroInfo}>
-                        <Text style={[styles.heroName, { color: theme.nameColor }]} numberOfLines={1}>
-                          {user?.fullName || 'Thành viên SORA'}
-                        </Text>
-                        <Text style={[styles.heroEmail, { color: theme.labelColor }]} numberOfLines={1}>
-                          {user?.email}
-                        </Text>
-                        <TierBadge tierName={user?.tier?.name} />
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })() : (
-                  <TouchableOpacity
-                    style={styles.menuUserSection}
-                    onPress={() => {
-                      toggleMenu();
-                      navigation.navigate('Login');
-                    }}
-                  >
-                    <View style={styles.menuAvatar}>
-                      <Ionicons name="person" size={30} color="#9f273b" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.menuUserName}>Đăng nhập / Đăng ký</Text>
-                      <Text style={styles.menuUserSub}>Nhận ưu đãi hạng thành viên</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={18} color="#ccc" />
-                  </TouchableOpacity>
-                )}
-
-                {/* Menu Items */}
-                <View style={styles.menuSection}>
-                  <Text style={styles.menuSectionTitle}>KHÁM PHÁ</Text>
-                  <TouchableOpacity style={styles.menuItem}>
-                    <Ionicons name="diamond-outline" size={22} color="#555" style={styles.menuItemIcon} />
-                    <Text style={styles.menuItemText}>Cửa hàng Trang sức</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.menuItem}>
-                    <Ionicons name="sparkles-outline" size={22} color="#555" style={styles.menuItemIcon} />
-                    <Text style={styles.menuItemText}>Bộ Sưu Tập Giới Hạn</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.menuItem}
-                    onPress={() => {
-                      closeMenu();
-                      openGoldModal();
-                    }}
-                  >
-                    <MaterialCommunityIcons name="gold" size={22} color="#555" style={styles.menuItemIcon} />
-                    <Text style={styles.menuItemText}>Bảng Giá Vàng</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.menuItem}
-                    onPress={() => {
-                      closeMenu();
-                      navigation.navigate('News');
-                    }}
-                  >
-                    <Ionicons name="newspaper-outline" size={22} color="#555" style={styles.menuItemIcon} />
-                    <Text style={styles.menuItemText}>Tin tức</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.menuItem}
-                    onPress={() => {
-                      closeMenu();
-                      navigation.navigate('StaffAttendance');
-                    }}
-                  >
-                    <Ionicons name="qr-code-outline" size={22} color="#555" style={styles.menuItemIcon} />
-                    <Text style={styles.menuItemText}>Chấm công nhân viên</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.menuSection}>
-                  <Text style={styles.menuSectionTitle}>HỖ TRỢ & DỊCH VỤ</Text>
-                  <TouchableOpacity
-                    style={styles.menuItem}
-                    onPress={() => {
-                      closeMenu();
-                      navigation.navigate('About');
-                    }}
-                  >
-                    <Ionicons name="information-circle-outline" size={22} color="#555" style={styles.menuItemIcon} />
-                    <Text style={styles.menuItemText}>Về SORA</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.menuItem}
-                    onPress={() => {
-                      closeMenu();
-                      navigation.navigate('Warranty');
-                    }}
-                  >
-                    <Ionicons name="shield-checkmark-outline" size={22} color="#555" style={styles.menuItemIcon} />
-                    <Text style={styles.menuItemText}>Chính sách bảo hành</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.menuItem}
-                    onPress={() => {
-                      closeMenu();
-                      navigation.navigate('ContactCSKH');
-                    }}
-                  >
-                    <Ionicons name="call-outline" size={22} color="#555" style={styles.menuItemIcon} />
-                    <Text style={styles.menuItemText}>Liên hệ CSKH</Text>
-                  </TouchableOpacity>
-                </View>
-              </ScrollView>
-
-              <View style={styles.menuFooter}>
-                <Text style={styles.menuFooterText}>SORA JEWELRY v1.0.0</Text>
-              </View>
-            </SafeAreaView>
-          </Animated.View>
-        </View>
-      )}
-
-      {/* Premium Gold Price Modal */}
-      <Modal
-        visible={isGoldModalVisible}
-        animationType="none"
-        transparent={true}
-        onRequestClose={closeGoldModal}
-      >
-        <View style={styles.modalOverlay}>
-          {/* Backdrop Sibling */}
-          <TouchableWithoutFeedback onPress={closeGoldModal}>
-            <View style={StyleSheet.absoluteFillObject} />
-          </TouchableWithoutFeedback>
-
-          <Animated.View
-            style={[
-              styles.goldModalContent,
-              { transform: [{ translateY: goldTranslateY }] }
-            ]}
-          >
-            {/* Header section (Draggable) */}
-            <View style={styles.goldHeader} {...goldPanResponder.panHandlers}>
-              <View style={styles.goldHeaderIndicator} />
-              <View style={styles.goldHeaderTitleRow}>
-                <Ionicons name="diamond-outline" size={22} color="#e7ce7d" style={{ marginRight: 8 }} />
-                <Text style={styles.goldHeaderTitle}>BẢNG GIÁ VÀNG HÔM NAY</Text>
-              </View>
-              <View style={styles.goldDivider} />
-              <Text style={styles.goldSubtitle}>Niêm Yết Hệ Thống SORA Jewelry</Text>
-
-              <View style={styles.goldUpdateTimeRow}>
-                <Ionicons name="time-outline" size={14} color="#e7ce7d" style={{ marginRight: 4 }} />
-                <Text style={styles.goldUpdateTime}>
-                  Cập nhật lúc: {goldLastUpdated || (isGoldLoading ? 'Đang tải...' : 'Chưa cập nhật')}
-                </Text>
-              </View>
-            </View>
-
-            {/* Content body */}
-            <View style={styles.goldBody}>
-              {isGoldLoading ? (
-                <View style={styles.goldLoadingContainer}>
-                  <ActivityIndicator size="large" color="#e7ce7d" />
-                  <Text style={styles.goldLoadingText}>Đang kết nối kho dữ liệu SORA Jewelry...</Text>
-                </View>
-              ) : goldError ? (
-                <View style={styles.goldErrorContainer}>
-                  <Ionicons name="alert-circle-outline" size={48} color="#9f273b" />
-                  <Text style={styles.goldErrorText}>{goldError}</Text>
-                  <TouchableOpacity style={styles.goldRetryButton} onPress={fetchGoldPrices}>
-                    <Text style={styles.goldRetryButtonText}>TẢI LẠI DỮ LIỆU</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : goldPrices.length === 0 ? (
-                <View style={styles.goldErrorContainer}>
-                  <Ionicons name="information-circle-outline" size={48} color="#e7ce7d" />
-                  <Text style={styles.goldErrorText}>Tạm thời chưa có dữ liệu giá vàng. Vui lòng quay lại sau!</Text>
-                  <TouchableOpacity style={styles.goldRetryButton} onPress={fetchGoldPrices}>
-                    <Text style={styles.goldRetryButtonText}>THỬ LẠI</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <FlatList
-                  data={goldPrices}
-                  keyExtractor={(item, index) => index.toString()}
-                  ListHeaderComponent={() => (
-                    <View style={styles.tableHeaderRow}>
-                      <Text style={[styles.tableHeaderCell, { flex: 2, textAlign: 'left', paddingLeft: 12 }]}>LOẠI VÀNG</Text>
-                      <Text style={[styles.tableHeaderCell, { flex: 1, textAlign: 'center' }]}>MUA VÀO</Text>
-                      <Text style={[styles.tableHeaderCell, { flex: 1, textAlign: 'center', paddingRight: 12 }]}>BÁN RA</Text>
-                    </View>
-                  )}
-                  renderItem={({ item, index }) => (
-                    <View style={[
-                      styles.tableDataRow,
-                      { backgroundColor: index % 2 === 0 ? '#ffffff' : '#faf8f5' }
-                    ]}>
-                      <Text style={[styles.tableDataCellName, { flex: 2, textAlign: 'left', paddingLeft: 12 }]} numberOfLines={2}>
-                        {item.name}
-                      </Text>
-                      <Text style={[styles.tableDataCellPriceBuy, { flex: 1, textAlign: 'center' }]}>
-                        {item.buy}
-                      </Text>
-                      <Text style={[styles.tableDataCellPriceSell, { flex: 1, textAlign: 'center', paddingRight: 12 }]}>
-                        {item.sell}
-                      </Text>
-                    </View>
-                  )}
-                  contentContainerStyle={{ paddingBottom: 15 }}
-                />
-              )}
-            </View>
-
-            {/* Footer / Notes */}
-            <View style={styles.goldFooter}>
-              <View style={styles.goldInfoItem}>
-                <Ionicons name="information-circle-outline" size={13} color="#e7ce7d" style={{ marginRight: 4 }} />
-                <Text style={styles.goldFooterNote}>Đơn vị tính: Nghìn VNĐ / Chỉ.</Text>
-              </View>
-              <View style={styles.goldInfoItem}>
-                <Ionicons name="shield-checkmark-outline" size={13} color="#e7ce7d" style={{ marginRight: 4, marginTop: 2 }} />
-                <Text style={[styles.goldFooterNote, { fontStyle: 'italic', flex: 1 }]}>
-                  Bảng giá chỉ mang tính chất tham khảo trực tuyến. Vui lòng liên hệ SORA Jewelry để chốt giao dịch.
-                </Text>
-              </View>
-
-              {/* Close Button */}
-              <TouchableOpacity style={styles.goldCloseBtn} onPress={closeGoldModal}>
-                <Text style={styles.goldCloseBtnText}>ĐÓNG BẢNG GIÁ</Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-        </View>
-      </Modal>
+      <GoldPriceModal visible={isGoldModalVisible} onClose={closeGoldModal} />
 
     </SafeAreaView>
   );
@@ -2467,380 +2032,6 @@ const styles = StyleSheet.create({
     width: 165,
     marginHorizontal: 5,
   },
-  menuOverlayWrapper: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 1000,
-    flexDirection: 'row',
-  },
-  menuOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  menuContainer: {
-    height: '100%',
-    backgroundColor: '#fff',
-    zIndex: 1001,
-    shadowColor: '#000',
-    shadowOffset: { width: 5, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 20,
-  },
-  menuHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  menuLogo: {
-    height: 40,
-    width: 150,
-  },
-  menuCloseBtn: {
-    padding: 5,
-  },
-  menuBody: {
-    flex: 1,
-  },
-  menuUserSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#fbf9f6',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  menuAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#e7ce7d',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-    borderWidth: 2,
-    borderColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  menuUserName: {
-    fontSize: 16,
-    fontFamily: 'PlayfairDisplay_700Bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  menuUserSub: {
-    fontSize: 12,
-    fontFamily: 'PlayfairDisplay_400Regular_Italic',
-    color: '#9f273b',
-  },
-  menuSection: {
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  menuSectionTitle: {
-    fontSize: 12,
-    fontFamily: 'Oswald_500Medium',
-    color: '#999',
-    letterSpacing: 1.5,
-    paddingHorizontal: 20,
-    marginBottom: 10,
-    textTransform: 'uppercase',
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-  },
-  menuItemIcon: {
-    marginRight: 15,
-    width: 24,
-    textAlign: 'center',
-  },
-  menuItemText: {
-    fontSize: 14,
-    fontFamily: 'Oswald_400Regular',
-    color: '#333',
-  },
-  menuFooter: {
-    padding: 20,
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-  },
-  menuFooterText: {
-    fontSize: 11,
-    fontFamily: 'Oswald_400Regular',
-    color: '#aaa',
-    letterSpacing: 1,
-  },
-
-  // Hero Card (Logged in)
-  heroCard: {
-    backgroundColor: '#fffdf6',
-    marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#ebd5a3',
-    shadowColor: '#ebd5a3',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
-    marginBottom: 10,
-  },
-  heroAvatarWrap: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 2,
-    borderColor: '#ebd5a3',
-    overflow: 'hidden',
-    marginRight: 12,
-  },
-  heroAvatar: {
-    width: '100%',
-    height: '100%',
-  },
-  heroInfo: {
-    flex: 1,
-  },
-  heroName: {
-    fontFamily: 'PlayfairDisplay_700Bold',
-    fontSize: 16,
-    color: '#1a1a1a',
-    marginBottom: 2,
-  },
-  heroEmail: {
-    fontFamily: 'Oswald_400Regular',
-    fontSize: 11,
-    color: '#888',
-    marginBottom: 6,
-  },
-
-  // Tier Badge (small pill)
-  tierBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 20,
-    borderWidth: 1,
-    alignSelf: 'flex-start',
-  },
-  tierBadgeTxt: {
-    fontFamily: 'Oswald_500Medium',
-    fontSize: 10,
-    letterSpacing: 0.5,
-  },
-
-  // Modal gold prices styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'flex-end',
-  },
-  goldModalContent: {
-    backgroundColor: '#ffffff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    height: SCREEN_H * 0.85,
-    width: '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 20,
-  },
-  goldHeader: {
-    backgroundColor: '#9f273b',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingTop: 12,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    borderBottomWidth: 3,
-    borderBottomColor: '#e7ce7d',
-  },
-  goldHeaderIndicator: {
-    width: 40,
-    height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 2,
-    marginBottom: 10,
-  },
-  goldHeaderTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  goldHeaderTitle: {
-    fontFamily: 'PlayfairDisplay_700Bold',
-    fontSize: 20,
-    color: '#ffffff',
-    letterSpacing: 1,
-  },
-  goldDivider: {
-    width: 40,
-    height: 1,
-    backgroundColor: '#e7ce7d',
-    marginVertical: 6,
-  },
-  goldSubtitle: {
-    fontFamily: 'Oswald_500Medium',
-    fontSize: 12,
-    color: '#e7ce7d',
-    letterSpacing: 2,
-    textTransform: 'uppercase',
-  },
-  goldUpdateTimeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-    borderRadius: 15,
-  },
-  goldUpdateTime: {
-    fontFamily: 'Oswald_400Regular',
-    fontSize: 11,
-    color: '#fff',
-    letterSpacing: 0.5,
-  },
-  goldBody: {
-    flex: 1,
-    backgroundColor: '#fffdf9', // Ivory cream background
-  },
-  goldLoadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  goldLoadingText: {
-    fontFamily: 'Oswald_500Medium',
-    fontSize: 14,
-    color: '#e7ce7d',
-    marginTop: 15,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  goldErrorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 30,
-    paddingVertical: 40,
-  },
-  goldErrorText: {
-    fontFamily: 'Oswald_400Regular',
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 10,
-    marginBottom: 20,
-    lineHeight: 20,
-  },
-  goldRetryButton: {
-    backgroundColor: '#9f273b',
-    borderWidth: 1,
-    borderColor: '#e7ce7d',
-    paddingVertical: 10,
-    paddingHorizontal: 25,
-    borderRadius: 2,
-  },
-  goldRetryButtonText: {
-    fontFamily: 'Oswald_600SemiBold',
-    fontSize: 13,
-    color: '#ffffff',
-    letterSpacing: 1.5,
-  },
-  tableHeaderRow: {
-    flexDirection: 'row',
-    backgroundColor: '#f6f4ef',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e7ce7d',
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  tableHeaderCell: {
-    fontFamily: 'Oswald_600SemiBold',
-    fontSize: 12,
-    color: '#666',
-    letterSpacing: 0.8,
-  },
-  tableDataRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(231, 206, 125, 0.15)',
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  tableDataCellName: {
-    fontFamily: 'PlayfairDisplay_700Bold',
-    fontSize: 14,
-    color: '#222',
-  },
-  tableDataCellPriceBuy: {
-    fontFamily: PRICE_FONT_FAMILY,
-    fontWeight: PRICE_FONT_WEIGHT,
-    fontSize: 15,
-    color: '#1e7e34', // Green for buying
-    letterSpacing: 0.5,
-  },
-  tableDataCellPriceSell: {
-    fontFamily: PRICE_FONT_FAMILY,
-    fontWeight: PRICE_FONT_WEIGHT,
-    fontSize: 15,
-    color: '#c82333', // Red for selling
-    letterSpacing: 0.5,
-  },
-  goldFooter: {
-    backgroundColor: '#ffffff',
-    borderTopWidth: 1,
-    borderTopColor: '#eaeaea',
-    padding: 16,
-  },
-  goldInfoItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 6,
-  },
-  goldFooterNote: {
-    fontFamily: 'Oswald_400Regular',
-    fontSize: 12,
-    color: '#888',
-    lineHeight: 16,
-  },
-  goldCloseBtn: {
-    backgroundColor: '#9f273b',
-    borderWidth: 1,
-    borderColor: '#e7ce7d',
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 12,
-    borderRadius: 2,
-  },
-  goldCloseBtnText: {
-    fontFamily: 'Oswald_600SemiBold',
-    fontSize: 14,
-    color: '#ffffff',
-    letterSpacing: 2,
-  },
-
   // Real-time search dropdown styles
   searchWrapper: {
     position: 'relative',

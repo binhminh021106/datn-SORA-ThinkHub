@@ -20,6 +20,8 @@ class ShopController extends Controller
                     ->with('attributeValues.attribute');
             },
         ])
+            ->withCount('reviews')
+            ->withAvg('reviews', 'rating')
             ->where('status', 'published')
             ->whereHas('variants', function ($variantQuery) {
                 $variantQuery->where('stock_quantity', '>', 0);
@@ -89,6 +91,8 @@ class ShopController extends Controller
         $products->getCollection()->transform(function ($product) {
             $product->is_new = $product->created_at >= now()->subDays(30);
             $product->hover_image = null;
+            $product->review_count = (int) ($product->reviews_count ?? $product->review_count ?? 0);
+            $product->rating_avg = (float) ($product->reviews_avg_rating ?? $product->rating_avg ?? 0);
 
             if ($product->variants && $product->variants->count() > 0) {
                 $hoverCandidate = $product->variants->first(function ($variant) use ($product) {

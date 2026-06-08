@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import SmartImage from "../components/SmartImage";
 import { showCustomAlert } from '../components/CustomAlert';
@@ -25,6 +26,13 @@ import { PRICE_FONT_FAMILY, PRICE_FONT_WEIGHT } from '../styles/typography';
 
 const Alert = {
   alert: (title, message, buttons) => showCustomAlert(title, message, buttons)
+};
+
+const WISHLIST_QUERY_KEY = ['wishlist'];
+
+const fetchLocalWishlistItems = async () => {
+  const stored = await AsyncStorage.getItem('sora_wishlist_items');
+  return stored ? JSON.parse(stored) : [];
 };
 
 const { width, height } = Dimensions.get("window");
@@ -334,42 +342,38 @@ const INITIAL_WISHLIST = [
 
 export default function WishlistScreen() {
   const navigation = useNavigation();
+  const queryClient = useQueryClient();
   const [items, setItems] = useState([]);
   const [selected, setSelected] = useState([]);
   const [lightboxImg, setLightboxImg] = useState(null);
   const [scrollEnabled, setScrollEnabled] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [addingItemIds, setAddingItemIds] = useState([]);
   const [isAddingSelected, setIsAddingSelected] = useState(false);
 
-  const loadWishlist = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const stored = await AsyncStorage.getItem('sora_wishlist_items');
-      if (stored) {
-        setItems(JSON.parse(stored));
-      } else {
-        setItems([]);
-      }
-    } catch (e) {
-      console.log('Error loading wishlist items in WishlistScreen:', e);
-    } finally {
-      setIsLoading(false);
+  const wishlistQuery = useQuery({
+    queryKey: WISHLIST_QUERY_KEY,
+    queryFn: fetchLocalWishlistItems,
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
+  });
+
+  useEffect(() => {
+    if (wishlistQuery.data) {
+      setItems(wishlistQuery.data);
+      const validIds = new Set(wishlistQuery.data.map((item) => item.id.toString()));
+      setSelected((previousSelected) => previousSelected.filter((id) => validIds.has(id)));
     }
-  }, []);
+  }, [wishlistQuery.data]);
 
   useFocusEffect(
     useCallback(() => {
-      loadWishlist();
-    }, [loadWishlist])
+      wishlistQuery.refetch();
+    }, [wishlistQuery.refetch])
   );
 
   const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadWishlist();
-    setRefreshing(false);
-  }, [loadWishlist]);
+    await wishlistQuery.refetch();
+  }, [wishlistQuery.refetch]);
 
   const allSelected = items.length > 0 && selected.length === items.length;
 
@@ -397,6 +401,7 @@ export default function WishlistScreen() {
       const updatedItems = currentItems.filter(i => i.id.toString() !== idStr);
 
       setItems(updatedItems);
+      queryClient.setQueryData(WISHLIST_QUERY_KEY, updatedItems);
       setSelected((prev) => prev.filter((x) => x !== idStr));
 
       await AsyncStorage.setItem('sora_wishlist_ids', JSON.stringify(updatedIds));
@@ -430,6 +435,7 @@ export default function WishlistScreen() {
               const updatedItems = currentItems.filter(i => !selected.includes(i.id.toString()));
 
               setItems(updatedItems);
+              queryClient.setQueryData(WISHLIST_QUERY_KEY, updatedItems);
               setSelected([]);
 
               await AsyncStorage.setItem('sora_wishlist_ids', JSON.stringify(updatedIds));
@@ -519,6 +525,7 @@ export default function WishlistScreen() {
     try {
       const headers = await getCartHeaders();
       await addWishlistItemToCart(item, headers);
+      queryClient.invalidateQueries({ queryKey: ['cart'] });
       Alert.alert("Giỏ hàng", `Đã thêm "${item.name}" vào giỏ hàng thành công!`);
     } catch (error) {
       console.log('Error adding wishlist item to cart:', error);
@@ -547,8 +554,10 @@ export default function WishlistScreen() {
       }
 
       if (failedItems.length === 0) {
+        queryClient.invalidateQueries({ queryKey: ['cart'] });
         Alert.alert("Giỏ hàng", `Đã thêm ${addedCount} sản phẩm được chọn vào giỏ hàng thành công!`);
       } else if (addedCount > 0) {
+        queryClient.invalidateQueries({ queryKey: ['cart'] });
         Alert.alert("Giỏ hàng", `Đã thêm ${addedCount}/${selectedItems.length} sản phẩm. Không thể thêm: ${failedItems.join(', ')}.`);
       } else {
         Alert.alert("Lỗi giỏ hàng", "Không thể thêm các sản phẩm đã chọn. Vui lòng thử lại.");
@@ -566,6 +575,8 @@ export default function WishlistScreen() {
     (sum, i) => sum + parsePriceToNumber(i.price),
     0,
   );
+  const isLoading = wishlistQuery.isLoading && items.length === 0;
+  const refreshing = wishlistQuery.isRefetching && items.length > 0;
 
   if (isLoading && !refreshing && items.length === 0) {
     return (
@@ -675,7 +686,7 @@ export default function WishlistScreen() {
           </View>
         ) : (
           items.map((item) => {
-            const isChecked = selected.includes(item.id);
+            const isChecked = selected.includes(item.id.toString());
             return (
               <SwipeableWishlistItem
                 key={item.id}

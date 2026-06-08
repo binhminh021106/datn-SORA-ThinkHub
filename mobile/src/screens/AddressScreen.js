@@ -142,6 +142,21 @@ const STATIC_PROVINCES = [
   { "code": "87", "name": "Tỉnh Đồng Tháp" }
 ];
 
+const NEW_ADDRESS_API_URL = 'https://esgoo.net/api-tinhthanh-new/4/0.htm';
+const normalizeLocationName = (value = '') =>
+  value
+    .replace(/^(Thành phố|Tỉnh|Phường|Xã|Thị trấn)\s+/i, '')
+    .trim()
+    .toLowerCase();
+const mapNewProvinceItems = (items = []) => items.map((item) => ({
+  code: item.id,
+  name: item.full_name || item.name,
+  wards: (item.data2 || []).map((ward) => ({
+    code: ward.id,
+    name: ward.full_name || ward.name,
+  })),
+}));
+
 export default function AddressScreen() {
   const navigation = useNavigation();
   const [addresses, setAddresses] = useState([]);
@@ -151,11 +166,10 @@ export default function AddressScreen() {
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentAddressId, setCurrentAddressId] = useState(null);
-  
+
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [city, setCity] = useState('');
-  const [district, setDistrict] = useState('');
   const [ward, setWard] = useState('');
   const [shippingAddress, setShippingAddress] = useState('');
   const [isDefault, setIsDefault] = useState(false);
@@ -164,15 +178,13 @@ export default function AddressScreen() {
   const [formError, setFormError] = useState('');
 
   // API Tỉnh Thành States
-  const [provinces, setProvinces] = useState(STATIC_PROVINCES);
-  const [districts, setDistricts] = useState([]);
+  const [provinces, setProvinces] = useState([]);
   const [wards, setWards] = useState([]);
-  
+
   const [selectedProvinceCode, setSelectedProvinceCode] = useState(null);
-  const [selectedDistrictCode, setSelectedDistrictCode] = useState(null);
 
   // Selector Modal States
-  const [selectorType, setSelectorType] = useState(null); // 'city' | 'district' | 'ward'
+  const [selectorType, setSelectorType] = useState(null); // 'city' | 'ward'
   const [showSelector, setShowSelector] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectorLoading, setSelectorLoading] = useState(false);
@@ -180,59 +192,30 @@ export default function AddressScreen() {
 
   useEffect(() => {
     if (formError) setFormError('');
-  }, [customerName, customerPhone, city, district, ward, shippingAddress, isDefault]);
+  }, [customerName, customerPhone, city, ward, shippingAddress, isDefault]);
 
-  // Load Provinces
+  // Load Provinces and wards from the 34-province API. The new dataset has only 2 levels.
   const loadProvinces = async () => {
-    setProvinces(STATIC_PROVINCES);
-  };
-
-  // Load Districts
-  const loadDistricts = async (provCode) => {
+    if (provinces.length > 0) return;
     setSelectorLoading(true);
     try {
-      const res = await fetch(`https://esgoo.net/api-tinhthanh/2/${provCode}.htm`);
+      const res = await fetch(NEW_ADDRESS_API_URL);
       const data = await res.json();
       if (data && data.error === 0 && Array.isArray(data.data)) {
-        const mapped = data.data.map(d => ({ code: d.id, name: d.full_name }));
-        setDistricts(mapped);
+        setProvinces(mapNewProvinceItems(data.data));
       } else {
-        throw new Error('Dữ liệu Quận/Huyện trống');
+        throw new Error('Province data is empty');
       }
     } catch (e) {
       Alert.alert(
         'Lỗi kết nối',
-        'Không thể tự động tải danh sách Quận/Huyện. Ứng dụng sẽ chuyển sang chế độ tự nhập tay.',
-        [{ text: 'ĐỒNG Ý', onPress: () => {
-          setIsManualMode(true);
-          setShowSelector(false);
-        }}]
-      );
-    } finally {
-      setSelectorLoading(false);
-    }
-  };
-
-  // Load Wards
-  const loadWards = async (distCode) => {
-    setSelectorLoading(true);
-    try {
-      const res = await fetch(`https://esgoo.net/api-tinhthanh/3/${distCode}.htm`);
-      const data = await res.json();
-      if (data && data.error === 0 && Array.isArray(data.data)) {
-        const mapped = data.data.map(w => ({ code: w.id, name: w.full_name }));
-        setWards(mapped);
-      } else {
-        throw new Error('Dữ liệu Phường/Xã trống');
-      }
-    } catch (e) {
-      Alert.alert(
-        'Lỗi kết nối',
-        'Không thể tự động tải danh sách Phường/Xã. Ứng dụng sẽ chuyển sang chế độ tự nhập tay.',
-        [{ text: 'ĐỒNG Ý', onPress: () => {
-          setIsManualMode(true);
-          setShowSelector(false);
-        }}]
+        'Không thể tự động tải danh sách Tỉnh / Thành phố. Ứng dụng sẽ chuyển sang chế độ tự nhập tay.',
+        [{
+          text: 'ĐỒNG Ý', onPress: () => {
+            setIsManualMode(true);
+            setShowSelector(false);
+          }
+        }]
       );
     } finally {
       setSelectorLoading(false);
@@ -244,13 +227,9 @@ export default function AddressScreen() {
     setSelectorType(type);
     setSearchQuery('');
     setShowSelector(true);
-    
+
     if (type === 'city') {
       loadProvinces();
-    } else if (type === 'district' && selectedProvinceCode) {
-      loadDistricts(selectedProvinceCode);
-    } else if (type === 'ward' && selectedDistrictCode) {
-      loadWards(selectedDistrictCode);
     }
   };
 
@@ -258,7 +237,6 @@ export default function AddressScreen() {
     const query = searchQuery.trim().toLowerCase();
     let sourceList = [];
     if (selectorType === 'city') sourceList = provinces;
-    else if (selectorType === 'district') sourceList = districts;
     else if (selectorType === 'ward') sourceList = wards;
 
     if (!query) return sourceList;
@@ -270,22 +248,8 @@ export default function AddressScreen() {
       if (item.name !== city) {
         setCity(item.name);
         setSelectedProvinceCode(item.code);
-        
-        // Reset district & ward
-        setDistrict('');
         setWard('');
-        setSelectedDistrictCode(null);
-        setDistricts([]);
-        setWards([]);
-      }
-    } else if (selectorType === 'district') {
-      if (item.name !== district) {
-        setDistrict(item.name);
-        setSelectedDistrictCode(item.code);
-        
-        // Reset ward
-        setWard('');
-        setWards([]);
+        setWards(item.wards || []);
       }
     } else if (selectorType === 'ward') {
       setWard(item.name);
@@ -330,13 +294,10 @@ export default function AddressScreen() {
     setCustomerName('');
     setCustomerPhone('');
     setCity('');
-    setDistrict('');
     setWard('');
     setShippingAddress('');
     setIsDefault(addresses.length === 0); // If first address, force default
     setSelectedProvinceCode(null);
-    setSelectedDistrictCode(null);
-    setDistricts([]);
     setWards([]);
     setIsManualMode(false);
     setShowModal(true);
@@ -349,52 +310,34 @@ export default function AddressScreen() {
     setCustomerName(item.customer_name || '');
     setCustomerPhone(item.customer_phone || '');
     setCity(item.city || '');
-    setDistrict(item.district || '');
     setWard(item.ward || '');
     setShippingAddress(item.shipping_address || '');
     setIsDefault(item.is_default === 1);
     setIsManualMode(false);
     setShowModal(true);
 
-    // Tự động khớp code tỉnh thành thông minh từ dữ liệu text có sẵn
+    // Match saved text against the new 34-province dataset. District no longer exists.
     try {
-      let provs = STATIC_PROVINCES;
-      setProvinces(provs);
+      let provs = provinces;
+      if (provs.length === 0) {
+        const res = await fetch(NEW_ADDRESS_API_URL);
+        const data = await res.json();
+        provs = data?.error === 0 && Array.isArray(data.data) ? mapNewProvinceItems(data.data) : [];
+        setProvinces(provs);
+      }
 
-      const matchProv = provs.find(p => 
-        p.name.toLowerCase() === item.city?.toLowerCase() || 
-        p.name.replace(/(Thành phố|Tỉnh)\s+/i, '').toLowerCase() === item.city?.replace(/(Thành phố|Tỉnh)\s+/i, '').toLowerCase()
+      const matchProv = provs.find(p =>
+        normalizeLocationName(p.name) === normalizeLocationName(item.city || '')
       );
 
       if (matchProv) {
         setSelectedProvinceCode(matchProv.code);
-        
-        const resDist = await fetch(`https://esgoo.net/api-tinhthanh/2/${matchProv.code}.htm`);
-        const distData = await resDist.json();
-        let dists = [];
-        if (distData && distData.error === 0 && Array.isArray(distData.data)) {
-          dists = distData.data.map(d => ({ code: d.id, name: d.full_name }));
-        }
-        setDistricts(dists);
+        setWards(matchProv.wards || []);
 
-        const matchDist = dists.find(d => 
-          d.name.toLowerCase() === item.district?.toLowerCase() || 
-          d.name.replace(/(Quận|Huyện|Thị xã|Thành phố)\s+/i, '').toLowerCase() === item.district?.replace(/(Quận|Huyện|Thị xã|Thành phố)\s+/i, '').toLowerCase()
+        const matchWard = (matchProv.wards || []).find(w =>
+          normalizeLocationName(w.name) === normalizeLocationName(item.ward || '')
         );
-
-        if (matchDist) {
-          setSelectedDistrictCode(matchDist.code);
-
-          const resWard = await fetch(`https://esgoo.net/api-tinhthanh/3/${matchDist.code}.htm`);
-          const wardData = await resWard.json();
-          let wList = [];
-          if (wardData && wardData.error === 0 && Array.isArray(wardData.data)) {
-            wList = wardData.data.map(w => ({ code: w.id, name: w.full_name }));
-          }
-          setWards(wList);
-        } else {
-          setIsManualMode(true);
-        }
+        if (!matchWard && item.ward) setIsManualMode(true);
       } else {
         setIsManualMode(true);
       }
@@ -427,9 +370,6 @@ export default function AddressScreen() {
     }
     if (!city.trim()) {
       return fail('Vui lòng nhập Tỉnh/Thành phố.');
-    }
-    if (!district.trim()) {
-      return fail('Vui lòng nhập Quận/Huyện.');
     }
     if (!ward.trim()) {
       return fail('Vui lòng nhập Phường/Xã.');
@@ -475,7 +415,7 @@ export default function AddressScreen() {
           customer_name: customerName.trim().replace(/\s+/g, ' '),
           customer_phone: customerPhone.replace(/[^0-9]/g, ''),
           city: city.trim(),
-          district: district.trim(),
+          district: '',
           ward: ward.trim(),
           shipping_address: shippingAddress.trim(),
           is_default: isDefault ? 1 : 0,
@@ -568,8 +508,8 @@ export default function AddressScreen() {
     return (
       <View style={s.center}>
         <ActivityIndicator size="large" color="#9f273b" />
-          <Text style={{ marginTop: 10, fontFamily: "Oswald_500Medium", color: "#9f273b", fontSize: 13, letterSpacing: 1, textTransform: 'uppercase' }}>Đang tải sổ địa chỉ SORA...</Text>
-        </View>
+        <Text style={{ marginTop: 10, fontFamily: "Oswald_500Medium", color: "#9f273b", fontSize: 13, letterSpacing: 1, textTransform: 'uppercase' }}>Đang tải sổ địa chỉ SORA...</Text>
+      </View>
     );
   }
 
@@ -615,7 +555,7 @@ export default function AddressScreen() {
               <View style={s.cardBody}>
                 <Ionicons name="map-outline" size={16} color="#8c826e" style={s.mapIcon} />
                 <Text style={s.addressTxt}>
-                  {item.shipping_address}, {item.ward}, {item.district}, {item.city}
+                  {[item.shipping_address, item.ward, item.city].filter(Boolean).join(', ')}
                 </Text>
               </View>
 
@@ -630,7 +570,7 @@ export default function AddressScreen() {
                     <Text style={s.actionBtnTxt}>Đặt mặc định</Text>
                   </TouchableOpacity>
                 )}
-                
+
                 <TouchableOpacity
                   style={[s.actionBtn, { marginLeft: 'auto' }]}
                   onPress={() => handleOpenEditModal(item)}
@@ -677,7 +617,7 @@ export default function AddressScreen() {
           >
             <View style={s.modalContainer}>
               <Text style={s.modalTitle}>{isEditing ? 'Sửa Địa Chỉ' : 'Thêm Địa Chỉ Mới'}</Text>
-            
+
               <ScrollView
                 showsVerticalScrollIndicator={false}
                 style={s.modalForm}
@@ -685,161 +625,133 @@ export default function AddressScreen() {
                 keyboardShouldPersistTaps="handled"
                 keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
               >
-              {/* Receiver Name */}
-              <View style={s.inputGroup}>
-                <Text style={s.inputLabel}>TÊN NGƯỜI NHẬN</Text>
-                <TextInput
-                  style={s.textInput}
-                  value={customerName}
-                  onChangeText={setCustomerName}
-                  placeholder="Nhập tên người nhận"
-                  placeholderTextColor="#bbb"
-                />
-              </View>
+                {/* Receiver Name */}
+                <View style={s.inputGroup}>
+                  <Text style={s.inputLabel}>TÊN NGƯỜI NHẬN</Text>
+                  <TextInput
+                    style={s.textInput}
+                    value={customerName}
+                    onChangeText={setCustomerName}
+                    placeholder="Nhập tên người nhận"
+                    placeholderTextColor="#bbb"
+                  />
+                </View>
 
-              {/* Receiver Phone */}
-              <View style={s.inputGroup}>
-                <Text style={s.inputLabel}>SỐ ĐIỆN THOẠI</Text>
-                <TextInput
-                  style={s.textInput}
-                  value={customerPhone}
-                  onChangeText={setCustomerPhone}
-                  placeholder="Nhập số điện thoại 10 số"
-                  placeholderTextColor="#bbb"
-                  keyboardType="numeric"
-                  maxLength={10}
-                />
-              </View>
+                {/* Receiver Phone */}
+                <View style={s.inputGroup}>
+                  <Text style={s.inputLabel}>SỐ ĐIỆN THOẠI</Text>
+                  <TextInput
+                    style={s.textInput}
+                    value={customerPhone}
+                    onChangeText={setCustomerPhone}
+                    placeholder="Nhập số điện thoại 10 số"
+                    placeholderTextColor="#bbb"
+                    keyboardType="numeric"
+                    maxLength={10}
+                  />
+                </View>
 
-              {/* Manual mode toggle button */}
-              <View style={s.manualRow}>
-                <Text style={s.manualLabel}>Cách nhập địa chỉ</Text>
-                <TouchableOpacity
-                  style={s.manualSwitchBtn}
-                  onPress={() => setIsManualMode(!isManualMode)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name={isManualMode ? "list-outline" : "create-outline"} size={14} color="#9f273b" />
-                  <Text style={s.manualSwitchBtnTxt}>
-                    {isManualMode ? 'Chọn từ danh sách' : 'Tự nhập tay'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+                {/* Manual mode toggle button */}
+                <View style={s.manualRow}>
+                  <Text style={s.manualLabel}>Cách nhập địa chỉ</Text>
+                  <TouchableOpacity
+                    style={s.manualSwitchBtn}
+                    onPress={() => setIsManualMode(!isManualMode)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name={isManualMode ? "list-outline" : "create-outline"} size={14} color="#9f273b" />
+                    <Text style={s.manualSwitchBtnTxt}>
+                      {isManualMode ? 'Chọn từ danh sách' : 'Tự nhập tay'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
 
-              {isManualMode ? (
-                <>
-                  {/* City Input */}
-                  <View style={s.inputGroup}>
-                    <Text style={s.inputLabel}>TỈNH / THÀNH PHỐ</Text>
-                    <TextInput
-                      style={s.textInput}
-                      value={city}
-                      onChangeText={setCity}
-                      placeholder="Nhập Tỉnh / Thành phố"
-                      placeholderTextColor="#bbb"
-                    />
-                  </View>
+                {isManualMode ? (
+                  <>
+                    {/* City Input */}
+                    <View style={s.inputGroup}>
+                      <Text style={s.inputLabel}>TỈNH / THÀNH PHỐ</Text>
+                      <TextInput
+                        style={s.textInput}
+                        value={city}
+                        onChangeText={setCity}
+                        placeholder="Nhập Tỉnh / Thành phố"
+                        placeholderTextColor="#bbb"
+                      />
+                    </View>
 
-                  {/* District Input */}
-                  <View style={s.inputGroup}>
-                    <Text style={s.inputLabel}>QUẬN / HUYỆN</Text>
-                    <TextInput
-                      style={s.textInput}
-                      value={district}
-                      onChangeText={setDistrict}
-                      placeholder="Nhập Quận / Huyện"
-                      placeholderTextColor="#bbb"
-                    />
-                  </View>
+                    {/* Ward Input */}
+                    <View style={s.inputGroup}>
+                      <Text style={s.inputLabel}>PHƯỜNG / XÃ</Text>
+                      <TextInput
+                        style={s.textInput}
+                        value={ward}
+                        onChangeText={setWard}
+                        placeholder="Nhập Phường / Xã"
+                        placeholderTextColor="#bbb"
+                      />
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    {/* City Selector */}
+                    <View style={s.inputGroup}>
+                      <Text style={s.inputLabel}>TỈNH / THÀNH PHỐ</Text>
+                      <TouchableOpacity
+                        style={s.selectTrigger}
+                        onPress={() => handleOpenSelector('city')}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[s.selectTriggerTxt, !city && s.selectPlaceholder]}>
+                          {city || 'Chọn Tỉnh / Thành phố'}
+                        </Text>
+                        <Ionicons name="chevron-down" size={16} color="#8c826e" />
+                      </TouchableOpacity>
+                    </View>
 
-                  {/* Ward Input */}
-                  <View style={s.inputGroup}>
-                    <Text style={s.inputLabel}>PHƯỜNG / XÃ</Text>
-                    <TextInput
-                      style={s.textInput}
-                      value={ward}
-                      onChangeText={setWard}
-                      placeholder="Nhập Phường / Xã"
-                      placeholderTextColor="#bbb"
-                    />
-                  </View>
-                </>
-              ) : (
-                <>
-                  {/* City Selector */}
-                  <View style={s.inputGroup}>
-                    <Text style={s.inputLabel}>TỈNH / THÀNH PHỐ</Text>
-                    <TouchableOpacity
-                      style={s.selectTrigger}
-                      onPress={() => handleOpenSelector('city')}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[s.selectTriggerTxt, !city && s.selectPlaceholder]}>
-                        {city || 'Chọn Tỉnh / Thành phố'}
-                      </Text>
-                      <Ionicons name="chevron-down" size={16} color="#8c826e" />
-                    </TouchableOpacity>
-                  </View>
+                    {/* Ward Selector */}
+                    <View style={s.inputGroup}>
+                      <Text style={s.inputLabel}>PHƯỜNG / XÃ</Text>
+                      <TouchableOpacity
+                        style={[s.selectTrigger, !city && s.selectDisabled]}
+                        onPress={() => city && handleOpenSelector('ward')}
+                        disabled={!city}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[s.selectTriggerTxt, !ward && s.selectPlaceholder]}>
+                          {ward || 'Chọn Phường / Xã'}
+                        </Text>
+                        <Ionicons name="chevron-down" size={16} color="#8c826e" />
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                )}
 
-                  {/* District Selector */}
-                  <View style={s.inputGroup}>
-                    <Text style={s.inputLabel}>QUẬN / HUYỆN</Text>
-                    <TouchableOpacity
-                      style={[s.selectTrigger, !city && s.selectDisabled]}
-                      onPress={() => city && handleOpenSelector('district')}
-                      disabled={!city}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[s.selectTriggerTxt, !district && s.selectPlaceholder]}>
-                        {district || 'Chọn Quận / Huyện'}
-                      </Text>
-                      <Ionicons name="chevron-down" size={16} color="#8c826e" />
-                    </TouchableOpacity>
-                  </View>
+                {/* Detailed Address */}
+                <View style={s.inputGroup}>
+                  <Text style={s.inputLabel}>ĐỊA CHỈ CHI TIẾT (ĐƯỜNG, SỐ NHÀ)</Text>
+                  <TextInput
+                    style={[s.textInput, { height: 60, textAlignVertical: 'top', paddingTop: 8 }]}
+                    value={shippingAddress}
+                    onChangeText={setShippingAddress}
+                    placeholder="Nhập số nhà, tên đường..."
+                    placeholderTextColor="#bbb"
+                    multiline={true}
+                    numberOfLines={2}
+                  />
+                </View>
 
-                  {/* Ward Selector */}
-                  <View style={s.inputGroup}>
-                    <Text style={s.inputLabel}>PHƯỜNG / XÃ</Text>
-                    <TouchableOpacity
-                      style={[s.selectTrigger, !district && s.selectDisabled]}
-                      onPress={() => district && handleOpenSelector('ward')}
-                      disabled={!district}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[s.selectTriggerTxt, !ward && s.selectPlaceholder]}>
-                        {ward || 'Chọn Phường / Xã'}
-                      </Text>
-                      <Ionicons name="chevron-down" size={16} color="#8c826e" />
-                    </TouchableOpacity>
-                  </View>
-                </>
-              )}
-
-              {/* Detailed Address */}
-              <View style={s.inputGroup}>
-                <Text style={s.inputLabel}>ĐỊA CHỈ CHI TIẾT (ĐƯỜNG, SỐ NHÀ)</Text>
-                <TextInput
-                  style={[s.textInput, { height: 60, textAlignVertical: 'top', paddingTop: 8 }]}
-                  value={shippingAddress}
-                  onChangeText={setShippingAddress}
-                  placeholder="Nhập số nhà, tên đường..."
-                  placeholderTextColor="#bbb"
-                  multiline={true}
-                  numberOfLines={2}
-                />
-              </View>
-
-              {/* Set as Default Switch */}
-              <View style={s.switchGroup}>
-                <Text style={s.switchLabel}>Đặt làm địa chỉ mặc định</Text>
-                <Switch
-                  value={isDefault}
-                  onValueChange={setIsDefault}
-                  trackColor={{ false: '#e0e0e0', true: '#f5dcd2' }}
-                  thumbColor={isDefault ? '#9f273b' : '#f4f3f4'}
-                  disabled={!isEditing && addresses.length === 0} // Always default if first
-                />
-              </View>
+                {/* Set as Default Switch */}
+                <View style={s.switchGroup}>
+                  <Text style={s.switchLabel}>Đặt làm địa chỉ mặc định</Text>
+                  <Switch
+                    value={isDefault}
+                    onValueChange={setIsDefault}
+                    trackColor={{ false: '#e0e0e0', true: '#f5dcd2' }}
+                    thumbColor={isDefault ? '#9f273b' : '#f4f3f4'}
+                    disabled={!isEditing && addresses.length === 0} // Always default if first
+                  />
+                </View>
               </ScrollView>
 
               {!!formError && (
@@ -858,7 +770,7 @@ export default function AddressScreen() {
                 >
                   <Text style={s.modalBtnCancelTxt}>HỦY</Text>
                 </TouchableOpacity>
-              
+
                 <TouchableOpacity
                   style={[s.modalBtn, s.modalBtnConfirm, isSaving && s.modalBtnDisabled]}
                   onPress={handleSave}
@@ -883,7 +795,7 @@ export default function AddressScreen() {
               <View style={s.selectorHeader}>
                 <Text style={s.selectorTitle}>
                   {selectorType === 'city' ? 'Chọn Tỉnh / Thành phố' :
-                   selectorType === 'district' ? 'Chọn Quận / Huyện' : 'Chọn Phường / Xã'}
+                    'Chọn Phường / Xã'}
                 </Text>
                 <TouchableOpacity onPress={() => setShowSelector(false)} style={s.selectorCloseBtn}>
                   <Ionicons name="close" size={24} color="#333" />
@@ -913,8 +825,8 @@ export default function AddressScreen() {
                   <ActivityIndicator size="large" color="#9f273b" />
                 </View>
               ) : (
-                <ScrollView 
-                  style={s.selectorList} 
+                <ScrollView
+                  style={s.selectorList}
                   keyboardShouldPersistTaps="handled"
                   showsVerticalScrollIndicator={true}
                 >
@@ -928,26 +840,23 @@ export default function AddressScreen() {
                         key={item.code}
                         style={[
                           s.selectorItem,
-                          ((selectorType === 'city' && item.name === city) ||
-                           (selectorType === 'district' && item.name === district) ||
-                           (selectorType === 'ward' && item.name === ward)) && s.selectorItemActive
+                          ((selectorType === 'city' && item.name === city)  ||
+                            (selectorType === 'ward' && item.name === ward)) && s.selectorItemActive
                         ]}
                         onPress={() => handleSelectItem(item)}
                         activeOpacity={0.7}
                       >
                         <Text style={[
                           s.selectorItemTxt,
-                          ((selectorType === 'city' && item.name === city) ||
-                           (selectorType === 'district' && item.name === district) ||
-                           (selectorType === 'ward' && item.name === ward)) && s.selectorItemTxtActive
+                          ((selectorType === 'city' && item.name === city)  ||
+                            (selectorType === 'ward' && item.name === ward)) && s.selectorItemTxtActive
                         ]}>
                           {item.name}
                         </Text>
-                        {((selectorType === 'city' && item.name === city) ||
-                          (selectorType === 'district' && item.name === district) ||
+                        {((selectorType === 'city' && item.name === city)  ||
                           (selectorType === 'ward' && item.name === ward)) && (
-                          <Ionicons name="checkmark" size={18} color="#9f273b" />
-                        )}
+                            <Ionicons name="checkmark" size={18} color="#9f273b" />
+                          )}
                       </TouchableOpacity>
                     ))
                   )}

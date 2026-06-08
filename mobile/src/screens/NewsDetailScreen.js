@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -9,12 +9,15 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Platform,
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { WebView } from 'react-native-webview';
+import { useQuery } from '@tanstack/react-query';
 import SmartImage from '../components/SmartImage';
 import { API_BASE_URL } from '../config/api';
+
+const NativeWebView = Platform.OS === 'web' ? null : require('react-native-webview').WebView;
 
 const BRAND_RED = '#9f273b';
 const BRAND_GOLD = '#e7ce7d';
@@ -46,11 +49,15 @@ const formatDate = (dateString) => {
 
 const formatViews = (views) => new Intl.NumberFormat('vi-VN').format(Number(views) || 0);
 
-const buildHtml = (content) => {
+const normalizeArticleContent = (content) => {
   const origin = API_BASE_URL.replace('/api', '');
-  const normalizedContent = String(content || '<p>Nội dung bài viết đang được cập nhật.</p>')
+  return String(content || '<p>Nội dung bài viết đang được cập nhật.</p>')
     .replace(/src=(["'])\/storage\//gi, `src=$1${origin}/storage/`)
     .replace(/src=(["'])storage\//gi, `src=$1${origin}/storage/`);
+};
+
+const buildHtml = (content) => {
+  const normalizedContent = normalizeArticleContent(content);
 
   return `
     <!DOCTYPE html>
@@ -89,57 +96,58 @@ const buildHtml = (content) => {
   `;
 };
 
+const renderWebArticleContent = (content) => (
+  React.createElement('div', {
+    style: {
+      color: '#4d4747',
+      fontFamily: 'Georgia, "Times New Roman", serif',
+      fontSize: 16,
+      lineHeight: 1.78,
+      width: '100%',
+    },
+    dangerouslySetInnerHTML: { __html: normalizeArticleContent(content) },
+  })
+);
+
+const fetchNewsDetailQuery = async (slug) => {
+  if (!slug) {
+    throw new Error('Không tìm thấy đường dẫn bài viết.');
+  }
+
+  const response = await fetch(`${API_BASE_URL}/news/${encodeURIComponent(slug)}`, {
+    headers: { Accept: 'application/json' },
+  });
+  const payload = await response.json();
+
+  if (!response.ok || payload.status !== 'success') {
+    throw new Error(payload.message || 'Không thể tải bài viết.');
+  }
+
+  return payload.data;
+};
+
 export default function NewsDetailScreen({ navigation, route }) {
   const { width } = useWindowDimensions();
-  const isMountedRef = useRef(true);
   const slug = route.params?.slug;
   const initialArticle = route.params?.article || null;
-  const [article, setArticle] = useState(initialArticle);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [errorText, setErrorText] = useState('');
   const [contentHeight, setContentHeight] = useState(160);
   const horizontalPadding = width >= 720 ? 24 : 16;
 
-  const loadArticle = useCallback(async ({ refreshing = false } = {}) => {
-    if (!slug) {
-      setErrorText('Không tìm thấy đường dẫn bài viết.');
-      setIsLoading(false);
-      return;
-    }
+  const articleQuery = useQuery({
+    queryKey: ['news', 'detail', slug],
+    queryFn: () => fetchNewsDetailQuery(slug),
+    enabled: !!slug,
+    initialData: initialArticle || undefined,
+    staleTime: 1000 * 60 * 3,
+    gcTime: 1000 * 60 * 15,
+  });
 
-    if (refreshing) setIsRefreshing(true);
-    else setIsLoading(true);
-    setErrorText('');
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/news/${encodeURIComponent(slug)}`, {
-        headers: { Accept: 'application/json' },
-      });
-      const payload = await response.json();
-      if (!response.ok || payload.status !== 'success') {
-        throw new Error(payload.message || 'Không thể tải bài viết.');
-      }
-      if (isMountedRef.current) setArticle(payload.data);
-    } catch (error) {
-      if (isMountedRef.current) {
-        setErrorText(error.message || 'Không thể kết nối đến máy chủ.');
-      }
-    } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false);
-        setIsRefreshing(false);
-      }
-    }
-  }, [slug]);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    loadArticle();
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, [loadArticle]);
+  const article = articleQuery.data || null;
+  const isLoading = articleQuery.isLoading && !article;
+  const isRefreshing = articleQuery.isRefetching && !!article;
+  const errorText = articleQuery.isError
+    ? articleQuery.error?.message || 'Không thể kết nối đến máy chủ.'
+    : '';
 
   const html = useMemo(() => buildHtml(article?.content), [article?.content]);
 
@@ -169,7 +177,7 @@ export default function NewsDetailScreen({ navigation, route }) {
           refreshControl={(
             <RefreshControl
               refreshing={isRefreshing}
-              onRefresh={() => loadArticle({ refreshing: true })}
+              onRefresh={() => articleQuery.refetch()}
               colors={[BRAND_RED]}
               tintColor={BRAND_RED}
             />
@@ -180,7 +188,7 @@ export default function NewsDetailScreen({ navigation, route }) {
               <View style={styles.errorBox}>
                 <Ionicons name="alert-circle-outline" size={19} color={BRAND_RED} />
                 <Text style={styles.errorText}>{errorText}</Text>
-                <TouchableOpacity onPress={() => loadArticle()} activeOpacity={0.75}>
+                <TouchableOpacity onPress={() => articleQuery.refetch()} activeOpacity={0.75}>
                   <Text style={styles.retryText}>THỬ LẠI</Text>
                 </TouchableOpacity>
               </View>
@@ -224,16 +232,22 @@ export default function NewsDetailScreen({ navigation, route }) {
                     <Text style={styles.bodyKicker}>CÂU CHUYỆN SORA</Text>
                     <View style={styles.headingLine} />
                   </View>
-                  <WebView
-                    source={{ html, baseUrl: API_BASE_URL.replace('/api', '') }}
-                    style={[styles.webView, { height: contentHeight }]}
-                    originWhitelist={['*']}
-                    scrollEnabled={false}
-                    onMessage={(event) => {
-                      const nextHeight = Number(event.nativeEvent.data);
-                      if (Number.isFinite(nextHeight) && nextHeight > 0) setContentHeight(nextHeight);
-                    }}
-                  />
+                  {Platform.OS === 'web' ? (
+                    <View style={styles.webArticleContent}>
+                      {renderWebArticleContent(article?.content)}
+                    </View>
+                  ) : (
+                    <NativeWebView
+                      source={{ html, baseUrl: API_BASE_URL.replace('/api', '') }}
+                      style={[styles.webView, { height: contentHeight }]}
+                      originWhitelist={['*']}
+                      scrollEnabled={false}
+                      onMessage={(event) => {
+                        const nextHeight = Number(event.nativeEvent.data);
+                        if (Number.isFinite(nextHeight) && nextHeight > 0) setContentHeight(nextHeight);
+                      }}
+                    />
+                  )}
                 </View>
 
                 <View style={styles.footerCard}>
@@ -298,6 +312,7 @@ const styles = StyleSheet.create({
   headingLine: { flex: 1, height: 1, backgroundColor: '#eadfd8' },
   bodyKicker: { color: BRAND_RED, fontFamily: 'Oswald_600SemiBold', fontSize: 10, letterSpacing: 1.5 },
   webView: { width: '100%', backgroundColor: 'transparent' },
+  webArticleContent: { width: '100%', maxWidth: '100%', overflow: 'hidden' },
   errorBox: { marginBottom: 14, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff4f5', borderWidth: 1, borderColor: '#f0d6da', borderRadius: 6 },
   errorText: { flex: 1, color: '#82404a', fontFamily: 'Oswald_400Regular', fontSize: 12, lineHeight: 17 },
   retryText: { color: BRAND_RED, fontFamily: 'Oswald_600SemiBold', fontSize: 11, letterSpacing: 0.7 },

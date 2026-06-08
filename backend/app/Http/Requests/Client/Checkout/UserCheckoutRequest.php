@@ -22,7 +22,9 @@ class UserCheckoutRequest extends FormRequest
             'order_note'       => 'nullable|string|max:1000',
             'payment_method'   => 'required|in:cod,vnpay,momo,bank_transfer',
             'coupon_code'      => 'nullable|string|exists:coupons,code',
+            'affiliate_code'   => 'nullable|string|max:50',
             'shipping_fee'     => 'required|integer|min:0|max:200000',
+            'checkout_source'  => 'nullable|in:web,mobile',
         ];
     }
 

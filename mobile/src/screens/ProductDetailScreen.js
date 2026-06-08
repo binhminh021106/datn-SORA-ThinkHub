@@ -17,12 +17,15 @@ import {
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { API_BASE_URL } from '../config/api';
 import { showCustomAlert } from '../components/CustomAlert';
 import SmartImage from '../components/SmartImage';
 import ProductCard from '../components/ProductCard';
 import { PRICE_FONT_FAMILY, PRICE_FONT_WEIGHT } from '../styles/typography';
 import useWishlist from '../hooks/useWishlist';
+import { prefetchImageUrls } from '../utils/imagePrefetch';
+import { getProductReviewStats } from '../utils/reviewStats';
 
 const { width, height: SCREEN_H } = Dimensions.get('window');
 const COMPARE_STORAGE_KEY = 'sora_compare_products';
@@ -50,6 +53,36 @@ const getReviewImageUrl = (url) => {
   if (!url) return '';
   if (url.startsWith('http')) return url;
   return `${API_BASE_URL.replace('/api', '')}/storage/${url}`;
+};
+
+const fetchProductDetailQuery = async (slug) => {
+  const response = await fetch(`${API_BASE_URL}/shop/sora/products/${slug}`, {
+    headers: { Accept: 'application/json' },
+  });
+  const result = await response.json();
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || 'Không tìm thấy thông tin sản phẩm.');
+  }
+  prefetchImageUrls([
+    ...(result.data?.images || []),
+    result.data?.thumbnail_image ? getReviewImageUrl(result.data.thumbnail_image) : '',
+  ]);
+  return result.data;
+};
+
+const fetchRelatedProductsQuery = async ({ catSlug, slug }) => {
+  const response = await fetch(`${API_BASE_URL}/shop/sora/products?categories=${catSlug}&per_page=5`, {
+    headers: { Accept: 'application/json' },
+  });
+  const result = await response.json();
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || 'Không thể tải sản phẩm liên quan.');
+  }
+  const relatedProducts = (result.data?.data || []).filter((item) => item.slug !== slug).slice(0, 4);
+  prefetchImageUrls(relatedProducts.map((product) => (
+    product.thumbnail_image ? getReviewImageUrl(product.thumbnail_image) : product.image
+  )));
+  return relatedProducts;
 };
 
 // Luxury HTML Parser Component for SORA Product Description
@@ -197,12 +230,45 @@ const renderLuxuryHTML = (html) => {
 export default function ProductDetailScreen() {
   const route = useRoute();
   const navigation = useNavigation();
-  const { slug, previewImage } = route.params || {};
+  const queryClient = useQueryClient();
+  const { slug, previewImage, previewProduct } = route.params || {};
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [product, setProduct] = useState(null);
-  const [relatedProducts, setRelatedProducts] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const {
+    data: product,
+    isLoading,
+    isPlaceholderData,
+    isError: isProductError,
+    error: productError,
+    refetch: refetchProductDetail,
+  } = useQuery({
+    queryKey: ['product-detail', slug],
+    queryFn: () => fetchProductDetailQuery(slug),
+    enabled: !!slug,
+    staleTime: 1000 * 60 * 5,
+    placeholderData: previewProduct || (previewImage ? {
+      id: slug,
+      slug,
+      name: 'SORA JEWELRY',
+      category: { name: 'Trang sức' },
+      brand: { name: 'SORA Exclusive' },
+      images: [previewImage],
+      variants: [],
+      attributes: {},
+      reviews: [],
+      reviews_count: 0,
+      rating_avg: 0,
+    } : undefined),
+  });
+  const {
+    data: relatedProducts = [],
+    refetch: refetchRelatedProducts,
+  } = useQuery({
+    queryKey: ['related-products', product?.category?.slug, slug],
+    queryFn: () => fetchRelatedProductsQuery({ catSlug: product.category.slug, slug }),
+    enabled: !!product?.category?.slug,
+    staleTime: 1000 * 60 * 5,
+  });
 
   // Gallery Swiper State
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -215,6 +281,7 @@ export default function ProductDetailScreen() {
 
   // Quantity selection state
   const [quantity, setQuantity] = useState(1);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isAddingToCompare, setIsAddingToCompare] = useState(false);
   const {
     wishlistIds: relatedWishlistIds,
@@ -224,56 +291,6 @@ export default function ProductDetailScreen() {
 
   // Zoomed review image state
   const [zoomImageUrl, setZoomImageUrl] = useState(null);
-
-  // Load product details
-  const fetchProductDetail = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/shop/sora/products/${slug}`, {
-        headers: { Accept: 'application/json' },
-      });
-      const result = await response.json();
-      if (result.success) {
-        setProduct(result.data);
-        
-        // Auto-select first in-stock variant attributes
-        if (result.data.variants && result.data.variants.length > 0) {
-          const firstInStock = result.data.variants.find(v => v.stock > 0) || result.data.variants[0];
-          if (firstInStock && firstInStock.attributes) {
-            setSelectedAttrs(firstInStock.attributes);
-          }
-        }
-        
-        // Fetch related products of the same category
-        if (result.data.category && result.data.category.slug) {
-          fetchRelatedProducts(result.data.category.slug);
-        }
-      } else {
-        showCustomAlert("SORA JEWELRY", "Không tìm thấy thông tin sản phẩm.", [{ text: "QUAY LẠI", onPress: () => navigation.goBack() }]);
-      }
-    } catch (e) {
-      console.log('Error fetching product details:', e);
-      showCustomAlert("SORA JEWELRY", "Lỗi kết nối máy chủ.", [{ text: "THỬ LẠI", onPress: () => fetchProductDetail() }]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Fetch related products
-  const fetchRelatedProducts = async (catSlug) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/shop/sora/products?categories=${catSlug}&per_page=5`, {
-        headers: { Accept: 'application/json' },
-      });
-      const result = await response.json();
-      if (result.success && result.data && result.data.data) {
-        // Exclude current product
-        const filtered = result.data.data.filter(p => p.slug !== slug).slice(0, 4);
-        setRelatedProducts(filtered);
-      }
-    } catch (e) {
-      console.log('Error fetching related products:', e);
-    }
-  };
 
   // Check wishlist state
   const checkWishlistState = async () => {
@@ -304,25 +321,43 @@ export default function ProductDetailScreen() {
   };
 
   useEffect(() => {
-    setIsLoading(true);
-    fetchProductDetail();
-  }, [slug]);
+    if (isProductError) {
+      showCustomAlert(
+        "SORA JEWELRY",
+        productError?.message || "Lỗi kết nối máy chủ.",
+        [{ text: "THỬ LẠI", onPress: () => refetchProductDetail() }],
+      );
+    }
+  }, [isProductError, productError, refetchProductDetail]);
 
   useEffect(() => {
-    if (product) {
+    if (isPlaceholderData) return;
+    if (product?.variants && product.variants.length > 0) {
+      const firstInStock = product.variants.find(v => v.stock > 0) || product.variants[0];
+      if (firstInStock?.attributes) {
+        setSelectedAttrs(firstInStock.attributes);
+      }
+    }
+  }, [isPlaceholderData, product?.id]);
+
+  useEffect(() => {
+    if (product && !isPlaceholderData) {
       checkWishlistState();
     }
-  }, [product]);
+  }, [product, isPlaceholderData]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchProductDetail();
+    await Promise.all([
+      refetchProductDetail(),
+      product?.category?.slug ? refetchRelatedProducts() : Promise.resolve(),
+    ]);
     setRefreshing(false);
-  }, [slug]);
+  }, [product?.category?.slug, refetchProductDetail, refetchRelatedProducts]);
 
   // Handle Heart Press (Wishlist toggle)
   const handleToggleFavorite = async () => {
-    if (!product) return;
+    if (!product || isPlaceholderData) return;
     try {
       const productId = product.id.toString();
       const token = await getAuthToken();
@@ -488,6 +523,7 @@ export default function ProductDetailScreen() {
 
   // Add selected variant to cart
   const handleAddToCart = async () => {
+    if (isPlaceholderData || isAddingToCart) return;
     const selectedVariant = getSelectedVariant();
     if (!selectedVariant) {
       showCustomAlert("VUI LÒNG CHỌN", "Vui lòng chọn đầy đủ thuộc tính sản phẩm!");
@@ -500,6 +536,7 @@ export default function ProductDetailScreen() {
     }
 
     try {
+      setIsAddingToCart(true);
       const headers = await getHeaders();
       const response = await fetch(`${API_BASE_URL}/client/cart`, {
         method: 'POST',
@@ -520,6 +557,9 @@ export default function ProductDetailScreen() {
         if (result.session_id) {
           await AsyncStorage.setItem('cart_session_id', result.session_id);
         }
+
+        await queryClient.invalidateQueries({ queryKey: ['cart'] });
+        await queryClient.refetchQueries({ queryKey: ['cart'], type: 'all' });
 
         showCustomAlert(
           "GIỎ HÀNG SORA",
@@ -542,11 +582,12 @@ export default function ProductDetailScreen() {
     } catch (e) {
       console.log('Error adding to cart:', e);
       showCustomAlert("LỖI KẾT NỐI", "Không thể kết nối tới máy chủ.");
+    } finally {
+      setIsAddingToCart(false);
     }
   };
-
   const handleAddToCompare = async () => {
-    if (!product || isAddingToCompare) return;
+    if (!product || isPlaceholderData || isAddingToCompare) return;
 
     setIsAddingToCompare(true);
     try {
@@ -606,11 +647,68 @@ export default function ProductDetailScreen() {
     }
   };
 
+  const previewImagesToRender = previewImage ? [previewImage] : [];
+
   if (isLoading) {
+    if (previewImage) {
+      return (
+        <SafeAreaView style={s.safe}>
+          <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
+
+          <View style={s.headerContainer}>
+            <TouchableOpacity style={s.headerBtn} onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={22} color="#111" />
+            </TouchableOpacity>
+            <Text style={s.headerTitle} numberOfLines={1}>SORA JEWELRY</Text>
+            <View style={s.headerRightActions}>
+              <View style={s.headerBtnPlaceholder} />
+              <View style={s.headerBtnPlaceholder} />
+            </View>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
+            <View style={s.galleryContainer}>
+              <FlatList
+                data={previewImagesToRender}
+                keyExtractor={(item, index) => `${item}-${index}`}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                renderItem={({ item }) => (
+                  <SmartImage
+                    source={{ uri: item }}
+                    previewSource={{ uri: item }}
+                    style={s.galleryImg}
+                  />
+                )}
+              />
+            </View>
+
+            <View style={s.previewLoadingBlock}>
+              <ActivityIndicator size="small" color="#9f273b" />
+              <Text style={s.previewLoadingText}>Đang tải thông tin sản phẩm...</Text>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      );
+    }
+
     return (
       <View style={s.loadingContainer}>
         <ActivityIndicator size="large" color="#9f273b" />
         <Text style={s.loadingText}>Đang tải tuyệt tác SORA...</Text>
+      </View>
+    );
+  }
+
+  if (!product) {
+    return (
+      <View style={s.loadingContainer}>
+        <Ionicons name="alert-circle-outline" size={34} color="#9f273b" />
+        <Text style={s.loadingText}>Không thể tải sản phẩm.</Text>
+        <TouchableOpacity style={s.retryButton} onPress={() => refetchProductDetail()} activeOpacity={0.8}>
+          <Text style={s.retryButtonText}>THỬ LẠI</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -621,13 +719,11 @@ export default function ProductDetailScreen() {
     : 0;
   const currentOldPrice = selectedVariant && selectedVariant.promotional_price > 0 ? selectedVariant.price : null;
   const currentStock = selectedVariant ? selectedVariant.stock : 0;
-  const isOutOfStock = currentStock <= 0;
+  const isOutOfStock = !isPlaceholderData && currentStock <= 0;
+  const isPurchaseDisabled = isPlaceholderData || isOutOfStock;
 
-  // Dynamically compute real review counts and averages to avoid caching errors
-  const reviewsCount = product.reviews ? product.reviews.length : 0;
-  const ratingAvg = reviewsCount > 0 
-    ? (product.reviews.reduce((acc, r) => acc + Number(r.rating), 0) / reviewsCount) 
-    : (Number(product.rating_avg) || 0);
+  // Compute rating only from real review data. Empty review lists must show empty stars.
+  const { count: reviewsCount, average: ratingAvg } = getProductReviewStats(product);
 
   // Swiper rendering
   const detailImages = product.images && product.images.length > 0 ? product.images : [];
@@ -648,13 +744,17 @@ export default function ProductDetailScreen() {
         <Text style={s.headerTitle} numberOfLines={1}>{product.name}</Text>
 
         <View style={s.headerRightActions}>
-          <TouchableOpacity style={s.headerBtn} onPress={handleToggleFavorite}>
+          <TouchableOpacity
+            style={[s.headerBtn, isPlaceholderData && s.headerBtnDisabled]}
+            onPress={handleToggleFavorite}
+            disabled={isPlaceholderData}
+          >
             <Ionicons name={isFavorite ? "heart" : "heart-outline"} size={22} color={isFavorite ? "#9f273b" : "#111"} />
           </TouchableOpacity>
           <TouchableOpacity
-            style={[s.headerBtn, isAddingToCompare && s.headerBtnDisabled]}
+            style={[s.headerBtn, (isAddingToCompare || isPlaceholderData) && s.headerBtnDisabled]}
             onPress={handleAddToCompare}
-            disabled={isAddingToCompare}
+            disabled={isAddingToCompare || isPlaceholderData}
           >
             {isAddingToCompare ? (
               <ActivityIndicator size="small" color="#9f273b" />
@@ -688,7 +788,7 @@ export default function ProductDetailScreen() {
             renderItem={({ item, index }) => (
               <SmartImage
                 source={{ uri: item }}
-                previewSource={index === 0 && previewImage && previewImage !== item ? { uri: previewImage } : undefined}
+                previewSource={index === 0 && previewImage ? { uri: previewImage } : undefined}
                 style={s.galleryImg}
               />
             )}
@@ -729,7 +829,9 @@ export default function ProductDetailScreen() {
               ))}
             </View>
             <Text style={s.reviewsCountText}>
-              {ratingAvg.toFixed(1)}/5.0 ({reviewsCount} Đánh giá thực)
+              {reviewsCount > 0
+                ? `${ratingAvg.toFixed(1)}/5.0 (${reviewsCount} Đánh giá thực)`
+                : 'Chưa có đánh giá'}
             </Text>
             <View style={s.verticalDivider} />
             <Text style={s.reviewsCountText}>Đã bán 1.5K+</Text>
@@ -753,12 +855,16 @@ export default function ProductDetailScreen() {
           {/* Stock Availability */}
           <View style={s.stockContainer}>
             <Ionicons 
-              name={isOutOfStock ? "close-circle" : "checkmark-circle"} 
+              name={isPlaceholderData ? "time-outline" : (isOutOfStock ? "close-circle" : "checkmark-circle")}
               size={16} 
-              color={isOutOfStock ? "#cc1e2e" : "#2ecc71"} 
+              color={isPlaceholderData ? "#9f273b" : (isOutOfStock ? "#cc1e2e" : "#2ecc71")}
             />
             <Text style={[s.stockText, isOutOfStock && { color: "#cc1e2e" }]}>
-              {isOutOfStock ? "Phiên bản này đã Hết hàng" : `Còn lại: ${currentStock} sản phẩm trong kho`}
+              {isPlaceholderData
+                ? "Đang cập nhật thông tin sản phẩm..."
+                : isOutOfStock
+                  ? "Phiên bản này đã Hết hàng"
+                  : `Còn lại: ${currentStock} sản phẩm trong kho`}
             </Text>
           </View>
 
@@ -816,22 +922,22 @@ export default function ProductDetailScreen() {
               <TouchableOpacity 
                 style={s.quantityBtn}
                 onPress={() => quantity > 1 && setQuantity(prev => prev - 1)}
-                disabled={isOutOfStock}
+                disabled={isPurchaseDisabled}
               >
-                <Ionicons name="remove" size={16} color={isOutOfStock ? "#ccc" : "#111"} />
+                <Ionicons name="remove" size={16} color={isPurchaseDisabled ? "#ccc" : "#111"} />
               </TouchableOpacity>
               <Text style={s.quantityValue}>{quantity}</Text>
               <TouchableOpacity 
                 style={s.quantityBtn}
                 onPress={() => quantity < currentStock && setQuantity(prev => prev + 1)}
-                disabled={isOutOfStock || quantity >= currentStock}
+                disabled={isPurchaseDisabled || quantity >= currentStock}
               >
-                <Ionicons name="add" size={16} color={isOutOfStock || quantity >= currentStock ? "#ccc" : "#111"} />
+                <Ionicons name="add" size={16} color={isPurchaseDisabled || quantity >= currentStock ? "#ccc" : "#111"} />
               </TouchableOpacity>
             </View>
             
             <Text style={s.quantitySubInfo}>
-              (Số lượng tối đa: {currentStock})
+              {isPlaceholderData ? 'Đang cập nhật tồn kho...' : `(Số lượng tối đa: ${currentStock})`}
             </Text>
           </View>
         </View>
@@ -975,6 +1081,7 @@ export default function ProductDetailScreen() {
                   onPress={(selectedProduct) => navigation.navigate("ProductDetail", {
                     slug: selectedProduct.slug,
                     previewImage: selectedProduct.previewImage || selectedProduct.image || null,
+                    previewProduct: selectedProduct.previewProduct || null,
                   })}
                 />
               ))}
@@ -991,14 +1098,26 @@ export default function ProductDetailScreen() {
         </View>
         
         <TouchableOpacity
-          style={[s.addToCartButton, isOutOfStock && s.addToCartButtonDisabled]}
+          style={[s.addToCartButton, (isPurchaseDisabled || isAddingToCart) && s.addToCartButtonDisabled]}
           onPress={handleAddToCart}
-          disabled={isOutOfStock}
+          disabled={isPurchaseDisabled || isAddingToCart}
           activeOpacity={0.9}
         >
-          <Ionicons name="cart-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
-          <Text style={s.addToCartButtonText}>
-            {isOutOfStock ? "HẾT HÀNG" : "THÊM VÀO GIỎ HÀNG"}
+          <View style={s.addToCartIconSlot}>
+            {isAddingToCart ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Ionicons name="cart-outline" size={18} color="#fff" />
+            )}
+          </View>
+          <Text style={s.addToCartButtonText} numberOfLines={1}>
+            {isAddingToCart
+              ? "ĐANG THÊM..."
+              : isPlaceholderData
+                ? "ĐANG CẬP NHẬT"
+                : isOutOfStock
+                  ? "HẾT HÀNG"
+                  : "THÊM VÀO GIỎ HÀNG"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -1032,6 +1151,8 @@ const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f5f5f5' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
   loadingText: { fontFamily: 'Oswald_500Medium', fontSize: 13, color: '#9f273b', marginTop: 14, letterSpacing: 1 },
+  retryButton: { marginTop: 14, paddingHorizontal: 18, paddingVertical: 9, borderRadius: 8, backgroundColor: '#9f273b' },
+  retryButtonText: { color: '#fff', fontFamily: 'Oswald_600SemiBold', fontSize: 12, letterSpacing: 1 },
 
   // HEADER BAR
   headerContainer: {
@@ -1067,6 +1188,10 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
+  headerBtnPlaceholder: {
+    width: 42,
+    height: 42,
+  },
 
   // GALLERY SWIPER
   galleryContainer: {
@@ -1079,6 +1204,22 @@ const s = StyleSheet.create({
     width: width,
     height: width * 0.95,
     resizeMode: 'cover',
+  },
+  previewLoadingBlock: {
+    backgroundColor: '#fff',
+    paddingVertical: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  previewLoadingText: {
+    marginTop: 10,
+    fontFamily: 'Oswald_500Medium',
+    fontSize: 12,
+    color: '#9f273b',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   dotsContainer: {
     position: 'absolute',
@@ -1590,6 +1731,9 @@ const s = StyleSheet.create({
   },
   bottomPricing: {
     flexDirection: 'column',
+    flex: 1,
+    minWidth: 0,
+    paddingRight: 12,
   },
   bottomPriceLabel: {
     fontFamily: 'Oswald_400Regular',
@@ -1604,20 +1748,31 @@ const s = StyleSheet.create({
     fontWeight: PRICE_FONT_WEIGHT,
   },
   addToCartButton: {
+    width: Math.min(Math.max(width * 0.48, 168), 220),
+    height: 50,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#9f273b',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: 10,
     borderRadius: 8,
   },
   addToCartButtonDisabled: {
     backgroundColor: '#ccc',
   },
+  addToCartIconSlot: {
+    width: 22,
+    height: 22,
+    marginRight: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   addToCartButtonText: {
+    flexShrink: 0,
+    textAlign: 'center',
     fontFamily: 'Oswald_600SemiBold',
     fontSize: 12,
     color: '#fff',
-    letterSpacing: 1.2,
+    letterSpacing: 0.8,
   },
 });

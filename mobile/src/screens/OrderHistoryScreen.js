@@ -7,6 +7,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQuery } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { API_BASE_URL } from '../config/api';
 import { showCustomAlert } from '../components/CustomAlert';
@@ -83,6 +84,49 @@ const getFirstValidationError = (result) => {
   }
 
   return result?.message;
+};
+
+const fetchOrderHistoryQuery = async () => {
+  const token = await AsyncStorage.getItem('auth_token');
+  if (!token) return { orders: [], reviewedOrders: {} };
+
+  const res = await fetch(`${API_BASE_URL}/client/orders`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Khong the tai lich su don hang.');
+  }
+
+  const orders = data.data || [];
+  const deliveredOrders = orders.filter((order) => order.status === 'delivered');
+  const reviewedEntries = await Promise.all(deliveredOrders.map(async (order) => {
+    try {
+      const reviewRes = await fetch(`${API_BASE_URL}/client/orders/${order.order_code}/review`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      });
+      const reviewData = await reviewRes.json();
+      return [order.order_code, (reviewData.count || 0) > 0];
+    } catch (_) {
+      return [order.order_code, false];
+    }
+  }));
+
+  return { orders, reviewedOrders: Object.fromEntries(reviewedEntries) };
+};
+
+const fetchOrderDetailQuery = async (orderCode) => {
+  const token = await AsyncStorage.getItem('auth_token');
+  if (!token) throw new Error('Phien dang nhap da het han.');
+
+  const res = await fetch(`${API_BASE_URL}/client/orders/${orderCode}`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Khong the tai chi tiet don hang.');
+  }
+  return data.data;
 };
 
 // ─── Progress Timeline Component ─────────────────────────────────────────────
@@ -587,16 +631,12 @@ const ds = StyleSheet.create({
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function OrderHistoryScreen() {
   const navigation = useNavigation();
-  const [orders, setOrders]           = useState([]);
-  const [isLoading, setIsLoading]     = useState(true);
-  const [refreshing, setRefreshing]   = useState(false);
   const [selectedTab, setSelectedTab] = useState(0);
-  const [reviewedOrders, setReviewedOrders] = useState({});
+  const [reviewedOverrides, setReviewedOverrides] = useState({});
 
   // Detail sheet
   const [showDetail, setShowDetail]       = useState(false);
-  const [detailOrder, setDetailOrder]     = useState(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [detailOrderCode, setDetailOrderCode] = useState(null);
 
   // Cancel
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -619,11 +659,47 @@ export default function OrderHistoryScreen() {
   const [customReason, setCustomReason]               = useState('');
   const [isSubmittingReturn, setIsSubmittingReturn]   = useState(false);
 
-  useEffect(() => { fetchOrders(true); }, []);
+  const {
+    data: orderHistoryData,
+    isLoading,
+    isRefetching,
+    refetch: refetchOrders,
+  } = useQuery({
+    queryKey: ['orders'],
+    queryFn: fetchOrderHistoryQuery,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+  });
+
+  const {
+    data: detailOrder,
+    isLoading: loadingDetail,
+    isError: isDetailError,
+    error: detailError,
+  } = useQuery({
+    queryKey: ['order-detail', detailOrderCode],
+    queryFn: () => fetchOrderDetailQuery(detailOrderCode),
+    enabled: showDetail && !!detailOrderCode,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+  });
+
+  const orders = orderHistoryData?.orders || [];
+  const reviewedOrders = {
+    ...(orderHistoryData?.reviewedOrders || {}),
+    ...reviewedOverrides,
+  };
 
   useEffect(() => {
     if (cancelError) setCancelError('');
   }, [cancelReason]);
+
+  useEffect(() => {
+    if (isDetailError) {
+      Alert.alert('Loi', detailError?.message || 'Khong the tai chi tiet don hang.');
+      setShowDetail(false);
+    }
+  }, [detailError, isDetailError]);
 
   useEffect(() => {
     if (showReviewModal) {
@@ -670,34 +746,6 @@ export default function OrderHistoryScreen() {
     },
   })).current;
 
-  const fetchOrders = async (overlay = true) => {
-    overlay ? setIsLoading(true) : setRefreshing(true);
-    try {
-      const token = await AsyncStorage.getItem('auth_token');
-      if (!token) return;
-      const res  = await fetch(`${API_BASE_URL}/client/orders`, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } });
-      const data = await res.json();
-      if (res.ok) {
-        const list = data.data || [];
-        setOrders(list);
-        checkReviewed(list.filter(o => o.status === 'delivered'), token);
-      }
-    } catch (_) {}
-    finally { setIsLoading(false); setRefreshing(false); }
-  };
-
-  const checkReviewed = async (list, token) => {
-    const result = {};
-    await Promise.all(list.map(async o => {
-      try {
-        const r = await fetch(`${API_BASE_URL}/client/orders/${o.order_code}/review`, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } });
-        const d = await r.json();
-        result[o.order_code] = (d.count || 0) > 0;
-      } catch (_) { result[o.order_code] = false; }
-    }));
-    setReviewedOrders(result);
-  };
-
   const getFiltered = () => {
     switch (selectedTab) {
       case 1: return orders.filter(o => o.status === 'pending');
@@ -709,18 +757,9 @@ export default function OrderHistoryScreen() {
   };
 
   // ── Open detail ──────────────────────────────────────────────────────────
-  const openDetail = async (orderCode) => {
-    setDetailOrder(null);
+  const openDetail = (orderCode) => {
+    setDetailOrderCode(orderCode);
     setShowDetail(true);
-    setLoadingDetail(true);
-    try {
-      const token = await AsyncStorage.getItem('auth_token');
-      const res   = await fetch(`${API_BASE_URL}/client/orders/${orderCode}`, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } });
-      const data  = await res.json();
-      if (res.ok && data.success) setDetailOrder(data.data);
-      else { Alert.alert('Lỗi', data.message || 'Không thể tải chi tiết.'); setShowDetail(false); }
-    } catch (_) { Alert.alert('Lỗi', 'Không thể kết nối.'); setShowDetail(false); }
-    finally { setLoadingDetail(false); }
   };
 
   // ── Cancel ───────────────────────────────────────────────────────────────
@@ -772,7 +811,7 @@ export default function OrderHistoryScreen() {
         setCancelReason('');
         setCancelError('');
         Alert.alert('Thành công', d.message || 'Đã huỷ đơn hàng!');
-        fetchOrders(true);
+        refetchOrders();
       } else {
         setCancelError(getFirstValidationError(d) || 'Không thể huỷ đơn hàng.');
       }
@@ -818,7 +857,7 @@ export default function OrderHistoryScreen() {
       });
       const res = await fetch(`${API_BASE_URL}/client/orders/${reviewOrder.order_code}/review`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, Accept: 'application/json', 'Content-Type': 'multipart/form-data' }, body: formData });
       let result; try { result = await res.json(); } catch(_) {}
-      if (result?.success) { setShowReviewModal(false); setReviewedOrders(prev=>({...prev,[reviewOrder.order_code]:true})); Alert.alert('Cảm ơn ⭐', 'Đánh giá đã được ghi nhận!'); }
+      if (result?.success) { setShowReviewModal(false); setReviewedOverrides(prev=>({...prev,[reviewOrder.order_code]:true})); Alert.alert('Cảm ơn ⭐', 'Đánh giá đã được ghi nhận!'); }
       else Alert.alert('Lỗi', result?.message || 'Không thể gửi đánh giá.');
     } catch(_) { Alert.alert('Lỗi','Không thể kết nối.'); }
     finally { setIsSubmittingReview(false); }
@@ -835,7 +874,7 @@ export default function OrderHistoryScreen() {
       const token = await AsyncStorage.getItem('auth_token');
       const res   = await fetch(`${API_BASE_URL}/client/orders/${returnCode}/return`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ return_reason: finalReason }) });
       let result; try { result = await res.json(); } catch(_) {}
-      if (result?.success) { setShowReturnModal(false); Alert.alert('Đã gửi yêu cầu', result.message || 'Yêu cầu hoàn trả đã được ghi nhận.'); fetchOrders(true); }
+      if (result?.success) { setShowReturnModal(false); Alert.alert('Đã gửi yêu cầu', result.message || 'Yêu cầu hoàn trả đã được ghi nhận.'); refetchOrders(); }
       else Alert.alert('Không thể gửi', result?.message || 'Có lỗi xảy ra.');
     } catch(_) { Alert.alert('Lỗi','Không thể kết nối.'); }
     finally { setIsSubmittingReturn(false); }
@@ -875,7 +914,7 @@ export default function OrderHistoryScreen() {
 
       {/* LIST */}
       <ScrollView contentContainerStyle={s.list} showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchOrders(false)} colors={['#9f273b']} tintColor="#9f273b" />}>
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetchOrders} colors={['#9f273b']} tintColor="#9f273b" />}>
         {filtered.length === 0 ? (
           <View style={s.empty}>
             <Ionicons name="receipt-outline" size={64} color="#d1d5db" />
