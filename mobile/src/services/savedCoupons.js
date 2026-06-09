@@ -11,7 +11,17 @@ const getSavedCouponHeaders = async () => {
 };
 
 const parseApiResponse = async (response) => {
-  const json = await response.json();
+  let json = {};
+  const text = await response.text();
+
+  if (text) {
+    try {
+      json = JSON.parse(text);
+    } catch {
+      json = { message: text };
+    }
+  }
+
   if (!response.ok || !json.success) {
     const error = new Error(json.message || 'Không thể xử lý mã giảm giá.');
     error.status = response.status;
@@ -30,12 +40,17 @@ export const fetchSavedCoupons = async () => {
 };
 
 export const saveCouponToWallet = async ({ couponId, code }) => {
+  const normalizedCode = String(code || '').trim();
+  if (!couponId && !normalizedCode) {
+    throw new Error('Vui lòng chọn mã giảm giá cần lưu.');
+  }
+
   const response = await fetch(`${API_BASE_URL}/client/saved-coupons`, {
     method: 'POST',
     headers: await getSavedCouponHeaders(),
     body: JSON.stringify({
       ...(couponId ? { coupon_id: couponId } : {}),
-      ...(code ? { code } : {}),
+      ...(normalizedCode ? { code: normalizedCode } : {}),
     }),
   });
   return parseApiResponse(response);

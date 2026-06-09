@@ -29,9 +29,13 @@ class ClientSavedCouponController extends Controller
 
     public function store(Request $request)
     {
+        if ($request->filled('code')) {
+            $request->merge(['code' => strtoupper(trim((string) $request->input('code')))]);
+        }
+
         $data = $request->validate([
             'coupon_id' => 'nullable|integer|exists:coupons,id',
-            'code' => 'nullable|string|exists:coupons,code',
+            'code' => 'nullable|string|max:100',
         ]);
 
         if (empty($data['coupon_id']) && empty($data['code'])) {
@@ -44,7 +48,7 @@ class ClientSavedCouponController extends Controller
         $user = $request->user();
         $coupon = Coupon::query()
             ->when(!empty($data['coupon_id']), fn ($query) => $query->where('id', $data['coupon_id']))
-            ->when(empty($data['coupon_id']) && !empty($data['code']), fn ($query) => $query->whereRaw('UPPER(code) = ?', [strtoupper(trim($data['code']))]))
+            ->when(empty($data['coupon_id']) && !empty($data['code']), fn ($query) => $query->whereRaw('UPPER(code) = ?', [$data['code']]))
             ->first();
 
         if (!$coupon) {
@@ -62,7 +66,7 @@ class ClientSavedCouponController extends Controller
         }
 
         $status = $this->couponStatus($coupon, $user);
-        if (!$status['is_active'] || $status['is_expired'] || !$status['is_usage_available']) {
+        if (!$status['is_selectable']) {
             return response()->json([
                 'success' => false,
                 'message' => $status['disabled_reason'] ?: 'Mã giảm giá hiện không thể lưu.',
