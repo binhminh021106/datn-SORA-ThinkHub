@@ -1,16 +1,6 @@
 <template>
   <div class="favorite-page bg-light-custom font-sans pb-5 min-vh-100 position-relative">
-    
-    <!-- Tiêu đề trang -->
-    <section class="pt-4 pb-4 bg-white text-center shadow-sm mb-4 position-relative">
-      <div class="container py-2">
-        <span class="text-accent text-uppercase fw-bold mb-2 d-block tracking-wide" style="font-size: 0.8rem; letter-spacing: 0.2em;">Tài Khoản Của Tôi</span>
-        <h1 class="display-6 font-serif text-main mb-3">Sản Phẩm Yêu Thích</h1>
-        <div class="divider bg-accent mx-auto"></div>
-      </div>
-    </section>
-
-    <div class="container">
+    <div class="container py-2">
       <!-- LAYOUT 2 CỘT: SIDEBAR + NỘI DUNG -->
       <div class="row g-4 g-lg-5 align-items-start">
 

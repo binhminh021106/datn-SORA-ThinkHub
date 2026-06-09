@@ -1,14 +1,7 @@
 <template>
   <div class="profile-page bg-light-custom font-sans pb-5 min-vh-100 position-relative">
     
-    <section class="py-4 bg-white text-center shadow-sm mb-4">
-      <div class="container py-2">
-        <h1 class="display-6 font-serif text-main mb-3">Tài Khoản Của Tôi</h1>
-        <div class="divider bg-accent mx-auto"></div>
-      </div>
-    </section>
-
-    <div class="container">
+    <div class="container py-2">
       <div v-if="!isLoggedIn" class="text-center py-5 bg-white shadow-sm p-5 border border-light mb-5">
         <h4 class="text-danger-custom mb-3">Bạn chưa đăng nhập!</h4>
         <p class="text-secondary mb-4">Vui lòng đăng nhập để xem và chỉnh sửa thông tin cá nhân.</p>

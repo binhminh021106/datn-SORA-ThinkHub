@@ -4,10 +4,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // Controllers Admin
-use Illuminate\Support\Facades\Broadcast;
-
-Broadcast::routes(['middleware' => ['auth:sanctum']]);
-
 use App\Http\Controllers\Api\client\ShopController;
 use App\Http\Controllers\Api\admin\AdminCouponController;
 use App\Http\Controllers\Api\admin\AdminAccountController;

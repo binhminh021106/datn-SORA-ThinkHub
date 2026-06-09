@@ -1,12 +1,7 @@
 <template>
   <div class="order-history-wrapper pb-5"
     style="min-height: 100vh; background-color: #f8f9fa; font-family: 'Lato', sans-serif;">
-    <div class="bg-white py-5 mb-4 border-bottom shadow-sm">
-      <div class="container text-center">
-        <h2 class="display-5 text-dark mb-2" style="font-family: 'Playfair Display', serif; font-weight: 700;">Đơn hàng
-          của bạn</h2>
-      </div>
-    </div>
+    
 
     <main class="container">
       <!-- LAYOUT 2 CỘT: SIDEBAR + NỘI DUNG -->

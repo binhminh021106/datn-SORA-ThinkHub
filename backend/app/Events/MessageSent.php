@@ -3,7 +3,6 @@
 namespace App\Events;
 
 use App\Models\Message;
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
@@ -15,37 +14,34 @@ class MessageSent implements ShouldBroadcastNow
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $message;
+    private bool $sentByAdmin;
 
-    public function __construct(Message $message)
+    public function __construct(Message $message, bool $sentByAdmin = false)
     {
         $this->message = $message;
+        $this->sentByAdmin = $sentByAdmin;
     }
 
-    /**
-     * Phát sóng đồng thời trên kênh của CẢ HAI bên (gửi + nhận)
-     * Giúp cả user lẫn admin thấy tin nhắn ngay lập tức mà không cần dùng toOthers()
-     */
     public function broadcastOn(): array
     {
-        $channels = [
-            // Kênh người nhận (user hoặc admin)
-            new PrivateChannel('chat.' . $this->message->receiver_id),
+        $channelNames = [
+            'chat.' . $this->message->receiver_id,
         ];
 
-        // Thêm kênh người gửi nếu khác người nhận
         if ($this->message->sender_id !== $this->message->receiver_id) {
-            $channels[] = new PrivateChannel('chat.' . $this->message->sender_id);
+            $channelNames[] = 'chat.' . $this->message->sender_id;
         }
 
-        // Nếu tin nhắn được gửi bởi người dùng (không phải admin) → thông báo toàn cục cho admin
-        if ($this->message->sender_id !== 1) {
-            $channels[] = new PrivateChannel('admin.chat');
+        if (!$this->sentByAdmin) {
+            $channelNames[] = 'admin.chat';
         }
 
-        return $channels;
+        return array_map(
+            fn ($channel) => new PrivateChannel($channel),
+            array_values(array_unique($channelNames))
+        );
     }
 
-    
     public function broadcastWith()
     {
         return [
@@ -53,7 +49,6 @@ class MessageSent implements ShouldBroadcastNow
             'sender_id' => $this->message->sender_id,
             'receiver_id' => $this->message->receiver_id,
             'content' => $this->message->content,
-            // Assuming Message has sender relationship
             'sender_name' => $this->message->sender->name ?? null,
             'sender_avatar' => $this->message->sender->avatar ?? null,
         ];
@@ -63,7 +58,4 @@ class MessageSent implements ShouldBroadcastNow
     {
         return 'MessageSent';
     }
-
-
-
 }
