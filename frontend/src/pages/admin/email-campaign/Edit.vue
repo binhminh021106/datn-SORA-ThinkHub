@@ -2,11 +2,11 @@
   <div class="email-campaign-edit pb-5">
     <div class="container-fluid py-4">
       <div class="d-flex align-items-center gap-3 mb-4">
-        <button class="btn btn-light border fw-semibold shadow-sm" @click="router.back()">
+        <button class="btn btn-sm btn-light border fw-semibold shadow-sm px-3" @click="router.back()">
           <i class="bi bi-arrow-left"></i> Quay lại
         </button>
         <div>
-          <h4 class="fw-bold text-dark mb-0">Cập nhật sự kiện</h4>
+          <h5 class="fw-bold text-dark mb-0">Cập nhật sự kiện</h5>
           <small class="text-muted">ID Sự kiện: #{{ eventId }}</small>
         </div>
       </div>
@@ -20,22 +20,19 @@
       </div>
 
       <div class="row g-4" v-else>
-        <!-- Cột Form Nhập Liệu -->
         <div class="col-xl-6">
           <div class="card border-0 shadow-sm form-card h-100">
-            <div class="card-header bg-white border-0 pt-4 px-4">
-              <h5 class="fw-bold mb-0 text-brand">Sửa đổi cấu hình</h5>
+            <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+              <h6 class="fw-bold mb-0 text-brand">Sửa đổi cấu hình</h6>
             </div>
             <div class="card-body p-4">
               <form @submit.prevent="updateHoliday">
                 
-                <!-- Tên sự kiện -->
                 <div class="mb-3">
                   <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Tên sự kiện / ngày lễ</label>
                   <input v-model.trim="holidayForm.name" type="text" class="form-control form-control-sm bg-light border-0" placeholder="Ví dụ: Quốc tế Phụ nữ 8/3" required>
                 </div>
                 
-                <!-- Chọn ngày diễn ra (Datepicker) -->
                 <div class="mb-4">
                   <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Ngày diễn ra (Hàng năm)</label>
                   <div class="input-group input-group-sm bg-light border-0 rounded-2 overflow-hidden focus-within-brand">
@@ -51,54 +48,87 @@
                 </div>
 
                 <div class="mb-3">
-                  <label class="form-label fw-bold small text-muted text-uppercase">Đối tượng nhận</label>
-                  <select v-model="holidayForm.target" class="form-select">
-                    <option value="all">Tất cả</option>
-                    <option value="male">Nam</option>
-                    <option value="female">Nữ</option>
-                    <option value="member">Hạng Thành viên</option>
-                    <option value="silver">Hạng Bạc</option>
-                    <option value="gold">Hạng Vàng</option>
-                    <option value="diamond">Hạng Kim cương</option>
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label fw-bold small text-muted text-uppercase">Tiêu đề email</label>
-                  <input v-model.trim="holidayForm.subject" type="text" class="form-control" required>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label fw-bold small text-muted text-uppercase">Nội dung email</label>
-                  <div class="editor-toolbar border rounded-top bg-light px-2 py-1">
-                    <button type="button" class="btn btn-sm btn-light border me-1" title="Chèn tên khách" @click="insertToken('[Tên_Khách_Hàng]')">
-                      <i class="bi bi-person-badge"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-light border" title="Chèn mã voucher" @click="insertToken('[Voucher_Code]')">
-                      <i class="bi bi-ticket-perforated"></i>
-                    </button>
+                  <label class="form-label fw-semibold small text-muted text-uppercase mb-2">Đối tượng nhận (Có thể chọn nhiều)</label>
+                  <div class="d-flex flex-wrap gap-3 bg-light p-3 rounded-2">
+                    <div class="form-check mb-0">
+                      <input class="form-check-input cursor-pointer shadow-none border-brand-focus" type="checkbox" id="t-all" value="all" v-model="holidayForm.target">
+                      <label class="form-check-label cursor-pointer small fw-semibold" for="t-all">Tất cả</label>
+                    </div>
+                    <div class="form-check mb-0">
+                      <input class="form-check-input cursor-pointer shadow-none border-brand-focus" type="checkbox" id="t-male" value="male" v-model="holidayForm.target">
+                      <label class="form-check-label cursor-pointer small" for="t-male">Nam</label>
+                    </div>
+                    <div class="form-check mb-0">
+                      <input class="form-check-input cursor-pointer shadow-none border-brand-focus" type="checkbox" id="t-female" value="female" v-model="holidayForm.target">
+                      <label class="form-check-label cursor-pointer small" for="t-female">Nữ</label>
+                    </div>
+                    <div class="form-check mb-0">
+                      <input class="form-check-input cursor-pointer shadow-none border-brand-focus" type="checkbox" id="t-member" value="member" v-model="holidayForm.target">
+                      <label class="form-check-label cursor-pointer small" for="t-member">Thành viên</label>
+                    </div>
+                    <div class="form-check mb-0">
+                      <input class="form-check-input cursor-pointer shadow-none border-brand-focus" type="checkbox" id="t-silver" value="silver" v-model="holidayForm.target">
+                      <label class="form-check-label cursor-pointer small" for="t-silver">Hạng Bạc</label>
+                    </div>
+                    <div class="form-check mb-0">
+                      <input class="form-check-input cursor-pointer shadow-none border-brand-focus" type="checkbox" id="t-gold" value="gold" v-model="holidayForm.target">
+                      <label class="form-check-label cursor-pointer small" for="t-gold">Hạng Vàng</label>
+                    </div>
+                    <div class="form-check mb-0">
+                      <input class="form-check-input cursor-pointer shadow-none border-brand-focus" type="checkbox" id="t-diamond" value="diamond" v-model="holidayForm.target">
+                      <label class="form-check-label cursor-pointer small" for="t-diamond">Hạng Kim cương</label>
+                    </div>
                   </div>
-                  <textarea v-model="holidayForm.content" class="form-control rounded-top-0 border-top-0" rows="6" required></textarea>
                 </div>
+
+                <div class="mb-3">
+                  <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Tiêu đề email</label>
+                  <input v-model.trim="holidayForm.subject" type="text" class="form-control form-control-sm bg-light border-0" required>
+                </div>
+
+                <div class="mb-3">
+                  <div class="d-flex justify-content-between align-items-end mb-1">
+                    <label class="form-label fw-semibold small text-muted text-uppercase mb-0">Nội dung email</label>
+                  </div>
+                  
+                  <div class="custom-editor-wrapper border rounded-2 overflow-hidden">
+                    <div class="editor-toolbar bg-white border-bottom px-2 py-1 d-flex gap-1">
+                      <button type="button" class="btn btn-sm btn-light border fw-semibold text-dark py-0 px-2" style="font-size: 0.75rem;" title="Chèn tên khách" @click="insertToken('[Tên_Khách_Hàng]')">
+                        <i class="bi bi-person-badge text-brand me-1"></i> [Tên]
+                      </button>
+                      <div class="vr mx-1"></div>
+                      <button type="button" class="btn btn-sm btn-light border fw-semibold text-dark py-0 px-2" style="font-size: 0.75rem;" title="Chèn mã voucher" @click="insertToken('[Voucher_Code]')">
+                        <i class="bi bi-ticket-perforated text-brand me-1"></i> [Voucher_Code]
+                      </button>
+                    </div>
+                    <textarea v-model="holidayForm.content" class="form-control border-0 rounded-0 bg-light small" rows="10" style="resize: none; font-size: 0.85rem;" required></textarea>
+                  </div>
+                </div>
+
                 <div class="d-flex align-items-center justify-content-between bg-light border rounded-3 p-3 mb-3">
                   <div>
-                    <div class="fw-bold text-dark">Kèm quà tặng</div>
+                    <div class="fw-bold text-dark" style="font-size: 0.9rem;">Kèm quà tặng</div>
+                    <small class="text-muted" style="font-size: 0.75rem;">Bật để hiển thị bảng quà tặng trong email.</small>
                   </div>
                   <div class="form-check form-switch m-0 fs-5">
-                    <input v-model="holidayForm.hasVoucher" class="form-check-input" type="checkbox" role="switch">
+                    <input v-model="holidayForm.hasVoucher" class="form-check-input cursor-pointer border-brand-focus" type="checkbox" role="switch">
                   </div>
                 </div>
+
                 <div class="row g-3 mb-4" v-if="holidayForm.hasVoucher">
                   <div class="col-sm-6">
-                    <label class="form-label fw-bold small text-muted text-uppercase">Mã quà tặng</label>
-                    <input v-model.trim="holidayForm.voucherCode" type="text" class="form-control text-uppercase">
+                    <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Mã quà tặng</label>
+                    <input v-model.trim="holidayForm.voucherCode" type="text" class="form-control form-control-sm text-uppercase fw-bold border-brand-focus" placeholder="VD: SORA0803">
                   </div>
                   <div class="col-sm-6">
-                    <label class="form-label fw-bold small text-muted text-uppercase">Mức ưu đãi</label>
-                    <input v-model.trim="holidayForm.discount" type="text" class="form-control">
+                    <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Mức ưu đãi</label>
+                    <input v-model.trim="holidayForm.discount" type="text" class="form-control form-control-sm border-brand-focus" placeholder="VD: 5%">
                   </div>
                 </div>
+
                 <div class="mt-4 border-top pt-4">
-                  <button class="btn btn-brand text-white fw-bold px-5" type="submit">
-                    <i class="bi bi-floppy me-1"></i> Lưu thay đổi
+                  <button class="btn btn-sm btn-brand text-white fw-bold px-4 py-2 w-100 shadow-sm" type="submit" :disabled="isSubmitting">
+                    <i class="bi bi-floppy me-1"></i> {{ isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi' }}
                   </button>
                 </div>
               </form>
@@ -106,42 +136,71 @@
           </div>
         </div>
 
-        <!-- Cột Preview Email -->
         <div class="col-xl-6">
-          <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-white border-0 pt-4 px-4">
-              <h5 class="fw-bold mb-1">Xem trước email</h5>
+          <div class="card border-0 shadow-sm h-100 preview-card-bg">
+            <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
+              <h6 class="fw-bold mb-1 text-dark">Xem trước email hiển thị</h6>
+              <p class="text-muted small mb-0" style="font-size: 0.75rem;">Minh họa khi khách hàng nhận được email.</p>
             </div>
-            <div class="card-body p-4 bg-light rounded-bottom-3 overflow-auto">
-              <div class="sora-template-preview shadow-sm border mx-auto">
-                <div class="sora-tp-header">HỆ THỐNG SORA THINKHUB</div>
-                <div class="sora-tp-body">
-                  <div class="sora-tp-banner">
-                    ✨ QUÀ TẶNG ĐẶC QUYỀN {{ holidayForm.name ? `NHÂN DỊP ${holidayForm.name.toUpperCase()}` : 'NHÂN DỊP LỄ' }}!
+            <div class="card-body p-4 d-flex align-items-center justify-content-center">
+              
+              <div class="mail-window-preview shadow-sm w-100">
+                <div class="mail-window-header d-flex align-items-center px-2 py-1">
+                  <div class="window-dots d-flex gap-1">
+                    <span class="dot bg-danger"></span>
+                    <span class="dot bg-warning"></span>
+                    <span class="dot bg-success"></span>
                   </div>
-                  <div class="sora-tp-content" v-html="previewHolidayContent"></div>
-                  
-                  <table class="sora-tp-table" v-if="holidayForm.hasVoucher">
-                    <tr>
-                      <td>Mã quà tặng:</td>
-                      <td class="text-danger fw-bold fs-6">{{ holidayForm.voucherCode || '...' }}</td>
-                    </tr>
-                    <tr>
-                      <td>Mức ưu đãi:</td>
-                      <td class="text-danger fw-bold">{{ holidayForm.discount || '...' }}</td>
-                    </tr>
-                    <tr>
-                      <td>Áp dụng cho:</td>
-                      <td>Tất cả các bộ sưu tập trang sức</td>
-                    </tr>
-                    <tr>
-                      <td>Hạn sử dụng:</td>
-                      <td>30/05/2026</td>
-                    </tr>
-                  </table>
-                  <button class="sora-tp-btn mt-4">CHỌN MÓN TRANG SỨC CHO RIÊNG MÌNH</button>
+                  <div class="window-title mx-auto text-muted fw-semibold" style="font-size: 0.7rem;">
+                    Thư mời - {{ holidayForm.subject }}
+                  </div>
+                </div>
+                <div class="mail-window-body p-3 bg-white">
+                  <div class="sora-tp-header rounded-top-2">
+                    HỆ THỐNG SORA THINKHUB
+                  </div>
+                  <div class="sora-tp-body border border-top-0 rounded-bottom-2">
+                    
+                    <div class="sora-tp-banner-holiday text-center mb-4 rounded-3 shadow-sm">
+                      <span class="fw-bold fs-6 text-uppercase">QUÀ TẶNG {{ holidayForm.name ? holidayForm.name : '[TÊN NGÀY LỄ]' }}</span>
+                    </div>
+                    
+                    <div class="sora-tp-content" v-html="previewHolidayContent"></div>
+                    
+                    <div class="sora-tp-voucher-box-holiday p-3 rounded-3 mb-2 mt-4" v-if="holidayForm.hasVoucher">
+                      <div class="text-center mb-3">
+                        <span class="badge bg-danger text-white rounded-pill px-3 py-1 fw-semibold shadow-sm"><i class="bi bi-star-fill me-1 text-warning"></i> ƯU ĐÃI ĐẶC QUYỀN <i class="bi bi-star-fill ms-1 text-warning"></i></span>
+                      </div>
+                      <table class="sora-tp-table mb-0 w-100">
+                        <tr>
+                          <td class="text-muted border-0 py-1">Mã quà tặng:</td>
+                          <td class="fw-bold fs-5 font-monospace border-0 py-1 text-end text-danger">{{ holidayForm.voucherCode || '...' }}</td>
+                        </tr>
+                        <tr>
+                          <td class="text-muted border-0 py-1">Mức ưu đãi:</td>
+                          <td class="text-dark fw-bold border-0 py-1 text-end">{{ holidayForm.discount || '...' }}</td>
+                        </tr>
+                        <tr>
+                          <td class="text-muted border-0 py-1">Áp dụng:</td>
+                          <td class="text-dark border-0 py-1 text-end">Tất cả bộ sưu tập</td>
+                        </tr>
+                      
+                        <tr>
+                          <td class="text-muted border-0 py-1">Ngày cấp:</td>
+                          <td class="text-dark border-0 py-1 text-end fw-bold">{{ currentDateDisplay }}</td>
+                        </tr>
+                        <tr>
+                          <td class="text-muted pb-0 border-0 py-1">Hạn sử dụng:</td>
+                          <td class="text-danger fw-bold pb-0 border-0 py-1 text-end">{{ expireDateDisplay }}</td>
+                        </tr>
+                      </table>
+                    </div>
+                    
+                    <button class="sora-tp-btn-holiday mt-4 w-100 shadow-sm">CHỌN MÓN TRANG SỨC CHO RIÊNG MÌNH</button>
+                  </div>
                 </div>
               </div>
+
             </div>
           </div>
         </div>
@@ -160,18 +219,18 @@ const router = useRouter()
 const route = useRoute()
 const toast = useToast()
 
-const eventId = route.params.id // Lấy ID từ URL (VD: /admin/email-campaign/edit/5)
+const eventId = route.params.id // Lấy ID từ URL
 
 const isFetching = ref(true)
 const isSubmitting = ref(false)
 const isLoading = computed(() => isFetching.value)
 
-// Khai báo Form state
+// Khai báo Form state (Đã đổi target thành mảng giống Create.vue)
 const holidayForm = reactive({
   name: '',
   day: '',
   month: '',
-  target: 'all',
+  target: [], 
   subject: '',
   content: '',
   hasVoucher: false,
@@ -180,20 +239,33 @@ const holidayForm = reactive({
   status: 'active'
 })
 
-// Computed Property biến đổi Day/Month thành chuẩn YYYY-MM-DD cho thẻ <input type="date">
+// Tính ngày hôm nay (Ngày cấp)
+const currentDateDisplay = computed(() => {
+  const d = new Date()
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+})
+
+// Tính ngày hết hạn (Hôm nay + 3 ngày)
+const expireDateDisplay = computed(() => {
+  const d = new Date()
+  d.setDate(d.getDate() + 3) 
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+})
+
+// Computed biến đổi Day/Month cho thẻ <input type="date">
 const displayDate = computed({
   get() {
     if (!holidayForm.month || !holidayForm.day) return ''
-    // Lấy năm hiện tại để làm năm ảo hiển thị trên lịch
-    const yy = new Date().getFullYear()
-    // Đảm bảo định dạng 2 chữ số (VD: 03 thay vì 3)
+    let yy = new Date().getFullYear()
+    if (holidayForm.month === 2 && holidayForm.day === 29) {
+      yy = 2024
+    }
     const mm = String(holidayForm.month).padStart(2, '0')
     const dd = String(holidayForm.day).padStart(2, '0')
     return `${yy}-${mm}-${dd}`
   },
   set(val) {
     if (val) {
-      // val trả về định dạng YYYY-MM-DD, ta cắt ra lấy tháng và ngày
       const parts = val.split('-')
       holidayForm.month = parseInt(parts[1], 10)
       holidayForm.day = parseInt(parts[2], 10)
@@ -208,7 +280,7 @@ const previewHolidayContent = computed(() => {
   return replaceTokens(holidayForm.content || '').replace(/\n/g, '<br>')
 })
 
-// Lấy chi tiết sự kiện đổ vào Form
+// Lấy chi tiết sự kiện
 const fetchEventDetail = async () => {
   isFetching.value = true
   try {
@@ -216,16 +288,19 @@ const fetchEventDetail = async () => {
     
     if (response.data && response.data.success) {
       const data = response.data.data
-      // Đổ dữ liệu cũ vào Form
       holidayForm.name = data.name
       const [day = '', month = ''] = String(data.event_date || '').split('/')
       holidayForm.day = day
       holidayForm.month = month
-      holidayForm.target = data.target_audience || 'all'
+      
+      // Xử lý chuỗi đối tượng nhận thành mảng
+      holidayForm.target = data.target_audience ? data.target_audience.split(',') : ['all']
+      
       holidayForm.subject = data.email_subject
       holidayForm.content = data.email_content
       holidayForm.hasVoucher = !!data.voucher_code
       holidayForm.voucherCode = data.voucher_code || ''
+      holidayForm.discount = data.discount || ''
       holidayForm.status = data.status || 'active'
     } else {
       toast.error('Không tìm thấy thông tin sự kiện.')
@@ -242,9 +317,12 @@ const fetchEventDetail = async () => {
 
 // Cập nhật sự kiện
 const updateHoliday = async () => {
-  // Validate
   if (!holidayForm.name || !holidayForm.day || !holidayForm.month || !holidayForm.subject || !holidayForm.content) {
     toast.warning('Vui lòng nhập đầy đủ các trường thông tin bắt buộc (*).')
+    return
+  }
+  if (holidayForm.hasVoucher && (!holidayForm.voucherCode || !holidayForm.discount)) {
+    toast.warning('Vui lòng nhập đầy đủ Mã quà tặng và Mức ưu đãi.')
     return
   }
 
@@ -254,7 +332,7 @@ const updateHoliday = async () => {
     
     if (response.data && response.data.success) {
       toast.success('Cập nhật sự kiện thành công!')
-      router.push({ path: '/admin/email-campaign' }) // Quay lại trang index
+      router.push({ path: '/admin/email-campaign' }) 
     } else {
       toast.error(response.data.message || 'Lỗi khi cập nhật sự kiện.')
     }
@@ -275,10 +353,12 @@ function buildPayload() {
     name: holidayForm.name,
     day: holidayForm.day,
     month: holidayForm.month,
-    target_audience: holidayForm.target || 'all',
+    // Nối mảng thành chuỗi để gửi lên server
+    target_audience: holidayForm.target.length > 0 ? holidayForm.target.join(',') : 'all',
     email_subject: holidayForm.subject,
     email_content: holidayForm.content,
     voucher_code: holidayForm.hasVoucher ? holidayForm.voucherCode : null,
+    discount: holidayForm.hasVoucher ? holidayForm.discount : null,
     status: holidayForm.status,
   }
 }
@@ -289,7 +369,6 @@ function insertToken(token) {
 
 function replaceTokens(text) {
   return text
-    .replaceAll('[TÃªn_KhÃ¡ch_HÃ ng]', 'Le Thi My Duyen')
     .replaceAll('[Tên_Khách_Hàng]', 'Le Thi My Duyen')
     .replaceAll('[Voucher_Code]', holidayForm.voucherCode || '')
 }
@@ -305,29 +384,34 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* Base Colors & Utilities Đồng bộ với Create.vue */
 .text-brand { color: #009981; }
+.bg-brand { background-color: #009981; }
+.border-brand-focus:focus { border-color: #009981 !important; box-shadow: 0 0 0 0.2rem rgba(0, 153, 129, 0.15) !important; }
+.cursor-pointer { cursor: pointer; }
 .btn-brand { background: #009981; border-color: #009981; }
-.btn-brand:hover { background: #007f6c; border-color: #007f6c; }
-.card { border-radius: 8px; }
-.editor-toolbar .btn { width: 34px; height: 30px; padding: 0; }
+.btn-brand:hover { background: #00856f; border-color: #00856f; }
+.form-card, .card { border-radius: 10px; }
+.custom-editor-wrapper:focus-within { border-color: #009981 !important; box-shadow: 0 0 0 0.2rem rgba(0, 153, 129, 0.15); }
+.custom-editor-wrapper textarea:focus { box-shadow: none; outline: none; }
+.form-check-input:checked { background-color: #009981; border-color: #009981; }
 
 /* SORA EMAIL PREVIEW CSS */
-.sora-template-preview { background: #fff; border-radius: 4px; overflow: hidden; font-family: Arial, sans-serif; max-width: 100%; }
-.sora-tp-header { background-color: #343a40; color: #fff; text-align: center; padding: 20px; font-weight: 700; font-size: 16px; text-transform: uppercase; }
-.sora-tp-body { padding: 30px; }
-.sora-tp-banner { background-color: #fdf3f4; color: #a42637; padding: 12px 16px; border-left: 4px solid #a42637; font-weight: bold; font-size: 14px; margin-bottom: 24px; text-transform: uppercase; }
-.sora-tp-content { color: #495057; line-height: 1.7; font-size: 14px; margin-bottom: 28px; }
-.sora-tp-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-bottom: 30px; }
-.sora-tp-table td { padding: 14px 0; border-bottom: 1px solid #f0f0f0; }
-.sora-tp-table tr:last-child td { border-bottom: none; }
-.sora-tp-table td:first-child { color: #6c757d; font-weight: 600; width: 35%; }
-.sora-tp-table td:last-child { color: #212529; font-weight: 700; }
-.sora-tp-table .text-danger { color: #a42637 !important; }
-.sora-tp-btn { background-color: #a42637; color: #fff; border: none; padding: 14px 24px; font-weight: bold; border-radius: 4px; display: block; margin: 0 auto; font-size: 14px; cursor: pointer; transition: opacity 0.2s; }
-.sora-tp-btn:hover { opacity: 0.9; }
+.preview-card-bg { background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%); }
+.mail-window-preview { border-radius: 8px; overflow: hidden; background: #fff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; border: 1px solid #e0e4e8; }
+.mail-window-header { background: #f1f3f5; border-bottom: 1px solid #dee2e6; }
+.window-dots .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.sora-tp-header { background-color: #343a40; color: #fff; text-align: center; padding: 14px; font-weight: 700; font-size: 14px; letter-spacing: 0.5px; text-transform: uppercase; }
+.sora-tp-body { padding: 20px; background: #fff; }
+.sora-tp-banner-holiday { background: linear-gradient(135deg, #9b111e 0%, #720b15 100%); color: #fff; padding: 20px; border: 1px solid #5a0911; }
+.text-holiday { color: #f8d7da; }
+.sora-tp-content { color: #495057; line-height: 1.6; font-size: 13px; margin-bottom: 20px; }
+.sora-tp-voucher-box-holiday { background: #fff0f3; border: 1px dashed #dc3545; position: relative; }
+.sora-tp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.sora-tp-btn-holiday { background: linear-gradient(135deg, #dc3545 0%, #a71d2a 100%); color: #fff; border: none; padding: 12px 20px; font-weight: 800; border-radius: 6px; font-size: 13px; transition: all 0.2s; box-shadow: 0 4px 10px rgba(220, 53, 69, 0.2); }
+.sora-tp-btn-holiday:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 15px rgba(220, 53, 69, 0.3); }
 
-/* CSS Đồng bộ từ Create.vue cho Datepicker */
-.cursor-pointer { cursor: pointer; }
+/* Hiệu ứng viền xanh khi click vào ô Datepicker */
 .focus-within-brand {
   transition: box-shadow 0.2s, border-color 0.2s;
   border: 1px solid transparent;
@@ -336,5 +420,9 @@ onMounted(() => {
   border-color: #009981 !important;
   background-color: #fff !important;
   box-shadow: 0 0 0 0.2rem rgba(0, 153, 129, 0.15);
+}
+
+@media (max-width: 575.98px) {
+  .sora-tp-body { padding: 16px; }
 }
 </style>

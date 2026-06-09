@@ -50,7 +50,7 @@
               <button
                 class="action-button birthday"
                 :class="{ 'is-running': sendingCampaign === 'birthday' }"
-                :disabled="sendingCampaign === 'birthday'"
+                :disabled="!!sendingCampaign"
                 @click="runBirthdayCampaign"
               >
                 <i class="bi bi-cake2"></i>
@@ -62,7 +62,7 @@
               <button
                 class="action-button holiday"
                 :class="{ 'is-running': sendingCampaign === 'holiday' }"
-                :disabled="sendingCampaign === 'holiday'"
+                :disabled="!!sendingCampaign"
                 @click="runHolidayCampaign"
               >
                 <i class="bi bi-calendar2-heart"></i>
@@ -745,7 +745,8 @@ function showToast(title, icon = 'success') {
 /* Action Buttons for Dashboard */
 .action-button { border: 1px solid #e8ecef; border-radius: 10px; background: #fff; padding: 14px; display: flex; align-items: center; gap: 14px; text-align: left; transition: all 0.2s ease; width: 100%; }
 .action-button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(33, 37, 41, 0.08); border-color: #dee2e6; }
-.action-button:disabled { cursor: not-allowed; }
+.action-button:disabled { cursor: not-allowed;
+ }
 .action-button.is-running {
   opacity: 0.62;
   background: #f8f9fa;

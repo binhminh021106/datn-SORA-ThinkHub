@@ -193,9 +193,14 @@
                           <td class="text-muted border-0 py-1">Áp dụng:</td>
                           <td class="text-dark border-0 py-1 text-end">Tất cả bộ sưu tập</td>
                         </tr>
+                      
+                        <tr>
+                          <td class="text-muted border-0 py-1">Ngày cấp:</td>
+                          <td class="text-dark border-0 py-1 text-end fw-bold">{{ currentDateDisplay }}</td>
+                        </tr>
                         <tr>
                           <td class="text-muted pb-0 border-0 py-1">Hạn sử dụng:</td>
-                          <td class="text-dark pb-0 border-0 py-1 text-end">30/05/2026</td>
+                          <td class="text-danger fw-bold pb-0 border-0 py-1 text-end">{{ expireDateDisplay }}</td>
                         </tr>
                       </table>
                     </div>
@@ -223,17 +228,18 @@ const router = useRouter()
 const toast = useToast()
 
 const isSubmitting = ref(false)
-
+const today = new Date()
 // Khai báo Form state (Đồng bộ v-model ở template)
 const holidayForm = reactive({
   name: '',
-  day: '',
-  month: '',
+  day: today.getDate(),         // SỬA DÒNG NÀY: Tự động lấy ngày hôm nay
+  month: today.getMonth() + 1,
   target: ['all'], // Mảng chứa nhiều đối tượng
   content: '',
   hasVoucher: false,
   voucherCode: '',
   discount: '',
+   expiresAt: '',
   status: 'active'
 })
 
@@ -254,17 +260,40 @@ const applySuggestion = (holiday) => {
   holidayForm.name = holiday.name
   holidayForm.day = holiday.day
   holidayForm.month = holiday.month
+  
 }
+
+// Tính ngày hôm nay (Ngày cấp)
+const currentDateDisplay = computed(() => {
+  const d = new Date()
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+})
+
+// Tính ngày hết hạn (Hôm nay + 3 ngày)
+const expireDateDisplay = computed(() => {
+  const d = new Date()
+  d.setDate(d.getDate() + 3) 
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+})
+
+
+
+
+
 
 // 3. Computed Property biến đổi Day/Month thành chuẩn YYYY-MM-DD cho thẻ <input type="date">
 const displayDate = computed({
   get() {
     if (!holidayForm.month || !holidayForm.day) return ''
     // Lấy năm hiện tại để làm năm ảo hiển thị trên lịch
-    const yy = new Date().getFullYear()
+   let yy = new Date().getFullYear()
+   if (holidayForm.month === 2 && holidayForm.day === 29) {
+      yy = 2024
+    }
     // Đảm bảo định dạng 2 chữ số (VD: 03 thay vì 3)
-    const mm = String(holidayForm.month).padStart(2, '0')
+   const mm = String(holidayForm.month).padStart(2, '0')
     const dd = String(holidayForm.day).padStart(2, '0')
+    
     return `${yy}-${mm}-${dd}`
   },
   set(val) {
@@ -332,6 +361,9 @@ function buildPayload() {
     voucher_code: holidayForm.hasVoucher ? holidayForm.voucherCode : null,
     discount: holidayForm.hasVoucher ? holidayForm.discount : null, // BỔ SUNG DÒNG NÀY
     status: holidayForm.status,
+    expires_at: holidayForm.expiresAt,
+    
+
   }
 }
 
