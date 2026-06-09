@@ -2,10 +2,10 @@
   <!-- Thêm class động để tự động đổi màu nền Header khi bật Dark Mode -->
   <nav class="app-header navbar navbar-expand shadow-sm px-3 py-2 border-bottom transition-all"
        :class="isDarkMode ? 'bg-dark border-secondary' : 'bg-white'">
-    <div class="container-fluid">
+    <div class="container-fluid admin-header-container">
       
       <!-- ĐỒNG HỒ DIGITAL (Bên trái) - Đã thay bằng FLIP CLOCK -->
-      <div class="d-none d-sm-flex align-items-center me-auto" v-if="isLoggedIn">
+      <div class="header-clock d-none d-lg-flex align-items-center" v-if="isLoggedIn">
         <div class="flip-clock-container d-flex align-items-center px-3 py-1 rounded shadow-sm transition-all" 
              :class="isDarkMode ? 'bg-black border border-secondary' : 'bg-dark border'">
           
@@ -44,10 +44,21 @@
       <ul class="navbar-nav header-actions ms-auto mb-2 mb-lg-0">
         <!-- NÚT MỞ TRẠM QUÉT (Chỉ dành cho Super Admin) -->
         <li class="nav-item me-2 d-flex align-items-center" v-if="isLoggedIn && isSuperAdmin">
-          <button class="btn station-qr-btn rounded-3 btn-sm fw-bold px-3 d-flex align-items-center" @click="openStation">
+          <button class="btn station-qr-btn rounded-3 btn-sm fw-bold px-3 d-flex align-items-center" title="QR điểm danh" @click="openStation">
             <i class="bi bi-display me-2 fs-6"></i>
             QR điểm danh
           </button>
+        </li>
+
+        <!-- NÚT CHAT HỖ TRỢ với badge thông báo -->
+        <li class="nav-item me-2 d-flex align-items-center" v-if="isLoggedIn">
+          <router-link :to="{ name: 'admin-chat' }" class="btn btn-chat-notify rounded-3 btn-sm fw-bold px-3 d-flex align-items-center position-relative" @click="unreadChatCount = 0">
+            <i class="bi bi-chat-dots-fill me-2 fs-6"></i>
+            Chat
+            <span v-if="unreadChatCount > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
+              {{ unreadChatCount > 9 ? '9+' : unreadChatCount }}
+            </span>
+          </router-link>
         </li>
 
         <!-- Nút chấm công -->
@@ -58,7 +69,8 @@
               <i v-if="attendanceState === 'working'" class="bi bi-box-arrow-right me-2 fs-5"></i>
               <i v-else-if="attendanceState === 'completed'" class="bi bi-check-circle me-2 fs-5"></i>
               <i v-else class="bi bi-box-arrow-in-right me-2 fs-5"></i>
-              {{ attendanceActionLabel }}
+              <span class="attendance-label-full">{{ attendanceActionLabel }}</span>
+              <span class="attendance-label-short">{{ attendanceShortLabel }}</span>
               <i class="bi bi-chevron-down ms-2 small"></i>
             </template>
           </button>
@@ -77,7 +89,7 @@
 
         <!-- NÚT TOGGLE DARK MODE -->
         <li class="nav-item me-2 d-flex align-items-center" v-if="isLoggedIn && isSuperAdmin">
-          <button class="btn face-manage-btn rounded-3 btn-sm fw-bold px-3 d-flex align-items-center" @click="openFaceRecognitionTest">
+          <button class="btn face-manage-btn rounded-3 btn-sm fw-bold px-3 d-flex align-items-center" title="Quản lý khuôn mặt" @click="openFaceRecognitionTest">
             <i class="bi bi-person-bounding-box me-2 fs-6"></i>
             Quản lý khuôn mặt
           </button>
@@ -194,6 +206,12 @@ const attendanceActionLabel = computed(() => {
 });
 
 // ----- LOGIC ĐỒNG HỒ FLIP CLOCK -----
+const attendanceShortLabel = computed(() => {
+  if (attendanceState.value === 'working') return 'Check-out';
+  if (attendanceState.value === 'completed') return 'Done';
+  return 'Check-in';
+});
+
 const currentTime = ref({ ampm: '' });
 let timeInterval = null;
 let isFirstRun = true;
@@ -418,6 +436,10 @@ const closeUserMenu = (event) => {
   }
 };
 
+// ===== GLOBAL CHAT NOTIFICATION =====
+const unreadChatCount = ref(0);
+let chatEchoChannel = null;
+
 onMounted(() => {
   initTheme();
   document.addEventListener('click', closeUserMenu);
@@ -426,11 +448,33 @@ onMounted(() => {
   timeInterval = setInterval(updateTime, 1000);
   
   fetchAttendanceState();
+
+  // Lắng nghe tin nhắn mới từ users dù đang ở trang nào
+  if (window.Echo && getAdminToken()) {
+    chatEchoChannel = window.Echo.private('admin.chat')
+      .listen('.MessageSent', (e) => {
+        const msg = e.message;
+        if (msg) {
+          unreadChatCount.value++;
+          // Toast thông báo góc phải
+          const toast = document.createElement('div');
+          toast.className = 'admin-chat-toast';
+          toast.innerHTML = `<i class="bi bi-chat-dots-fill me-2"></i><strong>Tin nhắn mới</strong><br><small>Khách hàng #${msg.sender_id} vừa nhắn tin</small>`;
+          document.body.appendChild(toast);
+          setTimeout(() => toast.classList.add('show'), 10);
+          setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+          }, 4000);
+        }
+      });
+  }
 });
 
 onUnmounted(() => {
   document.removeEventListener('click', closeUserMenu);
   if (timeInterval) clearInterval(timeInterval);
+  if (chatEchoChannel) window.Echo?.leave('admin.chat');
 });
 
 const qrModalRef = ref(null);
@@ -673,12 +717,27 @@ const handleAttendanceOption = async (method) => {
   z-index: 1000;
 }
 
+.admin-header-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.header-clock {
+  flex: 0 0 auto;
+}
+
 .header-actions {
   flex-direction: row;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
+  flex: 1 1 auto;
   gap: 0.5rem;
+  min-width: 0;
+  margin-bottom: 0 !important;
 }
 
 .header-actions .nav-item {
@@ -688,6 +747,10 @@ const handleAttendanceOption = async (method) => {
 .header-actions .btn {
   min-height: 38px;
   white-space: nowrap;
+}
+
+.attendance-label-short {
+  display: none;
 }
 
 .station-qr-btn {
@@ -731,6 +794,79 @@ const handleAttendanceOption = async (method) => {
   color: #fff;
   background: #009981;
   border-color: #009981;
+}
+
+@media (max-width: 1399.98px) {
+  .admin-header-container {
+    justify-content: flex-end;
+  }
+
+  .header-clock {
+    display: none !important;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .station-qr-btn,
+  .face-manage-btn {
+    width: 40px;
+    min-width: 40px;
+    justify-content: center;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    font-size: 0;
+  }
+
+  .station-qr-btn i,
+  .face-manage-btn i {
+    margin-right: 0 !important;
+    font-size: 1rem !important;
+  }
+
+  .attendance-main-btn {
+    min-width: 132px;
+  }
+
+  .attendance-label-full {
+    display: none;
+  }
+
+  .attendance-label-short {
+    display: inline;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .app-header {
+    padding: 0.5rem 0.75rem !important;
+  }
+
+  .admin-header-container {
+    gap: 0.5rem;
+  }
+
+  .header-actions {
+    gap: 0.4rem;
+  }
+
+  .attendance-main-btn {
+    min-width: 112px;
+    padding-left: 0.65rem !important;
+    padding-right: 0.65rem !important;
+  }
+
+  .theme-toggle-btn {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .user-menu-container .nav-link {
+    padding-left: 0.25rem;
+    padding-right: 0;
+  }
 }
 
 .transition-all {
@@ -802,5 +938,40 @@ const handleAttendanceOption = async (method) => {
 @keyframes slideInUp {
   from { opacity: 0; transform: translateY(10px) scale(0.95); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ===== NÚT CHAT + BADGE ===== */
+.btn-chat-notify {
+  color: #1e3a5f;
+  border: 1.5px solid #1e3a5f;
+  background: #fff;
+  transition: all 0.2s;
+}
+.btn-chat-notify:hover {
+  background: #1e3a5f;
+  color: #fff;
+}
+
+/* ===== TOAST THÔNG BÁO CHAT ===== */
+:global(.admin-chat-toast) {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: linear-gradient(135deg, #1e3a5f, #2d6a4f);
+  color: white;
+  padding: 14px 18px;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(30, 58, 95, 0.4);
+  font-size: 0.88rem;
+  z-index: 99999;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+  max-width: 280px;
+  pointer-events: none;
+}
+:global(.admin-chat-toast.show) {
+  opacity: 1;
+  transform: translateY(0);
 }
 </style>

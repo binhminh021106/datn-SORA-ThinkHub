@@ -3,7 +3,6 @@
 namespace App\Events;
 
 use App\Models\Message;
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
@@ -15,30 +14,46 @@ class MessageSent implements ShouldBroadcastNow
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $message;
+    private bool $sentByAdmin;
 
-    public function __construct(Message $message)
+    public function __construct(Message $message, bool $sentByAdmin = false)
     {
         $this->message = $message;
+        $this->sentByAdmin = $sentByAdmin;
     }
 
-    /**
-     * Phát sóng đồng thời trên kênh của CẢ HAI bên (gửi + nhận)
-     * Giúp cả user lẫn admin thấy tin nhắn ngay lập tức mà không cần dùng toOthers()
-     */
     public function broadcastOn(): array
     {
-        $channels = [
-            new PrivateChannel('chat.' . $this->message->receiver_id),
+        $channelNames = [
+            'chat.' . $this->message->receiver_id,
         ];
 
-        // Nếu sender khác receiver thì thêm kênh của sender (để sender thấy confirm)
         if ($this->message->sender_id !== $this->message->receiver_id) {
-            $channels[] = new PrivateChannel('chat.' . $this->message->sender_id);
+            $channelNames[] = 'chat.' . $this->message->sender_id;
         }
 
-        return $channels;
+        if (!$this->sentByAdmin) {
+            $channelNames[] = 'admin.chat';
+        }
+
+        return array_map(
+            fn ($channel) => new PrivateChannel($channel),
+            array_values(array_unique($channelNames))
+        );
     }
-    
+
+    public function broadcastWith()
+    {
+        return [
+            'message' => $this->message,
+            'sender_id' => $this->message->sender_id,
+            'receiver_id' => $this->message->receiver_id,
+            'content' => $this->message->content,
+            'sender_name' => $this->message->sender->name ?? null,
+            'sender_avatar' => $this->message->sender->avatar ?? null,
+        ];
+    }
+
     public function broadcastAs()
     {
         return 'MessageSent';

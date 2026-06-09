@@ -69,8 +69,9 @@ class MessageController extends Controller
             ]);
         }
 
-        // Phát sóng cho người nhận
-        broadcast(new MessageSent($message))->toOthers();
+        // Phát sóng cho cả 2 bên (Event đã broadcast trên kênh sender + receiver)
+        // Không dùng toOthers() vì sẽ bị loại trừ nhầm bên nhận
+        broadcast(new MessageSent($message, $isAdmin));
 
         return response()->json(['status' => true, 'data' => $message]);
     }
@@ -107,13 +108,31 @@ class MessageController extends Controller
     {
         $adminId = 1;
 
-        $senderIds = Message::where('receiver_id', $adminId)->pluck('sender_id')->toArray();
-        $receiverIds = Message::where('sender_id', $adminId)->pluck('receiver_id')->toArray();
-        
-        $userIds = array_unique(array_merge($senderIds, $receiverIds));
-        $userIds = array_diff($userIds, [1]);
+        // Fetch all messages involving the admin, ordered by latest first
+        $messages = Message::where('sender_id', $adminId)
+            ->orWhere('receiver_id', $adminId)
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-        $users = User::whereIn('id', $userIds)->select('id', 'fullName', 'email')->get();
+        $userIds = [];
+        foreach ($messages as $msg) {
+            $partnerId = $msg->sender_id == $adminId ? $msg->receiver_id : $msg->sender_id;
+            if ($partnerId != $adminId && !in_array($partnerId, $userIds)) {
+                $userIds[] = $partnerId;
+            }
+        }
+
+        if (empty($userIds)) {
+            return response()->json(['status' => true, 'data' => []]);
+        }
+
+        $users = User::whereIn('id', $userIds)
+     ->select('id', 'fullName', 'email')
+     ->get()
+     ->sortBy(function ($user) use ($userIds) {
+        return array_search($user->id, $userIds);
+    })
+      ->values();
 
         return response()->json(['status' => true, 'data' => $users]);
     }
