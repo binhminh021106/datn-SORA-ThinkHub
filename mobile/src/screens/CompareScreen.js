@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { API_BASE_URL } from '../config/api';
 import SmartImage from '../components/SmartImage';
@@ -45,92 +46,116 @@ const getDescription = (value) => {
   return value.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 };
 
+const readStoredCompareProducts = async () => {
+  const stored = await AsyncStorage.getItem(STORAGE_KEY);
+  const items = stored ? JSON.parse(stored) : [];
+  return Array.isArray(items) ? items.slice(0, MAX_COMPARE_PRODUCTS) : [];
+};
+
+const fetchCompareProducts = async (items) => {
+  const ids = items.map((item) => item.id);
+  if (ids.length === 0) return [];
+
+  const response = await fetch(`${API_BASE_URL}/shop/sora/compare`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ product_ids: ids }),
+  });
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || 'Không thể tải dữ liệu so sánh.');
+  }
+
+  return result.data || [];
+};
+
+const fetchCompareSuggestions = async () => {
+  const response = await fetch(`${API_BASE_URL}/shop/sora/products?per_page=30&sort=recommended`, {
+    headers: { Accept: 'application/json' },
+  });
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || 'Không thể tải sản phẩm gợi ý.');
+  }
+
+  return result.data?.data || [];
+};
+
 export default function CompareScreen({ navigation }) {
+  const queryClient = useQueryClient();
   const [selectedProducts, setSelectedProducts] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [suggestions, setSuggestions] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isSuggestionLoading, setIsSuggestionLoading] = useState(false);
   const [isPickerVisible, setIsPickerVisible] = useState(false);
   const [showDiffOnly, setShowDiffOnly] = useState(false);
   const [expandedDescriptions, setExpandedDescriptions] = useState({});
   const [removingProductId, setRemovingProductId] = useState(null);
 
-  const fetchCompareData = useCallback(async (items, { showLoading = true } = {}) => {
-    if (showLoading) setIsLoading(true);
-    try {
-      const ids = items.map((item) => item.id);
-      if (ids.length === 0) {
-        setProducts([]);
-        return;
-      }
+  const selectedIds = useMemo(
+    () => selectedProducts.map((item) => item.id).join(','),
+    [selectedProducts]
+  );
 
-      const response = await fetch(`${API_BASE_URL}/shop/sora/compare`, {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ product_ids: ids }),
-      });
-      const result = await response.json();
-      if (response.ok && result.success) {
-        setProducts(result.data || []);
-      } else {
-        showCustomAlert('So sánh sản phẩm', result.message || 'Không thể tải dữ liệu so sánh.');
-      }
-    } catch (error) {
-      console.log('Error loading compare products:', error);
-      showCustomAlert('So sánh sản phẩm', 'Không thể kết nối đến máy chủ.');
-    } finally {
-      if (showLoading) setIsLoading(false);
-    }
-  }, []);
-
-  const loadStoredProducts = useCallback(async () => {
-    try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      const items = stored ? JSON.parse(stored) : [];
-      const safeItems = Array.isArray(items) ? items.slice(0, MAX_COMPARE_PRODUCTS) : [];
-      setSelectedProducts(safeItems);
-      await fetchCompareData(safeItems);
-    } catch (error) {
-      console.log('Error loading stored compare list:', error);
-      setIsLoading(false);
-    }
-  }, [fetchCompareData]);
+  const storedCompareQuery = useQuery({
+    queryKey: ['compare', 'selected'],
+    queryFn: readStoredCompareProducts,
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 30,
+  });
 
   useEffect(() => {
-    loadStoredProducts();
-  }, [loadStoredProducts]);
-
-  const fetchSuggestions = useCallback(async () => {
-    setIsSuggestionLoading(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/shop/sora/products?per_page=30&sort=recommended`, {
-        headers: { Accept: 'application/json' },
-      });
-      const result = await response.json();
-      if (response.ok && result.success) {
-        setSuggestions(result.data?.data || []);
-      }
-    } catch (error) {
-      console.log('Error loading compare suggestions:', error);
-    } finally {
-      setIsSuggestionLoading(false);
+    if (storedCompareQuery.data) {
+      setSelectedProducts(storedCompareQuery.data);
     }
-  }, []);
+  }, [storedCompareQuery.data]);
 
-  const openPicker = async () => {
+  const compareQuery = useQuery({
+    queryKey: ['compare', 'products', selectedIds],
+    queryFn: () => fetchCompareProducts(selectedProducts),
+    enabled: !storedCompareQuery.isLoading,
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
+  });
+
+  const suggestionQuery = useQuery({
+    queryKey: ['compare', 'suggestions'],
+    queryFn: fetchCompareSuggestions,
+    enabled: isPickerVisible,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 15,
+  });
+
+  useEffect(() => {
+    if (compareQuery.isError) {
+      console.log('Error loading compare products:', compareQuery.error);
+      showCustomAlert('So sánh sản phẩm', compareQuery.error?.message || 'Không thể tải dữ liệu so sánh.');
+    }
+  }, [compareQuery.isError, compareQuery.error]);
+
+  useEffect(() => {
+    if (suggestionQuery.isError) {
+      console.log('Error loading compare suggestions:', suggestionQuery.error);
+    }
+  }, [suggestionQuery.isError, suggestionQuery.error]);
+
+  const products = compareQuery.data || [];
+  const suggestions = suggestionQuery.data || [];
+  const isLoading = (storedCompareQuery.isLoading || compareQuery.isLoading) && products.length === 0;
+  const isRefreshing = compareQuery.isRefetching && products.length > 0;
+  const isSuggestionLoading = suggestionQuery.isFetching && suggestions.length === 0;
+
+  const openPicker = () => {
     setIsPickerVisible(true);
-    if (suggestions.length === 0) await fetchSuggestions();
   };
 
   const persistAndRefresh = async (items) => {
     setSelectedProducts(items);
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    await fetchCompareData(items, { showLoading: false });
+    queryClient.setQueryData(['compare', 'selected'], items);
+    queryClient.invalidateQueries({ queryKey: ['compare', 'products'] });
   };
 
   const toggleProduct = async (product) => {
@@ -162,9 +187,10 @@ export default function CompareScreen({ navigation }) {
   };
 
   const onRefresh = async () => {
-    setIsRefreshing(true);
-    await fetchCompareData(selectedProducts, { showLoading: false });
-    setIsRefreshing(false);
+    await Promise.all([
+      compareQuery.refetch(),
+      suggestionQuery.data ? suggestionQuery.refetch() : Promise.resolve(),
+    ]);
   };
 
   const specificationKeys = useMemo(() => {

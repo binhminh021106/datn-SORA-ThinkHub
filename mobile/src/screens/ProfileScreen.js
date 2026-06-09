@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Image,
   SafeAreaView, StatusBar, ScrollView, ActivityIndicator,
@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MOBILE_AUTH_URL, API_BASE_URL } from '../config/api';
 import { showCustomAlert } from '../components/CustomAlert';
 import SmartImage from '../components/SmartImage';
@@ -130,6 +131,34 @@ const getTierTheme = (tierName) => {
   if (n.includes('vàng') || n.includes('gold')) return TIER_THEMES.gold;
   if (n.includes('bạc') || n.includes('silver')) return TIER_THEMES.silver;
   return TIER_THEMES.default;
+};
+
+const fetchProfileQuery = async () => {
+  const token = await AsyncStorage.getItem('auth_token');
+  if (!token) {
+    return { user: null, isLoggedIn: false, token: null };
+  }
+
+  try {
+    const res = await fetch(`${MOBILE_AUTH_URL}/me`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    });
+
+    if (!res.ok) {
+      await AsyncStorage.multiRemove(['auth_token', 'user', 'sora_wishlist_ids', 'sora_wishlist_items']);
+      return { user: null, isLoggedIn: false, token: null };
+    }
+
+    const data = await res.json();
+    await AsyncStorage.setItem('user', JSON.stringify(data.user));
+    return { user: data.user, isLoggedIn: true, token };
+  } catch (error) {
+    const cached = await AsyncStorage.getItem('user');
+    if (cached) {
+      return { user: JSON.parse(cached), isLoggedIn: true, token, fromCache: true };
+    }
+    throw error;
+  }
 };
 
 // ─── TierBadge ───────────────────────────────────────────────────────────────
@@ -288,74 +317,34 @@ function MenuItem({ icon, label, onPress, danger }) {
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 export default function ProfileScreen() {
   const navigation = useNavigation();
-  const [user, setUser] = useState(null);
-  const [allTiers, setAllTiers] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const hasLoadedProfile = useRef(false);
-  const lastLoadedToken = useRef(null);
 
-  const applyCachedProfile = useCallback(async () => {
+  const {
+    data: profileData,
+    isLoading,
+    refetch: refetchProfile,
+  } = useQuery({
+    queryKey: ['profile'],
+    queryFn: fetchProfileQuery,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+
+  const user = profileData?.user || null;
+  const allTiers = user?.all_tiers || [];
+  const isLoggedIn = !!profileData?.isLoggedIn;
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
     try {
-      const cached = await AsyncStorage.getItem('user');
-      if (!cached) return false;
-
-      const cachedUser = JSON.parse(cached);
-      setUser(cachedUser);
-      setAllTiers(cachedUser?.all_tiers || []);
-      setIsLoggedIn(true);
-      setIsLoading(false);
-      return true;
-    } catch {
-      return false;
-    }
-  }, []);
-
-  const loadProfile = useCallback(async ({ showOverlay = true, showRefresh = false } = {}) => {
-    if (showOverlay) {
-      setIsLoading(true);
-    }
-    if (showRefresh) {
-      setRefreshing(true);
-    }
-    try {
-      const token = await AsyncStorage.getItem('auth_token');
-      if (!token) { setIsLoggedIn(false); return; }
-
-      const res = await fetch(`${MOBILE_AUTH_URL}/me`, {
-        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-      });
-
-      if (!res.ok) {
-        // Token hết hạn hoặc không hợp lệ -> xóa token
-        await AsyncStorage.multiRemove(['auth_token', 'user', 'sora_wishlist_ids', 'sora_wishlist_items']);
-        setIsLoggedIn(false);
-        return;
-      }
-
-      const data = await res.json();
-      setUser(data.user);
-      setAllTiers(data.user?.all_tiers || []);
-      setIsLoggedIn(true);
-      // Lưu lại cache user để dùng offline
-      await AsyncStorage.setItem('user', JSON.stringify(data.user));
-    } catch (e) {
-      // Nếu lỗi mạng → lấy từ cache
-      const hasCache = await applyCachedProfile();
-      if (!hasCache) setIsLoggedIn(false);
+      await refetchProfile();
     } finally {
-      if (showOverlay) setIsLoading(false);
-      if (showRefresh) setRefreshing(false);
+      setRefreshing(false);
     }
-  }, [applyCachedProfile]);
+  }, [refetchProfile]);
 
-  const onRefresh = useCallback(() => {
-    loadProfile({ showOverlay: false, showRefresh: true });
-  }, [loadProfile]);
-
-  // Cache-first: only call the server on first visit, auth changes, or pull-to-refresh.
   useFocusEffect(
     useCallback(() => {
       StatusBar.setBarStyle('dark-content');
@@ -365,25 +354,18 @@ export default function ProfileScreen() {
       }
 
       let isActive = true;
-      const syncProfile = async () => {
+      const syncProfileToken = async () => {
         const token = await AsyncStorage.getItem('auth_token');
-        const hasCache = await applyCachedProfile();
-        if (!isActive) return;
-
-        const shouldFetch = !hasLoadedProfile.current || token !== lastLoadedToken.current;
-        hasLoadedProfile.current = true;
-        lastLoadedToken.current = token;
-
-        if (shouldFetch) {
-          await loadProfile({ showOverlay: !hasCache, showRefresh: false });
+        if (isActive && token !== profileData?.token) {
+          refetchProfile();
         }
       };
 
-      syncProfile();
+      syncProfileToken();
       return () => {
         isActive = false;
       };
-    }, [applyCachedProfile, loadProfile])
+    }, [profileData?.token, refetchProfile])
   );
 
   const handleLogout = () => {
@@ -402,9 +384,7 @@ export default function ProfileScreen() {
       }
     } catch { }
     await AsyncStorage.multiRemove(['auth_token', 'user', 'sora_wishlist_ids', 'sora_wishlist_items']);
-    lastLoadedToken.current = null;
-    setIsLoggedIn(false);
-    setUser(null);
+    queryClient.setQueryData(['profile'], { user: null, isLoggedIn: false, token: null });
   };
 
   // ── LOADING ──
@@ -553,6 +533,7 @@ export default function ProfileScreen() {
           <MenuItem icon="receipt-outline" label="Lịch sử đơn hàng" onPress={() => navigation.navigate('OrderHistory')} />
           <MenuItem icon="heart-outline" label="Sản phẩm yêu thích" onPress={() => navigation.navigate('Wishlist')} />
           <MenuItem icon="location-outline" label="Sổ địa chỉ" onPress={() => navigation.navigate('AddressBook')} />
+          <MenuItem icon="ticket-outline" label="Mã giảm giá của tôi" onPress={() => navigation.navigate('SavedCoupons')} />
           <MenuItem icon="megaphone-outline" label="Tiếp thị liên kết" onPress={() => navigation.navigate('Affiliate')} />
           <MenuItem icon="gift-outline" label="Ưu đãi & Thành viên" onPress={() => Alert.alert('Thành viên SORA', 'Ưu đãi và thứ hạng của bạn được cập nhật trực quan tại Thẻ thành viên phía trên!')} />
         </View>

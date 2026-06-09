@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
+  RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -17,6 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { API_BASE_URL } from '../config/api';
 import { showCustomAlert } from '../components/CustomAlert';
 import SmartImage from '../components/SmartImage';
@@ -123,9 +125,60 @@ const getAttendanceStatusConfig = (status) => {
   }
 };
 
+const fetchAdminProfileQuery = async (token) => {
+  const response = await fetch(`${API_BASE_URL}/admin/profile`, {
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(await getApiMessage(response));
+  }
+
+  const payload = await response.json();
+  const nextAdmin = payload?.data;
+  if (!payload?.success || !nextAdmin) {
+    throw new Error(payload?.message || 'Không thể tải thông tin nhân viên.');
+  }
+
+  await AsyncStorage.setItem(ADMIN_INFO_KEY, JSON.stringify(nextAdmin));
+  return nextAdmin;
+};
+
+const fetchAttendanceStatusQuery = async (token) => {
+  const response = await fetch(`${API_BASE_URL}/admin/attendances/status`, {
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (response.status === 401) {
+    throw new Error('Phiên đăng nhập nhân viên đã hết hạn.');
+  }
+
+  if (!response.ok) {
+    throw new Error(await getApiMessage(response));
+  }
+
+  const payload = await response.json();
+  if (!payload?.success) {
+    throw new Error(payload?.message || 'Không thể tải trạng thái chấm công.');
+  }
+
+  return {
+    state: payload.state,
+    data: payload.data || null,
+    shift_assignment: payload.shift_assignment || null,
+  };
+};
+
 export default function StaffAttendanceScreen({ navigation }) {
   const { width } = useWindowDimensions();
   const isFocused = useIsFocused();
+  const queryClient = useQueryClient();
   const isMountedRef = useRef(true);
   const processingRef = useRef(false);
   const [permission, requestPermission] = useCameraPermissions();
@@ -136,6 +189,7 @@ export default function StaffAttendanceScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
   const [isBooting, setIsBooting] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasScanned, setHasScanned] = useState(false);
   const [lastQrToken, setLastQrToken] = useState('');
@@ -154,76 +208,47 @@ export default function StaffAttendanceScreen({ navigation }) {
     }
   }, [adminAvatarUrl, adminInfo?.avatar_url]);
 
-  const refreshAttendanceStatus = useCallback(async (token) => {
-    if (!token) {
+  const adminProfileQuery = useQuery({
+    queryKey: ['staff', 'profile', adminToken],
+    queryFn: () => fetchAdminProfileQuery(adminToken),
+    enabled: !!adminToken,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 15,
+  });
+
+  const attendanceStatusQuery = useQuery({
+    queryKey: ['staff', 'attendance-status', adminToken],
+    queryFn: () => fetchAttendanceStatusQuery(adminToken),
+    enabled: !!adminToken,
+    staleTime: 1000 * 20,
+    gcTime: 1000 * 60 * 5,
+  });
+
+  useEffect(() => {
+    if (adminProfileQuery.data) {
+      setAdminInfo(adminProfileQuery.data);
+    }
+  }, [adminProfileQuery.data]);
+
+  useEffect(() => {
+    if (attendanceStatusQuery.data) {
+      setAttendanceStatus(attendanceStatusQuery.data);
+    } else if (!adminToken) {
       setAttendanceStatus({ state: 'ready' });
-      return null;
     }
+  }, [adminToken, attendanceStatusQuery.data]);
 
-    setAttendanceStatus((current) => current?.state ? current : { state: 'loading' });
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/admin/attendances/status`, {
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.status === 401) {
-        return null;
-      }
-
-      if (!response.ok) {
-        setAttendanceStatus({ state: 'ready' });
-        return null;
-      }
-
-      const payload = await response.json();
-      if (payload?.success && isMountedRef.current) {
-        setAttendanceStatus({
-          state: payload.state,
-          data: payload.data || null,
-          shift_assignment: payload.shift_assignment || null,
-        });
-      }
-
-      return payload;
-    } catch {
-      if (isMountedRef.current) {
-        setAttendanceStatus({ state: 'ready' });
-      }
-      return null;
+  useEffect(() => {
+    if (attendanceStatusQuery.isError && adminToken) {
+      setAttendanceStatus({ state: 'ready' });
     }
-  }, []);
+  }, [adminToken, attendanceStatusQuery.isError]);
 
-  const refreshAdminProfile = useCallback(async (token) => {
-    if (!token) return null;
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/admin/profile`, {
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) return null;
-
-      const payload = await response.json();
-      const nextAdmin = payload?.data;
-      if (!payload?.success || !nextAdmin) return null;
-
-      await AsyncStorage.setItem(ADMIN_INFO_KEY, JSON.stringify(nextAdmin));
-      if (isMountedRef.current) {
-        setAdminInfo(nextAdmin);
-      }
-
-      return nextAdmin;
-    } catch {
-      return null;
-    }
-  }, []);
+  useEffect(() => {
+    if (!isFocused || !adminToken) return;
+    adminProfileQuery.refetch();
+    attendanceStatusQuery.refetch();
+  }, [adminProfileQuery.refetch, adminToken, attendanceStatusQuery.refetch, isFocused]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -237,10 +262,6 @@ export default function StaffAttendanceScreen({ navigation }) {
         if (!isMountedRef.current) return;
         setAdminToken(storedToken || '');
         setAdminInfo(storedInfo ? JSON.parse(storedInfo) : null);
-        if (storedToken) {
-          refreshAdminProfile(storedToken);
-          refreshAttendanceStatus(storedToken);
-        }
       } catch {
         if (!isMountedRef.current) return;
         setAdminToken('');
@@ -255,7 +276,7 @@ export default function StaffAttendanceScreen({ navigation }) {
       isMountedRef.current = false;
       processingRef.current = false;
     };
-  }, [refreshAdminProfile, refreshAttendanceStatus]);
+  }, []);
 
   const loginAdmin = async () => {
     const normalizedEmail = email.trim();
@@ -288,8 +309,9 @@ export default function StaffAttendanceScreen({ navigation }) {
       if (!isMountedRef.current) return;
       setAdminToken(payload.token);
       setAdminInfo(payload.admin || null);
-      refreshAdminProfile(payload.token);
-      refreshAttendanceStatus(payload.token);
+      queryClient.setQueryData(['staff', 'profile', payload.token], payload.admin || null);
+      queryClient.invalidateQueries({ queryKey: ['staff', 'profile', payload.token] });
+      queryClient.invalidateQueries({ queryKey: ['staff', 'attendance-status', payload.token] });
       setPassword('');
       showCustomAlert('Đăng nhập thành công', 'Bạn có thể quét QR chấm công ngay bây giờ.', [{ text: 'BẮT ĐẦU QUÉT' }], 'checkmark-circle-outline');
     } catch (error) {
@@ -306,7 +328,8 @@ export default function StaffAttendanceScreen({ navigation }) {
     setAttendanceStatus({ state: 'ready' });
     setHasScanned(false);
     setLastQrToken('');
-  }, []);
+    queryClient.removeQueries({ queryKey: ['staff'] });
+  }, [queryClient]);
 
   const confirmLogoutAdmin = useCallback(() => {
     showCustomAlert(
@@ -325,6 +348,20 @@ export default function StaffAttendanceScreen({ navigation }) {
     setIsProcessing(false);
     setHasScanned(false);
   }, []);
+
+  const handleRefresh = useCallback(async () => {
+    if (!adminToken) return;
+    setRefreshing(true);
+    resetScanner();
+    try {
+      await Promise.all([
+        adminProfileQuery.refetch(),
+        attendanceStatusQuery.refetch(),
+      ]);
+    } finally {
+      if (isMountedRef.current) setRefreshing(false);
+    }
+  }, [adminProfileQuery, adminToken, attendanceStatusQuery, resetScanner]);
 
   const processAttendance = useCallback(async (rawValue) => {
     const qrToken = parseQrToken(rawValue);
@@ -368,6 +405,32 @@ export default function StaffAttendanceScreen({ navigation }) {
         throw new Error('Hôm nay bạn đã hoàn thành ca làm việc rồi.');
       }
 
+      if (endpoint === 'check-out') {
+        const shouldCheckOut = await new Promise((resolve) => {
+          showCustomAlert(
+            'Xác nhận tan ca',
+            'Bạn đã check-in trước đó. Bạn có chắc muốn check-out và kết thúc ca làm bây giờ không?',
+            [
+              {
+                text: 'HUỶ',
+                style: 'cancel',
+                onPress: () => {
+                  resetScanner();
+                  resolve(false);
+                },
+              },
+              {
+                text: 'CHECK-OUT',
+                onPress: () => resolve(true),
+              },
+            ],
+            'log-out-outline',
+          );
+        });
+
+        if (!shouldCheckOut) return;
+      }
+
       const attendanceResponse = await fetch(`${API_BASE_URL}/admin/attendances/${endpoint}`, {
         method: 'POST',
         headers: {
@@ -391,7 +454,7 @@ export default function StaffAttendanceScreen({ navigation }) {
           data: attendancePayload?.data || current?.data || null,
         }));
       }
-      refreshAttendanceStatus(adminToken);
+      attendanceStatusQuery.refetch();
       showCustomAlert(
         'Chấm công thành công',
         message,
@@ -414,7 +477,7 @@ export default function StaffAttendanceScreen({ navigation }) {
       }
       processingRef.current = false;
     }
-  }, [adminToken, logoutAdmin, navigation, refreshAttendanceStatus, resetScanner]);
+  }, [adminToken, attendanceStatusQuery.refetch, logoutAdmin, navigation, resetScanner]);
 
   const handleBarcodeScanned = ({ data }) => {
     if (hasScanned || isProcessing || !data) return;
@@ -537,6 +600,14 @@ export default function StaffAttendanceScreen({ navigation }) {
             style={styles.scroll}
             contentContainerStyle={[styles.page, { maxWidth: PAGE_MAX_WIDTH, paddingHorizontal: pagePadding }]}
             showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                colors={[BRAND_RED]}
+                tintColor={BRAND_RED}
+              />
+            }
           >
             <View style={styles.staffCard}>
               <View style={styles.staffIcon}>

@@ -141,7 +141,12 @@ class ClientCheckoutController extends Controller
                     if ($address) {
                         $customerName = $address->customer_name;
                         $customerPhone = $address->customer_phone;
-                        $customerAddress = $address->shipping_address . ', ' . $address->ward . ', ' . $address->district . ', ' . $address->city;
+                        $customerAddress = collect([
+                            $address->shipping_address,
+                            $address->ward,
+                            $address->district,
+                            $address->city,
+                        ])->filter()->implode(', ');
                     }
                 }
 
@@ -401,9 +406,6 @@ class ClientCheckoutController extends Controller
                     ]);
                 }
 
-                $cart->items()->delete();
-                $cart->delete();
-
                 try {
                     broadcast(new NewOrderReceived($order->order_code, (float) $order->total_amount));
                 } catch (\Exception $e) {
@@ -411,6 +413,9 @@ class ClientCheckoutController extends Controller
                 }
 
                 if ($request->payment_method === 'cod') {
+                    $cart->items()->delete();
+                    $cart->delete();
+
                     $this->sendOrderConfirmationEmail($order);
 
                     return response()->json([
@@ -424,10 +429,14 @@ class ClientCheckoutController extends Controller
                 }
 
                 if ($request->payment_method === 'momo') {
-                    $momoUrl = $this->generateMomoUrl($order);
+                    $momoUrl = $this->generateMomoUrl($order, $request->input('checkout_source', 'web'), $cart->id);
                     return response()->json([
                         'success' => true,
                         'payment_url' => $momoUrl,
+                        'data' => [
+                            'order_code'   => $order->order_code,
+                            'total_amount' => $order->total_amount
+                        ],
                         'message' => 'Đang chuyển hướng sang Ví MoMo...'
                     ]);
                 }
@@ -464,7 +473,7 @@ class ClientCheckoutController extends Controller
         return (float) $userTier->min_spent >= (float) $silverTier->min_spent;
     }
 
-    private function generateMomoUrl($order)
+    private function generateMomoUrl($order, string $checkoutSource = 'web', ?int $cartId = null)
     {
         $endpoint = env('MOMO_ENDPOINT');
         $partnerCode = env('MOMO_PARTNER_CODE');
@@ -488,7 +497,10 @@ class ClientCheckoutController extends Controller
         $redirectUrl = url('/api/client/checkout/momo-return');
         $ipnUrl = url('/api/client/checkout/momo-return');
 
-        $extraData = "";
+        $extraData = base64_encode(json_encode([
+            'source' => $checkoutSource === 'mobile' ? 'mobile' : 'web',
+            'cart_id' => $cartId,
+        ]));
         $requestId = time() . "";
         $requestType = "payWithATM";
 
@@ -512,7 +524,7 @@ class ClientCheckoutController extends Controller
             'signature'   => $signature
         );
 
-        $response = Http::post($endpoint, $data);
+        $response = Http::connectTimeout(5)->timeout(12)->post($endpoint, $data);
         $result = $response->json();
 
         if (isset($result['payUrl'])) {
@@ -526,22 +538,53 @@ class ClientCheckoutController extends Controller
     {
         $parts = explode('_', $request->orderId);
         $orderCode = $parts[0] ?? '';
+        $extraData = json_decode(base64_decode($request->extraData ?? ''), true) ?: [];
+        $isMobileCheckout = ($extraData['source'] ?? 'web') === 'mobile';
+        $cartId = isset($extraData['cart_id']) ? (int) $extraData['cart_id'] : null;
 
-        $frontendUrl = 'http://localhost:5173';
+        $frontendUrl = rtrim(env('FRONTEND_URL', 'http://localhost:5173'), '/');
 
         if ($request->resultCode == 0) {
-            Order::where('order_code', $orderCode)->update(['payment_status' => 'paid']);
-
             $order = Order::with('items')->where('order_code', $orderCode)->first();
             if ($order) {
-                $this->sendOrderConfirmationEmail($order);
+                $alreadyPaid = $order->payment_status === 'paid';
+
+                if (!$alreadyPaid) {
+                    $order->payment_status = 'paid';
+                    $order->save();
+
+                    $this->clearCartAfterPaidOrder($order, $cartId);
+                    $this->sendOrderConfirmationEmail($order);
+                }
+            }
+
+            if ($isMobileCheckout) {
+                return redirect('sora://order-history?order=' . urlencode($orderCode) . '&payment=success');
             }
 
             return redirect($frontendUrl . '/checkout/success?order=' . $orderCode);
         }
 
         $this->cancelOrderAndRestoreStock($orderCode);
+        if ($isMobileCheckout) {
+            return redirect('sora://cart?order=' . urlencode($orderCode) . '&payment=cancelled');
+        }
+
         return redirect($frontendUrl . '/checkout/failed?order=' . $orderCode);
+    }
+
+    private function clearCartAfterPaidOrder(Order $order, ?int $cartId = null): void
+    {
+        $cart = $cartId ? Cart::find($cartId) : null;
+
+        if (!$cart && $order->user_id) {
+            $cart = Cart::where('user_id', $order->user_id)->first();
+        }
+
+        if ($cart) {
+            $cart->items()->delete();
+            $cart->delete();
+        }
     }
 
     private function sendOrderConfirmationEmail($order)
@@ -585,6 +628,11 @@ class ClientCheckoutController extends Controller
                 ->where('service_type', 'tier_discount')
                 ->delete();
 
+            $this->restoreCouponUsage($order);
+            \App\Models\CommissionHistory::where('order_id', $order->id)
+                ->where('status', 'pending')
+                ->delete();
+
             foreach ($order->items as $item) {
                 if ($item->product_variant_id) {
                     ProductVariant::where('id', $item->product_variant_id)->increment('stock_quantity', $item->quantity);
@@ -613,6 +661,27 @@ class ClientCheckoutController extends Controller
                     }
                 }
             }
+        }
+    }
+
+    private function restoreCouponUsage(Order $order): void
+    {
+        if (!$order->coupon_id) {
+            return;
+        }
+
+        $coupon = Coupon::find($order->coupon_id);
+        if (!$coupon) {
+            return;
+        }
+
+        if ((int) $coupon->usage_count > 0) {
+            $coupon->decrement('usage_count');
+        }
+
+        if ($coupon->type === 'birthday') {
+            $coupon->is_used = 0;
+            $coupon->save();
         }
     }
 

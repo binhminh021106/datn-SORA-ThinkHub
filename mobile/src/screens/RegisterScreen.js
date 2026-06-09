@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MOBILE_AUTH_URL } from '../config/api';
 import { showCustomAlert } from '../components/CustomAlert';
@@ -87,6 +88,7 @@ function Field({ label, field, placeholder, keyboard, secure, showState, toggleS
 }
 
 export default function RegisterScreen({ navigation }) {
+  const queryClient = useQueryClient();
   const [form, setForm] = useState({
     fullName: '',
     email: '',
@@ -95,7 +97,6 @@ export default function RegisterScreen({ navigation }) {
   });
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -117,7 +118,51 @@ export default function RegisterScreen({ navigation }) {
     });
   }, [navigation]);
 
-  const handleRegister = async () => {
+  const handlePostAuthCacheRefresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['cart'] });
+    await queryClient.invalidateQueries({ queryKey: ['checkout', 'init'] });
+    queryClient.removeQueries({ queryKey: ['profile'] });
+  }, [queryClient]);
+
+  const registerMutation = useMutation({
+    mutationFn: async (payload) => {
+      const response = await fetch(`${MOBILE_AUTH_URL}/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.errors) {
+          throw new Error(Object.values(data.errors).flat().join('\n'));
+        }
+        throw new Error(data.message || 'Có lỗi xảy ra, vui lòng thử lại.');
+      }
+
+      return data;
+    },
+    onSuccess: async (data) => {
+      setSuccessMsg('Đăng ký thành công! Đang tự động đăng nhập...');
+      await persistAuthSession(data);
+      await handlePostAuthCacheRefresh();
+
+      setTimeout(() => {
+        goToAppAfterAuth();
+      }, 1500);
+    },
+    onError: (error) => {
+      setErrorMsg(error.message || 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.');
+    },
+  });
+
+  const isLoading = registerMutation.isPending;
+
+  const handleRegister = () => {
     if (!form.fullName || !form.email || !form.password) {
       setErrorMsg('Vui lòng điền đầy đủ thông tin bắt buộc.');
       return;
@@ -131,44 +176,9 @@ export default function RegisterScreen({ navigation }) {
       return;
     }
 
-    setIsLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
-
-    try {
-      const response = await fetch(`${MOBILE_AUTH_URL}/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify(form),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (data.errors) {
-          const msgs = Object.values(data.errors).flat().join('\n');
-          setErrorMsg(msgs);
-        } else {
-          setErrorMsg(data.message || 'Có lỗi xảy ra, vui lòng thử lại.');
-        }
-        return;
-      }
-
-      setSuccessMsg('Đăng ký thành công! Đang tự động đăng nhập...');
-      await persistAuthSession(data);
-
-      setTimeout(() => {
-        goToAppAfterAuth();
-      }, 1500);
-
-    } catch (e) {
-      setErrorMsg('Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.');
-    } finally {
-      setIsLoading(false);
-    }
+    registerMutation.mutate(form);
   };
 
   const persistAuthSession = async (data) => {
@@ -183,6 +193,7 @@ export default function RegisterScreen({ navigation }) {
     try {
       const data = await loginWithGoogle();
       await persistAuthSession(data);
+      await handlePostAuthCacheRefresh();
       setSuccessMsg('Đăng nhập Google thành công!');
       setTimeout(() => {
         goToAppAfterAuth();

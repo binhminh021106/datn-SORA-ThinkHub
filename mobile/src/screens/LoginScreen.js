@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MOBILE_AUTH_URL } from '../config/api';
 import { showCustomAlert } from '../components/CustomAlert';
@@ -15,10 +16,10 @@ const Alert = {
 };
 
 export default function LoginScreen({ navigation }) {
+  const queryClient = useQueryClient();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -32,15 +33,8 @@ export default function LoginScreen({ navigation }) {
     }, [])
   );
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      setErrorMsg('Vui lòng nhập đầy đủ email và mật khẩu.');
-      return;
-    }
-    setIsLoading(true);
-    setErrorMsg('');
-    setSuccessMsg('');
-    try {
+  const loginMutation = useMutation({
+    mutationFn: async ({ email, password }) => {
       const response = await fetch(`${MOBILE_AUTH_URL}/login`, {
         method: 'POST',
         headers: {
@@ -53,35 +47,49 @@ export default function LoginScreen({ navigation }) {
       const data = await response.json();
 
       if (!response.ok) {
-        // Lấy lỗi validation từ Laravel
         if (data.errors) {
-          const msgs = Object.values(data.errors).flat().join('\n');
-          setErrorMsg(msgs);
-        } else {
-          setErrorMsg(data.message || 'Email hoặc mật khẩu không chính xác.');
+          throw new Error(Object.values(data.errors).flat().join('\n'));
         }
-        return;
+        throw new Error(data.message || 'Email hoặc mật khẩu không chính xác.');
       }
 
+      return data;
+    },
+    onSuccess: async (data) => {
       setSuccessMsg('Đăng nhập thành công!');
-      // Lưu token và user vào AsyncStorage
-      await AsyncStorage.setItem('auth_token', data.access_token);
-      await AsyncStorage.setItem('user', JSON.stringify(data.user));
+      await persistAuthSession(data);
+      await handlePostLoginCacheRefresh();
 
       setTimeout(() => {
         navigation?.goBack();
       }, 1000);
+    },
+    onError: (error) => {
+      setErrorMsg(error.message || 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.');
+    },
+  });
 
-    } catch (e) {
-      setErrorMsg('Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.');
-    } finally {
-      setIsLoading(false);
+  const isLoading = loginMutation.isPending;
+
+  const handleLogin = () => {
+    if (!email || !password) {
+      setErrorMsg('Vui lòng nhập đầy đủ email và mật khẩu.');
+      return;
     }
+    setErrorMsg('');
+    setSuccessMsg('');
+    loginMutation.mutate({ email, password });
   };
 
   const persistAuthSession = async (data) => {
     await AsyncStorage.setItem('auth_token', data.access_token);
     await AsyncStorage.setItem('user', JSON.stringify(data.user));
+  };
+
+  const handlePostLoginCacheRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['cart'] });
+    await queryClient.invalidateQueries({ queryKey: ['checkout', 'init'] });
+    queryClient.removeQueries({ queryKey: ['profile'] });
   };
 
   const handleGoogleLogin = async () => {
@@ -91,6 +99,7 @@ export default function LoginScreen({ navigation }) {
     try {
       const data = await loginWithGoogle();
       await persistAuthSession(data);
+      await handlePostLoginCacheRefresh();
       setSuccessMsg('Đăng nhập Google thành công!');
       setTimeout(() => {
         navigation?.goBack();

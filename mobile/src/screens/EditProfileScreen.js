@@ -16,8 +16,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, MOBILE_AUTH_URL } from '../config/api';
 import { showCustomAlert } from '../components/CustomAlert';
 import SmartImage from '../components/SmartImage';
 
@@ -68,6 +69,25 @@ const YEARS = Array.from({ length: 100 }, (_, i) => currentYear - i);
 const ITEM_H = 48; // height of each item row
 const VISIBLE_ITEMS = 5; // number of visible rows
 const PICKER_H = ITEM_H * VISIBLE_ITEMS; // total visible height
+
+const fetchEditProfileQuery = async () => {
+  const token = await AsyncStorage.getItem('auth_token');
+  if (!token) {
+    throw new Error('Bạn chưa đăng nhập hoặc phiên làm việc đã hết hạn.');
+  }
+
+  const response = await fetch(`${MOBILE_AUTH_URL}/me`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+  });
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result.message || 'Không thể tải thông tin cá nhân.');
+  }
+
+  const user = result.user || result.data || result;
+  await AsyncStorage.setItem('user', JSON.stringify(user));
+  return { user, isLoggedIn: true, token };
+};
 
 // ─── Scroll Picker Column ─────────────────────────────────────────────────────
 const SpinColumn = React.memo(({ data, selectedIndex, onSelect, formatLabel }) => {
@@ -206,6 +226,7 @@ const spin = StyleSheet.create({
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function EditProfileScreen() {
   const navigation = useNavigation();
+  const queryClient = useQueryClient();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -225,39 +246,53 @@ export default function EditProfileScreen() {
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState(null);
   const [selectedImageUri, setSelectedImageUri] = useState(null);
 
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [showGenderModal, setShowGenderModal] = useState(false);
   const [showDateModal, setShowDateModal] = useState(false);
 
+  const {
+    data: profileData,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ['profile'],
+    queryFn: fetchEditProfileQuery,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+
+  const userData = profileData?.user || null;
+
   useEffect(() => {
-    loadUserData();
-  }, []);
+    if (!userData) return;
 
-  const loadUserData = async () => {
-    try {
-      const cached = await AsyncStorage.getItem('user');
-      if (cached) {
-        const u = JSON.parse(cached);
-        setFullName(u.fullName || '');
-        setEmail(u.email || '');
-        setPhone(u.phone || '');
-        setGender(u.gender || 'Nam');
-        setCurrentAvatarUrl(u.avatar_url || null);
+    setFullName(userData.fullName || '');
+    setEmail(userData.email || '');
+    setPhone(userData.phone || '');
+    setGender(userData.gender || 'Nam');
+    setCurrentAvatarUrl(userData.avatar_url || null);
 
-        if (u.birthday) {
-          const parts = dbDateToParts(u.birthday);
-          setBDay(parts.day);
-          setBMonth(parts.month);
-          setBYear(parts.year);
-        }
-      }
-      setIsLoading(false);
-    } catch (e) {
-      setIsLoading(false);
-      Alert.alert('Lỗi', 'Không thể lấy thông tin người dùng.');
+    if (userData.birthday) {
+      const parts = dbDateToParts(userData.birthday);
+      setBDay(parts.day);
+      setBMonth(parts.month);
+      setBYear(parts.year);
+    } else {
+      setBDay(null);
+      setBMonth(null);
+      setBYear(null);
     }
-  };
+  }, [userData]);
+
+  useEffect(() => {
+    if (isError) {
+      Alert.alert('Lỗi', error?.message || 'Không thể lấy thông tin người dùng.', [
+        { text: 'THỬ LẠI', onPress: () => refetch() },
+      ]);
+    }
+  }, [error, isError, refetch]);
 
   const handlePickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -378,7 +413,16 @@ export default function EditProfileScreen() {
           const cached = await AsyncStorage.getItem('user');
           if (result.data) {
             const u = cached ? JSON.parse(cached) : {};
-            await AsyncStorage.setItem('user', JSON.stringify({ ...u, ...result.data }));
+            const updatedUser = { ...u, ...result.data };
+            await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+            queryClient.setQueryData(['profile'], (oldData) => ({
+              ...(oldData || {}),
+              user: {
+                ...(oldData?.user || {}),
+                ...updatedUser,
+              },
+              isLoggedIn: true,
+            }));
           }
         } catch (_) {}
 

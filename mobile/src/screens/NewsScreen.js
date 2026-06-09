@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
 import SmartImage from '../components/SmartImage';
 import { API_BASE_URL } from '../config/api';
 
@@ -117,67 +118,51 @@ function PopularArticle({ article, rank, onPress }) {
   );
 }
 
+const fetchNewsQuery = async () => {
+  const [newsResponse, popularResponse] = await Promise.all([
+    fetch(`${API_BASE_URL}/news?per_page=50`, { headers: { Accept: 'application/json' } }),
+    fetch(`${API_BASE_URL}/news/popular`, { headers: { Accept: 'application/json' } }),
+  ]);
+  const [newsPayload, popularPayload] = await Promise.all([
+    newsResponse.json(),
+    popularResponse.json(),
+  ]);
+
+  if (!newsResponse.ok || newsPayload.status !== 'success') {
+    throw new Error(newsPayload.message || 'Không thể tải danh sách tin tức.');
+  }
+
+  const articles = (newsPayload.data?.data || []).map(mapArticle);
+  const articleMap = new Map(articles.map((article) => [String(article.id), article]));
+  const popularArticles = popularResponse.ok && popularPayload.status === 'success'
+    ? (popularPayload.data || []).map((article) => mapArticle({
+      ...articleMap.get(String(article.id)),
+      ...article,
+    }))
+    : [];
+
+  return { articles, popularArticles };
+};
+
 export default function NewsScreen({ navigation }) {
   const { width } = useWindowDimensions();
-  const isMountedRef = useRef(true);
-  const [newsList, setNewsList] = useState([]);
-  const [popularList, setPopularList] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [errorText, setErrorText] = useState('');
+  const newsQuery = useQuery({
+    queryKey: ['news', 'list'],
+    queryFn: fetchNewsQuery,
+    staleTime: 1000 * 60 * 3,
+    gcTime: 1000 * 60 * 15,
+  });
+  const newsList = newsQuery.data?.articles || [];
+  const popularList = newsQuery.data?.popularArticles || [];
+  const isLoading = newsQuery.isLoading && !newsQuery.data;
+  const isRefreshing = newsQuery.isRefetching && !!newsQuery.data;
+  const errorText = newsQuery.isError
+    ? newsQuery.error?.message || 'Không thể kết nối đến máy chủ.'
+    : '';
   const [searchText, setSearchText] = useState('');
   const [activeCategory, setActiveCategory] = useState(ALL_CATEGORY);
   const [currentPage, setCurrentPage] = useState(1);
   const horizontalPadding = width >= 720 ? 24 : 16;
-
-  const loadNews = useCallback(async ({ refreshing = false } = {}) => {
-    if (refreshing) setIsRefreshing(true);
-    else setIsLoading(true);
-    setErrorText('');
-
-    try {
-      const [newsResponse, popularResponse] = await Promise.all([
-        fetch(`${API_BASE_URL}/news?per_page=50`, { headers: { Accept: 'application/json' } }),
-        fetch(`${API_BASE_URL}/news/popular`, { headers: { Accept: 'application/json' } }),
-      ]);
-      const [newsPayload, popularPayload] = await Promise.all([
-        newsResponse.json(),
-        popularResponse.json(),
-      ]);
-
-      if (!newsResponse.ok || newsPayload.status !== 'success') {
-        throw new Error(newsPayload.message || 'Không thể tải danh sách tin tức.');
-      }
-
-      const articles = (newsPayload.data?.data || []).map(mapArticle);
-      const articleMap = new Map(articles.map((article) => [String(article.id), article]));
-      const popularArticles = popularResponse.ok && popularPayload.status === 'success'
-        ? (popularPayload.data || []).map((article) => mapArticle({
-          ...articleMap.get(String(article.id)),
-          ...article,
-        }))
-        : [];
-
-      if (!isMountedRef.current) return;
-      setNewsList(articles);
-      setPopularList(popularArticles);
-    } catch (error) {
-      if (!isMountedRef.current) return;
-      setErrorText(error.message || 'Không thể kết nối đến máy chủ.');
-    } finally {
-      if (!isMountedRef.current) return;
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    loadNews();
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, [loadNews]);
 
   const categories = useMemo(() => {
     const serverCategories = newsList.map((article) => article.category).filter(Boolean);
@@ -245,7 +230,7 @@ export default function NewsScreen({ navigation }) {
           refreshControl={(
             <RefreshControl
               refreshing={isRefreshing}
-              onRefresh={() => loadNews({ refreshing: true })}
+              onRefresh={() => newsQuery.refetch()}
               colors={[BRAND_RED]}
               tintColor={BRAND_RED}
             />
@@ -301,7 +286,7 @@ export default function NewsScreen({ navigation }) {
             <View style={styles.errorBox}>
               <Ionicons name="alert-circle-outline" size={18} color={BRAND_RED} />
               <Text style={styles.errorText}>{errorText}</Text>
-              <TouchableOpacity onPress={() => loadNews()} activeOpacity={0.75}>
+              <TouchableOpacity onPress={() => newsQuery.refetch()} activeOpacity={0.75}>
                 <Text style={styles.retryText}>THỬ LẠI</Text>
               </TouchableOpacity>
             </View>
