@@ -26,6 +26,11 @@ class Coupon extends Model
         'status'
     ];
 
+    protected $casts = [
+        'expires_at' => 'datetime',
+        'is_used' => 'boolean',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
@@ -34,5 +39,10 @@ class Coupon extends Model
     public function birthdayEmailLog()
     {
         return $this->hasOne(BirthdayEmailLog::class, 'coupon_id');
+    }
+
+    public function savedByUsers()
+    {
+        return $this->hasMany(UserSavedCoupon::class, 'coupon_id');
     }
 }

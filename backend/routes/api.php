@@ -55,6 +55,7 @@ use App\Http\Controllers\Api\client\ClientFavouriteController;
 use App\Http\Controllers\Api\client\ClientProfileController;
 use App\Http\Controllers\Api\client\ChatbotController;
 use App\Http\Controllers\Api\client\ClientNewController;
+use App\Http\Controllers\Api\client\ClientSavedCouponController;
 
 // gửi maill_kh
 use App\Http\Controllers\Api\admin\HolidayEventController;
@@ -155,6 +156,12 @@ Route::prefix('client')->group(function () {
         Route::get('/', [ClientFavouriteController::class, 'index']);
         Route::post('/toggle', [ClientFavouriteController::class, 'toggle']);
         Route::get('/check/{productId}', [ClientFavouriteController::class, 'check']);
+    });
+
+    Route::middleware('auth:sanctum')->prefix('saved-coupons')->group(function () {
+        Route::get('/', [ClientSavedCouponController::class, 'index']);
+        Route::post('/', [ClientSavedCouponController::class, 'store']);
+        Route::delete('/{id}', [ClientSavedCouponController::class, 'destroy']);
     });
 
     // Hồ Sơ Cá Nhân (Profile)

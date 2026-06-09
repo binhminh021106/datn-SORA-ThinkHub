@@ -17,6 +17,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   Linking,
+  Animated,
+  PanResponder,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -25,6 +27,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { API_BASE_URL } from "../config/api";
 import { showCustomAlert } from "../components/CustomAlert";
 import { PRICE_FONT_FAMILY, PRICE_FONT_WEIGHT } from "../styles/typography";
+import { fetchSavedCoupons } from "../services/savedCoupons";
 
 // Mock Alert to use CustomAlert globally in this screen
 const OriginalAlert = Alert;
@@ -34,7 +37,7 @@ const CustomAlertShim = {
   }
 };
 
-const { width } = Dimensions.get("window");
+const { width, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 const fmt = (n) => n.toLocaleString("vi-VN") + "đ";
 const MOMO_MIN_AMOUNT = 10000;
@@ -140,6 +143,7 @@ export default function CheckoutScreen({ route }) {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const savedCouponSheetTranslateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
 
   // Retrieve checkout items passed from Cart, fallback to dummy
   const [checkoutItems, setCheckoutItems] = useState(route?.params?.checkoutItems || []);
@@ -190,6 +194,14 @@ export default function CheckoutScreen({ route }) {
     gcTime: 1000 * 60 * 15,
   });
 
+  const savedCouponsQuery = useQuery({
+    queryKey: ["saved-coupons"],
+    queryFn: fetchSavedCoupons,
+    enabled: !isCheckingAuth,
+    staleTime: 1000 * 60 * 3,
+    gcTime: 1000 * 60 * 15,
+  });
+
   useEffect(() => {
     const json = checkoutInitQuery.data;
     if (!json?.success) return;
@@ -221,6 +233,55 @@ export default function CheckoutScreen({ route }) {
 
   const isLoading = checkoutInitQuery.isLoading && !checkoutInitQuery.data;
   const isRefreshing = checkoutInitQuery.isRefetching && !!checkoutInitQuery.data;
+
+  const openSavedCouponModal = () => {
+    setSelectedSavedCouponCode(appliedCouponSource === "saved" ? appliedCode : "");
+    savedCouponSheetTranslateY.setValue(SCREEN_HEIGHT);
+    setIsSavedCouponModalVisible(true);
+    requestAnimationFrame(() => {
+      Animated.spring(savedCouponSheetTranslateY, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 70,
+        friction: 9,
+      }).start();
+    });
+  };
+
+  const closeSavedCouponModal = () => {
+    Animated.timing(savedCouponSheetTranslateY, {
+      toValue: SCREEN_HEIGHT,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => {
+      setIsSavedCouponModalVisible(false);
+      savedCouponSheetTranslateY.setValue(SCREEN_HEIGHT);
+    });
+  };
+
+  const savedCouponPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dy) > 5,
+      onPanResponderMove: (_, gestureState) => {
+        const clampedY = Math.max(0, gestureState.dy);
+        savedCouponSheetTranslateY.setValue(clampedY);
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > 120 || gestureState.vy > 0.8) {
+          closeSavedCouponModal();
+          return;
+        }
+
+        Animated.spring(savedCouponSheetTranslateY, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 70,
+          friction: 9,
+        }).start();
+      },
+    })
+  ).current;
 
   // Add Address Modal States
   const [isAddAddrVisible, setIsAddAddrVisible] = useState(false);
@@ -274,6 +335,9 @@ export default function CheckoutScreen({ route }) {
   const [affiliateCode, setAffiliateCode] = useState("");
   const [discountAmount, setDiscountAmount] = useState(0);
   const [appliedCode, setAppliedCode] = useState("");
+  const [appliedCouponSource, setAppliedCouponSource] = useState(null);
+  const [isSavedCouponModalVisible, setIsSavedCouponModalVisible] = useState(false);
+  const [selectedSavedCouponCode, setSelectedSavedCouponCode] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cod"); // vnpay, momo, cod, bank
   const [note, setNote] = useState("");
 
@@ -294,45 +358,120 @@ export default function CheckoutScreen({ route }) {
   const tierDiscountAmount = tierDiscountInfo ? subtotal * (tierDiscountInfo.discount_percent / 100) : 0;
   const total = Math.max(0, subtotal + shippingFee - discountAmount - tierDiscountAmount);
 
-  const handleApplyPromo = () => {
-    const code = promoCode.trim().toUpperCase();
+  const savedCoupons = savedCouponsQuery.data || [];
+
+  const getCouponCode = (coupon) => String(coupon?.code || "").trim().toUpperCase();
+  const getCouponType = (coupon) => coupon?.type || coupon?.discount_type;
+  const getCouponValue = (coupon) => Number(coupon?.value ?? coupon?.discount_value ?? 0);
+  const getCouponMinSpend = (coupon) => Number(coupon?.min_spend ?? coupon?.min_order_value ?? 0);
+  const getCouponMaxDiscount = (coupon) => Number(coupon?.max_discount || 0);
+
+  const findCouponByCode = (code) => {
+    const normalizedCode = String(code || "").trim().toUpperCase();
+    return apiCoupons.find((coupon) => getCouponCode(coupon) === normalizedCode)
+      || savedCoupons.find((coupon) => getCouponCode(coupon) === normalizedCode);
+  };
+
+  const applyPromoByCode = (inputCode, options = {}) => {
+    const code = String(inputCode || "").trim().toUpperCase();
     if (!code) return;
 
-    const coupon = apiCoupons.find((c) => c.code.toUpperCase() === code);
+    const coupon = findCouponByCode(code);
     if (!coupon) {
       showCustomAlert("Mã giảm giá", "Mã không tồn tại hoặc đã hết hạn.");
       return;
     }
 
-    if (coupon.min_spend && subtotal < coupon.min_spend) {
-      showCustomAlert("Mã giảm giá", `Đơn hàng chưa đạt giá trị tối thiểu (${fmt(coupon.min_spend)}) để áp dụng mã này.`);
+    if (coupon.is_selectable === false) {
+      showCustomAlert("Mã giảm giá", coupon.disabled_reason || "Mã này hiện không thể sử dụng.");
       return;
     }
 
-    let discount = 0;
-    if (coupon.type === "fixed") {
-      discount = coupon.value;
-    } else {
-      discount = subtotal * (coupon.value / 100);
+    const minSpend = getCouponMinSpend(coupon);
+    if (minSpend && subtotal < minSpend) {
+      showCustomAlert("Mã giảm giá", `Đơn hàng chưa đạt giá trị tối thiểu (${fmt(minSpend)}) để áp dụng mã này.`);
+      return;
     }
 
-    if (coupon.max_discount && discount > coupon.max_discount) {
-      discount = coupon.max_discount;
+    const couponType = getCouponType(coupon);
+    const couponValue = getCouponValue(coupon);
+    let discount = couponType === "fixed"
+      ? couponValue
+      : subtotal * (couponValue / 100);
+
+    const maxDiscount = getCouponMaxDiscount(coupon);
+    if (maxDiscount && discount > maxDiscount) {
+      discount = maxDiscount;
     }
 
     setDiscountAmount(discount);
     setAppliedCode(code);
-    showCustomAlert(
-      "Mã giảm giá",
-      `Áp dụng thành công mã "${code}"!`,
-    );
+    setAppliedCouponSource(options.source || "manual");
+    if (options.source !== "saved") {
+      setPromoCode(code);
+    }
+    if (!options.silent) {
+      showCustomAlert(
+        "Mã giảm giá",
+        `Áp dụng thành công mã "${code}"!`,
+      );
+    }
+  };
+
+  const handleApplyPromo = () => {
+    applyPromoByCode(promoCode, { source: "manual" });
+  };
+
+  const clearAppliedCoupon = ({ clearManualInput = true } = {}) => {
+    setDiscountAmount(0);
+    setAppliedCode("");
+    setAppliedCouponSource(null);
+    if (clearManualInput) {
+      setPromoCode("");
+    }
   };
 
   const handleRemovePromo = () => {
-    setDiscountAmount(0);
-    setAppliedCode("");
-    setPromoCode("");
+    clearAppliedCoupon();
   };
+
+  const handleToggleSavedCoupon = (coupon) => {
+    const code = getCouponCode(coupon);
+    if (!code) return;
+
+    setSelectedSavedCouponCode((currentCode) => {
+      if (currentCode !== code) return code;
+
+      if (appliedCouponSource === "saved" && appliedCode === code) {
+        clearAppliedCoupon({ clearManualInput: false });
+      }
+
+      return "";
+    });
+  };
+
+  const handleUseSelectedSavedCoupon = () => {
+    if (!selectedSavedCouponCode) return;
+
+    if (appliedCouponSource === "saved" && appliedCode === selectedSavedCouponCode) {
+      clearAppliedCoupon({ clearManualInput: false });
+      setSelectedSavedCouponCode("");
+      closeSavedCouponModal();
+      return;
+    }
+
+    applyPromoByCode(selectedSavedCouponCode, { source: "saved", silent: true });
+    closeSavedCouponModal();
+  };
+
+  useEffect(() => {
+    const selectedCouponCode = route?.params?.selectedCouponCode;
+    const normalizedSelectedCouponCode = String(selectedCouponCode || "").trim().toUpperCase();
+    if (!normalizedSelectedCouponCode || appliedCode === normalizedSelectedCouponCode) return;
+    if (apiCoupons.length === 0 && savedCoupons.length === 0) return;
+
+    applyPromoByCode(normalizedSelectedCouponCode, { source: "saved", silent: true });
+  }, [route?.params?.selectedCouponCode, apiCoupons, savedCoupons, appliedCode]);
 
   const handleDeleteAddress = (id) => {
     if (id === "addr_1" || id === "addr_2" || id === "addr_3") {
@@ -692,6 +831,10 @@ export default function CheckoutScreen({ route }) {
         } else if (paymentMethod === "momo") {
           showCustomAlert("Lỗi thanh toán", json.message || "MoMo chưa trả về đường dẫn thanh toán. Vui lòng thử lại.");
         } else {
+          queryClient.invalidateQueries({ queryKey: ["cart"] });
+          queryClient.invalidateQueries({ queryKey: ["checkout", "init"] });
+          queryClient.invalidateQueries({ queryKey: ["orders"] });
+          queryClient.invalidateQueries({ queryKey: ["saved-coupons"] });
           setCreatedOrder(json.data);
           setIsSuccessModalVisible(true);
         }
@@ -748,6 +891,7 @@ export default function CheckoutScreen({ route }) {
         queryClient.invalidateQueries({ queryKey: ["cart"] });
         queryClient.invalidateQueries({ queryKey: ["checkout", "init"] });
         queryClient.invalidateQueries({ queryKey: ["orders"] });
+        queryClient.invalidateQueries({ queryKey: ["saved-coupons"] });
 
         if (latestOrder?.payment_status === "paid") {
           setCreatedOrder(latestOrder);
@@ -1242,9 +1386,9 @@ export default function CheckoutScreen({ route }) {
               value={promoCode}
               onChangeText={setPromoCode}
               autoCapitalize="characters"
-              editable={!appliedCode}
+              editable={appliedCouponSource !== "manual"}
             />
-            {appliedCode ? (
+            {appliedCouponSource === "manual" ? (
               <TouchableOpacity
                 style={s.promoBtnCancel}
                 onPress={handleRemovePromo}
@@ -1260,7 +1404,31 @@ export default function CheckoutScreen({ route }) {
               </TouchableOpacity>
             )}
           </View>
-          {appliedCode ? (
+          <TouchableOpacity
+            style={s.savedCouponPickerButton}
+            onPress={openSavedCouponModal}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="ticket-outline" size={17} color="#9f273b" />
+            <Text style={s.savedCouponPickerText}>Chọn mã đã lưu</Text>
+            {savedCouponsQuery.isFetching ? (
+              <ActivityIndicator size={14} color="#9f273b" />
+            ) : (
+              <View style={s.savedCouponCount}>
+                <Text style={s.savedCouponCountText}>{savedCoupons.length}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          {appliedCouponSource === "saved" && appliedCode ? (
+            <View style={s.savedCouponAppliedBox}>
+              <Ionicons name="checkmark-circle" size={15} color="#16a34a" />
+              <Text style={s.savedCouponAppliedText}>Đã chọn mã đã lưu: {appliedCode}</Text>
+              <TouchableOpacity onPress={handleRemovePromo} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="close-circle" size={18} color="#9f273b" />
+              </TouchableOpacity>
+            </View>
+          ) : null}
+          {appliedCouponSource === "manual" && appliedCode ? (
             <Text style={s.promoSuccessMsg}>
               <Ionicons name="checkmark-circle" size={12} color="green" /> Đã áp
               dụng mã thành công!
@@ -1331,6 +1499,121 @@ export default function CheckoutScreen({ route }) {
           )}
         </TouchableOpacity>
       </ScrollView>
+
+      <Modal
+        visible={isSavedCouponModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={closeSavedCouponModal}
+      >
+        <View style={s.savedCouponModalOverlay}>
+          <Animated.View
+            style={[
+              s.savedCouponModalCard,
+              { transform: [{ translateY: savedCouponSheetTranslateY }] },
+            ]}
+          >
+            <View {...savedCouponPanResponder.panHandlers} style={s.savedCouponDragArea}>
+              <View style={s.savedCouponModalHandle} />
+              <View style={s.savedCouponModalHeader}>
+              <View>
+                <Text style={s.savedCouponModalTitle}>Chọn mã đã lưu</Text>
+                <Text style={s.savedCouponModalSub}>Chạm vào thẻ để chọn hoặc huỷ mã</Text>
+              </View>
+              <TouchableOpacity style={s.savedCouponCloseBtn} onPress={closeSavedCouponModal}>
+                <Ionicons name="close" size={22} color="#333" />
+              </TouchableOpacity>
+              </View>
+            </View>
+
+            {savedCouponsQuery.isLoading ? (
+              <View style={s.savedCouponLoading}>
+                <ActivityIndicator size="large" color="#9f273b" />
+                <Text style={s.savedCouponLoadingText}>Đang tải mã đã lưu...</Text>
+              </View>
+            ) : savedCoupons.length === 0 ? (
+              <View style={s.savedCouponEmpty}>
+                <Ionicons name="ticket-outline" size={42} color="#d7b9bf" />
+                <Text style={s.savedCouponEmptyTitle}>Chưa có mã đã lưu</Text>
+                <Text style={s.savedCouponEmptyText}>Bạn có thể lưu mã từ trang chủ để dùng nhanh tại đây.</Text>
+              </View>
+            ) : (
+              <>
+              <ScrollView style={s.savedCouponList} showsVerticalScrollIndicator={false}>
+                {savedCoupons.map((coupon) => {
+                  const disabled = coupon.is_selectable === false || subtotal < getCouponMinSpend(coupon);
+                  const isSelected = selectedSavedCouponCode === getCouponCode(coupon);
+                  const disabledReason = coupon.is_selectable === false
+                    ? coupon.disabled_reason
+                    : `Đơn hàng chưa đạt ${fmt(getCouponMinSpend(coupon))}`;
+
+                  return (
+                    <TouchableOpacity
+                      key={coupon.id}
+                      style={[
+                        s.savedCouponItem,
+                        isSelected && s.savedCouponItemSelected,
+                        disabled && s.savedCouponItemDisabled,
+                      ]}
+                      onPress={() => disabled ? null : handleToggleSavedCoupon(coupon)}
+                      disabled={disabled}
+                      activeOpacity={0.86}
+                    >
+                      <View style={s.savedCouponItemLeft}>
+                        <Text style={s.savedCouponCode}>{coupon.code}</Text>
+                        <Text style={s.savedCouponCondition}>
+                          Đơn từ {fmt(getCouponMinSpend(coupon))}
+                        </Text>
+                        {disabled ? (
+                          <Text style={s.savedCouponDisabledText}>{disabledReason}</Text>
+                        ) : null}
+                      </View>
+                      <View style={s.savedCouponItemRight}>
+                        <Text style={[s.savedCouponValue, disabled && s.savedCouponValueDisabled]}>
+                          {getCouponType(coupon) === "fixed"
+                            ? fmt(getCouponValue(coupon))
+                            : `${getCouponValue(coupon)}%`}
+                        </Text>
+                        {!disabled && (
+                          <View style={[s.savedCouponSelectMark, isSelected && s.savedCouponSelectMarkActive]}>
+                            <Ionicons
+                              name={isSelected ? "checkmark" : "add"}
+                              size={15}
+                              color={isSelected ? "#fff" : "#9f273b"}
+                            />
+                          </View>
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+              <TouchableOpacity
+                style={[
+                  s.savedCouponUseButton,
+                  appliedCouponSource === "saved" && appliedCode === selectedSavedCouponCode && s.savedCouponRemoveUseButton,
+                  !selectedSavedCouponCode && s.savedCouponUseButtonDisabled,
+                ]}
+                onPress={handleUseSelectedSavedCoupon}
+                disabled={!selectedSavedCouponCode}
+                activeOpacity={0.86}
+              >
+                <Ionicons
+                  name={appliedCouponSource === "saved" && appliedCode === selectedSavedCouponCode ? "close-circle-outline" : "ticket-outline"}
+                  size={18}
+                  color="#fff"
+                />
+                <Text style={s.savedCouponUseButtonText}>
+                  {appliedCouponSource === "saved" && appliedCode === selectedSavedCouponCode
+                    ? "BỎ MÃ ĐANG DÙNG"
+                    : "SỬ DỤNG MÃ"}
+                </Text>
+              </TouchableOpacity>
+              </>
+            )}
+          </Animated.View>
+        </View>
+      </Modal>
 
       {/* MODAL XAC NHAN DAT HANG */}
       <Modal
@@ -1984,6 +2267,61 @@ const s = StyleSheet.create({
     color: "green",
     marginTop: 6,
   },
+  savedCouponPickerButton: {
+    marginTop: 10,
+    height: 42,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ead9dc",
+    backgroundColor: "#fffafa",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  savedCouponPickerText: {
+    flex: 1,
+    fontFamily: "Oswald_500Medium",
+    fontSize: 12,
+    color: "#9f273b",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  savedCouponCount: {
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#9f273b",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 7,
+    overflow: "hidden",
+  },
+  savedCouponCountText: {
+    color: "#fff",
+    fontFamily: "Oswald_600SemiBold",
+    fontSize: 11,
+    lineHeight: 14,
+    textAlign: "center",
+  },
+  savedCouponAppliedBox: {
+    marginTop: 9,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#bbf7d0",
+    backgroundColor: "#f0fdf4",
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  savedCouponAppliedText: {
+    flex: 1,
+    fontFamily: "Oswald_500Medium",
+    fontSize: 12,
+    color: "#166534",
+  },
   affiliateBox: {
     marginTop: 14,
     padding: 12,
@@ -2225,6 +2563,197 @@ const s = StyleSheet.create({
     fontSize: 14,
     color: "#fff",
     letterSpacing: 1.5,
+  },
+
+  // SAVED COUPON MODAL
+  savedCouponModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.38)",
+    justifyContent: "flex-end",
+  },
+  savedCouponModalCard: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: Platform.OS === "ios" ? 30 : 18,
+    height: SCREEN_HEIGHT * 0.85,
+  },
+  savedCouponDragArea: {
+    paddingTop: 4,
+    paddingBottom: 12,
+    width: "100%",
+  },
+  savedCouponModalHandle: {
+    width: 46,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: "#ddd",
+    alignSelf: "center",
+    marginBottom: 12,
+  },
+  savedCouponModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  savedCouponModalTitle: {
+    fontFamily: "PlayfairDisplay_700Bold",
+    fontSize: 20,
+    color: "#1f1a1b",
+  },
+  savedCouponModalSub: {
+    marginTop: 3,
+    fontFamily: "Oswald_400Regular",
+    fontSize: 11,
+    color: "#777",
+  },
+  savedCouponCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#f4f4f4",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  savedCouponLoading: {
+    minHeight: 220,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  savedCouponLoadingText: {
+    marginTop: 10,
+    fontFamily: "Oswald_500Medium",
+    color: "#9f273b",
+  },
+  savedCouponEmpty: {
+    minHeight: 220,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  savedCouponEmptyTitle: {
+    marginTop: 12,
+    fontFamily: "PlayfairDisplay_700Bold",
+    fontSize: 18,
+    color: "#1f1a1b",
+  },
+  savedCouponEmptyText: {
+    marginTop: 6,
+    fontFamily: "Oswald_400Regular",
+    fontSize: 12,
+    color: "#777",
+    textAlign: "center",
+  },
+  savedCouponList: {
+    flex: 1,
+  },
+  savedCouponItem: {
+    borderWidth: 1,
+    borderColor: "#ead9dc",
+    backgroundColor: "#fffafa",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 16,
+    marginBottom: 12,
+    minHeight: 92,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  savedCouponItemSelected: {
+    borderWidth: 2,
+    borderColor: "#9f273b",
+    backgroundColor: "#fff5f6",
+    shadowColor: "#9f273b",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  savedCouponItemDisabled: {
+    opacity: 0.62,
+    backgroundColor: "#f5f5f5",
+  },
+  savedCouponItemLeft: {
+    flex: 1,
+  },
+  savedCouponCode: {
+    fontFamily: "Oswald_600SemiBold",
+    fontSize: 16,
+    color: "#1f1a1b",
+    letterSpacing: 1,
+  },
+  savedCouponCondition: {
+    marginTop: 3,
+    fontFamily: "Oswald_400Regular",
+    fontSize: 11,
+    color: "#666",
+  },
+  savedCouponDisabledText: {
+    marginTop: 5,
+    fontFamily: "Oswald_400Regular",
+    fontSize: 11,
+    color: "#999",
+  },
+  savedCouponItemRight: {
+    alignItems: "flex-end",
+    gap: 4,
+  },
+  savedCouponSelectMark: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: "#9f273b",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
+  savedCouponSelectMarkActive: {
+    backgroundColor: "#9f273b",
+  },
+  savedCouponValue: {
+    fontFamily: PRICE_FONT_FAMILY,
+    fontWeight: PRICE_FONT_WEIGHT,
+    fontSize: 16,
+    color: "#9f273b",
+  },
+  savedCouponValueDisabled: {
+    color: "#999",
+  },
+  savedCouponUseButton: {
+    height: 48,
+    borderRadius: 10,
+    backgroundColor: "#9f273b",
+    marginTop: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    shadowColor: "#9f273b",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  savedCouponUseButtonDisabled: {
+    backgroundColor: "#c9a8ae",
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  savedCouponRemoveUseButton: {
+    backgroundColor: "#6b7280",
+    shadowColor: "#6b7280",
+  },
+  savedCouponUseButtonText: {
+    fontFamily: "Oswald_600SemiBold",
+    fontSize: 13,
+    color: "#fff",
+    letterSpacing: 1,
   },
 
   // MODAL CONFIRM ORDER

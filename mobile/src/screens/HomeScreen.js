@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, FlatList, 
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MOBILE_AUTH_URL, API_BASE_URL } from '../config/api';
 import { showCustomAlert } from '../components/CustomAlert';
 import ProductCard from '../components/ProductCard';
@@ -11,6 +11,7 @@ import HomeSideMenu from '../components/home/HomeSideMenu';
 import GoldPriceModal from '../components/home/GoldPriceModal';
 import { PRICE_FONT_FAMILY, PRICE_FONT_WEIGHT } from '../styles/typography';
 import { prefetchImageUrls } from '../utils/imagePrefetch';
+import { saveCouponToWallet } from '../services/savedCoupons';
 
 const COMBO_CARD_GAP = 14;
 const COMBO_SIDE_SPACER = 24;
@@ -187,6 +188,7 @@ function SoraFallbackImage({ uri, style, resizeMode = 'cover' }) {
 }
 
 export default function HomeScreen({ navigation }) {
+  const queryClient = useQueryClient();
   const { width: viewportWidth } = useWindowDimensions();
   const bannerWidth = Math.min(viewportWidth, 720);
   const bannerHeight = Math.min(bannerWidth * 0.62, 420);
@@ -239,6 +241,7 @@ export default function HomeScreen({ navigation }) {
   const dbCategories = headerData?.categories || [];
   const [wishlistIds, setWishlistIds] = useState([]);
   const [wishlistLoadingIds, setWishlistLoadingIds] = useState([]);
+  const [savingCouponIds, setSavingCouponIds] = useState([]);
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
   const bannerDotAnimations = useRef([]).current;
   const bannerFlatListRef = useRef(null);
@@ -376,6 +379,46 @@ export default function HomeScreen({ navigation }) {
       console.log('Error saving wishlist in HomeScreen:', e);
     } finally {
       setWishlistLoadingIds((prev) => prev.filter((id) => id !== productId));
+    }
+  };
+
+  const handleSaveCoupon = async (coupon) => {
+    const couponId = coupon?.id?.toString();
+    if (!couponId || savingCouponIds.includes(couponId)) return;
+
+    const token = await getAuthToken();
+    if (!token) {
+      showCustomAlert(
+        'SORA JEWELRY',
+        'Bạn cần đăng nhập để lưu mã giảm giá vào ví ưu đãi cá nhân.',
+        [
+          { text: 'Để sau', style: 'cancel' },
+          { text: 'Đăng nhập', onPress: () => navigation.navigate('Login') },
+        ]
+      );
+      return;
+    }
+
+    setSavingCouponIds((prev) => [...prev, couponId]);
+    try {
+      const result = await saveCouponToWallet({ couponId: coupon.id, code: coupon.code });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['saved-coupons'] }),
+        queryClient.invalidateQueries({ queryKey: ['checkout', 'init'] }),
+      ]);
+      showCustomAlert(
+        'Mã giảm giá',
+        result.message || `Đã lưu mã "${coupon.code}" vào ví ưu đãi cá nhân.`,
+        [{ text: 'Đồng ý' }]
+      );
+    } catch (error) {
+      showCustomAlert(
+        'Mã giảm giá',
+        error.message || 'Không thể lưu mã giảm giá lúc này.',
+        [{ text: 'Đồng ý' }]
+      );
+    } finally {
+      setSavingCouponIds((prev) => prev.filter((id) => id !== couponId));
     }
   };
 
@@ -1069,8 +1112,12 @@ export default function HomeScreen({ navigation }) {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.couponsList}
             >
-              {coupons.map((coupon) => (
-                <View key={coupon.id.toString()} style={styles.couponCard}>
+              {coupons.map((coupon) => {
+                const couponKey = coupon.id.toString();
+                const isSavingCoupon = savingCouponIds.includes(couponKey);
+
+                return (
+                <View key={couponKey} style={styles.couponCard}>
                   <View style={styles.couponCardInner}>
                     <View style={styles.couponTop}>
                       <Text style={styles.couponCode}>{coupon.code}</Text>
@@ -1090,20 +1137,22 @@ export default function HomeScreen({ navigation }) {
                         Đơn từ {formatCurrency(coupon.min_order_value)}
                       </Text>
                       <TouchableOpacity
-                        style={styles.couponSaveBtn}
-                        onPress={() => showCustomAlert(
-                          "SORA JEWELRY",
-                          `Chúc mừng! Bạn đã lưu voucher mã "${coupon.code}" thành công vào ví ưu đãi cá nhân.`,
-                          [{ text: "ĐỒNG Ý", style: "default" }]
-                        )}
+                        style={[styles.couponSaveBtn, isSavingCoupon && styles.couponSaveBtnDisabled]}
+                        onPress={() => handleSaveCoupon(coupon)}
+                        disabled={isSavingCoupon}
                         activeOpacity={0.8}
                       >
-                        <Text style={styles.couponSaveBtnTxt}>LƯU MÃ NGAY</Text>
+                        {isSavingCoupon ? (
+                          <ActivityIndicator size={14} color="#fff" />
+                        ) : (
+                          <Text style={styles.couponSaveBtnTxt}>LƯU MÃ NGAY</Text>
+                        )}
                       </TouchableOpacity>
                     </View>
                   </View>
                 </View>
-              ))}
+                );
+              })}
             </ScrollView>
           </View>
         )}
@@ -1643,6 +1692,13 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     paddingHorizontal: 10,
     paddingVertical: 5,
+    minWidth: 82,
+    minHeight: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  couponSaveBtnDisabled: {
+    opacity: 0.75,
   },
   couponSaveBtnTxt: {
     fontFamily: 'Oswald_500Medium',

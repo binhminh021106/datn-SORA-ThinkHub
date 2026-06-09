@@ -533,6 +533,7 @@ export default function ProfileScreen() {
           <MenuItem icon="receipt-outline" label="Lịch sử đơn hàng" onPress={() => navigation.navigate('OrderHistory')} />
           <MenuItem icon="heart-outline" label="Sản phẩm yêu thích" onPress={() => navigation.navigate('Wishlist')} />
           <MenuItem icon="location-outline" label="Sổ địa chỉ" onPress={() => navigation.navigate('AddressBook')} />
+          <MenuItem icon="ticket-outline" label="Mã giảm giá của tôi" onPress={() => navigation.navigate('SavedCoupons')} />
           <MenuItem icon="megaphone-outline" label="Tiếp thị liên kết" onPress={() => navigation.navigate('Affiliate')} />
           <MenuItem icon="gift-outline" label="Ưu đãi & Thành viên" onPress={() => Alert.alert('Thành viên SORA', 'Ưu đãi và thứ hạng của bạn được cập nhật trực quan tại Thẻ thành viên phía trên!')} />
         </View>

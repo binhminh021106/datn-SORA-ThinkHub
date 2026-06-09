@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
+  RefreshControl,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -188,6 +189,7 @@ export default function StaffAttendanceScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
   const [isBooting, setIsBooting] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasScanned, setHasScanned] = useState(false);
   const [lastQrToken, setLastQrToken] = useState('');
@@ -347,6 +349,20 @@ export default function StaffAttendanceScreen({ navigation }) {
     setHasScanned(false);
   }, []);
 
+  const handleRefresh = useCallback(async () => {
+    if (!adminToken) return;
+    setRefreshing(true);
+    resetScanner();
+    try {
+      await Promise.all([
+        adminProfileQuery.refetch(),
+        attendanceStatusQuery.refetch(),
+      ]);
+    } finally {
+      if (isMountedRef.current) setRefreshing(false);
+    }
+  }, [adminProfileQuery, adminToken, attendanceStatusQuery, resetScanner]);
+
   const processAttendance = useCallback(async (rawValue) => {
     const qrToken = parseQrToken(rawValue);
     if (!qrToken || processingRef.current || !adminToken) return;
@@ -387,6 +403,32 @@ export default function StaffAttendanceScreen({ navigation }) {
         fallbackMessage = 'Kết thúc ca thành công.';
       } else {
         throw new Error('Hôm nay bạn đã hoàn thành ca làm việc rồi.');
+      }
+
+      if (endpoint === 'check-out') {
+        const shouldCheckOut = await new Promise((resolve) => {
+          showCustomAlert(
+            'Xác nhận tan ca',
+            'Bạn đã check-in trước đó. Bạn có chắc muốn check-out và kết thúc ca làm bây giờ không?',
+            [
+              {
+                text: 'HUỶ',
+                style: 'cancel',
+                onPress: () => {
+                  resetScanner();
+                  resolve(false);
+                },
+              },
+              {
+                text: 'CHECK-OUT',
+                onPress: () => resolve(true),
+              },
+            ],
+            'log-out-outline',
+          );
+        });
+
+        if (!shouldCheckOut) return;
       }
 
       const attendanceResponse = await fetch(`${API_BASE_URL}/admin/attendances/${endpoint}`, {
@@ -558,6 +600,14 @@ export default function StaffAttendanceScreen({ navigation }) {
             style={styles.scroll}
             contentContainerStyle={[styles.page, { maxWidth: PAGE_MAX_WIDTH, paddingHorizontal: pagePadding }]}
             showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                colors={[BRAND_RED]}
+                tintColor={BRAND_RED}
+              />
+            }
           >
             <View style={styles.staffCard}>
               <View style={styles.staffIcon}>
