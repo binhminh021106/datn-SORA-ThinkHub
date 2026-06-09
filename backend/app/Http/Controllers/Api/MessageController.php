@@ -71,7 +71,7 @@ class MessageController extends Controller
 
         // Phát sóng cho cả 2 bên (Event đã broadcast trên kênh sender + receiver)
         // Không dùng toOthers() vì sẽ bị loại trừ nhầm bên nhận
-        broadcast(new MessageSent($message));
+        broadcast(new MessageSent($message, $isAdmin));
 
         return response()->json(['status' => true, 'data' => $message]);
     }

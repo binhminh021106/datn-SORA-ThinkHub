@@ -19,17 +19,21 @@ window.Pusher = Pusher;
 window.axios = axios;
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api').replace(/\/$/, '');
+const REVERB_HOST = import.meta.env.VITE_REVERB_HOST || '127.0.0.1';
+const REVERB_PORT = Number(import.meta.env.VITE_REVERB_PORT || 8080);
+const REVERB_SCHEME = import.meta.env.VITE_REVERB_SCHEME || 'http';
+const REVERB_FORCE_TLS = REVERB_SCHEME === 'https';
 
 // Cấu hình bắt sóng Real-time
 window.Echo = new Echo({
     broadcaster: 'reverb',
     key: import.meta.env.VITE_REVERB_APP_KEY,
-    wsHost: '127.0.0.1',
-    wsPort: 8080,
-    wssPort: 8080,
-    forceTLS: false,
-    enabledTransports: ['ws', 'wss'],
+    wsHost: REVERB_HOST,
+    wsPort: REVERB_PORT,
+    wssPort: REVERB_PORT,
+    forceTLS: REVERB_FORCE_TLS,
+    enabledTransports: REVERB_FORCE_TLS ? ['wss'] : ['ws'],
     disableStats: true,
     authorizer: (channel, options) => {
         return {
@@ -52,8 +56,14 @@ window.Echo = new Echo({
                         channel_name: channel.name
                     })
                 })
-                .then(response => response.json())
-                .then(data => {
+                .then(async (response) => {
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw { status: response.status, data };
+                    }
+                    return data;
+                })
+                .then((data) => {
                     callback(false, data);
                 })
                 .catch(error => {

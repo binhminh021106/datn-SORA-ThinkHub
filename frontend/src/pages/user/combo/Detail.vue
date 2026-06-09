@@ -1,5 +1,5 @@
 <template>
-  <div class="combo-detail-page bg-light-custom pb-5">
+  <div class="combo-detail-page pb-5">
     
     <div v-if="isLoading" class="container pt-4 pb-5 fade-in">
       <div class="skeleton-box skeleton-text w-25 mb-4 shimmer py-2"></div>
@@ -60,7 +60,7 @@
     </div>
 
     <div v-else class="fade-in">
-      <div class="bg-transparent pt-4 pb-2">
+      <div class="combo-breadcrumb-shell pt-4 pb-2">
         <div class="container">
           <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0 font-oswald text-uppercase tracking-wide small" style="font-size: 0.75rem;">
@@ -73,13 +73,14 @@
       </div>
 
       <div class="container pt-4">
-        <div class="row g-0 g-lg-5 mb-5 pb-5 border-bottom border-light-subtle">
+        <div class="row g-0 g-lg-5 mb-5 pb-5 combo-detail-hero-row">
           
           <div class="col-lg-6 mb-4 mb-lg-0">
             <div class="sticky-top" style="top: 100px; z-index: 1;">
-              <div class="luxury-image-wrapper position-relative overflow-hidden cursor-zoom-in" @click="viewFullImage(getImage(combo.thumbnail_image))">
+              <div class="luxury-image-wrapper position-relative overflow-hidden cursor-zoom-in" style="aspect-ratio: 1 / 1;" @click="viewFullImage(getImage(combo.thumbnail_image))">
+                <div class="image-display-surface"></div>
                 <div class="position-absolute top-0 start-0 z-index-2 mt-4 ms-4">
-                  <div class="luxury-badge bg-sora-primary text-white font-oswald tracking-widest px-3 py-2 text-uppercase shadow-sm">
+                  <div class="luxury-badge luxury-badge-discount font-oswald tracking-widest px-3 py-2 text-uppercase shadow-sm">
                     Giảm {{ combo.discount_type === 'percentage' ? combo.discount_value + '%' : formatCurrency(combo.discount_value) }}
                   </div>
                 </div>
@@ -89,9 +90,9 @@
                     <div class="mt-3 bg-white" style="width: 40px; height: 1px;"></div>
                 </div>
 
-                <img :src="getImage(combo.thumbnail_image)" class="w-100 object-fit-cover img-zoom-hover bg-white" style="height: auto; min-height: 600px; max-height: 80vh;" :class="{'opacity-75 grayscale': timerInfo.isEnded}" @error="handleImageError">
+                <img :src="getImage(combo.thumbnail_image)" class="combo-hero-image img-zoom-hover position-absolute top-0 start-0 w-100 h-100" :class="{'opacity-75 grayscale': timerInfo.isEnded}" @error="handleImageError">
                 
-                <div class="position-absolute bottom-0 end-0 m-4 z-index-2 text-muted small fw-light fst-italic bg-white px-3 py-2 rounded-pill shadow-sm" style="opacity: 0.8; font-size: 0.75rem;">
+                <div class="image-zoom-hint position-absolute bottom-0 end-0 m-4 z-index-2 small fw-light fst-italic px-3 py-2 rounded-pill shadow-sm">
                   <i class="bi bi-arrows-fullscreen me-1"></i> Nhấp để xem chi tiết
                 </div>
               </div>
@@ -99,59 +100,56 @@
           </div>
 
           <div class="col-lg-6">
-            <div class="ps-lg-4 pt-2">
-              <div class="d-flex align-items-center gap-3 mb-3 text-uppercase font-oswald tracking-widest small">
-                <span class="text-gold fw-medium"><i class="bi bi-stars me-1"></i> Bộ Sưu Tập {{ combo.items.length }} Món</span>
-                <span v-if="combo.theme" class="text-muted border-start ps-3 border-secondary-subtle">{{ combo.theme }}</span>
+            <div class="combo-detail-copy ps-lg-4 pt-2">
+              <div class="luxury-meta-line d-flex align-items-center gap-3 mb-3 text-uppercase font-oswald tracking-widest small">
+                <span class="luxury-meta fw-medium"><i class="bi bi-stars me-1"></i> Bộ Sưu Tập {{ combo.items.length }} Món</span>
+                <span v-if="combo.theme" class="theme-pill">{{ combo.theme }}</span>
               </div>
               
-              <h1 class="display-4 fw-bold text-dark mb-4 font-serif" style="line-height: 1.15; letter-spacing: -0.5px;">{{ combo.name }}</h1>
-              <p class="text-muted fs-6 mb-5 lh-lg fw-light" style="font-family: 'Arial', sans-serif;">{{ combo.description }}</p>
+              <h1 class="combo-detail-title display-4 fw-bold mb-4 font-serif">{{ combo.name }}</h1>
+              <p class="combo-detail-desc fs-6 mb-5 lh-lg fw-light">{{ combo.description }}</p>
 
-              <div class="luxury-timer-section mb-5 py-3 border-top border-bottom border-gold-light" v-if="timerInfo.type !== 'forever'">
+              <div class="luxury-timer-section mb-5" v-if="timerInfo.type !== 'forever'">
                   <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
                     <div class="d-flex align-items-center gap-2">
                       <div class="pulsing-dot" :class="timerInfo.type === 'active' ? 'bg-sora-red' : 'bg-warning'" v-if="!timerInfo.isEnded"></div>
-                      <span class="text-muted font-oswald tracking-wide text-uppercase small fw-medium">
+                      <span class="timer-label font-oswald tracking-wide text-uppercase small fw-medium">
                         {{ timerInfo.title }}
                       </span>
                     </div>
                     
-                    <div v-if="!timerInfo.isEnded" class="d-flex gap-2 align-items-baseline font-oswald text-dark fs-4">
-                        <span>{{ timerInfo.d }}</span><span class="fs-6 text-muted mx-1 fw-light">Ngày</span>
-                        <span class="text-gold fw-light mx-1">:</span>
-                        <span>{{ timerInfo.h }}</span><span class="fs-6 text-muted mx-1 fw-light">Giờ</span>
-                        <span class="text-gold fw-light mx-1">:</span>
-                        <span>{{ timerInfo.m }}</span><span class="fs-6 text-muted mx-1 fw-light">Phút</span>
-                        <span class="text-gold fw-light mx-1">:</span>
-                        <span class="text-sora-red">{{ timerInfo.s }}</span><span class="fs-6 text-sora-red mx-1 fw-light">Giây</span>
+                    <div v-if="!timerInfo.isEnded" class="timer-countdown d-flex gap-2 font-oswald">
+                        <span><strong>{{ timerInfo.d }}</strong><small>Ngày</small></span>
+                        <span><strong>{{ timerInfo.h }}</strong><small>Giờ</small></span>
+                        <span><strong>{{ timerInfo.m }}</strong><small>Phút</small></span>
+                        <span><strong>{{ timerInfo.s }}</strong><small>Giây</small></span>
                     </div>
                   </div>
               </div>
 
               <div class="combo-items-editorial mb-5">
-                <h5 class="fw-bold text-dark mb-4 font-serif fs-4 d-flex align-items-center">
+                <h5 class="section-heading fw-bold mb-4 font-serif fs-4 d-flex align-items-center">
                   <i class="bi bi-gem text-gold me-2"></i> Định Hình Phong Cách
                 </h5>
                 
                 <div class="editorial-item mb-4" v-for="(item, index) in combo.items" :key="item.id">
-                  <div class="card border border-light-subtle shadow-sm rounded-0 luxury-product-card overflow-hidden">
-                    <div class="row g-0">
+                  <div class="card luxury-product-card overflow-hidden">
+                    <div class="d-flex flex-column">
                       
-                      <div class="col-md-4 col-lg-4 col-xl-3 bg-light border-end border-light-subtle p-3 d-flex flex-column align-items-center justify-content-center position-relative">
-                         <div class="position-absolute top-0 start-0 m-2 z-index-2">
-                             <span class="badge bg-dark text-gold font-oswald px-2 py-1 shadow-sm">Món {{ index + 1 }}</span>
+                      <div class="editorial-image-cell position-relative w-100">
+                         <div class="position-absolute top-0 start-0 m-3 z-index-2">
+                             <span class="item-index-badge font-oswald px-3 py-1 shadow-sm">Món {{ index + 1 }}</span>
                          </div>
-                         <div class="position-relative w-100 ratio ratio-1x1 cursor-zoom-in mt-3" @click="viewFullImage(getDisplayImage(item))">
-                            <img :src="getDisplayImage(item)" class="object-fit-contain mix-blend-multiply transition-all img-zoom-hover drop-shadow" @error="handleImageError">
+                         <div class="editorial-image-frame position-relative w-100 cursor-zoom-in" style="height: 320px;" @click="viewFullImage(getDisplayImage(item))">
+                            <img :src="getDisplayImage(item)" class="w-100 h-100 object-fit-cover transition-all img-zoom-hover" @error="handleImageError">
                          </div>
                       </div>
 
-                      <div class="col-md-8 col-lg-8 col-xl-9 p-4 d-flex flex-column">
+                      <div class="p-4 d-flex flex-column bg-white">
                          <div class="d-flex justify-content-between align-items-start mb-3 gap-2 flex-wrap flex-xl-nowrap">
                              <div>
-                                <small class="text-uppercase font-oswald tracking-widest text-gold fw-bold" style="font-size: 0.7rem;">{{ item.product?.category?.name || 'Trang Sức Cao Cấp' }}</small>
-                                <h5 class="fw-bold text-dark font-serif mt-1 mb-0 fs-5 lh-base">{{ item.product?.name }}</h5>
+                                <small class="item-category text-uppercase font-oswald tracking-widest fw-bold">{{ item.product?.category?.name || 'Trang Sức Cao Cấp' }}</small>
+                                <h5 class="item-title fw-bold font-serif mt-1 mb-0 fs-5 lh-base">{{ item.product?.name }}</h5>
                              </div>
                              <div class="text-xl-end">
                                 <template v-if="!item.product_variant_id">
@@ -165,7 +163,7 @@
                          </div>
 
                          <div class="flex-grow-1 border-top border-light-subtle pt-3 mt-1">
-                             <div v-if="item.product_variant_id" class="bg-light p-3 border rounded small">
+                             <div v-if="item.product_variant_id" class="fixed-config-box p-3 small">
                                  <p class="text-muted font-oswald tracking-wide text-uppercase mb-2" style="font-size: 0.75rem;"><i class="bi bi-pin-angle-fill text-sora-primary me-1"></i>Phiên bản cấu hình sẵn</p>
                                  <div class="d-flex flex-wrap gap-2">
                                     <span v-if="item.variant?.formatted_attributes" class="fw-bold text-dark">
@@ -191,7 +189,6 @@
                                                    }"
                                                    :title="!isOptionAvailable(item, attrName, val) ? 'Tạm hết hàng' : ''"
                                                    @click.prevent="isOptionAvailable(item, attrName, val) ? toggleSelection(item.id, attrName, val) : null">
-                                              <!-- Đã thêm :disabled -->
                                               <input type="radio" class="d-none" :name="`attr_${item.id}_${attrName}`" :checked="userSelections[item.id][attrName] === val" :disabled="!isOptionAvailable(item, attrName, val)">
                                               <div class="chip-inner px-3 py-1 d-flex flex-column align-items-center justify-content-center text-center shadow-sm" style="min-width: 45px;">
                                                 <span class="fw-bold font-oswald tracking-wide" style="font-size: 0.85rem;">{{ val }}</span>
@@ -209,7 +206,7 @@
 
                          <div class="d-flex align-items-center gap-2 mt-4 pt-3 border-top border-light-subtle">
                              <span class="text-muted small text-uppercase font-oswald tracking-widest">Số lượng áp dụng:</span>
-                             <span class="badge bg-sora-primary text-white font-oswald px-3 py-1 fs-6 shadow-sm">x{{ item.quantity }}</span>
+                             <span class="quantity-badge font-oswald px-3 py-1 fs-6 shadow-sm">x{{ item.quantity }}</span>
                          </div>
                       </div>
                     </div>
@@ -219,7 +216,7 @@
 
             </div>
 
-            <div class="luxury-price-summary mb-5 p-4 bg-white border border-gold-light" style="border-radius: 2px;">
+            <div class="luxury-price-summary mb-5 p-4">
                 <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom border-light-subtle">
                   <span class="text-muted font-oswald text-uppercase tracking-wide">Giá Trị Gốc</span>
                   <span class="text-muted text-decoration-line-through fs-5 font-oswald">{{ formatCurrency(originalTotal) }}</span>
@@ -235,7 +232,7 @@
                 </div>
             </div>
 
-            <div v-if="!canBuyCombo" class="text-center py-4 bg-light border">
+            <div v-if="!canBuyCombo" class="combo-unavailable text-center py-4">
               <span class="font-oswald tracking-widest text-uppercase text-muted fs-5">
                 <template v-if="timerInfo.type === 'upcoming'">Gói ưu đãi chưa mở bán</template>
                 <template v-else-if="timerInfo.type === 'soldout'">Đã bán hết số lượng</template>
@@ -257,8 +254,8 @@
               </div>
             </div>
 
-            <div class="d-flex justify-content-between mt-5 pt-4 border-top border-light-subtle opacity-75">
-              <div v-for="(feat, index) in shopFeatures" :key="index" class="text-center">
+            <div class="shop-feature-row d-flex justify-content-between mt-5 pt-4">
+              <div v-for="(feat, index) in shopFeatures" :key="index" class="feature-pill text-center">
                 <i :class="['bi', feat.icon, 'fs-4 text-dark mb-1 d-block']"></i>
                 <span class="font-oswald text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;" v-html="feat.text"></span>
               </div>
@@ -268,7 +265,7 @@
         </div>
       </div>
       
-      <div class="related-products-section py-5 bg-white border-top border-light-subtle" v-if="relatedProducts.length > 0">
+      <div class="related-products-section py-5" v-if="relatedProducts.length > 0">
         <div class="container">
           <div class="text-center mb-5">
             <h3 class="font-serif fw-bold text-dark display-6 mb-3">Có Thể Bạn Sẽ Thích</h3>
@@ -350,7 +347,6 @@
                           }"
                           :title="!isQuickAddOptionAvailable(attrName, val) ? 'Tạm hết hàng' : ''"
                           @click.prevent="isQuickAddOptionAvailable(attrName, val) ? toggleQuickAddSelection(attrName, val) : null">
-                     <!-- Đã thêm :disabled -->
                      <input type="radio" class="d-none" :checked="String(quickAddSelections[attrName]) === String(val)" :disabled="!isQuickAddOptionAvailable(attrName, val)">
                      <div class="chip-inner px-3 py-2 d-flex flex-column align-items-center justify-content-center text-center shadow-sm">
                        <span class="fw-bold font-oswald tracking-wide small">{{ val }}</span>
@@ -1000,6 +996,14 @@ onUnmounted(() => {
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap');
 
+.combo-detail-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 12% 12%, rgba(231, 206, 125, 0.15), transparent 28%),
+    linear-gradient(180deg, #fffaf1 0%, #fbf7ee 45%, #f7efe3 100%);
+  color: #2d2020;
+}
+
 .bg-light-custom { background-color: #faf9f6; min-height: 100vh; }
 .font-serif { font-family: 'Playfair Display', serif; }
 .font-oswald { font-family: 'Oswald', sans-serif; }
@@ -1011,53 +1015,364 @@ onUnmounted(() => {
 .cursor-pointer { cursor: pointer; }
 .cursor-zoom-in { cursor: zoom-in; }
 
-.text-sora-primary { color: #9f273b !important; }
-.text-sora-red { color: #cc1e2e !important; }
-.text-gold { color: #e7ce7d !important; }
-.bg-sora-primary { background-color: #9f273b !important; }
-.border-gold-light { border-color: rgba(231, 206, 125, 0.4) !important; }
-.divider-gold { width: 50px; height: 2px; background-color: #e7ce7d; }
+.text-sora-primary { color: #8f2034 !important; }
+.text-sora-red { color: #a9283f !important; }
+.text-gold { color: #c9a44e !important; }
+.bg-sora-primary { background-color: #8f2034 !important; }
+.border-gold-light { border-color: rgba(197, 158, 74, 0.42) !important; }
+.divider-gold { width: 54px; height: 2px; background: linear-gradient(90deg, transparent, #c9a44e, transparent); }
 
-.hover-primary:hover { color: #9f273b !important; }
+.hover-primary:hover { color: #8f2034 !important; }
 
-.luxury-image-wrapper { border-radius: 4px; box-shadow: 0 10px 40px rgba(0,0,0,0.05); background: #fff; }
+.combo-breadcrumb-shell {
+  background: linear-gradient(180deg, rgba(255, 252, 246, 0.7), transparent);
+}
+
+.combo-detail-hero-row {
+  border-bottom: 1px solid rgba(197, 158, 74, 0.32) !important;
+}
+
+.combo-detail-copy {
+  color: #2f2020;
+}
+
+.luxury-meta {
+  color: #c9a44e;
+}
+
+.theme-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  color: #6b5451;
+  border: 1px solid rgba(197, 158, 74, 0.42);
+  background: rgba(255, 252, 246, 0.82);
+}
+
+.combo-detail-title {
+  color: #2f2020;
+  line-height: 1.08;
+  letter-spacing: 0;
+}
+
+.combo-detail-desc {
+  color: #776360;
+  font-family: Arial, sans-serif;
+}
+
+.luxury-image-wrapper {
+  border-radius: 24px;
+  border: 1px solid rgba(197, 158, 74, 0.38);
+  background:
+    radial-gradient(circle at 50% 78%, rgba(130, 39, 53, 0.12), transparent 36%),
+    linear-gradient(145deg, #fffaf1, #efe1cf);
+  box-shadow: 0 28px 70px rgba(65, 35, 24, 0.13);
+}
+
+.luxury-image-wrapper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.8), transparent 28%),
+    linear-gradient(115deg, transparent 24%, rgba(255, 255, 255, 0.22) 46%, transparent 66%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.image-display-surface {
+  position: absolute;
+  left: 16%;
+  right: 16%;
+  bottom: 42px;
+  height: 54px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(122, 87, 74, 0.25), rgba(122, 87, 74, 0));
+  filter: blur(3px);
+  z-index: 0;
+}
+
+.combo-hero-image {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .img-zoom-hover { transition: transform 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
 .luxury-image-wrapper:hover .img-zoom-hover { transform: scale(1.05); }
 .grayscale { filter: grayscale(100%); }
-.ended-overlay { position: absolute; inset: 0; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(2px); z-index: 10; }
-.luxury-badge { letter-spacing: 2px; font-size: 0.85rem; }
+.ended-overlay { position: absolute; inset: 0; background-color: rgba(45, 19, 24, 0.78); backdrop-filter: blur(4px); z-index: 10; }
+.luxury-badge { letter-spacing: 2px; font-size: 0.8rem; border-radius: 999px; }
+.luxury-badge-discount {
+  color: #fff7df;
+  background: linear-gradient(135deg, #761527, #a8273e);
+  border: 1px solid rgba(231, 206, 125, 0.72);
+}
+
+.image-zoom-hint {
+  color: #6b5451;
+  background: rgba(255, 252, 246, 0.86);
+  border: 1px solid rgba(197, 158, 74, 0.36);
+  opacity: 0.92;
+  font-size: 0.75rem;
+}
+
+.luxury-timer-section {
+  padding: 16px;
+  border: 1px solid rgba(197, 158, 74, 0.38);
+  border-radius: 18px;
+  background: rgba(255, 252, 246, 0.72);
+  box-shadow: 0 14px 34px rgba(65, 35, 24, 0.07);
+}
+
+.timer-label {
+  color: #6b5451;
+}
+
+.timer-countdown span {
+  min-width: 58px;
+  height: 58px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  border: 1px solid rgba(197, 158, 74, 0.44);
+  background: linear-gradient(180deg, #fffdf8, #f8eddd);
+  box-shadow: 0 10px 24px rgba(72, 42, 28, 0.08);
+}
+
+.timer-countdown strong {
+  color: #8f2034;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.timer-countdown small {
+  margin-top: 4px;
+  color: #8b7771;
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+}
+
+.section-heading {
+  color: #2f2020;
+}
+
+.luxury-product-card {
+  border: 1px solid rgba(197, 158, 74, 0.34);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fffdf8, #fbf3e8);
+  box-shadow: 0 18px 42px rgba(65, 35, 24, 0.08);
+  transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
+}
+
+.luxury-product-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(197, 158, 74, 0.62);
+  box-shadow: 0 24px 50px rgba(65, 35, 24, 0.13);
+}
+
+.editorial-image-cell {
+  border-bottom: 1px solid rgba(197, 158, 74, 0.28);
+  background:
+    radial-gradient(circle at 50% 78%, rgba(130, 39, 53, 0.1), transparent 36%),
+    linear-gradient(145deg, #fffaf1, #efe1cf);
+}
+
+.editorial-image-frame img {
+  position: relative;
+  z-index: 1;
+  padding: 0;
+}
+
+.editorial-image-frame::after {
+  display: none;
+}
+
+.item-index-badge,
+.quantity-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  color: #fff7df;
+  background: #2d2020;
+  border: 1px solid rgba(231, 206, 125, 0.78);
+}
+
+.item-category {
+  color: #c9a44e;
+  font-size: 0.7rem;
+}
+
+.item-title {
+  color: #2f2020;
+}
+
+.fixed-config-box {
+  border: 1px solid rgba(197, 158, 74, 0.32);
+  border-radius: 14px;
+  background: rgba(255, 252, 246, 0.72);
+}
 
 .pulsing-dot { width: 8px; height: 8px; border-radius: 50%; animation: pulse 1.5s infinite; }
 @keyframes pulse { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(204, 30, 46, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(204, 30, 46, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(204, 30, 46, 0); } }
 
-.attr-chip { border-radius: 4px; overflow: hidden; min-width: 55px; }
+.attr-chip { border-radius: 999px; overflow: hidden; min-width: 55px; }
 .attr-chip:not(.disabled) { cursor: pointer; }
 .attr-chip.disabled { opacity: 0.6; cursor: not-allowed; }
 .attr-chip.disabled .chip-inner { background-color: #f8f9fa; border-color: #e9ecef; color: #adb5bd; box-shadow: none !important; }
 .attr-chip.disabled:hover .chip-inner { border-color: #e9ecef; color: #adb5bd; }
-.attr-chip .chip-inner { border: 1px solid #dee2e6; background-color: #fff; color: #555; border-radius: 4px; transition: all 0.3s ease-in-out; padding: 6px 12px; }
-.attr-chip:hover:not(.disabled) .chip-inner { border-color: #e7ce7d; color: #9f273b; }
-.attr-chip.selected:not(.disabled) .chip-inner { background-color: #9f273b; border-color: #9f273b; color: #fff !important; box-shadow: 0 4px 10px rgba(159, 39, 59, 0.25); }
+.attr-chip .chip-inner {
+  border: 1px solid rgba(197, 158, 74, 0.38);
+  background: rgba(255, 252, 246, 0.88);
+  color: #6b5451;
+  border-radius: 999px;
+  transition: all 0.3s ease-in-out;
+  padding: 6px 12px;
+}
+.attr-chip:hover:not(.disabled) .chip-inner { border-color: #c9a44e; color: #8f2034; }
+.attr-chip.selected:not(.disabled) .chip-inner { background-color: #8f2034; border-color: #c9a44e; color: #fff !important; box-shadow: 0 8px 18px rgba(159, 39, 59, 0.22); }
 .attr-chip.selected:not(.disabled) .chip-inner span { color: #fff !important; }
 .attr-chip.error .chip-inner { border-color: #dc3545; color: #dc3545; background-color: rgba(220, 53, 69, 0.05); animation: shake 0.4s; }
 
 @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 50% { transform: translateX(4px); } 75% { transform: translateX(-4px); } }
 
-.luxury-btn-solid { background-color: #9f273b; color: white; border: 1px solid #9f273b; transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }
-.luxury-btn-solid:hover { background-color: #7a1c2d; border-color: #7a1c2d; color: white; box-shadow: 0 8px 20px rgba(159,39,59,0.3); transform: translateY(-2px); }
-.luxury-btn-outline { border: 1px solid #9f273b; color: #9f273b; background: transparent; transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); }
-.luxury-btn-outline:hover { background: #9f273b; color: white; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(159,39,59,0.2); }
+.luxury-price-summary {
+  border: 1px solid rgba(197, 158, 74, 0.42);
+  border-radius: 20px;
+  background: rgba(255, 252, 246, 0.88);
+  box-shadow: 0 18px 44px rgba(65, 35, 24, 0.08);
+}
 
-.related-prev:hover, .related-next:hover { background-color: #9f273b !important; color: white !important; border-color: #9f273b !important; }
+.combo-unavailable {
+  border: 1px solid rgba(197, 158, 74, 0.35);
+  border-radius: 18px;
+  background: rgba(255, 252, 246, 0.82);
+}
+
+.luxury-btn-solid,
+.luxury-btn-outline {
+  border-radius: 999px;
+  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.luxury-btn-solid {
+  background: linear-gradient(135deg, #761527, #9f273b);
+  color: #fff5dc;
+  border: 1px solid rgba(231, 206, 125, 0.72);
+  box-shadow: 0 14px 26px rgba(126, 23, 43, 0.22);
+}
+.luxury-btn-solid:hover { color: #fffdf4; box-shadow: 0 18px 34px rgba(126,23,43,0.3); transform: translateY(-2px); }
+.luxury-btn-outline { border: 1px solid rgba(197, 158, 74, 0.62); color: #7e172b; background: rgba(255, 252, 246, 0.9); }
+.luxury-btn-outline:hover { background: #7e172b; color: #fff7df; border-color: rgba(231, 206, 125, 0.78); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(159,39,59,0.2); }
+
+.shop-feature-row {
+  gap: 10px;
+  border-top-color: rgba(197, 158, 74, 0.28) !important;
+}
+
+.feature-pill {
+  flex: 1;
+  padding: 12px 8px;
+  border-radius: 16px;
+  border: 1px solid rgba(197, 158, 74, 0.24);
+  background: rgba(255, 252, 246, 0.54);
+}
+
+.related-products-section {
+  background:
+    linear-gradient(180deg, rgba(255, 252, 246, 0.92), #fffaf1);
+  border-top: 1px solid rgba(197, 158, 74, 0.28);
+}
+
+.related-prev:hover, .related-next:hover { background-color: #8f2034 !important; color: white !important; border-color: #8f2034 !important; }
 
 .fade-in { animation: fadeIn 0.4s ease-in; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-.shimmer { background: #f6f7f8; background-image: linear-gradient(to right, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%); background-repeat: no-repeat; background-size: 800px 100%; animation: placeholderShimmer 1.5s linear infinite forwards; }
+.shimmer { background: #f6f0e7; background-image: linear-gradient(to right, #f6f0e7 0%, #ede2d3 20%, #f6f0e7 40%, #f6f0e7 100%); background-repeat: no-repeat; background-size: 800px 100%; animation: placeholderShimmer 1.5s linear infinite forwards; }
 @keyframes placeholderShimmer { 0% { background-position: -468px 0; } 100% { background-position: 468px 0; } }
 
-.skeleton-box { background-color: #eee; border-radius: 4px; }
+.skeleton-box { background-color: #efe5d8; border-radius: 8px; }
 .skeleton-text { height: 14px; border-radius: 4px; }
 .skeleton-title { height: 24px; border-radius: 4px; }
 .skeleton-card { pointer-events: none; }
+
+@media (max-width: 991.98px) {
+  .luxury-image-wrapper {
+    min-height: auto;
+  }
+
+  .combo-hero-image {
+    height: 520px;
+  }
+
+  .combo-detail-title {
+    font-size: 2.6rem;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .combo-detail-title {
+    font-size: 2.2rem;
+  }
+
+  .combo-hero-image {
+    height: 390px;
+    padding: 24px;
+  }
+
+  .luxury-image-wrapper {
+    border-radius: 20px;
+  }
+
+  .luxury-meta-line {
+    align-items: flex-start !important;
+    flex-direction: column;
+    gap: 8px !important;
+  }
+
+  .theme-pill {
+    border-left: 0 !important;
+  }
+
+  .timer-countdown {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .timer-countdown span {
+    flex: 1 1 calc(50% - 8px);
+  }
+
+  .editorial-image-cell {
+    min-height: 220px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(197, 158, 74, 0.28);
+  }
+
+  .shop-feature-row {
+    flex-wrap: wrap;
+  }
+
+  .feature-pill {
+    flex: 1 1 calc(50% - 10px);
+  }
+}
+
+@media (max-width: 420px) {
+  .combo-hero-image {
+    height: 330px;
+  }
+
+  .feature-pill {
+    flex-basis: 100%;
+  }
+}
 </style>
