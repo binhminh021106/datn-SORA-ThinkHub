@@ -16,6 +16,12 @@ class HolidayEvent extends Model
         'email_subject',
         'email_content',
         'voucher_code',
+        'discount',     // BỔ SUNG DÒNG NÀY ĐỂ LARAVEL CHO PHÉP LƯU
+        'expires_at',
         'status'
+    ];
+
+    protected $casts = [
+        'target_audience' => 'array',
     ];
 }

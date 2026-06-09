@@ -76,6 +76,7 @@ const quickAddSelections = ref({});
 const quickAddError = ref(false);
 const isAdding = ref(false);
 let quickAddModalInstance = null;
+let pendingSuccessToast = false;
 
 const soraAlert = Swal.mixin({
   buttonsStyling: true,
@@ -90,7 +91,20 @@ watch(() => globalModalState.quickAddTrigger, () => {
 });
 
 onMounted(() => {
-    quickAddModalInstance = new window.bootstrap.Modal(document.getElementById('soraGlobalQuickAddModal'));
+    const modalElement = document.getElementById('soraGlobalQuickAddModal');
+    quickAddModalInstance = new window.bootstrap.Modal(modalElement);
+
+    modalElement.addEventListener('hidden.bs.modal', () => {
+        document.querySelectorAll('.modal-backdrop').forEach((backdrop) => backdrop.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+
+        if (pendingSuccessToast) {
+            pendingSuccessToast = false;
+            Toast.fire({ icon: 'success', title: 'Đã thêm sản phẩm vào giỏ' });
+        }
+    });
 });
 
 const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
@@ -296,8 +310,8 @@ const confirmQuickAdd = async () => {
         
         window.dispatchEvent(new CustomEvent('update-cart-count'));
         
+        pendingSuccessToast = true;
         quickAddModalInstance.hide();
-        Toast.fire({ icon: 'success', title: 'Đã thêm sản phẩm vào giỏ' });
     } catch (error) {
         const msg = error.response?.data?.message || 'Không thể thêm vào giỏ hàng!';
         soraAlert.fire({icon: 'error', title: 'Lỗi', text: msg});
