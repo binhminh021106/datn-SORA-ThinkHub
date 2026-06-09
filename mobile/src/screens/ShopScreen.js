@@ -15,114 +15,14 @@ import {
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { API_BASE_URL } from '../config/api';
 import SmartImage from '../components/SmartImage';
 import ProductCard from '../components/ProductCard';
 import { showCustomAlert } from '../components/CustomAlert';
+import { prefetchImageUrls } from '../utils/imagePrefetch';
 
 const CARD_GAP = 12;
-
-const CATEGORIES = [
-  {
-    id: 'rings',
-    name: 'Nhan',
-    label: 'Nhẫn',
-    image: 'https://images.unsplash.com/photo-1605100804763-247f67b854d4?q=80&w=500&auto=format&fit=crop',
-  },
-  {
-    id: 'necklaces',
-    name: 'Day chuyen',
-    label: 'Dây chuyền',
-    image: 'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?q=80&w=500&auto=format&fit=crop',
-  },
-  {
-    id: 'earrings',
-    name: 'Bong tai',
-    label: 'Bông tai',
-    image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?q=80&w=500&auto=format&fit=crop',
-  },
-  {
-    id: 'bracelets',
-    name: 'Lac tay',
-    label: 'Lắc tay',
-    image: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=500&auto=format&fit=crop',
-  },
-  {
-    id: 'sets',
-    name: 'Bo suu tap',
-    label: 'Bộ sưu tập',
-    image: 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?q=80&w=500&auto=format&fit=crop',
-  },
-  {
-    id: 'brooches',
-    name: 'Ghim cai',
-    label: 'Ghim cài',
-    image: 'https://images.unsplash.com/photo-1573408301185-9519df1f2c1f?q=80&w=500&auto=format&fit=crop',
-  },
-];
-
-const PRODUCTS = [
-  {
-    id: 'p1',
-    name: 'Nhẫn Kim Cương Eternal Trắng 18K',
-    category: 'Nhẫn cao cấp',
-    price: '25.000.000đ',
-    oldPrice: '30.500.000đ',
-    discount: '-18%',
-    rating: 5,
-    image: 'https://images.unsplash.com/photo-1605100804763-247f67b854d4?q=80&w=700&auto=format&fit=crop',
-  },
-  {
-    id: 'p2',
-    name: 'Dây Chuyền Ngọc Trai Biển Nam',
-    category: 'Dây chuyền',
-    price: '12.500.000đ',
-    oldPrice: null,
-    discount: null,
-    rating: 5,
-    image: 'https://images.unsplash.com/photo-1599643477877-530eb83abc8e?q=80&w=700&auto=format&fit=crop',
-  },
-  {
-    id: 'p3',
-    name: 'Bông Tai Sapphire Xanh Hoàng Gia',
-    category: 'Bông tai',
-    price: '18.200.000đ',
-    oldPrice: '22.000.000đ',
-    discount: '-20%',
-    rating: 5,
-    image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?q=80&w=700&auto=format&fit=crop',
-  },
-  {
-    id: 'p4',
-    name: 'Lắc Tay Vàng Hồng Charm Hoa',
-    category: 'Lắc tay',
-    price: '9.800.000đ',
-    oldPrice: null,
-    discount: null,
-    rating: 4,
-    image: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=700&auto=format&fit=crop',
-  },
-  {
-    id: 'p5',
-    name: 'Vòng Cổ Diamond Halo Limited',
-    category: 'Vòng cổ',
-    price: '42.000.000đ',
-    oldPrice: '48.000.000đ',
-    discount: '-13%',
-    rating: 5,
-    image: 'https://images.unsplash.com/photo-1602173574767-37ac01994b2a?q=80&w=700&auto=format&fit=crop',
-  },
-  {
-    id: 'p6',
-    name: 'Ghim Cài Ruby SORA Signature',
-    category: 'Ghim cài',
-    price: '15.600.000đ',
-    oldPrice: null,
-    discount: null,
-    rating: 4,
-    image: 'https://images.unsplash.com/photo-1573408301185-9519df1f2c1f?q=80&w=700&auto=format&fit=crop',
-  },
-];
 
 const FILTERS = ['Tất cả', 'Mới nhất', 'Đang giảm', 'Kim cương', 'Vàng 18K'];
 const COLOR_FILTERS = [
@@ -134,6 +34,12 @@ const COLOR_FILTERS = [
 ];
 const MATERIAL_FILTERS = ['Kim cương', 'Vàng 18K', 'Ngọc trai', 'Sapphire', 'Ruby'];
 const PRICE_FILTERS = ['Dưới 10 triệu', '10 - 20 triệu', '20 - 40 triệu', 'Trên 40 triệu'];
+const PRICE_FILTER_RANGES = {
+  'Dưới 10 triệu': { max: 10000000 },
+  '10 - 20 triệu': { min: 10000000, max: 20000000 },
+  '20 - 40 triệu': { min: 20000000, max: 40000000 },
+  'Trên 40 triệu': { min: 40000000 },
+};
 
 const DIMENSION_FILTERS = ['1', '2'];
 const SIZE_FILTERS = ['14 – 2', '16 cm', '18 cm', '45 cm', '50 cm', '8 – 14', 'Ni 10', 'Ni 12', 'Ni 14'];
@@ -184,28 +90,161 @@ const saveLocalWishlist = async (items) => {
   await AsyncStorage.setItem('sora_wishlist_items', JSON.stringify(items));
 };
 
+const fetchShopCategories = async () => {
+  const response = await fetch(`${API_BASE_URL}/shop/sora/categories`, {
+    headers: { Accept: 'application/json' },
+  });
+  const result = await response.json();
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || 'Không thể tải danh mục cửa hàng.');
+  }
+  const categories = result.data || [];
+  prefetchImageUrls(categories.map((category) => (
+    category.thumbnail ? getStorageUrl(category.thumbnail) : category.image
+  )));
+  return categories;
+};
+
+const fetchShopProducts = async ({
+  page,
+  activeCategory,
+  activeFilter,
+  searchKeyword,
+  selectedColors,
+  selectedMaterials,
+  selectedDimensions,
+  selectedSizes,
+  selectedPrice,
+}) => {
+  const params = new URLSearchParams({
+    page: page.toString(),
+    per_page: '6',
+  });
+
+  if (activeCategory) {
+    params.set('categories', activeCategory);
+  }
+
+  if (searchKeyword) {
+    params.set('keyword', searchKeyword);
+  }
+
+  if (activeFilter === 'Mới nhất') {
+    params.set('sort', 'new');
+  } else {
+    params.set('sort', 'recommended');
+  }
+
+  if (selectedColors.length > 0) {
+    params.set('color', selectedColors.join(','));
+  }
+
+  if (selectedMaterials.length > 0) {
+    params.set('attribute_values', selectedMaterials.join(','));
+  }
+
+  if (selectedDimensions.length > 0) {
+    params.set('dimension', selectedDimensions.join(','));
+  }
+
+  if (selectedSizes.length > 0) {
+    params.set('size', selectedSizes.join(','));
+  }
+
+  const priceRange = selectedPrice ? PRICE_FILTER_RANGES[selectedPrice] : null;
+  if (priceRange?.min !== undefined) {
+    params.set('min_price', String(priceRange.min));
+  }
+  if (priceRange?.max !== undefined) {
+    params.set('max_price', String(priceRange.max));
+  }
+
+  const response = await fetch(`${API_BASE_URL}/shop/sora/products?${params.toString()}`, {
+    headers: { Accept: 'application/json' },
+  });
+  const result = await response.json();
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || 'Không thể tải sản phẩm cửa hàng.');
+  }
+
+  const products = result.data?.data || [];
+  prefetchImageUrls(products.map((product) => (
+    product.thumbnail_image ? getStorageUrl(product.thumbnail_image) : product.image
+  )));
+
+  return {
+    products,
+    pagination: {
+      current_page: result.data?.current_page || 1,
+      last_page: result.data?.last_page || 1,
+      total: result.data?.total || 0,
+    },
+  };
+};
+
 export default function ShopScreen({ navigation, route }) {
   const { width: viewportWidth } = useWindowDimensions();
   const productGridWidth = Math.min(viewportWidth, 720);
   const productCardWidth = (productGridWidth - 36 - CARD_GAP) / 2;
-  const [categories, setCategories] = useState(CATEGORIES);
-  const [products, setProducts] = useState(PRODUCTS);
   const [activeCategory, setActiveCategory] = useState('');
+  const [searchKeyword, setSearchKeyword] = useState('');
   const [activeFilter, setActiveFilter] = useState('Tất cả');
+  const [currentPage, setCurrentPage] = useState(1);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedColors, setSelectedColors] = useState([]);
   const [selectedMaterials, setSelectedMaterials] = useState([]);
   const [selectedDimensions, setSelectedDimensions] = useState([]);
   const [selectedSizes, setSelectedSizes] = useState([]);
   const [selectedPrice, setSelectedPrice] = useState(null);
-  const [pagination, setPagination] = useState({ current_page: 1, last_page: 1, total: PRODUCTS.length });
-  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
-  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [wishlistIds, setWishlistIds] = useState([]);
   const [wishlistLoadingIds, setWishlistLoadingIds] = useState([]);
 
-  const displayCategories = categories.length > 0 ? categories : CATEGORIES;
+  const categoryQuery = useQuery({
+    queryKey: ['shop-categories'],
+    queryFn: fetchShopCategories,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+
+  const productQuery = useQuery({
+    queryKey: [
+      'shop-products',
+      currentPage,
+      activeCategory,
+      activeFilter,
+      searchKeyword,
+      selectedColors,
+      selectedMaterials,
+      selectedDimensions,
+      selectedSizes,
+      selectedPrice,
+    ],
+    queryFn: () => fetchShopProducts({
+      page: currentPage,
+      activeCategory,
+      activeFilter,
+      searchKeyword,
+      selectedColors,
+      selectedMaterials,
+      selectedDimensions,
+      selectedSizes,
+      selectedPrice,
+    }),
+    staleTime: 2 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    placeholderData: keepPreviousData,
+  });
+
+  const { refetch: refetchCategories } = categoryQuery;
+  const { refetch: refetchProducts } = productQuery;
+  const categories = categoryQuery.data || [];
+  const products = productQuery.data?.products || [];
+  const pagination = productQuery.data?.pagination || { current_page: currentPage, last_page: 1, total: 0 };
+  const isLoadingProducts = productQuery.isLoading;
+  const isFetchingProducts = productQuery.isFetching;
+
+  const displayCategories = categories;
 
   const activeCategoryLabel = useMemo(() => {
     const category = displayCategories.find((cat) => (cat.slug || cat.id) === activeCategory);
@@ -216,77 +255,6 @@ export default function ShopScreen({ navigation, route }) {
     ? ((Number(pagination.current_page) - 1) * 6) + 1
     : 0;
   const productRangeEnd = Math.min(Number(pagination.current_page) * 6, Number(pagination.total) || 0);
-
-  const fetchCategories = useCallback(async ({ showLoading = true } = {}) => {
-    if (showLoading) setIsLoadingCategories(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/shop/sora/categories`, {
-        headers: { Accept: 'application/json' },
-      });
-      const result = await response.json();
-      if (response.ok && result.success) {
-        setCategories(result.data || []);
-      }
-    } catch (error) {
-      console.log('Error loading shop categories:', error);
-    } finally {
-      if (showLoading) setIsLoadingCategories(false);
-    }
-  }, []);
-
-  const fetchProducts = useCallback(async (page = 1, { showLoading = true } = {}) => {
-    if (showLoading) setIsLoadingProducts(true);
-    try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        per_page: '6',
-      });
-
-      if (activeCategory) {
-        params.set('categories', activeCategory);
-      }
-
-      if (activeFilter === 'Mới nhất') {
-        params.set('sort', 'new');
-      } else {
-        params.set('sort', 'recommended');
-      }
-
-      if (selectedColors.length > 0) {
-        params.set('color', selectedColors.join(','));
-      }
-
-      if (selectedMaterials.length > 0) {
-        params.set('attribute_values', selectedMaterials.join(','));
-      }
-
-      if (selectedDimensions.length > 0) {
-        params.set('dimension', selectedDimensions.join(','));
-      }
-
-      if (selectedSizes.length > 0) {
-        params.set('size', selectedSizes.join(','));
-      }
-
-      const response = await fetch(`${API_BASE_URL}/shop/sora/products?${params.toString()}`, {
-        headers: { Accept: 'application/json' },
-      });
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        setProducts(result.data?.data || []);
-        setPagination({
-          current_page: result.data?.current_page || 1,
-          last_page: result.data?.last_page || 1,
-          total: result.data?.total || 0,
-        });
-      }
-    } catch (error) {
-      console.log('Error loading shop products:', error);
-    } finally {
-      if (showLoading) setIsLoadingProducts(false);
-    }
-  }, [activeCategory, activeFilter, selectedColors, selectedMaterials, selectedDimensions, selectedSizes]);
 
   const loadWishlist = useCallback(async () => {
     try {
@@ -405,25 +373,24 @@ export default function ShopScreen({ navigation, route }) {
   }, [wishlistIds, wishlistLoadingIds]);
 
   useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
-
-  useEffect(() => {
     const categorySlug = route.params?.categorySlug;
-    if (!categorySlug) return;
+    const keyword = route.params?.keyword?.toString().trim() || '';
+    if (!categorySlug && !keyword) return;
 
-    setActiveCategory(categorySlug.toString());
+    setSearchKeyword(keyword);
+    setActiveCategory(categorySlug ? categorySlug.toString() : '');
     setActiveFilter('Tất cả');
     setSelectedColors([]);
     setSelectedMaterials([]);
     setSelectedDimensions([]);
     setSelectedSizes([]);
     setSelectedPrice(null);
-  }, [route.params?.categoryRequestId, route.params?.categorySlug]);
+    setCurrentPage(1);
+  }, [route.params?.categoryRequestId, route.params?.categorySlug, route.params?.searchRequestId, route.params?.keyword]);
 
   useEffect(() => {
-    fetchProducts(1);
-  }, [fetchProducts]);
+    setCurrentPage(1);
+  }, [activeCategory, activeFilter, searchKeyword, selectedColors, selectedMaterials, selectedDimensions, selectedSizes, selectedPrice]);
 
   useFocusEffect(
     useCallback(() => {
@@ -435,14 +402,14 @@ export default function ShopScreen({ navigation, route }) {
     setIsRefreshing(true);
     try {
       await Promise.all([
-        fetchCategories({ showLoading: false }),
-        fetchProducts(Number(pagination.current_page) || 1, { showLoading: false }),
+        refetchCategories(),
+        refetchProducts(),
         loadWishlist(),
       ]);
     } finally {
       setIsRefreshing(false);
     }
-  }, [fetchCategories, fetchProducts, loadWishlist, pagination.current_page]);
+  }, [refetchCategories, refetchProducts, loadWishlist]);
 
   const toggleArrayValue = (value, setter) => {
     setter((prev) => (
@@ -467,6 +434,7 @@ export default function ShopScreen({ navigation, route }) {
     navigation.navigate('ProductDetail', {
       slug: product.slug,
       previewImage: product.previewImage || product.image || null,
+      previewProduct: product.previewProduct || null,
     });
   };
 
@@ -545,9 +513,14 @@ export default function ShopScreen({ navigation, route }) {
             <Text style={styles.resultCount}>
               {isLoadingProducts
                 ? 'Đang tải sản phẩm...'
+                : isFetchingProducts
+                  ? 'Đang cập nhật sản phẩm...'
                 : `Hiển thị ${productRangeStart}-${productRangeEnd} của ${pagination.total}`}
             </Text>
             <Text style={styles.resultSub}>Danh mục: {activeCategoryLabel}</Text>
+            {searchKeyword ? (
+              <Text style={styles.resultSub}>Từ khóa: "{searchKeyword}"</Text>
+            ) : null}
           </View>
           <TouchableOpacity
             style={styles.sortButton}
@@ -604,16 +577,24 @@ export default function ShopScreen({ navigation, route }) {
               isWishlistLoading={wishlistLoadingIds.includes(product.id?.toString())}
             />
           ))}
+          {isFetchingProducts && !isLoadingProducts && (
+            <View style={styles.pageLoadingOverlay} pointerEvents="auto">
+              <View style={styles.pageLoadingCard}>
+                <ActivityIndicator size="small" color="#9f273b" />
+                <Text style={styles.pageLoadingText}>Đang chuyển trang...</Text>
+              </View>
+            </View>
+          )}
         </View>
 
         {!isLoadingProducts && pagination.last_page > 1 && (
           <View style={styles.paginationBar}>
             <TouchableOpacity
-              style={[styles.pageButton, pagination.current_page <= 1 && styles.pageButtonDisabled]}
-              disabled={pagination.current_page <= 1}
-              onPress={() => fetchProducts(Number(pagination.current_page) - 1)}
+              style={[styles.pageButton, (pagination.current_page <= 1 || isFetchingProducts) && styles.pageButtonDisabled]}
+              disabled={pagination.current_page <= 1 || isFetchingProducts}
+              onPress={() => setCurrentPage((page) => Math.max(page - 1, 1))}
             >
-              <Ionicons name="chevron-back" size={16} color={pagination.current_page <= 1 ? '#bbb' : '#9f273b'} />
+              <Ionicons name="chevron-back" size={16} color={pagination.current_page <= 1 || isFetchingProducts ? '#bbb' : '#9f273b'} />
             </TouchableOpacity>
 
             <Text style={styles.pageStatus}>
@@ -621,11 +602,11 @@ export default function ShopScreen({ navigation, route }) {
             </Text>
 
             <TouchableOpacity
-              style={[styles.pageButton, pagination.current_page >= pagination.last_page && styles.pageButtonDisabled]}
-              disabled={pagination.current_page >= pagination.last_page}
-              onPress={() => fetchProducts(Number(pagination.current_page) + 1)}
+              style={[styles.pageButton, (pagination.current_page >= pagination.last_page || isFetchingProducts) && styles.pageButtonDisabled]}
+              disabled={pagination.current_page >= pagination.last_page || isFetchingProducts}
+              onPress={() => setCurrentPage((page) => Math.min(page + 1, Number(pagination.last_page) || page))}
             >
-              <Ionicons name="chevron-forward" size={16} color={pagination.current_page >= pagination.last_page ? '#bbb' : '#9f273b'} />
+              <Ionicons name="chevron-forward" size={16} color={pagination.current_page >= pagination.last_page || isFetchingProducts ? '#bbb' : '#9f273b'} />
             </TouchableOpacity>
           </View>
         )}
@@ -973,11 +954,13 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   productGrid: {
+    position: 'relative',
     alignSelf: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: CARD_GAP,
     paddingHorizontal: 18,
+    minHeight: 240,
   },
   loadingBox: {
     width: '100%',
@@ -993,6 +976,37 @@ const styles = StyleSheet.create({
     marginTop: 10,
     letterSpacing: 1,
     textTransform: 'uppercase',
+  },
+  pageLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.62)',
+  },
+  pageLoadingCard: {
+    minWidth: 152,
+    minHeight: 46,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ead9dc',
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#9f273b',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  pageLoadingText: {
+    fontFamily: 'Oswald_500Medium',
+    fontSize: 12,
+    color: '#9f273b',
+    letterSpacing: 0.5,
   },
   emptyBox: {
     width: '100%',

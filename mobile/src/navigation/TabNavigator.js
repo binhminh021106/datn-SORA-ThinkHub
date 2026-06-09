@@ -25,6 +25,7 @@ import NewsScreen from '../screens/NewsScreen';
 import NewsDetailScreen from '../screens/NewsDetailScreen';
 import StaffAttendanceScreen from '../screens/StaffAttendanceScreen';
 import AffiliateScreen from '../screens/AffiliateScreen';
+import SavedCouponsScreen from '../screens/SavedCouponsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -84,6 +85,7 @@ export default function TabNavigator() {
       <Stack.Screen name="NewsDetail" component={NewsDetailScreen} />
       <Stack.Screen name="StaffAttendance" component={StaffAttendanceScreen} />
       <Stack.Screen name="Affiliate" component={AffiliateScreen} />
+      <Stack.Screen name="SavedCoupons" component={SavedCouponsScreen} />
     </Stack.Navigator>
   );
 }

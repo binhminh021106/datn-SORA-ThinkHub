@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar,
   ScrollView, Platform, Modal, TextInput, KeyboardAvoidingView,
@@ -7,6 +7,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/api';
 import { showCustomAlert } from '../components/CustomAlert';
@@ -65,6 +66,24 @@ const STATUS_CONFIG = {
 };
 const getStatusCfg = (s) => STATUS_CONFIG[s] || { label: s, color: '#6b7280', bg: '#f9fafb', border: '#e5e7eb' };
 
+const fetchAffiliateStatusQuery = async () => {
+  const token = await AsyncStorage.getItem('auth_token');
+  if (!token) return { isLoggedIn: false, data: null };
+
+  const res = await fetch(`${API_BASE_URL}/client/affiliate/status`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+  });
+
+  if (res.status === 401) return { isLoggedIn: false, data: null };
+
+  const result = await res.json();
+  if (!res.ok || !result.success) {
+    throw new Error(result?.message || 'Không thể tải dữ liệu tiếp thị liên kết.');
+  }
+
+  return { isLoggedIn: true, data: result.data || null };
+};
+
 // ─── Reusable header ─────────────────────────────────────────────────────────
 function Header({ navigation }) {
   return (
@@ -82,17 +101,7 @@ function Header({ navigation }) {
 export default function AffiliateScreen() {
   const navigation = useNavigation();
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
-
-  // Data từ GET /client/affiliate/status
-  const [info, setInfo] = useState({ is_affiliate: false, affiliate_code: null, commission_balance: 0 });
-  const [applicationStatus, setApplicationStatus] = useState(null);
-  const [adminNotes, setAdminNotes] = useState('');
-  const [stats, setStats] = useState({ available_balance: 0, pending_balance: 0, total_withdrawn: 0 });
-  const [histories, setHistories] = useState([]);
-  const [showApplyForm, setShowApplyForm] = useState(false); // nút "Đăng ký lại"
+  const [showApplyForm, setShowApplyForm] = useState(false); // n?t "??ng k? l?i"
 
   // Forms
   const [showWithdraw, setShowWithdraw] = useState(false);
@@ -102,62 +111,39 @@ export default function AffiliateScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
 
-  const hasLoaded = useRef(false);
+  const affiliateQuery = useQuery({
+    queryKey: ['affiliate', 'status'],
+    queryFn: fetchAffiliateStatusQuery,
+    staleTime: 1000 * 60 * 2,
+    gcTime: 1000 * 60 * 10,
+  });
 
-  // ── Fetch status ──
-  const fetchStatus = useCallback(async ({ showOverlay = true, showRefresh = false } = {}) => {
-    if (showOverlay) setIsLoading(true);
-    if (showRefresh) setRefreshing(true);
-    try {
-      const token = await AsyncStorage.getItem('auth_token');
-      if (!token) { setIsLoggedIn(false); return; }
-      setIsLoggedIn(true);
-
-      const res = await fetch(`${API_BASE_URL}/client/affiliate/status`, {
-        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-      });
-
-      if (res.status === 401) { setIsLoggedIn(false); return; }
-
-      const result = await res.json();
-      if (result.success && result.data) {
-        const d = result.data;
-        setInfo({
-          is_affiliate: !!d.is_affiliate,
-          affiliate_code: d.affiliate_code,
-          commission_balance: d.commission_balance,
-        });
-
-        if (d.application) {
-          setApplicationStatus(d.application.status);
-          setAdminNotes(d.application.admin_notes || '');
-        } else {
-          setApplicationStatus(null);
-          setAdminNotes('');
-        }
-
-        if (d.is_affiliate) {
-          setStats(d.dashboard_stats || { available_balance: 0, pending_balance: 0, total_withdrawn: 0 });
-          setHistories(d.histories || []);
-        }
-      }
-    } catch (e) {
-      Alert.alert('Lỗi kết nối', 'Không thể tải dữ liệu tiếp thị liên kết. Vui lòng thử lại sau.');
-    } finally {
-      if (showOverlay) setIsLoading(false);
-      if (showRefresh) setRefreshing(false);
-    }
-  }, []);
+  const affiliateData = affiliateQuery.data?.data || {};
+  const isLoggedIn = affiliateQuery.data?.isLoggedIn !== false;
+  const info = {
+    is_affiliate: !!affiliateData.is_affiliate,
+    affiliate_code: affiliateData.affiliate_code,
+    commission_balance: affiliateData.commission_balance || 0,
+  };
+  const applicationStatus = affiliateData.application?.status || null;
+  const adminNotes = affiliateData.application?.admin_notes || '';
+  const stats = affiliateData.is_affiliate
+    ? affiliateData.dashboard_stats || { available_balance: 0, pending_balance: 0, total_withdrawn: 0 }
+    : { available_balance: 0, pending_balance: 0, total_withdrawn: 0 };
+  const histories = affiliateData.is_affiliate ? affiliateData.histories || [] : [];
+  const isLoading = affiliateQuery.isLoading && !affiliateQuery.data;
+  const refreshing = affiliateQuery.isRefetching && !!affiliateQuery.data;
 
   useFocusEffect(
     useCallback(() => {
       StatusBar.setBarStyle('dark-content');
-      fetchStatus({ showOverlay: !hasLoaded.current });
-      hasLoaded.current = true;
-    }, [fetchStatus])
+      affiliateQuery.refetch();
+    }, [affiliateQuery.refetch])
   );
 
-  const onRefresh = useCallback(() => fetchStatus({ showOverlay: false, showRefresh: true }), [fetchStatus]);
+  const onRefresh = useCallback(() => {
+    affiliateQuery.refetch();
+  }, [affiliateQuery.refetch]);
 
   const addSocialChannel = () => {
     setSocialChannels((prev) => [...prev, createSocialChannel()]);
@@ -209,8 +195,8 @@ export default function AffiliateScreen() {
         Alert.alert('Thành công!', result.message || 'Nộp đơn đăng ký thành công! Vui lòng chờ SORA xét duyệt.');
         setApply({ introduce_message: '' });
         setSocialChannels([createSocialChannel()]);
-        setApplicationStatus('pending');
         setShowApplyForm(false);
+        affiliateQuery.refetch();
       } else {
         Alert.alert('Lỗi', result.message || 'Không thể nộp đơn. Vui lòng thử lại.');
       }
@@ -248,7 +234,7 @@ export default function AffiliateScreen() {
         setShowWithdraw(false);
         Alert.alert('Đã gửi yêu cầu!', result.message || 'Yêu cầu rút tiền đã được gửi thành công!');
         setWithdrawForm({ amount: '', bank_name: '', account_number: '', account_holder_name: '' });
-        fetchStatus({ showOverlay: false });
+        affiliateQuery.refetch();
       } else {
         Alert.alert('Lỗi', result.message || 'Không thể gửi yêu cầu rút tiền.');
       }
@@ -576,6 +562,21 @@ export default function AffiliateScreen() {
 
   // ── Chọn view theo trạng thái (giống web) ──
   const renderBody = () => {
+    if (affiliateQuery.isError) {
+      return (
+        <View style={s.centerState}>
+          <View style={[s.stateIconWrap, { backgroundColor: '#fff4f6', borderColor: '#f0cdd3' }]}>
+            <Ionicons name="cloud-offline-outline" size={40} color="#9f273b" />
+          </View>
+          <Text style={s.stateTitle}>Không thể tải dữ liệu</Text>
+          <Text style={s.stateSub}>{affiliateQuery.error?.message || 'Vui lòng kiểm tra kết nối rồi thử lại.'}</Text>
+          <TouchableOpacity style={[s.primaryBtn, { width: '70%', marginTop: 8 }]} activeOpacity={0.85} onPress={() => affiliateQuery.refetch()}>
+            <Ionicons name="refresh-outline" size={16} color="#fff" />
+            <Text style={s.primaryBtnTxt}>THỬ LẠI</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
     if (!isLoggedIn) return renderGuest();
     if (info.is_affiliate) return renderDashboard();
     if (applicationStatus === 'pending' && !showApplyForm) return renderPending();

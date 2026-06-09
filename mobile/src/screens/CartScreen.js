@@ -17,8 +17,9 @@ import {
   ActivityIndicator
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useNavigation, useIsFocused } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useQuery } from "@tanstack/react-query";
 import { API_BASE_URL } from "../config/api";
 import { showCustomAlert } from "../components/CustomAlert";
 import SmartImage from '../components/SmartImage';
@@ -418,15 +419,10 @@ const mapBackendItem = (item) => {
 
 export default function CartScreen() {
   const navigation = useNavigation();
-  const isFocused = useIsFocused();
-
-  const [isLoading, setIsLoading] = useState(true);
   const [items, setItems] = useState([]);
   const [selected, setSelected] = useState([]);
   const [lightboxImg, setLightboxImg] = useState(null);
   const [scrollEnabled, setScrollEnabled] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const isMountedRef = useRef(true);
   const hasLoadedCartRef = useRef(false);
 
   // Read auth token & guest session ID for API requests
@@ -452,57 +448,51 @@ export default function CartScreen() {
     return headers;
   };
 
-  // Fetch items from Laravel API
-  const fetchCartItems = async (isBackground = false) => {
-    if (!isMountedRef.current) return;
-    if (!isBackground) setIsLoading(true);
-    try {
+  const cartQuery = useQuery({
+    queryKey: ['cart'],
+    queryFn: async () => {
       const headers = await getHeaders();
       const response = await fetch(`${API_BASE_URL}/client/cart`, {
         method: 'GET',
-        headers
+        headers,
       });
       const result = await response.json();
-      if (!isMountedRef.current) return;
-      if (result.success && result.data) {
-        const mapped = result.data.map(mapBackendItem);
-        setItems(mapped);
-        
-        // Auto-select all items on first load
-        if (!isBackground) {
-          setSelected(mapped.map(i => i.id));
-        }
+
+      if (!response.ok || !result.success) {
+        throw new Error(result?.message || 'Unable to load cart');
       }
-    } catch (e) {
-      console.log('Error fetching cart:', e);
-    } finally {
-      if (isMountedRef.current && !isBackground) setIsLoading(false);
-    }
-  };
+
+      return Array.isArray(result.data) ? result.data.map(mapBackendItem) : [];
+    },
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 10,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
+
+  const syncCartFromServer = useCallback(async () => {
+    const result = await cartQuery.refetch();
+    return result.data || [];
+  }, [cartQuery.refetch]);
 
   useEffect(() => {
-    isMountedRef.current = true;
+    if (!cartQuery.data) return;
 
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
+    setItems(cartQuery.data);
+    setSelected((previousSelected) => {
+      if (!hasLoadedCartRef.current) {
+        hasLoadedCartRef.current = true;
+        return cartQuery.data.map((item) => item.id);
+      }
 
-  // Keep the current cart visible when returning to the tab. Server changes
-  // still sync in the background so newly added products appear immediately.
-  useEffect(() => {
-    if (!isFocused) return;
-
-    const isFirstLoad = !hasLoadedCartRef.current;
-    hasLoadedCartRef.current = true;
-    fetchCartItems(!isFirstLoad);
-  }, [isFocused]);
+      const validIds = new Set(cartQuery.data.map((item) => item.id));
+      return previousSelected.filter((id) => validIds.has(id));
+    });
+  }, [cartQuery.data]);
 
   const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await fetchCartItems(true);
-    if (isMountedRef.current) setRefreshing(false);
-  }, []);
+    await cartQuery.refetch();
+  }, [cartQuery.refetch]);
 
   const allSelected = items.length > 0 && selected.length === items.length;
 
@@ -528,7 +518,6 @@ export default function CartScreen() {
           text: "Xoá",
           style: "destructive",
           onPress: async () => {
-            setIsLoading(true);
             try {
               const headers = await getHeaders();
               // Delete each item on backend in parallel
@@ -545,10 +534,10 @@ export default function CartScreen() {
               );
               showCustomAlert("GIỎ HÀNG", "Đã xóa các sản phẩm được chọn khỏi giỏ hàng thành công!", [{ text: "ĐỒNG Ý" }]);
               setSelected([]);
-              await fetchCartItems(false);
+              await syncCartFromServer();
             } catch (e) {
               console.log('Error deleting selected items:', e);
-              setIsLoading(false);
+              await syncCartFromServer();
             }
           },
         },
@@ -589,7 +578,7 @@ export default function CartScreen() {
       });
       const result = await response.json();
       if (result.success) {
-        await fetchCartItems(true); // background sync
+        await syncCartFromServer(); // background sync
       } else {
         // Revert on error
         setItems((prev) =>
@@ -632,12 +621,12 @@ export default function CartScreen() {
               const result = await response.json();
               if (result.success) {
                 // Background sync
-                await fetchCartItems(true);
+                await syncCartFromServer();
               }
             } catch (e) {
               console.log('Error deleting single item:', e);
               // Restore state on failure
-              await fetchCartItems(false);
+              await syncCartFromServer();
             }
           }
         }
@@ -646,12 +635,14 @@ export default function CartScreen() {
   };
 
   const selectedItems = items.filter((i) => selected.includes(i.id));
-  const subtotal = (selected.length > 0 ? selectedItems : items).reduce(
+  const subtotal = selectedItems.reduce(
     (sum, i) => sum + i.price * i.qty,
     0,
   );
 
   const totalQty = items.reduce((sum, i) => sum + i.qty, 0);
+  const isLoading = cartQuery.isLoading && items.length === 0;
+  const refreshing = cartQuery.isRefetching && items.length > 0;
 
   if (isLoading) {
     return (
@@ -790,7 +781,7 @@ export default function CartScreen() {
           </View>
           <TouchableOpacity
             style={s.checkoutBtn}
-            onPress={() => {
+            onPress={async () => {
               const selectedItems = items.filter((i) => selected.includes(i.id));
               if (selectedItems.length === 0) {
                 showCustomAlert(
@@ -799,6 +790,12 @@ export default function CartScreen() {
                 );
                 return;
               }
+              const token = await AsyncStorage.getItem('auth_token');
+              if (!token) {
+                navigation.navigate("Login");
+                return;
+              }
+
               navigation.navigate("Checkout", { checkoutItems: selectedItems });
             }}
           >

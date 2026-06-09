@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/api';
 import SmartImage from '../components/SmartImage';
@@ -170,15 +171,28 @@ const getFirstValidationError = (result) => {
   return result?.message;
 };
 
+const fetchComboDetailQuery = async (slug) => {
+  const response = await fetch(`${API_BASE_URL}/client/combos/${slug}`, {
+    headers: { Accept: 'application/json' },
+  });
+  const result = await response.json();
+
+  if (!response.ok || !result.success || !result.data) {
+    throw new Error(result?.message || 'Không thể tải bộ sưu tập từ máy chủ.');
+  }
+
+  return {
+    combo: result.data,
+    relatedProducts: result.related_products || [],
+  };
+};
+
 export default function CollectionDetailScreen() {
   const navigation = useNavigation();
+  const queryClient = useQueryClient();
   const route = useRoute();
   const { slug, initialCollection } = route.params || {};
 
-  const [combo, setCombo] = useState(initialCollection || MOCK_COLLECTION);
-  const [relatedProducts, setRelatedProducts] = useState([]);
-  const [isLoading, setIsLoading] = useState(!!slug);
-  const [refreshing, setRefreshing] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const {
@@ -187,42 +201,28 @@ export default function CollectionDetailScreen() {
     toggleWishlist,
   } = useWishlist();
 
-  const fetchComboDetail = useCallback(async () => {
-    if (!slug) {
-      setCombo(initialCollection || MOCK_COLLECTION);
-      setIsLoading(false);
-      return;
-    }
+  const comboDetailQuery = useQuery({
+    queryKey: ['collection-detail', slug],
+    queryFn: () => fetchComboDetailQuery(slug),
+    enabled: !!slug,
+    staleTime: 1000 * 60 * 3,
+    gcTime: 1000 * 60 * 15,
+  });
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/client/combos/${slug}`, {
-        headers: { Accept: 'application/json' },
-      });
-      const result = await response.json();
-
-      if (response.ok && result.success && result.data) {
-        setCombo(result.data);
-        setRelatedProducts(result.related_products || []);
-      } else {
-        setCombo(initialCollection || MOCK_COLLECTION);
-      }
-    } catch (error) {
-      setCombo(initialCollection || MOCK_COLLECTION);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [slug, initialCollection]);
+  const combo = comboDetailQuery.data?.combo || initialCollection || MOCK_COLLECTION;
+  const relatedProducts = comboDetailQuery.data?.relatedProducts || [];
+  const isLoading = comboDetailQuery.isLoading && !!slug && !comboDetailQuery.data && !initialCollection;
+  const refreshing = comboDetailQuery.isRefetching && !!comboDetailQuery.data;
 
   useEffect(() => {
-    setIsLoading(!!slug);
-    fetchComboDetail();
-  }, [fetchComboDetail, slug]);
+    setActiveImageIndex(0);
+  }, [combo?.id, combo?.slug]);
 
   const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await fetchComboDetail();
-    setRefreshing(false);
-  }, [fetchComboDetail]);
+    if (slug) {
+      await comboDetailQuery.refetch();
+    }
+  }, [comboDetailQuery.refetch, slug]);
 
   const items = combo?.items || [];
   const galleryImages = useMemo(() => {
@@ -314,6 +314,7 @@ export default function CollectionDetailScreen() {
         if (result.session_id) {
           await AsyncStorage.setItem('cart_session_id', result.session_id);
         }
+        queryClient.invalidateQueries({ queryKey: ['cart'] });
 
         showCustomAlert(
           'GIỎ HÀNG SORA',
@@ -503,6 +504,7 @@ export default function CollectionDetailScreen() {
                   onPress={(selectedProduct) => navigation.navigate('ProductDetail', {
                     slug: selectedProduct.slug,
                     previewImage: selectedProduct.previewImage || selectedProduct.image || null,
+                    previewProduct: selectedProduct.previewProduct || null,
                   })}
                   onToggleWishlist={toggleWishlist}
                   isFavorite={wishlistIds.includes(product.id?.toString())}

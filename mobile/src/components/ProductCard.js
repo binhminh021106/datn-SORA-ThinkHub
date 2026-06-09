@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { API_BASE_URL } from '../config/api';
 import SmartImage from './SmartImage';
 import { PRICE_FONT_FAMILY, PRICE_FONT_WEIGHT } from '../styles/typography';
+import { getProductReviewStats } from '../utils/reviewStats';
 
 const getStorageUrl = (path) => {
   if (!path) return '';
@@ -63,11 +64,36 @@ export default function ProductCard({
   showWishlist = true,
 }) {
   const { category, discount, imageUrl, oldPrice, price } = getProductDisplayData(product);
+  const reviewStats = getProductReviewStats(product);
+  const previewPrice = Number(
+    product.promotional_price
+    || product.base_price
+    || String(product.price || '').replace(/[^\d]/g, '')
+    || 0
+  );
+  const previewProduct = {
+    ...product,
+    category: typeof product.category === 'object' ? product.category : { name: category },
+    images: [imageUrl],
+    variants: previewPrice > 0
+      ? [{
+          id: null,
+          price: Number(product.base_price || previewPrice),
+          promotional_price: Number(product.promotional_price || 0),
+          stock: 0,
+          attributes: {},
+        }]
+      : [],
+    attributes: {},
+    reviews: [],
+    reviews_count: reviewStats.count,
+    rating_avg: reviewStats.average,
+  };
 
   return (
     <TouchableOpacity
       style={[styles.card, { width }, style]}
-      onPress={() => onPress?.({ ...product, previewImage: imageUrl })}
+      onPress={() => onPress?.({ ...product, previewImage: imageUrl, previewProduct })}
       activeOpacity={0.9}
     >
       {discount && (
@@ -105,11 +131,14 @@ export default function ProductCard({
               {[1, 2, 3, 4, 5].map((star, index) => (
                 <Ionicons
                   key={star}
-                  name={index < (product.rating || 5) ? 'star' : 'star-outline'}
+                  name={index < Math.round(reviewStats.average) ? 'star' : 'star-outline'}
                   size={11}
                   color="#f1c40f"
                 />
               ))}
+              {reviewStats.count > 0 && (
+                <Text style={styles.ratingCount}>({reviewStats.count})</Text>
+              )}
             </View>
             {showWishlist && (
               <TouchableOpacity
@@ -236,6 +265,13 @@ const styles = StyleSheet.create({
   },
   rating: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 1,
+  },
+  ratingCount: {
+    fontFamily: 'Oswald_400Regular',
+    fontSize: 10,
+    color: '#999',
+    marginLeft: 3,
   },
 });

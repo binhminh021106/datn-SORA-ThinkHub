@@ -87,4 +87,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(BirthdayEmailLog::class, 'user_id');
     }
+
+    public function savedCoupons()
+    {
+        return $this->hasMany(UserSavedCoupon::class, 'user_id');
+    }
 }

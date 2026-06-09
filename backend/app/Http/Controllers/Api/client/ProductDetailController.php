@@ -48,6 +48,8 @@ class ProductDetailController extends Controller
                 },
                 'variants.attributeValues.attribute'
             ])
+            ->withCount('reviews')
+            ->withAvg('reviews', 'rating')
             ->where('slug', $slug)
             ->where('status', 'published') 
             ->firstOrFail();
@@ -111,8 +113,8 @@ class ProductDetailController extends Controller
                     'name' => $product->name,
                     'category' => $product->category, // Trả về category để frontend lấy slug
                     'brand' => $product->brand,
-                    'rating_avg' => (float) $product->rating_avg ?: 5.0, 
-                    'review_count' => (int) $product->review_count,
+                    'rating_avg' => (float) ($product->reviews_avg_rating ?? $product->rating_avg ?? 0),
+                    'review_count' => (int) ($product->reviews_count ?? $product->review_count ?? 0),
                     'sold_count' => 1500, 
                     'description' => $product->description,
                     'specifications' => is_array($product->specifications) ? $product->specifications : json_decode($product->specifications, true),

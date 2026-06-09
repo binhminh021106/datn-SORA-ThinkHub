@@ -21,7 +21,7 @@ class ClientHomeController extends Controller
     {
         try {
             // LẤY DỮ LIỆU TỪ CACHE (Hoặc truy vấn DB nếu chưa có Cache) - Tối ưu cực mạnh
-            $data = Cache::remember('sora_home_data_v3', 3600, function () {
+            $data = Cache::remember('sora_home_data_v4', 3600, function () {
                 $result = [
                     'banners' => [],
                     'coupons' => [],
@@ -64,13 +64,17 @@ class ClientHomeController extends Controller
 
                 // 4. Lấy Sản phẩm
                 $result['products'] = Product::where('status', 'published')
-                    ->select('id', 'name', 'slug', 'thumbnail_image', 'base_price', 'promotional_price', 'created_at')
+                    ->select('id', 'name', 'slug', 'thumbnail_image', 'base_price', 'promotional_price', 'review_count', 'rating_avg', 'created_at')
+                    ->withCount('reviews')
+                    ->withAvg('reviews', 'rating')
                     ->orderBy('is_featured', 'desc')
                     ->orderBy('id', 'desc')
                     ->take(8)
                     ->get()
                     ->map(function ($product) {
                         $arr = $product->toArray();
+                        $arr['review_count'] = (int) ($product->reviews_count ?? $product->review_count ?? 0);
+                        $arr['rating_avg'] = (float) ($product->reviews_avg_rating ?? $product->rating_avg ?? 0);
                         $arr['is_new'] = $product->created_at >= Carbon::now()->subDays(15);
                         return $arr;
                     })->toArray();

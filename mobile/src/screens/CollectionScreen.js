@@ -12,6 +12,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useQuery } from '@tanstack/react-query';
 import SmartImage from '../components/SmartImage';
 import { API_BASE_URL } from '../config/api';
 import { PRICE_FONT_FAMILY, PRICE_FONT_WEIGHT } from '../styles/typography';
@@ -166,70 +167,51 @@ const mapComboToCollection = (combo, index) => {
   };
 };
 
+const fetchCollectionsQuery = async () => {
+  const response = await fetch(`${API_BASE_URL}/client/combos`, {
+    headers: { Accept: 'application/json' },
+  });
+  const result = await response.json();
+  const rawCombos = result?.data?.data || result?.data || [];
+  const mapped = Array.isArray(rawCombos)
+    ? rawCombos.map(mapComboToCollection).filter((item) => item.name)
+    : [];
+
+  if (!response.ok || !result.success || mapped.length === 0) {
+    throw new Error(result?.message || 'Chưa có bộ sưu tập từ hệ thống.');
+  }
+
+  return mapped;
+};
+
 export default function CollectionScreen({ navigation }) {
   const { width: viewportWidth } = useWindowDimensions();
   const heroWidth = Math.min(Math.max(viewportWidth - 36, 0), 620);
   const heroHeight = Math.min(Math.max(heroWidth * 1.18, 340), 440);
   const [activeId, setActiveId] = useState(COLLECTIONS[0].id);
-  const [collections, setCollections] = useState(COLLECTIONS);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [refreshVersion, setRefreshVersion] = useState(0);
-  const [errorText, setErrorText] = useState('');
+  const collectionQuery = useQuery({
+    queryKey: ['collections', 'combos'],
+    queryFn: fetchCollectionsQuery,
+    staleTime: 1000 * 60 * 3,
+    gcTime: 1000 * 60 * 15,
+  });
+  const collections = collectionQuery.data?.length ? collectionQuery.data : COLLECTIONS;
+  const isLoading = collectionQuery.isLoading && !collectionQuery.data;
+  const isRefreshing = collectionQuery.isRefetching && !!collectionQuery.data;
+  const errorText = collectionQuery.isError
+    ? collectionQuery.error?.message || 'Không thể tải bộ sưu tập từ máy chủ.'
+    : '';
   const activeCollection = collections.find((item) => item.id === activeId) || collections[0] || COLLECTIONS[0];
   const activeProducts = activeCollection?.products?.length ? activeCollection.products : CURATED_PRODUCTS;
 
   useEffect(() => {
-    let isMounted = true;
-    const isPullToRefresh = refreshVersion > 0;
-
-    const fetchCollections = async () => {
-      if (!isPullToRefresh) setIsLoading(true);
-      setErrorText('');
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/client/combos`, {
-          headers: { Accept: 'application/json' },
-        });
-        const result = await response.json();
-        const rawCombos = result?.data?.data || result?.data || [];
-        const mapped = Array.isArray(rawCombos)
-          ? rawCombos.map(mapComboToCollection).filter((item) => item.name)
-          : [];
-
-        if (!isMounted) return;
-
-        if (response.ok && result.success && mapped.length > 0) {
-          setCollections(mapped);
-          setActiveId(mapped[0].id);
-        } else {
-          setCollections(COLLECTIONS);
-          setActiveId(COLLECTIONS[0].id);
-          setErrorText(result?.message || 'Chưa có bộ sưu tập từ hệ thống.');
-        }
-      } catch (error) {
-        if (!isMounted) return;
-        setCollections(COLLECTIONS);
-        setActiveId(COLLECTIONS[0].id);
-        setErrorText('Không thể tải bộ sưu tập từ máy chủ.');
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-          setIsRefreshing(false);
-        }
-      }
-    };
-
-    fetchCollections();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [refreshVersion]);
+    if (!collections.some((item) => item.id === activeId)) {
+      setActiveId(collections[0]?.id || COLLECTIONS[0].id);
+    }
+  }, [activeId, collections]);
 
   const onRefresh = () => {
-    setIsRefreshing(true);
-    setRefreshVersion((version) => version + 1);
+    collectionQuery.refetch();
   };
 
   if (isLoading && !isRefreshing) {
