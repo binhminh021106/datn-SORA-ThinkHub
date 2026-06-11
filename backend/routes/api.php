@@ -4,58 +4,58 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // Controllers Admin
-use App\Http\Controllers\Api\client\ShopController;
-use App\Http\Controllers\Api\admin\AdminCouponController;
-use App\Http\Controllers\Api\admin\AdminAccountController;
-use App\Http\Controllers\Api\admin\AdminForgotPasswordController;
-use App\Http\Controllers\Api\admin\AdminProfileController;
-use App\Http\Controllers\Api\admin\AdminStaffController;
-use App\Http\Controllers\Api\admin\AdminUserController;
-use App\Http\Controllers\Api\admin\AdminUserAddressController;
-use App\Http\Controllers\Api\admin\AdminRoleController;
-use App\Http\Controllers\Api\admin\AdminModulePermissionController;
-use App\Http\Controllers\Api\admin\AdminCategoryController;
-use App\Http\Controllers\Api\admin\AdminProductController;
-use App\Http\Controllers\Api\admin\AdminAttributeController;
-use App\Http\Controllers\Api\admin\AdminAttributeValueController;
-use App\Http\Controllers\Api\admin\AdminBrandController;
-use App\Http\Controllers\Api\admin\AdminOrderController;
-use App\Http\Controllers\Api\admin\AdminBannerController;
-use App\Http\Controllers\Api\admin\OrderSimulationController;
-use App\Http\Controllers\Api\admin\AdminMembershipTierController;
-use App\Http\Controllers\Api\admin\AdminComboController;
-use App\Http\Controllers\Api\admin\AdminCustomerGalleryController;
-use App\Http\Controllers\Api\admin\AdminReviewController;
-use App\Http\Controllers\Api\admin\AdminInventoryController;
-use App\Http\Controllers\Api\admin\AdminDashboardController;
-use App\Http\Controllers\Api\admin\AdminContactController;
-use App\Http\Controllers\Api\admin\AdminNewController;
-use App\Http\Controllers\Api\admin\AdminAttendanceController;
-use App\Http\Controllers\Api\admin\AdminAffiliateController;
-use App\Http\Controllers\Api\admin\AdminFaceRecognitionController;
+use App\Http\Controllers\Api\Client\ShopController;
+use App\Http\Controllers\Api\Admin\AdminCouponController;
+use App\Http\Controllers\Api\Admin\AdminAccountController;
+use App\Http\Controllers\Api\Admin\AdminForgotPasswordController;
+use App\Http\Controllers\Api\Admin\AdminProfileController;
+use App\Http\Controllers\Api\Admin\AdminStaffController;
+use App\Http\Controllers\Api\Admin\AdminUserController;
+use App\Http\Controllers\Api\Admin\AdminUserAddressController;
+use App\Http\Controllers\Api\Admin\AdminRoleController;
+use App\Http\Controllers\Api\Admin\AdminModulePermissionController;
+use App\Http\Controllers\Api\Admin\AdminCategoryController;
+use App\Http\Controllers\Api\Admin\AdminProductController;
+use App\Http\Controllers\Api\Admin\AdminAttributeController;
+use App\Http\Controllers\Api\Admin\AdminAttributeValueController;
+use App\Http\Controllers\Api\Admin\AdminBrandController;
+use App\Http\Controllers\Api\Admin\AdminOrderController;
+use App\Http\Controllers\Api\Admin\AdminBannerController;
+use App\Http\Controllers\Api\Admin\OrderSimulationController;
+use App\Http\Controllers\Api\Admin\AdminMembershipTierController;
+use App\Http\Controllers\Api\Admin\AdminComboController;
+use App\Http\Controllers\Api\Admin\AdminCustomerGalleryController;
+use App\Http\Controllers\Api\Admin\AdminReviewController;
+use App\Http\Controllers\Api\Admin\AdminInventoryController;
+use App\Http\Controllers\Api\Admin\AdminDashboardController;
+use App\Http\Controllers\Api\Admin\AdminContactController;
+use App\Http\Controllers\Api\Admin\AdminNewController;
+use App\Http\Controllers\Api\Admin\AdminAttendanceController;
+use App\Http\Controllers\Api\Admin\AdminAffiliateController;
+use App\Http\Controllers\Api\Admin\AdminFaceRecognitionController;
 
 // Controllers Client
-use App\Http\Controllers\Api\client\ProductDetailController;
-use App\Http\Controllers\Api\client\ClientCartController;
-use App\Http\Controllers\Api\client\ClientOrderController;
-use App\Http\Controllers\Api\client\ClientHeaderController;
-use App\Http\Controllers\Api\client\ClientHomeController;
-use App\Http\Controllers\Api\client\ClientAffiliateController;
-use App\Http\Controllers\Api\client\ClientCompareController;
-use App\Http\Controllers\Api\client\ClientContactController;
+use App\Http\Controllers\Api\Client\ProductDetailController;
+use App\Http\Controllers\Api\Client\ClientCartController;
+use App\Http\Controllers\Api\Client\ClientOrderController;
+use App\Http\Controllers\Api\Client\ClientHeaderController;
+use App\Http\Controllers\Api\Client\ClientHomeController;
+use App\Http\Controllers\Api\Client\ClientAffiliateController;
+use App\Http\Controllers\Api\Client\ClientCompareController;
+use App\Http\Controllers\Api\Client\ClientContactController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\GeoController;
-// use App\Http\Controllers\Api\client\ClientCheckoutController;
+// use App\Http\Controllers\Api\Client\ClientCheckoutController;
 use App\Http\Controllers\Api\Auth\GoogleAuthController;
-use App\Http\Controllers\Api\client\ClientFavouriteController;
-use App\Http\Controllers\Api\client\ClientProfileController;
-use App\Http\Controllers\Api\client\ChatbotController;
-use App\Http\Controllers\Api\client\ClientNewController;
-use App\Http\Controllers\Api\client\ClientSavedCouponController;
+use App\Http\Controllers\Api\Client\ClientFavouriteController;
+use App\Http\Controllers\Api\Client\ClientProfileController;
+use App\Http\Controllers\Api\Client\ChatbotController;
+use App\Http\Controllers\Api\Client\ClientNewController;
+use App\Http\Controllers\Api\Client\ClientSavedCouponController;
 
 // gửi maill_kh
-use App\Http\Controllers\Api\admin\HolidayEventController;
-use App\Http\Controllers\Api\admin\EmailCampaignController;
+use App\Http\Controllers\Api\Admin\HolidayEventController;
+use App\Http\Controllers\Api\Admin\EmailCampaignController;
 
 
 
@@ -162,16 +162,16 @@ Route::prefix('client')->group(function () {
 
     // Hồ Sơ Cá Nhân (Profile)
     Route::prefix('profile')->middleware('auth:sanctum')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Api\client\ClientProfileController::class, 'show']);
-        Route::post('/', [\App\Http\Controllers\Api\client\ClientProfileController::class, 'update']);
-        Route::post('/password', [\App\Http\Controllers\Api\client\ClientProfileController::class, 'updatePassword']);
+        Route::get('/', [\App\Http\Controllers\Api\Client\ClientProfileController::class, 'show']);
+        Route::post('/', [\App\Http\Controllers\Api\Client\ClientProfileController::class, 'update']);
+        Route::post('/password', [\App\Http\Controllers\Api\Client\ClientProfileController::class, 'updatePassword']);
 
         // Sổ Địa Chỉ (Address Book)
-        Route::get('/addresses', [\App\Http\Controllers\Api\client\ClientProfileController::class, 'getAddresses']);
-        Route::post('/addresses', [\App\Http\Controllers\Api\client\ClientProfileController::class, 'storeAddress']);
-        Route::put('/addresses/{id}', [\App\Http\Controllers\Api\client\ClientProfileController::class, 'updateAddress']);
-        Route::delete('/addresses/{id}', [\App\Http\Controllers\Api\client\ClientProfileController::class, 'deleteAddress']);
-        Route::put('/addresses/{id}/default', [\App\Http\Controllers\Api\client\ClientProfileController::class, 'setDefaultAddress']);
+        Route::get('/addresses', [\App\Http\Controllers\Api\Client\ClientProfileController::class, 'getAddresses']);
+        Route::post('/addresses', [\App\Http\Controllers\Api\Client\ClientProfileController::class, 'storeAddress']);
+        Route::put('/addresses/{id}', [\App\Http\Controllers\Api\Client\ClientProfileController::class, 'updateAddress']);
+        Route::delete('/addresses/{id}', [\App\Http\Controllers\Api\Client\ClientProfileController::class, 'deleteAddress']);
+        Route::put('/addresses/{id}/default', [\App\Http\Controllers\Api\Client\ClientProfileController::class, 'setDefaultAddress']);
     });
 
     // MODULE ĐƠN HÀNG (Orders)
@@ -186,19 +186,19 @@ Route::prefix('client')->group(function () {
         Route::post('/{order_code}/return', 'requestReturn');
     });
 
-    Route::controller(\App\Http\Controllers\Api\client\ClientComboController::class)->prefix('combos')->group(function () {
+    Route::controller(\App\Http\Controllers\Api\Client\ClientComboController::class)->prefix('combos')->group(function () {
         Route::get('/', 'index');
         Route::get('/{slug}', 'show');
     });
 
     // ROUTE PAYMENT
     Route::prefix('checkout')->group(function () {
-        Route::get('/init', [\App\Http\Controllers\Api\client\ClientCheckoutController::class, 'initData']);
-        Route::post('/', [\App\Http\Controllers\Api\client\ClientCheckoutController::class, 'processCheckout']);
-        Route::get('/momo-return', [\App\Http\Controllers\Api\client\ClientCheckoutController::class, 'momoReturn']);
-        Route::post('/momo-return', [\App\Http\Controllers\Api\client\ClientCheckoutController::class, 'momoReturn']);
+        Route::get('/init', [\App\Http\Controllers\Api\Client\ClientCheckoutController::class, 'initData']);
+        Route::post('/', [\App\Http\Controllers\Api\Client\ClientCheckoutController::class, 'processCheckout']);
+        Route::get('/momo-return', [\App\Http\Controllers\Api\Client\ClientCheckoutController::class, 'momoReturn']);
+        Route::post('/momo-return', [\App\Http\Controllers\Api\Client\ClientCheckoutController::class, 'momoReturn']);
     });
-    Route::get('orders/{order_code}/invoice', [App\Http\Controllers\Api\client\ClientOrderController::class, 'invoice'])
+    Route::get('orders/{order_code}/invoice', [App\Http\Controllers\Api\Client\ClientOrderController::class, 'invoice'])
         ->name('client.orders.invoice');
 
     // CHƯƠNG TRÌNH ĐỐI TÁC (AFFILIATE)
@@ -219,9 +219,9 @@ Route::prefix('shop/{shop_slug}')->group(function () {
     Route::get('/products/{slug}', [ProductDetailController::class, 'show']);
     Route::post('/compare', [ClientCompareController::class, 'getCompareData']);
 });
-Route::get('shop/{shop_slug}/categories', [App\Http\Controllers\Api\client\ShopController::class, 'categories']);
-Route::get('shop/{shop_slug}/colors', [App\Http\Controllers\Api\client\ShopController::class, 'colors']);
-Route::get('shop/{shop_slug}/attributes', [App\Http\Controllers\Api\client\ShopController::class, 'attributes']);
+Route::get('shop/{shop_slug}/categories', [App\Http\Controllers\Api\Client\ShopController::class, 'categories']);
+Route::get('shop/{shop_slug}/colors', [App\Http\Controllers\Api\Client\ShopController::class, 'colors']);
+Route::get('shop/{shop_slug}/attributes', [App\Http\Controllers\Api\Client\ShopController::class, 'attributes']);
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -454,7 +454,7 @@ Route::prefix('admin')->group(function () {
         });
 
         // 1. CÁC ROUTE ĐIỂM DANH CÁ NHÂN (AI CŨNG ĐƯỢC DÙNG, KHÔNG YÊU CẦU QUYỀN MODULE)
-        Route::controller(\App\Http\Controllers\Api\admin\AdminAttendanceController::class)->prefix('attendances')->group(function () {
+        Route::controller(\App\Http\Controllers\Api\Admin\AdminAttendanceController::class)->prefix('attendances')->group(function () {
             Route::get('/status', 'checkStatus');       // Lấy trạng thái của mình hoặc Quét QR
             Route::post('/check-in', 'checkIn');        // Vào ca
             Route::post('/check-out', 'checkOut');      // Tan ca
@@ -462,7 +462,7 @@ Route::prefix('admin')->group(function () {
 
         // 2. CÁC ROUTE QUẢN LÝ ĐIỂM DANH (CHỈ DÀNH CHO QUẢN LÝ / SUPER ADMIN)
         Route::middleware(['check.module:admin_attendance'])->group(function () {
-            Route::controller(\App\Http\Controllers\Api\admin\AdminAttendanceController::class)->prefix('attendances')->group(function () {
+            Route::controller(\App\Http\Controllers\Api\Admin\AdminAttendanceController::class)->prefix('attendances')->group(function () {
                 // ĐẶT CÁC ROUTE TĨNH LÊN TRƯỚC (Tránh bị route động nuốt)
                 Route::get('/work-shifts', 'getWorkShifts');
                 Route::get('/roles', 'getRoles');
@@ -479,7 +479,7 @@ Route::prefix('admin')->group(function () {
             });
 
             // 2. Quản lý Ca làm việc
-            Route::controller(\App\Http\Controllers\Api\admin\AdminWorkShiftController::class)->prefix('work-shifts')->group(function () {
+            Route::controller(\App\Http\Controllers\Api\Admin\AdminWorkShiftController::class)->prefix('work-shifts')->group(function () {
                 // ĐẶT CÁC ROUTE TĨNH LÊN TRƯỚC ĐỂ TRÁNH BỊ {id} NUỐT
                 Route::get('/', 'index');
                 Route::post('/', 'store');

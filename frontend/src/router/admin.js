@@ -37,7 +37,7 @@ const admin = [
       {
         path: '',
         name: 'admin-dashboard',
-        component: () => import('../pages/admin/index.vue'),
+        component: () => import('../pages/admin/Index.vue'),
         meta: { title: 'Bảng điều khiển', moduleCode: 'admin_dashboard' },
       },
       {
@@ -238,17 +238,17 @@ const admin = [
       {
         path: 'coupons',
         name: 'admin-coupons',
-        component: () => import('../pages/admin/coupon/index.vue'),
+        component: () => import('../pages/admin/coupon/Index.vue'),
       },
       {
         path: 'coupons/create',
         name: 'admin-coupon-create',
-        component: () => import('../pages/admin/coupon/create.vue'),
+        component: () => import('../pages/admin/coupon/Create.vue'),
       },
       {
         path: 'coupons/:id/edit',
         name: 'admin-coupon-edit',
-        component: () => import('../pages/admin/coupon/edit.vue'),
+        component: () => import('../pages/admin/coupon/Edit.vue'),
       },
       {
         path: 'email-campaigns',
@@ -324,7 +324,7 @@ const admin = [
       {
         path: 'contacts',
         name: 'admin-contacts',
-        component: () => import('../pages/admin/contact/index.vue'),
+        component: () => import('../pages/admin/contact/Index.vue'),
         meta: { moduleCode: 'admin_contacts' },
       },
 
@@ -359,7 +359,7 @@ const admin = [
       {
         path: 'affiliates',
         name: 'AdminAffiliates',
-        component: () => import('@/pages/admin/affiliate/index.vue'),
+        component: () => import('@/pages/admin/affiliate/Index.vue'),
         meta: { title: 'Quản lý Đối tác' }
       },
       // ROUTE EMAIL CAMPAIGN (Chiến dịch Email)

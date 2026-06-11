@@ -98,12 +98,11 @@
             <div class="chat-header-actions">
               <span class="online-badge">
                 <span class="online-dot me-1"></span>
-                Đang hoạt động
+                Online
               </span>
               <!-- NÚT XÓA CUỘC TRÒ CHUYỆN -->
               <button class="delete-conv-btn" @click="confirmDeleteConversation" title="Xóa toàn bộ cuộc trò chuyện">
                 <i class="bi bi-trash3-fill"></i>
-                <span>Xóa hội thoại</span>
               </button>
             </div>
           </div>
