@@ -1,15 +1,6 @@
 <template>
   <div class="shop-page min-vh-100 bg-white">
-    
-    <!-- HEADER BREADCRUMB -->
-    <div class="container-fluid px-4 py-3 border-bottom sora-border-light bg-light">
-      <div class="d-flex align-items-center text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.15em;">
-        <a href=""> <span class="text-muted cursor-pointer hover-text-primary transition-colors">Trang chủ</span> </a>
-        <span class="mx-2 text-muted">/</span>
-        <span class="fw-medium text-dark">Cửa hàng trang sức</span>
-      </div>
-    </div>
-
+   
     <!-- LỰA CHỌN LÝ TƯỞNG (DANH MỤC TOP) -->
     <section class="ideal-choices-section py-2 border-bottom sora-border-light" style="background-color: rgb(159,39,59);">
       <div class="container-fluid px-3 py-1 py-md-2">
@@ -22,8 +13,11 @@
           </div>
         </div>
 
-        <div v-if="isLoadingCategories" class="d-flex justify-content-center py-4">
-          <div class="spinner-border text-white" style="width: 2rem; height: 2rem; border-width: 0.1em;" role="status"></div>
+        <div v-if="isLoadingCategories" class="category-skeleton-row mx-auto">
+          <div v-for="item in 5" :key="'cat-skeleton-' + item" class="category-skeleton-item">
+            <SoraSkeleton width="85px" height="85px" circle class="mx-auto mb-2" />
+            <SoraSkeleton width="70px" height="12px" class="mx-auto" />
+          </div>
         </div>
 
         <div v-else class="mx-auto w-100" style="max-width: 900px;">
@@ -53,11 +47,15 @@
         
         <!-- SIDEBAR BỘ LỌC (LEFT) -->
         <div class="col-lg-2 col-md-3 d-none d-md-block sidebar-filter pe-4 pt-2">
+          <div class="filter-panel">
           
           <div class="filter-header mb-4 border-bottom pb-3">
              <h5 class="text-uppercase fw-bold mb-0 d-flex align-items-center" style="color: #9f273b; font-size: 1.1rem; letter-spacing: 0.5px;">
                <i class="bi bi-funnel-fill me-2 fs-5"></i> Bộ Lọc
              </h5>
+             <button v-if="hasActiveFilters" type="button" class="filter-clear-link mt-2" @click="resetFilters">
+               XÃ³a táº¥t cáº£
+             </button>
           </div>
 
           <!-- BỘ LỌC DANH MỤC -->
@@ -122,8 +120,8 @@
           </div>
 
           <!-- BỘ LỌC THUỘC TÍNH ĐỘNG KHÁC (Chất liệu, Size...) -->
-          <div v-if="isLoadingAttributes" class="d-flex justify-content-center mb-5">
-             <div class="spinner-grow spinner-grow-sm text-secondary" role="status"></div>
+          <div v-if="isLoadingAttributes" class="mb-5">
+             <SoraListSkeleton :rows="3" :image="false" />
           </div>
           <template v-else>
             <div class="filter-widget mb-4 border-bottom pb-3" v-for="attr in dynamicAttributes" :key="attr.id">
@@ -137,7 +135,7 @@
                 </div>
                 
                 <ul v-if="filterCollapses[attr.name] !== false" class="list-unstyled mb-0 filter-list-text d-flex flex-column gap-2 mt-3">
-                  <li v-for="val in attr.values" :key="val.id" class="w-100">
+                  <li v-for="val in getVisibleAttributeValues(attr)" :key="val.id" class="w-100">
                     <div class="d-flex align-items-center cursor-pointer attr-checkbox-item" @click="toggleAttribute(val.value)" :class="{'active': selectedAttributes.includes(val.value)}">
                       <!-- Giao diện checkbox vuông chuyên nghiệp thay cho dấu chấm -->
                       <div class="custom-square-checkbox me-3 d-flex align-items-center justify-content-center">
@@ -146,10 +144,18 @@
                       <span class="label-text transition-colors">{{ val.value }}</span>
                     </div>
                   </li>
+                  <li v-if="attr.values.length > 5" class="text-center pt-1">
+                    <button type="button" class="filter-show-more-btn" @click="toggleAttributeExpanded(attr.name)">
+                      {{ expandedAttributes[attr.name] ? 'Thu gọn' : 'Xem thêm' }}
+                      <i class="bi ms-1" :class="expandedAttributes[attr.name] ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                    </button>
+                  </li>
                 </ul>
               </template>
             </div>
           </template>
+
+          </div>
 
         </div>
 
@@ -176,22 +182,24 @@
           </div>
 
           <!-- SKELETON LOADING GRID KẾT HỢP SORA PLACEHOLDER -->
-          <div v-if="isLoadingProducts" class="product-grid">
-            <div v-for="i in 8" :key="'skeleton-' + i" class="sora-luxury-card skeleton-card">
-                <!-- Vùng ảnh loading sẽ tự hiển thị Sora-placeholder.png từ CSS -->
-                <div class="sora-card-image sora-img-container skeleton-animate"></div>
-                
-                <!-- Vùng text loading -->
-                <div class="sora-card-info">
-                    <div class="skeleton-text skeleton-title skeleton-animate mx-auto mb-2"></div>
-                    <div class="skeleton-text skeleton-category skeleton-animate mx-auto mb-3"></div>
-                    <div class="skeleton-text skeleton-price skeleton-animate mx-auto mt-auto"></div>
-                </div>
-            </div>
+          <div v-if="activeFilterLabels.length" class="active-filter-row mb-4">
+            <button
+              v-for="item in activeFilterLabels"
+              :key="item.key"
+              type="button"
+              class="active-filter-chip"
+              @click="removeFilter(item)"
+            >
+              <span>{{ item.label }}</span>
+              <i class="bi bi-x-lg"></i>
+            </button>
+            <button type="button" class="active-filter-reset" @click="resetFilters">XÃ³a bá»™ lá»c</button>
           </div>
 
+          <SoraProductGridSkeleton v-if="showInitialProductSkeleton" :count="8" min="260px" gap="2.5rem 1.5rem" />
+
           <!-- LƯỚI SẢN PHẨM THỰC TẾ -->
-          <div v-else class="product-grid">
+          <div v-else class="product-grid product-grid-live" :class="{ 'is-refreshing': isProductRefreshing }">
             <ProductCard
               v-for="product in allProducts"
               :key="product.id"
@@ -333,14 +341,17 @@ import { useRoute, useRouter } from 'vue-router';
 import ProductCard from '@/components/ui/ProductCard.vue';
 import QuickAddModal from '@/components/ui/QuickAddModal.vue';
 import CompareModal from '@/components/ui/CompareModal.vue';
+import SoraSkeleton from '@/components/ui/SoraSkeleton.vue';
+import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
+import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
 import { useWishlist } from '@/composables/useWishlist';
 import Toast from '@/utils/toastConfig';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
+import { API_BASE_URL, BACKEND_URL, getStorageUrl } from '@/utils/env';
 
 const route = useRoute();
 const router = useRouter();
 const shopSlug = ref(route.params.shop_slug || 'aurora-jewelry');
-const API_BASE_URL = 'http://127.0.0.1:8000';
 
 const soraAlert = createSoraAlert({
   customClass: { confirmButton: 'px-4 py-2 mx-2 rounded shadow-sm fw-bold font-oswald tracking-widest text-uppercase' },
@@ -352,21 +363,33 @@ const { fetchFavorites, isFavourited, toggleFavourite } = useWishlist();
 const isLoadingCategories = ref(true);
 const isLoadingProducts = ref(true);
 const isLoadingAttributes = ref(true);
+const hasLoadedProducts = ref(false);
 const isPageLoading = ref(true);
+let productFetchSequence = 0;
 
 const categories = shallowRef([]);
 const showAllCategories = ref(false); // BIẾN QUẢN LÝ TRẠNG THÁI XEM THÊM
 const showAllSidebarCategories = ref(false); // BIẾN QUẢN LÝ TRẠNG THÁI XEM THÊM Ở SIDEBAR
 
 const dynamicAttributes = ref([]); 
+const expandedAttributes = reactive({});
 const allProducts = shallowRef([]);
-const pagination = ref({ current_page: 1, last_page: 1, total: 0 });
+const pagination = ref({ current_page: 1, last_page: 1, total: 0, per_page: 0 });
 const compareList = ref([]);
 
 const selectedAttributes = ref([]); 
 const colorOptions = ref([]); 
 const selectedColors = ref([]); 
 const filters = reactive({ sort: 'recommended', categories: '' });
+const hasActiveFilters = computed(() => Boolean(filters.categories || selectedColors.value.length || selectedAttributes.value.length || filters.sort !== 'recommended'));
+const showInitialProductSkeleton = computed(() => isLoadingProducts.value && !hasLoadedProducts.value);
+const isProductRefreshing = computed(() => isLoadingProducts.value && hasLoadedProducts.value);
+const visibleResultStart = computed(() => {
+  if (!pagination.value.total) return 0;
+  const perPage = Number(pagination.value.per_page) || allProducts.value.length || 1;
+  return ((Number(pagination.value.current_page) || 1) - 1) * perPage + 1;
+});
+const visibleResultEnd = computed(() => Math.min(pagination.value.total || 0, visibleResultStart.value + allProducts.value.length - 1));
 
 const filterCollapses = ref({
   categories: true,
@@ -381,6 +404,15 @@ const toggleCollapse = (key) => {
     newCollapses[key] = !newCollapses[key];
   }
   filterCollapses.value = newCollapses;
+};
+
+const getVisibleAttributeValues = (attr) => {
+  if (expandedAttributes[attr.name]) return attr.values;
+  return attr.values.slice(0, 5);
+};
+
+const toggleAttributeExpanded = (name) => {
+  expandedAttributes[name] = !expandedAttributes[name];
 };
 
 const getToken = () => {
@@ -410,7 +442,7 @@ const handleBirthdayCouponFromUrl = async () => {
   const token = getToken();
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/client/cart/apply-birthday-coupon`, {
+    const response = await fetch(`${API_BASE_URL}/client/cart/apply-birthday-coupon`, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -449,7 +481,7 @@ const formatPrice = (price) => {
   return new Intl.NumberFormat('vi-VN').format(price) + ' đ';
 };
 
-const getImageUrl = (path) => path ? (path.startsWith('http') ? path : `${API_BASE_URL}/storage/${path}`) : '/Sora-placeholder.png';
+const getImageUrl = (path) => getStorageUrl(path);
 
 // Hàm xử lý lỗi ảnh chính
 const handleImageError = (e) => { e.target.src = '/Sora-placeholder.png'; };
@@ -501,7 +533,7 @@ const refreshFilterOptions = () => Promise.all([fetchColors(), fetchAttributes()
 const fetchColors = async () => {
   try {
     const query = buildFilterOptionParams();
-    const response = await fetch(`${API_BASE_URL}/api/shop/${shopSlug.value}/colors${query ? `?${query}` : ''}`);
+    const response = await fetch(`${BACKEND_URL}/api/shop/${shopSlug.value}/colors${query ? `?${query}` : ''}`);
     const data = await response.json();
     if(data?.success) {
       colorOptions.value = data.data;
@@ -515,7 +547,7 @@ const fetchAttributes = async () => {
   isLoadingAttributes.value = true;
   try {
     const query = buildFilterOptionParams();
-    const response = await fetch(`${API_BASE_URL}/api/shop/${shopSlug.value}/attributes${query ? `?${query}` : ''}`);
+    const response = await fetch(`${BACKEND_URL}/api/shop/${shopSlug.value}/attributes${query ? `?${query}` : ''}`);
     const data = await response.json();
     if(data?.success) {
       dynamicAttributes.value = data.data.filter(attr => !isColorAttribute(attr.name)).map(attr => ({
@@ -523,6 +555,12 @@ const fetchAttributes = async () => {
         name: attr.name,
         values: attr.values
       }));
+
+      Object.keys(expandedAttributes).forEach((key) => {
+        if (!dynamicAttributes.value.some((attr) => attr.name === key)) {
+          delete expandedAttributes[key];
+        }
+      });
       
       const newCollapses = { ...filterCollapses.value };
       let hasChanges = false;
@@ -569,7 +607,7 @@ const toggleAttribute = (val) => {
 const fetchCategories = async () => {
   isLoadingCategories.value = true;
   try {
-    const response = await fetch(`${API_BASE_URL}/api/shop/${shopSlug.value}/categories`);
+    const response = await fetch(`${BACKEND_URL}/api/shop/${shopSlug.value}/categories`);
     const data = await response.json();
     if(data?.success) {
       // Sắp xếp danh mục dựa theo sort_order của Admin trả về
@@ -603,7 +641,42 @@ const visibleSidebarCategories = computed(() => {
   return categories.value.slice(0, 5); // Giới hạn 5 mục đầu ở Sidebar
 });
 
+const sortLabels = {
+  new: 'Má»›i nháº¥t',
+  price_asc: 'GiÃ¡ tháº¥p Ä‘áº¿n cao',
+  price_desc: 'GiÃ¡ cao Ä‘áº¿n tháº¥p',
+};
+
+const activeFilterLabels = computed(() => {
+  const labels = [];
+  if (filters.categories) {
+    const category = categories.value.find((item) => item.slug === filters.categories);
+    labels.push({ key: 'category', type: 'category', label: category?.name || filters.categories });
+  }
+  selectedColors.value.forEach((color) => labels.push({ key: `color-${color}`, type: 'color', value: color, label: color }));
+  selectedAttributes.value.forEach((value) => labels.push({ key: `attr-${value}`, type: 'attribute', value, label: value }));
+  if (filters.sort !== 'recommended') {
+    labels.push({ key: 'sort', type: 'sort', label: sortLabels[filters.sort] || filters.sort });
+  }
+  return labels;
+});
+
+const removeFilter = (item) => {
+  if (item.type === 'category') {
+    filters.categories = '';
+    refreshFilterOptions();
+  } else if (item.type === 'color') {
+    selectedColors.value = selectedColors.value.filter((color) => color !== item.value);
+  } else if (item.type === 'attribute') {
+    selectedAttributes.value = selectedAttributes.value.filter((value) => value !== item.value);
+  } else if (item.type === 'sort') {
+    filters.sort = 'recommended';
+  }
+  applyFilters();
+};
+
 const fetchProducts = async (page = 1) => {
+  const requestId = ++productFetchSequence;
   isLoadingProducts.value = true;
   try {
     const queryPayload = { page, sort: filters.sort };
@@ -618,17 +691,21 @@ const fetchProducts = async (page = 1) => {
     }
 
     const params = new URLSearchParams(queryPayload);
-    const response = await fetch(`${API_BASE_URL}/api/shop/${shopSlug.value}/products?${params.toString()}`);
+    const response = await fetch(`${BACKEND_URL}/api/shop/${shopSlug.value}/products?${params.toString()}`);
     const data = await response.json();
+    if (requestId !== productFetchSequence) return;
     
     if(data?.success) {
       allProducts.value = data.data.data; 
-      pagination.value = { current_page: data.data.current_page, last_page: data.data.last_page, total: data.data.total };
+      pagination.value = { current_page: data.data.current_page, last_page: data.data.last_page, total: data.data.total, per_page: data.data.per_page };
+      hasLoadedProducts.value = true;
     }
   } catch (e) {
     console.error(e);
   } finally { 
-    isLoadingProducts.value = false; 
+    if (requestId === productFetchSequence) {
+      isLoadingProducts.value = false;
+    }
   }
 };
 
@@ -825,7 +902,7 @@ const confirmAddToCart = async () => {
     const headers = { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-Cart-Session-Id': sessionId };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const response = await fetch(`${API_BASE_URL}/api/client/cart`, {
+    const response = await fetch(`${API_BASE_URL}/client/cart`, {
       method: 'POST', headers,
       body: JSON.stringify({ product_variant_id: currentVariant.value.id, quantity: quickAddModal.quantity })
     });
@@ -874,6 +951,84 @@ onMounted(() => {
 .sora-border-light { border-color: var(--sora-border) !important; }
 .sora-btn-primary { background-color: var(--sora-primary); color: #fff; border: 1px solid var(--sora-primary); }
 .sora-btn-primary:hover { background-color: #831f30; border-color: #831f30; color: #fff; }
+
+.filter-panel {
+  position: sticky;
+  top: 88px;
+  padding: 18px 16px;
+  border: 1px solid rgba(231, 206, 125, 0.38);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #fffdf8 0%, #ffffff 72%);
+  box-shadow: 0 18px 40px rgba(65, 35, 24, 0.06);
+}
+
+.filter-clear-link {
+  border: 0;
+  background: transparent;
+  color: var(--sora-primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0;
+}
+
+.filter-widget {
+  border-color: rgba(231, 206, 125, 0.28) !important;
+}
+
+.active-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(231, 206, 125, 0.34);
+  border-radius: 10px;
+  background: #fffdf8;
+}
+
+.active-filter-chip,
+.active-filter-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.active-filter-chip {
+  border: 1px solid rgba(159, 39, 59, 0.18);
+  background: #fff;
+  color: #6b5451;
+  padding: 6px 12px;
+}
+
+.active-filter-chip:hover {
+  color: var(--sora-primary);
+  border-color: rgba(159, 39, 59, 0.38);
+}
+
+.active-filter-reset {
+  border: 0;
+  background: transparent;
+  color: var(--sora-primary);
+  padding: 6px 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.product-grid-live {
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+.product-grid-live.is-refreshing {
+  opacity: 0.58;
+  filter: saturate(0.9);
+  pointer-events: none;
+}
 
 /* -------------------------------------
    CSS NÚT XEM THÊM VÀ HIỆU ỨNG TRƯỢT
@@ -948,6 +1103,20 @@ onMounted(() => {
 .attr-checkbox-item.active .label-text {
   color: var(--sora-primary);
   font-weight: 600;
+}
+
+.filter-show-more-btn {
+  border: 0;
+  background: transparent;
+  color: #7c6964;
+  font-size: 0.84rem;
+  font-style: italic;
+  padding: 4px 8px;
+  transition: color 0.2s ease;
+}
+
+.filter-show-more-btn:hover {
+  color: var(--sora-primary);
 }
 
 /* -------------------------------------
@@ -1058,6 +1227,18 @@ onMounted(() => {
   background-repeat: no-repeat;
 }
 
+.category-skeleton-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(90px, 1fr));
+  gap: 14px;
+  max-width: 720px;
+  padding: 4px 0 10px;
+}
+
+.category-skeleton-item {
+  min-width: 0;
+}
+
 .sora-card-image img { width: 100%; height: 100%; object-fit: cover; object-position: center; transition: opacity 0.6s ease; }
 .sora-main-img { z-index: 1; position: relative; }
 .sora-hover-img { position: absolute; top:0; left:0; z-index: 2; opacity: 0; }
@@ -1082,56 +1263,4 @@ onMounted(() => {
 .variant-select-btn.selected { border-color: #9f273b; color: #9f273b; font-weight: 700; background-color: #fdf5f6; box-shadow: inset 0 0 0 1px #9f273b; }
 .sora-discount-tag { background-color: #cc1e2e; color: white; font-weight: bold; border-radius: 2px; }
 
-/* -------------------------------------
-   CSS SKELETON LOADING (SHIMMER EFFECT)
-   ------------------------------------- */
-.skeleton-card {
-  pointer-events: none;
-}
-.skeleton-text {
-  background-color: #e2e5e7;
-  border-radius: 4px;
-}
-.skeleton-title {
-  width: 80%;
-  height: 18px;
-}
-.skeleton-category {
-  width: 50%;
-  height: 14px;
-}
-.skeleton-price {
-  width: 40%;
-  height: 20px;
-}
-
-/* Hiệu ứng chớp sáng chạy ngang */
-.skeleton-animate {
-  position: relative;
-  overflow: hidden;
-}
-.skeleton-animate::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  transform: translateX(-100%);
-  background-image: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0,
-    rgba(255, 255, 255, 0.4) 20%,
-    rgba(255, 255, 255, 0.8) 60%,
-    rgba(255, 255, 255, 0)
-  );
-  animation: shimmer 1.5s infinite;
-  z-index: 1;
-}
-
-@keyframes shimmer {
-  100% {
-    transform: translateX(100%);
-  }
-}
 </style>

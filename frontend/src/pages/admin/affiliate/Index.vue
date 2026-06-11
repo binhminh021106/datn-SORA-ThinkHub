@@ -202,8 +202,8 @@ import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { getAdminToken } from '@/composables/useUtilities';
+import { API_BASE_URL } from '@/utils/env';
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
 // Read admin token from both localStorage and sessionStorage (handles "remember me" off)
 const getToken = () => getAdminToken();
 
@@ -225,7 +225,7 @@ const fetchApplications = async (silent = false) => {
   else isLoading.value = true;
 
   try {
-    const res = await axios.get(`${API_BASE}/api/admin/affiliates/applications`, {
+    const res = await axios.get(`${API_BASE_URL}/admin/affiliates/applications`, {
       headers: { Authorization: `Bearer ${getToken()}` }
     });
     if (res.data.success) {
@@ -253,7 +253,7 @@ const approveApp = async (id) => {
     if (result.isConfirmed) {
       isActionLoading.value = true;
       try {
-        const res = await axios.post(`${API_BASE}/api/admin/affiliates/applications/${id}/approve`, {}, {
+        const res = await axios.post(`${API_BASE_URL}/admin/affiliates/applications/${id}/approve`, {}, {
           headers: { Authorization: `Bearer ${getToken()}` }
         });
         if (res.data.success) {
@@ -284,7 +284,7 @@ const rejectApp = async (id) => {
     if (result.isConfirmed) {
       isActionLoading.value = true;
       try {
-        const res = await axios.post(`${API_BASE}/api/admin/affiliates/applications/${id}/reject`, {
+        const res = await axios.post(`${API_BASE_URL}/admin/affiliates/applications/${id}/reject`, {
           admin_notes: result.value
         }, {
           headers: { Authorization: `Bearer ${getToken()}` }
@@ -316,7 +316,7 @@ const revokeApp = async (id) => {
     if (result.isConfirmed) {
       isActionLoading.value = true;
       try {
-        const res = await axios.post(`${API_BASE}/api/admin/affiliates/applications/${id}/revoke`, {}, {
+        const res = await axios.post(`${API_BASE_URL}/admin/affiliates/applications/${id}/revoke`, {}, {
           headers: { Authorization: `Bearer ${getToken()}` }
         });
         if (res.data.success) {

@@ -90,6 +90,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
+import { API_BASE_URL } from '@/utils/env';
 
 const isLoading = ref(true);
 const data = reactive({
@@ -97,11 +98,9 @@ const data = reactive({
   last_updated: ''
 });
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL; 
-
 const fetchGoldPrices = async () => {
   try {
-    const response = await fetch(`${API_BASE}/client/gold-prices`, {
+    const response = await fetch(`${API_BASE_URL}/client/gold-prices`, {
       headers: { 'Accept': 'application/json' }
     });
     

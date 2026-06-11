@@ -35,9 +35,12 @@
         </div>
       </div>
 
-      <div v-if="isLoading" class="loading-state">
-        <div class="spinner"></div>
-        <p>Đang tải dữ liệu so sánh...</p>
+      <div v-if="isLoading" class="compare-table-skeleton">
+        <div class="d-flex gap-3 mb-4">
+          <SoraSkeleton width="18%" height="160px" radius="8px" />
+          <SoraSkeleton v-for="item in 3" :key="item" width="26%" height="160px" radius="8px" />
+        </div>
+        <SoraListSkeleton :rows="5" :image="false" />
       </div>
 
       <div v-else-if="products.length === 0" class="empty-state">
@@ -195,9 +198,7 @@
             <div v-if="comparePopupTab === 'suggestions'">
               <p class="compare-modal-subtitle">Các sản phẩm mới nhất cùng danh mục:</p>
               
-              <div v-if="isLoadingCompareSuggestions" class="rec-loading">
-                <div class="spinner small-spinner"></div>
-              </div>
+              <SoraProductGridSkeleton v-if="isLoadingCompareSuggestions" :count="4" min="130px" gap="15px" />
 
               <div v-else-if="filteredSuggestions.length === 0" class="empty-msg">
                 <p>Không tìm thấy sản phẩm nào khớp với tìm kiếm của bạn.</p>
@@ -228,9 +229,7 @@
               <div v-if="!isLoggedIn" class="not-logged-in-msg">
                 <p>Vui lòng đăng nhập để xem danh sách yêu thích.</p>
               </div>
-              <div v-else-if="isLoadingFavourites" class="rec-loading">
-                <div class="spinner small-spinner"></div>
-              </div>
+              <SoraProductGridSkeleton v-else-if="isLoadingFavourites" :count="4" min="130px" gap="15px" />
               <div v-else-if="filteredFavourites.length === 0" class="empty-msg">
                 <p v-if="searchQuery">Không có sản phẩm yêu thích nào khớp với "{{ searchQuery }}".</p>
                 <p v-else>Bạn chưa có sản phẩm yêu thích nào.</p>
@@ -271,11 +270,14 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import Toast from '@/utils/toastConfig';
+import SoraSkeleton from '@/components/ui/SoraSkeleton.vue';
+import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
+import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
+import { API_BASE_URL, getStorageUrl } from '@/utils/env';
 
 const route = useRoute();
 const router = useRouter();
 const shopSlug = route.params.shop_slug || 'aurora';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const products = ref([]);
 const isLoading = ref(true);
@@ -375,9 +377,7 @@ onMounted(() => {
 // LOGIC: POPUP CHỌN SẢN PHẨM SO SÁNH
 // ==========================================
 const getImageUrl = (path) => {
-  if (!path) return 'https://via.placeholder.com/150?text=No+Image';
-  if (path.startsWith('http') || path.startsWith('data:')) return path;
-  return `${API_BASE_URL}/storage/${path}`;
+  return getStorageUrl(path, 'https://via.placeholder.com/150?text=No+Image');
 };
 
 const openComparePopup = async () => {
@@ -754,10 +754,10 @@ const truncateHtml = (html, length) => {
 .mt-3 { margin-top: 1rem; }
 
 /* Loading state */
-.loading-state, .empty-state { text-align: center; padding: 50px 0; color: #666;}
-.spinner { width: 40px; height: 40px; border: 3px solid #f3f3f3; border-top: 3px solid rgb(159,39,59); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-.small-spinner { width: 30px; height: 30px; border-width: 2px; }
+.empty-state { text-align: center; padding: 50px 0; color: #666;}
+.compare-table-skeleton {
+  padding: 24px 0;
+}
 .btn-primary-outline { background: transparent; border: 1px solid rgb(159,39,59); color: rgb(159,39,59); padding: 10px 24px; border-radius: 6px; cursor: pointer; margin-top: 15px;}
 
 @media (min-width: 768px) {
@@ -829,8 +829,6 @@ const truncateHtml = (html, length) => {
     color: #888;
     font-style: italic;
 }
-.rec-loading { min-height: 200px; display: flex; align-items: center; justify-content: center; }
-
 @media (max-width: 600px) {
   .compare-modal-header { flex-direction: column; align-items: flex-start; }
   .header-search-wrap { width: 100%; justify-content: space-between; }

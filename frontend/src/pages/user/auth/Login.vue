@@ -76,8 +76,7 @@
 import { ref, reactive } from 'vue';
 import axios from 'axios';
 import Toast from '@/utils/toastConfig';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { API_BASE_URL } from '@/utils/env';
 
 const LoginWithGoogle = () => {
   window.location.href = `${API_BASE_URL}/auth/google/redirect`;

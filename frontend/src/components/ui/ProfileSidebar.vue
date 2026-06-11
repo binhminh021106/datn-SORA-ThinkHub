@@ -162,6 +162,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
+import { getStorageUrl } from '@/utils/env';
 
 const props = defineProps({
   /** Cho phép truyền thẳng user data từ parent */
@@ -263,8 +264,7 @@ const tierName = computed(() => {
 const avatarSrc = computed(() => {
   const url = props.user?.avatar_url || userData.value.avatar_url;
   if (!url) return `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName.value || 'User')}&background=9f273b&color=fff`;
-  if (url.startsWith('http')) return url;
-  return `http://127.0.0.1:8000/storage/${url}`;
+  return getStorageUrl(url);
 });
 
 // ===== TIER STYLES =====

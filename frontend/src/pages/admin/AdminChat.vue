@@ -98,7 +98,7 @@
             <div class="chat-header-actions">
               <span class="online-badge">
                 <span class="online-dot me-1"></span>
-                Online
+                Trực tuyến
               </span>
               <!-- NÚT XÓA CUỘC TRÒ CHUYỆN -->
               <button class="delete-conv-btn" @click="confirmDeleteConversation" title="Xóa toàn bộ cuộc trò chuyện">

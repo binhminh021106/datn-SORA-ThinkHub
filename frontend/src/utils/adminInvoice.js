@@ -1,7 +1,8 @@
 import axios from 'axios';
 import Swal from 'sweetalert2';
+import { BACKEND_URL } from '@/utils/env';
 
-export const downloadAdminInvoice = async ({ orderId, orderCode, apiBaseUrl = 'http://127.0.0.1:8000', token = localStorage.getItem('admin_token') }) => {
+export const downloadAdminInvoice = async ({ orderId, orderCode, apiBaseUrl = BACKEND_URL, token = localStorage.getItem('admin_token') }) => {
   Swal.fire({
     title: 'Đang xuất hóa đơn...',
     allowOutsideClick: false,

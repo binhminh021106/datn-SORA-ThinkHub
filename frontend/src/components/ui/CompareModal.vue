@@ -46,9 +46,7 @@
           <div class="compare-modal-body">
             <!-- TAB GỢI Ý -->
             <div v-if="comparePopupTab === 'suggestions'">
-              <div v-if="isLoadingCompareSuggestions" class="text-center py-4">
-                <div class="spinner small-spinner mx-auto" style="margin: 0 auto;"></div>
-              </div>
+              <SoraProductGridSkeleton v-if="isLoadingCompareSuggestions" :count="4" min="130px" gap="15px" />
               <div v-else-if="filteredSuggestions.length > 0" class="compare-suggestions-grid">
                 <div v-for="item in filteredSuggestions" :key="item.id" class="suggestion-card">
                   <img :src="getImageUrl(item.thumbnail_image)" :alt="item.name" class="suggestion-img" @error="handleImageError">
@@ -67,9 +65,7 @@
             <!-- TAB YÊU THÍCH -->
             <div v-if="comparePopupTab === 'favourites'">
               <div v-if="!isLoggedIn" class="not-logged-in-msg">Vui lòng đăng nhập để xem danh sách yêu thích.</div>
-              <div v-else-if="isLoadingFavourites" class="text-center py-4">
-                <div class="spinner small-spinner mx-auto" style="margin: 0 auto;"></div>
-              </div>
+              <SoraProductGridSkeleton v-else-if="isLoadingFavourites" :count="4" min="130px" gap="15px" />
               <div v-else-if="filteredFavourites.length > 0" class="compare-suggestions-grid">
                 <div v-for="item in filteredFavourites" :key="item.id" class="suggestion-card">
                   <img :src="getImageUrl(item.thumbnail_image)" :alt="item.name" class="suggestion-img" @error="handleImageError">
@@ -103,13 +99,14 @@ import Swal from 'sweetalert2';
 import apiClient from '@/utils/apiClient';
 import Toast from '@/utils/toastConfig';
 import { globalModalState } from '@/stores/modalState';
+import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
+import { getStorageUrl } from '@/utils/env';
 
 const props = defineProps({
   shopSlug: { type: String, default: 'sora' }
 });
 
 const router = useRouter();
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
 
 const compareList = ref([]);
 const showComparePopup = ref(false);
@@ -129,10 +126,7 @@ watch(() => globalModalState.compareTrigger, () => {
 });
 
 const getImageUrl = (path) => {
-    if (!path) return '/Sora-placeholder.png';
-    if (path.startsWith('http') || path.startsWith('data:image')) return path;
-    const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    return `${API_BASE_URL}/storage/${cleanPath}`;
+    return getStorageUrl(path);
 };
 
 const handleImageError = (e) => { e.target.src = '/Sora-placeholder.png'; };
@@ -297,6 +291,4 @@ const fetchFavouritesForCompare = async () => {
 .compare-modal-tabs button.active { color: #9f273b; border-bottom-color: #9f273b; background: #fff; }
 .compare-modal-tabs button:hover:not(.active) { background: #f0f0f0; }
 .not-logged-in-msg, .empty-msg { text-align: center; padding: 40px 20px; color: #888; font-style: italic; }
-.spinner { width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid #9f273b; border-radius: 50%; animation: spin 1s linear infinite; }
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 </style>

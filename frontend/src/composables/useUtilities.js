@@ -1,3 +1,5 @@
+import { API_BASE_URL, BACKEND_URL, getStorageUrl } from '@/utils/env';
+
 export const ADMIN_AUTH_STORAGE_KEYS = ['admin_token', 'adminToken'];
 export const ADMIN_AUTH_STATE_KEYS = ['admin_role', 'admin_level', 'admin_info'];
 export const USER_AUTH_STORAGE_KEYS = ['access_token', 'token', 'auth_token', 'userToken', 'user_token'];
@@ -57,19 +59,12 @@ export const getHeaders = () => {
   return headers;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || API_BASE_URL?.replace(/\/api\/?$/, '');
 if (!API_BASE_URL && !BACKEND_URL) {
   throw new Error('VITE_API_BASE_URL or VITE_BACKEND_URL must be defined in environment variables');
 }
-const soraPlaceholder = '/Sora-placeholder.png';
 
 export const getFullImage = (path) => {
-  if (!path) return soraPlaceholder;
-  if (path.startsWith('http') || path.startsWith('data:image')) return path;
-  const cleanPath = path.startsWith('/') ? path.substring(1) : path;
-  if (cleanPath.startsWith('storage/')) return `${BACKEND_URL}/${cleanPath}`;
-  return `${BACKEND_URL}/storage/${cleanPath}`;
+  return getStorageUrl(path);
 };
 
 export const formatMoney = (amount) => amount ? new Intl.NumberFormat('vi-VN').format(amount) + ' ₫' : '0 ₫';

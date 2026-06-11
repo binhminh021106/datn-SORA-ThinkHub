@@ -14,10 +14,7 @@
     </div>
 
     <div class="container">
-      <div v-if="isInitializing" class="d-flex flex-column justify-content-center align-items-center py-5 my-5">
-        <div class="spinner-border text-sora-primary mb-3" style="width: 3rem; height: 3rem;" role="status"></div>
-        <p class="text-muted font-oswald tracking-widest text-uppercase small">Đang chuẩn bị đơn hàng của bạn...</p>
-      </div>
+      <SoraCheckoutSkeleton v-if="isInitializing" />
 
       <div v-else-if="cartItems.length === 0" class="text-center py-5 bg-white shadow-sm border-top border-4 border-danger-custom">
         <div class="py-5">
@@ -375,6 +372,8 @@ import Toast from '@/utils/toastConfig';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 import VietnamAddressPicker from '@/components/ui/VietnamAddressPicker.vue';
+import SoraCheckoutSkeleton from '@/components/ui/SoraCheckoutSkeleton.vue';
+import { API_BASE_URL, getStorageUrl } from '@/utils/env';
 
 const router = useRouter();
 
@@ -432,9 +431,6 @@ const getHeaders = () => {
   if (sid) headers['X-Cart-Session-Id'] = sid;
   return headers;
 };
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'http://127.0.0.1:8000/storage';
 
 const SHOP_LAT = 12.6675;
 const SHOP_LNG = 108.0378;
@@ -606,16 +602,7 @@ const parseAttributes = (attr) => {
 const formatPrice = (value) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value || 0);
 
 const getImageUrl = (path) => {
-    if (!path) return defaultPlaceholder;
-    if (path.startsWith('http') || path.startsWith('data:image')) return path;
-    
-    let cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    
-    if (cleanPath.startsWith('storage/')) {
-        cleanPath = cleanPath.substring(8);
-    }
-    
-    return `${STORAGE_URL}/${cleanPath}`;
+    return getStorageUrl(path, defaultPlaceholder);
 };
 
 const handleImageError = (e) => { e.target.src = defaultPlaceholder; };

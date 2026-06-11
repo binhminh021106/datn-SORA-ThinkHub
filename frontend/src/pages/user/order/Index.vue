@@ -15,9 +15,7 @@
         <!-- NỘI DUNG CHÍNH BÊN PHẢI -->
         <div class="col-lg-9">
 
-      <div v-if="isLoading" class="d-flex justify-content-center align-items-center py-5 my-5">
-        <div class="spinner-border text-primary-custom" style="width: 3rem; height: 3rem;"></div>
-      </div>
+      <SoraListSkeleton v-if="isLoading" :rows="4" image-size="72px" card />
 
       <div v-else-if="orders.length > 0 || hasActiveFilters" class="mb-5">
         <div class="bg-white p-3 p-md-4 shadow-sm border border-light-subtle d-flex flex-column gap-4">
@@ -233,6 +231,8 @@ import ReviewModal from './ReviewModal.vue';
 import ViewReviewModal from './ViewReviewModal.vue';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 import ProfileSidebar from '@/components/ui/ProfileSidebar.vue';
+import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
+import { getStorageUrl } from '@/utils/env';
 
 const router = useRouter();
 const isLoading = ref(true);
@@ -287,7 +287,7 @@ const getHeaders = () => {
 
 const formatPrice = (v) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v || 0);
 const formatDate = (d) => d ? new Date(d).toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'N/A';
-const getImageUrl = (p) => p ? (p.startsWith('http') ? p : `http://127.0.0.1:8000/storage/${p}`) : defaultPlaceholder;
+const getImageUrl = (p) => getStorageUrl(p, defaultPlaceholder);
 const handleImageError = (e) => { e.target.src = defaultPlaceholder; };
 
 const getStatusClass = (s) => ({

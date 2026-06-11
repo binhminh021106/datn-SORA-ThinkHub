@@ -23,7 +23,7 @@ class HolidayCouponMail extends Mailable implements ShouldQueue
     public $expiresAt;
     public $applicableScope;
 
-    private static array $couponCache = [];
+    private array $couponCache = [];
 
     public function __construct($user, $event, $holidayName = null)
     {
@@ -77,7 +77,7 @@ class HolidayCouponMail extends Mailable implements ShouldQueue
     {
         if ($event instanceof Coupon) {
             if ($event->code) {
-                self::$couponCache[$event->code] = $event;
+                $this->couponCache[$event->code] = $event;
             }
 
             return $event;
@@ -87,11 +87,11 @@ class HolidayCouponMail extends Mailable implements ShouldQueue
             return null;
         }
 
-        if (!array_key_exists($this->voucherCode, self::$couponCache)) {
-            self::$couponCache[$this->voucherCode] = Coupon::where('code', $this->voucherCode)->first();
+        if (!array_key_exists($this->voucherCode, $this->couponCache)) {
+            $this->couponCache[$this->voucherCode] = Coupon::where('code', $this->voucherCode)->first();
         }
 
-        return self::$couponCache[$this->voucherCode];
+        return $this->couponCache[$this->voucherCode];
     }
 
     private function resolveDiscountLabel(?Coupon $coupon): string

@@ -100,6 +100,7 @@
 import { defineProps, defineEmits, computed } from 'vue';
 import { globalModalState } from '@/stores/modalState';
 import Toast from '@/utils/toastConfig';
+import { getStorageUrl } from '@/utils/env';
 
 const props = defineProps({
   product: { type: Object, required: true },
@@ -140,11 +141,7 @@ const formatCurrency = (val) => {
 };
 
 const getImageUrl = (path) => {
-  if (!path) return '/Sora-placeholder.png';
-  if (path.startsWith('http')) return path;
-  const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
-  let cleanPath = path.startsWith('/') ? path.substring(1) : path;
-  return `${baseUrl}/storage/${cleanPath}`;
+  return getStorageUrl(path);
 };
 
 const handleImageError = (e) => {

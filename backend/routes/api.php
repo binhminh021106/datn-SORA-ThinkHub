@@ -33,6 +33,7 @@ use App\Http\Controllers\Api\Admin\AdminNewController;
 use App\Http\Controllers\Api\Admin\AdminAttendanceController;
 use App\Http\Controllers\Api\Admin\AdminAffiliateController;
 use App\Http\Controllers\Api\Admin\AdminFaceRecognitionController;
+use App\Http\Controllers\Api\Admin\AdminWorkShiftController;
 
 // Controllers Client
 use App\Http\Controllers\Api\Client\ProductDetailController;
@@ -45,13 +46,15 @@ use App\Http\Controllers\Api\Client\ClientCompareController;
 use App\Http\Controllers\Api\Client\ClientContactController;
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\GeoController;
-// use App\Http\Controllers\Api\Client\ClientCheckoutController;
 use App\Http\Controllers\Api\Auth\GoogleAuthController;
 use App\Http\Controllers\Api\Client\ClientFavouriteController;
 use App\Http\Controllers\Api\Client\ClientProfileController;
 use App\Http\Controllers\Api\Client\ChatbotController;
 use App\Http\Controllers\Api\Client\ClientNewController;
 use App\Http\Controllers\Api\Client\ClientSavedCouponController;
+use App\Http\Controllers\Api\Client\ClientComboController;
+use App\Http\Controllers\Api\Client\ClientCheckoutController;
+use App\Http\Controllers\Api\MessageController;
 
 // gửi maill_kh
 use App\Http\Controllers\Api\Admin\HolidayEventController;
@@ -112,8 +115,8 @@ Route::prefix('client')->group(function () {
 
     // THÊM VÀO ĐÂY (trước hoặc sau các route khác đều được)
     Route::middleware('auth:sanctum')->prefix('messages')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Api\MessageController::class, 'history']);
-        Route::post('/', [\App\Http\Controllers\Api\MessageController::class, 'store']);
+        Route::get('/', [MessageController::class, 'history']);
+        Route::post('/', [MessageController::class, 'store']);
     });
 
     Route::prefix('geo')->group(function () {
@@ -162,16 +165,16 @@ Route::prefix('client')->group(function () {
 
     // Hồ Sơ Cá Nhân (Profile)
     Route::prefix('profile')->middleware('auth:sanctum')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Api\Client\ClientProfileController::class, 'show']);
-        Route::post('/', [\App\Http\Controllers\Api\Client\ClientProfileController::class, 'update']);
-        Route::post('/password', [\App\Http\Controllers\Api\Client\ClientProfileController::class, 'updatePassword']);
+        Route::get('/', [ClientProfileController::class, 'show']);
+        Route::post('/', [ClientProfileController::class, 'update']);
+        Route::post('/password', [ClientProfileController::class, 'updatePassword']);
 
         // Sổ Địa Chỉ (Address Book)
-        Route::get('/addresses', [\App\Http\Controllers\Api\Client\ClientProfileController::class, 'getAddresses']);
-        Route::post('/addresses', [\App\Http\Controllers\Api\Client\ClientProfileController::class, 'storeAddress']);
-        Route::put('/addresses/{id}', [\App\Http\Controllers\Api\Client\ClientProfileController::class, 'updateAddress']);
-        Route::delete('/addresses/{id}', [\App\Http\Controllers\Api\Client\ClientProfileController::class, 'deleteAddress']);
-        Route::put('/addresses/{id}/default', [\App\Http\Controllers\Api\Client\ClientProfileController::class, 'setDefaultAddress']);
+        Route::get('/addresses', [ClientProfileController::class, 'getAddresses']);
+        Route::post('/addresses', [ClientProfileController::class, 'storeAddress']);
+        Route::put('/addresses/{id}', [ClientProfileController::class, 'updateAddress']);
+        Route::delete('/addresses/{id}', [ClientProfileController::class, 'deleteAddress']);
+        Route::put('/addresses/{id}/default', [ClientProfileController::class, 'setDefaultAddress']);
     });
 
     // MODULE ĐƠN HÀNG (Orders)
@@ -186,19 +189,19 @@ Route::prefix('client')->group(function () {
         Route::post('/{order_code}/return', 'requestReturn');
     });
 
-    Route::controller(\App\Http\Controllers\Api\Client\ClientComboController::class)->prefix('combos')->group(function () {
+    Route::controller(ClientComboController::class)->prefix('combos')->group(function () {
         Route::get('/', 'index');
         Route::get('/{slug}', 'show');
     });
 
     // ROUTE PAYMENT
     Route::prefix('checkout')->group(function () {
-        Route::get('/init', [\App\Http\Controllers\Api\Client\ClientCheckoutController::class, 'initData']);
-        Route::post('/', [\App\Http\Controllers\Api\Client\ClientCheckoutController::class, 'processCheckout']);
-        Route::get('/momo-return', [\App\Http\Controllers\Api\Client\ClientCheckoutController::class, 'momoReturn']);
-        Route::post('/momo-return', [\App\Http\Controllers\Api\Client\ClientCheckoutController::class, 'momoReturn']);
+        Route::get('/init', [ClientCheckoutController::class, 'initData']);
+        Route::post('/', [ClientCheckoutController::class, 'processCheckout']);
+        Route::get('/momo-return', [ClientCheckoutController::class, 'momoReturn']);
+        Route::post('/momo-return', [ClientCheckoutController::class, 'momoReturn']);
     });
-    Route::get('orders/{order_code}/invoice', [App\Http\Controllers\Api\Client\ClientOrderController::class, 'invoice'])
+    Route::get('orders/{order_code}/invoice', [ClientOrderController::class, 'invoice'])
         ->name('client.orders.invoice');
 
     // CHƯƠNG TRÌNH ĐỐI TÁC (AFFILIATE)
@@ -219,9 +222,9 @@ Route::prefix('shop/{shop_slug}')->group(function () {
     Route::get('/products/{slug}', [ProductDetailController::class, 'show']);
     Route::post('/compare', [ClientCompareController::class, 'getCompareData']);
 });
-Route::get('shop/{shop_slug}/categories', [App\Http\Controllers\Api\Client\ShopController::class, 'categories']);
-Route::get('shop/{shop_slug}/colors', [App\Http\Controllers\Api\Client\ShopController::class, 'colors']);
-Route::get('shop/{shop_slug}/attributes', [App\Http\Controllers\Api\Client\ShopController::class, 'attributes']);
+Route::get('shop/{shop_slug}/categories', [ShopController::class, 'categories']);
+Route::get('shop/{shop_slug}/colors', [ShopController::class, 'colors']);
+Route::get('shop/{shop_slug}/attributes', [ShopController::class, 'attributes']);
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -446,15 +449,15 @@ Route::prefix('admin')->group(function () {
 
         // BỔ SUNG ROUTE REAL-TIME CHAT CHO ADMIN
         Route::prefix('messages')->group(function () {
-            Route::get('/conversations', [\App\Http\Controllers\Api\MessageController::class, 'getConversations']);
-            Route::get('/', [\App\Http\Controllers\Api\MessageController::class, 'history']);
-            Route::post('/', [\App\Http\Controllers\Api\MessageController::class, 'store']);
+            Route::get('/conversations', [MessageController::class, 'getConversations']);
+            Route::get('/', [MessageController::class, 'history']);
+            Route::post('/', [MessageController::class, 'store']);
             // Xóa toàn bộ cuộc trò chuyện với user
-            Route::delete('/conversations/{userId}', [\App\Http\Controllers\Api\MessageController::class, 'deleteConversation']);
+            Route::delete('/conversations/{userId}', [MessageController::class, 'deleteConversation']);
         });
 
         // 1. CÁC ROUTE ĐIỂM DANH CÁ NHÂN (AI CŨNG ĐƯỢC DÙNG, KHÔNG YÊU CẦU QUYỀN MODULE)
-        Route::controller(\App\Http\Controllers\Api\Admin\AdminAttendanceController::class)->prefix('attendances')->group(function () {
+        Route::controller(AdminAttendanceController::class)->prefix('attendances')->group(function () {
             Route::get('/status', 'checkStatus');       // Lấy trạng thái của mình hoặc Quét QR
             Route::post('/check-in', 'checkIn');        // Vào ca
             Route::post('/check-out', 'checkOut');      // Tan ca
@@ -462,7 +465,7 @@ Route::prefix('admin')->group(function () {
 
         // 2. CÁC ROUTE QUẢN LÝ ĐIỂM DANH (CHỈ DÀNH CHO QUẢN LÝ / SUPER ADMIN)
         Route::middleware(['check.module:admin_attendance'])->group(function () {
-            Route::controller(\App\Http\Controllers\Api\Admin\AdminAttendanceController::class)->prefix('attendances')->group(function () {
+            Route::controller(AdminAttendanceController::class)->prefix('attendances')->group(function () {
                 // ĐẶT CÁC ROUTE TĨNH LÊN TRƯỚC (Tránh bị route động nuốt)
                 Route::get('/work-shifts', 'getWorkShifts');
                 Route::get('/roles', 'getRoles');
@@ -479,7 +482,7 @@ Route::prefix('admin')->group(function () {
             });
 
             // 2. Quản lý Ca làm việc
-            Route::controller(\App\Http\Controllers\Api\Admin\AdminWorkShiftController::class)->prefix('work-shifts')->group(function () {
+            Route::controller(AdminWorkShiftController::class)->prefix('work-shifts')->group(function () {
                 // ĐẶT CÁC ROUTE TĨNH LÊN TRƯỚC ĐỂ TRÁNH BỊ {id} NUỐT
                 Route::get('/', 'index');
                 Route::post('/', 'store');

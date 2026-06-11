@@ -152,16 +152,7 @@ class HolidayEventController extends Controller
     private function parseDiscount(string $discount): ?array
     {
         $rawDiscount = trim($discount);
-        $normalizedDiscount = preg_replace('/[^0-9.,]/', '', $rawDiscount);
-        if (str_contains($normalizedDiscount, ',') && str_contains($normalizedDiscount, '.')) {
-            $normalizedDiscount = str_replace('.', '', $normalizedDiscount);
-            $normalizedDiscount = str_replace(',', '.', $normalizedDiscount);
-        } elseif (str_contains($normalizedDiscount, ',') || substr_count($normalizedDiscount, '.') > 1) {
-            $normalizedDiscount = str_replace('.', '', $normalizedDiscount);
-            $normalizedDiscount = str_replace(',', '.', $normalizedDiscount);
-        } elseif (preg_match('/\.\d{3}$/', $normalizedDiscount)) {
-            $normalizedDiscount = str_replace('.', '', $normalizedDiscount);
-        }
+        $normalizedDiscount = $this->normalizeNumericString($rawDiscount);
 
         $numericValue = (float) $normalizedDiscount;
         if ($numericValue <= 0) {
@@ -172,6 +163,36 @@ class HolidayEventController extends Controller
             'type' => str_contains($rawDiscount, '%') ? 'percentage' : 'fixed',
             'value' => $numericValue,
         ];
+    }
+
+    private function normalizeNumericString(string $input): string
+    {
+        $value = preg_replace('/[^0-9.,]/', '', $input);
+        if (!$value) {
+            return '';
+        }
+
+        $lastComma = strrpos($value, ',');
+        $lastDot = strrpos($value, '.');
+
+        if ($lastComma !== false && $lastDot !== false) {
+            $decimalSeparator = $lastComma > $lastDot ? ',' : '.';
+            $thousandSeparator = $decimalSeparator === ',' ? '.' : ',';
+
+            return str_replace($decimalSeparator, '.', str_replace($thousandSeparator, '', $value));
+        }
+
+        if ($lastComma !== false) {
+            return preg_match('/^\d{1,3}(,\d{3})+$/', $value)
+                ? str_replace(',', '', $value)
+                : str_replace(',', '.', $value);
+        }
+
+        if ($lastDot !== false && preg_match('/^\d{1,3}(\.\d{3})+$/', $value)) {
+            return str_replace('.', '', $value);
+        }
+
+        return $value;
     }
 
     private function formatCouponDiscount(?Coupon $coupon): ?string

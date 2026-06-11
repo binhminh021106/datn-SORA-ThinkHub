@@ -304,12 +304,12 @@ const fetchEventDetail = async () => {
       holidayForm.status = data.status || 'active'
     } else {
       toast.error('Không tìm thấy thông tin sự kiện.')
-      router.push({ path: '/admin/email-campaign' })
+      router.push({ path: '/admin/email-campaigns' })
     }
   } catch (error) {
     console.error('Lỗi fetch detail:', error)
     toast.error('Lỗi tải dữ liệu. Sự kiện có thể đã bị xóa.')
-    router.push({ path: '/admin/email-campaign' })
+    router.push({ path: '/admin/email-campaigns' })
   } finally {
     isFetching.value = false
   }
@@ -332,7 +332,7 @@ const updateHoliday = async () => {
     
     if (response.data && response.data.success) {
       toast.success('Cập nhật sự kiện thành công!')
-      router.push({ path: '/admin/email-campaign' }) 
+      router.push({ path: '/admin/email-campaigns' })
     } else {
       toast.error(response.data.message || 'Lỗi khi cập nhật sự kiện.')
     }

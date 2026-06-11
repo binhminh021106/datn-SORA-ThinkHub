@@ -17,8 +17,18 @@
         </button>
       </div>
 
-      <div v-if="isLoading" class="d-flex justify-content-center align-items-center py-5">
-        <div class="spinner-border" style="color: #9f273b; width: 3rem; height: 3rem;" role="status"></div>
+      <div v-if="isLoading" class="row g-5">
+        <div class="col-lg-8">
+          <SoraListSkeleton :rows="4" image-size="100px" card />
+        </div>
+        <div class="col-lg-4">
+          <div class="summary-skeleton-card">
+            <SoraSkeleton width="56%" height="24px" radius="6px" class="mb-4" />
+            <SoraSkeleton width="100%" height="16px" class="mb-3" />
+            <SoraSkeleton width="86%" height="16px" class="mb-4" />
+            <SoraSkeleton width="100%" height="48px" radius="999px" />
+          </div>
+        </div>
       </div>
 
       <div v-else-if="cartItems.length === 0" class="text-center py-5 bg-white shadow-sm rounded-0 border-top border-4 border-danger-custom">
@@ -162,6 +172,8 @@ import axios from 'axios';
 import Toast from '@/utils/toastConfig';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
+import SoraSkeleton from '@/components/ui/SoraSkeleton.vue';
+import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
 
 const router = useRouter();
 const isLoading = ref(true);
@@ -446,6 +458,13 @@ onMounted(async () => {
 .btn-remove-item:hover i { color: #dc3545 !important; }
 
 .summary-card { background-color: #9f273b; color: white; }
+.summary-skeleton-card {
+  padding: 24px;
+  border: 1px solid rgba(231, 206, 125, 0.24);
+  border-radius: 18px;
+  background: #9f273b;
+  box-shadow: 0 12px 30px rgba(159, 39, 59, 0.16);
+}
 .btn-gold { background-color: #e7ce7d; color: #9f273b; border: none; transition: all 0.3s ease; }
 .btn-gold:hover { background-color: #f1e0a8; box-shadow: 0 4px 15px rgba(231, 206, 125, 0.4); transform: translateY(-2px); }
 

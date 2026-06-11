@@ -50,9 +50,16 @@
           </button>
         </div>
         
-        <div v-else class="p-5 text-center">
-           <div class="spinner-border text-sora-primary" role="status"></div>
-           <p class="mt-3 text-muted font-oswald tracking-widest text-uppercase small">Đang nạp dữ liệu...</p>
+        <div v-else class="p-4">
+           <div class="d-flex gap-3 mb-4 pb-4 border-bottom border-light-subtle">
+             <SoraSkeleton variant="image" width="80px" height="80px" radius="4px" class="flex-shrink-0" />
+             <div class="flex-grow-1 d-flex flex-column justify-content-center">
+               <SoraSkeleton width="38%" height="12px" class="mb-2" />
+               <SoraSkeleton width="78%" height="20px" class="mb-2" />
+               <SoraSkeleton width="44%" height="20px" />
+             </div>
+           </div>
+           <SoraListSkeleton :rows="2" :image="false" />
         </div>
       </div>
     </div>
@@ -65,11 +72,11 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 import Toast from '@/utils/toastConfig';
 import { globalModalState } from '@/stores/modalState';
+import SoraSkeleton from '@/components/ui/SoraSkeleton.vue';
+import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
+import { API_BASE_URL, getStorageUrl } from '@/utils/env';
 
 // CẬP NHẬT: Không dùng hàm replace() xóa /api nữa, khai báo tương tự Index.vue và Detail.vue
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'http://127.0.0.1:8000/storage';
-
 const quickAddProduct = ref(null);
 const quickAddMatrix = ref({});
 const quickAddSelections = ref({});
@@ -111,14 +118,7 @@ const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currenc
 
 // CẬP NHẬT: Hàm lấy URL ảnh sử dụng biến STORAGE_URL
 const getImageUrl = (path) => {
-  if (!path) return '/Sora-placeholder.png';
-  if (path.startsWith('http') || path.startsWith('data:image')) return path;
-  
-  let cleanPath = path.startsWith('/') ? path.substring(1) : path;
-  if (cleanPath.startsWith('storage/')) {
-      cleanPath = cleanPath.substring(8);
-  }
-  return `${STORAGE_URL}/${cleanPath}`;
+  return getStorageUrl(path);
 };
 
 const handleImageError = (e) => { e.target.src = '/Sora-placeholder.png'; };

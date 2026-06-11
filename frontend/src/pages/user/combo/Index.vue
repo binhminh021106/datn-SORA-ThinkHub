@@ -31,47 +31,13 @@
         </div>
 
         <div v-if="isLoading" class="combo-list-container fade-in">
-          <div v-for="i in 2" :key="i" class="combo-row-card skeleton-card overflow-hidden mb-4 mb-lg-5">
+          <div v-for="item in 2" :key="'combo-skeleton-' + item" class="combo-row-card overflow-hidden mb-4 mb-lg-5">
             <div class="row g-0">
               <div class="col-lg-4 combo-offer-panel">
-                <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start mb-4">
-                  <div class="skeleton-box shimmer" style="width: 92px; height: 34px;"></div>
-                  <div class="skeleton-box shimmer" style="width: 108px; height: 34px;"></div>
-                </div>
-                <div class="skeleton-box skeleton-title w-75 mb-3 shimmer mx-auto mx-md-0"></div>
-                <div class="skeleton-box skeleton-text w-100 mb-2 shimmer mx-auto mx-md-0"></div>
-                <div class="skeleton-box skeleton-text w-75 mb-4 shimmer mx-auto mx-md-0"></div>
-                <div class="d-flex justify-content-center justify-content-md-start gap-2 mt-auto mb-4">
-                  <div class="skeleton-box shimmer rounded-3" style="width: 62px; height: 68px;"></div>
-                  <div class="skeleton-box shimmer rounded-3" style="width: 62px; height: 68px;"></div>
-                  <div class="skeleton-box shimmer rounded-3" style="width: 62px; height: 68px;"></div>
-                  <div class="skeleton-box shimmer rounded-3" style="width: 62px; height: 68px;"></div>
-                </div>
-                <div class="d-flex align-items-end justify-content-center justify-content-md-between gap-3 flex-wrap">
-                  <div class="w-50">
-                    <div class="skeleton-box skeleton-text w-50 mb-2 shimmer"></div>
-                    <div class="skeleton-box skeleton-title w-100 shimmer"></div>
-                  </div>
-                  <div class="skeleton-box shimmer" style="width: 142px; height: 44px;"></div>
-                </div>
+                <SoraListSkeleton :rows="4" :image="false" />
               </div>
-
               <div class="col-lg-8 combo-products-panel">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                  <div class="skeleton-box skeleton-title w-25 shimmer"></div>
-                  <div class="d-flex gap-2">
-                    <div class="skeleton-box rounded-circle shimmer" style="width: 38px; height: 38px;"></div>
-                    <div class="skeleton-box rounded-circle shimmer" style="width: 38px; height: 38px;"></div>
-                  </div>
-                </div>
-                <div class="d-flex gap-3 gap-xl-4 overflow-hidden pt-2 pb-3">
-                  <div class="combo-item-card flex-shrink-0" v-for="j in 3" :key="j">
-                    <div class="skeleton-box shimmer rounded-3 mb-3" style="height: 210px; width: 100%;"></div>
-                    <div class="skeleton-box skeleton-title w-75 mb-2 shimmer"></div>
-                    <div class="skeleton-box skeleton-text w-50 mb-2 shimmer"></div>
-                    <div class="skeleton-box skeleton-text w-50 shimmer"></div>
-                  </div>
-                </div>
+                <SoraProductGridSkeleton :count="3" min="180px" />
               </div>
             </div>
           </div>
@@ -199,6 +165,8 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
 import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener.js';
+import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
+import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -843,21 +811,6 @@ onUnmounted(() => {
 
 .fade-in { animation: fadeIn 0.4s ease-in; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-.shimmer {
-  background: #f6f0e7;
-  background-image: linear-gradient(to right, #f6f0e7 0%, #ede2d3 20%, #f6f0e7 40%, #f6f0e7 100%);
-  background-repeat: no-repeat;
-  background-size: 800px 100%;
-  animation: placeholderShimmer 1.5s linear infinite forwards;
-}
-
-@keyframes placeholderShimmer { 0% { background-position: -468px 0; } 100% { background-position: 468px 0; } }
-
-.skeleton-box { background-color: #efe5d8; border-radius: 8px; }
-.skeleton-text { height: 14px; }
-.skeleton-title { height: 26px; }
-.skeleton-card { pointer-events: none; }
 
 @media (max-width: 991.98px) {
   .sora-banner { min-height: 340px; }

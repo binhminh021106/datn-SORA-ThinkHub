@@ -15,9 +15,7 @@
         </div>
 
         <div class="col-lg-9">
-          <div v-if="isLoading" class="text-center py-5">
-            <div class="spinner-border text-accent" role="status"></div>
-          </div>
+          <SoraListSkeleton v-if="isLoading" :rows="4" :image="false" card />
           
           <div v-else>
             <ProfileForm 
@@ -59,6 +57,8 @@ import PasswordForm from './components/PasswordForm.vue';
 import AddressBook from './components/AddressBook.vue';
 import ProfileSidebar from '@/components/ui/ProfileSidebar.vue';
 import AffiliateTab from './components/AffiliateTab.vue';
+import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
+import { getStorageUrl } from '@/utils/env';
 
 const router = useRouter();
 const route = useRoute();
@@ -110,8 +110,7 @@ const getToken = () => {
 
 const getImageUrl = (path) => {
   if (!path) return null;
-  if (path.startsWith('http')) return path;
-  return `http://127.0.0.1:8000/storage/${path}`;
+  return getStorageUrl(path, null);
 };
 
 const triggerFileInput = () => { fileInput.value.click(); };

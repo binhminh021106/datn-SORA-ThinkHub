@@ -95,10 +95,10 @@
 import { ref, reactive } from 'vue';
 import axios from 'axios';
 import Toast from '@/utils/toastConfig';
+import { API_BASE_URL } from '@/utils/env';
 // import { useRouter } from 'vue-router';
 
 // const router = useRouter();
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const isLoading = ref(false);
 const errorMessage = ref('');

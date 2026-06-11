@@ -564,9 +564,9 @@ async function deleteHoliday(event) {
 
 // ================= TIỆN ÍCH UI =================
 
-function goToCreate() { router.push({ name: 'admin-email-campaign-create' }); }
+function goToCreate() { router.push({ name: 'admin-email-campaigns-create' }); }
 
-function goToEdit(event) { router.push({ name: 'admin-email-campaign-edit', params: { id: event.id } }); }
+function goToEdit(event) { router.push({ name: 'admin-email-campaigns-edit', params: { id: event.id } }); }
 
 function targetLabel(target) { return targetLabels[target] || target; }
 

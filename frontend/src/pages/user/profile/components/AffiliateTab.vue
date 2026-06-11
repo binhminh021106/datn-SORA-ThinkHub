@@ -10,11 +10,7 @@
       </div>
     </div>
 
-    <div v-if="isLoading" class="text-center py-5">
-      <div class="spinner-border text-primary-luxury" role="status">
-        <span class="visually-hidden">Loading...</span>
-      </div>
-    </div>
+    <SoraListSkeleton v-if="isLoading" :rows="4" :image="false" card />
 
     <div v-else>
       <div v-if="affiliateData.is_affiliate" class="affiliate-dashboard">
@@ -243,8 +239,9 @@
 import { ref, reactive, onMounted } from 'vue';
 import Toast from '@/utils/toastConfig';
 import soraAlert from '@/utils/soraAlertConfig';
+import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
+import { API_BASE_URL } from '@/utils/env';
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
 const getToken = () => localStorage.getItem('auth_token') || localStorage.getItem('access_token');
 
 const isLoading = ref(true);
@@ -286,7 +283,7 @@ const withdrawForm = reactive({
 const fetchStatus = async () => {
   isLoading.value = true;
   try {
-    const res = await fetch(`${API_BASE}/api/client/affiliate/status`, {
+    const res = await fetch(`${API_BASE_URL}/client/affiliate/status`, {
       headers: { 
         'Authorization': `Bearer ${getToken()}`,
         'Accept': 'application/json' 
@@ -328,7 +325,7 @@ const submitApplication = async () => {
   
   isSubmitting.value = true;
   try {
-    const res = await fetch(`${API_BASE}/api/client/affiliate/apply`, {
+    const res = await fetch(`${API_BASE_URL}/client/affiliate/apply`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -371,7 +368,7 @@ const submitWithdraw = async () => {
 
   isWithdrawing.value = true;
   try {
-    const res = await fetch(`${API_BASE}/api/client/affiliate/withdraw`, {
+    const res = await fetch(`${API_BASE_URL}/client/affiliate/withdraw`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

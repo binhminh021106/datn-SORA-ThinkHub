@@ -16,7 +16,6 @@ class HolidayEvent extends Model
         'email_subject',
         'email_content',
         'voucher_code',
-        'expires_at',
         'status'
     ];
 }

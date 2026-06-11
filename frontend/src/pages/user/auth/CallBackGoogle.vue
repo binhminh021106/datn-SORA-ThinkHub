@@ -28,9 +28,9 @@
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import axios from 'axios';
+import { API_BASE_URL } from '@/utils/env';
 
 const route = useRoute();
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const statusMessage = ref('Đang kết nối với hệ thống...');
 const isError = ref(false);

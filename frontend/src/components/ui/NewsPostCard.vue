@@ -36,6 +36,7 @@
 
 <script setup>
 import { computed } from 'vue';
+import { getStorageUrl } from '@/utils/env';
 
 const props = defineProps({
   post: {
@@ -44,7 +45,6 @@ const props = defineProps({
   }
 });
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
 const soraPlaceholder = '/Sora-placeholder.png';
 
 const toSlug = (str) => {
@@ -69,12 +69,7 @@ const postLink = computed(() => {
 });
 
 const imageUrl = computed(() => {
-  const path = props.post.image_url || props.post.image;
-  if (!path) return soraPlaceholder;
-  if (path.startsWith('http') || path.startsWith('data:image')) return path;
-  let cleanPath = path.startsWith('/') ? path.substring(1) : path;
-  if (cleanPath.startsWith('storage/')) return `${API_BASE_URL}/${cleanPath}`;
-  return `${API_BASE_URL}/storage/${cleanPath}`;
+  return getStorageUrl(props.post.image_url || props.post.image, soraPlaceholder);
 });
 
 // Xử lý khi ảnh bị lỗi (404)

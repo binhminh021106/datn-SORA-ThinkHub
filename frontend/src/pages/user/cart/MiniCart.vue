@@ -26,22 +26,7 @@
             
             <div class="swiper-wrapper-container w-100 position-relative">
               
-              <!-- SKELETON LOADING ĐỒNG BỘ LAYOUT PRODUCT CARD -->
-              <div v-if="isProductsLoading" class="d-flex px-2 pb-5" style="gap: 20px;">
-                <div v-for="i in 3" :key="'skel-prod-'+i" class="d-flex flex-column border border-light-subtle bg-white" style="width: calc((100% - 40px) / 3);">
-                  <!-- Skeleton Khung Ảnh Tỉ lệ 1:1 -->
-                  <div class="ratio ratio-1x1 w-100 skeleton border-bottom border-light-subtle"></div>
-                  <!-- Skeleton Nội dung thẻ -->
-                  <div class="p-4 d-flex flex-column flex-grow-1 text-center" style="padding-bottom: 64px !important;">
-                    <div class="skeleton mx-auto mb-2" style="width: 80%; height: 24px; border-radius: 4px;"></div>
-                    <div class="skeleton mx-auto mb-3" style="width: 50%; height: 18px; border-radius: 4px;"></div>
-                    <div class="mt-auto d-flex flex-column align-items-center justify-content-center">
-                      <div class="skeleton mb-1" style="width: 40%; height: 16px; border-radius: 4px;"></div>
-                      <div class="skeleton" style="width: 60%; height: 24px; border-radius: 4px;"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <SoraProductGridSkeleton v-if="isProductsLoading" :count="3" min="160px" gap="20px" class="px-2 pb-5" />
 
               <!-- SWIPER SẢN PHẨM THỰC TẾ -->
               <div v-else class="position-relative w-100">
@@ -91,19 +76,7 @@
 
           <div class="flex-grow-1 overflow-auto p-4 custom-scrollbar">
             
-            <div v-if="isLoading" class="d-flex flex-column gap-4">
-              <div v-for="i in 3" :key="'skel-cart-'+i" class="d-flex gap-3 position-relative cart-item border-0">
-                <div class="skeleton" style="width: 85px; height: 105px; flex-shrink: 0; border-radius: 4px;"></div>
-                <div class="d-flex flex-column flex-grow-1 py-1">
-                  <div class="skeleton" style="width: 90%; height: 18px; border-radius: 4px; margin-bottom: 8px;"></div>
-                  <div class="skeleton" style="width: 60%; height: 14px; border-radius: 4px; margin-bottom: 12px;"></div>
-                  <div class="skeleton" style="width: 40%; height: 20px; border-radius: 4px;"></div>
-                  <div class="mt-auto d-flex justify-content-between align-items-center">
-                    <div class="skeleton" style="width: 70px; height: 25px; border-radius: 4px;"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <SoraListSkeleton v-if="isLoading" :rows="3" image-size="85px" />
             
             <div v-else-if="cartItems.length === 0" class="text-center text-muted mt-5 py-5 d-flex flex-column align-items-center">
               <i class="bi bi-bag-x mb-3" style="font-size: 3.5rem; color: #ddd;"></i>
@@ -211,6 +184,8 @@ import { ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 import ProductCard from '@/components/ui/ProductCard.vue';
+import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
+import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
 import { useWishlist } from '@/composables/useWishlist.js';
 import Toast from '@/utils/toastConfig';
 
@@ -219,12 +194,12 @@ import { Pagination, Navigation } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
 import 'swiper/css/navigation';
+import { API_BASE_URL, getStorageUrl } from '@/utils/env';
 
 const router = useRouter();
 const route = useRoute();
 
-const BACKEND_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || BACKEND_URL.replace(/\/api\/?$/, '');
+const BACKEND_URL = API_BASE_URL;
 
 const { isFavourited, toggleFavourite, fetchFavorites } = useWishlist();
 
@@ -255,11 +230,7 @@ const getImage = (path) => {
   if (!path) return soraPlaceholder;
   const cleaned = path.trim();
   if (cleaned.startsWith('http') || cleaned.startsWith('data:')) return cleaned;
-  let normalized = cleaned.replace(/^\//, '');
-  if (normalized.startsWith('storage/')) {
-    normalized = normalized.replace(/^storage\//, '');
-  }
-  return `${STORAGE_URL}/${normalized}`;
+  return getStorageUrl(cleaned);
 };
 const handleImageError = (e) => { e.target.src = soraPlaceholder; };
 
@@ -491,18 +462,6 @@ defineExpose({ openCart, fetchCart });
   flex-grow: 1; 
   height: 100vh; 
   pointer-events: auto;
-}
-
-.skeleton {
-  background: #f0f0f0;
-  background-image: linear-gradient(90deg, #f0f0f0 0px, #f8f8f8 40px, #f0f0f0 80px);
-  background-size: 200vw 100%;
-  animation: shimmer 1.5s infinite linear;
-}
-
-@keyframes shimmer {
-  0% { background-position: -20vw 0; }
-  100% { background-position: 20vw 0; }
 }
 
 .swiper-wrapper-container {

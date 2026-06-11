@@ -17,50 +17,7 @@
         </header>
 
         <main class="page-container container">
-            <!-- Skeleton Loading (Chỉ hiện lần đầu tiên) -->
-            <div v-if="isLoading" class="page-layout fade-in">
-                <section class="content-column">
-                    <div class="featured-heading skeleton-box skeleton-text w-50 mb-4 shimmer"></div>
-                    <div class="featured-post card-style skeleton-card">
-                        <div class="featured-image-wrap skeleton-box img-box shimmer">
-                            <span class="skeleton-placeholder-text-large">SORA</span>
-                        </div>
-                        <div class="featured-body">
-                            <div class="skeleton-box skeleton-text w-25 mb-3 shimmer"></div>
-                            <div class="skeleton-box skeleton-title mb-3 shimmer"></div>
-                            <div class="skeleton-box skeleton-text w-100 mb-2 shimmer"></div>
-                            <div class="skeleton-box skeleton-text w-75 mb-4 shimmer"></div>
-                            <div class="d-flex justify-content-between mt-auto">
-                                <div class="skeleton-box skeleton-text w-25 shimmer"></div>
-                                <div class="skeleton-box skeleton-text w-25 shimmer"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="latest-section">
-                        <div class="skeleton-box skeleton-text w-25 mb-4 shimmer"></div>
-                        <div class="latest-posts-grid">
-                            <div v-for="n in 4" :key="n" class="post-card card-style skeleton-card">
-                                <div class="card-img-top skeleton-box img-box shimmer" style="aspect-ratio: 16/9;"></div>
-                                <div class="card-body">
-                                    <div class="skeleton-box skeleton-text w-50 mb-3 shimmer"></div>
-                                    <div class="skeleton-box skeleton-title mb-3 shimmer"></div>
-                                    <div class="skeleton-box skeleton-text w-100 mb-2 shimmer"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-                <aside class="sidebar-column">
-                    <div class="sidebar-widget skeleton-card mb-4">
-                        <div class="skeleton-box skeleton-title w-50 mb-3 shimmer"></div>
-                        <div class="skeleton-box skeleton-input shimmer" style="height: 45px;"></div>
-                    </div>
-                    <div class="sidebar-widget skeleton-card">
-                        <div class="skeleton-box skeleton-title w-50 mb-3 shimmer"></div>
-                        <div v-for="i in 4" :key="i" class="skeleton-box skeleton-text w-100 mb-2 shimmer"></div>
-                    </div>
-                </aside>
-            </div>
+            <SoraBlogSkeleton v-if="isLoading" class="fade-in" />
 
             <!-- Dữ liệu thực tế -->
             <div v-else class="page-layout fade-in" :class="{ 'opacity-50': isFetching }">
@@ -245,11 +202,10 @@ import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 import { useQuery, keepPreviousData } from '@tanstack/vue-query';
 import NewsPostCard from '@/components/ui/NewsPostCard.vue';
+import SoraBlogSkeleton from '@/components/ui/SoraBlogSkeleton.vue';
+import { API_BASE_URL, getStorageUrl } from '@/utils/env';
 
 // --- CONFIG ---
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'http://127.0.0.1:8000/storage';
-
 // Tăng số lượng tải lên 7 để chừa 1 bài nổi bật và đúng 6 bài ở phần danh sách lưới bên dưới
 const ITEMS_PER_PAGE = 7;
 const SITE_NAME = 'SORA Jewelry';
@@ -347,13 +303,7 @@ const formatViews = (count) => {
 };
 
 const getFullImage = (path) => {
-    if (!path) return soraPlaceholder;
-    if (path.startsWith('http') || path.startsWith('data:image')) return path;
-    let cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    if (cleanPath.startsWith('storage/')) {
-        cleanPath = cleanPath.substring(8);
-    }
-    return `${STORAGE_URL}/${cleanPath}`;
+    return getStorageUrl(path, soraPlaceholder);
 };
 
 const handleImageError = (e) => { e.target.src = soraPlaceholder; };
@@ -553,14 +503,4 @@ h1, h2, h3, h4, h5, h6 { font-family: 'Inter', sans-serif; font-weight: 700; col
 
 .fade-in { animation: fadeIn 0.4s ease-in; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-.shimmer { background: #f6f7f8; background-image: linear-gradient(to right, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%); background-repeat: no-repeat; background-size: 800px 100%; animation: placeholderShimmer 1.5s linear infinite forwards; }
-@keyframes placeholderShimmer { 0% { background-position: -468px 0; } 100% { background-position: 468px 0; } }
-
-.skeleton-box { background-color: #eee; border-radius: 4px; }
-.skeleton-text { height: 14px; border-radius: 4px; }
-.skeleton-title { height: 24px; border-radius: 4px; }
-.skeleton-input { border-radius: 8px; }
-.skeleton-card { border: 1px solid #eee; pointer-events: none; }
-.skeleton-box.img-box { background-color: #ddd; display: flex; align-items: center; justify-content: center; }
-.skeleton-placeholder-text-large { font-family: 'Oswald', sans-serif; font-size: 3rem; font-weight: 900; color: #e5e7eb; text-transform: uppercase; letter-spacing: 2px; opacity: 0.8; }
 </style>

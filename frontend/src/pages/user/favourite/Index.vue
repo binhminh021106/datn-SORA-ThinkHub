@@ -29,11 +29,7 @@
         </h3>
 
         <!-- Trạng thái Loading -->
-        <div v-if="isLoading" class="text-center py-5">
-          <div class="spinner-border text-accent" role="status" style="width: 3rem; height: 3rem;">
-            <span class="visually-hidden">Đang tải...</span>
-          </div>
-        </div>
+        <SoraProductGridSkeleton v-if="isLoading" :count="6" min="190px" />
 
         <!-- Trạng thái trống -->
         <div v-else-if="favorites.length === 0 && !isLoading" class="empty-state text-center py-5 bg-white shadow-sm p-5 border border-light">
@@ -121,9 +117,8 @@
                <i class="bi bi-bag-plus-fill me-2"></i> Xác nhận thêm
             </button>
           </div>
-          <div v-else class="p-5 text-center">
-             <div class="spinner-border text-sora-primary" role="status"></div>
-             <p class="mt-3 text-muted font-oswald tracking-widest text-uppercase small">Đang nạp dữ liệu...</p>
+          <div v-else class="p-4">
+             <SoraListSkeleton :rows="3" image-size="80px" />
           </div>
         </div>
       </div>
@@ -141,9 +136,11 @@ import { createSoraAlert } from '@/utils/soraAlertConfig';
 import ProductCard from '@/components/ui/ProductCard.vue';
 import CompareModal from '@/components/ui/CompareModal.vue';
 import ProfileSidebar from '@/components/ui/ProfileSidebar.vue';
+import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
+import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
+import { API_BASE_URL, getStorageUrl } from '@/utils/env';
 
 const router = useRouter();
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
 
 const favorites = ref([]);
 const isLoading = ref(true);
@@ -175,11 +172,7 @@ const getToken = () => {
 };
 
 const getImageUrl = (path) => {
-  if (!path) return '/Sora-placeholder.png';
-  if (path.startsWith('http') || path.startsWith('data:image')) return path;
-  let cleanPath = path.startsWith('/') ? path.substring(1) : path;
-  if (cleanPath.startsWith('storage/')) return `${API_BASE_URL}/${cleanPath}`;
-  return `${API_BASE_URL}/storage/${cleanPath}`;
+  return getStorageUrl(path);
 };
 
 const handleImageError = (e) => { e.target.src = '/Sora-placeholder.png'; };
@@ -191,7 +184,7 @@ const fetchFavorites = async () => {
     return;
   }
   try {
-    const response = await axios.get(`${API_BASE_URL}/api/client/favourites`, {
+    const response = await axios.get(`${API_BASE_URL}/client/favourites`, {
       headers: { Authorization: `Bearer ${getToken()}`, Accept: 'application/json' }
     });
     if (response.data.status) {
@@ -217,7 +210,7 @@ const toggleFavorite = async (product) => {
 
   isToggling.value = product.id;
   try {
-    const response = await axios.post(`${API_BASE_URL}/api/client/favourites/toggle`, {
+    const response = await axios.post(`${API_BASE_URL}/client/favourites/toggle`, {
       product_id: product.id
     }, {
       headers: { Authorization: `Bearer ${currentToken}`, Accept: 'application/json' }
@@ -300,7 +293,7 @@ const openQuickAdd = async (prod) => {
     quickAddModalInstance.show();
 
     try {
-        const res = await axios.get(`${API_BASE_URL}/api/shop/all/products/${prod.slug}`);
+        const res = await axios.get(`${API_BASE_URL}/shop/all/products/${prod.slug}`);
         if (res.data && res.data.data) {
             quickAddProduct.value = {
                 ...res.data.data,
@@ -371,7 +364,7 @@ const confirmQuickAdd = async () => {
         if (sessionId) headers['X-Cart-Session-Id'] = sessionId;
 
         const payload = { product_variant_id: selectedVar.id, quantity: 1 };
-        const res = await axios.post(`${API_BASE_URL}/api/client/cart`, payload, { headers });
+        const res = await axios.post(`${API_BASE_URL}/client/cart`, payload, { headers });
 
         if (res.data.session_id) {
             localStorage.setItem('cart_session_id', res.data.session_id);

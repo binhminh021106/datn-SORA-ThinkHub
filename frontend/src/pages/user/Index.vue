@@ -148,8 +148,8 @@
               <div class="craft-copy">
                 <span class="section-kicker">Nghệ thuật chế tác</span>
                 <h2 class="font-serif">Tinh xảo từ chất liệu đến đường nét.</h2>
-                <div class="craft-line" v-for="item in craftItems" :key="item.title">
-                  <i class="bi bi-diamond-fill craft-line-icon"></i>
+                <div class="craft-line" v-for="(item, index) in craftItems" :key="`craft-${index}`">
+                  <i class="bi bi-diamond-fill craft-line-icon" aria-hidden="true"></i>
                   <div class="craft-line-content">
                     <h3>{{ item.title }}</h3>
                     <p>{{ item.text }}</p>
@@ -167,7 +167,7 @@
                 <img :src="getImageUrl(craftAccentImage)" alt="SORA jewelry care" @error="handleImageError">
               </div>
               <div class="craft-card">
-                <i class="bi bi-quote craft-quote-icon"></i>
+                <i class="bi bi-quote craft-quote-icon" aria-hidden="true"></i>
                 <h3 class="font-serif">Vẻ đẹp được nâng niu mỗi ngày.</h3>
                 <p>Từ lựa chọn chất liệu đến hoàn thiện chi tiết, SORA hướng đến sự chỉn chu, sang trọng và bền lâu trong
                   từng trải nghiệm.</p>
@@ -222,7 +222,7 @@
                 <p>Trải nghiệm SORA được chăm chút từ thiết kế, chất liệu đến dịch vụ hậu mãi.</p>
                 <div class="testimonial-divider"></div>
                 <div class="testimonial-badges">
-                  <span v-for="badge in testimonialBadges" :key="badge">
+                  <span v-for="(badge, index) in testimonialBadges" :key="`badge-${index}`">
                     {{ badge }}
                   </span>
                 </div>
@@ -269,6 +269,7 @@ import Toast from '@/utils/toastConfig';
 import soraAlert from '@/utils/soraAlertConfig';
 import ProductCard from '@/components/ui/ProductCard.vue';
 import NewsPostCard from '@/components/ui/NewsPostCard.vue';
+import { API_BASE_URL, getStorageUrl } from '@/utils/env';
 
 const HOME_INTRO_SESSION_KEY = 'sora_home_intro_seen';
 const navigationEntry = performance.getEntriesByType('navigation')[0];
@@ -311,15 +312,10 @@ const serviceCards = [
 const testimonialTitles = ['Trải nghiệm tuyệt vời', 'Hoàn hảo cho mỗi ngày', 'Dịch vụ chu đáo'];
 const testimonialBadges = ['Tư vấn tận tâm', 'Chất liệu chọn lọc', 'Bảo hành rõ ràng'];
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
 const soraPlaceholder = '/Sora-placeholder.png';
 
 const getImageUrl = (path) => {
-  if (!path) return soraPlaceholder;
-  if (typeof path !== 'string') return soraPlaceholder;
-  if (path.startsWith('http') || path.startsWith('data:image')) return path;
-  let cleanPath = path.replace(/^\/+/, '').replace(/^public\//, '').replace(/^storage\//, '').replace(/^\/+/, '');
-  return `${API_BASE}/storage/${cleanPath}`;
+  return getStorageUrl(path, soraPlaceholder);
 };
 
 const formatBannerTitle = (title) => {
@@ -405,7 +401,7 @@ const loadWishlist = async () => {
     return;
   }
   try {
-    const response = await fetch(`${API_BASE}/api/client/favourites`, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } });
+    const response = await fetch(`${API_BASE_URL}/client/favourites`, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } });
     const result = await response.json();
     if (response.ok && result.status && Array.isArray(result.data)) {
       wishlistIds.value = result.data.map((item) => item.product?.id).filter(Boolean);
@@ -432,7 +428,7 @@ const toggleWishlist = async (product) => {
   }
 
   try {
-    const response = await fetch(`${API_BASE}/api/client/favourites/toggle`, {
+    const response = await fetch(`${API_BASE_URL}/client/favourites/toggle`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ product_id: product.id })
@@ -461,7 +457,7 @@ const fetchHomepageData = async () => {
   isHeroImageReady.value = false;
 
   try {
-    const response = await fetch(`${API_BASE}/api/client/home-data`, { headers: { Accept: 'application/json' } });
+    const response = await fetch(`${API_BASE_URL}/client/home-data`, { headers: { Accept: 'application/json' } });
     const result = await response.json();
     if (result.success) {
       data.banners = result.data.banners || [];

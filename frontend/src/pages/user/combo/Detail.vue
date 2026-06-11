@@ -2,54 +2,9 @@
   <div class="combo-detail-page pb-5">
     
     <div v-if="isLoading" class="container pt-4 pb-5 fade-in">
-      <div class="skeleton-box skeleton-text w-25 mb-4 shimmer py-2"></div>
-      <div class="row g-0 g-lg-5 mb-5 pb-5 border-bottom border-light-subtle">
-        <div class="col-lg-6 mb-4 mb-lg-0">
-          <div class="skeleton-box w-100 shimmer rounded" style="min-height: 600px;"></div>
-        </div>
-        <div class="col-lg-6">
-          <div class="ps-lg-4 pt-2">
-            <div class="skeleton-box skeleton-text w-50 mb-3 shimmer"></div>
-            <div class="skeleton-box skeleton-title w-100 mb-4 shimmer" style="height: 48px;"></div>
-            <div class="skeleton-box skeleton-text w-100 mb-2 shimmer"></div>
-            <div class="skeleton-box skeleton-text w-100 mb-2 shimmer"></div>
-            <div class="skeleton-box skeleton-text w-75 mb-5 shimmer"></div>
-            <div class="skeleton-box w-100 mb-5 shimmer rounded border border-light-subtle" style="height: 80px;"></div>
-            <div class="skeleton-box skeleton-title w-50 mb-4 shimmer"></div>
-            <div v-for="i in 2" :key="i" class="card border border-light-subtle shadow-sm rounded-0 mb-4 overflow-hidden skeleton-card">
-              <div class="row g-0">
-                <div class="col-4 bg-light p-3">
-                  <div class="skeleton-box w-100 shimmer ratio ratio-1x1"></div>
-                </div>
-                <div class="col-8 p-4">
-                  <div class="skeleton-box skeleton-text w-25 mb-2 shimmer"></div>
-                  <div class="skeleton-box skeleton-title w-75 mb-3 shimmer"></div>
-                  <div class="skeleton-box w-100 mb-2 shimmer" style="height: 40px;"></div>
-                  <div class="skeleton-box w-75 shimmer" style="height: 40px;"></div>
-                </div>
-              </div>
-            </div>
-            <div class="skeleton-box w-100 mb-5 shimmer rounded" style="height: 120px;"></div>
-            <div class="row g-3">
-              <div class="col-sm-6"><div class="skeleton-box w-100 shimmer" style="height: 50px;"></div></div>
-              <div class="col-sm-6"><div class="skeleton-box w-100 shimmer" style="height: 50px;"></div></div>
-            </div>
-            <div class="d-flex justify-content-between mt-5 pt-4 border-top border-light-subtle">
-               <div v-for="j in 4" :key="j" class="skeleton-box w-100 mx-2 shimmer" style="height: 40px;"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="text-center mb-5">
-        <div class="skeleton-box skeleton-title w-25 mx-auto mb-3 shimmer" style="height: 36px;"></div>
-        <div class="skeleton-box mx-auto shimmer" style="width: 50px; height: 2px;"></div>
-      </div>
-      <div class="row px-md-4">
-        <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-4" v-for="k in 4" :key="k">
-          <div class="skeleton-box w-100 shimmer mb-3" style="height: 250px;"></div>
-          <div class="skeleton-box skeleton-text w-75 mx-auto mb-2 shimmer"></div>
-          <div class="skeleton-box skeleton-text w-50 mx-auto shimmer"></div>
-        </div>
+      <SoraProductDetailSkeleton />
+      <div class="mt-5 pt-4">
+        <SoraProductGridSkeleton :count="4" min="220px" />
       </div>
     </div>
 
@@ -388,6 +343,9 @@ import 'swiper/css/navigation';
 import ProductCard from '@/components/ui/ProductCard.vue';
 import CompareModal from '@/components/ui/CompareModal.vue';
 import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener.js';
+import SoraProductDetailSkeleton from '@/components/ui/SoraProductDetailSkeleton.vue';
+import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
+import { API_BASE_URL, getStorageUrl } from '@/utils/env';
 
 const swiperModules = [Navigation];
 const route = useRoute();
@@ -410,9 +368,6 @@ let quickAddModalInstance = null;
 const currentTime = ref(new Date().getTime());
 let timerInterval = null;
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'http://127.0.0.1:8000/storage';
-
 const shopFeatures = [
   { icon: 'bi-truck', text: 'Giao Hàng<br>Miễn Phí' },
   { icon: 'bi-arrow-repeat', text: 'Đổi Trả<br>Dễ Dàng' },
@@ -431,15 +386,7 @@ const setSafeStorage = (key, val) => {
 };
 
 const getImage = (path) => {
-    if (!path) return '/Sora-placeholder.png';
-    if (path.startsWith('http') || path.startsWith('data:image')) return path;
-    
-    let cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    
-    if (cleanPath.startsWith('storage/')) {
-        cleanPath = cleanPath.substring(8);
-    }
-    return `${STORAGE_URL}/${cleanPath}`;
+    return getStorageUrl(path);
 };
 
 const getImageUrl = getImage;
@@ -1295,14 +1242,6 @@ onUnmounted(() => {
 
 .fade-in { animation: fadeIn 0.4s ease-in; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-.shimmer { background: #f6f0e7; background-image: linear-gradient(to right, #f6f0e7 0%, #ede2d3 20%, #f6f0e7 40%, #f6f0e7 100%); background-repeat: no-repeat; background-size: 800px 100%; animation: placeholderShimmer 1.5s linear infinite forwards; }
-@keyframes placeholderShimmer { 0% { background-position: -468px 0; } 100% { background-position: 468px 0; } }
-
-.skeleton-box { background-color: #efe5d8; border-radius: 8px; }
-.skeleton-text { height: 14px; border-radius: 4px; }
-.skeleton-title { height: 24px; border-radius: 4px; }
-.skeleton-card { pointer-events: none; }
 
 @media (max-width: 991.98px) {
   .luxury-image-wrapper {

@@ -13,9 +13,7 @@
 
     <!-- DANH SÁCH ĐỊA CHỈ -->
     <div v-if="!showAddressForm">
-      <div v-if="isLoading" class="text-center py-5">
-        <div class="spinner-border text-accent" role="status"></div>
-      </div>
+      <SoraListSkeleton v-if="isLoading" :rows="3" :image="false" card />
 
       <div v-else-if="addresses.length === 0" class="text-center py-5 bg-light border border-light rounded-3">
         <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="text-muted mb-3 opacity-50 mx-auto">
@@ -132,6 +130,7 @@ import { ref, onMounted } from 'vue';
 import axios from 'axios';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
 import VietnamAddressPicker from '@/components/ui/VietnamAddressPicker.vue';
+import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
 
 const props = defineProps({
   userName: { type: String, default: '' },
