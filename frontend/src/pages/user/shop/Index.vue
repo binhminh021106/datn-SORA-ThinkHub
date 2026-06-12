@@ -43,7 +43,7 @@
       <div class="row">
         
         <!-- SIDEBAR BỘ LỌC (LEFT) -->
-        <div class="col-lg-2 col-md-3 d-none d-md-block sidebar-filter pe-4 pt-2">
+        <div class="col-lg-2 col-md-3 d-none d-md-block sidebar-filter pe-3 pt-2" style="flex-basis: 23%; max-width: 23%;">
           <div class="filter-panel">
           
           <div class="filter-header mb-4 border-bottom pb-3">
@@ -155,7 +155,7 @@
         </div>
 
         <!-- MAIN PRODUCT GRID (RIGHT) -->
-        <div class="col-lg-10 col-md-9 ps-lg-5">
+        <div class="col-lg-10 col-md-9 ps-lg-3" style="flex-basis: 77%; max-width: 77%;">
           
           <div class="shop-top-bar d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom sora-border-light">
             <div class="result-count text-muted mb-3 mb-md-0" style="font-size: 1.2rem;">
