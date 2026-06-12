@@ -12,33 +12,7 @@
       </div>
 
       <div class="modal-body p-4 overflow-auto bg-light" style="max-height: 70vh;">
-        <!-- Skeleton Loading -->
-        <div v-if="isLoading" class="skeleton-container">
-          <div class="skeleton-text mb-4"></div>
-          
-          <div v-for="n in 3" :key="n" class="skeleton-review-item mb-4">
-            <div class="skeleton-product-info d-flex align-items-center gap-3 border-bottom pb-3 mb-3">
-              <div class="skeleton-img"></div>
-              <div class="flex-grow-1">
-                <div class="skeleton-title mb-2"></div>
-                <div class="skeleton-date"></div>
-              </div>
-            </div>
-            
-            <div class="skeleton-stars text-center mb-3">
-              <div class="d-flex justify-content-center gap-2 mb-2">
-                <div v-for="star in 5" :key="star" class="skeleton-star"></div>
-              </div>
-              <div class="skeleton-rating-label"></div>
-            </div>
-            
-            <div class="skeleton-comment mb-3"></div>
-            
-            <div class="skeleton-images d-flex gap-2">
-              <div v-for="img in 3" :key="img" class="skeleton-image"></div>
-            </div>
-          </div>
-        </div>
+        <SoraListSkeleton v-if="isLoading" :rows="3" image-size="70px" card />
 
         <!-- Content -->
         <div v-else-if="reviews && reviews.length > 0">
@@ -114,6 +88,8 @@
 <script setup>
 import { ref, watch } from 'vue';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
+import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
+import clientApiClient from '@/utils/clientApiClient';
 
 const props = defineProps({
   isOpen: Boolean,
@@ -124,7 +100,6 @@ const emit = defineEmits(['close']);
 
 const reviews = ref([]);
 const isLoading = ref(false);
-const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/client/orders`;
 
 const ratingLabels = {
   1: "Rất Tệ",
@@ -132,14 +107,6 @@ const ratingLabels = {
   3: "Bình Thường",
   4: "Hài Lòng",
   5: "Tuyệt Vời"
-};
-
-const getHeaders = () => {
-  const token = localStorage.getItem('auth_token');
-  return { 
-    'Accept': 'application/json', 
-    'Authorization': token ? `Bearer ${token}` : ''
-  };
 };
 
 const getImageUrl = (path) => {
@@ -179,10 +146,7 @@ watch(() => props.isOpen, async (newVal) => {
     reviews.value = [];
     
     try {
-      const response = await fetch(`${API_BASE_URL}/${props.order.order_code}/review`, {
-        headers: getHeaders()
-      });
-      const data = await response.json();
+      const { data } = await clientApiClient.get(`/client/orders/${props.order.order_code}/review`);
       if (data.success) {
         reviews.value = data.data;
       }
@@ -217,116 +181,4 @@ watch(() => props.isOpen, async (newVal) => {
 @keyframes slideUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
 .slide-up { animation: slideUp 0.3s ease-out; }
 
-/* Skeleton Loading Styles */
-.skeleton-container {
-  animation: fadeIn 0.3s ease-in;
-}
-
-.skeleton-text {
-  height: 20px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 4px;
-  margin-bottom: 16px;
-}
-
-.skeleton-review-item {
-  background: white;
-  padding: 16px;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.skeleton-product-info {
-  padding-bottom: 12px;
-  margin-bottom: 12px;
-  border-bottom: 1px solid #e9ecef;
-}
-
-.skeleton-img {
-  width: 60px;
-  height: 60px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 4px;
-  flex-shrink: 0;
-}
-
-.skeleton-title {
-  height: 18px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 4px;
-  width: 70%;
-}
-
-.skeleton-date {
-  height: 14px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 4px;
-  width: 50%;
-  margin-top: 8px;
-}
-
-.skeleton-stars {
-  margin-bottom: 12px;
-}
-
-.skeleton-star {
-  width: 24px;
-  height: 24px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 50%;
-  display: inline-block;
-  margin: 0 4px;
-}
-
-.skeleton-rating-label {
-  height: 14px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 4px;
-  width: 100px;
-  margin: 0 auto;
-}
-
-.skeleton-comment {
-  height: 60px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 4px;
-}
-
-.skeleton-images {
-  margin-top: 12px;
-}
-
-.skeleton-image {
-  width: 80px;
-  height: 80px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 4px;
-}
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
 </style>

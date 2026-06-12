@@ -22,11 +22,11 @@ MAIL_FROM_NAME="${APP_NAME}"
 
 ## 2. Kiểm tra & Chạy thử Command
 
-Lệnh Command đã được thiết lập để chạy tự động mỗi ngày lúc 07:00 sáng. Tuy nhiên, để kiểm tra thử (Test) ngay lập tức, bạn có thể chạy lệnh Artisan sau:
+Lệnh Command đã được thiết lập để chạy tự động mỗi ngày lúc 11:15 sáng. Tuy nhiên, để kiểm tra thử (Test) ngay lập tức, bạn có thể chạy lệnh Artisan sau:
 
 ```bash
 cd backend
-php artisan emails:send-birthday
+php artisan email-campaign:auto-send
 ```
 
 Lệnh sẽ quét các User có ngày sinh là hôm nay, có lịch sử đơn hàng, và chưa nhận email trong năm nay, sau đó tiến hành cấp Voucher và gửi Email.

@@ -9,6 +9,7 @@ import axios from 'axios';
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 import { getAdminToken, getUserToken } from '@/composables/useUtilities';
+import { API_BASE_URL, REVERB_APP_KEY, REVERB_HOST, REVERB_PORT, REVERB_SCHEME } from '@/utils/env';
 
 // 1. IMPORT VUE QUERY VÀO ĐÂY
 import { VueQueryPlugin } from '@tanstack/vue-query';
@@ -19,16 +20,12 @@ window.Pusher = Pusher;
 window.axios = axios;
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api').replace(/\/$/, '');
-const REVERB_HOST = import.meta.env.VITE_REVERB_HOST || '127.0.0.1';
-const REVERB_PORT = Number(import.meta.env.VITE_REVERB_PORT || 8080);
-const REVERB_SCHEME = import.meta.env.VITE_REVERB_SCHEME || 'http';
 const REVERB_FORCE_TLS = REVERB_SCHEME === 'https';
 
 // Cấu hình bắt sóng Real-time
 window.Echo = new Echo({
     broadcaster: 'reverb',
-    key: import.meta.env.VITE_REVERB_APP_KEY,
+    key: REVERB_APP_KEY,
     wsHost: REVERB_HOST,
     wsPort: REVERB_PORT,
     wssPort: REVERB_PORT,

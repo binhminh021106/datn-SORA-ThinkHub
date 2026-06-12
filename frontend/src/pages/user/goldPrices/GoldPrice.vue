@@ -90,6 +90,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
+import clientApiClient from '@/utils/clientApiClient';
 
 const isLoading = ref(true);
 const data = reactive({
@@ -97,15 +98,10 @@ const data = reactive({
   last_updated: ''
 });
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL; 
-
 const fetchGoldPrices = async () => {
   try {
-    const response = await fetch(`${API_BASE}/client/gold-prices`, {
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    const result = await response.json();
+    const res = await clientApiClient.get('/client/gold-prices', { ignoreAuthRedirect: true, skipCartSession: true });
+    const result = res.data;
 
     if (result.success) {
       data.prices = result.data.prices || [];

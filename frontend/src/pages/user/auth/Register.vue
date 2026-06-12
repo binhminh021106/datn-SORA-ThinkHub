@@ -93,12 +93,12 @@
 
 <script setup>
 import { ref, reactive } from 'vue';
-import axios from 'axios';
 import Toast from '@/utils/toastConfig';
+import { API_BASE_URL } from '@/utils/env';
+import clientApiClient from '@/utils/clientApiClient';
 // import { useRouter } from 'vue-router';
 
 // const router = useRouter();
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const isLoading = ref(false);
 const errorMessage = ref('');
@@ -120,13 +120,12 @@ const handleRegister = async () => {
   errorMessage.value = '';
 
   try {
-    const response = await axios.post(`${API_BASE_URL}/register`, form);
+    const response = await clientApiClient.post('/register', form, { skipCartSession: true });
 
     Toast.fire({ icon: 'success', title: 'Đăng ký thành công! Đang tự động đăng nhập...' });
 
     // Lưu Token
     localStorage.setItem('auth_token', response.data.access_token);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
 
     // CẬP NHẬT MỚI: Lưu thông tin User
     localStorage.setItem('userData', JSON.stringify(response.data.user));
@@ -135,12 +134,9 @@ const handleRegister = async () => {
     const sessionId = localStorage.getItem('cart_session_id');
     if (sessionId) {
         try {
-            await axios.post(`${API_BASE_URL}/client/cart/merge`, {}, {
-                headers: {
-                    'Authorization': `Bearer ${response.data.access_token}`,
-                    'X-Cart-Session-Id': sessionId,
-                    'Accept': 'application/json'
-                }
+            await clientApiClient.post('/client/cart/merge', {}, {
+                ensureCartSession: true,
+                ignoreAuthRedirect: true
             });
             localStorage.removeItem('cart_session_id');
             window.dispatchEvent(new CustomEvent('update-cart-count'));

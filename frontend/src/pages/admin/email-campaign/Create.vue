@@ -334,7 +334,7 @@ const saveHoliday = async () => {
     
     if (response.data && response.data.success) {
       toast.success('Thêm mới sự kiện thành công!')
-      router.push({ path: '/admin/email-campaign' }) 
+      router.push({ path: '/admin/email-campaigns' })
     } else {
       toast.error(response.data.message || 'Lỗi khi thêm mới sự kiện.')
     }

@@ -138,28 +138,7 @@ class EmailCampaignService
                 continue;
             }
 
-            // Lấy dữ liệu nguyên gốc từ Database để xử lý an toàn
-            $rawTarget = $event->getRawOriginal('target_audience');
-            $targets = [];
-
-            if (!empty($rawTarget)) {
-                $decoded = json_decode($rawTarget, true);
-                // Nếu parse JSON thành công và là mảng (Dữ liệu sự kiện tạo mới)
-                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                    $targets = $decoded;
-                } else {
-                    // Nếu lỗi parse JSON -> Đây là dữ liệu sự kiện cũ lưu dạng chữ (VD: "male", "gold")
-                    $targets = [$rawTarget];
-                }
-            } elseif (is_array($event->target_audience)) {
-                $targets = $event->target_audience;
-            }
-
-            // Chắc chắn mảng không có giá trị rỗng 
-            $targets = array_filter($targets);
-            if (empty($targets)) {
-                $targets = ['all'];
-            }
+            $targets = $this->normalizeTargetAudience($event->getRawOriginal('target_audience') ?? $event->target_audience);
 
             // Gọi AudienceFilterService để quét danh sách Users
             $targetUsers = $audienceService->getTargetedUsers($targets);
@@ -216,6 +195,28 @@ class EmailCampaignService
             'sent_count' => $totalSentCount,
             'message' => "Hoan tat! Da gui thanh cong {$totalSentCount} email su kien ngay le.",
         ];
+    }
+
+    private function normalizeTargetAudience($targetAudience): array
+    {
+        if (is_array($targetAudience)) {
+            $targets = $targetAudience;
+        } else {
+            $rawTarget = trim((string) $targetAudience);
+            if ($rawTarget === '') {
+                return ['all'];
+            }
+
+            $decoded = json_decode($rawTarget, true);
+            $targets = json_last_error() === JSON_ERROR_NONE && is_array($decoded)
+                ? $decoded
+                : explode(',', $rawTarget);
+        }
+
+        $targets = array_map(static fn ($target) => trim((string) $target), $targets);
+        $targets = array_values(array_filter($targets));
+
+        return $targets ?: ['all'];
     }
 
     private function logFailedEmail(int $userId, string $eventType): void

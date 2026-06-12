@@ -218,12 +218,12 @@ import axios from 'axios';
 import { getFullImage } from '@/composables/useUtilities';
 import defaultAvatar from '../../../assets/images/defaults/avatar1.png';
 import VietnamAddressPicker from '@/components/ui/VietnamAddressPicker.vue';
+import { API_BASE_URL } from '@/utils/env';
 
 const activeTab = ref('info');
 const isLoading = ref(false);
 
-const API_URL = import.meta.env.VITE_API_BASE_URL;
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || API_URL.replace(/\/api\/?$/, '');
+const API_URL = API_BASE_URL;
 
 const showNewPassword = ref(false);
 const showConfirmPassword = ref(false);

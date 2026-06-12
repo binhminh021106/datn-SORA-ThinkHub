@@ -29,9 +29,7 @@
 <script setup>
 import { computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+import clientApiClient from '@/utils/clientApiClient';
 
 const route = useRoute();
 const orderCode = computed(() => route.query.order || 'N/A');
@@ -40,15 +38,8 @@ onMounted(async () => {
     // Chỉ khi khách hàng đến được trang Success này (nghĩa là tiền đã vào tài khoản)
     // Thì mới tiến hành gọi API xóa sạch Giỏ hàng.
     try {
-        const token = localStorage.getItem('auth_token');
-        const sid = localStorage.getItem('cart_session_id');
-        const headers = { 'Accept': 'application/json' };
-        
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        if (sid) headers['X-Cart-Session-Id'] = sid;
-        
-        // Gọi API dọn dẹp giỏ hàng
-        await axios.post(`${API_URL}/client/cart/clear`, {}, { headers });
+        // Gọi API dọn dẹp giỏ hàng (dùng clientApiClient để gắn token/session tự động)
+        await clientApiClient.post('/client/cart/clear', {}, { ensureCartSession: true, ignoreAuthRedirect: true });
         
         // Xóa Session ID lưu ở LocalStorage để hệ thống cấp Giỏ hàng mới cho lần mua sau
         localStorage.removeItem('cart_session_id');

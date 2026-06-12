@@ -294,7 +294,7 @@ const fetchEventDetail = async () => {
       holidayForm.month = month
       
       // Xử lý chuỗi đối tượng nhận thành mảng
-      holidayForm.target = data.target_audience ? data.target_audience.split(',') : ['all']
+      holidayForm.target = normalizeTargetAudience(data.target_audience)
       
       holidayForm.subject = data.email_subject
       holidayForm.content = data.email_content
@@ -304,12 +304,12 @@ const fetchEventDetail = async () => {
       holidayForm.status = data.status || 'active'
     } else {
       toast.error('Không tìm thấy thông tin sự kiện.')
-      router.push({ path: '/admin/email-campaign' })
+      router.push({ path: '/admin/email-campaigns' })
     }
   } catch (error) {
     console.error('Lỗi fetch detail:', error)
     toast.error('Lỗi tải dữ liệu. Sự kiện có thể đã bị xóa.')
-    router.push({ path: '/admin/email-campaign' })
+    router.push({ path: '/admin/email-campaigns' })
   } finally {
     isFetching.value = false
   }
@@ -332,7 +332,7 @@ const updateHoliday = async () => {
     
     if (response.data && response.data.success) {
       toast.success('Cập nhật sự kiện thành công!')
-      router.push({ path: '/admin/email-campaign' }) 
+      router.push({ path: '/admin/email-campaigns' })
     } else {
       toast.error(response.data.message || 'Lỗi khi cập nhật sự kiện.')
     }
@@ -346,6 +346,31 @@ const updateHoliday = async () => {
   } finally {
     isSubmitting.value = false
   }
+}
+
+function normalizeTargetAudience(value) {
+  if (Array.isArray(value)) {
+    const targets = value.map(target => String(target).trim()).filter(Boolean)
+    return targets.length ? targets : ['all']
+  }
+
+  if (!value) return ['all']
+
+  const rawValue = String(value).trim()
+  if (!rawValue) return ['all']
+
+  try {
+    const parsed = JSON.parse(rawValue)
+    if (Array.isArray(parsed)) {
+      const targets = parsed.map(target => String(target).trim()).filter(Boolean)
+      return targets.length ? targets : ['all']
+    }
+  } catch (error) {
+    // Keep compatibility with legacy comma-separated values.
+  }
+
+  const targets = rawValue.split(',').map(target => target.trim()).filter(Boolean)
+  return targets.length ? targets : ['all']
 }
 
 function buildPayload() {

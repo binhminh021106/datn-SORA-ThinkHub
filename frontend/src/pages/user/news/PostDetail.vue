@@ -4,14 +4,16 @@ import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import Toast from '@/utils/toastConfig';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
+import SoraSkeleton from '@/components/ui/SoraSkeleton.vue';
+import SoraBlogSkeleton from '@/components/ui/SoraBlogSkeleton.vue';
+import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
+import { API_BASE_URL, getStorageUrl } from '@/utils/env';
 
 const route = useRoute();
 const router = useRouter();
 const queryClient = useQueryClient();
 
 // --- CONFIG ---
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'http://127.0.0.1:8000/storage';
 const soraPlaceholder = '/Sora-placeholder.png'; 
 
 // --- HELPER METHODS ---
@@ -33,13 +35,7 @@ const toSlug = (str) => {
 };
 
 const getFullImage = (path) => {
-    if (!path) return soraPlaceholder;
-    if (path.startsWith('http') || path.startsWith('data:image')) return path;
-    let cleanPath = path.startsWith('/') ? path.substring(1) : path;
-    if (cleanPath.startsWith('storage/')) {
-        cleanPath = cleanPath.substring(8);
-    }
-    return `${STORAGE_URL}/${cleanPath}`;
+    return getStorageUrl(path, soraPlaceholder);
 };
 
 const handleImageError = (e) => { e.target.src = soraPlaceholder; };
@@ -207,56 +203,9 @@ watch(currentSlug, () => {
 <template>
     <div class="post-detail-page bg-light-custom pb-5">
 
-        <!-- HIỆU ỨNG SKELETON KHI LOAD LẦN ĐẦU (Không có Cache) -->
         <div v-if="isPostLoading" class="container py-4 fade-in">
-            <div class="skeleton-box skeleton-text w-25 mb-4 shimmer py-3"></div>
-
-            <div class="row my-4">
-                <div class="col-lg-8 pe-lg-5">
-                    <div class="bg-white p-4 p-md-5 rounded-4 shadow-sm border border-light-subtle">
-                        <div class="skeleton-box skeleton-text w-25 mb-3 shimmer"></div>
-                        <div class="skeleton-box skeleton-title w-100 mb-2 shimmer" style="height: 40px;"></div>
-                        <div class="skeleton-box skeleton-title w-75 mb-4 shimmer" style="height: 40px;"></div>
-                        
-                        <div class="d-flex align-items-center mb-4 pb-3 border-bottom">
-                            <div class="skeleton-box rounded-circle shimmer me-3" style="width: 40px; height: 40px;"></div>
-                            <div class="skeleton-box skeleton-text w-25 shimmer"></div>
-                            <div class="skeleton-box skeleton-text w-25 ms-4 shimmer"></div>
-                        </div>
-
-                        <div class="p-4 bg-light-custom rounded-3 mb-4 border-start border-4 border-light">
-                            <div class="skeleton-box skeleton-text w-100 mb-2 shimmer"></div>
-                            <div class="skeleton-box skeleton-text w-75 shimmer"></div>
-                        </div>
-
-                        <div class="skeleton-box w-100 rounded-4 mb-5 shimmer" style="height: 450px;"></div>
-
-                        <div v-for="i in 6" :key="i" class="skeleton-box skeleton-text w-100 mb-3 shimmer"></div>
-                        <div class="skeleton-box skeleton-text w-50 mb-5 shimmer"></div>
-                        
-                        <div class="d-flex align-items-center bg-light-custom p-4 rounded-4 mt-5 border border-light-subtle">
-                            <div class="skeleton-box rounded-circle shimmer me-4" style="width: 80px; height: 80px;"></div>
-                            <div class="flex-grow-1">
-                                <div class="skeleton-box skeleton-title w-50 mb-2 shimmer"></div>
-                                <div class="skeleton-box skeleton-text w-75 shimmer"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-4 mt-5 mt-lg-0">
-                    <div class="bg-white p-4 rounded-4 shadow-sm border border-light-subtle mb-4">
-                        <div class="skeleton-box skeleton-title w-50 mb-4 shimmer"></div>
-                        <div v-for="i in 4" :key="i" class="d-flex mb-4">
-                            <div class="skeleton-box rounded shimmer flex-shrink-0" style="width: 90px; height: 70px;"></div>
-                            <div class="ms-3 flex-grow-1 d-flex flex-column justify-content-center">
-                                <div class="skeleton-box skeleton-text w-100 mb-2 shimmer"></div>
-                                <div class="skeleton-box skeleton-text w-75 shimmer"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <SoraSkeleton width="24%" height="18px" radius="6px" class="mb-4 py-3" />
+            <SoraBlogSkeleton variant="detail" />
         </div>
 
         <div v-else-if="isError || !post" class="container py-5 text-center">
@@ -325,8 +274,8 @@ watch(currentSlug, () => {
 
                             <!-- NẾU CHỈ MỚI CÓ CACHE (isPartial), HIỆN SKELETON Ở VÙNG CONTENT -->
                             <div v-if="post.isPartial" class="article-body-skeleton fade-in py-3">
-                                <div v-for="i in 8" :key="i" class="skeleton-box skeleton-text w-100 mb-3 shimmer" :style="{'width': i%3===0 ? '80%' : '100%'}"></div>
-                                <div class="skeleton-box skeleton-text w-50 mb-5 shimmer"></div>
+                                <SoraSkeleton v-for="i in 8" :key="i" :width="i % 3 === 0 ? '80%' : '100%'" height="16px" class="mb-3" />
+                                <SoraSkeleton width="50%" height="16px" class="mb-5" />
                             </div>
                             
                             <!-- NẾU ĐÃ LOAD XONG DATA THẬT -->
@@ -352,15 +301,7 @@ watch(currentSlug, () => {
                                 <h4 class="widget-title font-serif">Bài viết mới nhất</h4>
 
                                 <!-- Loading related posts -->
-                                <div v-if="isRelatedLoading" class="mt-4">
-                                     <div v-for="i in 4" :key="i" class="d-flex mb-4">
-                                        <div class="skeleton-box rounded shimmer flex-shrink-0" style="width: 90px; height: 70px;"></div>
-                                        <div class="ms-3 flex-grow-1 d-flex flex-column justify-content-center">
-                                            <div class="skeleton-box skeleton-text w-100 mb-2 shimmer"></div>
-                                            <div class="skeleton-box skeleton-text w-75 shimmer"></div>
-                                        </div>
-                                    </div>
-                                </div>
+                                <SoraListSkeleton v-if="isRelatedLoading" :rows="4" image-size="90px" class="mt-4" />
 
                                 <div v-else class="related-posts mt-4 fade-in">
                                     <p v-if="relatedPosts.length === 0" class="text-muted fst-italic">Chưa có bài viết nào khác.</p>
@@ -507,20 +448,7 @@ h1, h2, h3, h4, h5, h6 {
 .product-title-link { transition: color 0.3s ease; }
 .product-card:hover .product-title, .product-title-link:hover .product-title { color: #9f273b !important; }
 
-/* HIỆU ỨNG CHUYỂN ĐỘNG VÀ SKELETON */
+/* HIỆU ỨNG CHUYỂN ĐỘNG */
 .fade-in { animation: fadeIn 0.4s ease-in; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-.shimmer { 
-    background: #f6f7f8; 
-    background-image: linear-gradient(to right, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%); 
-    background-repeat: no-repeat; 
-    background-size: 800px 100%; 
-    animation: placeholderShimmer 1.5s linear infinite forwards; 
-}
-@keyframes placeholderShimmer { 0% { background-position: -468px 0; } 100% { background-position: 468px 0; } }
-
-.skeleton-box { background-color: #eee; border-radius: 4px; }
-.skeleton-text { height: 16px; border-radius: 4px; }
-.skeleton-title { height: 28px; border-radius: 4px; }
 </style>

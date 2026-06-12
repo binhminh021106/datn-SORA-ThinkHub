@@ -14,6 +14,7 @@
 
 <script setup>
 import { computed } from 'vue';
+import { getStorageUrl } from '@/utils/env';
 
 const props = defineProps({
   src: { type: [String, Number], default: '' },
@@ -27,18 +28,8 @@ const props = defineProps({
 
 const emit = defineEmits(['load', 'error']);
 
-const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'http://127.0.0.1:8000/storage';
-
 const computedSrc = computed(() => {
-  const s = props.src;
-  if (!s) return props.placeholder;
-  const str = String(s);
-  if (str.startsWith('http') || str.startsWith('data:image')) return str;
-  let clean = str.startsWith('/') ? str.substring(1) : str;
-  if (clean.startsWith('storage/')) {
-    clean = clean.substring(8);
-  }
-  return `${STORAGE_URL}/${clean}`;
+  return getStorageUrl(String(props.src || ''), props.placeholder);
 });
 
 const imgStyle = computed(() => ({

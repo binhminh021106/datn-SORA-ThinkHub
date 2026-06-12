@@ -6,7 +6,7 @@ const user = [
       {
         path: '',
         name: 'home',
-        component: () => import('../pages/user/index.vue'),
+        component: () => import('../pages/user/Index.vue'),
       },
       {
         path: 'gia-vang',
@@ -16,7 +16,7 @@ const user = [
       {
         path: 'cart',
         name: 'cart',
-        component: () => import('../pages/user/cart/index.vue'),
+        component: () => import('../pages/user/cart/Index.vue'),
       },
       {
         path: 'order',
@@ -71,22 +71,22 @@ const user = [
       {
         path: 'favourite',
         name: 'favourite',
-        component: () => import('../pages/user/favourite/index.vue'),
+        component: () => import('../pages/user/favourite/Index.vue'),
       },
       {
         path: 'about',
         name: 'about',
-        component: () => import('../pages/user/about/index.vue'),
+        component: () => import('../pages/user/about/Index.vue'),
       },
       {
         path: 'contact',
         name: 'contact',
-        component: () => import('../pages/user/contact/index.vue'),
+        component: () => import('../pages/user/contact/Index.vue'),
       },
       {
         path: 'services',
         name: 'services',
-        component: () => import('../pages/user/services/index.vue'),
+        component: () => import('../pages/user/services/Index.vue'),
       },
       {
         path: 'checkout',
@@ -111,7 +111,7 @@ const user = [
       {
         path: 'profile',
         name: 'profile',
-        component: () => import('../pages/user/profile/index.vue')
+        component: () => import('../pages/user/profile/Index.vue')
       },
       
       {
@@ -129,7 +129,7 @@ const user = [
       {
         path: 'policy',
         name: 'policy',
-        component: () => import('../pages/user/policy/index.vue'),
+        component: () => import('../pages/user/policy/Index.vue'),
       },
 
     ],

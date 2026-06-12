@@ -3,7 +3,7 @@
     
     <div class="position-relative bg-light text-center border-bottom border-light-subtle sora-img-container" :class="{'has-hover-image': showHoverImage && hasHoverImage(product)}">
       
-      <!-- Compare Button (Gọi thẳng globalModalState) -->
+      <!-- Compare Button -->
       <button
         type="button"
         v-if="showCompare"
@@ -78,14 +78,17 @@
           </div>
         </div>
 
-        <!-- Add to Cart Button (Gọi thẳng globalModalState) -->
+        <!-- Add to Cart Button -->
         <div v-if="showAddToCart" :class="['related-btn-add', { 'hover-only': hoverAddToCart }]">
           <button
             type="button"
             @click.stop="handleQuickAddClick"
-            class="btn luxury-btn-solid w-100 rounded-0 py-3 font-oswald tracking-widest text-uppercase fw-bold shadow-none fs-6"
+            class="btn luxury-btn-solid w-100 rounded-0 py-3 font-oswald tracking-widest text-uppercase fw-bold shadow-none fs-6 d-flex align-items-center justify-content-center"
           >
-            Thêm vào giỏ
+            <span class="cart-icon-wrapper d-flex align-items-center justify-content-center overflow-hidden">
+              <i class="bi bi-cart-plus fs-5 text-white"></i>
+            </span>
+            <span>Thêm vào giỏ</span>
           </button>
         </div>
       </div>
@@ -97,7 +100,7 @@
 import { defineProps, defineEmits, computed } from 'vue';
 import { globalModalState } from '@/stores/modalState';
 import Toast from '@/utils/toastConfig';
-
+import { getStorageUrl } from '@/utils/env';
 
 const props = defineProps({
   product: { type: Object, required: true },
@@ -120,7 +123,6 @@ const heartIconClass = computed(() => {
     : 'bi bi-suit-heart text-muted hover-text-accent';
 });
 
-// Gọi trực tiếp đến Store Global
 const handleQuickAddClick = () => {
   globalModalState.openQuickAdd(props.product);
 };
@@ -139,11 +141,7 @@ const formatCurrency = (val) => {
 };
 
 const getImageUrl = (path) => {
-  if (!path) return '/Sora-placeholder.png';
-  if (path.startsWith('http')) return path;
-  const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
-  let cleanPath = path.startsWith('/') ? path.substring(1) : path;
-  return `${baseUrl}/storage/${cleanPath}`;
+  return getStorageUrl(path);
 };
 
 const handleImageError = (e) => {
@@ -191,15 +189,14 @@ const hasHoverImage = (product) => {
 .has-hover-image:hover .sora-hover-img { opacity: 1; }
 
 .theme-bar {
-  width: 30%;
+  width: 0;
   height: 3px;
   background-color: #9f273b;
-  opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
   left: 0;
 }
 .luxury-related-card:hover .theme-bar {
-  opacity: 1;
+  width: 30%;
 }
 
 .wishlist-btn, .compare-btn {
@@ -240,11 +237,21 @@ const hasHoverImage = (product) => {
   transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 .luxury-btn-solid:hover {
-  background-color: #7a1c2d;
-  border-color: #7a1c2d;
+  background-color: #cc1e2e;
+  border-color: #cc1e2e;
   color: white;
-  box-shadow: 0 8px 20px rgba(159,39,59,0.3);
-  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(204,30,46,0.3);
+}
+
+.cart-icon-wrapper {
+  max-width: 0;
+  opacity: 0;
+  transition: all 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.luxury-btn-solid:hover .cart-icon-wrapper {
+  max-width: 30px;
+  opacity: 1;
+  margin-right: 8px;
 }
 
 .text-truncate-2 {

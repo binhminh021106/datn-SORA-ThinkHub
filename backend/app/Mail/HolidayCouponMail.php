@@ -23,6 +23,8 @@ class HolidayCouponMail extends Mailable implements ShouldQueue
     public $expiresAt;
     public $applicableScope;
 
+    private array $couponCache = [];
+
     public function __construct($user, $event, $holidayName = null)
     {
         $this->user = $user;
@@ -33,7 +35,7 @@ class HolidayCouponMail extends Mailable implements ShouldQueue
 
         $coupon = $this->resolveCoupon($event);
 
-        $this->emailContent = $this->prepareEmailContent($event->email_content ?? '');
+        $this->emailContent = $this->prepareEmailContent($this->resolveEmailContent($event));
         $this->discount = $this->resolveDiscountLabel($coupon);
         $this->expiresAt = $this->resolveExpiresAtLabel($coupon);
         $this->applicableScope = $this->resolveApplicableScopeLabel($coupon);
@@ -61,9 +63,23 @@ class HolidayCouponMail extends Mailable implements ShouldQueue
         return $this->containsHtml($content) ? $content : nl2br($content, false);
     }
 
+    private function resolveEmailContent($event): string
+    {
+        $content = trim((string) ($event->email_content ?? ''));
+        if ($content !== '') {
+            return $content;
+        }
+
+        return "Xin chao [Ten_Khach_Hang],\n\nSORA ThinkHub gui ban ma uu dai [Voucher_Code] nhan dip {$this->holidayName}.\nVui long su dung ma truoc khi het han.";
+    }
+
     private function resolveCoupon($event): ?Coupon
     {
         if ($event instanceof Coupon) {
+            if ($event->code) {
+                $this->couponCache[$event->code] = $event;
+            }
+
             return $event;
         }
 
@@ -71,7 +87,11 @@ class HolidayCouponMail extends Mailable implements ShouldQueue
             return null;
         }
 
-        return Coupon::where('code', $this->voucherCode)->first();
+        if (!array_key_exists($this->voucherCode, $this->couponCache)) {
+            $this->couponCache[$this->voucherCode] = Coupon::where('code', $this->voucherCode)->first();
+        }
+
+        return $this->couponCache[$this->voucherCode];
     }
 
     private function resolveDiscountLabel(?Coupon $coupon): string

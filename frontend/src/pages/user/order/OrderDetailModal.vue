@@ -318,11 +318,9 @@
 <script setup>
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
-import axios from 'axios';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 import soraAlert from '@/utils/soraAlertConfig';
-
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+import clientApiClient from '@/utils/clientApiClient';
 
 const router = useRouter();
 
@@ -340,11 +338,6 @@ const orderSteps = [
     { value: 'shipping', label: 'Đang giao', icon: 'bi-truck' },
     { value: 'delivered', label: 'Hoàn tất', icon: 'bi-check-circle-fill' }
 ];
-
-const getHeaders = () => {
-    const token = localStorage.getItem('auth_token');
-    return { 'Accept': 'application/json', 'Authorization': token ? `Bearer ${token}` : '' };
-};
 
 const isStepCompleted = (currentStatus, stepValue) => {
     if (!currentStatus) return false;
@@ -539,9 +532,9 @@ const handleReturn = async () => {
     soraAlert.fire({ title: 'Đang gửi...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
     try {
-        await axios.post(`${API_URL}/client/orders/${props.order.order_code}/return`, {
+        await clientApiClient.post(`/client/orders/${props.order.order_code}/return`, {
             return_reason: noteText
-        }, { headers: getHeaders() });
+        });
 
         soraAlert.fire({
             icon: 'success', title: 'Thành công',
@@ -557,7 +550,10 @@ const handleReturn = async () => {
 const handleReorder = async () => {
     soraAlert.fire({ title: 'Đang xử lý...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
     try {
-        await axios.post(`${API_URL}/client/orders/${props.order.order_code}/reorder`, {}, { headers: getHeaders() });
+        await clientApiClient.post(`/client/orders/${props.order.order_code}/reorder`, {}, {
+            ensureCartSession: true,
+            ignoreAuthRedirect: true
+        });
         soraAlert.fire({
             icon: 'success', title: 'Thành công', text: 'Sản phẩm đã được thêm vào Giỏ hàng!',
             timer: 2000, showConfirmButton: false
@@ -573,8 +569,9 @@ const handleReorder = async () => {
 const handleDownloadInvoice = async () => {
     soraAlert.fire({ title: 'Đang xuất PDF...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
     try {
-        const res = await axios.get(`${API_URL}/client/orders/${props.order.order_code}/invoice`, {
-            headers: getHeaders(), responseType: 'blob'
+        const res = await clientApiClient.get(`/client/orders/${props.order.order_code}/invoice`, {
+            headers: { Accept: 'application/pdf' },
+            responseType: 'blob'
         });
 
         const url = window.URL.createObjectURL(new Blob([res.data]));

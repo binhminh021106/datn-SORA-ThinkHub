@@ -187,8 +187,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick, computed, watch, defineProps, defineEmits } from 'vue';
-import axios from 'axios';
-import { getUserToken } from '@/composables/useUtilities';
+import clientApiClient from '@/utils/clientApiClient';
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -219,11 +218,7 @@ const activeCategory = ref('smileys');
 // Lightbox
 const lightboxUrl = ref(null);
 
-const API_URL = import.meta.env.VITE_API_BASE_URL;
-const getToken = () => getUserToken();
-const axiosConfig = () => ({
-  headers: { Authorization: `Bearer ${getToken()}`, Accept: 'application/json' }
-});
+// clientApiClient handles auth token and headers automatically
 
 // ===== EMOJI DATA =====
 const emojiCategories = [
@@ -337,7 +332,7 @@ const fetchHistory = async () => {
     return;
   }
   try {
-    const res = await axios.get(`${API_URL}/client/messages`, axiosConfig());
+    const res = await clientApiClient.get('/client/messages');
     if (res.data.status) {
       messages.value = res.data.data.map(m => {
         renderedIds.add(m.id);
@@ -430,13 +425,7 @@ const sendMessage = async () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('receiver_id', 1);
-      const res = await axios.post(`${API_URL}/client/messages`, formData, {
-        headers: {
-          Authorization: `Bearer ${getToken()}`,
-          Accept: 'application/json',
-          'Content-Type': 'multipart/form-data'
-        }
-      });
+      const res = await clientApiClient.post('/client/messages', formData);
       if (res.data.status) {
         const realMsg = res.data.data;
         const idx = messages.value.findIndex(m => m.id === tempId);
@@ -476,10 +465,10 @@ const sendMessage = async () => {
     scrollToBottom();
 
     try {
-      const res = await axios.post(`${API_URL}/client/messages`, {
+      const res = await clientApiClient.post('/client/messages', {
         receiver_id: 1,
         content: userMessage
-      }, axiosConfig());
+      });
 
       if (res.data.status) {
         const realMsg = res.data.data;

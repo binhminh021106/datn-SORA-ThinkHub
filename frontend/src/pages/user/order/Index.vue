@@ -15,9 +15,7 @@
         <!-- NỘI DUNG CHÍNH BÊN PHẢI -->
         <div class="col-lg-9">
 
-      <div v-if="isLoading" class="d-flex justify-content-center align-items-center py-5 my-5">
-        <div class="spinner-border text-primary-custom" style="width: 3rem; height: 3rem;"></div>
-      </div>
+      <SoraListSkeleton v-if="isLoading" :rows="4" image-size="72px" card />
 
       <div v-else-if="orders.length > 0 || hasActiveFilters" class="mb-5">
         <div class="bg-white p-3 p-md-4 shadow-sm border border-light-subtle d-flex flex-column gap-4">
@@ -224,7 +222,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
 import Swal from 'sweetalert2';
 import Toast from '@/utils/toastConfig';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
@@ -233,6 +230,9 @@ import ReviewModal from './ReviewModal.vue';
 import ViewReviewModal from './ViewReviewModal.vue';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 import ProfileSidebar from '@/components/ui/ProfileSidebar.vue';
+import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
+import { getStorageUrl } from '@/utils/env';
+import clientApiClient from '@/utils/clientApiClient';
 
 const router = useRouter();
 const isLoading = ref(true);
@@ -249,8 +249,6 @@ const filterStatus = ref('all');
 const filterDate = ref('all');
 const sortBy = ref('newest');
 const searchQuery = ref('');
-
-const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/client/orders`;
 
 const statusTabs = [
   { label: 'Tất cả', value: 'all' },
@@ -280,14 +278,9 @@ const soraAlert = createSoraAlert({
   customClass: { confirmButton: 'px-4 py-2 mx-2 rounded-0 shadow-sm fw-bold', cancelButton: 'px-4 py-2 mx-2 rounded-0 fw-bold' }
 });
 
-const getHeaders = () => {
-  const token = localStorage.getItem('auth_token');
-  return { 'Accept': 'application/json', 'Authorization': token ? `Bearer ${token}` : '' };
-};
-
 const formatPrice = (v) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v || 0);
 const formatDate = (d) => d ? new Date(d).toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'N/A';
-const getImageUrl = (p) => p ? (p.startsWith('http') ? p : `http://127.0.0.1:8000/storage/${p}`) : defaultPlaceholder;
+const getImageUrl = (p) => getStorageUrl(p, defaultPlaceholder);
 const handleImageError = (e) => { e.target.src = defaultPlaceholder; };
 
 const getStatusClass = (s) => ({
@@ -335,7 +328,7 @@ const resetFilters = () => { filterStatus.value = 'all'; filterDate.value = 'all
 const fetchOrders = async (page = 1) => {
   isLoading.value = true;
   try {
-    const res = await axios.get(`${API_BASE_URL}?page=${page}`, { headers: getHeaders() });
+    const res = await clientApiClient.get('/client/orders', { params: { page } });
     orders.value = res.data.data || [];
     pagination.value = { current_page: res.data.current_page, last_page: res.data.last_page };
   } catch (err) { Toast.fire({ icon: 'error', title: 'Lỗi tải danh sách đơn hàng' }); }
@@ -344,7 +337,7 @@ const fetchOrders = async (page = 1) => {
 
 const openDetails = async (order) => {
   try {
-    const res = await axios.get(`${API_BASE_URL}/${order.order_code}`, { headers: getHeaders() });
+    const res = await clientApiClient.get(`/client/orders/${order.order_code}`);
     selectedOrder.value = res.data.data;
     isModalOpen.value = true;
     document.body.style.overflow = 'hidden';
@@ -399,7 +392,10 @@ const handleReorder = async (order) => {
     });
 
     // Bắn request tới backend để add vào bảng Carts
-    await axios.post(`${API_BASE_URL}/${order.order_code}/reorder`, {}, { headers: getHeaders() });
+    await clientApiClient.post(`/client/orders/${order.order_code}/reorder`, {}, {
+      ensureCartSession: true,
+      ignoreAuthRedirect: true
+    });
 
     // Tắt loading và hiện thông báo thành công
     soraAlert.fire({
@@ -440,7 +436,7 @@ const confirmCancel = async (order) => {
   }).then(async (result) => {
     if (result.isConfirmed) {
       try {
-        await axios.put(`${API_BASE_URL}/${order.order_code}`, { action: 'cancel', cancel_reason: result.value }, { headers: getHeaders() });
+        await clientApiClient.put(`/client/orders/${order.order_code}`, { action: 'cancel', cancel_reason: result.value });
         soraAlert.fire({ icon: 'success', title: 'Thành công', text: 'Đơn hàng đã được hủy.' });
         if (isModalOpen.value) closeModal();
         fetchOrders(pagination.value.current_page);
@@ -453,19 +449,11 @@ const confirmCancel = async (order) => {
 const exportInvoice = async (order) => {
   if (!order?.order_code) return;
 
-  const token = localStorage.getItem('auth_token'); // token bạn đang lưu
-
   try {
-    const res = await axios.get(
-      `${import.meta.env.VITE_API_BASE_URL}/client/orders/${order.order_code}/invoice`,
-      {
-        headers: {
-          Authorization: token ? `Bearer ${token}` : '',
-          Accept: 'application/pdf',
-        },
-        responseType: 'blob',           // ← rất quan trọng
-      }
-    );
+    const res = await clientApiClient.get(`/client/orders/${order.order_code}/invoice`, {
+      headers: { Accept: 'application/pdf' },
+      responseType: 'blob',
+    });
 
     // Tạo link tải file
     const blobUrl = window.URL.createObjectURL(res.data);

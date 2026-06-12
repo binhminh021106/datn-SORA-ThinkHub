@@ -1,59 +1,8 @@
 <template>
   <div class="product-page">
     
-    <!-- LOADING STATE SKELETON -->
-    <div v-if="isLoading" class="container py-4 fade-in" style="max-width: 1300px; margin: 0 auto;">
-       <!-- Breadcrumb Skeleton -->
-       <div class="skeleton-box skeleton-text w-25 mb-4 shimmer py-2"></div>
-       
-       <div class="product-grid">
-           <!-- Product Gallery Skeleton -->
-           <div class="product-gallery">
-               <div class="thumbnails-list">
-                   <div v-for="i in 4" :key="i" class="skeleton-box shimmer rounded mb-2" style="width: 75px; height: 75px;"></div>
-               </div>
-               <div class="main-image-wrapper">
-                   <div class="skeleton-box shimmer rounded w-100 h-100"></div>
-               </div>
-           </div>
-
-           <!-- Product Info Skeleton -->
-           <div class="product-info">
-               <div class="skeleton-box skeleton-text w-25 mb-3 shimmer"></div>
-               <div class="skeleton-box skeleton-title w-75 mb-4 shimmer" style="height: 36px;"></div>
-               <div class="skeleton-box skeleton-title w-50 mb-4 shimmer" style="height: 30px;"></div>
-               
-               <div class="skeleton-box w-100 mb-4 shimmer rounded border border-light" style="height: 60px;"></div>
-               
-               <div class="mb-4">
-                   <div class="skeleton-box skeleton-text w-25 mb-2 shimmer"></div>
-                   <div class="d-flex gap-2 mb-3">
-                       <div v-for="i in 4" :key="i" class="skeleton-box shimmer rounded-circle" style="width: 36px; height: 36px;"></div>
-                   </div>
-                   <div class="skeleton-box skeleton-text w-25 mb-2 shimmer"></div>
-                   <div class="d-flex gap-2">
-                       <div v-for="i in 3" :key="i" class="skeleton-box shimmer rounded" style="width: 60px; height: 36px;"></div>
-                   </div>
-               </div>
-               
-               <div class="action-area mb-4 d-flex gap-3">
-                   <div class="skeleton-box shimmer rounded" style="width: 130px; height: 48px;"></div>
-                   <div class="action-buttons d-flex gap-3" style="flex: 1;">
-                       <div class="skeleton-box shimmer rounded" style="flex: 1; height: 48px;"></div>
-                       <div class="skeleton-box shimmer rounded" style="flex: 1; height: 48px;"></div>
-                   </div>
-               </div>
-
-               <div class="d-flex gap-3 mb-4">
-                  <div class="skeleton-box shimmer rounded" style="flex: 1; height: 48px;"></div>
-                  <div class="skeleton-box shimmer rounded-circle" style="width: 48px; height: 48px;"></div>
-               </div>
-               
-               <div class="skeleton-box skeleton-text w-100 mb-2 shimmer mt-4"></div>
-               <div class="skeleton-box skeleton-text w-100 mb-2 shimmer"></div>
-               <div class="skeleton-box skeleton-text w-75 shimmer"></div>
-           </div>
-       </div>
+    <div v-if="isLoading" class="container py-4 fade-in">
+      <SoraProductDetailSkeleton />
     </div>
 
     <!-- MAIN CONTENT -->
@@ -357,9 +306,7 @@
           </div>
         </div>
 
-        <div v-if="isLoadingRecs" class="rec-loading">
-          <div class="spinner small-spinner"></div>
-        </div>
+        <SoraProductGridSkeleton v-if="isLoadingRecs" :count="4" min="230px" />
 
         <!-- LIST SẢN PHẨM GỢI Ý - SỬ DỤNG COMPONENT PRODUCTCARD ĐÃ TÍCH HỢP ĐẦY ĐỦ -->
         <div v-else class="rec-slider-container" ref="recSliderRef">
@@ -521,9 +468,8 @@
                <i class="bi bi-bag-plus-fill me-2"></i> Xác nhận thêm
             </button>
           </div>
-          <div v-else class="p-5 text-center">
-             <div class="spinner-border text-sora-primary" role="status"></div>
-             <p class="mt-3 text-muted font-oswald tracking-widest text-uppercase small">Đang nạp dữ liệu...</p>
+          <div v-else class="p-4">
+             <SoraListSkeleton :rows="3" image-size="80px" />
           </div>
         </div>
       </div>
@@ -546,6 +492,9 @@ import SizeGuideModal from '@/components/ui/SizeGuideModal.vue';
 import VariantSelector from '@/components/ui/VariantSelector.vue';
 import StockStatusBar from '@/components/ui/StockStatusBar.vue';
 import PriceDisplay from '@/components/ui/PriceDisplay.vue';
+import SoraProductDetailSkeleton from '@/components/ui/SoraProductDetailSkeleton.vue';
+import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
+import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
 
 // Composables
 import { useWishlist } from '@/composables/useWishlist';
@@ -553,6 +502,7 @@ import { useProductVariants } from '@/composables/useProductVariants';
 import { isColorAttribute, isSizeAttribute, getColorCode, isLightColor } from '@/composables/useColorMapping';
 import { getToken, getHeaders, getFullImage, formatMoney } from '@/composables/useUtilities';
 import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener.js';
+import { API_BASE_URL } from '@/utils/env';
 
 const route = useRoute();
 const router = useRouter();
@@ -561,8 +511,6 @@ const mainImage = ref('');
 const isLoading = ref(true);
 const showSizeGuideModal = ref(false);
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || API_BASE_URL.replace(/\/api\/?$/, '');
 const shopSlug = route.params.shop_slug || 'aurora';
 const currentProductSlug = computed(() => route.params.slug || route.params.product_slug || '');
 const soraPlaceholder = '/Sora-placeholder.png';
@@ -1355,7 +1303,7 @@ input[type=number] { -moz-appearance: textfield; }
 .rec-arrows { display: flex; gap: 8px; }
 .arrow-btn { width: 36px; height: 36px; border: 1px solid #ddd; background: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #555; transition: all 0.2s; border-radius: 50%; }
 .arrow-btn:hover { background: rgb(159,39,59); color: #fff; border-color: rgb(159,39,59); }
-.rec-loading, .rec-empty { min-height: 250px; display: flex; align-items: center; justify-content: center; color: #777; }
+.rec-empty { min-height: 250px; display: flex; align-items: center; justify-content: center; color: #777; }
 .rec-slider-container { display: flex; gap: 20px; overflow-x: auto; scroll-behavior: smooth; padding-bottom: 20px; -ms-overflow-style: none; scrollbar-width: none; }
 .rec-slider-container::-webkit-scrollbar { display: none; }
 
@@ -1459,22 +1407,8 @@ input[type=number] { -moz-appearance: textfield; }
   .flash-sale-countdown { flex-direction: column; align-items: flex-start; gap: 8px; }
 }
 
-/* SKELETON LOADING CSS */
 .fade-in { animation: fadeIn 0.4s ease-in; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-.shimmer {
-    background: #f6f7f8;
-    background-image: linear-gradient(to right, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%);
-    background-repeat: no-repeat;
-    background-size: 800px 100%;
-    animation: placeholderShimmer 1.5s linear infinite forwards;
-}
-@keyframes placeholderShimmer { 0% { background-position: -468px 0; } 100% { background-position: 468px 0; } }
-
-.skeleton-box { background-color: #eee; border-radius: 4px; }
-.skeleton-text { height: 16px; border-radius: 4px; }
-.skeleton-title { height: 28px; border-radius: 4px; }
 
 /* CSS QUICK ADD MODAL CHIP */
 .attr-chip { border-radius: 4px; overflow: hidden; min-width: 55px; }

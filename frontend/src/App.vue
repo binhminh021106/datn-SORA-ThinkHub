@@ -5,7 +5,6 @@
     <router-view></router-view>
 
     <QuickAddModal />
-    <CompareModal shop-slug="sora" />
   </div>
 </template>
 
@@ -15,9 +14,8 @@ import { useRouter, useRoute } from 'vue-router';
 import apiClient from '@/utils/apiClient';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 
-// Nhúng 2 Modal Global vào App
+// Nhúng modal global vào App
 import QuickAddModal from '@/components/ui/QuickAddModal.vue';
-import CompareModal from '@/components/ui/CompareModal.vue';
 
 const router = useRouter();
 const route = useRoute();

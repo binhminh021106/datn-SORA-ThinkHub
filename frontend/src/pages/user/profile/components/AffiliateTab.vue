@@ -10,11 +10,7 @@
       </div>
     </div>
 
-    <div v-if="isLoading" class="text-center py-5">
-      <div class="spinner-border text-primary-luxury" role="status">
-        <span class="visually-hidden">Loading...</span>
-      </div>
-    </div>
+    <SoraListSkeleton v-if="isLoading" :rows="4" :image="false" card />
 
     <div v-else>
       <div v-if="affiliateData.is_affiliate" class="affiliate-dashboard">
@@ -243,9 +239,8 @@
 import { ref, reactive, onMounted } from 'vue';
 import Toast from '@/utils/toastConfig';
 import soraAlert from '@/utils/soraAlertConfig';
-
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/api\/?$/, '');
-const getToken = () => localStorage.getItem('auth_token') || localStorage.getItem('access_token');
+import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
+import clientApiClient from '@/utils/clientApiClient';
 
 const isLoading = ref(true);
 const isSubmitting = ref(false);
@@ -286,13 +281,7 @@ const withdrawForm = reactive({
 const fetchStatus = async () => {
   isLoading.value = true;
   try {
-    const res = await fetch(`${API_BASE}/api/client/affiliate/status`, {
-      headers: { 
-        'Authorization': `Bearer ${getToken()}`,
-        'Accept': 'application/json' 
-      }
-    });
-    const result = await res.json();
+    const { data: result } = await clientApiClient.get('/client/affiliate/status');
     
     if (result.success && result.data) {
       affiliateData.is_affiliate = result.data.is_affiliate;
@@ -328,20 +317,10 @@ const submitApplication = async () => {
   
   isSubmitting.value = true;
   try {
-    const res = await fetch(`${API_BASE}/api/client/affiliate/apply`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getToken()}`,
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({
-        social_links: form.social_links,
-        introduce_message: form.introduce_message
-      })
+    const { data: result } = await clientApiClient.post('/client/affiliate/apply', {
+      social_links: form.social_links,
+      introduce_message: form.introduce_message
     });
-    
-    const result = await res.json();
     
     if (result.success) {
       soraAlert.fire({ icon: 'success', title: 'Thành công!', text: result.message });
@@ -371,17 +350,7 @@ const submitWithdraw = async () => {
 
   isWithdrawing.value = true;
   try {
-    const res = await fetch(`${API_BASE}/api/client/affiliate/withdraw`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getToken()}`,
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify(withdrawForm)
-    });
-    
-    const result = await res.json();
+    const { data: result } = await clientApiClient.post('/client/affiliate/withdraw', withdrawForm);
     
     if (result.success) {
       // Ẩn modal rút tiền bằng Bootstrap API

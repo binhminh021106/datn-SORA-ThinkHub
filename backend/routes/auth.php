@@ -1,8 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\admin\AdminAccountController;
-use App\Http\Controllers\Api\admin\AdminForgotPasswordController;
+use App\Http\Controllers\Api\Admin\AdminAccountController;
+use App\Http\Controllers\Api\Admin\AdminForgotPasswordController;
 
 // --- ADMIN AUTH ROUTES ---
 Route::prefix('admin')->group(function () {

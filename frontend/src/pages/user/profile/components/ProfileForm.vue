@@ -149,8 +149,8 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
-import axios from 'axios';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
+import clientApiClient from '@/utils/clientApiClient';
 
 const props = defineProps({
   initialForm: {
@@ -179,26 +179,6 @@ const showToast = (message, type = 'success') => {
     timer: type === 'success' ? 2500 : undefined,
     showConfirmButton: type !== 'success'
   });
-};
-
-const apiBase = `${import.meta.env.VITE_API_BASE_URL}/client/profile`; 
-const getToken = () => {
-  const commonKeys = ['access_token', 'token', 'auth_token', 'userToken', 'user_token'];
-  for (const k of commonKeys) {
-    const val = localStorage.getItem(k) || sessionStorage.getItem(k);
-    if (val && val.length > 15) return val; 
-  }
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    try {
-      const parsed = JSON.parse(localStorage.getItem(key));
-      if (parsed && typeof parsed === 'object') {
-        if (parsed.access_token) return parsed.access_token;
-        if (parsed.token) return parsed.token;
-      }
-    } catch(e) {}
-  }
-  return '';
 };
 
 const isSaving = ref(false);
@@ -303,9 +283,7 @@ const updateProfile = async () => {
     if (form.value.birthday) formData.append('birthday', form.value.birthday);
     if (props.avatarFile) formData.append('avatar', props.avatarFile);
 
-    const response = await axios.post(apiBase, formData, {
-      headers: { Authorization: `Bearer ${getToken()}` }
-    });
+    const response = await clientApiClient.post('/client/profile', formData);
 
     if (response.data.status) {
       showToast(response.data.message, 'success');
@@ -337,9 +315,7 @@ const defaultAddress = computed(() => {
 const fetchAddresses = async () => {
   isLoadingAddresses.value = true;
   try {
-    const response = await axios.get(`${apiBase}/addresses`, {
-      headers: { Authorization: `Bearer ${getToken()}`, Accept: 'application/json' }
-    });
+    const response = await clientApiClient.get('/client/profile/addresses');
     if (response.data.status) {
       addresses.value = response.data.data;
     }
