@@ -127,10 +127,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import axios from 'axios';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
 import VietnamAddressPicker from '@/components/ui/VietnamAddressPicker.vue';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
+import clientApiClient from '@/utils/clientApiClient';
 
 const props = defineProps({
   userName: { type: String, default: '' },
@@ -154,27 +154,6 @@ type === 'success'
     timer: type === 'success' ? 2500 : undefined,
     showConfirmButton: type !== 'success'
   });
-};
-
-const apiBase = `${import.meta.env.VITE_API_BASE_URL}/client/profile`;
-const apiGeo = `${import.meta.env.VITE_API_BASE_URL}/client/geo`;
-const getToken = () => {
-  const keys = ['access_token', 'token', 'auth_token', 'userToken', 'user_token'];
-  for (const k of keys) {
-    const val = localStorage.getItem(k) || sessionStorage.getItem(k);
-    if (val && val.length > 15) return val;
-  }
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    try {
-      const parsed = JSON.parse(localStorage.getItem(key));
-      if (parsed && typeof parsed === 'object') {
-        if (parsed.access_token) return parsed.access_token;
-        if (parsed.token) return parsed.token;
-      }
-    } catch(e) {}
-  }
-  return '';
 };
 
 // === STATE ===
@@ -209,9 +188,7 @@ const handleAddressPickerChange = ({ hasDistrictLevel }) => {
 const fetchAddresses = async () => {
   isLoading.value = true;
   try {
-    const res = await axios.get(`${apiBase}/addresses`, {
-      headers: { Authorization: `Bearer ${getToken()}`, Accept: 'application/json' }
-    });
+    const res = await clientApiClient.get('/client/profile/addresses');
     if (res.data.status) addresses.value = res.data.data;
   } catch (e) {
     console.error('Lỗi lấy địa chỉ:', e);
@@ -295,9 +272,8 @@ const getCurrentLocation = () => {
       const lon = position.coords.longitude;
       let geoRes = null;
       try {
-        geoRes = await axios.get(`${apiGeo}/reverse`, {
-          params: { lat, lng: lon },
-          headers: { Authorization: `Bearer ${getToken()}`, Accept: 'application/json' }
+        geoRes = await clientApiClient.get('/client/geo/reverse', {
+          params: { lat, lng: lon }
         });
       } catch (e) {
         console.error('Lỗi gọi backend reverse geo:', e);
@@ -368,13 +344,11 @@ const saveAddress = async () => {
 
   isSaving.value = true;
   try {
-    const url = isEditing.value ? `${apiBase}/addresses/${addrForm.value.id}` : `${apiBase}/addresses`;
+    const url = isEditing.value ? `/client/profile/addresses/${addrForm.value.id}` : '/client/profile/addresses';
     const method = isEditing.value ? 'put' : 'post';
     const payload = { ...addrForm.value, is_default: addrForm.value.is_default ? 1 : 0 };
 
-    const res = await axios[method](url, payload, {
-      headers: { Authorization: `Bearer ${getToken()}`, Accept: 'application/json' }
-    });
+    const res = await clientApiClient[method](url, payload);
 
     if (res.data.status) {
       showToast(res.data.message, 'success');
@@ -401,9 +375,7 @@ const confirmDelete = async (id) => {
   }).then(async (result) => {
     if (result.isConfirmed) {
       try {
-        const res = await axios.delete(`${apiBase}/addresses/${id}`, {
-          headers: { Authorization: `Bearer ${getToken()}`, Accept: 'application/json' }
-        });
+        const res = await clientApiClient.delete(`/client/profile/addresses/${id}`);
         if (res.data.status) {
           showToast('Đã xóa địa chỉ', 'success');
           fetchAddresses();
@@ -418,9 +390,7 @@ const confirmDelete = async (id) => {
 // === SET DEFAULT ===
 const setDefault = async (id) => {
   try {
-    const res = await axios.put(`${apiBase}/addresses/${id}/default`, {}, {
-      headers: { Authorization: `Bearer ${getToken()}`, Accept: 'application/json' }
-    });
+    const res = await clientApiClient.put(`/client/profile/addresses/${id}/default`, {});
     if (res.data.status) {
       showToast('Đã thay đổi địa chỉ mặc định', 'success');
       fetchAddresses();

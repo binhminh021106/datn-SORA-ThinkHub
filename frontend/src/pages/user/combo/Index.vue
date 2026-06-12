@@ -163,12 +163,11 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
+import clientApiClient from '@/utils/clientApiClient';
 import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener.js';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
 import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 const router = useRouter();
 const combos = ref([]);
@@ -255,9 +254,9 @@ const scrollSlider = (comboId, direction) => {
 const fetchCombos = async (gender = null) => {
   isLoading.value = true;
   try {
-    let url = `${API_URL}/client/combos`;
-    if (gender && gender !== 'all') url += `?gender=${gender}`;
-    const res = await axios.get(url);
+    const params = {};
+    if (gender && gender !== 'all') params.gender = gender;
+    const res = await clientApiClient.get('/client/combos', { params, ignoreAuthRedirect: true });
 
     combos.value = res.data.data.data.map(combo => {
         combo.parsed_start_date = parseDBDate(combo.start_date);
@@ -274,10 +273,11 @@ const fetchCombos = async (gender = null) => {
         return combo;
     });
 
-  } catch (error) {
-  } finally {
-    isLoading.value = false;
-  }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      isLoading.value = false;
+    }
 };
 
 usePublicRefreshListener({

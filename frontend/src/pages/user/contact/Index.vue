@@ -138,8 +138,8 @@
 
 <script setup>
 import { ref } from 'vue';
-import axios from 'axios';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
+import clientApiClient from '@/utils/clientApiClient';
 
 // 1. Quản lý trạng thái form
 const form = ref({
@@ -149,9 +149,6 @@ const form = ref({
   message: ''
 });
 const isSubmitting = ref(false);
-
-// 2. Đường dẫn API trỏ vào Controller mình vừa tạo
-const API_URL = `${import.meta.env.VITE_API_BASE_URL}/client/contact`;
 
 // 3. Cấu hình SweetAlert2 đồng bộ với toàn hệ thống
 const soraAlert = createSoraAlert({
@@ -165,8 +162,9 @@ const submitContactForm = async () => {
   isSubmitting.value = true;
   
   try {
-    const response = await axios.post(API_URL, form.value, {
-      headers: { 'Accept': 'application/json' }
+    const response = await clientApiClient.post('/client/contact', form.value, {
+      ignoreAuthRedirect: true,
+      skipCartSession: true
     });
 
     if (response.data.status) {

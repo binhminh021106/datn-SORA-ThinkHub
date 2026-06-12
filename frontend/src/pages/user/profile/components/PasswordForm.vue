@@ -39,8 +39,8 @@
 
 <script setup>
 import { ref } from 'vue';
-import axios from 'axios';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
+import clientApiClient from '@/utils/clientApiClient';
 
 const isChangingPassword = ref(false);
 const passwordForm = ref({
@@ -63,26 +63,6 @@ const showToast = (message, type = 'success') => {
   });
 };
 
-const apiBase = `${import.meta.env.VITE_API_BASE_URL}/client/profile`; 
-const getToken = () => {
-  const commonKeys = ['access_token', 'token', 'auth_token', 'userToken', 'user_token'];
-  for (const k of commonKeys) {
-    const val = localStorage.getItem(k) || sessionStorage.getItem(k);
-    if (val && val.length > 15) return val; 
-  }
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    try {
-      const parsed = JSON.parse(localStorage.getItem(key));
-      if (parsed && typeof parsed === 'object') {
-        if (parsed.access_token) return parsed.access_token;
-        if (parsed.token) return parsed.token;
-      }
-    } catch(e) {}
-  }
-  return '';
-};
-
 const changePassword = async () => {
   if (passwordForm.value.password !== passwordForm.value.password_confirmation) {
     showToast('Mật khẩu xác nhận không khớp!', 'error');
@@ -90,9 +70,7 @@ const changePassword = async () => {
   }
   isChangingPassword.value = true;
   try {
-    const response = await axios.post(`${apiBase}/password`, passwordForm.value, {
-      headers: { Authorization: `Bearer ${getToken()}`, Accept: 'application/json' }
-    });
+    const response = await clientApiClient.post('/client/profile/password', passwordForm.value);
     if (response.data.status) {
       showToast(response.data.message, 'success');
       passwordForm.value = { current_password: '', password: '', password_confirmation: '' };

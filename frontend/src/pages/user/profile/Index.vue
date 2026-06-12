@@ -50,7 +50,6 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
-import axios from 'axios';
 import { useRouter, useRoute } from 'vue-router';
 import ProfileForm from './components/ProfileForm.vue';
 import PasswordForm from './components/PasswordForm.vue';
@@ -59,6 +58,8 @@ import ProfileSidebar from '@/components/ui/ProfileSidebar.vue';
 import AffiliateTab from './components/AffiliateTab.vue';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
 import { getStorageUrl } from '@/utils/env';
+import clientApiClient from '@/utils/clientApiClient';
+import { getUserToken } from '@/composables/useUtilities';
 
 const router = useRouter();
 const route = useRoute();
@@ -86,27 +87,6 @@ const form = ref({
   fullName: '', email: '', phone: '', gender: '', birthday: '', avatar_url: '',
   tier_id: null, accumulated_spent: 0, accumulated_orders: 0, tier: null, all_tiers: []
 });
-
-const apiBase = `${import.meta.env.VITE_API_BASE_URL}/client/profile`; 
-
-const getToken = () => {
-  const commonKeys = ['access_token', 'token', 'auth_token', 'userToken', 'user_token'];
-  for (const k of commonKeys) {
-    const val = localStorage.getItem(k) || sessionStorage.getItem(k);
-    if (val && val.length > 15) return val; 
-  }
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    try {
-      const parsed = JSON.parse(localStorage.getItem(key));
-      if (parsed && typeof parsed === 'object') {
-        if (parsed.access_token) return parsed.access_token;
-        if (parsed.token) return parsed.token;
-      }
-    } catch(e) {}
-  }
-  return '';
-};
 
 const getImageUrl = (path) => {
   if (!path) return null;
@@ -151,9 +131,7 @@ const updateLocalAuthData = (newData) => {
 
 const fetchProfile = async () => {
   try {
-    const response = await axios.get(apiBase, {
-      headers: { Authorization: `Bearer ${getToken()}`, Accept: 'application/json' }
-    });
+    const response = await clientApiClient.get('/client/profile');
     
     if (response.data.status) {
       const userData = response.data.data;
@@ -187,7 +165,7 @@ const logout = () => {
 };
 
 onMounted(() => {
-  const token = getToken();
+  const token = getUserToken();
   if (token) {
     isLoggedIn.value = true;
     fetchProfile();

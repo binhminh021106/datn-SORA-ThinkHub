@@ -76,7 +76,7 @@
 
 <script setup>
 import { ref, nextTick, watch, defineProps, defineEmits } from 'vue';
-import axios from 'axios';
+import clientApiClient from '@/utils/clientApiClient';
 import { useRouter } from 'vue-router';
 import ProductCard from '@/components/ui/ProductCard.vue';
 
@@ -153,7 +153,7 @@ const sendMessage = async () => {
   userInput.value = ''; isLoading.value = true; scrollToBottom();
 
   try {
-    const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/client/chatbot`, { message: text });
+    const response = await clientApiClient.post('/client/chatbot', { message: text }, { ignoreAuthRedirect: true });
     if (response.data.success) {
       messages.value.push({
         sender: 'bot',

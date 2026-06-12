@@ -140,7 +140,7 @@
       <!-- BẮT ĐẦU PHẦN ĐÃ CHỈNH SỬA HTML -->
       <section class="editorial-section craft-section">
         <div class="craft-watermark font-serif d-none d-lg-block">SORA</div>
-        
+
         <div class="container">
           <div class="craft-rows-wrapper">
             <!-- HÀNG 1: Text trái - Ảnh phải -->
@@ -169,7 +169,8 @@
               <div class="craft-card">
                 <i class="bi bi-quote craft-quote-icon" aria-hidden="true"></i>
                 <h3 class="font-serif">Vẻ đẹp được nâng niu mỗi ngày.</h3>
-                <p>Từ lựa chọn chất liệu đến hoàn thiện chi tiết, SORA hướng đến sự chỉn chu, sang trọng và bền lâu trong
+                <p>Từ lựa chọn chất liệu đến hoàn thiện chi tiết, SORA hướng đến sự chỉn chu, sang trọng và bền lâu
+                  trong
                   từng trải nghiệm.</p>
                 <router-link :to="{ name: 'services' }" class="editorial-btn text-decoration-none">Dịch vụ của chúng
                   tôi</router-link>
@@ -269,7 +270,9 @@ import Toast from '@/utils/toastConfig';
 import soraAlert from '@/utils/soraAlertConfig';
 import ProductCard from '@/components/ui/ProductCard.vue';
 import NewsPostCard from '@/components/ui/NewsPostCard.vue';
-import { API_BASE_URL, getStorageUrl } from '@/utils/env';
+import { getStorageUrl } from '@/utils/env';
+import clientApiClient from '@/utils/clientApiClient';
+import { getUserToken } from '@/composables/useUtilities';
 
 const HOME_INTRO_SESSION_KEY = 'sora_home_intro_seen';
 const navigationEntry = performance.getEntriesByType('navigation')[0];
@@ -379,10 +382,6 @@ const handleHeroImageError = (event, index = 0) => {
   markHeroImageReady(index);
 };
 
-const getToken = () => {
-  return localStorage.getItem('auth_token') || localStorage.getItem('token') || localStorage.getItem('access_token') || localStorage.getItem('userToken') || localStorage.getItem('user_token') || null;
-};
-
 const isInWishlist = (productId) => wishlistIds.value.includes(productId);
 
 const showWishlistNotification = (isAdded) => {
@@ -394,16 +393,15 @@ const showWishlistNotification = (isAdded) => {
 };
 
 const loadWishlist = async () => {
-  const token = getToken();
+  const token = getUserToken();
   if (!token) {
     const stored = localStorage.getItem('sora_wishlist');
     if (stored) wishlistIds.value = JSON.parse(stored);
     return;
   }
   try {
-    const response = await fetch(`${API_BASE_URL}/client/favourites`, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } });
-    const result = await response.json();
-    if (response.ok && result.status && Array.isArray(result.data)) {
+    const { data: result } = await clientApiClient.get('/client/favourites', { ignoreAuthRedirect: true });
+    if (result.status && Array.isArray(result.data)) {
       wishlistIds.value = result.data.map((item) => item.product?.id).filter(Boolean);
       localStorage.setItem('sora_wishlist', JSON.stringify(wishlistIds.value));
     } else {
@@ -417,7 +415,7 @@ const loadWishlist = async () => {
 };
 
 const toggleWishlist = async (product) => {
-  const token = getToken();
+  const token = getUserToken();
   if (!token) {
     const index = wishlistIds.value.indexOf(product.id);
     const isAdding = index === -1;
@@ -428,13 +426,8 @@ const toggleWishlist = async (product) => {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/client/favourites/toggle`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ product_id: product.id })
-    });
-    const result = await response.json();
-    if (!response.ok || !result.status) throw new Error(result.message || 'Không thể cập nhật danh sách yêu thích.');
+    const { data: result } = await clientApiClient.post('/client/favourites/toggle', { product_id: product.id });
+    if (!result.status) throw new Error(result.message || 'Không thể cập nhật danh sách yêu thích.');
 
     const isAdded = result.action === 'added';
     if (isAdded && !wishlistIds.value.includes(product.id)) {
@@ -457,8 +450,7 @@ const fetchHomepageData = async () => {
   isHeroImageReady.value = false;
 
   try {
-    const response = await fetch(`${API_BASE_URL}/client/home-data`, { headers: { Accept: 'application/json' } });
-    const result = await response.json();
+    const { data: result } = await clientApiClient.get('/client/home-data', { ignoreAuthRedirect: true });
     if (result.success) {
       data.banners = result.data.banners || [];
       data.coupons = result.data.coupons || [];
@@ -930,17 +922,17 @@ onMounted(() => {
   gap: clamp(2rem, 5vw, 4.5rem);
 }
 
-.story-grid > *,
-.craft-row-top > *,
-.craft-row-bottom > *,
-.testimonial-grid > *,
-.news-grid > *,
-.editorial-products-grid > *,
-.expertise-grid > * {
+.story-grid>*,
+.craft-row-top>*,
+.craft-row-bottom>*,
+.testimonial-grid>*,
+.news-grid>*,
+.editorial-products-grid>*,
+.expertise-grid>* {
   min-width: 0;
 }
 
-.story-image > img,
+.story-image>img,
 .story-thumb img,
 .craft-image img,
 .craft-image-low img,
@@ -972,7 +964,7 @@ onMounted(() => {
   background: rgba(255, 250, 250, 0.35);
 }
 
-.story-image > img,
+.story-image>img,
 .craft-image img,
 .craft-image-low img,
 .story-thumb img,
@@ -1040,7 +1032,7 @@ onMounted(() => {
   background: rgba(var(--sora-secondary-rgb), 0.18);
   padding: clamp(3.75rem, 7vw, 6rem) 0;
   position: relative;
-  overflow: hidden; 
+  overflow: hidden;
 }
 
 .craft-watermark {
@@ -1062,20 +1054,24 @@ onMounted(() => {
   z-index: 2;
   display: flex;
   flex-direction: column;
-  gap: clamp(2rem, 4vw, 3.5rem); /* Khoảng cách giữa hàng trên và dưới */
+  gap: clamp(2rem, 4vw, 3.5rem);
+  /* Khoảng cách giữa hàng trên và dưới */
 }
 
 /* Cấu hình chung cho cả 2 hàng */
 .craft-row-top,
 .craft-row-bottom {
   display: flex;
-  align-items: center; /* Căn giữa theo chiều dọc */
+  align-items: center;
+  /* Căn giữa theo chiều dọc */
   justify-content: space-between;
-  gap: clamp(1.5rem, 3vw, 3rem); /* Gap linh động theo màn hình */
+  gap: clamp(1.5rem, 3vw, 3rem);
+  /* Gap linh động theo màn hình */
 }
 
 .craft-copy {
-  flex: 1; /* Tự động co giãn lấy phần không gian còn lại */
+  flex: 1;
+  /* Tự động co giãn lấy phần không gian còn lại */
 }
 
 .craft-copy h2 {
@@ -1118,7 +1114,8 @@ onMounted(() => {
 }
 
 .craft-image {
-  flex: 0 0 min(100%, 500px); /* Kích thước tối đa ảnh trên */
+  flex: 0 0 min(100%, 500px);
+  /* Kích thước tối đa ảnh trên */
   position: relative;
   min-height: 320px;
   border-radius: 10px;
@@ -1132,18 +1129,17 @@ onMounted(() => {
   inset: 15px -15px -15px 15px;
   z-index: -1;
   border: 1px solid rgba(var(--sora-secondary-rgb), 0.5);
-  background: repeating-linear-gradient(
-    45deg, 
-    rgba(var(--sora-secondary-rgb), 0.08), 
-    rgba(var(--sora-secondary-rgb), 0.08) 2px, 
-    transparent 2px, 
-    transparent 10px
-  );
+  background: repeating-linear-gradient(45deg,
+      rgba(var(--sora-secondary-rgb), 0.08),
+      rgba(var(--sora-secondary-rgb), 0.08) 2px,
+      transparent 2px,
+      transparent 10px);
   border-radius: 10px;
 }
 
 .craft-image-low {
-  flex: 0 0 min(100%, 430px); /* Kích thước tối đa ảnh dưới */
+  flex: 0 0 min(100%, 430px);
+  /* Kích thước tối đa ảnh dưới */
   position: relative;
   min-height: 280px;
   border-radius: 10px;
@@ -1157,18 +1153,17 @@ onMounted(() => {
   inset: 15px 15px -15px -15px;
   z-index: -1;
   border: 1px solid rgba(var(--sora-secondary-rgb), 0.5);
-  background: repeating-linear-gradient(
-    45deg, 
-    rgba(var(--sora-secondary-rgb), 0.08), 
-    rgba(var(--sora-secondary-rgb), 0.08) 2px, 
-    transparent 2px, 
-    transparent 10px
-  );
+  background: repeating-linear-gradient(45deg,
+      rgba(var(--sora-secondary-rgb), 0.08),
+      rgba(var(--sora-secondary-rgb), 0.08) 2px,
+      transparent 2px,
+      transparent 10px);
   border-radius: 10px;
 }
 
 .craft-card {
-  flex: 1; /* Tự động co giãn lấy phần không gian còn lại */
+  flex: 1;
+  /* Tự động co giãn lấy phần không gian còn lại */
   background: rgba(255, 255, 255, 0.95);
   padding: 2rem;
   border-radius: 12px;

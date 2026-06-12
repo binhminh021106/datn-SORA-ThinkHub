@@ -89,6 +89,7 @@
 import { ref, watch } from 'vue';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
+import clientApiClient from '@/utils/clientApiClient';
 
 const props = defineProps({
   isOpen: Boolean,
@@ -99,7 +100,6 @@ const emit = defineEmits(['close']);
 
 const reviews = ref([]);
 const isLoading = ref(false);
-const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/client/orders`;
 
 const ratingLabels = {
   1: "Rất Tệ",
@@ -107,14 +107,6 @@ const ratingLabels = {
   3: "Bình Thường",
   4: "Hài Lòng",
   5: "Tuyệt Vời"
-};
-
-const getHeaders = () => {
-  const token = localStorage.getItem('auth_token');
-  return { 
-    'Accept': 'application/json', 
-    'Authorization': token ? `Bearer ${token}` : ''
-  };
 };
 
 const getImageUrl = (path) => {
@@ -154,10 +146,7 @@ watch(() => props.isOpen, async (newVal) => {
     reviews.value = [];
     
     try {
-      const response = await fetch(`${API_BASE_URL}/${props.order.order_code}/review`, {
-        headers: getHeaders()
-      });
-      const data = await response.json();
+      const { data } = await clientApiClient.get(`/client/orders/${props.order.order_code}/review`);
       if (data.success) {
         reviews.value = data.data;
       }

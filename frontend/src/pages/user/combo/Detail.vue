@@ -333,7 +333,7 @@
 <script setup>
 import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import axios from 'axios';
+import clientApiClient from '@/utils/clientApiClient';
 import Toast from '@/utils/toastConfig';
 import soraAlert from '@/utils/soraAlertConfig';
 import { Swiper, SwiperSlide } from 'swiper/vue';
@@ -345,7 +345,7 @@ import CompareModal from '@/components/ui/CompareModal.vue';
 import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener.js';
 import SoraProductDetailSkeleton from '@/components/ui/SoraProductDetailSkeleton.vue';
 import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
-import { API_BASE_URL, getStorageUrl } from '@/utils/env';
+import { getStorageUrl } from '@/utils/env';
 
 const swiperModules = [Navigation];
 const route = useRoute();
@@ -513,13 +513,9 @@ const fetchFavorites = async () => {
   const token = getToken();
   if (!token) return;
   try {
-    const response = await fetch(`${API_BASE_URL}/client/favourites`, {
-      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-    });
-    const data = await response.json();
-    if (data.status) {
-      favourites.value = data.data.map(fav => fav.product_id);
-    }
+    const res = await clientApiClient.get('/client/favourites', { ignoreAuthRedirect: true });
+    const data = res.data;
+    if (data.status) favourites.value = data.data.map(fav => fav.product_id);
   } catch (e) {}
 };
 
@@ -541,12 +537,8 @@ const toggleWishlist = async (prod) => {
 
   isTogglingFav.value = prod.id; 
   try {
-    const response = await fetch(`${API_BASE_URL}/client/favourites/toggle`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
-      body: JSON.stringify({ product_id: prod.id })
-    });
-    const data = await response.json();
+    const res = await clientApiClient.post('/client/favourites/toggle', { product_id: prod.id });
+    const data = res.data;
     if (data.status) {
       if (data.action === 'added') {
         favourites.value.push(prod.id);
@@ -659,7 +651,7 @@ const openQuickAdd = async (product) => {
     quickAddModalInstance.show();
 
     try {
-        const res = await axios.get(`${API_BASE_URL}/shop/all/products/${product.slug}`);
+        const res = await clientApiClient.get(`/shop/all/products/${product.slug}`, { ignoreAuthRedirect: true });
         if (res.data && res.data.data) {
             quickAddProduct.value = {
                 ...res.data.data,
@@ -699,10 +691,10 @@ const confirmQuickAdd = async () => {
 
     try {
         const headers = getCartHeaders();
-        const res = await axios.post(`${API_BASE_URL}/client/cart`, {
+        const res = await clientApiClient.post('/client/cart', {
             product_variant_id: selectedVar.id,
             quantity: 1
-        }, { headers });
+        }, { ensureCartSession: true, ignoreAuthRedirect: true });
 
         if (res.data.session_id) {
             setSafeStorage('cart_session_id', res.data.session_id);
@@ -789,13 +781,13 @@ const fetchRelatedProducts = async () => {
     if (!combo.value || !combo.value.items) return;
     const categoryIds = [...new Set(combo.value.items.map(item => item.product?.category_id).filter(Boolean))];
     try {
-        let url = `${API_BASE_URL}/shop/all/products?per_page=7`;
-        if (categoryIds.length > 0) url += `&category_id=${categoryIds[0]}`;
-        const res = await axios.get(url);
-        if (res.data && res.data.success) {
-            let items = res.data.data.data ? res.data.data.data : res.data.data;
-            relatedProducts.value = items.slice(0, 7);
-        }
+    const params = { per_page: 7 };
+    if (categoryIds.length > 0) params.category_id = categoryIds[0];
+    const res = await clientApiClient.get('/shop/all/products', { params, ignoreAuthRedirect: true });
+    if (res.data && res.data.success) {
+      let items = res.data.data.data ? res.data.data.data : res.data.data;
+      relatedProducts.value = items.slice(0, 7);
+    }
     } catch (error) {}
 };
 
@@ -803,7 +795,7 @@ const fetchDetail = async (slug) => {
   isLoading.value = true;
   combo.value = null; 
   try {
-    const res = await axios.get(`${API_BASE_URL}/client/combos/${slug}`);
+    const res = await clientApiClient.get(`/client/combos/${slug}`, { ignoreAuthRedirect: true });
     let fetchedCombo = res.data.data;
     
     fetchedCombo.parsed_start_date = parseDBDate(fetchedCombo.start_date);
@@ -895,7 +887,7 @@ const addToCart = async () => {
   
   try {
       const headers = getCartHeaders();
-      const res = await axios.post(`${API_BASE_URL}/client/cart/add-combo`, payload, { headers });
+      const res = await clientApiClient.post('/client/cart/add-combo', payload, { ensureCartSession: true });
       
       if (res.data.session_id) {
           setSafeStorage('cart_session_id', res.data.session_id);

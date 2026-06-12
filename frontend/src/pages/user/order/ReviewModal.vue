@@ -92,10 +92,10 @@
 
 <script setup>
 import { ref, watch } from 'vue';
-import axios from 'axios';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 import soraAlert from '@/utils/soraAlertConfig';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
+import clientApiClient from '@/utils/clientApiClient';
 
 const props = defineProps({
   isOpen: Boolean,
@@ -107,7 +107,6 @@ const emit = defineEmits(['close', 'review-success']);
 const reviewForms = ref([]);
 const isSubmitting = ref(false);
 const isLoading = ref(false);
-const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/client/orders`;
 
 const ratingLabels = {
   0: "Vui lòng chọn sao",
@@ -143,16 +142,6 @@ watch(() => props.isOpen, async (newVal) => {
     isLoading.value = false;
   }
 });
-
-const getHeaders = () => {
-  const token = localStorage.getItem('auth_token');
-  // Gửi FormData thay vì JSON thông thường
-  return { 
-    'Accept': 'application/json', 
-    'Authorization': token ? `Bearer ${token}` : '',
-    'Content-Type': 'multipart/form-data'
-  };
-};
 
 const getImageUrl = (path) => {
   if (!path) return defaultPlaceholder;
@@ -219,7 +208,7 @@ const submitReviews = async () => {
   });
 
   try {
-    const response = await axios.post(`${API_BASE_URL}/${props.order.order_code}/review`, formData, { headers: getHeaders() });
+    const response = await clientApiClient.post(`/client/orders/${props.order.order_code}/review`, formData);
     
     soraAlert.fire({
       icon: 'success',

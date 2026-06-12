@@ -34,9 +34,6 @@
               </div>
             </div>
           </transition-group>
-
-         
-          
         </div>
       </div>
     </section>
@@ -54,7 +51,7 @@
                <i class="bi bi-funnel-fill me-2 fs-5"></i> Bộ Lọc
              </h5>
              <button v-if="hasActiveFilters" type="button" class="filter-clear-link mt-2" @click="resetFilters">
-               XÃ³a táº¥t cáº£
+               Xóa tất cả
              </button>
           </div>
 
@@ -76,7 +73,7 @@
                   <i class="bi bi-chevron-right text-muted chevron-icon" style="font-size: 0.8rem;"></i>
                 </div>
               </li>
-              <!-- Render Danh mục ẩn hình ảnh (Đã tự động sắp xếp theo sort_order) -->
+              <!-- Render Danh mục ẩn hình ảnh -->
               <li v-for="cat in visibleSidebarCategories" :key="cat.id" class="border-bottom sora-border-light last-no-border">
                 <div class="d-flex align-items-center justify-content-between cursor-pointer py-2 px-1 category-elegant-item" @click="filterByCategory(cat.slug)" :class="{'active': filters.categories === cat.slug}">
                   <span class="cat-name transition-colors">{{ cat.name }}</span>
@@ -119,7 +116,7 @@
             </div>
           </div>
 
-          <!-- BỘ LỌC THUỘC TÍNH ĐỘNG KHÁC (Chất liệu, Size...) -->
+          <!-- BỘ LỌC THUỘC TÍNH ĐỘNG KHÁC -->
           <div v-if="isLoadingAttributes" class="mb-5">
              <SoraListSkeleton :rows="3" :image="false" />
           </div>
@@ -137,7 +134,6 @@
                 <ul v-if="filterCollapses[attr.name] !== false" class="list-unstyled mb-0 filter-list-text d-flex flex-column gap-2 mt-3">
                   <li v-for="val in getVisibleAttributeValues(attr)" :key="val.id" class="w-100">
                     <div class="d-flex align-items-center cursor-pointer attr-checkbox-item" @click="toggleAttribute(val.value)" :class="{'active': selectedAttributes.includes(val.value)}">
-                      <!-- Giao diện checkbox vuông chuyên nghiệp thay cho dấu chấm -->
                       <div class="custom-square-checkbox me-3 d-flex align-items-center justify-content-center">
                          <i class="bi bi-check-lg check-icon"></i>
                       </div>
@@ -156,7 +152,6 @@
           </template>
 
           </div>
-
         </div>
 
         <!-- MAIN PRODUCT GRID (RIGHT) -->
@@ -181,7 +176,6 @@
             </div>
           </div>
 
-          <!-- SKELETON LOADING GRID KẾT HỢP SORA PLACEHOLDER -->
           <div v-if="activeFilterLabels.length" class="active-filter-row mb-4">
             <button
               v-for="item in activeFilterLabels"
@@ -193,7 +187,7 @@
               <span>{{ item.label }}</span>
               <i class="bi bi-x-lg"></i>
             </button>
-            <button type="button" class="active-filter-reset" @click="resetFilters">XÃ³a bá»™ lá»c</button>
+            <button type="button" class="active-filter-reset" @click="resetFilters">Xóa bộ lọc</button>
           </div>
 
           <SoraProductGridSkeleton v-if="showInitialProductSkeleton" :count="8" min="260px" gap="2.5rem 1.5rem" />
@@ -267,7 +261,6 @@
         </div>
         <div class="p-4 overflow-y-auto" style="flex-grow: 1;">
           <div class="d-flex gap-3 mb-4 pb-4 border-bottom">
-            <!-- Modal Image: Khung chứa ảnh cũng dùng SORA Placeholder -->
             <div class="flex-shrink-0 border rounded sora-img-container" style="width: 90px; height: 90px; overflow: hidden; border-color: #eaeaea;">
                <img :src="getImageUrl(currentVariant?.image_url || quickAddModal.product.thumbnail_image)" class="w-100 h-100 object-fit-cover bg-light position-relative z-1" @error="handleImageError">
             </div>
@@ -347,7 +340,8 @@ import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue
 import { useWishlist } from '@/composables/useWishlist';
 import Toast from '@/utils/toastConfig';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
-import { API_BASE_URL, BACKEND_URL, getStorageUrl } from '@/utils/env';
+import { getStorageUrl } from '@/utils/env';
+import clientApiClient from '@/utils/clientApiClient';
 
 const route = useRoute();
 const router = useRouter();
@@ -367,9 +361,12 @@ const hasLoadedProducts = ref(false);
 const isPageLoading = ref(true);
 let productFetchSequence = 0;
 
+// Thêm AbortController để hủy các request bị đè
+let productAbortController = null;
+
 const categories = shallowRef([]);
-const showAllCategories = ref(false); // BIẾN QUẢN LÝ TRẠNG THÁI XEM THÊM
-const showAllSidebarCategories = ref(false); // BIẾN QUẢN LÝ TRẠNG THÁI XEM THÊM Ở SIDEBAR
+const showAllCategories = ref(false);
+const showAllSidebarCategories = ref(false);
 
 const dynamicAttributes = ref([]); 
 const expandedAttributes = reactive({});
@@ -415,44 +412,17 @@ const toggleAttributeExpanded = (name) => {
   expandedAttributes[name] = !expandedAttributes[name];
 };
 
-const getToken = () => {
-  const possibleKeys = ['access_token', 'token', 'auth_token', 'userToken', 'user_token', 'user'];
-  for (const k of possibleKeys) {
-    const rawVal = localStorage.getItem(k) || sessionStorage.getItem(k);
-    if (!rawVal) continue;
-    if (rawVal.startsWith('{')) {
-      try {
-        const parsed = JSON.parse(rawVal);
-        if (parsed?.access_token) return parsed.access_token;
-        if (parsed?.token) return parsed.token;
-        if (parsed?.user?.token) return parsed.user.token;
-      } catch(e) { }
-    } else if (rawVal.length > 15) {
-      return rawVal;
-    }
-  }
-  return '';
-};
-
 const handleBirthdayCouponFromUrl = async () => {
   const couponCode = route.query.coupon;
   if (!couponCode) return;
 
   const code = Array.isArray(couponCode) ? couponCode[0] : couponCode;
-  const token = getToken();
 
   try {
-    const response = await fetch(`${API_BASE_URL}/client/cart/apply-birthday-coupon`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {})
-      },
-      body: JSON.stringify({ code })
+    const { data } = await clientApiClient.post('/client/cart/apply-birthday-coupon', { code }, {
+      ensureCartSession: true,
+      ignoreAuthRedirect: true
     });
-
-    const data = await response.json();
     if (data.success) {
       localStorage.setItem('birthday_coupon_code', data.coupon || code);
       Toast.fire({ icon: 'success', title: data.message || 'Đã lưu voucher sinh nhật vào giỏ hàng.' });
@@ -483,14 +453,8 @@ const formatPrice = (price) => {
 
 const getImageUrl = (path) => getStorageUrl(path);
 
-// Hàm xử lý lỗi ảnh chính
 const handleImageError = (e) => { e.target.src = '/Sora-placeholder.png'; };
-
-// SỬA Ở ĐÂY: Hàm xử lý lỗi ảnh hover - Nếu lỗi sẽ ẩn nó đi thay vì hiện ảnh placeholder đè lên
-const handleHoverImageError = (e) => { 
-  e.target.style.display = 'none'; 
-};
-
+const handleHoverImageError = (e) => { e.target.style.display = 'none'; };
 const hasHoverImage = (product) => product.hover_image && product.hover_image !== product.thumbnail_image;
 
 const handleToggleWishlist = (product) => {
@@ -523,20 +487,31 @@ const getColorCode = (colorName) => {
 };
 
 const buildFilterOptionParams = () => {
-  const params = new URLSearchParams();
-  if (filters.categories) params.set('categories', filters.categories);
-  return params.toString();
+  const params = {};
+  if (filters.categories) params.categories = filters.categories;
+  return params;
 };
 
 const refreshFilterOptions = () => Promise.all([fetchColors(), fetchAttributes()]);
 
+// CẬP NHẬT 1: SỬ DỤNG SESSION STORAGE CACHE CHO FILTER (COLORS, ATTRS, CATS)
 const fetchColors = async () => {
   try {
-    const query = buildFilterOptionParams();
-    const response = await fetch(`${BACKEND_URL}/api/shop/${shopSlug.value}/colors${query ? `?${query}` : ''}`);
-    const data = await response.json();
+    const params = buildFilterOptionParams();
+    const cacheKey = `colors_${shopSlug.value}_${params.categories || 'all'}`;
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+      colorOptions.value = JSON.parse(cached);
+      return; // Skip gọi API nếu đã có trong Session Cache
+    }
+    
+    const { data } = await clientApiClient.get(`/shop/${shopSlug.value}/colors`, {
+      params,
+      ignoreAuthRedirect: true
+    });
     if(data?.success) {
       colorOptions.value = data.data;
+      sessionStorage.setItem(cacheKey, JSON.stringify(data.data));
     }
   } catch (e) {
     console.error('Lỗi khi tải màu sắc:', e);
@@ -546,11 +521,26 @@ const fetchColors = async () => {
 const fetchAttributes = async () => {
   isLoadingAttributes.value = true;
   try {
-    const query = buildFilterOptionParams();
-    const response = await fetch(`${BACKEND_URL}/api/shop/${shopSlug.value}/attributes${query ? `?${query}` : ''}`);
-    const data = await response.json();
-    if(data?.success) {
-      dynamicAttributes.value = data.data.filter(attr => !isColorAttribute(attr.name)).map(attr => ({
+    const params = buildFilterOptionParams();
+    const cacheKey = `attrs_${shopSlug.value}_${params.categories || 'all'}`;
+    const cached = sessionStorage.getItem(cacheKey);
+    let attrsData = null;
+
+    if (cached) {
+      attrsData = JSON.parse(cached);
+    } else {
+      const { data } = await clientApiClient.get(`/shop/${shopSlug.value}/attributes`, {
+        params,
+        ignoreAuthRedirect: true
+      });
+      if(data?.success) {
+        attrsData = data.data;
+        sessionStorage.setItem(cacheKey, JSON.stringify(attrsData));
+      }
+    }
+
+    if (attrsData) {
+      dynamicAttributes.value = attrsData.filter(attr => !isColorAttribute(attr.name)).map(attr => ({
         id: attr.id,
         name: attr.name,
         values: attr.values
@@ -581,6 +571,34 @@ const fetchAttributes = async () => {
   }
 };
 
+const fetchCategories = async () => {
+  isLoadingCategories.value = true;
+  try {
+    const cacheKey = `categories_${shopSlug.value}`;
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+      categories.value = JSON.parse(cached);
+      isLoadingCategories.value = false;
+      return;
+    }
+
+    const { data } = await clientApiClient.get(`/shop/${shopSlug.value}/categories`, { ignoreAuthRedirect: true });
+    if(data?.success) {
+      const sorted = data.data.sort((a, b) => {
+        const orderA = (a.sort_order !== null && a.sort_order !== undefined) ? Number(a.sort_order) : 9999;
+        const orderB = (b.sort_order !== null && b.sort_order !== undefined) ? Number(b.sort_order) : 9999;
+        return orderA - orderB;
+      });
+      categories.value = sorted;
+      sessionStorage.setItem(cacheKey, JSON.stringify(sorted));
+    } 
+  } catch (e) {
+    console.error('Lỗi khi tải danh mục:', e);
+  } finally { 
+    isLoadingCategories.value = false; 
+  }
+};
+
 const toggleColor = (color) => {
   selectedAttributes.value = [];
   const index = selectedColors.value.indexOf(color);
@@ -603,48 +621,20 @@ const toggleAttribute = (val) => {
   applyFilters();
 };
 
-// CẬP NHẬT: HÀM TẢI DANH MỤC VÀ SẮP XẾP THEO sort_order
-const fetchCategories = async () => {
-  isLoadingCategories.value = true;
-  try {
-    const response = await fetch(`${BACKEND_URL}/api/shop/${shopSlug.value}/categories`);
-    const data = await response.json();
-    if(data?.success) {
-      // Sắp xếp danh mục dựa theo sort_order của Admin trả về
-      // Nếu không có sort_order (null) thì gán ưu tiên thấp nhất (9999)
-      categories.value = data.data.sort((a, b) => {
-        const orderA = (a.sort_order !== null && a.sort_order !== undefined) ? Number(a.sort_order) : 9999;
-        const orderB = (b.sort_order !== null && b.sort_order !== undefined) ? Number(b.sort_order) : 9999;
-        return orderA - orderB;
-      });
-    } 
-  } catch (e) {
-    console.error('Lỗi khi tải danh mục:', e);
-  } finally { 
-    isLoadingCategories.value = false; 
-  }
-};
-
-// TÍNH TOÁN DANH SÁCH DANH MỤC ĐƯỢC HIỂN THỊ
 const visibleCategories = computed(() => {
-  if (showAllCategories.value) {
-    return categories.value;
-  }
-  return categories.value.slice(0, 5); // Mặc định chỉ hiển thị 5 mục đầu
+  if (showAllCategories.value) return categories.value;
+  return categories.value.slice(0, 5); 
 });
 
-// TÍNH TOÁN DANH SÁCH DANH MỤC Ở SIDEBAR
 const visibleSidebarCategories = computed(() => {
-  if (showAllSidebarCategories.value) {
-    return categories.value;
-  }
-  return categories.value.slice(0, 5); // Giới hạn 5 mục đầu ở Sidebar
+  if (showAllSidebarCategories.value) return categories.value;
+  return categories.value.slice(0, 5);
 });
 
 const sortLabels = {
-  new: 'Má»›i nháº¥t',
-  price_asc: 'GiÃ¡ tháº¥p Ä‘áº¿n cao',
-  price_desc: 'GiÃ¡ cao Ä‘áº¿n tháº¥p',
+  new: 'Mới nhất',
+  price_asc: 'Giá thấp đến cao',
+  price_desc: 'Giá cao đến thấp',
 };
 
 const activeFilterLabels = computed(() => {
@@ -675,7 +665,14 @@ const removeFilter = (item) => {
   applyFilters();
 };
 
+// CẬP NHẬT 2: THÊM TÍN HIỆU HỦY (ABORT CONTROLLER) ĐỂ HỦY REQUEST CŨ DƯỚI BACKEND
 const fetchProducts = async (page = 1) => {
+  if (productAbortController) {
+    productAbortController.abort();
+  }
+  productAbortController = new AbortController();
+  const signal = productAbortController.signal;
+
   const requestId = ++productFetchSequence;
   isLoadingProducts.value = true;
   try {
@@ -690,9 +687,11 @@ const fetchProducts = async (page = 1) => {
       queryPayload.attribute_values = selectedAttributes.value.join(',');
     }
 
-    const params = new URLSearchParams(queryPayload);
-    const response = await fetch(`${BACKEND_URL}/api/shop/${shopSlug.value}/products?${params.toString()}`);
-    const data = await response.json();
+    const { data } = await clientApiClient.get(`/shop/${shopSlug.value}/products`, {
+      params: queryPayload,
+      signal, // Ngắt kết nối trên network nếu user ấn tiếp 
+      ignoreAuthRedirect: true
+    });
     if (requestId !== productFetchSequence) return;
     
     if(data?.success) {
@@ -701,6 +700,9 @@ const fetchProducts = async (page = 1) => {
       hasLoadedProducts.value = true;
     }
   } catch (e) {
+    if (e.name === 'CanceledError' || e.code === 'ERR_CANCELED') {
+      return; // Bỏ qua lỗi hủy request
+    }
     console.error(e);
   } finally { 
     if (requestId === productFetchSequence) {
@@ -709,15 +711,17 @@ const fetchProducts = async (page = 1) => {
   }
 };
 
-const filterByCategory = async (categorySlug) => {
+// CẬP NHẬT 3: XÓA 'AWAIT' ĐỂ LOAD SONG SONG BỘ LỌC VÀ SẢN PHẨM
+const filterByCategory = (categorySlug) => {
   selectedColors.value = [];
   selectedAttributes.value = [];
   filters.categories = filters.categories === categorySlug ? '' : categorySlug; 
-  await refreshFilterOptions();
-  applyFilters();
+  refreshFilterOptions(); // Gọi bất đồng bộ (không await)
+  applyFilters();         // Để products load song song với categories luôn
 };
 
 const applyFilters = () => fetchProducts(1);
+
 const resetFilters = () => { 
   filters.categories = ''; 
   filters.sort = 'recommended';
@@ -892,22 +896,16 @@ const confirmAddToCart = async () => {
   
   quickAddModal.isAdding = true;
   try {
-    const token = getToken();
-    let sessionId = localStorage.getItem('cart_session_id');
-    if (!sessionId) {
-      sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
-      localStorage.setItem('cart_session_id', sessionId);
-    }
-
-    const headers = { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-Cart-Session-Id': sessionId };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
-    const response = await fetch(`${API_BASE_URL}/client/cart`, {
-      method: 'POST', headers,
-      body: JSON.stringify({ product_variant_id: currentVariant.value.id, quantity: quickAddModal.quantity })
+    const { data } = await clientApiClient.post('/client/cart', {
+      product_variant_id: currentVariant.value.id,
+      quantity: quickAddModal.quantity
+    }, {
+      ensureCartSession: true,
+      ignoreAuthRedirect: true
     });
-    
-    const data = await response.json();
+    if (data.session_id) {
+      localStorage.setItem('cart_session_id', data.session_id);
+    }
     if (data.success) { closeQuickAdd(); router.push('/cart'); } 
     else { soraAlert.fire({ icon: 'error', title: 'Không thể thêm', text: data.message || "Đã có lỗi xảy ra." }); }
   } catch (error) { 

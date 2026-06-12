@@ -27,8 +27,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import axios from 'axios';
-import { API_BASE_URL } from '@/utils/env';
+import clientApiClient from '@/utils/clientApiClient';
 
 const route = useRoute();
 
@@ -51,13 +50,12 @@ onMounted(async () => {
     try {
       statusMessage.value = 'Đang đồng bộ dữ liệu tài khoản...';
       
-      // Lưu token và set Header cho Axios
+      // Lưu token để clientApiClient tự gắn Authorization cho các request sau.
       localStorage.setItem('auth_token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
       // Gọi API lấy thông tin User để lưu vào userData (Đồng bộ với logic của bạn)
       // Lưu ý: Laravel của bạn cần có route GET /api/user (mặc định đã có trong routes/api.php)
-      const response = await axios.get(`${API_BASE_URL}/user`);
+      const response = await clientApiClient.get('/user');
       
       // Lưu thông tin user
       localStorage.setItem('userData', JSON.stringify(response.data));
@@ -66,12 +64,9 @@ onMounted(async () => {
       const sessionId = localStorage.getItem('cart_session_id');
       if (sessionId) {
           try {
-              await axios.post(`${API_BASE_URL}/client/cart/merge`, {}, {
-                  headers: {
-                      'Authorization': `Bearer ${token}`,
-                      'X-Cart-Session-Id': sessionId,
-                      'Accept': 'application/json'
-                  }
+              await clientApiClient.post('/client/cart/merge', {}, {
+                  ensureCartSession: true,
+                  ignoreAuthRedirect: true
               });
               localStorage.removeItem('cart_session_id');
               window.dispatchEvent(new CustomEvent('update-cart-count'));
@@ -91,7 +86,6 @@ onMounted(async () => {
       handleError('Không thể lấy thông tin tài khoản. Vui lòng thử lại.', err);
       // Xóa token rác nếu gọi API user thất bại
       localStorage.removeItem('auth_token'); 
-      delete axios.defaults.headers.common['Authorization'];
     }
   } else {
     handleError('Yêu cầu không hợp lệ.');

@@ -367,13 +367,13 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
 import Toast from '@/utils/toastConfig';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 import VietnamAddressPicker from '@/components/ui/VietnamAddressPicker.vue';
 import SoraCheckoutSkeleton from '@/components/ui/SoraCheckoutSkeleton.vue';
-import { API_BASE_URL, getStorageUrl } from '@/utils/env';
+import { getStorageUrl } from '@/utils/env';
+import clientApiClient from '@/utils/clientApiClient';
 
 const router = useRouter();
 
@@ -422,15 +422,6 @@ const soraAlert = createSoraAlert({
 const getSafeStorage = (key) => { try { return localStorage.getItem(key); } catch(e) { return null; } };
 const removeSafeStorage = (key) => { try { localStorage.removeItem(key); } catch(e) {} };
 const setSafeStorage = (key, value) => { try { localStorage.setItem(key, value); } catch(e) {} };
-
-const getHeaders = () => {
-  const headers = { 'Accept': 'application/json' };
-  const token = getSafeStorage('auth_token');
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  const sid = getSafeStorage('cart_session_id');
-  if (sid) headers['X-Cart-Session-Id'] = sid;
-  return headers;
-};
 
 const SHOP_LAT = 12.6675;
 const SHOP_LNG = 108.0378;
@@ -634,7 +625,7 @@ const totalAmount = computed(() => Math.max(subTotal.value - discountAmount.valu
 
 const fetchInitData = async () => {
     try {
-        const res = await axios.get(`${API_BASE_URL}/client/checkout/init`, { headers: getHeaders() });
+        const res = await clientApiClient.get('/client/checkout/init', { ensureCartSession: true, ignoreAuthRedirect: true });
         if (res.data && res.data.success) {
             cartItems.value = res.data.cart_items || [];
             addresses.value = res.data.addresses || [];
@@ -720,7 +711,10 @@ const updateQuantity = async (item, delta) => {
     item.isUpdating = true;
     isUpdatingCart.value = true;
     try {
-        const res = await axios.put(`${API_BASE_URL}/client/cart/${item.id}`, { quantity: newQty }, { headers: getHeaders() });
+        const res = await clientApiClient.put(`/client/cart/${item.id}`, { quantity: newQty }, {
+            ensureCartSession: true,
+            ignoreAuthRedirect: true,
+        });
         if (res.data.success) {
             item.quantity = newQty;
             if (selectedCoupon.value && subTotal.value < selectedCoupon.value.min_spend) {
@@ -749,7 +743,10 @@ const removeItem = async (itemId) => {
     if (result.isConfirmed) {
       isUpdatingCart.value = true;
       try {
-        const response = await axios.delete(`${API_BASE_URL}/client/cart/${itemId}`, { headers: getHeaders() });
+        const response = await clientApiClient.delete(`/client/cart/${itemId}`, {
+          ensureCartSession: true,
+          ignoreAuthRedirect: true,
+        });
         if (response.data.success) {
           cartItems.value = cartItems.value.filter(i => i.id !== itemId);
           if (selectedCoupon.value && subTotal.value < selectedCoupon.value.min_spend) {
@@ -802,7 +799,10 @@ const checkDirectBuy = async () => {
     if (directComboStr) {
         try {
             const payload = JSON.parse(directComboStr);
-            const res = await axios.post(`${API_BASE_URL}/client/cart/add-combo`, payload, { headers: getHeaders() });
+            const res = await clientApiClient.post('/client/cart/add-combo', payload, {
+                ensureCartSession: true,
+                ignoreAuthRedirect: true,
+            });
             if (res.data && res.data.session_id && !getSafeStorage('auth_token')) {
                 try { localStorage.setItem('cart_session_id', res.data.session_id); } catch(e){}
             }
@@ -842,7 +842,9 @@ const submitOrder = async () => {
 
     isSubmitting.value = true;
     try {
-        const res = await axios.post(`${API_BASE_URL}/client/checkout`, payload, { headers: getHeaders() });
+        const res = await clientApiClient.post('/client/checkout', payload, {
+            ensureCartSession: true,
+        });
         
         if (res.data.success) {
             if (res.data.payment_url) {

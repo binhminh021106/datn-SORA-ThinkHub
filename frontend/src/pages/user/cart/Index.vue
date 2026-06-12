@@ -168,19 +168,18 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
 import Toast from '@/utils/toastConfig';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 import SoraSkeleton from '@/components/ui/SoraSkeleton.vue';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
+import clientApiClient from '@/utils/clientApiClient';
+import { getUserToken } from '@/composables/useUtilities';
 
 const router = useRouter();
 const isLoading = ref(true);
 const cartItems = ref([]);
 const backendSummary = ref(null);
-
-const API_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/client/cart`;
 
 const soraAlert = createSoraAlert({
   customClass: {
@@ -189,31 +188,18 @@ const soraAlert = createSoraAlert({
   }
 });
 
-const getHeaders = () => {
-  const headers = { 'Accept': 'application/json' };
-  const token = localStorage.getItem('auth_token');
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  
-  let sid = localStorage.getItem('cart_session_id');
-  if (!sid && !token) { 
-    sid = 'session_' + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem('cart_session_id', sid);
-  }
-  if (sid) headers['X-Cart-Session-Id'] = sid;
-  return headers;
-};
-
 // ==================== THÊM MỚI: TỰ ĐỘNG MERGE ====================
 const checkAndMergeCart = async () => {
-  const token = localStorage.getItem('auth_token');
+  const token = getUserToken();
   const sessionId = localStorage.getItem('cart_session_id');
   
   // Chỉ merge khi ĐÃ LOGIN mà vẫn còn session cart (tức là có giỏ guest)
   if (!token || !sessionId) return;
 
   try {
-    const response = await axios.post(`${API_BASE_URL}/merge`, {}, { 
-      headers: getHeaders() 
+    const response = await clientApiClient.post('/client/cart/merge', {}, { 
+      ensureCartSession: true,
+      ignoreAuthRedirect: true 
     });
 
     if (response.data.success) {
@@ -278,7 +264,10 @@ const handleImageError = (e) => {
 const fetchCart = async (isBackground = false) => {
   if (!isBackground) isLoading.value = true;
   try {
-    const response = await axios.get(API_BASE_URL, { headers: getHeaders() });
+    const response = await clientApiClient.get('/client/cart', {
+      ensureCartSession: true,
+      ignoreAuthRedirect: true
+    });
     if (response.data && response.data.success) {
       cartItems.value = (response.data.data || []).map(item => ({ ...item, isUpdating: false }));
       if (response.data.summary) backendSummary.value = response.data.summary;
@@ -307,10 +296,10 @@ const updateQuantity = async (item, change) => {
   item.isUpdating = true;
   
   try {
-    const response = await axios.put(`${API_BASE_URL}/${item.id}`, 
-      { quantity: newQty }, 
-      { headers: getHeaders() }
-    );
+    const response = await clientApiClient.put(`/client/cart/${item.id}`, { quantity: newQty }, {
+      ensureCartSession: true,
+      ignoreAuthRedirect: true
+    });
     
     if (response.data.success) {
       item.quantity = newQty;
@@ -356,7 +345,10 @@ const removeItem = async (itemId) => {
 
       cartItems.value[index].isUpdating = true;
       try {
-        const response = await axios.delete(`${API_BASE_URL}/${itemId}`, { headers: getHeaders() });
+        const response = await clientApiClient.delete(`/client/cart/${itemId}`, {
+          ensureCartSession: true,
+          ignoreAuthRedirect: true
+        });
         if (response.data.success) {
           cartItems.value.splice(index, 1);
           Toast.fire({ icon: 'success', title: 'Đã xóa sản phẩm thành công' });
@@ -388,7 +380,10 @@ const clearCart = async () => {
     if (result.isConfirmed) {
       isLoading.value = true;
       try {
-        const response = await axios.post(`${API_BASE_URL}/clear`, {}, { headers: getHeaders() });
+        const response = await clientApiClient.post('/client/cart/clear', {}, {
+          ensureCartSession: true,
+          ignoreAuthRedirect: true
+        });
         if (response.data.success) {
           cartItems.value = [];
           backendSummary.value = { total_items: 0, subtotal: 0 };

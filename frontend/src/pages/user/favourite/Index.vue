@@ -130,7 +130,8 @@
 <script setup>
 import { ref, onMounted, computed, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
+import clientApiClient from '@/utils/clientApiClient';
+import { getUserToken } from '@/composables/useUtilities';
 import Toast from '@/utils/toastConfig';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
 import ProductCard from '@/components/ui/ProductCard.vue';
@@ -138,7 +139,7 @@ import CompareModal from '@/components/ui/CompareModal.vue';
 import ProfileSidebar from '@/components/ui/ProfileSidebar.vue';
 import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
-import { API_BASE_URL, getStorageUrl } from '@/utils/env';
+import { getStorageUrl } from '@/utils/env';
 
 const router = useRouter();
 
@@ -152,24 +153,7 @@ const soraAlert = createSoraAlert({
   didOpen: (modal) => { if (modal.parentElement) modal.parentElement.style.zIndex = '10005'; }
 });
 
-const getToken = () => {
-  const commonKeys = ['access_token', 'token', 'auth_token', 'userToken', 'user_token', 'user'];
-  for (const k of commonKeys) {
-    const rawVal = localStorage.getItem(k) || sessionStorage.getItem(k);
-    if (!rawVal) continue;
-    if (rawVal.startsWith('{')) {
-      try {
-        const parsed = JSON.parse(rawVal);
-        if (parsed?.access_token) return parsed.access_token;
-        if (parsed?.token) return parsed.token;
-        if (parsed?.user?.token) return parsed.user.token;
-      } catch(e) { }
-    } else if (rawVal.length > 15) {
-      return rawVal;
-    }
-  }
-  return '';
-};
+// auth helper: use getUserToken() from composables
 
 const getImageUrl = (path) => {
   return getStorageUrl(path);
@@ -184,11 +168,9 @@ const fetchFavorites = async () => {
     return;
   }
   try {
-    const response = await axios.get(`${API_BASE_URL}/client/favourites`, {
-      headers: { Authorization: `Bearer ${getToken()}`, Accept: 'application/json' }
-    });
-    if (response.data.status) {
-      favorites.value = response.data.data;
+    const { data } = await clientApiClient.get('/client/favourites', { ignoreAuthRedirect: true });
+    if (data && data.status) {
+      favorites.value = data.data;
     }
   } catch (error) {
     if (error.response && error.response.status === 401) {
@@ -200,8 +182,8 @@ const fetchFavorites = async () => {
 };
 
 const toggleFavorite = async (product) => {
-  const currentToken = getToken();
-  if (!currentToken) {
+  const token = getUserToken();
+  if (!token) {
     soraAlert.fire({ icon: 'warning', title: 'Phiên đăng nhập hết hạn!', text: 'Vui lòng đăng nhập lại.' });
     isLoggedIn.value = false;
     router.push('/login');
@@ -210,13 +192,8 @@ const toggleFavorite = async (product) => {
 
   isToggling.value = product.id;
   try {
-    const response = await axios.post(`${API_BASE_URL}/client/favourites/toggle`, {
-      product_id: product.id
-    }, {
-      headers: { Authorization: `Bearer ${currentToken}`, Accept: 'application/json' }
-    });
-
-    if (response.data.status) {
+    const { data } = await clientApiClient.post('/client/favourites/toggle', { product_id: product.id });
+    if (data && data.status) {
       favorites.value = favorites.value.filter(item => item.product_id !== product.id);
       Toast.fire({ icon: 'info', title: 'Đã gỡ khỏi danh sách yêu thích' });
     }
@@ -293,13 +270,13 @@ const openQuickAdd = async (prod) => {
     quickAddModalInstance.show();
 
     try {
-        const res = await axios.get(`${API_BASE_URL}/shop/all/products/${prod.slug}`);
-        if (res.data && res.data.data) {
-            quickAddProduct.value = {
-                ...res.data.data,
-                fallback_image: prod.thumbnail_image,
-                fallback_price: prod.base_price 
-            };
+      const { data: resData } = await clientApiClient.get(`/shop/all/products/${prod.slug}`, { ignoreAuthRedirect: true });
+      if (resData && resData.data) {
+        quickAddProduct.value = {
+          ...resData.data,
+          fallback_image: prod.thumbnail_image,
+          fallback_price: prod.base_price 
+        };
             
             const matrix = {};
             if (quickAddProduct.value.variants) {
@@ -352,26 +329,15 @@ const confirmQuickAdd = async () => {
     }
 
     try {
-        const token = getToken();
-        let sessionId = localStorage.getItem('cart_session_id');
-        if (!sessionId && !token) { 
-            sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('cart_session_id', sessionId);
-        }
-        
-        const headers = { 'Accept': 'application/json', 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        if (sessionId) headers['X-Cart-Session-Id'] = sessionId;
+      const payload = { product_variant_id: selectedVar.id, quantity: 1 };
+      const { data } = await clientApiClient.post('/client/cart', payload, { ensureCartSession: true, ignoreAuthRedirect: true });
 
-        const payload = { product_variant_id: selectedVar.id, quantity: 1 };
-        const res = await axios.post(`${API_BASE_URL}/client/cart`, payload, { headers });
+      if (data && data.session_id) {
+        localStorage.setItem('cart_session_id', data.session_id);
+      }
 
-        if (res.data.session_id) {
-            localStorage.setItem('cart_session_id', res.data.session_id);
-        }
-        
-        quickAddModalInstance.hide();
-        Toast.fire({ icon: 'success', title: 'Đã thêm sản phẩm vào giỏ' });
+      quickAddModalInstance.hide();
+      Toast.fire({ icon: 'success', title: 'Đã thêm sản phẩm vào giỏ' });
     } catch (error) {
         const msg = error.response?.data?.message || 'Không thể thêm vào giỏ hàng!';
         soraAlert.fire({icon: 'error', title: 'Lỗi', text: msg});
@@ -379,7 +345,7 @@ const confirmQuickAdd = async () => {
 };
 
 onMounted(() => {
-  const token = getToken();
+  const token = getUserToken();
   if (token) {
     isLoggedIn.value = true;
     fetchFavorites();

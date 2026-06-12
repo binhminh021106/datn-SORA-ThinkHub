@@ -240,9 +240,7 @@ import { ref, reactive, onMounted } from 'vue';
 import Toast from '@/utils/toastConfig';
 import soraAlert from '@/utils/soraAlertConfig';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
-import { API_BASE_URL } from '@/utils/env';
-
-const getToken = () => localStorage.getItem('auth_token') || localStorage.getItem('access_token');
+import clientApiClient from '@/utils/clientApiClient';
 
 const isLoading = ref(true);
 const isSubmitting = ref(false);
@@ -283,13 +281,7 @@ const withdrawForm = reactive({
 const fetchStatus = async () => {
   isLoading.value = true;
   try {
-    const res = await fetch(`${API_BASE_URL}/client/affiliate/status`, {
-      headers: { 
-        'Authorization': `Bearer ${getToken()}`,
-        'Accept': 'application/json' 
-      }
-    });
-    const result = await res.json();
+    const { data: result } = await clientApiClient.get('/client/affiliate/status');
     
     if (result.success && result.data) {
       affiliateData.is_affiliate = result.data.is_affiliate;
@@ -325,20 +317,10 @@ const submitApplication = async () => {
   
   isSubmitting.value = true;
   try {
-    const res = await fetch(`${API_BASE_URL}/client/affiliate/apply`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getToken()}`,
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({
-        social_links: form.social_links,
-        introduce_message: form.introduce_message
-      })
+    const { data: result } = await clientApiClient.post('/client/affiliate/apply', {
+      social_links: form.social_links,
+      introduce_message: form.introduce_message
     });
-    
-    const result = await res.json();
     
     if (result.success) {
       soraAlert.fire({ icon: 'success', title: 'Thành công!', text: result.message });
@@ -368,17 +350,7 @@ const submitWithdraw = async () => {
 
   isWithdrawing.value = true;
   try {
-    const res = await fetch(`${API_BASE_URL}/client/affiliate/withdraw`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getToken()}`,
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify(withdrawForm)
-    });
-    
-    const result = await res.json();
+    const { data: result } = await clientApiClient.post('/client/affiliate/withdraw', withdrawForm);
     
     if (result.success) {
       // Ẩn modal rút tiền bằng Bootstrap API

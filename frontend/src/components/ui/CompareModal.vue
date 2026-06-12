@@ -1,32 +1,62 @@
 <template>
   <div>
+    <transition name="slide-up">
+      <button v-if="compareList.length > 0 && isBottomBarMinimized" class="minimized-compare-btn" @click="isBottomBarMinimized = false" title="Mở danh sách so sánh">
+        <i class="bi bi-arrow-left-right"></i>
+        <span class="compare-badge">{{ compareList.length }}</span>
+      </button>
+    </transition>
+
     <!-- BOTTOM BAR: Danh sách đang so sánh -->
     <transition name="slide-up">
-      <div v-if="compareList.length > 0" class="compare-bottom-bar">
+      <div v-if="compareList.length > 0 && !isBottomBarMinimized" class="compare-bottom-bar">
+        
+        <div class="compare-header-row">
+          <span class="compare-title">SO SÁNH SẢN PHẨM</span>
+          <button class="close-bar-btn" @click="isBottomBarMinimized = true" title="Tạm ẩn thanh so sánh">
+            <i class="bi bi-chevron-down"></i>
+          </button>
+        </div>
+
         <div class="compare-inner">
-          <div class="compare-info">
-            <h4>So sánh sản phẩm ({{ compareList.length }}/4)</h4>
-          </div>
-          <div class="compare-items">
-            <div v-for="n in 4" :key="n" class="compare-item" :class="{ empty: !compareList[n-1] }">
-              <template v-if="compareList[n-1]">
-                <img :src="compareList[n-1].image" :alt="compareList[n-1].name" @error="handleImageError">
-                <button class="remove-compare" @click="removeFromCompare(compareList[n-1].id)">
-                  <i class="bi bi-x"></i>
-                </button>
-              </template>
-              <span v-else><i class="bi bi-plus text-muted"></i></span>
+          <div class="compare-left">
+            <div class="compare-items">
+              <div v-for="n in 4" :key="n" class="compare-item" :class="{ empty: !compareList[n-1] }">
+                <template v-if="compareList[n-1]">
+                  <img class="compare-item-img" :src="compareList[n-1].image" :alt="compareList[n-1].name" @error="handleImageError">
+                  <button class="remove-compare" @click="removeFromCompare(compareList[n-1].id)">
+                    <i class="bi bi-x"></i>
+                  </button>
+                </template>
+                <template v-else>
+                  <button class="compare-empty-btn" type="button" @click="openComparePopup" aria-label="Thêm sản phẩm so sánh">
+                    <i class="bi bi-plus" aria-hidden="true"></i>
+                  </button>
+                </template>
+              </div>
             </div>
           </div>
-          <div class="compare-actions">
-            <button class="btn-clear-compare" @click="clearCompare">Xóa tất cả</button>
-            <button class="btn-go-compare" :disabled="compareList.length < 2" @click="goToComparePage">So sánh ngay</button>
+
+          <div class="compare-right">
+            <div class="compare-divider hidden-mobile"></div>
+
+            <div class="compare-status-container hidden-mobile">
+              <div class="compare-status">
+                <span class="selected-count"><strong>{{ compareList.length }}/4</strong> Đã chọn</span>
+                <span class="hint-text" v-if="compareList.length < 2">Chọn ít nhất 2 sản phẩm</span>
+              </div>
+            </div>
+
+            <div class="compare-actions">
+              <button class="editorial-btn btn-go-compare" :disabled="compareList.length < 2" @click="goToComparePage">So sánh</button>
+              <button class="editorial-btn btn-clear-compare" @click="clearCompare">Xóa tất cả</button>
+            </div>
           </div>
         </div>
       </div>
     </transition>
 
-    <!-- POPUP THÊM SẢN PHẨM SO SÁNH -->
+    <!-- LIST BAR: Danh sách đang so sánh -->
     <transition name="fade">
       <div v-if="showComparePopup" class="compare-modal-overlay" @click.self="closeComparePopup">
         <div class="compare-modal">
@@ -81,11 +111,6 @@
               <div v-else class="empty-msg">Danh sách yêu thích đang trống.</div>
             </div>
           </div>
-
-          <div class="compare-modal-footer">
-            <button class="btn-outline" @click="closeComparePopup">Đóng</button>
-            <button class="btn-primary" :disabled="compareList.length < 2" @click="goToComparePage">Xem so sánh ({{ compareList.length }})</button>
-          </div>
         </div>
       </div>
     </transition>
@@ -118,7 +143,8 @@ const favouriteProducts = ref([]);
 const isLoadingFavourites = ref(false);
 let searchTimeout = null;
 
-// LẮNG NGHE TÍN HIỆU TỪ TRẠNG THÁI TOÀN CỤC
+const isBottomBarMinimized = ref(false);
+
 watch(() => globalModalState.compareTrigger, () => {
     if (globalModalState.compareProduct) {
         toggleCompareItem(globalModalState.compareProduct);
@@ -197,8 +223,9 @@ const handleSearchInput = () => {
 const isInCompare = (id) => compareList.value.some(item => item.id === id);
 
 const toggleCompareItem = (prod) => {
-  if (isInCompare(prod.id)) removeFromCompare(prod.id);
-  else {
+  if (isInCompare(prod.id)) {
+    removeFromCompare(prod.id);
+  } else {
     if (compareList.value.length >= 4) return Toast.fire({ icon: 'warning', title: 'Chỉ được so sánh tối đa 4 sản phẩm' });
     const item = {
         id: prod.id,
@@ -207,12 +234,19 @@ const toggleCompareItem = (prod) => {
     };
     compareList.value.push(item);
     Toast.fire({ icon: 'success', title: 'Đã thêm vào danh sách so sánh' });
-    if (!showComparePopup.value) openComparePopup();
   }
+  // Mở lại Bottom Bar nếu đang bị thu nhỏ
+  isBottomBarMinimized.value = false;
 };
 
-const removeFromCompare = (id) => compareList.value = compareList.value.filter(item => item.id !== id);
-const clearCompare = () => compareList.value = [];
+const removeFromCompare = (id) => {
+  compareList.value = compareList.value.filter(item => item.id !== id);
+};
+
+const clearCompare = () => {
+  compareList.value = [];
+  isBottomBarMinimized.value = false; // Đặt lại trạng thái khi xóa sạch
+};
 
 const goToComparePage = () => {
   if (compareList.value.length < 2) return Toast.fire({ icon: 'info', title: 'Vui lòng chọn ít nhất 2 sản phẩm' });
@@ -240,29 +274,280 @@ const fetchFavouritesForCompare = async () => {
 </script>
 
 <style scoped>
-.compare-bottom-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: #fff; box-shadow: 0 -4px 15px rgba(0,0,0,0.1); padding: 15px 20px; z-index: 9999; border-top: 2px solid rgb(159,39,59); }
-.compare-inner { max-width: 1300px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 20px; }
-.compare-info h4 { font-size: 15px; margin-bottom: 2px; color: #333; }
-.compare-items { display: flex; gap: 15px; }
-.compare-item { width: 60px; height: 60px; border: 1px solid #ddd; border-radius: 6px; position: relative; background: #f8f9fa; display: flex; align-items: center; justify-content: center; }
-.compare-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
-.compare-item.empty span { font-size: 24px; color: #ccc; }
-.remove-compare { position: absolute; top: -8px; right: -8px; background: red; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-.compare-actions { display: flex; gap: 15px; }
-.btn-clear-compare { background: transparent; border: none; text-decoration: underline; color: #777; cursor: pointer; }
-.btn-go-compare { background: rgb(159,39,59); color: #fff; border: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; cursor: pointer; }
-.btn-go-compare:disabled { background: #ccc; cursor: not-allowed; }
+/* KHU VỰC BOTTOM BAR MỚI ĐÃ ĐƯỢC CẢI TIẾN */
+.compare-bottom-bar { 
+  position: fixed; 
+  bottom: 0; 
+  left: 0; 
+  width: 100%; 
+  background: #fff; 
+  box-shadow: 0 -4px 15px rgba(0,0,0,0.1); 
+  padding: 15px 20px; 
+  z-index: 9999; 
+  border-top: 2px solid rgb(159,39,59); 
+  pointer-events: auto; 
+}
+
+/* Nút bong bóng hiển thị khi Bottom bar bị thu gọn (Giao diện mới) */
+.minimized-compare-btn {
+  position: fixed;
+  bottom: 24px;
+  left: 24px; /* Chuyển sang trái để không đè nút Chat bên phải */
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #9f273b, #7a1c2d);
+  border: 2px solid #e7ce7d;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.24);
+  z-index: 9999;
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+.minimized-compare-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.28);
+}
+.minimized-compare-btn i {
+  font-size: 22px;
+  color: #fff;
+}
+
+/* Badge số lượng trên nút tròn */
+.compare-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #9f273b;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+}
+
+/* Phần tiêu đề giống hình */
+.compare-header-row {
+  max-width: 1300px;
+  margin: 0 auto 15px auto;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #666;
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+.compare-title {
+  text-transform: uppercase;
+}
+
+/* Nút đóng UI mới: Giống button, có nền và bo viền */
+.close-bar-btn {
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #666;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+.close-bar-btn:hover {
+  background: #e5e5e5;
+  color: #d32f2f;
+  border-color: #d32f2f;
+}
+
+.compare-inner { 
+  max-width: 1300px; 
+  margin: 0 auto; 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  gap: 24px; 
+}
+
+.compare-left { 
+  display: flex; 
+  align-items: center; 
+}
+
+/* Fix Product Slots Spacing */
+.compare-items { 
+  display: flex; 
+  flex-direction: row;
+  gap: 16px; /* gap-4 */
+}
+
+/* Bỏ overflow: hidden, thêm border-radius 8px */
+.compare-item { 
+  width: 86px; 
+  height: 86px; 
+  border: 1px solid #e5e5e5; 
+  border-radius: 8px; /* Distinct rounded corners */
+  position: relative; 
+  background: #fff; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+}
+
+.compare-item-img { 
+  width: 100%; 
+  height: 100%; 
+  object-fit: cover; 
+  border-radius: 8px; /* Bo góc riêng cho hình ảnh */
+}
+
+.compare-item.empty { background: #fafafa; }
+.compare-empty-btn { width: 100%; height: 100%; border: none; background: #f7f6f4; color: #b0b0b0; display: grid; place-items: center; font-size: 1.4rem; cursor: pointer; border-radius: 8px; transition: background 0.2s, color 0.2s; }
+.compare-empty-btn:hover { background: #efebe7; color: #9f273b; }
+
+/* Fix Red Delete Badge */
+.remove-compare { 
+  position: absolute; 
+  top: -8px; 
+  right: -8px; 
+  background: #dc3545; /* Red Badge */
+  color: white; 
+  border: none; 
+  border-radius: 50%; 
+  width: 22px; 
+  height: 22px; 
+  font-size: 14px; 
+  cursor: pointer; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2); 
+  z-index: 10;
+}
+
+/* Bố cục bên phải: Divider, Text và Nút ngang hàng */
+.compare-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.compare-divider {
+  width: 1px;
+  height: 50px;
+  background-color: #e5e5e5;
+}
+
+.compare-status-container {
+  display: flex;
+  flex-direction: column;
+}
+.compare-status {
+  font-size: 13px;
+  color: #555;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hint-text {
+  color: #888;
+}
+.selected-count strong {
+  color: #333;
+}
+
+/* Fix Action Buttons: Nằm ngang (row), w-auto */
+.compare-actions { 
+  display: flex; 
+  flex-direction: row; 
+  gap: 16px; 
+  align-items: center; 
+}
+
+.editorial-btn {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0.75rem 1.25rem;
+  background: var(--sora-primary, #9f273b);
+  color: #fff;
+  border: 1px solid rgba(var(--sora-secondary-rgb, 231, 206, 125), 0.5);
+  border-radius: 14px;
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.76rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.editorial-btn::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(45deg) translateY(-200%);
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.editorial-btn:hover {
+  background: var(--sora-accent, #cc1e2e);
+  color: #fff;
+  border-color: var(--sora-secondary, #e7ce7d);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);
+}
+
+.editorial-btn:hover::after {
+  transform: rotate(45deg) translateY(200%);
+}
+
+.btn-clear-compare { width: auto; background: #fff; color: #9f273b; border: 1px solid #9f273b; cursor: pointer; padding: 10px 24px; border-radius: 14px; font-weight: 600; transition: all 0.2s; white-space: nowrap; }
+.btn-clear-compare:hover,
+.editorial-btn.btn-clear-compare:hover {
+  background: #f8f0ef;
+  color: #9f273b;
+  border-color: #9f273b;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-go-compare { width: auto; background: var(--sora-primary, #9f273b); color: #fff; border: 1px solid transparent; padding: 10px 24px; border-radius: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 8px 16px rgba(159,39,59,0.16); white-space: nowrap; }
+.btn-go-compare:disabled { background: #d1d1d1; color: #fff; cursor: not-allowed; box-shadow: none; }
+
 .slide-up-enter-active, .slide-up-leave-active { transition: transform 0.3s ease, opacity 0.3s; }
 .slide-up-enter-from, .slide-up-leave-to { transform: translateY(100%); opacity: 0; }
 
-@media (max-width: 600px) {
-  .compare-inner { flex-direction: column; gap: 15px; }
-  .compare-actions { width: 100%; justify-content: space-between; }
-  .btn-go-compare { flex: 1; margin-left: 15px; }
+@media (max-width: 768px) {
+  .compare-inner { flex-direction: column; gap: 15px; align-items: stretch; }
+  .compare-left { justify-content: center; }
+  .compare-right { flex-direction: column; align-items: stretch; gap: 12px; }
+  .compare-actions { width: 100%; display: flex; gap: 10px; justify-content: space-between; }
+  .btn-clear-compare, .btn-go-compare { flex: 1; padding: 10px; text-align: center; }
+  .hidden-mobile { display: none; }
 }
 
-.compare-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
-.compare-modal { background: #fff; border-radius: 12px; width: 90%; max-width: 800px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+/* KHU VỰC POPUP MODAL (Giữ nguyên) */
+.compare-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9998; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); padding-bottom: 140px; }
+.compare-modal { background: #fff; border-radius: 12px; width: 90%; max-width: 800px; max-height: 70vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
 .compare-modal-header { padding: 20px 25px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap; }
 .compare-modal-header h3 { font-size: 18px; margin: 0; color: #222; font-weight: 600; white-space: nowrap;}
 .header-search-wrap { display: flex; align-items: center; gap: 15px; flex: 1; justify-content: flex-end; }
@@ -272,20 +557,16 @@ const fetchFavouritesForCompare = async () => {
 .close-btn:hover { color: rgb(159,39,59); }
 .compare-modal-body { padding: 20px 25px; overflow-y: auto; flex: 1; }
 .compare-suggestions-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
-.suggestion-card { border: 1px solid #eee; border-radius: 8px; padding: 10px; text-align: center; display: flex; flex-direction: column; transition: transform 0.2s, border-color 0.2s; }
+.suggestion-card { border: 1px solid #eee; border-radius: 8px; padding: 10px; text-align: center; display: flex; flex-direction: column; transition: transform 0.2s, border-color 0.2s; min-height: 260px; }
 .suggestion-card:hover { border-color: rgb(159,39,59); transform: translateY(-3px); }
 .suggestion-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 6px; margin-bottom: 10px; background: #f9f9f9;}
-.suggestion-info { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; }
-.suggestion-name { font-size: 13px; font-weight: 500; margin-bottom: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #333; line-height: 1.4;}
-.suggestion-price { font-size: 14px; font-weight: 600; color: rgb(159,39,59); margin-bottom: 10px; }
-.btn-add-suggestion { background: transparent; border: 1px solid rgb(159,39,59); color: rgb(159,39,59); padding: 6px; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: 600; transition: all 0.2s; width: 100%; }
+.suggestion-info { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+.suggestion-name { font-size: 13px; font-weight: 500; margin-bottom: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; color: #333; line-height: 1.4;}
+.suggestion-price { font-size: 14px; font-weight: 600; color: rgb(159,39,59); margin: 8px 0 0 0; }
+.btn-add-suggestion { background: transparent; border: 1px solid rgb(159,39,59); color: rgb(159,39,59); padding: 6px; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: 600; transition: all 0.2s; width: 100%; margin-top: 8px; }
 .btn-add-suggestion:hover { background: rgb(159,39,59); color: #fff; }
 .btn-add-suggestion.is-added { background: rgb(159,39,59); color: #fff; }
-.compare-modal-footer { padding: 15px 25px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 15px; background: #fdfdfd; border-radius: 0 0 12px 12px; }
-.btn-outline { background: transparent; border: 1px solid #ccc; padding: 10px 20px; border-radius: 6px; cursor: pointer; color: #555; font-weight: 600; transition: background 0.2s; }
-.btn-outline:hover { background: #eee; }
-.btn-primary { background: rgb(159,39,59); border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; color: #fff; font-weight: 600; transition: opacity 0.2s; }
-.btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+  
 .compare-modal-tabs { display: flex; border-bottom: 1px solid #eee; background: #fafafa; }
 .compare-modal-tabs button { flex: 1; padding: 12px 15px; background: transparent; border: none; font-size: 14px; font-weight: 600; color: #666; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.3s; }
 .compare-modal-tabs button.active { color: #9f273b; border-bottom-color: #9f273b; background: #fff; }

@@ -74,9 +74,9 @@
 
 <script setup>
 import { ref, reactive } from 'vue';
-import axios from 'axios';
 import Toast from '@/utils/toastConfig';
 import { API_BASE_URL } from '@/utils/env';
+import clientApiClient from '@/utils/clientApiClient';
 
 const LoginWithGoogle = () => {
   window.location.href = `${API_BASE_URL}/auth/google/redirect`;
@@ -95,13 +95,12 @@ const handleLogin = async () => {
   errorMessage.value = '';
 
   try {
-    const response = await axios.post(`${API_BASE_URL}/login`, form);
+    const response = await clientApiClient.post('/login', form, { skipCartSession: true });
     
     Toast.fire({ icon: 'success', title: 'Đăng nhập thành công!' });
     
     // Lưu Token
     localStorage.setItem('auth_token', response.data.access_token);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
     
     // CẬP NHẬT MỚI: Lưu thông tin User vào localStorage để Header nhận diện
     localStorage.setItem('userData', JSON.stringify(response.data.user));
@@ -110,12 +109,9 @@ const handleLogin = async () => {
     const sessionId = localStorage.getItem('cart_session_id');
     if (sessionId) {
         try {
-            await axios.post(`${API_BASE_URL}/client/cart/merge`, {}, {
-                headers: {
-                    'Authorization': `Bearer ${response.data.access_token}`,
-                    'X-Cart-Session-Id': sessionId,
-                    'Accept': 'application/json'
-                }
+            await clientApiClient.post('/client/cart/merge', {}, {
+                ensureCartSession: true,
+                ignoreAuthRedirect: true
             });
             localStorage.removeItem('cart_session_id');
             window.dispatchEvent(new CustomEvent('update-cart-count'));

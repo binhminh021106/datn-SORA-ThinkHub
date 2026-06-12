@@ -268,12 +268,12 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import axios from 'axios';
+import clientApiClient from '@/utils/clientApiClient';
 import Toast from '@/utils/toastConfig';
 import SoraSkeleton from '@/components/ui/SoraSkeleton.vue';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
 import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
-import { API_BASE_URL, getStorageUrl } from '@/utils/env';
+import { getStorageUrl } from '@/utils/env';
 
 const route = useRoute();
 const router = useRouter();
@@ -343,7 +343,7 @@ const loadCompareData = async (isBackgroundRefresh = false) => {
 
     if(!isBackgroundRefresh) isLoading.value = true;
 
-    const response = await axios.post(`${API_BASE_URL}/shop/${shopSlug}/compare`, {
+    const response = await clientApiClient.post(`/shop/${shopSlug}/compare`, {
       product_ids: ids
     });
 
@@ -411,20 +411,14 @@ const filteredFavourites = computed(() => {
 const fetchCompareSuggestions = async (query = '') => {
   isLoadingCompareSuggestions.value = true;
   try {
-    let url = new URL(`${API_BASE_URL}/shop/${shopSlug}/products`);
-    url.searchParams.append('per_page', query ? '20' : '10');
-    url.searchParams.append('sort', 'new'); 
-    
-    // Gửi tham số keyword cho backend
-    if (query) {
-      url.searchParams.append('keyword', query);
-    }
-
-    const response = await fetch(url.toString());
-    const result = await response.json();
-    
-    if (result.success && result.data?.data) {
-      compareSuggestions.value = result.data.data;
+    try {
+      const params = { per_page: query ? '20' : '10', sort: 'new' };
+      if (query) params.keyword = query;
+      const resp = await clientApiClient.get(`/shop/${shopSlug}/products`, { params, ignoreAuthRedirect: true });
+      const result = resp.data;
+      if (result.success && result.data?.data) compareSuggestions.value = result.data.data;
+    } catch (e) {
+      console.error(e);
     }
   } catch (error) {
     console.error("Lỗi tải sản phẩm gợi ý:", error);
@@ -448,15 +442,12 @@ const fetchFavouritesForCompare = async () => {
   if(!isLoggedIn.value || favouriteProducts.value.length > 0) return;
 
   isLoadingFavourites.value = true;
-  try {
-    const token = localStorage.getItem('auth_token');
-    const response = await fetch(`${API_BASE_URL}/client/favourites`, {
-      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
-    });
-    const result = await response.json();
-    if (result.status && result.data) {
-      favouriteProducts.value = result.data.map(item => item.product).filter(p => p !== null);
-    }
+    try {
+      const resp = await clientApiClient.get('/client/favourites', { ignoreAuthRedirect: true });
+      const result = resp.data;
+      if (result.status && result.data) {
+        favouriteProducts.value = result.data.map(item => item.product).filter(p => p !== null);
+      }
   } catch (error) {
     console.error("Lỗi lấy danh sách yêu thích:", error);
   } finally {

@@ -182,24 +182,22 @@
 <script setup>
 import { ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import axios from 'axios';
 import ProductCard from '@/components/ui/ProductCard.vue';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
 import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
 import { useWishlist } from '@/composables/useWishlist.js';
 import Toast from '@/utils/toastConfig';
+import clientApiClient from '@/utils/clientApiClient';
 
 import { Swiper, SwiperSlide } from 'swiper/vue';
 import { Pagination, Navigation } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
 import 'swiper/css/navigation';
-import { API_BASE_URL, getStorageUrl } from '@/utils/env';
+import { getStorageUrl } from '@/utils/env';
 
 const router = useRouter();
 const route = useRoute();
-
-const BACKEND_URL = API_BASE_URL;
 
 const { isFavourited, toggleFavourite, fetchFavorites } = useWishlist();
 
@@ -213,17 +211,6 @@ const updatingItemId = ref(null);
 const cartItems = ref([]);
 const summary = ref({ total_items: 0, subtotal: 0 });
 const featuredProducts = ref([]);
-
-const getHeaders = () => {
-  const headers = { 'Accept': 'application/json' };
-  const token = localStorage.getItem('auth_token');
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  
-  const sid = localStorage.getItem('cart_session_id');
-  if (sid) headers['X-Cart-Session-Id'] = sid;
-  
-  return headers;
-};
 
 const soraPlaceholder = '/Sora-placeholder.png';
 const getImage = (path) => {
@@ -296,7 +283,10 @@ const formatPrice = (value) => {
 const fetchCart = async (showLoading = true) => {
   if (showLoading) isLoading.value = true;
   try {
-    const res = await axios.get(`${BACKEND_URL}/client/cart`, { headers: getHeaders() });
+    const res = await clientApiClient.get('/client/cart', {
+      ensureCartSession: true,
+      ignoreAuthRedirect: true
+    });
     if (res.data.success) {
       cartItems.value = res.data.data;
       summary.value = res.data.summary;
@@ -312,7 +302,7 @@ const fetchFeaturedProducts = async () => {
   if (featuredProducts.value.length > 0) return;
   isProductsLoading.value = true;
   try {
-    const res = await axios.get(`${BACKEND_URL}/client/home-data`);
+    const res = await clientApiClient.get('/client/home-data', { ignoreAuthRedirect: true });
     if (res.data.success && res.data.data.products) {
       featuredProducts.value = res.data.data.products;
     }
@@ -334,10 +324,10 @@ const updateQuantity = (item, newQuantity) => {
 
   updateTimeout = setTimeout(async () => {
     try {
-      const res = await axios.put(`${BACKEND_URL}/client/cart/${item.id}`, 
-        { quantity: item.quantity }, 
-        { headers: getHeaders() }
-      );
+      const res = await clientApiClient.put(`/client/cart/${item.id}`, { quantity: item.quantity }, {
+        ensureCartSession: true,
+        ignoreAuthRedirect: true
+      });
       if (res.data.success) {
         await fetchCart(false); 
         window.dispatchEvent(new CustomEvent('update-cart-count', {
@@ -360,7 +350,10 @@ const updateQuantity = (item, newQuantity) => {
 const removeItem = async (id) => {
   try {
     updatingItemId.value = id;
-    const res = await axios.delete(`${BACKEND_URL}/client/cart/${id}`, { headers: getHeaders() });
+    const res = await clientApiClient.delete(`/client/cart/${id}`, {
+      ensureCartSession: true,
+      ignoreAuthRedirect: true
+    });
     if (res.data.success) {
       cartItems.value = cartItems.value.filter(item => item.id !== id);
       await fetchCart(false); 
