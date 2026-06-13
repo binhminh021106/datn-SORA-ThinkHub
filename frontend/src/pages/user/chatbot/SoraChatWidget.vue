@@ -188,6 +188,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick, computed, watch, defineProps, defineEmits } from 'vue';
 import clientApiClient from '@/utils/clientApiClient';
+import { getToken } from '@/composables/useUtilities';
 
 const props = defineProps({
   visible: { type: Boolean, default: false },

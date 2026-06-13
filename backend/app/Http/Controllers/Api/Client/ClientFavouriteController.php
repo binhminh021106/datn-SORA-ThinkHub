@@ -25,7 +25,10 @@ class ClientFavouriteController extends Controller
         }
 
         // Lấy danh sách yêu thích kèm chi tiết sản phẩm (Lấy các trường cần thiết theo Product Model)
-        $favourites = Favourite::with(['product' => function($query) {
+        $favourites = Favourite::whereHas('product', function($query) {
+                $query->where('status', 'published');
+            })
+            ->with(['product' => function($query) {
                 $query->select('id', 'name', 'slug', 'base_price', 'promotional_price', 'thumbnail_image', 'review_count', 'rating_avg', 'status')
                     ->withCount('reviews')
                     ->withAvg('reviews', 'rating');

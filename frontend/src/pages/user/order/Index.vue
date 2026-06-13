@@ -130,46 +130,41 @@
 
   <div class="d-flex flex-column gap-2">
     <!-- Chi tiết đơn hàng - Màu trung tính -->
+    <!-- Chi tiết đơn hàng - Màu trung tính -->
     <button v-on:click="openDetails(order)"
-      class="btn py-2 px-2 fw-bold small text-uppercase w-100 rounded-3 border" 
-      style="background-color: #f8f9fa; border-color: #dee2e6; color: #495057;">
+      class="btn py-2 px-2 fw-bold small text-uppercase w-100 btn-luxury-neutral">
       Chi tiết đơn hàng
     </button>
 
     <!-- Hủy đơn - Nền đỏ nhạt, chữ đỏ đậm -->
     <button v-if="order.status === 'pending'" v-on:click="confirmCancel(order)"
-      class="btn py-2 px-4 small fw-bold text-uppercase w-100 rounded-3 border-0" 
-      style="background-color: #FCF0F1; color: #9F273B;">
+      class="btn py-2 px-4 small fw-bold text-uppercase w-100 btn-luxury-danger">
       Hủy đơn
     </button>
 
     <!-- Đánh giá - Màu chủ đạo -->
     <button v-if="order.status === 'delivered' && (!order.reviews || order.reviews.length === 0)"
       v-on:click="openReview(order)"
-      class="btn py-2 px-4 small fw-bold text-uppercase w-100 rounded-3 border-0 text-white" 
-      style="background-color: #E6C97A;">
+      class="editorial-btn w-100 border-0 btn-luxury-gold">
       <i class="bi bi-star-fill me-1"></i> Đánh giá
     </button>
 
     <!-- Xem đánh giá - Màu xanh lá -->
     <button v-if="order.status === 'delivered' && order.reviews && order.reviews.length > 0"
       v-on:click="openViewReview(order)"
-      class="btn py-2 px-4 small fw-bold text-uppercase w-100 rounded-3 border-0 text-white" 
-      style="background-color: #009981;">
+      class="btn py-2 px-4 small fw-bold text-uppercase w-100 btn-luxury-success">
       <i class="bi bi-eye-fill me-1"></i> Xem đánh giá
     </button>
 
     <!-- Mua lại - Màu xanh lá nhạt -->
     <button v-on:click="handleReorder(order)"
-      class="btn py-2 px-4 small fw-bold text-uppercase w-100 mt-2 rounded-3 border-0" 
-      style="background-color: #E2F3E5; color: #009981;">
+      class="btn py-2 px-4 small fw-bold text-uppercase w-100 mt-2 btn-luxury-success-light">
       Mua lại
     </button>
 
     <!-- Xuất hóa đơn - Màu chủ đạo (để nổi bật tài liệu) -->
     <button v-on:click="exportInvoice(order)"
-      class="btn py-2 px-4 fw-bold small text-uppercase w-100 rounded-3 border-0 text-white" 
-      style="background-color: #9F273B;">
+      class="editorial-btn w-100 border-0 mt-2 text-white">
       <i class="bi bi-file-earmark-pdf me-1"></i> Xuất hóa đơn
     </button>
   </div>
@@ -200,8 +195,7 @@
           <h3 class="fs-4 text-dark mb-3 font-serif">Bạn chưa có đơn hàng nào</h3>
           <p class="text-secondary mb-4">Những kiệt tác trang sức SORA đang chờ bạn khám phá.</p>
           <button v-on:click="router.push('/shop')"
-            class="btn btn-primary-custom rounded-0 px-5 py-3 text-uppercase text-white fw-bold tracking-wider">Bắt đầu
-            mua sắm</button>
+            class="editorial-btn border-0 px-5 py-3 mt-2">Bắt đầu mua sắm</button>
         </div>
       </div>
         </div><!-- end col-lg-9 -->
@@ -510,6 +504,99 @@ onMounted(fetchOrders);
   color: white;
 }
 
+/* Button Luxury States */
+.btn-luxury-neutral, .btn-luxury-danger, .btn-luxury-success, .btn-luxury-success-light {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-luxury-neutral::after, 
+.btn-luxury-danger::after, 
+.btn-luxury-success::after, 
+.btn-luxury-success-light::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: rgba(255, 255, 255, 0.25);
+  transform: rotate(45deg) translateY(-200%);
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.btn-luxury-neutral:hover::after, 
+.btn-luxury-danger:hover::after, 
+.btn-luxury-success:hover::after, 
+.btn-luxury-success-light:hover::after {
+  transform: rotate(45deg) translateY(200%);
+}
+
+.btn-luxury-neutral {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  color: #495057;
+  border-radius: 14px;
+  transition: all 0.3s ease;
+}
+.btn-luxury-neutral:hover {
+  background-color: #e9ecef;
+  border-color: #ced4da;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(0,0,0,0.06);
+}
+
+.btn-luxury-danger {
+  background-color: #FCF0F1;
+  color: #9F273B;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  transition: all 0.3s ease;
+}
+.btn-luxury-danger:hover {
+  background-color: #9F273B;
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(159,39,59,0.25);
+}
+
+.editorial-btn.btn-luxury-gold {
+  background-color: #e7ce7d !important;
+  color: #fff !important;
+}
+.editorial-btn.btn-luxury-gold:hover {
+  background-color: #d4af37 !important;
+  box-shadow: 0 8px 20px rgba(231,206,125,0.4) !important;
+}
+
+.btn-luxury-success {
+  background-color: #009981;
+  color: #fff;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  transition: all 0.3s ease;
+}
+.btn-luxury-success:hover {
+  background-color: #007b67;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(0,153,129,0.3);
+}
+
+.btn-luxury-success-light {
+  background-color: #E2F3E5;
+  color: #009981;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  transition: all 0.3s ease;
+}
+.btn-luxury-success-light:hover {
+  background-color: #009981;
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(0,153,129,0.2);
+}
+
 .border-danger-custom {
   border-color: #9f273b !important;
 }
@@ -673,5 +760,317 @@ onMounted(fetchOrders);
   .border-end-lg {
     border-right: 1px solid #dee2e6;
   }
+}
+
+.editorial-btn {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0.75rem 1.25rem;
+  background: var(--sora-primary);
+  color: #fff;
+  border: 1px solid rgba(var(--sora-secondary-rgb), 0.5);
+  border-radius: 14px;
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.76rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.editorial-btn::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(45deg) translateY(-200%);
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.editorial-btn:hover {
+  background: var(--sora-accent);
+  color: #fff;
+  border-color: var(--sora-secondary);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);
+}
+
+.editorial-btn:hover::after {
+  transform: rotate(45deg) translateY(200%);
+}
+
+/* Banner (Sora Banner Style) */
+.text-champagne {
+  color: #ead089 !important;
+}
+
+.z-index-2 {
+  z-index: 2;
+}
+
+.sora-banner {
+  min-height: 380px;
+  background:
+    linear-gradient(135deg, rgba(54, 6, 17, 0.98), rgba(114, 20, 38, 0.96) 48%, rgba(74, 9, 24, 0.98)),
+    repeating-linear-gradient(120deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 14px);
+  isolation: isolate;
+}
+
+.sora-banner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 236, 189, 0.2), transparent 42%),
+    linear-gradient(110deg, transparent 20%, rgba(255, 255, 255, 0.08) 44%, transparent 64%);
+  opacity: 0.9;
+  z-index: 0;
+}
+
+.banner-ambient {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 84px 84px;
+  mask-image: radial-gradient(circle at center, black 0%, transparent 68%);
+  z-index: 0;
+}
+
+.banner-glow {
+  position: absolute;
+  width: 330px;
+  height: 330px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(231, 206, 125, 0.2), transparent 68%);
+  filter: blur(3px);
+  z-index: 0;
+}
+
+.banner-glow-left {
+  left: -120px;
+  bottom: -150px;
+}
+
+.banner-glow-right {
+  right: -100px;
+  top: -120px;
+}
+
+.banner-monogram {
+  position: absolute;
+  text-align: center;
+  color: rgba(255, 244, 218, 0.038);
+  font-size: clamp(3.4rem, 9vw, 8.8rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  white-space: nowrap;
+  z-index: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 52px;
+}
+
+.banner-content {
+  max-width: 850px;
+}
+
+.banner-content h1 {
+  letter-spacing: 0;
+  line-height: 1.05;
+  text-shadow: 0 10px 35px rgba(0, 0, 0, 0.32);
+}
+
+.banner-subtitle {
+  color: rgba(255, 248, 231, 0.9);
+  line-height: 1.75;
+  text-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+.banner-line-art {
+  position: absolute;
+  width: 118px;
+  height: 118px;
+  border: 1px solid rgba(231, 206, 125, 0.34);
+  transform: rotate(45deg);
+  z-index: 1;
+}
+
+.banner-line-art::before,
+.banner-line-art::after {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border: 1px solid rgba(231, 206, 125, 0.2);
+}
+
+.banner-line-art-left {
+  left: 8%;
+  top: 24%;
+}
+
+.banner-line-art-right {
+  right: 8%;
+  bottom: 22%;
+}
+
+@media (max-width: 992px) {
+  .sora-banner {
+    min-height: 340px;
+  }
+
+  .banner-line-art {
+    opacity: 0.45;
+  }
+}
+
+@media (max-width: 768px) {
+  .sora-banner {
+    min-height: 320px;
+  }
+
+  .banner-content h1 {
+    font-size: 2.45rem;
+  }
+
+  .banner-subtitle {
+    font-size: 1rem !important;
+  }
+
+  .banner-line-art {
+    display: none;
+  }
+
+  .banner-monogram {
+    bottom: 38px;
+    font-size: 3.5rem;
+  }
+}
+
+/* Image wrapper (Border xoắn) */
+.img-wrapper {
+  padding: 1rem;
+}
+
+.img-wrapper img {
+  position: relative;
+  z-index: 2;
+}
+
+.img-border {
+  top: 0;
+  left: 0;
+  right: 2rem;
+  bottom: 2rem;
+  border: 1px solid #e7ce7d;
+  z-index: 1;
+}
+
+.custom-img-portrait {
+  aspect-ratio: 4/5;
+}
+
+/* Đường kẻ ngăn cách (Divider) */
+.divider {
+  width: 4rem;
+  height: 2px;
+}
+
+/* Card Mission & Vision */
+.card-hover {
+  transition: box-shadow 0.3s ease;
+}
+
+.card-hover:hover {
+  box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15) !important;
+}
+
+.card-indicator {
+  width: 4px;
+  transition: width 0.3s ease, opacity 0.3s ease;
+  opacity: 1;
+}
+
+.card-hover:hover .card-indicator {
+  width: 100%;
+  opacity: 0.05;
+}
+
+/* Icon vòng tròn */
+.icon-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 1px solid;
+}
+
+/* Khối sản phẩm (Fix ảnh vuông tuyệt đối) */
+.square-ratio {
+  width: 100%;
+  padding-bottom: 100%;
+  /* Tạo tỷ lệ vuông chuẩn 1:1 */
+  display: block;
+  overflow: hidden;
+}
+
+.img-zoom-wrapper img {
+  transition: transform 0.7s ease;
+}
+
+.product-card:hover .img-zoom-wrapper img {
+  transform: scale(1.1);
+}
+
+.product-overlay {
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+  z-index: 2;
+}
+
+/* Link khám phá */
+.product-link:hover {
+  color: #cc1e2e !important;
+}
+
+/* Combo Carousel Container Overrides */
+.combos-editorial {
+  background-color: #fffafa;
+  overflow: hidden;
+}
+
+.combos-container {
+  max-width: var(--home-container-width, 1400px);
+}
+
+.section-heading {
+  max-width: 740px;
+  margin: 0 auto 3rem;
+}
+
+.section-kicker {
+  display: block;
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sora-primary, #9f273b);
+  margin-bottom: 0.75rem;
+}
+
+.section-heading h2 {
+  font-size: clamp(2.3rem, 5vw, 4.4rem);
+  line-height: 1.02;
+}
+
+.text-gold {
+  color: #d4af37 !important;
 }
 </style>

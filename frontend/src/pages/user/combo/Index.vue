@@ -1,5 +1,6 @@
 <template>
   <main class="combo-client-page">
+    <!-- banner combo đầu trang -->
     <section class="sora-banner position-relative d-flex align-items-center justify-content-center overflow-hidden">
       <div class="banner-ambient"></div>
       <div class="banner-glow banner-glow-left"></div>

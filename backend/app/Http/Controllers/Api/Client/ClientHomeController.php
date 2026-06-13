@@ -104,7 +104,8 @@ class ClientHomeController extends Controller
                             $productsArray[] = [
                                 'id' => $item->product->id,
                                 'name' => $item->product->name,
-                                'thumbnail_image' => $item->product->thumbnail_image
+                                'thumbnail_image' => $item->product->thumbnail_image,
+                                'price' => $priceToUse
                             ];
                         }
                     }

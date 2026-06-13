@@ -1,20 +1,27 @@
 <template>
     <section class="blog-page">
-        <!-- Hero Section -->
-        <header class="page-hero">
-            <div class="hero-inner">
-                <p class="hero-title text-main fst-italic tracking-wide fw-bold mb-2">
-                    SORA - Chạm đến sự hoàn mỹ
+        <!-- banner tin tức đầu trang -->
+        <section class="sora-banner position-relative d-flex align-items-center justify-content-center overflow-hidden">
+            <div class="banner-ambient"></div>
+            <div class="banner-glow banner-glow-left"></div>
+            <div class="banner-glow banner-glow-right"></div>
+            <div class="banner-monogram font-serif">SORA MAGAZINE</div>
+            <div class="banner-line-art banner-line-art-left"></div>
+            <div class="banner-line-art banner-line-art-right"></div>
+
+            <div class="position-relative z-index-2 text-center px-3 banner-content">
+                <p class="text-champagne font-oswald tracking-widest mb-3 text-uppercase small">
+                    <i class="bi bi-stars me-2"></i>SORA - Chạm đến sự hoàn mỹ
                 </p>
-                <h1 class="text-main font-oswald text-uppercase" v-if="searchQuery">Tìm kiếm: "{{ searchQuery }}"</h1>
-                <h1 class="text-main font-oswald text-uppercase" v-else-if="authorQuery">Tác giả: "{{ authorQuery }}"</h1>
-                <h1 class="text-main font-oswald text-uppercase" v-else-if="categoryQuery">Danh mục: "{{ categoryQuery }}"</h1>
-                <h1 class="text-main font-oswald text-uppercase" v-else>SORA BLOG</h1>
-                <p class="hero-subtitle text-muted mt-3">
+                <h1 class="display-3 fw-bold font-serif mb-3 text-white text-uppercase" v-if="searchQuery">TÌM KIẾM: "{{ searchQuery }}"</h1>
+                <h1 class="display-3 fw-bold font-serif mb-3 text-white text-uppercase" v-else-if="authorQuery">TÁC GIẢ: "{{ authorQuery }}"</h1>
+                <h1 class="display-3 fw-bold font-serif mb-3 text-white text-uppercase" v-else-if="categoryQuery">DANH MỤC: "{{ categoryQuery }}"</h1>
+                <h1 class="display-3 fw-bold font-serif mb-3 text-white text-uppercase" v-else>SORA BLOG</h1>
+                <p class="banner-subtitle fw-light fs-5 mb-0 font-serif text-white">
                     Khám phá xu hướng trang sức & bí quyết làm đẹp tinh tế mỗi ngày.
                 </p>
             </div>
-        </header>
+        </section>
 
         <main class="page-container container">
             <SoraBlogSkeleton v-if="isLoading" class="fade-in" />
@@ -419,10 +426,99 @@ onMounted(() => {
 h1, h2, h3, h4, h5, h6 { font-family: 'Inter', sans-serif; font-weight: 700; color: var(--text-dark); }
 .hover-primary:hover { color: #9f273b !important;}
 
-/* Hero Banner */
-.page-hero { background: linear-gradient(135deg, #ffffff 0%, #faf9f8 100%); padding: 60px 20px; text-align: center; border-bottom: 1px solid #eee; }
-.hero-inner { max-width: 800px; margin: 0 auto; }
-.hero-title { font-size: 1rem; }
+/* Hero Banner (Sora Banner Style) */
+.text-champagne { color: #ead089 !important; }
+.z-index-2 { z-index: 2; }
+
+.sora-banner {
+  min-height: 380px;
+  background:
+    linear-gradient(135deg, rgba(54, 6, 17, 0.98), rgba(114, 20, 38, 0.96) 48%, rgba(74, 9, 24, 0.98)),
+    repeating-linear-gradient(120deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 14px);
+  isolation: isolate;
+}
+
+.sora-banner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 236, 189, 0.2), transparent 42%),
+    linear-gradient(110deg, transparent 20%, rgba(255, 255, 255, 0.08) 44%, transparent 64%);
+  opacity: 0.9;
+  z-index: 0;
+}
+
+.banner-ambient {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 84px 84px;
+  mask-image: radial-gradient(circle at center, black 0%, transparent 68%);
+  z-index: 0;
+}
+
+.banner-glow {
+  position: absolute;
+  width: 330px;
+  height: 330px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(231, 206, 125, 0.2), transparent 68%);
+  filter: blur(3px);
+  z-index: 0;
+}
+
+.banner-glow-left { left: -120px; bottom: -150px; }
+.banner-glow-right { right: -100px; top: -120px; }
+
+.banner-monogram {
+  position: absolute;
+  inset: auto 0 52px;
+  text-align: center;
+  color: rgba(255, 244, 218, 0.038);
+  font-size: clamp(3.4rem, 9vw, 8.8rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  white-space: nowrap;
+  z-index: 0;
+}
+
+.banner-content { max-width: 850px; }
+
+.banner-content h1 {
+  letter-spacing: 0;
+  line-height: 1.05;
+  text-shadow: 0 10px 35px rgba(0, 0, 0, 0.32);
+}
+
+.banner-subtitle {
+  color: rgba(255, 248, 231, 0.9);
+  line-height: 1.75;
+  text-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+.banner-line-art {
+  position: absolute;
+  width: 118px;
+  height: 118px;
+  border: 1px solid rgba(231, 206, 125, 0.34);
+  transform: rotate(45deg);
+  z-index: 1;
+}
+
+.banner-line-art::before,
+.banner-line-art::after {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border: 1px solid rgba(231, 206, 125, 0.2);
+}
+
+.banner-line-art-left { left: 8%; top: 24%; }
+.banner-line-art-right { right: 8%; bottom: 22%; }
 
 /* Layout Grid */
 .page-container { margin: 50px auto; flex-grow: 1; }
@@ -499,6 +595,20 @@ h1, h2, h3, h4, h5, h6 { font-family: 'Inter', sans-serif; font-weight: 700; col
     .featured-body { width: 100%; padding: 25px; border-radius: 0 0 12px 12px; }
     .featured-title { font-size: 1.5rem; }
     .sidebar-column { order: 1; }
+    
+    .sora-banner { min-height: 340px; }
+    .banner-line-art { opacity: 0.45; }
+}
+
+@media (max-width: 768px) {
+    .sora-banner { min-height: 320px; }
+    .banner-content h1 { font-size: 2.45rem; }
+    .banner-subtitle { font-size: 1rem !important; }
+    .banner-line-art { display: none; }
+    .banner-monogram {
+        bottom: 38px;
+        font-size: 3.5rem;
+    }
 }
 
 .fade-in { animation: fadeIn 0.4s ease-in; }
