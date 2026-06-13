@@ -304,17 +304,19 @@ const handleResize = () => {
 };
 
 watch(() => props.combos, (newVal) => {
-    if (newVal && newVal.length > 0) {
-        comboResetAutoplay();
+    clearInterval(comboAutoplayTimer);
+    if (Array.isArray(newVal) && newVal.length > 0) {
+        comboStartAutoplay();
         updateCountdown();
     }
 }, { immediate: true });
 
 onMounted(() => {
   window.addEventListener('resize', handleResize);
-  comboStartAutoplay();
   updateCountdown();
-  comboIntervalTimer = setInterval(updateCountdown, 1000);
+  if (!comboIntervalTimer) {
+      comboIntervalTimer = setInterval(updateCountdown, 1000);
+  }
 });
 
 onUnmounted(() => {

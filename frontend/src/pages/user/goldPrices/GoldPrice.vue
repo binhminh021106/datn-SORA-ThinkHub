@@ -518,7 +518,5 @@ onMounted(() => {
   line-height: 1.02;
 }
 
-.text-gold {
-  color: #d4af37 !important;
-}
+
 </style>

@@ -770,9 +770,9 @@ onMounted(fetchOrders);
   justify-content: center;
   min-height: 42px;
   padding: 0.75rem 1.25rem;
-  background: var(--sora-primary);
+  background: var(--sora-primary, #9f273b);
   color: #fff;
-  border: 1px solid rgba(var(--sora-secondary-rgb), 0.5);
+  border: 1px solid rgba(var(--sora-secondary-rgb, 231, 206, 125), 0.5);
   border-radius: 14px;
   font-family: 'Oswald', sans-serif;
   font-size: 0.76rem;
@@ -795,9 +795,9 @@ onMounted(fetchOrders);
 }
 
 .editorial-btn:hover {
-  background: var(--sora-accent);
+  background: var(--sora-accent, #cc1e2e);
   color: #fff;
-  border-color: var(--sora-secondary);
+  border-color: var(--sora-secondary, #e7ce7d);
   transform: translateY(-2px);
   box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);
 }

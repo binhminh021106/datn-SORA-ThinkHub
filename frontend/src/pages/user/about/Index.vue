@@ -218,7 +218,7 @@
           Hãy để chúng tôi giúp bạn tìm thấy món trang sức thuộc về riêng bạn. Một dấu ấn thời gian, một mảnh ghép hoàn
           hảo cho phong cách thường nhật.
         </p>
-        <router-link to="/products" class="editorial-btn text-decoration-none px-5 py-3">
+        <router-link :to="{ name: 'shop' }" class="editorial-btn text-decoration-none px-5 py-3">
           Khám Phá SORA
         </router-link>
       </div>

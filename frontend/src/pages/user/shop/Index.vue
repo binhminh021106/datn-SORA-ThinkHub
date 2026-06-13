@@ -200,7 +200,7 @@
           <div
             class="shop-top-bar d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom sora-border-light">
             <div class="result-count text-muted mb-3 mb-md-0" style="font-size: 1.2rem;">
-              <span v-if="!isLoadingProducts">Hiển thị 1–{{ allProducts.length }} của {{ pagination.total }} kết
+              <span v-if="!isLoadingProducts">Hiển thị {{ visibleResultStart }}–{{ visibleResultEnd }} của {{ pagination.total }} kết
                 quả</span>
               <span v-else>Đang tải dữ liệu...</span>
             </div>
@@ -812,9 +812,7 @@ const changePage = (page) => {
   }
 };
 
-const goToProductDetail = (slug) => {
-  if (slug) router.push({ name: 'productDetail', params: { shop_slug: shopSlug.value, slug: slug } });
-};
+
 
 const quickAddModal = reactive({
   isOpen: false, product: null, attributes: {}, selectedOptions: {}, quantity: 1, isAdding: false

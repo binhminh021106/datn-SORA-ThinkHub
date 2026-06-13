@@ -105,6 +105,7 @@ class ClientHomeController extends Controller
                                 'id' => $item->product->id,
                                 'name' => $item->product->name,
                                 'thumbnail_image' => $item->product->thumbnail_image,
+                                'quantity' => (int) $item->quantity,
                                 'price' => $priceToUse
                             ];
                         }
