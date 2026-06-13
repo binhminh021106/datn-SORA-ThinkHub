@@ -110,7 +110,7 @@ const data = reactive({
 const filteredPrices = computed(() => {
   if (!searchQuery.value) return data.prices;
   const lowerSearch = searchQuery.value.toLowerCase();
-  return data.prices.filter(gold => gold.name.toLowerCase().includes(lowerSearch));
+  return data.prices.filter(gold => (gold?.name || '').toLowerCase().includes(lowerSearch));
 });
 
 const fetchGoldPrices = async () => {
