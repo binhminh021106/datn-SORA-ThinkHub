@@ -2,12 +2,14 @@
   <div class="shop-page min-vh-100 bg-white">
 
     <!-- LỰA CHỌN LÝ TƯỞNG (DANH MỤC TOP) -->
-    <section class="ideal-choices-section py-3 border-bottom sora-border-light sora-banner position-relative overflow-hidden"
-      style="min-height: auto;">
+    <section
+      class="ideal-choices-section py-3 border-bottom sora-border-light sora-banner position-relative d-flex flex-column align-items-center justify-content-center overflow-hidden"
+      style="min-height: 380px;">
       <div class="banner-ambient"></div>
       <div class="banner-glow banner-glow-left"></div>
       <div class="banner-glow banner-glow-right"></div>
-      <div class="banner-monogram font-serif" style="bottom: 10px; font-size: clamp(2.5rem, 7vw, 6rem);">SORA BOUTIQUE</div>
+      <div class="banner-monogram font-serif" style="bottom: 10px; font-size: clamp(2.5rem, 7vw, 6rem);">SORA BOUTIQUE
+      </div>
       <div class="banner-line-art banner-line-art-left"></div>
       <div class="banner-line-art banner-line-art-right"></div>
 
@@ -38,10 +40,14 @@
               <div class="category-circle-item text-center cursor-pointer group d-flex flex-column align-items-center"
                 @click="filterByCategory(cat.slug)">
                 <div
-                  class="circle-img-wrapper rounded-circle bg-white shadow-sm d-flex align-items-center justify-content-center mb-2 transition-transform duration-400 group-hover-scale"
+                  class="circle-img-wrapper rounded-circle bg-white shadow-sm d-flex align-items-center justify-content-center mb-2 transition-transform duration-400 group-hover-scale position-relative"
                   style="width: 85px; height: 85px; padding: 2px;">
-                  <img :src="getImageUrl(cat.thumbnail)" loading="lazy" :alt="cat.name" @error="handleImageError"
-                    class="w-100 h-100 object-fit-contain rounded-circle transition-transform duration-500 group-hover-scale-img">
+                  <SoraSkeleton v-show="!categoryImagesLoaded[cat.id]" variant="image" width="100%" height="100%" circle class="position-absolute top-0 start-0" />
+                  <img :src="getImageUrl(cat.thumbnail)" loading="lazy" :alt="cat.name" 
+                    @load="categoryImagesLoaded[cat.id] = true"
+                    @error="handleImageError"
+                    class="w-100 h-100 object-fit-contain rounded-circle transition-transform duration-500 group-hover-scale-img"
+                    :style="{ opacity: categoryImagesLoaded[cat.id] ? 1 : 0, transition: 'opacity 0.4s ease' }">
                 </div>
                 <h3 class="text-white fw-medium mb-0 tracking-wider text-truncate w-100 pb-1"
                   style="font-size: 0.85rem;">
@@ -172,7 +178,8 @@
                     class="list-unstyled mb-0 filter-list-text d-flex flex-column gap-2 mt-3">
                     <li v-for="val in getVisibleAttributeValues(attr)" :key="val.id" class="w-100">
                       <div class="d-flex align-items-center cursor-pointer attr-checkbox-item"
-                        @click="toggleAttribute(val.value)" :class="{ 'active': selectedAttributes.includes(val.value) }">
+                        @click="toggleAttribute(val.value)"
+                        :class="{ 'active': selectedAttributes.includes(val.value) }">
                         <div class="custom-square-checkbox me-3 d-flex align-items-center justify-content-center">
                           <i class="bi bi-check-lg check-icon"></i>
                         </div>
@@ -200,7 +207,9 @@
           <div
             class="shop-top-bar d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom sora-border-light">
             <div class="result-count text-muted mb-3 mb-md-0" style="font-size: 1.2rem;">
-              <span v-if="!isLoadingProducts">Hiển thị {{ visibleResultStart }}–{{ visibleResultEnd }} của {{ pagination.total }} kết
+              <span v-if="!isLoadingProducts">Hiển thị {{ visibleResultStart }}–{{ visibleResultEnd }} của {{
+                pagination.total
+                }} kết
                 quả</span>
               <span v-else>Đang tải dữ liệu...</span>
             </div>
@@ -265,7 +274,7 @@
                   :class="{ 'active': page !== '...' && Number(page) === Number(pagination.current_page), 'disabled': page === '...' }">
                   <span v-if="page === '...'" class="page-link border-0 text-muted bg-transparent px-2">...</span>
                   <button v-else class="page-link shadow-sm font-serif fw-bold" @click="changePage(page)">{{ page
-                    }}</button>
+                  }}</button>
                 </li>
 
                 <li class="page-item"
@@ -410,6 +419,7 @@ const { fetchFavorites, isFavourited, toggleFavourite } = useWishlist();
 
 const isLoadingCategories = ref(true);
 const isLoadingProducts = ref(true);
+const categoryImagesLoaded = ref({});
 const isLoadingAttributes = ref(true);
 const hasLoadedProducts = ref(false);
 const isPageLoading = ref(true);
@@ -1017,8 +1027,13 @@ onMounted(() => {
 }
 
 /* Banner (Sora Banner Style) */
-.text-champagne { color: #ead089 !important; }
-.z-index-2 { z-index: 2; }
+.text-champagne {
+  color: #ead089 !important;
+}
+
+.z-index-2 {
+  z-index: 2;
+}
 
 .sora-banner {
   background:
@@ -1059,8 +1074,15 @@ onMounted(() => {
   z-index: 0;
 }
 
-.banner-glow-left { left: -120px; bottom: -150px; }
-.banner-glow-right { right: -100px; top: -120px; }
+.banner-glow-left {
+  left: -120px;
+  bottom: -150px;
+}
+
+.banner-glow-right {
+  right: -100px;
+  top: -120px;
+}
 
 .banner-monogram {
   position: absolute;
@@ -1092,19 +1114,31 @@ onMounted(() => {
   border: 1px solid rgba(231, 206, 125, 0.2);
 }
 
-.banner-line-art-left { left: 8%; top: 24%; }
-.banner-line-art-right { right: 8%; bottom: 22%; }
+.banner-line-art-left {
+  left: 8%;
+  top: 24%;
+}
+
+.banner-line-art-right {
+  right: 8%;
+  bottom: 22%;
+}
 
 @media (max-width: 992px) {
-    .banner-line-art { opacity: 0.45; }
+  .banner-line-art {
+    opacity: 0.45;
+  }
 }
 
 @media (max-width: 768px) {
-    .banner-line-art { display: none; }
-    .banner-monogram {
-        bottom: 10px !important;
-        font-size: 3.5rem !important;
-    }
+  .banner-line-art {
+    display: none;
+  }
+
+  .banner-monogram {
+    bottom: 10px !important;
+    font-size: 3.5rem !important;
+  }
 }
 
 .sora-btn-primary {
@@ -1419,24 +1453,19 @@ onMounted(() => {
   transform: translateY(-5px);
 }
 
-/* SORA-IMG-CONTAINER DÙNG SORA-PLACEHOLDER LÀM BACKGROUND */
+/* SORA-IMG-CONTAINER MẶC ĐỊNH */
 .sora-img-container {
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
   overflow: hidden;
   background-color: #f9f9f9;
-  background-image: url('/Sora-placeholder.png');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
 }
 
 .circle-img-wrapper {
-  background-image: url('/Sora-placeholder.png');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  position: relative;
+  overflow: hidden;
+  background-color: #f5efe8; /* Màu nền nhẹ khi chưa có ảnh */
 }
 
 .category-skeleton-row {

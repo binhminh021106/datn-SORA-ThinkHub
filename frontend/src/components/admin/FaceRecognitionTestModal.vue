@@ -130,13 +130,42 @@
               <aside class="face-control-card">
                 <template v-if="isManageMode">
                   <div class="control-section">
-                    <label class="form-label fw-bold text-dark">Chọn nhân sự để quản lý định danh</label>
-                    <select class="form-select" v-model="selectedAdminId" @change="fetchProfile">
-                      <option disabled value="">Chọn tài khoản admin/nhân sự</option>
-                      <option v-for="admin in admins" :key="admin.id" :value="admin.id">
-                        {{ admin.fullname || admin.email }} - {{ faceProfileStatus(admin.face_profile) }}
-                      </option>
-                    </select>
+                    <label class="form-label fw-bold text-dark mb-1">Chọn nhân sự để quản lý định danh</label>
+                    <div class="custom-select-container position-relative">
+                      <input 
+                        type="text" 
+                        class="form-control" 
+                        v-model="searchQuery" 
+                        @input="onSearchInput"
+                        placeholder="Tìm kiếm tên hoặc email..." 
+                        @focus="isDropdownOpen = true" 
+                        @blur="closeDropdownDelayed"
+                      />
+                      <div v-if="isDropdownOpen" class="custom-dropdown-menu position-absolute w-100 bg-white border rounded shadow-sm mt-1" style="max-height: 250px; overflow-y: auto; z-index: 1050;">
+                        <div 
+                          v-for="admin in filteredAdmins" 
+                          :key="admin.id" 
+                          class="dropdown-item p-2 border-bottom" 
+                          style="cursor: pointer;"
+                          @click.stop="selectAdmin(admin.id)"
+                          :class="{'bg-light': selectedAdminId === admin.id}"
+                        >
+                          <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div class="fw-bold text-dark">{{ admin.fullname || 'Chưa có tên' }}</div>
+                            <span class="badge" :class="admin.face_profile?.requires_reset ? 'bg-warning text-dark' : (admin.face_profile ? 'bg-success' : 'bg-secondary')">
+                              {{ faceProfileStatus(admin.face_profile) }}
+                            </span>
+                          </div>
+                          <div class="small text-muted d-flex align-items-center gap-1">
+                            <i class="bi bi-envelope"></i>
+                            <span class="text-truncate">{{ admin.email }}</span>
+                          </div>
+                        </div>
+                        <div v-if="filteredAdmins.length === 0" class="p-2 text-center text-muted small">
+                          Không tìm thấy nhân sự
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   <div class="profile-card">
@@ -150,7 +179,7 @@
                       Nhân sự: <strong class="text-dark">{{ selectedAdminLabel }}</strong>
                     </div>
                     <div class="small text-muted">
-                      Định danh đã lưu: <strong class="text-dark">{{ profile.sample_count || 0 }}/1</strong>
+                      Định danh đã lưu: <strong class="text-dark">{{ profile.sample_count || 0 }}/5</strong>
                     </div>
                     <div v-if="profile.requires_reset" class="small text-danger fw-semibold mt-2">
                       Hồ sơ cũ có nhiều mẫu và cần được xóa trước khi đăng ký lại.
@@ -273,6 +302,8 @@ const streamRef = ref(null);
 const cameraAspectRatio = ref('4 / 3');
 const admins = ref([]);
 const selectedAdminId = ref('');
+const searchQuery = ref('');
+const isDropdownOpen = ref(false);
 const profile = ref({ has_profile: false, sample_count: 0, requires_reset: false });
 const modalMode = ref('manage');
 const resultMessage = ref('');
@@ -287,6 +318,35 @@ const isAutoScanEnabled = ref(false);
 let modelLoadPromise = null;
 let faceApiModule = null;
 let autoScanTimer = null;
+
+const filteredAdmins = computed(() => {
+  if (!searchQuery.value) return admins.value;
+  const q = searchQuery.value.toLowerCase();
+  return admins.value.filter(a => 
+    (a.fullname && a.fullname.toLowerCase().includes(q)) || 
+    (a.email && a.email.toLowerCase().includes(q))
+  );
+});
+
+const selectAdmin = (id) => {
+  selectedAdminId.value = id;
+  const admin = admins.value.find(a => a.id === id);
+  if (admin) {
+    searchQuery.value = admin.fullname || admin.email;
+  }
+  isDropdownOpen.value = false;
+  fetchProfile();
+};
+
+const closeDropdownDelayed = () => {
+  setTimeout(() => {
+    isDropdownOpen.value = false;
+  }, 200);
+};
+
+const onSearchInput = () => {
+  isDropdownOpen.value = true;
+};
 
 const emit = defineEmits(['attendance-success']);
 const isManageMode = computed(() => modalMode.value === 'manage');
@@ -366,6 +426,13 @@ const fetchAdmins = async () => {
 
     if (!selectedAdminId.value && admins.value.length) {
       selectedAdminId.value = admins.value[0].id;
+    }
+
+    if (selectedAdminId.value) {
+      const admin = admins.value.find(a => a.id === selectedAdminId.value);
+      if (admin && !isDropdownOpen.value) {
+        searchQuery.value = admin.fullname || admin.email;
+      }
     }
 
     await fetchProfile();
@@ -525,10 +592,26 @@ const registerFace = async () => {
   }
 
   await runFaceAction(async () => {
-    const descriptor = await getDescriptor();
+    const descriptors = [];
+    const maxSamples = 5;
+
+    for (let i = 1; i <= maxSamples; i++) {
+      resultType.value = 'info';
+      resultMessage.value = `Đang lấy mẫu ${i}/${maxSamples}... Vui lòng giữ khuôn mặt và hơi cử động nhẹ đầu.`;
+      
+      const descriptor = await getDescriptor();
+      descriptors.push(descriptor);
+      
+      if (i < maxSamples) {
+        await new Promise(resolve => setTimeout(resolve, 400));
+      }
+    }
+
+    resultMessage.value = 'Đang gửi dữ liệu định danh lên máy chủ...';
+
     const response = await apiClient.post('/admin/face-recognition/register', {
       admin_id: selectedAdminId.value,
-      descriptor,
+      descriptors,
       model_name: MODEL_NAME,
       model_version: MODEL_VERSION,
     });
@@ -552,6 +635,13 @@ const verifyFace = async () => {
     resultType.value = data.is_matched ? 'success' : 'warning';
     resultMessage.value = response.data?.message || 'Đã quét thử khuôn mặt.';
     if (data.is_matched && data.matched_admin) {
+      selectedAdminId.value = data.matched_admin.id;
+      const admin = admins.value.find(a => a.id === data.matched_admin.id);
+      if (admin) {
+        searchQuery.value = admin.fullname || admin.email;
+      }
+      await fetchProfile();
+
       await showRecognitionAlert(data.matched_admin, {
         title: 'Định danh thành công',
         message: resultMessage.value,
@@ -1171,7 +1261,8 @@ onUnmounted(() => {
 }
 
 .candidate-list {
-  max-height: 180px;
+  flex: 1 1 auto;
+  min-height: 100px;
   overflow-y: auto;
 }
 

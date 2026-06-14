@@ -60,21 +60,53 @@
     </div>
 
     <div class="position-relative flex-grow-1 bg-white d-flex flex-column">
-      <div class="p-4 text-center d-flex flex-column flex-grow-1" style="padding-bottom: 64px !important;">
+      <div class="p-4 text-start d-flex flex-column flex-grow-1" style="padding-bottom: 64px !important;">
         <router-link
           :to="{ name: 'productDetail', params: { shop_slug: shopSlug, slug: product.slug } }"
           class="text-decoration-none flex-grow-1 d-flex flex-column justify-content-center"
         >
           <h6 class="text-dark font-oswald text-uppercase tracking-widest fw-bold mb-2 text-truncate-2 fs-5 lh-base">{{ product.name }}</h6>
-          <p class="font-serif fst-italic text-muted fs-6 mb-3">{{ product.category?.name || 'Trang sức SORA' }}</p>
+          
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <p class="font-serif fst-italic text-muted small mb-0">{{ product.category?.name || 'Trang sức SORA' }}</p>
+            
+            <!-- Luxury constraint: Show only one badge (Scarcity > Sold Count > In Stock) -->
+            <span v-if="product.stock_quantity > 0 && product.stock_quantity <= 5" class="small font-oswald text-uppercase tracking-widest" style="font-size: 0.7rem; color: #cc1e2e;">
+              Còn {{ product.stock_quantity }}
+            </span>
+            <span v-else-if="product.sold_count > 0" class="small text-muted font-oswald text-uppercase tracking-widest" style="font-size: 0.7rem;">
+              Đã bán {{ product.sold_count }}
+            </span>
+            <span v-else class="small text-success font-oswald text-uppercase tracking-widest opacity-75" style="font-size: 0.7rem;">
+              Sẵn hàng
+            </span>
+          </div>
+          
+          <div class="d-flex justify-content-start align-items-center mb-3 gap-1" style="color: #e7ce7d; font-size: 0.9rem;">
+            <i v-for="n in 5" :key="n" class="bi" :class="n <= Math.round(getProtectedRating(product.rating_avg || product.rating, product.reviews_count || product.reviews?.length)) ? 'bi-star-fill' : 'bi-star text-muted'"></i>
+            <span class="small text-muted ms-1 font-oswald">({{ getProtectedRating(product.rating_avg || product.rating, product.reviews_count || product.reviews?.length).toFixed(1) }})</span>
+          </div>
         </router-link>
 
         <div class="mt-auto">
-          <div class="d-flex flex-column align-items-center justify-content-center">
-            <span v-if="product.promotional_price && product.promotional_price < product.base_price" class="text-muted text-decoration-line-through small fw-light font-oswald mb-1">
-              {{ formatCurrency(product.base_price) }}
-            </span>
-            <span class="text-sora-primary fw-bold font-oswald fs-5">{{ formatCurrency(product.promotional_price || product.base_price) }}</span>
+          <div class="d-flex align-items-center justify-content-between">
+            <template v-if="priceInfo.isRange">
+              <div class="d-flex align-items-baseline gap-2 flex-wrap w-100">
+                <span class="text-sora-primary fw-bold font-oswald fs-5 text-truncate" :title="`${formatCurrency(priceInfo.min)} - ${formatCurrency(priceInfo.max)}`" style="font-size: 1.1rem !important;">{{ formatCompactPrice(priceInfo.min) }} - {{ formatCompactPrice(priceInfo.max) }}</span>
+              </div>
+            </template>
+            <template v-else>
+              <div class="d-flex align-items-baseline gap-2 flex-wrap">
+                <span class="text-sora-primary fw-bold font-oswald fs-5">{{ formatCurrency(priceInfo.price) }}</span>
+                <span v-if="priceInfo.oldPrice" class="text-muted text-decoration-line-through small fw-light font-oswald" style="font-size: 0.85rem;">
+                  {{ formatCurrency(priceInfo.oldPrice) }}
+                </span>
+              </div>
+              
+              <div v-if="priceInfo.discount" class="badge text-white font-oswald tracking-widest px-2 py-1 rounded-0" style="background-color: #cc1e2e; font-size: 0.65rem;">
+                -{{ priceInfo.discount }}%
+              </div>
+            </template>
           </div>
         </div>
 
@@ -101,6 +133,7 @@ import { defineProps, defineEmits, computed } from 'vue';
 import { globalModalState } from '@/stores/modalState';
 import Toast from '@/utils/toastConfig';
 import { getStorageUrl } from '@/utils/env';
+import { getProtectedRating, formatCompactPrice } from '@/composables/useUtilities';
 
 const props = defineProps({
   product: { type: Object, required: true },
@@ -116,6 +149,24 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['toggle-wishlist']);
+
+const priceInfo = computed(() => {
+  const p = props.product;
+  if (p.variants && p.variants.length > 0) {
+    const prices = p.variants.map(v => Number(v.promotional_price || v.price || p.base_price));
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    if (min !== max && !isNaN(min) && !isNaN(max)) {
+      return { isRange: true, min, max };
+    }
+  }
+  return {
+    isRange: false,
+    price: Number(p.promotional_price || p.base_price || 0),
+    oldPrice: Number(p.promotional_price) > 0 && Number(p.promotional_price) < Number(p.base_price) ? Number(p.base_price) : null,
+    discount: Number(p.promotional_price) > 0 && Number(p.promotional_price) < Number(p.base_price) ? Math.round((Number(p.base_price) - Number(p.promotional_price)) / Number(p.base_price) * 100) : 0
+  };
+});
 
 const heartIconClass = computed(() => {
   return props.isInWishlist

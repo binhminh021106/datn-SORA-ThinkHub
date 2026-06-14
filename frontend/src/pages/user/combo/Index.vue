@@ -24,10 +24,14 @@
       <div class="container">
         <div class="d-flex justify-content-center mb-4 mb-lg-5">
           <div class="filter-group d-inline-flex">
-            <button class="filter-btn" :class="{ active: activeFilter === 'all' }" @click="filterCombo('all')">TẤT CẢ</button>
-            <button class="filter-btn" :class="{ active: activeFilter === 'female' }" @click="filterCombo('female')">CHO NÀNG</button>
-            <button class="filter-btn" :class="{ active: activeFilter === 'male' }" @click="filterCombo('male')">CHO CHÀNG</button>
-            <button class="filter-btn" :class="{ active: activeFilter === 'couple' }" @click="filterCombo('couple')">CẶP ĐÔI</button>
+            <button class="filter-btn" :class="{ active: activeFilter === 'all' }" @click="filterCombo('all')">TẤT
+              CẢ</button>
+            <button class="filter-btn" :class="{ active: activeFilter === 'female' }" @click="filterCombo('female')">CHO
+              NÀNG</button>
+            <button class="filter-btn" :class="{ active: activeFilter === 'male' }" @click="filterCombo('male')">CHO
+              CHÀNG</button>
+            <button class="filter-btn" :class="{ active: activeFilter === 'couple' }" @click="filterCombo('couple')">CẶP
+              ĐÔI</button>
           </div>
         </div>
 
@@ -48,7 +52,8 @@
           <article class="combo-row-card overflow-hidden mb-4 mb-lg-5" v-for="combo in displayCombos" :key="combo.id">
             <div class="row g-0 align-items-stretch">
               <div class="col-lg-4 combo-offer-panel position-relative d-flex flex-column">
-                <div v-if="combo.timerData.isEnded" class="ended-overlay d-flex align-items-center justify-content-center flex-column text-center p-4">
+                <div v-if="combo.timerData.isEnded"
+                  class="ended-overlay d-flex align-items-center justify-content-center flex-column text-center p-4">
                   <i class="bi bi-x-circle fs-1 text-white opacity-75 mb-2"></i>
                   <h3 class="text-white font-oswald tracking-widest m-0">{{ combo.timerData.title }}</h3>
                 </div>
@@ -59,7 +64,8 @@
                 <div class="position-relative z-index-2 d-flex flex-column h-100 text-center text-md-start">
                   <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start mb-4">
                     <span class="luxury-badge luxury-badge-discount">
-                      GIẢM {{ combo.discount_type === 'percentage' ? combo.discount_value + '%' : formatCurrency(combo.discount_value) }}
+                      GIẢM {{ combo.discount_type === 'percentage' ? combo.discount_value + '%' :
+                        formatCurrency(combo.discount_value) }}
                     </span>
                     <span v-if="combo.theme" class="luxury-badge luxury-badge-theme">{{ combo.theme }}</span>
                   </div>
@@ -68,11 +74,13 @@
                   <p class="combo-description small mb-4 line-clamp-2">{{ combo.description }}</p>
 
                   <div class="timer-section mb-4 mt-auto">
-                    <h6 class="timer-title font-oswald mb-3 tracking-wide text-uppercase" :class="{ active: combo.timerData.type === 'active' }">
+                    <h6 class="timer-title font-oswald mb-3 tracking-wide text-uppercase"
+                      :class="{ active: combo.timerData.type === 'active' }">
                       <i class="bi bi-clock-history me-1"></i> {{ combo.timerData.title }}
                     </h6>
 
-                    <div v-if="!combo.timerData.isEnded && combo.timerData.type !== 'forever'" class="d-flex justify-content-center justify-content-md-start gap-2">
+                    <div v-if="!combo.timerData.isEnded && combo.timerData.type !== 'forever'"
+                      class="d-flex justify-content-center justify-content-md-start gap-2">
                       <div class="time-box">
                         <span class="num font-oswald">{{ combo.timerData.d }}</span>
                         <span class="label">Days</span>
@@ -92,9 +100,11 @@
                     </div>
                   </div>
 
-                  <div class="offer-footer d-flex align-items-end justify-content-center justify-content-md-between flex-wrap gap-3">
+                  <div
+                    class="offer-footer d-flex align-items-end justify-content-center justify-content-md-between flex-wrap gap-3">
                     <div>
-                      <div class="old-price text-decoration-line-through">{{ formatCurrency(combo.originalPrice) }}</div>
+                      <div class="old-price text-decoration-line-through">{{ formatCurrency(combo.originalPrice) }}
+                      </div>
                       <div class="new-price font-oswald tracking-wide">{{ formatCurrency(combo.finalPrice) }}</div>
                     </div>
                     <button class="btn luxury-cta font-oswald tracking-wide px-4 py-2" @click="goToDetail(combo.slug)">
@@ -108,7 +118,8 @@
                 <div class="d-flex justify-content-between align-items-center gap-3 mb-4">
                   <h5 class="included-title font-serif m-0">Bao Gồm {{ combo.items?.length || 0 }} Tác Phẩm</h5>
                   <div class="d-flex gap-2" v-if="combo.items && combo.items.length > 2">
-                    <button class="btn slider-btn" @click="scrollSlider(combo.id, -1)" aria-label="Previous combo items">
+                    <button class="btn slider-btn" @click="scrollSlider(combo.id, -1)"
+                      aria-label="Previous combo items">
                       <i class="bi bi-chevron-left"></i>
                     </button>
                     <button class="btn slider-btn" @click="scrollSlider(combo.id, 1)" aria-label="Next combo items">
@@ -117,16 +128,19 @@
                   </div>
                 </div>
 
-                <div class="combo-items-slider d-flex gap-3 gap-xl-4 overflow-auto hide-scrollbar pt-2 pb-3" :id="'scroll-container-' + combo.id">
+                <div class="combo-items-slider d-flex gap-3 gap-xl-4 overflow-auto hide-scrollbar pt-2 pb-3"
+                  :id="'scroll-container-' + combo.id">
                   <div class="combo-item-card flex-shrink-0" v-for="item in combo.items" :key="item.id">
                     <div class="item-image-frame position-relative overflow-hidden">
                       <div class="item-display-surface"></div>
-                      <img :src="getImage(item.product?.thumbnail_image)" class="item-img-hover" :alt="item.product?.name || 'SORA jewelry item'">
+                      <img :src="getImage(item.product?.thumbnail_image)" class="item-img-hover"
+                        :alt="item.product?.name || 'SORA jewelry item'">
                       <div class="position-absolute top-0 end-0 m-2 z-index-2">
                         <span class="quantity-badge shadow-sm">x{{ item.quantity }}</span>
                       </div>
                     </div>
-                    <h6 class="item-name font-serif mb-2 text-truncate" :title="item.product?.name">{{ item.product?.name }}</h6>
+                    <h6 class="item-name font-serif mb-2 text-truncate" :title="item.product?.name">{{
+                      item.product?.name }}</h6>
                     <div class="item-meta small mb-2 d-flex align-items-center">
                       <span v-if="item.product_variant_id" class="selection-badge">
                         <i class="bi bi-tag-fill me-1"></i>{{ item.variant?.sku }}
@@ -143,10 +157,13 @@
           </article>
 
           <div class="text-center mt-4 mb-2 fade-in" v-if="processedCombos.length > displayLimit">
-            <button class="btn luxury-outline-cta px-4 py-2 me-2 me-md-3 font-oswald tracking-widest text-uppercase fw-bold" @click="loadMore">
+            <button
+              class="btn luxury-outline-cta px-4 py-2 me-2 me-md-3 font-oswald tracking-widest text-uppercase fw-bold"
+              @click="loadMore">
               <i class="bi bi-arrow-down-circle me-1"></i> Xem Thêm
             </button>
-            <button class="btn luxury-cta px-4 py-2 font-oswald tracking-widest text-uppercase fw-bold" @click="loadAll">
+            <button class="btn luxury-cta px-4 py-2 font-oswald tracking-widest text-uppercase fw-bold"
+              @click="loadAll">
               <i class="bi bi-grid-fill me-1"></i> Xem Tất Cả ({{ processedCombos.length }})
             </button>
           </div>
@@ -183,8 +200,8 @@ const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currenc
 const getImage = (path) => path ? `${import.meta.env.VITE_STORAGE_URL}/${path}` : 'https://placehold.co/400x400?text=No+Image';
 
 const getItemPrice = (item) => {
-    if (item.product_variant_id && item.variant) return parseFloat(item.variant.price);
-    return item.product ? parseFloat(item.product.base_price) : 0;
+  if (item.product_variant_id && item.variant) return parseFloat(item.variant.price);
+  return item.product ? parseFloat(item.product.base_price) : 0;
 };
 
 const calculateOriginal = (comboItems) => {
@@ -204,9 +221,9 @@ const calculateFinal = (originalTotal, discountType, discountValue) => {
 };
 
 const parseDBDate = (dateStr) => {
-    if (!dateStr) return null;
-    const cleanStr = dateStr.replace(' ', 'T').substring(0, 19);
-    return new Date(cleanStr).getTime();
+  if (!dateStr) return null;
+  const cleanStr = dateStr.replace(' ', 'T').substring(0, 19);
+  return new Date(cleanStr).getTime();
 };
 
 const calculateTimeParts = (diff) => {
@@ -224,32 +241,32 @@ const calculateTimeParts = (diff) => {
 };
 
 const computeTimerData = (combo, now) => {
-    if (combo.usage_limit !== null && combo.usage_limit <= 0) {
-        return { type: 'soldout', title: 'ĐÃ BÁN HẾT SỐ LƯỢNG', isEnded: true };
-    }
+  if (combo.usage_limit !== null && combo.usage_limit <= 0) {
+    return { type: 'soldout', title: 'ĐÃ BÁN HẾT SỐ LƯỢNG', isEnded: true };
+  }
 
-    const startTime = combo.parsed_start_date;
-    const endTime = combo.parsed_end_date;
+  const startTime = combo.parsed_start_date;
+  const endTime = combo.parsed_end_date;
 
-    if (endTime && endTime < now) return { type: 'ended', title: 'ƯU ĐÃI ĐÃ KẾT THÚC', isEnded: true };
-    if (startTime && startTime > now) {
-        const diff = startTime - now;
-        return { type: 'upcoming', title: 'HÃY NHANH TAY! MỞ BÁN SAU:', isEnded: false, ...calculateTimeParts(diff) };
-    }
-    if (endTime && endTime >= now) {
-        const diff = endTime - now;
-        return { type: 'active', title: 'NHANH CHÓNG LÊN! KẾT THÚC TRONG:', isEnded: false, ...calculateTimeParts(diff) };
-    }
+  if (endTime && endTime < now) return { type: 'ended', title: 'ƯU ĐÃI ĐÃ KẾT THÚC', isEnded: true };
+  if (startTime && startTime > now) {
+    const diff = startTime - now;
+    return { type: 'upcoming', title: 'HÃY NHANH TAY! MỞ BÁN SAU:', isEnded: false, ...calculateTimeParts(diff) };
+  }
+  if (endTime && endTime >= now) {
+    const diff = endTime - now;
+    return { type: 'active', title: 'NHANH CHÓNG LÊN! KẾT THÚC TRONG:', isEnded: false, ...calculateTimeParts(diff) };
+  }
 
-    return { type: 'forever', title: 'SẢN PHẨM KHÔNG GIỚI HẠN THỜI GIAN', isEnded: false };
+  return { type: 'forever', title: 'SẢN PHẨM KHÔNG GIỚI HẠN THỜI GIAN', isEnded: false };
 };
 
 const scrollSlider = (comboId, direction) => {
-    const container = document.getElementById('scroll-container-' + comboId);
-    if (container) {
-        const scrollAmount = 300;
-        container.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
-    }
+  const container = document.getElementById('scroll-container-' + comboId);
+  if (container) {
+    const scrollAmount = 300;
+    container.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
+  }
 };
 
 const fetchCombos = async (gender = null) => {
@@ -260,25 +277,25 @@ const fetchCombos = async (gender = null) => {
     const res = await clientApiClient.get('/client/combos', { params, ignoreAuthRedirect: true });
 
     combos.value = res.data.data.data.map(combo => {
-        combo.parsed_start_date = parseDBDate(combo.start_date);
-        combo.parsed_end_date = parseDBDate(combo.end_date);
+      combo.parsed_start_date = parseDBDate(combo.start_date);
+      combo.parsed_end_date = parseDBDate(combo.end_date);
 
-        combo.items = combo.items.map(item => ({
-            ...item,
-            computedPrice: getItemPrice(item)
-        }));
+      combo.items = combo.items.map(item => ({
+        ...item,
+        computedPrice: getItemPrice(item)
+      }));
 
-        combo.originalPrice = calculateOriginal(combo.items);
-        combo.finalPrice = calculateFinal(combo.originalPrice, combo.discount_type, combo.discount_value);
+      combo.originalPrice = calculateOriginal(combo.items);
+      combo.finalPrice = calculateFinal(combo.originalPrice, combo.discount_type, combo.discount_value);
 
-        return combo;
+      return combo;
     });
 
-    } catch (error) {
-      console.error(error);
-    } finally {
-      isLoading.value = false;
-    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    isLoading.value = false;
+  }
 };
 
 usePublicRefreshListener({
@@ -297,51 +314,51 @@ const goToDetail = (slug) => {
 };
 
 const loadMore = () => {
-    displayLimit.value += 2;
+  displayLimit.value += 2;
 };
 
 const loadAll = () => {
-    displayLimit.value = processedCombos.value.length;
+  displayLimit.value = processedCombos.value.length;
 };
 
 const processedCombos = computed(() => {
-    const now = currentTime.value;
-    const oneDayMs = 24 * 60 * 60 * 1000;
+  const now = currentTime.value;
+  const oneDayMs = 24 * 60 * 60 * 1000;
 
-    let result = combos.value.filter(combo => {
-        if (!combo.parsed_end_date) return true;
-        return now - combo.parsed_end_date <= oneDayMs;
-    });
+  let result = combos.value.filter(combo => {
+    if (!combo.parsed_end_date) return true;
+    return now - combo.parsed_end_date <= oneDayMs;
+  });
 
-    result.sort((a, b) => {
-        const aEnded = a.parsed_end_date && a.parsed_end_date < now;
-        const bEnded = b.parsed_end_date && b.parsed_end_date < now;
+  result.sort((a, b) => {
+    const aEnded = a.parsed_end_date && a.parsed_end_date < now;
+    const bEnded = b.parsed_end_date && b.parsed_end_date < now;
 
-        if (aEnded && !bEnded) return 1;
-        if (!aEnded && bEnded) return -1;
-        return 0;
-    });
+    if (aEnded && !bEnded) return 1;
+    if (!aEnded && bEnded) return -1;
+    return 0;
+  });
 
-    return result.map(combo => ({
-        ...combo,
-        timerData: computeTimerData(combo, now)
-    }));
+  return result.map(combo => ({
+    ...combo,
+    timerData: computeTimerData(combo, now)
+  }));
 });
 
 const displayCombos = computed(() => {
-    return processedCombos.value.slice(0, displayLimit.value);
+  return processedCombos.value.slice(0, displayLimit.value);
 });
 
 onMounted(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    fetchCombos();
-    timerInterval = setInterval(() => {
-        currentTime.value = new Date().getTime();
-    }, 1000);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  fetchCombos();
+  timerInterval = setInterval(() => {
+    currentTime.value = new Date().getTime();
+  }, 1000);
 });
 
 onUnmounted(() => {
-    if (timerInterval) clearInterval(timerInterval);
+  if (timerInterval) clearInterval(timerInterval);
 });
 </script>
 
@@ -356,16 +373,44 @@ onUnmounted(() => {
   color: #2d2020;
 }
 
-.font-serif { font-family: 'Playfair Display', serif; }
-.font-oswald { font-family: 'Oswald', sans-serif; }
-.tracking-wide { letter-spacing: 1px; }
-.tracking-widest { letter-spacing: 2px; }
-.z-index-2 { z-index: 2; }
-.line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.font-serif {
+  font-family: 'Playfair Display', serif;
+}
 
-.text-champagne { color: #ead089 !important; }
-.text-sora-primary { color: #8f2034 !important; }
-.bg-sora-primary { background-color: #8f2034 !important; }
+.font-oswald {
+  font-family: 'Oswald', sans-serif;
+}
+
+.tracking-wide {
+  letter-spacing: 1px;
+}
+
+.tracking-widest {
+  letter-spacing: 2px;
+}
+
+.z-index-2 {
+  z-index: 2;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.text-champagne {
+  color: #ead089 !important;
+}
+
+.text-sora-primary {
+  color: #8f2034 !important;
+}
+
+.bg-sora-primary {
+  background-color: #8f2034 !important;
+}
 
 .sora-banner {
   min-height: 380px;
@@ -407,8 +452,15 @@ onUnmounted(() => {
   z-index: 0;
 }
 
-.banner-glow-left { left: -120px; bottom: -150px; }
-.banner-glow-right { right: -100px; top: -120px; }
+.banner-glow-left {
+  left: -120px;
+  bottom: -150px;
+}
+
+.banner-glow-right {
+  right: -100px;
+  top: -120px;
+}
 
 .banner-monogram {
   position: absolute;
@@ -423,7 +475,9 @@ onUnmounted(() => {
   z-index: 0;
 }
 
-.banner-content { max-width: 850px; }
+.banner-content {
+  max-width: 850px;
+}
 
 .banner-content h1 {
   letter-spacing: 0;
@@ -454,8 +508,15 @@ onUnmounted(() => {
   border: 1px solid rgba(231, 206, 125, 0.2);
 }
 
-.banner-line-art-left { left: 8%; top: 24%; }
-.banner-line-art-right { right: 8%; bottom: 22%; }
+.banner-line-art-left {
+  left: 8%;
+  top: 24%;
+}
+
+.banner-line-art-right {
+  right: 8%;
+  bottom: 22%;
+}
 
 .combo-content-section {
   padding: 42px 0 48px;
@@ -571,7 +632,7 @@ onUnmounted(() => {
 .combo-title {
   color: #2f2020;
   font-size: clamp(1.65rem, 3vw, 2.25rem);
-  line-height: 1.15;
+  line-height: 1.1;
 }
 
 .combo-description {
@@ -584,7 +645,9 @@ onUnmounted(() => {
   font-size: 0.82rem;
 }
 
-.timer-title.active { color: #8f2034; }
+.timer-title.active {
+  color: #8f2034;
+}
 
 .time-box {
   display: flex;
@@ -630,7 +693,26 @@ onUnmounted(() => {
 .luxury-cta,
 .luxury-outline-cta {
   border-radius: 999px;
-  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+.luxury-cta::after,
+.luxury-outline-cta::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(45deg) translateY(-200%);
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.luxury-outline-cta::after {
+  background: rgba(126, 23, 43, 0.1);
 }
 
 .luxury-cta {
@@ -644,6 +726,11 @@ onUnmounted(() => {
   color: #fffdf4;
   transform: translateY(-2px);
   box-shadow: 0 18px 34px rgba(126, 23, 43, 0.3);
+}
+
+.luxury-cta:hover::after,
+.luxury-outline-cta:hover::after {
+  transform: rotate(45deg) translateY(200%);
 }
 
 .luxury-outline-cta {
@@ -807,16 +894,42 @@ onUnmounted(() => {
   color: #7b6560;
 }
 
-.hide-scrollbar::-webkit-scrollbar { display: none; }
-.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
 
-.fade-in { animation: fadeIn 0.4s ease-in; }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.fade-in {
+  animation: fadeIn 0.4s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
 
 @media (max-width: 991.98px) {
-  .sora-banner { min-height: 340px; }
-  .banner-line-art { opacity: 0.45; }
-  .combo-content-section { padding-top: 32px; }
+  .sora-banner {
+    min-height: 340px;
+  }
+
+  .banner-line-art {
+    opacity: 0.45;
+  }
+
+  .combo-content-section {
+    padding-top: 32px;
+  }
+
   .combo-offer-panel {
     min-height: auto;
     border-right: 0;
@@ -825,37 +938,61 @@ onUnmounted(() => {
 }
 
 @media (max-width: 767.98px) {
-  .sora-banner { min-height: 320px; }
-  .banner-content h1 { font-size: 2.45rem; }
-  .banner-subtitle { font-size: 1rem !important; }
-  .banner-line-art { display: none; }
+  .sora-banner {
+    min-height: 320px;
+  }
+
+  .banner-content h1 {
+    font-size: 2.45rem;
+  }
+
+  .banner-subtitle {
+    font-size: 1rem !important;
+  }
+
+  .banner-line-art {
+    display: none;
+  }
+
   .banner-monogram {
     bottom: 38px;
     font-size: 3rem;
     white-space: normal;
   }
+
   .filter-group {
     width: 100%;
     border-radius: 24px;
   }
+
   .filter-btn {
     flex: 1 1 calc(50% - 8px);
     padding-inline: 12px;
   }
-  .combo-row-card { border-radius: 20px; }
+
+  .combo-row-card {
+    border-radius: 20px;
+  }
+
   .combo-offer-panel,
   .combo-products-panel {
     padding: 24px;
   }
+
   .time-box {
     width: 58px;
     height: 64px;
   }
+
   .combo-item-card {
     width: 190px;
     padding: 12px;
   }
-  .item-image-frame { height: 184px; }
+
+  .item-image-frame {
+    height: 184px;
+  }
+
   .luxury-outline-cta,
   .luxury-cta {
     width: 100%;
@@ -864,16 +1001,27 @@ onUnmounted(() => {
 }
 
 @media (max-width: 420px) {
+
   .combo-offer-panel,
   .combo-products-panel {
     padding: 20px;
   }
+
   .time-box {
     width: 52px;
     height: 60px;
   }
-  .time-box .num { font-size: 1.25rem; }
-  .combo-item-card { width: 176px; }
-  .item-image-frame { height: 172px; }
+
+  .time-box .num {
+    font-size: 1.25rem;
+  }
+
+  .combo-item-card {
+    width: 176px;
+  }
+
+  .item-image-frame {
+    height: 172px;
+  }
 }
 </style>

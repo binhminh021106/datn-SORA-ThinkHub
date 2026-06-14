@@ -38,8 +38,8 @@ watch(
 
 const checkAuthentication = async () => {
   const token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token') ||
-                localStorage.getItem('adminToken') || sessionStorage.getItem('adminToken');
-  
+    localStorage.getItem('adminToken') || sessionStorage.getItem('adminToken');
+
   if (!token) {
     currentUser.value = null;
     isCheckingAuth.value = false;
@@ -50,7 +50,7 @@ const checkAuthentication = async () => {
     const result = await apiClient.get('/admin/me', { ignoreAuthRedirect: true });
     currentUser.value = result.data?.data;
     if (result.data?.data?.role) {
-       localStorage.setItem('admin_level', result.data.data.role.level);
+      localStorage.setItem('admin_level', result.data.data.role.level);
     }
   } catch (err) {
     console.error('Lỗi xác thực:', err);
@@ -114,6 +114,54 @@ body {
 }
 
 @keyframes shine {
-  to { background-position: 200% center; }
+  to {
+    background-position: 200% center;
+  }
+}
+
+/* Global button styles for editorial-btn */
+.editorial-btn {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0.75rem 1.25rem;
+  background: var(--sora-primary);
+  color: #fff !important;
+  border: 1px solid rgba(var(--sora-secondary-rgb), 0.5);
+  border-radius: 14px;
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.76rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  text-decoration: none !important;
+}
+
+.editorial-btn::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(45deg) translateY(-200%);
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.editorial-btn:hover {
+  background: var(--sora-accent);
+  color: #fff !important;
+  border-color: var(--sora-secondary);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);
+}
+
+.editorial-btn:hover::after {
+  transform: rotate(45deg) translateY(200%);
 }
 </style>

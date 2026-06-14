@@ -29,7 +29,7 @@
         </h3>
 
         <!-- Trạng thái Loading -->
-        <SoraProductGridSkeleton v-if="isLoading" :count="6" min="190px" />
+        <SoraProductGridSkeleton v-if="isLoading" :count="6" grid-class="row g-4" col-class="col-6 col-md-4" />
 
         <!-- Trạng thái trống -->
         <div v-else-if="favorites.length === 0 && !isLoading" class="empty-state text-center py-5 bg-white shadow-sm p-5 border border-light">

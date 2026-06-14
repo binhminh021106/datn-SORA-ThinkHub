@@ -22,8 +22,9 @@ class StoreFaceProfileRequest extends FormRequest
                 'integer',
                 Rule::exists('admins', 'id')->whereNull('deleted_at'),
             ],
-            'descriptor' => ['required', 'array', 'size:128'],
-            'descriptor.*' => ['required', 'numeric', 'between:-10,10'],
+            'descriptors' => ['required', 'array', 'min:1', 'max:5'],
+            'descriptors.*' => ['required', 'array', 'size:128'],
+            'descriptors.*.*' => ['required', 'numeric', 'between:-10,10'],
             'model_name' => ['nullable', 'string', 'max:100'],
             'model_version' => ['nullable', 'string', 'max:50'],
         ];
@@ -34,11 +35,13 @@ class StoreFaceProfileRequest extends FormRequest
         return [
             'admin_id.required' => 'Vui long chon nhan su de ghi mau khuon mat.',
             'admin_id.exists' => 'Khong tim thay nhan su duoc chon.',
-            'descriptor.required' => 'Khong nhan duoc du lieu dinh danh khuon mat.',
-            'descriptor.array' => 'Du lieu dinh danh khuon mat khong hop le.',
-            'descriptor.size' => 'Du lieu dinh danh khuon mat phai co dung 128 gia tri.',
-            'descriptor.*.numeric' => 'Du lieu dinh danh khuon mat chi duoc chua so.',
-            'descriptor.*.between' => 'Du lieu dinh danh khuon mat nam ngoai nguong cho phep.',
+            'descriptors.required' => 'Khong nhan duoc du lieu dinh danh khuon mat.',
+            'descriptors.array' => 'Du lieu dinh danh khuon mat khong hop le.',
+            'descriptors.min' => 'Can it nhat 1 mau khuon mat.',
+            'descriptors.max' => 'Chi ho tro toi da 5 mau khuon mat.',
+            'descriptors.*.size' => 'Moi mau khuon mat phai co dung 128 gia tri.',
+            'descriptors.*.*.numeric' => 'Du lieu dinh danh khuon mat chi duoc chua so.',
+            'descriptors.*.*.between' => 'Du lieu dinh danh khuon mat nam ngoai nguong cho phep.',
         ];
     }
 

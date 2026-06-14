@@ -117,11 +117,44 @@
         </div>
       </section>
 
+      <!-- TOP SELLING SECTION -->
+      <section class="editorial-section top-selling-editorial" style="background-color: #fdfaf7; padding-top: 5rem; padding-bottom: 5rem;" v-if="topSellingProducts.length > 0">
+        <div class="container products-container">
+          <div class="section-heading text-center mb-5">
+            <span class="section-kicker text-sora-primary fw-bold" style="font-size: 0.9rem; letter-spacing: 3px;"><i class="bi bi-fire me-1"></i> Bestsellers</span>
+            <h2 class="font-serif">Kiệt tác được khao khát nhất</h2>
+          </div>
+
+          <div class="editorial-products-grid">
+            <ProductCard v-for="product in topSellingProducts" :key="'ts-' + product.id" :product="product"
+              :is-in-wishlist="isInWishlist(product.id)" :show-wishlist="true" :show-add-to-cart="true"
+              :show-compare="true" :hover-add-to-cart="true" shop-slug="sora" @toggle-wishlist="toggleWishlist" />
+          </div>
+
+          <div class="text-center mt-5 pt-3">
+            <router-link :to="{ name: 'shop', query: { sort: 'best_selling' } }" class="editorial-btn text-decoration-none">Khám phá toàn bộ Bestsellers</router-link>
+          </div>
+        </div>
+      </section>
+
+      <!-- COMBO CAROUSEL SECTION -->
+      <section class="editorial-section combos-editorial" v-if="data.combos && data.combos.length > 0">
+        <div class="container-fluid px-0 combos-container">
+          <div class="section-heading text-center mb-5">
+            <span class="section-kicker text-gold">Ưu Đãi Đặc Quyền</span>
+            <h2 class="font-serif">Bộ sưu tập quà tặng hoàn hảo</h2>
+          </div>
+
+          <ComboCarousel :combos="data.combos" />
+        </div>
+      </section>
+
+
       <section class="editorial-section products-editorial" v-if="featuredProducts.length > 0">
         <div class="container products-container">
-          <div class="section-heading text-center">
-            <span class="section-kicker">Tác Phẩm Nổi Bật</span>
-            <h2 class="font-serif">Tuyệt tác vượt thời gian cho mọi khoảnh khắc</h2>
+          <div class="section-heading text-center mb-5">
+            <span class="section-kicker">Bộ Sưu Tập Mới</span>
+            <h2 class="font-serif">Đón chào những thiết kế tinh xảo nhất từ SORA</h2>
           </div>
 
           <div class="editorial-products-grid">
@@ -137,17 +170,6 @@
         </div>
       </section>
 
-      <!-- COMBO CAROUSEL SECTION -->
-      <section class="editorial-section combos-editorial" v-if="data.combos && data.combos.length > 0">
-        <div class="container-fluid px-0 combos-container">
-          <div class="section-heading text-center mb-2">
-            <span class="section-kicker text-gold">Ưu Đãi Đặc Quyền</span>
-            <h2 class="font-serif">Bộ sưu tập quà tặng hoàn hảo</h2>
-          </div>
-
-          <ComboCarousel :combos="data.combos" />
-        </div>
-      </section>
 
       <section class="editorial-section craft-section">
         <div class="craft-watermark font-serif d-none d-lg-block">SORA</div>
@@ -365,6 +387,13 @@ const craftAccentImage = computed(() => secondaryImages.value[3] || storyAccentI
 const bottomCtaImage = computed(() => data.banners[1]?.image_desktop || data.banners[1]?.image_mobile || secondaryImages.value[4] || heroImage.value);
 
 const featuredProducts = computed(() => data.products.slice(0, 8));
+
+const topSellingProducts = computed(() => {
+  if (!data.products) return [];
+  return [...data.products]
+    .sort((a, b) => (Number(b.sold_count) || 0) - (Number(a.sold_count) || 0))
+    .slice(0, 4);
+});
 
 const galleryDisplayImages = computed(() => {
   const galleryImages = data.galleries.map((item) => item.image_path || item.image).filter(Boolean);
