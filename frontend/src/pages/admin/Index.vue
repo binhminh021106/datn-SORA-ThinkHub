@@ -389,7 +389,7 @@
                     <div class="d-flex justify-content-between align-items-center mt-1">
                       <span class="text-secondary font-size-xs"><i class="bi bi-clock me-1"></i>{{ combo.end_date }}</span>
                       <span class="fw-bolder text-info font-size-sm whitespace-nowrap">
-                        -{{ combo.discount_type === 'percent' ? combo.discount_value + '%' : formatCurrency(combo.discount_value) }}
+                        -{{ combo.discount_type === 'percentage' ? combo.discount_value + '%' : formatCurrency(combo.discount_value) }}
                       </span>
                     </div>
                   </div>
@@ -596,7 +596,7 @@ const exportToExcel = () => {
         if (activeCombos.value?.length) {
             const comboData = activeCombos.value.map(c => ({
                 "Tên Combo": c.name,
-                "Mức giảm": c.discount_type === 'percent' ? `${c.discount_value}%` : formatMoney(c.discount_value),
+                "Mức giảm": c.discount_type === 'percentage' ? `${c.discount_value}%` : formatCurrency(c.discount_value),
                 "Ngày bắt đầu": c.start_date,
                 "Ngày kết thúc": c.end_date
             }));
