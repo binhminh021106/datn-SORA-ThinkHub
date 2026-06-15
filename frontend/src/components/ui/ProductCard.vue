@@ -153,12 +153,20 @@ const emit = defineEmits(['toggle-wishlist']);
 const priceInfo = computed(() => {
   const p = props.product;
   if (p.variants && p.variants.length > 0) {
-    const prices = p.variants.map(v => Number(v.promotional_price || v.price || p.base_price));
+    const prices = p.variants
+      .map(v => Number(v.promotional_price ?? v.price ?? p.base_price))
+      .filter(v => Number.isFinite(v) && v > 0);
+
+    if (prices.length === 0) {
+      return { isRange: false, price: 0, oldPrice: null, discount: 0 };
+    }
+
     const min = Math.min(...prices);
     const max = Math.max(...prices);
     if (min !== max && !isNaN(min) && !isNaN(max)) {
       return { isRange: true, min, max };
     }
+    return { isRange: false, price: min, oldPrice: null, discount: 0 };
   }
   return {
     isRange: false,

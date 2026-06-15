@@ -119,8 +119,9 @@ class AdminDashboardController extends Controller
                     ->whereNull('product_variants.deleted_at')
                     ->whereNull('products.deleted_at')
                     ->where('product_variants.stock_quantity', '<', 10)
-                    ->select('products.id', 'products.name', 'product_variants.stock_quantity as stock', 'products.thumbnail_image as image', 'product_variants.sku')
-                    ->orderBy('product_variants.stock_quantity', 'asc')
+                    ->select('products.id', 'products.name', DB::raw('MIN(product_variants.stock_quantity) as stock'), 'products.thumbnail_image as image', DB::raw('MIN(product_variants.sku) as sku'))
+                    ->groupBy('products.id', 'products.name', 'products.thumbnail_image')
+                    ->orderBy('stock', 'asc')
                     ->take(5)
                     ->get();
                     
@@ -162,6 +163,7 @@ class AdminDashboardController extends Controller
                         'discount_type' => $combo->discount_type,
                         'discount_value' => (float) $combo->discount_value,
                         'image' => $combo->thumbnail_image ? asset('storage/' . $combo->thumbnail_image) : '',
+                        'start_date' => $combo->start_date ? Carbon::parse($combo->start_date)->format('d/m/Y') : 'Không giới hạn',
                         'end_date' => $combo->end_date ? Carbon::parse($combo->end_date)->format('d/m/Y') : 'Không giới hạn',
                     ];
                 });

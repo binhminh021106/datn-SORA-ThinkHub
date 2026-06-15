@@ -70,16 +70,17 @@ export const getFullImage = (path) => {
 export const formatMoney = (amount) => amount ? new Intl.NumberFormat('vi-VN').format(amount) + ' ₫' : '0 ₫';
 
 export const formatCompactPrice = (amount) => {
-  if (!amount) return '0 ₫';
-  if (amount >= 1e9) {
-    const num = +(amount / 1e9).toFixed(2);
+  const value = Number(amount);
+  if (!Number.isFinite(value) || value === 0) return '0 ₫';
+  if (value >= 1e9) {
+    const num = +(value / 1e9).toFixed(2);
     return num.toString().replace('.', ',') + ' Tỷ';
   }
-  if (amount >= 1e6) {
-    const num = +(amount / 1e6).toFixed(2);
+  if (value >= 1e6) {
+    const num = +(value / 1e6).toFixed(2);
     return num.toString().replace('.', ',') + ' Triệu';
   }
-  return new Intl.NumberFormat('vi-VN').format(amount) + ' ₫';
+  return new Intl.NumberFormat('vi-VN').format(value) + ' ₫';
 };
 export const getProtectedRating = (avgRating, reviewCount) => {
   const count = Number(reviewCount) || 0;
