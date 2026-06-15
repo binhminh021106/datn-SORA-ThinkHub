@@ -2324,8 +2324,13 @@ onUnmounted(() => {
   }
 
   .home-stats-band {
+    padding-top: 1.25rem;
+    padding-bottom: 1.25rem;
+  }
+
+  .stat-container {
     grid-template-columns: 1fr;
-    gap: 2rem;
+    gap: 1rem;
   }
 
   .editorial-products-grid,
