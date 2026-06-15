@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 import { getToken } from './useUtilities';
-import apiClient from '@/utils/apiClient';
+import clientApiClient from '@/utils/clientApiClient';
 
 export const useWishlist = () => {
   const favourites = ref([]);
@@ -10,12 +10,18 @@ export const useWishlist = () => {
     const token = getToken();
     if (!token) return;
     try {
-      const data = await apiClient.get('/client/favourites', { ignoreAuthRedirect: true });
+      const data = await clientApiClient.get('/client/favourites', { ignoreAuthRedirect: true });
       if (data.data?.status) {
         favourites.value = data.data.data.map(fav => fav.product_id);
+      } else if (data.data?.require_login) {
+        import('@/composables/useUtilities').then(({ clearUserAuthStorage }) => {
+          clearUserAuthStorage();
+        });
       }
     } catch (e) {
-      console.error('Không thể tải danh sách yêu thích', e);
+      if (e?.response?.status !== 401) {
+        console.error('Không thể tải danh sách yêu thích', e);
+      }
     }
   };
 
@@ -45,7 +51,7 @@ export const useWishlist = () => {
     isTogglingFav.value = prod.id;
 
     try {
-      const response = await apiClient.post('/client/favourites/toggle', { product_id: prod.id });
+      const response = await clientApiClient.post('/client/favourites/toggle', { product_id: prod.id });
 
       if (response.data?.status) {
         if (response.data?.action === 'added') {

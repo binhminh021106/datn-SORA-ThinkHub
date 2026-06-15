@@ -20,7 +20,7 @@
       <button
         type="button"
         v-if="showWishlist"
-        @click.stop="$emit('toggle-wishlist', product)"
+        @click.stop="handleWishlistClick"
         class="wishlist-btn position-absolute top-0 end-0 m-3 z-index-2 border-0 bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center"
         style="width: 38px; height: 38px; z-index: 10;"
         :aria-label="isInWishlist ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'"
@@ -132,8 +132,9 @@
 import { defineProps, defineEmits, computed } from 'vue';
 import { globalModalState } from '@/stores/modalState';
 import Toast from '@/utils/toastConfig';
+import soraAlert from '@/utils/soraAlertConfig';
 import { getStorageUrl } from '@/utils/env';
-import { getProtectedRating, formatCompactPrice } from '@/composables/useUtilities';
+import { getProtectedRating, formatCompactPrice, getUserToken } from '@/composables/useUtilities';
 
 const props = defineProps({
   product: { type: Object, required: true },
@@ -184,6 +185,26 @@ const heartIconClass = computed(() => {
 
 const handleQuickAddClick = () => {
   globalModalState.openQuickAdd(props.product);
+};
+
+const handleWishlistClick = () => {
+  const token = getUserToken();
+  if (!token) {
+    soraAlert.fire({
+      icon: 'warning',
+      title: 'Bạn chưa đăng nhập!',
+      text: 'Vui lòng đăng nhập để lưu trữ bộ sưu tập yêu thích của mình.',
+      confirmButtonText: 'Đăng Nhập Ngay',
+      showCancelButton: true,
+      cancelButtonText: 'Đóng'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        window.location.href = '/login';
+      }
+    });
+    return;
+  }
+  emit('toggle-wishlist', props.product);
 };
 
 const handleCompareClick = () => {

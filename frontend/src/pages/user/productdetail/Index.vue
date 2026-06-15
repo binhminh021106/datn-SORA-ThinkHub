@@ -415,8 +415,16 @@
           <p class="text-muted">Hãy là người đầu tiên sở hữu và đánh giá kiệt tác này.</p>
         </div>
       </section>
-
     </template>
+    
+    <!-- COMBO CAROUSEL SECTION -->
+    <section class="product-combo-carousel-section fade-in mt-5 mb-5" v-if="!isLoading && combos.length > 0">
+      <div class="section-heading text-center mb-2 mt-5">
+        <span class="section-kicker text-gold font-oswald tracking-widest text-uppercase" style="font-size: 0.75rem;">Mua Cùng Nhau</span>
+        <h2 class="font-serif text-sora-primary" style="font-size: clamp(2rem, 4vw, 3rem);">Combo Ưu Đãi</h2>
+      </div>
+      <ComboCarousel :combos="combos" />
+    </section>
     
     <!-- SIZE GUIDE MODAL COMPONENT -->
     <SizeGuideModal
@@ -504,6 +512,7 @@ import PriceDisplay from '@/components/ui/PriceDisplay.vue';
 import SoraProductDetailSkeleton from '@/components/ui/SoraProductDetailSkeleton.vue';
 import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
+import ComboCarousel from '@/components/ui/ComboCarousel.vue';
 
 // Composables
 import { useWishlist } from '@/composables/useWishlist';
@@ -512,6 +521,7 @@ import { isColorAttribute, isSizeAttribute, getColorCode, isLightColor } from '@
 import { getToken, getHeaders, getFullImage, formatMoney, getProtectedRating } from '@/composables/useUtilities';
 import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener.js';
 import { API_BASE_URL } from '@/utils/env';
+import clientApiClient from '@/utils/clientApiClient';
 
 const route = useRoute();
 const router = useRouter();
@@ -580,6 +590,7 @@ const recommendedProducts = ref([]);
 const isLoadingRecs = ref(false);
 const recSliderRef = ref(null);
 const shopBrands = ref([]);
+const combos = ref([]);
 
 // Compare & Quick Add
 const compareModalRef = ref(null);
@@ -930,6 +941,7 @@ const fetchProductData = async () => {
 
       saveToRecentlyViewed(product.value);
       fetchRecommendations('related_category');
+      fetchCombos();
       startCountdown();
       return product.value;
     } else {
@@ -940,6 +952,18 @@ const fetchProductData = async () => {
     router.push({ name: 'NotFound' });
   } finally {
     isLoading.value = false;
+  }
+};
+
+const fetchCombos = async () => {
+  try {
+    const res = await clientApiClient.get('/client/home-data', { ignoreAuthRedirect: true });
+    const payload = res.data?.data || res.data || {};
+    if (payload.combos) {
+      combos.value = payload.combos.slice(0, 5);
+    }
+  } catch (e) {
+    console.error("Failed to fetch combos", e);
   }
 };
 

@@ -20,8 +20,9 @@ class ClientFavouriteController extends Controller
         if (!$user) {
             return response()->json([
                 'status' => false,
-                'message' => 'Vui lòng đăng nhập để xem danh sách yêu thích'
-            ], 401);
+                'message' => 'Vui lòng đăng nhập để xem danh sách yêu thích',
+                'require_login' => true
+            ], 200); // Trả về 200 thay vì 401 để không báo đỏ network
         }
 
         // Lấy danh sách yêu thích kèm chi tiết sản phẩm (Lấy các trường cần thiết theo Product Model)
@@ -58,8 +59,9 @@ class ClientFavouriteController extends Controller
         if (!$user) {
             return response()->json([
                 'status' => false,
-                'message' => 'Vui lòng đăng nhập để thực hiện chức năng này'
-            ], 401);
+                'message' => 'Vui lòng đăng nhập để thực hiện chức năng này',
+                'require_login' => true
+            ], 200); // Trả về 200 thay vì 401 để không báo đỏ network
         }
 
         $productId = $request->product_id;

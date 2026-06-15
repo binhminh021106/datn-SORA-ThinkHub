@@ -287,7 +287,7 @@
                       <i v-for="n in review.rating" :key="'star-'+n" class="bi bi-star-fill me-1"></i>
                       <i v-for="n in (5 - review.rating)" :key="'empty-'+n" class="bi bi-star text-secondary me-1"></i>
                     </div>
-                    <p class="text-secondary font-size-sm mb-0" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                    <p class="text-secondary font-size-sm mb-0" style="display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
                       "{{ review.comment || 'Không có nội dung' }}"
                     </p>
                   </div>

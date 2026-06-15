@@ -128,7 +128,7 @@
           <div class="editorial-products-grid">
             <ProductCard v-for="product in topSellingProducts" :key="'ts-' + product.id" :product="product"
               :is-in-wishlist="isInWishlist(product.id)" :show-wishlist="true" :show-add-to-cart="true"
-              :show-compare="true" :hover-add-to-cart="true" shop-slug="sora" @toggle-wishlist="toggleWishlist" />
+              :show-compare="true" :hover-add-to-cart="true" shop-slug="sora" />
           </div>
 
           <div class="text-center mt-5 pt-3">
@@ -160,7 +160,7 @@
           <div class="editorial-products-grid">
             <ProductCard v-for="product in featuredProducts" :key="product.id" :product="product"
               :is-in-wishlist="isInWishlist(product.id)" :show-wishlist="true" :show-add-to-cart="true"
-              :show-compare="true" :hover-add-to-cart="true" shop-slug="sora" @toggle-wishlist="toggleWishlist" />
+              :show-compare="true" :hover-add-to-cart="true" shop-slug="sora" />
           </div>
 
           <div class="text-center mt-5 pt-2">
@@ -563,6 +563,44 @@ watch(showHomeLogoLoader, (isShown) => {
   }
 });
 
+const loadWishlist = async () => {
+  const token = getUserToken();
+  if (!token) {
+    wishlistIds.value = [];
+    return;
+  }
+  try {
+    const { data: result } = await clientApiClient.get('/client/favourites', { ignoreAuthRedirect: true });
+    if (result.status && Array.isArray(result.data)) {
+      wishlistIds.value = result.data.map((item) => item.product?.id).filter(Boolean);
+    } else if (result.require_login) {
+      import('@/composables/useUtilities').then(({ clearUserAuthStorage }) => {
+        clearUserAuthStorage();
+        wishlistIds.value = [];
+      });
+    }
+  } catch (error) {
+    wishlistIds.value = [];
+  }
+};
+
+const toggleWishlist = async (product) => {
+  try {
+    const { data: result } = await clientApiClient.post('/client/favourites/toggle', { product_id: product.id });
+    if (!result.status) throw new Error(result.message || 'Không thể cập nhật danh sách yêu thích.');
+
+    const isAdded = result.action === 'added';
+    if (isAdded && !wishlistIds.value.includes(product.id)) {
+      wishlistIds.value.push(product.id);
+    } else if (!isAdded) {
+      wishlistIds.value = wishlistIds.value.filter((id) => id !== product.id);
+    }
+    showWishlistNotification(isAdded);
+  } catch (error) {
+    soraAlert.fire({ icon: 'error', title: 'Không thể cập nhật danh sách yêu thích', text: error.message || 'Xin vui lòng thử lại sau.' });
+  }
+};
+
 const handleImageError = (event) => {
   event.target.onerror = null;
   event.target.src = soraPlaceholder;
@@ -586,61 +624,8 @@ const showWishlistNotification = (isAdded) => {
     icon: isAdded ? 'success' : 'info',
     title: isAdded ? 'Đã thêm vào danh sách yêu thích!' : 'Đã xóa khỏi danh sách yêu thích!'
   });
-  localStorage.setItem('sora_wishlist', JSON.stringify(wishlistIds.value));
 };
 
-const loadWishlist = async () => {
-  const token = getUserToken();
-  if (!token) {
-    const stored = localStorage.getItem('sora_wishlist');
-    if (stored) wishlistIds.value = JSON.parse(stored);
-    return;
-  }
-  try {
-    const { data: result } = await clientApiClient.get('/client/favourites', { ignoreAuthRedirect: true });
-    if (result.status && Array.isArray(result.data)) {
-      wishlistIds.value = result.data.map((item) => item.product?.id).filter(Boolean);
-      localStorage.setItem('sora_wishlist', JSON.stringify(wishlistIds.value));
-    } else {
-      const stored = localStorage.getItem('sora_wishlist');
-      if (stored) wishlistIds.value = JSON.parse(stored);
-    }
-  } catch (error) {
-    const stored = localStorage.getItem('sora_wishlist');
-    if (stored) wishlistIds.value = JSON.parse(stored);
-  }
-};
-
-const toggleWishlist = async (product) => {
-  const token = getUserToken();
-  if (!token) {
-    const index = wishlistIds.value.indexOf(product.id);
-    const isAdding = index === -1;
-    if (isAdding) wishlistIds.value.push(product.id);
-    else wishlistIds.value.splice(index, 1);
-    showWishlistNotification(isAdding);
-    return;
-  }
-
-  try {
-    const { data: result } = await clientApiClient.post('/client/favourites/toggle', { product_id: product.id });
-    if (!result.status) throw new Error(result.message || 'Không thể cập nhật danh sách yêu thích.');
-
-    const isAdded = result.action === 'added';
-    if (isAdded && !wishlistIds.value.includes(product.id)) {
-      wishlistIds.value.push(product.id);
-    } else if (!isAdded) {
-      wishlistIds.value = wishlistIds.value.filter((id) => id !== product.id);
-    }
-    showWishlistNotification(isAdded);
-  } catch (error) {
-    if (error?.response?.status === 401) {
-      soraAlert.fire({ icon: 'warning', title: 'Vui lòng đăng nhập để sử dụng chức năng yêu thích.' });
-      return;
-    }
-    soraAlert.fire({ icon: 'error', title: 'Không thể cập nhật danh sách yêu thích', text: error.message || 'Xin vui lòng thử lại sau.' });
-  }
-};
 
 const fetchHomepageData = async () => {
   isLoading.value = true;
