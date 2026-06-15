@@ -20,12 +20,16 @@ class ClientFavouriteController extends Controller
         if (!$user) {
             return response()->json([
                 'status' => false,
-                'message' => 'Vui lòng đăng nhập để xem danh sách yêu thích'
-            ], 401);
+                'message' => 'Vui lòng đăng nhập để xem danh sách yêu thích',
+                'require_login' => true
+            ], 200); // Trả về 200 thay vì 401 để không báo đỏ network
         }
 
         // Lấy danh sách yêu thích kèm chi tiết sản phẩm (Lấy các trường cần thiết theo Product Model)
-        $favourites = Favourite::with(['product' => function($query) {
+        $favourites = Favourite::whereHas('product', function($query) {
+                $query->where('status', 'published');
+            })
+            ->with(['product' => function($query) {
                 $query->select('id', 'name', 'slug', 'base_price', 'promotional_price', 'thumbnail_image', 'review_count', 'rating_avg', 'status')
                     ->withCount('reviews')
                     ->withAvg('reviews', 'rating');
@@ -55,8 +59,9 @@ class ClientFavouriteController extends Controller
         if (!$user) {
             return response()->json([
                 'status' => false,
-                'message' => 'Vui lòng đăng nhập để thực hiện chức năng này'
-            ], 401);
+                'message' => 'Vui lòng đăng nhập để thực hiện chức năng này',
+                'require_login' => true
+            ], 200); // Trả về 200 thay vì 401 để không báo đỏ network
         }
 
         $productId = $request->product_id;
@@ -74,6 +79,15 @@ class ClientFavouriteController extends Controller
                 'message' => 'Đã xóa sản phẩm khỏi danh sách yêu thích'
             ]);
         } else {
+            // Chỉ cho phép thêm nếu sản phẩm tồn tại và đang được bán
+            $product = \App\Models\Product::find($productId);
+            if (!$product || $product->status !== 'published') {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Sản phẩm không tồn tại hoặc ngừng kinh doanh'
+                ], 403);
+            }
+
             Favourite::create([   // Thả tim
                 'user_id' => $user->id,
                 'product_id' => $productId
@@ -99,6 +113,7 @@ class ClientFavouriteController extends Controller
 
         $exists = Favourite::where('user_id', $user->id)
                            ->where('product_id', $productId)
+                           ->whereHas('product', fn($q) => $q->where('status', 'published'))
                            ->exists();
 
         return response()->json([

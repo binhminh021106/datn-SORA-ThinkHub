@@ -24,8 +24,7 @@
       <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-1">
         <div class="mb-3 mb-md-0 d-flex align-items-center gap-3">
           <div>
-            <h1 class="h3 fw-bolder text-dark mb-2 tracking-tight">Bảng điều khiển</h1>
-            <p class="text-secondary mb-0 font-size-sm">Chào mừng trở lại! Dưới đây là tổng quan cửa hàng.</p>
+            <h1 class="h3 fw-bolder text-dark mb-2 tracking-tight">Admin Dashboard</h1>
           </div>
           <div v-if="isFetching && !isLoading" class="spinner-border spinner-border-sm text-brand" role="status" title="Đang cập nhật ngầm dữ liệu mới nhất..."></div>
         </div>
@@ -211,9 +210,9 @@
         </div>
       </div>
 
-      <!-- Hàng 3: Danh sách Giao dịch & Sản phẩm -->
+      <!-- Hàng 3: Giao dịch & Tương tác -->
       <div class="row g-3 g-xl-4 mb-4">
-        <div class="col-12 col-xl-8">
+        <div class="col-12 col-xl-7">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4">
             <div class="card-header bg-transparent border-bottom pt-3 pb-3 px-3 px-xxl-4 d-flex justify-content-between align-items-center">
               <h5 class="fw-bold mb-0 text-dark">Đơn hàng mới nhất</h5>
@@ -234,7 +233,7 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-if="recentOrders.length === 0">
+                    <tr v-if="recentOrders?.length === 0">
                       <td colspan="5" class="text-center py-4 text-muted">Chưa có đơn hàng nào.</td>
                     </tr>
                     <tr v-else v-for="order in recentOrders" :key="order.id" class="border-bottom border-light transition-all table-row-hover">
@@ -262,36 +261,136 @@
           </div>
         </div>
 
-        <div class="col-12 col-xl-4">
+        <div class="col-12 col-xl-5">
+          <div class="card custom-card h-100 border-0 shadow-sm rounded-4">
+            <div class="card-header bg-transparent border-bottom pt-3 pb-3 px-3 px-xxl-4 d-flex justify-content-between align-items-center">
+              <h5 class="fw-bold mb-0 text-dark">Đánh giá mới nhất</h5>
+              <router-link :to="{ path: '/admin/reviews' }" class="btn btn-sm bg-brand-soft text-brand fw-bold rounded-pill px-3 transition-all border border-light">
+                Quản lý
+              </router-link>
+            </div>
+            <div class="card-body p-3 p-xxl-4">
+              <p v-if="recentReviews?.length === 0" class="text-center text-muted py-3">Chưa có đánh giá nào.</p>
+              
+              <ul v-else class="list-unstyled mb-0 d-flex flex-column gap-3">
+                <li v-for="review in recentReviews" :key="review.id" class="d-flex align-items-start gap-3 border-bottom pb-3 mb-1">
+                  <div class="avatar-circle bg-light-soft text-dark fw-bolder border border-light shadow-sm flex-shrink-0" style="width: 40px; height: 40px;">
+                    <img v-if="review.user_avatar" :src="review.user_avatar" class="w-100 h-100 rounded-circle object-fit-cover" />
+                    <span v-else>{{ review.user_name?.charAt(0) || 'K' }}</span>
+                  </div>
+                  <div class="flex-grow-1 min-w-0">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <h6 class="mb-0 fw-bold text-dark font-size-sm text-truncate pe-2">{{ review.user_name }}</h6>
+                      <span class="text-muted font-size-xs whitespace-nowrap">{{ review.date }}</span>
+                    </div>
+                    <div class="text-warning mb-1 font-size-xs">
+                      <i v-for="n in review.rating" :key="'star-'+n" class="bi bi-star-fill me-1"></i>
+                      <i v-for="n in (5 - review.rating)" :key="'empty-'+n" class="bi bi-star text-secondary me-1"></i>
+                    </div>
+                    <p class="text-secondary font-size-sm mb-0" style="display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                      "{{ review.comment || 'Không có nội dung' }}"
+                    </p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hàng 4: Sản phẩm & Chiến dịch -->
+      <div class="row g-3 g-xl-4 mb-4">
+        <!-- Top Bán Chạy -->
+        <div class="col-12 col-md-4">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4">
             <div class="card-header bg-transparent border-bottom pt-3 pb-3 px-3 px-xxl-4">
               <h5 class="fw-bold mb-0 text-dark">Top Bán Chạy</h5>
             </div>
             <div class="card-body p-3 p-xxl-4">
-              <p v-if="topProducts.length === 0" class="text-center text-muted py-3">Chưa có sản phẩm nào được bán.</p>
+              <p v-if="topProducts?.length === 0" class="text-center text-muted py-3">Chưa có sản phẩm nào được bán.</p>
               
               <ul v-else class="list-unstyled mb-0 d-flex flex-column gap-3">
-                <li v-for="(product, index) in topProducts" :key="product.id" class="d-flex align-items-center product-item">
+                <li v-for="(product, index) in topProducts" :key="product.id" class="d-flex align-items-center product-item pb-2 border-bottom border-light">
                   <div class="rank-badge fw-bolder shadow-sm flex-shrink-0" :class="getRankClass(index)">{{ index + 1 }}</div>
                   
-                  <div class="product-img-box ms-3 me-3 bg-light-soft position-relative d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm border border-light">
-                    <img v-if="product.image" :src="product.image" @error="product.image = ''" alt="Product" class="img-fluid rounded-3 h-100 w-100 position-absolute top-0 start-0" style="object-fit: cover; z-index: 1;"/>
-                    <div v-if="!product.image" class="w-100 h-100 d-flex align-items-center justify-content-center bg-light text-secondary rounded-3">
-                      <i class="bi bi-box-seam fs-4"></i>
+                  <div class="product-img-box ms-3 me-3 bg-light-soft position-relative d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm border border-light" style="width: 48px; height: 48px; border-radius: 8px;">
+                    <img v-if="product.image" :src="product.image" @error="product.image = ''" alt="Product" class="img-fluid rounded-2 h-100 w-100 position-absolute top-0 start-0" style="object-fit: cover; z-index: 1;"/>
+                    <div v-if="!product.image" class="w-100 h-100 d-flex align-items-center justify-content-center bg-light text-secondary rounded-2">
+                      <i class="bi bi-box-seam"></i>
                     </div>
                   </div>
                   
                   <div class="flex-grow-1 min-w-0 d-flex flex-column justify-content-center">
-                    <h6 class="mb-1 fw-bold text-dark font-size-sm" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal;" :class="{'text-decoration-line-through text-muted opacity-75': product.is_deleted}" :title="product.name">
+                    <h6 class="mb-1 fw-bold text-dark font-size-sm text-truncate" :class="{'text-decoration-line-through text-muted opacity-75': product.is_deleted}" :title="product.name">
                       {{ product.name }}
                     </h6>
                     <div class="d-flex justify-content-between align-items-end mt-1 flex-wrap gap-1">
                       <p class="mb-0 text-secondary font-size-xs fw-medium">
                         Bán: <span class="text-dark fw-bold">{{ product.sold }}</span> 
-                        <span class="mx-1 text-light">|</span> 
-                        Tồn: <span class="fw-bold" :class="product.stock < 20 ? 'text-danger' : 'text-dark'">{{ product.stock }}</span>
                       </p>
                       <div class="fw-bolder text-brand font-size-sm whitespace-nowrap">{{ formatCurrency(product.price) }}</div>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cảnh báo Hết Hàng -->
+        <div class="col-12 col-md-4">
+          <div class="card custom-card h-100 border-0 shadow-sm rounded-4 border-top border-danger border-3">
+            <div class="card-header bg-transparent border-bottom pt-3 pb-3 px-3 px-xxl-4 d-flex justify-content-between align-items-center">
+              <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                 <i class="bi bi-exclamation-triangle-fill text-danger"></i> Sắp hết hàng
+              </h5>
+              <router-link :to="{ path: '/admin/inventory' }" class="btn btn-sm bg-danger-soft text-danger fw-bold rounded-pill px-3 transition-all border border-light">Quản lý</router-link>
+            </div>
+            <div class="card-body p-3 p-xxl-4">
+              <p v-if="lowStockProducts?.length === 0" class="text-center text-muted py-3">Kho hàng đang dồi dào, chưa có mã nào sắp hết.</p>
+              <ul v-else class="list-unstyled mb-0 d-flex flex-column gap-3">
+                <li v-for="product in lowStockProducts" :key="product.id" class="d-flex align-items-center product-item pb-2 border-bottom border-light">
+                  <div class="product-img-box me-3 bg-light-soft position-relative d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm border border-light" style="width: 48px; height: 48px; border-radius: 8px;">
+                    <img v-if="product.image" :src="product.image" class="img-fluid rounded-2 h-100 w-100 position-absolute top-0 start-0" style="object-fit: cover;" />
+                    <i v-else class="bi bi-box-seam text-secondary"></i>
+                  </div>
+                  <div class="flex-grow-1 min-w-0">
+                    <h6 class="mb-1 fw-bold text-dark font-size-sm text-truncate" :title="product.name">{{ product.name }}</h6>
+                    <div class="d-flex justify-content-between align-items-center mt-1">
+                      <span class="text-secondary font-size-xs">SKU: {{ product.sku || 'N/A' }}</span>
+                      <span class="badge bg-danger-soft text-danger fw-bolder px-2 py-1">Tồn: {{ product.stock }}</span>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Combo đang chạy -->
+        <div class="col-12 col-md-4">
+          <div class="card custom-card h-100 border-0 shadow-sm rounded-4 border-top border-info border-3">
+            <div class="card-header bg-transparent border-bottom pt-3 pb-3 px-3 px-xxl-4 d-flex justify-content-between align-items-center">
+              <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                 <i class="bi bi-gift-fill text-info"></i> Combo Đang chạy
+              </h5>
+              <router-link :to="{ path: '/admin/combos' }" class="btn btn-sm bg-info-soft text-info fw-bold rounded-pill px-3 transition-all border border-light">Quản lý</router-link>
+            </div>
+            <div class="card-body p-3 p-xxl-4">
+              <p v-if="activeCombos?.length === 0" class="text-center text-muted py-3">Không có combo nào đang hoạt động.</p>
+              <ul v-else class="list-unstyled mb-0 d-flex flex-column gap-3">
+                <li v-for="combo in activeCombos" :key="combo.id" class="d-flex align-items-center product-item pb-2 border-bottom border-light">
+                  <div class="product-img-box me-3 bg-light-soft position-relative d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm border border-info" style="width: 48px; height: 48px; border-radius: 8px;">
+                    <img v-if="combo.image" :src="combo.image" class="img-fluid h-100 w-100 position-absolute top-0 start-0" style="object-fit: cover; border-radius: 8px;" />
+                    <i v-else class="bi bi-basket2 text-info fs-4"></i>
+                  </div>
+                  <div class="flex-grow-1 min-w-0">
+                    <h6 class="mb-1 fw-bold text-dark font-size-sm text-truncate" :title="combo.name">{{ combo.name }}</h6>
+                    <div class="d-flex justify-content-between align-items-center mt-1">
+                      <span class="text-secondary font-size-xs"><i class="bi bi-clock me-1"></i>{{ combo.end_date }}</span>
+                      <span class="fw-bolder text-info font-size-sm whitespace-nowrap">
+                        -{{ combo.discount_type === 'percentage' ? combo.discount_value + '%' : formatCurrency(combo.discount_value) }}
+                      </span>
                     </div>
                   </div>
                 </li>
@@ -311,81 +410,73 @@
               </span>
               Khuyến mãi & Mã giảm giá
             </h4>
-            <router-link :to="{ name: 'admin-coupon-create' }" class="btn btn-dark rounded-3 px-3 py-2 fw-semibold font-size-sm shadow-sm d-flex align-items-center gap-2">
+            <router-link :to="{ name: 'admin-coupon-create' }" class="btn bg-purple text-white rounded-3 px-3 py-2 fw-semibold font-size-sm shadow-sm d-flex align-items-center gap-2">
               <i class="bi bi-plus-lg"></i> Thêm mã mới
             </router-link>
           </div>
         </div>
 
-        <!-- Các thẻ Coupon -->
-        <div class="col-12 col-md-6 col-xl-4" v-for="coupon in couponData.list" :key="coupon.id">
-          <div class="card coupon-card h-100 bg-white shadow-sm rounded-4 position-relative overflow-hidden" :class="getCouponCardClass(coupon.status)">
-            <div class="card-body p-3 p-xxl-4">
-              <!-- Header thẻ: Icon & Status -->
-              <div class="d-flex justify-content-between align-items-start mb-3">
-                <div class="coupon-icon border border-light rounded-circle d-flex align-items-center justify-content-center text-dark bg-light" style="width: 36px; height: 36px;">
-                  <i class="bi fw-bold font-size-sm" :class="getCouponIcon(coupon.type)"></i>
-                </div>
-                <span class="badge rounded-pill fw-bold px-3 py-1 d-flex align-items-center gap-1" :class="getCouponBadgeClass(coupon.status)">
-                  <i class="bi font-size-xs" :class="coupon.status === 'active' ? 'bi-check-circle-fill' : (coupon.status === 'expired' ? 'bi-x-circle-fill' : 'bi-hourglass-split')"></i>
-                  {{ coupon.status === 'active' ? 'Hoạt động' : (coupon.status === 'expired' ? 'Đã hết hạn' : (coupon.status === 'inactive' ? 'Ẩn đi' : 'Sắp tới')) }}
-                </span>
-              </div>
-
-              <!-- Thông tin chính -->
-              <h5 class="fw-bolder text-dark mb-1 font-size-lg tracking-tight">{{ coupon.name }}</h5>
-              <p class="text-muted font-size-sm mb-3">{{ coupon.desc }}</p>
-
-              <!-- Các dòng thuộc tính -->
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="text-secondary font-size-sm">Mức giảm</span>
-                <span class="fw-bold" style="color: #8b5cf6;">{{ coupon.value_display }}</span>
-              </div>
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="text-secondary font-size-sm">Loại mã</span>
-                <span class="badge bg-light text-dark border border-light fw-semibold px-2 py-1">{{ coupon.type }}</span>
-              </div>
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="text-secondary font-size-sm">Danh mục</span>
-                <span class="badge bg-light text-dark border border-light fw-semibold px-2 py-1">{{ coupon.category || 'Khuyến mãi hệ thống' }}</span>
-              </div>
-
-              <!-- Thanh Usage -->
-              <div class="mb-3">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                  <span class="text-secondary font-size-sm">Đã sử dụng</span>
-                  <span class="fw-bold text-dark font-size-sm">{{ coupon.usage_count }} / {{ coupon.usage_limit || '∞' }}</span>
-                </div>
-                <div class="progress progress-thin bg-light">
-                  <div class="progress-bar bg-dark" role="progressbar" :style="{ width: getUsagePercentage(coupon) + '%' }" :aria-valuenow="getUsagePercentage(coupon)" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-                <div class="text-end text-muted font-size-xs mt-1">{{ getUsagePercentage(coupon) }}% đã dùng</div>
-              </div>
-
-              <!-- Thời gian & Nút chức năng -->
-              <div class="d-flex align-items-center gap-2 mb-3 bg-light-soft rounded-3 p-2 border border-light">
-                <i class="bi bi-calendar3 text-secondary"></i>
-                <span class="text-secondary font-size-xs fw-medium">{{ formatCouponDate(coupon.expires_at) }}</span>
-              </div>
-
-              <div class="d-flex gap-2">
-                <router-link :to="{ name: 'admin-coupon-edit', params: { id: coupon.id } }" class="btn btn-light border flex-grow-1 font-size-sm fw-semibold text-dark"><i class="bi bi-pencil-square me-1"></i> Sửa</router-link>
-                <router-link :to="{ name: 'admin-coupons' }" class="btn btn-light border flex-grow-1 font-size-sm fw-semibold text-dark"><i class="bi bi-eye me-1"></i> Xem</router-link>
-                <button v-if="coupon.status === 'active'" @click="toggleCouponStatus(coupon)" :disabled="isUpdatingCoupon === coupon.id" class="btn btn-danger-soft border-0 flex-grow-1 font-size-sm fw-semibold text-danger">
-                  <span v-if="isUpdatingCoupon === coupon.id" class="spinner-border spinner-border-sm" role="status"></span>
-                  <span v-else><i class="bi bi-pause-circle me-1"></i> Dừng</span>
-                </button>
-                <button v-else-if="coupon.status === 'inactive' || coupon.status === 'expired' || coupon.status === 'soon'" @click="toggleCouponStatus(coupon)" :disabled="isUpdatingCoupon === coupon.id" class="btn btn-success-soft border-0 flex-grow-1 font-size-sm fw-semibold text-success">
-                  <span v-if="isUpdatingCoupon === coupon.id" class="spinner-border spinner-border-sm" role="status"></span>
-                  <span v-else><i class="bi bi-play-circle me-1"></i> Kích hoạt</span>
-                </button>
+        <div class="col-12">
+          <div class="card custom-card border-0 shadow-sm rounded-4">
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 custom-table">
+                  <thead class="bg-light">
+                    <tr>
+                      <th class="ps-4 py-3 fw-bold text-secondary border-0">Mã / Tên</th>
+                      <th class="py-3 fw-bold text-secondary border-0">Mức giảm</th>
+                      <th class="py-3 fw-bold text-secondary border-0" style="min-width: 140px;">Đã dùng</th>
+                      <th class="py-3 fw-bold text-secondary border-0">Thời hạn</th>
+                      <th class="py-3 fw-bold text-secondary border-0 text-center">Trạng thái</th>
+                      <th class="pe-4 py-3 fw-bold text-secondary border-0 text-end">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-if="!couponData.list || couponData.list.length === 0">
+                      <td colspan="6" class="text-center py-4 text-muted">Hiện chưa có mã giảm giá nào.</td>
+                    </tr>
+                    <tr v-else v-for="coupon in couponData.list" :key="coupon.id" class="border-bottom border-light">
+                      <td class="ps-4 py-3">
+                        <div class="fw-bold text-dark font-size-sm">{{ coupon.name }}</div>
+                        <div class="text-muted font-size-xs">{{ coupon.desc }}</div>
+                      </td>
+                      <td class="py-3">
+                        <span class="fw-bolder" style="color: #8b5cf6;">{{ coupon.value_display }}</span>
+                        <div class="text-muted font-size-xs mt-1"><span class="badge bg-light text-dark border">{{ coupon.type }}</span></div>
+                      </td>
+                      <td class="py-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                          <span class="fw-bold text-dark font-size-sm">{{ coupon.usage_count }} / {{ coupon.usage_limit || '∞' }}</span>
+                          <span class="text-muted font-size-xs">{{ getUsagePercentage(coupon) }}%</span>
+                        </div>
+                        <div class="progress progress-thin bg-light" style="height: 5px;">
+                          <div class="progress-bar bg-dark" role="progressbar" :style="{ width: getUsagePercentage(coupon) + '%' }"></div>
+                        </div>
+                      </td>
+                      <td class="py-3 text-secondary font-size-sm fw-medium"><i class="bi bi-calendar3 me-1"></i>{{ formatCouponDate(coupon.expires_at) }}</td>
+                      <td class="py-3 text-center">
+                        <span class="badge rounded-pill fw-bold px-3 py-1" :class="getCouponBadgeClass(coupon.status)">
+                          {{ coupon.status === 'active' ? 'Hoạt động' : (coupon.status === 'expired' ? 'Hết hạn' : (coupon.status === 'inactive' ? 'Ẩn đi' : 'Sắp tới')) }}
+                        </span>
+                      </td>
+                      <td class="pe-4 py-3 text-end">
+                        <div class="d-flex justify-content-end gap-2">
+                           <button v-if="coupon.status === 'active'" @click="toggleCouponStatus(coupon)" :disabled="isUpdatingCoupon === coupon.id" class="btn btn-sm btn-danger-soft text-danger border-0 fw-semibold">
+                             <span v-if="isUpdatingCoupon === coupon.id" class="spinner-border spinner-border-sm" role="status"></span>
+                             <span v-else>Dừng</span>
+                           </button>
+                           <button v-else-if="['inactive', 'expired', 'soon'].includes(coupon.status)" @click="toggleCouponStatus(coupon)" :disabled="isUpdatingCoupon === coupon.id" class="btn btn-sm btn-success-soft text-success border-0 fw-semibold">
+                             <span v-if="isUpdatingCoupon === coupon.id" class="spinner-border spinner-border-sm" role="status"></span>
+                             <span v-else>Kích hoạt</span>
+                           </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
-        </div>
-
-        <div v-if="!couponData.list || couponData.list.length === 0" class="col-12">
-            <div class="text-center text-muted p-4 bg-white rounded-4 shadow-sm">Hiện chưa có mã giảm giá nào.</div>
         </div>
 
         <!-- Thanh tóm tắt thống kê -->
@@ -445,6 +536,86 @@ import * as XLSX from 'xlsx';
 const today = new Date();
 const maxDate = today.toISOString().split('T')[0]; 
 const apiUrl = import.meta.env.VITE_API_BASE_URL;
+
+const exportToExcel = () => {
+    isExporting.value = true;
+    try {
+        const wb = XLSX.utils.book_new();
+
+        const formatMoney = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
+        const formatNumber = (val) => new Intl.NumberFormat('vi-VN').format(val || 0);
+
+        const overviewData = [
+            { "Chỉ số": "Tổng doanh thu", "Giá trị": formatMoney(stats.value.totalRevenue) },
+            { "Chỉ số": "Đơn hàng mới", "Giá trị": formatNumber(stats.value.newOrders) },
+            { "Chỉ số": "Tổng khách hàng", "Giá trị": formatNumber(stats.value.totalCustomers) },
+            { "Chỉ số": "Tổng tồn kho hệ thống", "Giá trị": formatNumber(stats.value.inventory) },
+            { "Chỉ số": "Mã giảm giá đang hoạt động", "Giá trị": formatNumber(couponData.value?.summary?.active) },
+            { "Chỉ số": "Tổng lượt dùng mã giảm giá", "Giá trị": formatNumber(couponData.value?.summary?.total_uses) }
+        ];
+        const wsOverview = XLSX.utils.json_to_sheet(overviewData);
+        wsOverview['!cols'] = [{ wch: 35 }, { wch: 25 }];
+        XLSX.utils.book_append_sheet(wb, wsOverview, "Tổng Quan");
+
+        if (recentOrders.value?.length) {
+            const ordersData = recentOrders.value.map(o => ({
+                "Mã ĐH": o.code,
+                "Khách hàng": o.customer,
+                "Ngày đặt": o.date,
+                "Tổng tiền": formatMoney(o.total),
+                "Trạng thái": o.status === 'delivered' ? 'Đã giao hàng' : (o.status === 'shipping' ? 'Đang giao' : (o.status === 'pending' ? 'Chờ xác nhận' : o.status))
+            }));
+            const wsOrders = XLSX.utils.json_to_sheet(ordersData);
+            wsOrders['!cols'] = [{ wch: 15 }, { wch: 25 }, { wch: 20 }, { wch: 20 }, { wch: 20 }];
+            XLSX.utils.book_append_sheet(wb, wsOrders, "Đơn Hàng Gần Đây");
+        }
+
+        if (topProducts.value?.length) {
+            const topData = topProducts.value.map(p => ({
+                "Tên Sản phẩm": p.name,
+                "Số lượng đã bán": formatNumber(p.sold),
+                "Tồn kho": formatNumber(p.stock),
+                "Giá bán": formatMoney(p.price)
+            }));
+            const wsTop = XLSX.utils.json_to_sheet(topData);
+            wsTop['!cols'] = [{ wch: 50 }, { wch: 20 }, { wch: 15 }, { wch: 20 }];
+            XLSX.utils.book_append_sheet(wb, wsTop, "Top Bán Chạy");
+        }
+
+        if (lowStockProducts.value?.length) {
+            const lowStockData = lowStockProducts.value.map(p => ({
+                "Tên Sản phẩm": p.name,
+                "SKU": p.sku || 'Không có',
+                "Tồn kho": formatNumber(p.stock)
+            }));
+            const wsLowStock = XLSX.utils.json_to_sheet(lowStockData);
+            wsLowStock['!cols'] = [{ wch: 50 }, { wch: 20 }, { wch: 15 }];
+            XLSX.utils.book_append_sheet(wb, wsLowStock, "Sắp Hết Hàng");
+        }
+
+        if (activeCombos.value?.length) {
+            const comboData = activeCombos.value.map(c => ({
+                "Tên Combo": c.name,
+                "Mức giảm": c.discount_type === 'percentage' ? `${c.discount_value}%` : formatCurrency(c.discount_value),
+                "Ngày bắt đầu": c.start_date,
+                "Ngày kết thúc": c.end_date
+            }));
+            const wsCombo = XLSX.utils.json_to_sheet(comboData);
+            wsCombo['!cols'] = [{ wch: 40 }, { wch: 20 }, { wch: 20 }, { wch: 20 }];
+            XLSX.utils.book_append_sheet(wb, wsCombo, "Combo Đang Chạy");
+        }
+
+        const dateStr = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(wb, `Bao_Cao_ThinkHub_${dateStr}.xlsx`);
+        
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Xuất Excel thành công!', showConfirmButton: false, timer: 3000 });
+    } catch (err) {
+        console.error("Lỗi xuất Excel:", err);
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể tạo file Excel.' });
+    } finally {
+        isExporting.value = false;
+    }
+};
 
 const getHeaders = () => {
   const token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token') ||
@@ -511,6 +682,9 @@ const stats = computed(() => dashboardData.value?.stats || {
 });
 const recentOrders = computed(() => dashboardData.value?.recentOrders || []);
 const topProducts = computed(() => dashboardData.value?.topProducts || []);
+const lowStockProducts = computed(() => dashboardData.value?.lowStockProducts || []);
+const recentReviews = computed(() => dashboardData.value?.recentReviews || []);
+const activeCombos = computed(() => dashboardData.value?.activeCombos || []);
 
 // Lấy dữ liệu danh sách coupon
 const couponData = computed(() => {
@@ -684,13 +858,6 @@ const initCouponChart = (labels, values) => {
   }
 };
 
-// ==========================================
-// 4. XUẤT BÁO CÁO EXCEL
-// ==========================================
-const exportToExcel = () => {
-  isExporting.value = true;
-  setTimeout(() => { isExporting.value = false; Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã tải file Excel thành công!', showConfirmButton: false, timer: 2000 }); }, 1000);
-};
 
 // ==========================================
 // 5. HELPER FORMAT CHUNG

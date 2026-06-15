@@ -8,6 +8,8 @@ use App\Models\Order;
 use App\Models\User;
 use App\Models\Product;
 use App\Models\Coupon;
+use App\Models\Review;
+use App\Models\Combo;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema; 
@@ -109,6 +111,64 @@ class AdminDashboardController extends Controller
                 ];
             });
 
+            // 4.1. CẢNH BÁO TỒN KHO THẤP (LOW STOCK)
+            $lowStockProducts = collect([]);
+            if (Schema::hasTable('product_variants') && Schema::hasColumn('product_variants', 'stock_quantity')) {
+                $lowStockRaw = DB::table('product_variants')
+                    ->join('products', 'product_variants.product_id', '=', 'products.id')
+                    ->whereNull('product_variants.deleted_at')
+                    ->whereNull('products.deleted_at')
+                    ->where('product_variants.stock_quantity', '<', 10)
+                    ->select('products.id', 'products.name', DB::raw('MIN(product_variants.stock_quantity) as stock'), 'products.thumbnail_image as image', DB::raw('MIN(product_variants.sku) as sku'))
+                    ->groupBy('products.id', 'products.name', 'products.thumbnail_image')
+                    ->orderBy('stock', 'asc')
+                    ->take(5)
+                    ->get();
+                    
+                $lowStockProducts = $lowStockRaw->map(function($item) {
+                    return [
+                        'id' => $item->id,
+                        'name' => $item->name,
+                        'sku' => $item->sku,
+                        'stock' => (int) $item->stock,
+                        'image' => $item->image ? asset('storage/' . $item->image) : '',
+                    ];
+                });
+            }
+
+            // 4.2. ĐÁNH GIÁ MỚI NHẤT (RECENT REVIEWS)
+            $recentReviews = collect([]);
+            if (Schema::hasTable('reviews')) {
+                $recentReviewsRaw = Review::with('user:id,fullName,avatar_url')->orderBy('created_at', 'desc')->take(5)->get();
+                $recentReviews = $recentReviewsRaw->map(function($review) {
+                    return [
+                        'id' => $review->id,
+                        'user_name' => $review->user ? $review->user->fullName : 'Khách hàng',
+                        'user_avatar' => $review->user && $review->user->avatar_url ? $review->user->avatar_url : null,
+                        'rating' => (int) $review->rating,
+                        'comment' => $review->comment,
+                        'date' => $review->created_at->diffForHumans(),
+                    ];
+                });
+            }
+
+            // 4.3. COMBO ĐANG CHẠY (ACTIVE COMBOS)
+            $activeCombos = collect([]);
+            if (Schema::hasTable('combos')) {
+                $activeCombosRaw = Combo::where('status', 'active')->orderBy('created_at', 'desc')->take(5)->get();
+                $activeCombos = $activeCombosRaw->map(function($combo) {
+                    return [
+                        'id' => $combo->id,
+                        'name' => $combo->name,
+                        'discount_type' => $combo->discount_type,
+                        'discount_value' => (float) $combo->discount_value,
+                        'image' => $combo->thumbnail_image ? asset('storage/' . $combo->thumbnail_image) : '',
+                        'start_date' => $combo->start_date ? Carbon::parse($combo->start_date)->format('d/m/Y') : 'Không giới hạn',
+                        'end_date' => $combo->end_date ? Carbon::parse($combo->end_date)->format('d/m/Y') : 'Không giới hạn',
+                    ];
+                });
+            }
+
             // 5. THỐNG KÊ KHUYẾN MÃI (DỮ LIỆU THẬT)
             $activeCoupons = Coupon::where('status', 'active')->count();
             $expiredCoupons = Coupon::where('status', 'expired')->orWhere('expires_at', '<', Carbon::now())->count();
@@ -168,6 +228,9 @@ class AdminDashboardController extends Controller
                     ],
                     'recentOrders' => $recentOrders,
                     'topProducts' => $topProducts,
+                    'lowStockProducts' => $lowStockProducts,
+                    'recentReviews' => $recentReviews,
+                    'activeCombos' => $activeCombos,
                     'paymentStats' => $chartData['paymentStats'],
                     'chartData' => [
                         'labels' => $chartData['labels'],

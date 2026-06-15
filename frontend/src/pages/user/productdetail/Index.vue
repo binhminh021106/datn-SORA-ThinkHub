@@ -1,7 +1,7 @@
 <template>
   <div class="product-page">
     
-    <div v-if="isLoading" class="container py-4 fade-in">
+    <div v-if="isLoading" class="product-container mt-4 pt-4 fade-in">
       <SoraProductDetailSkeleton />
     </div>
 
@@ -50,7 +50,17 @@
               <span class="sku" v-if="product.sku">SKU: {{ product.sku }}</span>
             </div>
 
-            <h1 class="product-title">{{ product.name }}</h1>
+            <h1 class="product-title mb-2">{{ product.name }}</h1>
+            
+            <div class="d-flex align-items-center mb-3 gap-2" v-if="product">
+              <div class="rating-stars" style="color: #e7ce7d; font-size: 1.1rem;">
+                <i v-for="n in 5" :key="n" class="bi" :class="!product.reviews?.length || n <= Math.round(getProtectedRating(product.rating_avg, product.reviews?.length)) ? 'bi-star-fill' : 'bi-star text-muted'"></i>
+              </div>
+              <span class="text-muted fw-medium font-oswald" style="font-size: 0.95rem;" v-if="product.reviews?.length">
+                {{ getProtectedRating(product.rating_avg, product.reviews?.length).toFixed(1) }} 
+                ({{ product.reviews.length }} Đánh giá)
+              </span>
+            </div>
             
             <!-- PRICE DISPLAY -->
             <PriceDisplay
@@ -306,15 +316,14 @@
           </div>
         </div>
 
-        <SoraProductGridSkeleton v-if="isLoadingRecs" :count="4" min="230px" />
+        <SoraProductGridSkeleton v-if="isLoadingRecs" :count="4" gap="20px" :is-slider="true" />
 
         <!-- LIST SẢN PHẨM GỢI Ý - SỬ DỤNG COMPONENT PRODUCTCARD ĐÃ TÍCH HỢP ĐẦY ĐỦ -->
         <div v-else class="rec-slider-container" ref="recSliderRef">
           <div 
             v-for="item in recommendedProducts" 
             :key="item.id" 
-            class="position-relative"
-            style="min-width: 250px; max-width: 250px; flex-shrink: 0;"
+            class="position-relative rec-slider-item"
           >
             <!-- Sử dụng ProductCard Đã Được Nâng Cấp -->
             <ProductCard
@@ -349,9 +358,9 @@
         <div class="reviews-overview shadow-sm border border-light-subtle" v-if="product.reviews && product.reviews.length > 0">
           <div class="row align-items-center w-100 m-0">
              <div class="col-md-5 text-center border-end border-light-subtle py-4">
-               <div class="rating-score display-2 font-oswald fw-bold text-sora-primary lh-1 mb-2">{{ Number(product.rating_avg).toFixed(1) }}<span class="fs-4 text-muted">/5</span></div>
+               <div class="rating-score display-2 font-oswald fw-bold text-sora-primary lh-1 mb-2">{{ getProtectedRating(product.rating_avg, product.reviews?.length).toFixed(1) }}<span class="fs-4 text-muted">/5</span></div>
                <div class="rating-stars fs-4 text-gold mb-2">
-                 <i v-for="n in 5" :key="n" class="bi" :class="n <= Math.round(product.rating_avg) ? 'bi-star-fill' : 'bi-star'"></i>
+                 <i v-for="n in 5" :key="n" class="bi" :class="n <= Math.round(getProtectedRating(product.rating_avg, product.reviews?.length)) ? 'bi-star-fill' : 'bi-star text-muted'"></i>
                </div>
                <div class="rating-count text-muted fw-medium font-oswald text-uppercase tracking-widest">{{ product.reviews.length }} nhận xét</div>
              </div>
@@ -406,8 +415,16 @@
           <p class="text-muted">Hãy là người đầu tiên sở hữu và đánh giá kiệt tác này.</p>
         </div>
       </section>
-
     </template>
+    
+    <!-- COMBO CAROUSEL SECTION -->
+    <section class="product-combo-carousel-section fade-in mt-5 mb-5" v-if="!isLoading && combos.length > 0">
+      <div class="section-heading text-center mb-2 mt-5">
+        <span class="section-kicker text-gold font-oswald tracking-widest text-uppercase" style="font-size: 0.75rem;">Mua Cùng Nhau</span>
+        <h2 class="font-serif text-sora-primary" style="font-size: clamp(2rem, 4vw, 3rem);">Combo Ưu Đãi</h2>
+      </div>
+      <ComboCarousel :combos="combos" />
+    </section>
     
     <!-- SIZE GUIDE MODAL COMPONENT -->
     <SizeGuideModal
@@ -495,14 +512,16 @@ import PriceDisplay from '@/components/ui/PriceDisplay.vue';
 import SoraProductDetailSkeleton from '@/components/ui/SoraProductDetailSkeleton.vue';
 import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
+import ComboCarousel from '@/components/ui/ComboCarousel.vue';
 
 // Composables
 import { useWishlist } from '@/composables/useWishlist';
 import { useProductVariants } from '@/composables/useProductVariants';
 import { isColorAttribute, isSizeAttribute, getColorCode, isLightColor } from '@/composables/useColorMapping';
-import { getToken, getHeaders, getFullImage, formatMoney } from '@/composables/useUtilities';
+import { getToken, getHeaders, getFullImage, formatMoney, getProtectedRating } from '@/composables/useUtilities';
 import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener.js';
 import { API_BASE_URL } from '@/utils/env';
+import clientApiClient from '@/utils/clientApiClient';
 
 const route = useRoute();
 const router = useRouter();
@@ -571,6 +590,7 @@ const recommendedProducts = ref([]);
 const isLoadingRecs = ref(false);
 const recSliderRef = ref(null);
 const shopBrands = ref([]);
+const combos = ref([]);
 
 // Compare & Quick Add
 const compareModalRef = ref(null);
@@ -921,6 +941,7 @@ const fetchProductData = async () => {
 
       saveToRecentlyViewed(product.value);
       fetchRecommendations('related_category');
+      fetchCombos();
       startCountdown();
       return product.value;
     } else {
@@ -931,6 +952,18 @@ const fetchProductData = async () => {
     router.push({ name: 'NotFound' });
   } finally {
     isLoading.value = false;
+  }
+};
+
+const fetchCombos = async () => {
+  try {
+    const res = await clientApiClient.get('/client/home-data', { ignoreAuthRedirect: true });
+    const payload = res.data?.data || res.data || {};
+    if (payload.combos) {
+      combos.value = payload.combos.slice(0, 5);
+    }
+  } catch (e) {
+    console.error("Failed to fetch combos", e);
   }
 };
 
@@ -1306,6 +1339,7 @@ input[type=number] { -moz-appearance: textfield; }
 .rec-empty { min-height: 250px; display: flex; align-items: center; justify-content: center; color: #777; }
 .rec-slider-container { display: flex; gap: 20px; overflow-x: auto; scroll-behavior: smooth; padding-bottom: 20px; -ms-overflow-style: none; scrollbar-width: none; }
 .rec-slider-container::-webkit-scrollbar { display: none; }
+.rec-slider-item { flex-shrink: 0; width: calc(25% - 15px); transition: width 0.3s ease; }
 
 .product-description-section { padding-top: 40px; border-top: 1px solid #eee; margin-top: 20px;}
 .section-title { font-size: 18px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 25px; }
@@ -1394,6 +1428,7 @@ input[type=number] { -moz-appearance: textfield; }
   .product-info { width: 100%; }
   .featured-lines-container { flex-direction: column; }
   .featured-banner, .featured-content { width: 100%; }
+  .rec-slider-item { width: calc(33.333% - 13.33px); }
 }
 @media (max-width: 768px) {
   .product-gallery { flex-direction: column-reverse; }
@@ -1405,6 +1440,11 @@ input[type=number] { -moz-appearance: textfield; }
   .action-area { flex-wrap: wrap; }
   .quantity-selector { width: 100%; justify-content: center; }
   .flash-sale-countdown { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .rec-slider-item { width: calc(50% - 10px); }
+}
+
+@media (max-width: 480px) {
+  .rec-slider-item { width: 85%; }
 }
 
 .fade-in { animation: fadeIn 0.4s ease-in; }

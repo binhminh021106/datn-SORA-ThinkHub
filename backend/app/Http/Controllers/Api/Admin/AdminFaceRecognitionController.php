@@ -24,7 +24,7 @@ use Throwable;
 class AdminFaceRecognitionController extends Controller
 {
     private const DEFAULT_THRESHOLD = 0.48;
-    private const REQUIRED_DESCRIPTOR_COUNT = 1;
+    private const MIN_DESCRIPTOR_COUNT = 1;
 
     public function admins()
     {
@@ -79,10 +79,10 @@ class AdminFaceRecognitionController extends Controller
     public function register(StoreFaceProfileRequest $request)
     {
         $data = $request->validated();
-        $descriptor = $this->normalizeDescriptor($data['descriptor']);
+        $descriptors = array_map(fn($d) => $this->normalizeDescriptor($d), $data['descriptors']);
 
         try {
-            return DB::transaction(function () use ($request, $data, $descriptor) {
+            return DB::transaction(function () use ($request, $data, $descriptors) {
                 Admin::query()->orderBy('id')->lockForUpdate()->firstOrFail();
 
                 $targetAdmin = Admin::whereNull('deleted_at')
@@ -106,45 +106,47 @@ class AdminFaceRecognitionController extends Controller
                     ], 409);
                 }
 
-                $duplicateMatch = $this->matchDescriptor(
-                    $descriptor,
-                    self::DEFAULT_THRESHOLD,
-                    $targetAdmin->id,
-                    true
-                );
+                foreach ($descriptors as $desc) {
+                    $duplicateMatch = $this->matchDescriptor(
+                        $desc,
+                        self::DEFAULT_THRESHOLD,
+                        $targetAdmin->id,
+                        true
+                    );
 
-                if ($duplicateMatch['is_matched']) {
-                    $matchedAdmin = $duplicateMatch['best_profile']->admin;
+                    if ($duplicateMatch['is_matched']) {
+                        $matchedAdmin = $duplicateMatch['best_profile']->admin;
 
-                    FaceVerificationLog::create([
-                        'admin_id' => $targetAdmin->id,
-                        'action' => 'register',
-                        'is_matched' => false,
-                        'face_distance' => $duplicateMatch['best_distance'],
-                        'threshold' => self::DEFAULT_THRESHOLD,
-                        'ip_address' => $request->ip(),
-                        'user_agent' => $request->userAgent(),
-                        'note' => 'Face registration rejected: descriptor already belongs to admin #' . $matchedAdmin->id,
-                    ]);
-
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Khuôn mặt này đã được đăng ký cho ' . $matchedAdmin->fullname . '.',
-                        'data' => [
-                            'is_matched' => true,
-                            'distance' => $duplicateMatch['best_distance'],
+                        FaceVerificationLog::create([
+                            'admin_id' => $targetAdmin->id,
+                            'action' => 'register',
+                            'is_matched' => false,
+                            'face_distance' => $duplicateMatch['best_distance'],
                             'threshold' => self::DEFAULT_THRESHOLD,
-                            'matched_admin' => $matchedAdmin,
-                            'nearest_admin' => $matchedAdmin,
-                            'candidates' => $duplicateMatch['candidates'],
-                        ],
-                    ], 409);
+                            'ip_address' => $request->ip(),
+                            'user_agent' => $request->userAgent(),
+                            'note' => 'Face registration rejected: descriptor already belongs to admin #' . $matchedAdmin->id,
+                        ]);
+
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Khuôn mặt này đã được đăng ký cho ' . $matchedAdmin->fullname . '.',
+                            'data' => [
+                                'is_matched' => true,
+                                'distance' => $duplicateMatch['best_distance'],
+                                'threshold' => self::DEFAULT_THRESHOLD,
+                                'matched_admin' => $matchedAdmin,
+                                'nearest_admin' => $matchedAdmin,
+                                'candidates' => $duplicateMatch['candidates'],
+                            ],
+                        ], 409);
+                    }
                 }
 
                 $profile = AdminFaceProfile::create([
                     'admin_id' => $targetAdmin->id,
-                    'face_descriptors' => [$descriptor],
-                    'sample_count' => self::REQUIRED_DESCRIPTOR_COUNT,
+                    'face_descriptors' => $descriptors,
+                    'sample_count' => count($descriptors),
                     'model_name' => $data['model_name'] ?? 'face-api.js',
                     'model_version' => $data['model_version'] ?? null,
                     'is_active' => true,
@@ -712,9 +714,9 @@ class AdminFaceRecognitionController extends Controller
         $descriptors = $profile->face_descriptors;
 
         return $profile->is_active
-            && $profile->sample_count === self::REQUIRED_DESCRIPTOR_COUNT
+            && $profile->sample_count >= self::MIN_DESCRIPTOR_COUNT
             && is_array($descriptors)
-            && count($descriptors) === self::REQUIRED_DESCRIPTOR_COUNT
+            && count($descriptors) >= self::MIN_DESCRIPTOR_COUNT
             && is_array($descriptors[0] ?? null)
             && count($descriptors[0]) === 128;
     }

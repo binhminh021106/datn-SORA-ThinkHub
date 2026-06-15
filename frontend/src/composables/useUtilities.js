@@ -68,3 +68,31 @@ export const getFullImage = (path) => {
 };
 
 export const formatMoney = (amount) => amount ? new Intl.NumberFormat('vi-VN').format(amount) + ' ₫' : '0 ₫';
+
+export const formatCompactPrice = (amount) => {
+  const value = Number(amount);
+  if (!Number.isFinite(value) || value === 0) return '0 ₫';
+  if (value >= 1e9) {
+    const num = +(value / 1e9).toFixed(2);
+    return num.toString().replace('.', ',') + ' Tỷ';
+  }
+  if (value >= 1e6) {
+    const num = +(value / 1e6).toFixed(2);
+    return num.toString().replace('.', ',') + ' Triệu';
+  }
+  return new Intl.NumberFormat('vi-VN').format(value) + ' ₫';
+};
+export const getProtectedRating = (avgRating, reviewCount) => {
+  const count = Number(reviewCount) || 0;
+  const avg = Number(avgRating) || 0;
+  if (count === 0) return 5.0;
+  
+  // Bayesian average formula to protect the rating with M=3 ghost reviews of 5.0
+  const M = 3; 
+  const defaultRating = 5.0;
+  
+  const totalStars = (avg * count) + (defaultRating * M);
+  const totalReviews = count + M;
+  
+  return Number((totalStars / totalReviews).toFixed(1));
+};

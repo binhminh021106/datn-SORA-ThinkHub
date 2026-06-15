@@ -16,16 +16,17 @@ class AdminFaceProfile extends Model
         static::saving(function (AdminFaceProfile $profile) {
             $descriptors = $profile->face_descriptors;
 
-            if (
-                !is_array($descriptors)
-                || count($descriptors) !== 1
-                || !is_array($descriptors[0] ?? null)
-                || count($descriptors[0]) !== 128
-            ) {
-                throw new \InvalidArgumentException('A face profile must contain exactly one 128-value descriptor.');
+            if (!is_array($descriptors) || count($descriptors) < 1 || count($descriptors) > 5) {
+                throw new \InvalidArgumentException('A face profile must contain between 1 and 5 descriptors.');
             }
 
-            $profile->sample_count = 1;
+            foreach ($descriptors as $descriptor) {
+                if (!is_array($descriptor) || count($descriptor) !== 128) {
+                    throw new \InvalidArgumentException('Each descriptor must contain exactly 128 values.');
+                }
+            }
+
+            $profile->sample_count = count($descriptors);
         });
     }
 

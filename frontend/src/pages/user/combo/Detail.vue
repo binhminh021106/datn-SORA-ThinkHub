@@ -2,9 +2,9 @@
   <div class="combo-detail-page pb-5">
     
     <div v-if="isLoading" class="container pt-4 pb-5 fade-in">
-      <SoraProductDetailSkeleton />
+      <SoraComboDetailSkeleton />
       <div class="mt-5 pt-4">
-        <SoraProductGridSkeleton :count="4" min="220px" />
+        <SoraProductGridSkeleton :count="4" gap="20px" :is-slider="true" />
       </div>
     </div>
 
@@ -343,7 +343,7 @@ import 'swiper/css/navigation';
 import ProductCard from '@/components/ui/ProductCard.vue';
 import CompareModal from '@/components/ui/CompareModal.vue';
 import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener.js';
-import SoraProductDetailSkeleton from '@/components/ui/SoraProductDetailSkeleton.vue';
+import SoraComboDetailSkeleton from '@/components/ui/SoraComboDetailSkeleton.vue';
 import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
 import { getStorageUrl } from '@/utils/env';
 
