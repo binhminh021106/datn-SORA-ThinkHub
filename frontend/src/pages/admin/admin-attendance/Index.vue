@@ -1033,13 +1033,33 @@ const scheduleAttendanceChartRender = () => {
   });
 };
 
-onMounted(scheduleAttendanceChartRender);
+let adminChannel = null;
+
+onMounted(() => {
+  scheduleAttendanceChartRender();
+  if (window.Echo) {
+    adminChannel = window.Echo.private('admin');
+    adminChannel.listen('.AdminRefresh', (data) => {
+      if (data && data.module === 'attendances') {
+        refetchAll();
+        Toast.fire({
+          icon: 'info',
+          title: 'Dữ liệu chấm công đã được cập nhật'
+        });
+      }
+    });
+  }
+});
+
 onActivated(scheduleAttendanceChartRender);
 
 onUnmounted(() => {
   if (attendanceChartInstance) {
     attendanceChartInstance.destroy();
     attendanceChartInstance = null;
+  }
+  if (adminChannel) {
+    adminChannel.stopListening('.AdminRefresh');
   }
 });
 

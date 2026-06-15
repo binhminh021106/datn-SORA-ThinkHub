@@ -355,13 +355,13 @@ const isReady = computed(() => isCameraActive.value && !isLoadingModels.value &&
 const cameraPanelStyle = computed(() => ({
   aspectRatio: cameraAspectRatio.value,
 }));
-const canRegister = computed(() => isReady.value && !!selectedAdminId.value && !profile.value?.has_profile);
+const canRegister = computed(() => isReady.value && !!selectedAdminId.value && (!profile.value?.has_profile || profile.value.sample_count < 5));
 const canResetProfile = computed(() => !!selectedAdminId.value && !!profile.value?.has_profile && !isProcessing.value);
 const selectedAdmin = computed(() => admins.value.find((admin) => String(admin.id) === String(selectedAdminId.value)));
 const selectedAdminLabel = computed(() => selectedAdmin.value ? displayAdminName(selectedAdmin.value) : 'Chưa chọn');
 const profileStatusLabel = computed(() => {
   if (profile.value?.requires_reset) return 'Cần đăng ký lại';
-  return profile.value?.has_profile ? 'Đã đăng ký' : 'Chưa đăng ký';
+  return profile.value?.has_profile ? (profile.value.sample_count >= 5 ? 'Đã đăng ký (Tối đa)' : 'Đang đăng ký') : 'Chưa đăng ký';
 });
 const profileBadgeClass = computed(() => {
   if (profile.value?.requires_reset) return 'bg-warning text-dark';
@@ -593,7 +593,7 @@ const registerFace = async () => {
 
   await runFaceAction(async () => {
     const descriptors = [];
-    const maxSamples = 5;
+    const maxSamples = 5 - (profile.value?.sample_count || 0);
     const maxRetries = 3;
 
     for (let i = 1; i <= maxSamples; i++) {

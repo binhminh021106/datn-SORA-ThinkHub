@@ -94,10 +94,10 @@ class AdminFaceRecognitionController extends Controller
                     ->lockForUpdate()
                     ->first();
 
-                if ($existingProfile) {
+                if ($existingProfile && $existingProfile->sample_count >= 5) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'Tài khoản này đã có định danh khuôn mặt. Hãy xóa hồ sơ cũ trước khi đăng ký lại.',
+                        'message' => 'Tài khoản này đã lưu đủ 5 mẫu định danh. Hãy xóa hồ sơ cũ trước khi đăng ký mới.',
                         'data' => [
                             'admin' => $targetAdmin->only(['id', 'fullname', 'email', 'phone', 'avatar_url']),
                             'sample_count' => $existingProfile->sample_count,
@@ -143,15 +143,30 @@ class AdminFaceRecognitionController extends Controller
                     }
                 }
 
-                $profile = AdminFaceProfile::create([
-                    'admin_id' => $targetAdmin->id,
-                    'face_descriptors' => $descriptors,
-                    'sample_count' => count($descriptors),
-                    'model_name' => $data['model_name'] ?? 'face-api.js',
-                    'model_version' => $data['model_version'] ?? null,
-                    'is_active' => true,
-                    'registered_at' => Carbon::now(),
-                ]);
+                if ($existingProfile) {
+                    $currentDescriptors = $existingProfile->face_descriptors ?? [];
+                    $mergedDescriptors = array_merge($currentDescriptors, $descriptors);
+                    // Ensure we don't exceed 5 samples
+                    $mergedDescriptors = array_slice($mergedDescriptors, 0, 5);
+
+                    $existingProfile->update([
+                        'face_descriptors' => $mergedDescriptors,
+                        'sample_count' => count($mergedDescriptors),
+                        'model_name' => $data['model_name'] ?? 'face-api.js',
+                        'model_version' => $data['model_version'] ?? null,
+                    ]);
+                    $profile = $existingProfile;
+                } else {
+                    $profile = AdminFaceProfile::create([
+                        'admin_id' => $targetAdmin->id,
+                        'face_descriptors' => $descriptors,
+                        'sample_count' => count($descriptors),
+                        'model_name' => $data['model_name'] ?? 'face-api.js',
+                        'model_version' => $data['model_version'] ?? null,
+                        'is_active' => true,
+                        'registered_at' => Carbon::now(),
+                    ]);
+                }
 
                 FaceVerificationLog::create([
                     'admin_id' => $targetAdmin->id,

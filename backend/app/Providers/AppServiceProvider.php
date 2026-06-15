@@ -20,6 +20,8 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Review;
 use App\Models\User;
+use App\Models\AdminAttendance;
+use App\Models\AdminAttendanceAdjustment;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -55,6 +57,8 @@ class AppServiceProvider extends ServiceProvider
             Review::class => 'reviews',
             MembershipTier::class => 'membership_tiers',
             ModulePermission::class => 'modules',
+            AdminAttendance::class => 'attendances',
+            AdminAttendanceAdjustment::class => 'attendances',
         ];
 
         foreach ($broadcastMapping as $modelClass => $module) {

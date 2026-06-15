@@ -88,10 +88,19 @@
         </div>
       </section>
 
-      <section class="home-stats-band">
-        <div class="stat-item" v-for="item in homeStats" :key="item.value">
-          <strong>{{ item.value }}</strong>
-          <span>{{ item.label }}</span>
+      <section class="home-stats-band position-relative overflow-hidden">
+        <div class="banner-ambient"></div>
+        <div class="banner-glow banner-glow-left"></div>
+        <div class="banner-glow banner-glow-right"></div>
+        <div class="banner-monogram font-serif">SORA</div>
+        <div class="banner-line-art banner-line-art-left d-none d-md-block"></div>
+        <div class="banner-line-art banner-line-art-right d-none d-md-block"></div>
+
+        <div class="stat-container position-relative z-index-2">
+          <div class="stat-item" v-for="item in homeStats" :key="item.value">
+            <strong>{{ item.value }}</strong>
+            <span>{{ item.label }}</span>
+          </div>
         </div>
       </section>
 
@@ -213,8 +222,15 @@
         </div>
       </section>
 
-      <section class="dark-expertise-section">
-        <div class="container">
+      <section class="dark-expertise-section position-relative overflow-hidden">
+        <div class="banner-ambient"></div>
+        <div class="banner-glow banner-glow-left"></div>
+        <div class="banner-glow banner-glow-right"></div>
+        <div class="banner-monogram font-serif">ĐẶC QUYỀN</div>
+        <div class="banner-line-art banner-line-art-left d-none d-md-block"></div>
+        <div class="banner-line-art banner-line-art-right d-none d-md-block"></div>
+
+        <div class="container position-relative z-index-2">
           <div class="section-heading text-center text-white">
             <span class="section-kicker text-gold">Đặc Quyền SORA</span>
             <h2 class="font-serif">Sự chăm sóc tận tâm cho mọi nhu cầu</h2>
@@ -1048,12 +1064,92 @@ onUnmounted(() => {
 }
 
 .home-stats-band {
-  background: linear-gradient(135deg, var(--sora-primary) 0%, var(--sora-primary) 62%, #12090c 100%);
+  background: #6a1622;
+  position: relative;
   color: #fff;
+  padding: 1.5rem max(var(--home-gutter), calc((100vw - var(--home-container-width)) / 2 + var(--home-gutter)));
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.banner-ambient {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(231, 206, 125, 0.2), transparent 68%);
+  filter: blur(3px);
+  z-index: 0;
+}
+
+.banner-glow {
+  position: absolute;
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, rgba(200, 40, 60, 0.6), transparent 70%);
+  filter: blur(40px);
+  border-radius: 50%;
+  z-index: 0;
+}
+
+.banner-glow-left {
+  left: -80px;
+  bottom: -80px;
+}
+
+.banner-glow-right {
+  right: -80px;
+  top: -80px;
+}
+
+.banner-monogram {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  text-align: center;
+  color: rgba(255, 244, 218, 0.038);
+  font-size: clamp(3rem, 8vw, 6rem);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  white-space: nowrap;
+  z-index: 0;
+}
+
+.banner-line-art {
+  position: absolute;
+  width: 70px;
+  height: 70px;
+  border: 1px solid rgba(231, 206, 125, 0.34);
+  z-index: 1;
+}
+
+.banner-line-art::before,
+.banner-line-art::after {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border: 1px solid rgba(231, 206, 125, 0.2);
+}
+
+.banner-line-art-left {
+  left: 8%;
+  top: 50%;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.banner-line-art-right {
+  right: 8%;
+  top: 50%;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.stat-container {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  padding: 3rem max(var(--home-gutter), calc((100vw - var(--home-container-width)) / 2 + var(--home-gutter)));
+  gap: 1.5rem;
+  width: 100%;
 }
 
 .stat-item {
@@ -1063,19 +1159,20 @@ onUnmounted(() => {
 .stat-item strong {
   display: block;
   color: var(--sora-secondary);
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(2.3rem, 5vw, 4.5rem);
+  font-family: 'Oswald', sans-serif;
+  font-weight: 500;
+  font-size: clamp(2rem, 4vw, 3rem);
   line-height: 1;
 }
 
 .stat-item span {
   display: block;
-  margin-top: 0.7rem;
+  margin-top: 0.5rem;
   font-family: 'Oswald', sans-serif;
   font-size: 0.75rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.66);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .editorial-section {
@@ -1922,7 +2019,7 @@ onUnmounted(() => {
 .dark-expertise-section {
   background: linear-gradient(135deg, var(--sora-primary) 0%, var(--sora-primary) 62%, #12090c 100%);
   color: #fff;
-  padding: clamp(4.5rem, 8vw, 7rem) 0;
+  padding: clamp(3rem, 5vw, 4rem) 0;
 }
 
 .expertise-grid {
@@ -2227,8 +2324,13 @@ onUnmounted(() => {
   }
 
   .home-stats-band {
+    padding-top: 1.25rem;
+    padding-bottom: 1.25rem;
+  }
+
+  .stat-container {
     grid-template-columns: 1fr;
-    gap: 2rem;
+    gap: 1rem;
   }
 
   .editorial-products-grid,
