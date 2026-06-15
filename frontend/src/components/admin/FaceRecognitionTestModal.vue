@@ -594,17 +594,36 @@ const registerFace = async () => {
   await runFaceAction(async () => {
     const descriptors = [];
     const maxSamples = 5;
+    const maxRetries = 3;
 
     for (let i = 1; i <= maxSamples; i++) {
       resultType.value = 'info';
       resultMessage.value = `Đang lấy mẫu ${i}/${maxSamples}... Vui lòng giữ khuôn mặt và hơi cử động nhẹ đầu.`;
       
-      const descriptor = await getDescriptor();
-      descriptors.push(descriptor);
+      let success = false;
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const descriptor = await getDescriptor();
+          descriptors.push(descriptor);
+          success = true;
+          break;
+        } catch (err) {
+          console.warn(`Lấy mẫu ${i} thất bại (lần ${attempt}/${maxRetries}):`, err);
+          if (attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
+      }
       
-      if (i < maxSamples) {
+      if (!success) {
+        console.warn(`Bỏ qua mẫu ${i} sau ${maxRetries} lần thử thất bại.`);
+      } else if (i < maxSamples) {
         await new Promise(resolve => setTimeout(resolve, 400));
       }
+    }
+
+    if (descriptors.length === 0) {
+      throw new Error('Không thể lấy được mẫu khuôn mặt hợp lệ nào. Vui lòng thử lại.');
     }
 
     resultMessage.value = 'Đang gửi dữ liệu định danh lên máy chủ...';

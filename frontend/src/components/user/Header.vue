@@ -547,6 +547,8 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
   window.removeEventListener('scroll', handleScroll);
   window.removeEventListener('update-cart-count', handleCartUpdateEvent);
+  if (megaMenuTimer) clearTimeout(megaMenuTimer);
+  document.body.style.overflow = '';
 });
 </script>
 <style>

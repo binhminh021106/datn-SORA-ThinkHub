@@ -129,16 +129,16 @@ body {
   min-height: 42px;
   padding: 0.75rem 1.25rem;
   background: var(--sora-primary);
-  color: #fff !important;
+  color: #fff;
   border: 1px solid rgba(var(--sora-secondary-rgb), 0.5);
   border-radius: 14px;
   font-family: 'Oswald', sans-serif;
   font-size: 0.76rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-  text-decoration: none !important;
+  text-decoration: none;
 }
 
 .editorial-btn::after {
@@ -150,12 +150,12 @@ body {
   height: 200%;
   background: rgba(255, 255, 255, 0.2);
   transform: rotate(45deg) translateY(-200%);
-  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .editorial-btn:hover {
   background: var(--sora-accent);
-  color: #fff !important;
+  color: #fff;
   border-color: var(--sora-secondary);
   transform: translateY(-2px);
   box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);

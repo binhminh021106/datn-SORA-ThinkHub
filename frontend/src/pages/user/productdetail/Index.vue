@@ -54,11 +54,11 @@
             
             <div class="d-flex align-items-center mb-3 gap-2" v-if="product">
               <div class="rating-stars" style="color: #e7ce7d; font-size: 1.1rem;">
-                <i v-for="n in 5" :key="n" class="bi" :class="n <= Math.round(getProtectedRating(product.rating_avg, product.reviews?.length)) ? 'bi-star-fill' : 'bi-star text-muted'"></i>
+                <i v-for="n in 5" :key="n" class="bi" :class="!product.reviews?.length || n <= Math.round(getProtectedRating(product.rating_avg, product.reviews?.length)) ? 'bi-star-fill' : 'bi-star text-muted'"></i>
               </div>
-              <span class="text-muted fw-medium font-oswald" style="font-size: 0.95rem;">
+              <span class="text-muted fw-medium font-oswald" style="font-size: 0.95rem;" v-if="product.reviews?.length">
                 {{ getProtectedRating(product.rating_avg, product.reviews?.length).toFixed(1) }} 
-                ({{ product.reviews?.length || 0 }} Đánh giá)
+                ({{ product.reviews.length }} Đánh giá)
               </span>
             </div>
             
