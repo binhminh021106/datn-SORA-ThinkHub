@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use App\Http\Requests\Client\Auth\SendOtpRequest;
 use App\Http\Requests\Client\Auth\VerifyOtpRequest;
 use App\Http\Requests\Client\Auth\ResetPasswordRequest;
+use Illuminate\Support\Facades\DB;
 
 class UserForgotPasswordController extends Controller
 {
@@ -30,27 +31,31 @@ class UserForgotPasswordController extends Controller
         }
         RateLimiter::hit('send-otp-'.$email, 120);
 
-        $otp = sprintf("%06d", mt_rand(100000, 999999));
+        // Chỉ tạo và gửi OTP nếu User tồn tại trong hệ thống
+        $user = User::where('email', $email)->first();
+        if ($user) {
+            $otp = sprintf("%06d", random_int(100000, 999999));
 
-        // DÙNG CACHE FILE: Không sợ lỗi Timezone của MySQL
-        Cache::store('file')->put('user_password_reset_otp_' . $email, [
-            'otp' => $otp,
-            'attempts' => 0
-        ], now()->addMinutes(5));
+            $expiresAt = now()->addMinutes(5);
 
-        // Gửi email
-        try {
-            Mail::to($email)->send(new UserForgotPasswordOtpMail($otp));
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Lỗi gửi mail SMTP (OTP): ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Hệ thống gửi mail đang gặp sự cố. Vui lòng thử lại sau.',
-                'debug_error' => env('APP_DEBUG') ? $e->getMessage() : null
-            ], 500);
+            // DÙNG CACHE FILE: Không sợ lỗi Timezone của MySQL
+            Cache::store('file')->put('user_password_reset_otp_' . $email, [
+                'otp' => $otp,
+                'attempts' => 0,
+                'expires_at' => $expiresAt,
+            ], $expiresAt);
+
+            // Gửi email
+            try {
+                Mail::to($email)->send(new UserForgotPasswordOtpMail($otp));
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Lỗi gửi mail SMTP (OTP): ' . $e->getMessage());
+                // Không throw error ra ngoài để tránh lộ việc email có tồn tại hay không
+            }
         }
 
-        return response()->json(['success' => true, 'message' => 'Mã OTP đã được gửi đến email của bạn.']);
+        // Luôn trả về câu thông báo chung
+        return response()->json(['success' => true, 'message' => 'Nếu email của bạn tồn tại trong hệ thống, mã OTP sẽ được gửi đến hộp thư.']);
     }
 
     /**
@@ -83,7 +88,7 @@ class UserForgotPasswordController extends Controller
         // 3. Lỗi: OTP Sai
         if ($cacheData['otp'] !== $otp) {
             $cacheData['attempts']++;
-            Cache::store('file')->put($cacheKey, $cacheData, now()->addMinutes(5));
+            Cache::store('file')->put($cacheKey, $cacheData, $cacheData['expires_at'] ?? now());
             RateLimiter::hit('verify-otp-'.$email, 300);
             $attemptsLeft = 5 - $cacheData['attempts'];
             return response()->json(['message' => "Mã OTP không chính xác. Bạn còn {$attemptsLeft} lần thử."], 400);
@@ -131,13 +136,14 @@ class UserForgotPasswordController extends Controller
         }
 
         try {
-            // Cập nhật mật khẩu mới
-            $user->password = Hash::make($newPassword);
-            $user->save();
+            DB::transaction(function () use ($user, $newPassword) {
+                // Cập nhật mật khẩu mới
+                $user->password = Hash::make($newPassword);
+                $user->save();
 
-            // Xóa tất cả các token hiện có (đăng xuất thiết bị khác)
-            $user->tokens()->delete();
-
+                // Xóa tất cả các token hiện có (đăng xuất thiết bị khác)
+                $user->tokens()->delete();
+            });
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Lỗi Database khi đổi mật khẩu User: ' . $e->getMessage());
             return response()->json(['message' => 'Lỗi hệ thống khi lưu mật khẩu mới.'], 500);

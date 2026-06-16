@@ -244,9 +244,10 @@ Route::prefix('admin')->group(function () {
         Route::post('register', 'store');
     });
 
-    Route::controller(AdminForgotPasswordController::class)->group(function () {
-        Route::post('forgot-password', 'sendResetLinkEmail');
-        Route::post('reset-password', 'resetPassword');
+    Route::prefix('forgot-password')->controller(AdminForgotPasswordController::class)->group(function () {
+        Route::post('/send-otp', 'sendOtp');
+        Route::post('/verify-otp', 'verifyOtp');
+        Route::post('/reset', 'resetPassword');
     });
 
     Route::middleware('auth:sanctum')->group(function () {

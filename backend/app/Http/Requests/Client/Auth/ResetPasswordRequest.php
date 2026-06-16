@@ -14,7 +14,7 @@ class ResetPasswordRequest extends FormRequest
     public function rules()
     {
         return [
-            'email' => 'required|email|exists:users,email',
+            'email' => 'required|email',
             'reset_token' => 'required|string',
             'password' => 'required|string|min:8|confirmed',
         ];
@@ -25,7 +25,7 @@ class ResetPasswordRequest extends FormRequest
         return [
             'email.required' => 'Vui lòng nhập địa chỉ email.',
             'email.email' => 'Địa chỉ email không hợp lệ.',
-            'email.exists' => 'Không tìm thấy tài khoản với email này trong hệ thống.',
+
             'reset_token.required' => 'Mã bảo mật (Token) không hợp lệ.',
             'password.required' => 'Vui lòng nhập mật khẩu mới.',
             'password.min' => 'Mật khẩu phải có ít nhất 8 ký tự.',

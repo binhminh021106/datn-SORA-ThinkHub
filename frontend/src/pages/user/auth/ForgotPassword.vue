@@ -68,7 +68,7 @@
 
           <div class="otp-actions">
              <span class="change-email" @click="goBackToStep1">Đổi email khác</span>
-             <span class="timer">Hết hạn sau: <strong>{{ countdown }}s</strong></span>
+             <span class="timer">Gửi lại sau: <strong>{{ countdown }}s</strong></span>
           </div>
 
           <button type="submit" class="btn-primary" :disabled="isLoading || form.otp.length < 6">
@@ -188,7 +188,7 @@ const countdown = ref(0);
 let timer = null;
 
 const startCountdown = () => {
-  countdown.value = 60;
+  countdown.value = 120;
   if (timer) clearInterval(timer);
   timer = setInterval(() => {
     if (countdown.value > 0) countdown.value--;
@@ -223,7 +223,7 @@ const handleSendOtp = async () => {
 
   try {
     await clientApiClient.post('/client/forgot-password/send-otp', { email: form.value.email.trim() });
-    Toast.fire({ icon: 'success', title: 'Mã OTP đã được gửi đến email của bạn!' });
+    Toast.fire({ icon: 'success', title: 'Nếu email hợp lệ, mã OTP sẽ được gửi đến bạn.' });
     step.value = 2;
     nextTick(() => { if(otpInputs.value[0]) otpInputs.value[0].focus(); });
     startCountdown();
@@ -335,7 +335,7 @@ onUnmounted(() => { if (timer) clearInterval(timer); });
 .auth-banner {
   flex: 1;
   position: relative;
-  background: url('https://images.unsplash.com/photo-1617117832890-a5f11e037000?q=80&w=1000&auto=format&fit=crop') center/cover no-repeat;
+  background: #1a060d; /* Removed Unsplash URL to prevent metadata leakage */
   display: flex;
   align-items: center;
   justify-content: center;

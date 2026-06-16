@@ -14,7 +14,7 @@ class SendOtpRequest extends FormRequest
     public function rules()
     {
         return [
-            'email' => 'required|email|exists:users,email',
+            'email' => 'required|email',
         ];
     }
 
@@ -23,7 +23,6 @@ class SendOtpRequest extends FormRequest
         return [
             'email.required' => 'Vui lòng nhập địa chỉ email.',
             'email.email' => 'Địa chỉ email không hợp lệ.',
-            'email.exists' => 'Không tìm thấy tài khoản với email này trong hệ thống.',
         ];
     }
 }
