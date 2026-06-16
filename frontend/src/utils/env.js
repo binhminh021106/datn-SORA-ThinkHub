@@ -21,7 +21,7 @@ if (!BACKEND_URL) {
 export const getStorageUrl = (path, fallback = '/Sora-placeholder.png') => {
   if (!path) return fallback;
   if (typeof path !== 'string') return fallback;
-  if (path.startsWith('http') || path.startsWith('data:image')) return path;
+  if (path.startsWith('http') || path.startsWith('data:image') || path.startsWith('blob:')) return path;
 
   let cleanPath = path.replace(/^\/+/, '').replace(/^public\//, '');
   if (cleanPath.startsWith('storage/')) {

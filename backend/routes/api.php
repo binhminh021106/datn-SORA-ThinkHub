@@ -111,6 +111,12 @@ Route::prefix('mobile')->group(function () {
 
 // CLIENT API ROUTES
 Route::prefix('client')->group(function () {
+    // BỔ SUNG: AUTH & FORGOT PASSWORD (Client)
+    Route::prefix('forgot-password')->group(function () {
+        Route::post('/send-otp', [\App\Http\Controllers\Api\Auth\UserForgotPasswordController::class, 'sendOtp']);
+        Route::post('/verify-otp', [\App\Http\Controllers\Api\Auth\UserForgotPasswordController::class, 'verifyOtp']);
+        Route::post('/reset', [\App\Http\Controllers\Api\Auth\UserForgotPasswordController::class, 'resetPassword']);
+    });
 
 
     // THÊM VÀO ĐÂY (trước hoặc sau các route khác đều được)
@@ -238,9 +244,10 @@ Route::prefix('admin')->group(function () {
         Route::post('register', 'store');
     });
 
-    Route::controller(AdminForgotPasswordController::class)->group(function () {
-        Route::post('forgot-password', 'sendResetLinkEmail');
-        Route::post('reset-password', 'resetPassword');
+    Route::prefix('forgot-password')->controller(AdminForgotPasswordController::class)->group(function () {
+        Route::post('/send-otp', 'sendOtp');
+        Route::post('/verify-otp', 'verifyOtp');
+        Route::post('/reset', 'resetPassword');
     });
 
     Route::middleware('auth:sanctum')->group(function () {
