@@ -85,14 +85,18 @@
                                         </div>
                                         <small class="text-muted d-block" style="font-size: 0.85rem;">{{ formatFullAddress(addr) }}</small>
                                     </div>
-                                    <i v-if="selectedAddressId === addr.id && !useNewAddress" class="bi bi-check-circle-fill text-sora-primary fs-4 shadow-sm rounded-circle bg-white"></i>
+                                    <span v-if="selectedAddressId === addr.id && !useNewAddress" class="d-inline-flex justify-content-center align-items-center bg-white rounded-circle shadow-sm" style="width: 26px; height: 26px; min-width: 26px;">
+                                        <i class="bi bi-check-circle-fill text-sora-primary fs-4" style="line-height: 1;"></i>
+                                    </span>
                                 </div>
                             </div>
                             
                             <div class="address-option-item p-3 cursor-pointer text-sora-primary fw-bold font-oswald tracking-wide text-uppercase hover-bg-light d-flex align-items-center" 
                                  @click="selectNewAddress()">
                                 <i class="bi bi-plus-circle-fill fs-5 me-2"></i> Nhập địa chỉ giao hàng khác
-                                <i v-if="useNewAddress" class="bi bi-check-circle-fill text-sora-primary fs-4 ms-auto shadow-sm rounded-circle bg-white"></i>
+                                <span v-if="useNewAddress" class="ms-auto d-inline-flex justify-content-center align-items-center bg-white rounded-circle shadow-sm" style="width: 26px; height: 26px; min-width: 26px;">
+                                    <i class="bi bi-check-circle-fill text-sora-primary fs-4" style="line-height: 1;"></i>
+                                </span>
                             </div>
                         </div>
                     </div>

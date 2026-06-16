@@ -26,7 +26,7 @@
             
             <div class="swiper-wrapper-container w-100 position-relative">
               
-              <SoraProductGridSkeleton v-if="isProductsLoading" :count="3" min="160px" gap="20px" class="px-2 pb-5" />
+              <SoraProductGridSkeleton v-if="isProductsLoading" :count="3" class="px-2 pb-5" gridClass="sora-minicart-skeleton-grid" colClass="sora-minicart-skeleton-col" />
 
               <!-- SWIPER SẢN PHẨM THỰC TẾ -->
               <div v-else class="position-relative w-100">
@@ -521,6 +521,16 @@ defineExpose({ openCart, fetchCart });
 
 .fade-enter-active, .fade-leave-active { transition: opacity 0.4s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.sora-minicart-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  width: 100%;
+}
+.sora-minicart-skeleton-col {
+  width: 100%;
+}
 </style>
 
 <style>
