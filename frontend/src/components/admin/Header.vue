@@ -95,6 +95,63 @@
           </button>
         </li>
 
+        <!-- ========================================== -->
+        <!-- NÚT CHUÔNG THÔNG BÁO REAL-TIME -->
+        <!-- ========================================== -->
+        <li class="nav-item dropdown me-3 notification-menu-container" ref="notiMenuContainer" v-if="isLoggedIn">
+          <button @click="toggleNotiMenu"
+            class="btn rounded-circle shadow-sm d-flex align-items-center justify-content-center p-0 theme-toggle-btn position-relative"
+            :class="isDarkMode ? 'btn-secondary border-secondary' : 'btn-light border-light'"
+            style="width: 36px; height: 36px; transition: all 0.3s;"
+            title="Thông báo hệ thống">
+            <i class="bi bi-bell-fill" :class="isDarkMode ? 'text-light' : 'text-brand'"></i>
+            <span v-if="unreadCount > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-white dark:border-dark" style="font-size: 0.65rem; padding: 0.35em 0.5em;">
+              {{ unreadCount > 99 ? '99+' : unreadCount }}
+            </span>
+          </button>
+
+          <div class="dropdown-menu dropdown-menu-end shadow-lg border mt-2 transition-all p-0 overflow-hidden"
+            :class="[{ 'show': isNotiMenuActive }, isDarkMode ? 'bg-dark border-secondary' : 'bg-white border-0']"
+            style="width: 350px; right: -10px !important;">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center" :class="isDarkMode ? 'border-secondary' : ''">
+               <h6 class="m-0 fw-bold font-sans-vn" :class="isDarkMode ? 'text-white' : 'text-dark'">Thông báo mới</h6>
+               <a href="#" v-if="unreadCount > 0" @click.prevent="markAllAsRead" class="small fw-semibold text-decoration-none text-brand transition-all hover-opacity">Đánh dấu đọc hết</a>
+            </div>
+            
+            <div class="custom-scrollbar-y" style="max-height: 400px; overflow-y: auto;">
+               <div v-if="isLoadingNoti" class="text-center p-4">
+                  <div class="spinner-border spinner-border-sm text-brand" role="status"></div>
+               </div>
+               <div v-else-if="notifications.length === 0" class="text-center p-5 text-muted small font-sans-vn">
+                  <i class="bi bi-bell-slash fs-2 d-block mb-2 opacity-50"></i>
+                  Bạn đã xem hết thông báo.
+               </div>
+               <div v-else>
+                  <a href="#" v-for="noti in notifications" :key="noti.id" 
+                     @click.prevent="handleNotiClick(noti)"
+                     class="dropdown-item p-3 border-bottom d-flex align-items-start gap-3 transition-all text-wrap"
+                     :class="[
+                        isDarkMode ? 'border-secondary hover-dark text-light' : 'text-dark hover-light',
+                        !noti.read_at ? (isDarkMode ? 'bg-secondary bg-opacity-25' : 'bg-brand-soft') : ''
+                     ]">
+                     <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 mt-1 shadow-sm position-relative"
+                          :class="getIconClass(noti.data?.alert_type || noti.data?.type)" style="width: 38px; height: 38px;">
+                        <i class="bi text-white fs-6" :class="getIconName(noti.data?.alert_type || noti.data?.type)"></i>
+                        <span v-if="!noti.read_at" class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-white rounded-circle" style="width: 10px; height: 10px;"></span>
+                     </div>
+                     <div class="font-sans-vn">
+                        <h6 class="fw-bold mb-1 line-clamp-2" style="font-size: 0.9rem;" :class="!noti.read_at ? (isDarkMode ? 'text-white' : 'text-dark') : 'text-muted'">
+                           {{ noti.data?.title }}
+                        </h6>
+                        <p class="small mb-1 opacity-75 line-clamp-2" style="font-size: 0.8rem; line-height: 1.4;">{{ noti.data?.message }}</p>
+                        <small class="text-muted font-monospace" style="font-size: 0.7rem;"><i class="bi bi-clock me-1"></i>{{ formatTime(noti.created_at) }}</small>
+                     </div>
+                  </a>
+               </div>
+            </div>
+          </div>
+        </li>
+
         <li class="nav-item me-3" v-if="isLoggedIn">
           <button @click="toggleTheme" 
                   class="btn rounded-circle shadow-sm d-flex align-items-center justify-content-center p-0 theme-toggle-btn"
@@ -377,11 +434,94 @@ const adminUser = computed(() => {
   };
 });
 
+// ==========================================
+// LOGIC THÔNG BÁO (NOTIFICATIONS)
+// ==========================================
+const notifications = ref([]);
+const unreadCount = ref(0);
+const isLoadingNoti = ref(false);
+const isNotiMenuActive = ref(false);
+const notiMenuContainer = ref(null);
+
 const toggleUserMenu = () => {
   isUserMenuActive.value = !isUserMenuActive.value;
   if (isUserMenuActive.value) {
     isAttendanceMenuActive.value = false;
+    isNotiMenuActive.value = false;
   }
+};
+
+const toggleNotiMenu = () => {
+  isNotiMenuActive.value = !isNotiMenuActive.value;
+  isUserMenuActive.value = false;
+  isAttendanceMenuActive.value = false;
+  if (isNotiMenuActive.value && notifications.value.length === 0) {
+    fetchNotifications();
+  }
+};
+
+const fetchNotifications = async () => {
+  isLoadingNoti.value = true;
+  try {
+    const res = await adminApiClient.get('/notifications');
+    if (res.data.success) {
+      notifications.value = res.data.data.data;
+      unreadCount.value = res.data.unread_count;
+    }
+  } catch (err) {
+    console.error("Lỗi lấy danh sách thông báo:", err);
+  } finally {
+    isLoadingNoti.value = false;
+  }
+};
+
+const markAsRead = async (noti) => {
+  if (noti.read_at) return;
+  try {
+    const res = await adminApiClient.patch(`/notifications/${noti.id}/read`);
+    if (res.data.success) {
+      noti.read_at = new Date().toISOString();
+      unreadCount.value = res.data.unread_count;
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+const markAllAsRead = async () => {
+  try {
+    const res = await adminApiClient.post(`/notifications/mark-all-read`);
+    if (res.data.success) {
+      notifications.value.forEach(n => n.read_at = new Date().toISOString());
+      unreadCount.value = 0;
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+const handleNotiClick = (noti) => {
+  markAsRead(noti);
+  isNotiMenuActive.value = false;
+  if (noti.data?.url && noti.data.url !== '#') {
+    router.push(noti.data.url);
+  }
+};
+
+const formatTime = (dateString) => {
+  if (!dateString) return '';
+  const d = new Date(dateString);
+  return `${d.toLocaleDateString('vi-VN')} lúc ${d.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}`;
+};
+
+const getIconClass = (type) => {
+  const map = { 'success': 'bg-success', 'warning': 'bg-warning', 'danger': 'bg-danger', 'info': 'bg-info' };
+  return map[type] || 'bg-primary';
+};
+
+const getIconName = (type) => {
+  const map = { 'success': 'bi-check-circle', 'warning': 'bi-exclamation-triangle', 'danger': 'bi-x-circle', 'info': 'bi-info-circle' };
+  return map[type] || 'bi-bell';
 };
 
 const toggleAttendanceMenu = async () => {
@@ -434,6 +574,10 @@ const closeUserMenu = (event) => {
   if (attendanceMenuContainer.value && !attendanceMenuContainer.value.contains(event.target)) {
     isAttendanceMenuActive.value = false;
   }
+  
+  if (notiMenuContainer.value && !notiMenuContainer.value.contains(event.target)) {
+    isNotiMenuActive.value = false;
+  }
 };
 
 // ===== GLOBAL CHAT NOTIFICATION =====
@@ -448,6 +592,10 @@ onMounted(() => {
   timeInterval = setInterval(updateTime, 1000);
   
   fetchAttendanceState();
+
+  if (isLoggedIn.value) {
+    fetchNotifications();
+  }
 
   // Lắng nghe tin nhắn mới từ users dù đang ở trang nào
   if (window.Echo && getAdminToken()) {
@@ -468,6 +616,34 @@ onMounted(() => {
           }, 4000);
         }
       });
+      
+    // Lắng nghe thông báo AdminAlert
+    const adminData = adminProfileData.value || JSON.parse(localStorage.getItem('admin_info') || '{}');
+    if (adminData && adminData.id) {
+      window.Echo.private(`App.Models.Admin.${adminData.id}`)
+        .listen('.AdminAlert', (e) => { // Tên event ngắn gọn có dấu chấm
+           // Chèn thông báo lên đầu danh sách
+           notifications.value.unshift({
+             id: e.id,
+             data: e,
+             read_at: null,
+             created_at: new Date().toISOString()
+           });
+           unreadCount.value++;
+
+           // Bắn Toast SweetAlert thông báo nhanh
+           Swal.fire({
+             toast: true,
+             position: 'bottom-end',
+             icon: (e.alert_type || e.type) === 'danger' ? 'error' : ((e.alert_type || e.type) === 'warning' ? 'warning' : 'info'),
+             title: e.title,
+             text: e.message,
+             showConfirmButton: false,
+             timer: 5000,
+             timerProgressBar: true
+           });
+        });
+    }
   }
 });
 
@@ -475,6 +651,11 @@ onUnmounted(() => {
   document.removeEventListener('click', closeUserMenu);
   if (timeInterval) clearInterval(timeInterval);
   if (chatEchoChannel) window.Echo?.leave('admin.chat');
+  
+  const adminData = adminProfileData.value || JSON.parse(localStorage.getItem('admin_info') || '{}');
+  if (adminData && adminData.id && window.Echo) {
+    window.Echo.leave(`App.Models.Admin.${adminData.id}`);
+  }
 });
 
 const qrModalRef = ref(null);
@@ -938,6 +1119,10 @@ const handleAttendanceOption = async (method) => {
 @keyframes slideInUp {
   from { opacity: 0; transform: translateY(10px) scale(0.95); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.bg-brand-soft {
+  background-color: rgba(0, 153, 129, 0.08) !important;
 }
 
 /* ===== NÚT CHAT + BADGE ===== */

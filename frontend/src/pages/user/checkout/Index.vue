@@ -657,6 +657,8 @@ const fetchInitData = async () => {
                 selectedAddressId.value = defaultAddr.id;
                 useNewAddress.value = false;
                 form.value.customer_address = formatFullAddress(defaultAddr); 
+                form.value.customer_name = defaultAddr.customer_name || form.value.customer_name;
+                form.value.customer_phone = defaultAddr.customer_phone || form.value.customer_phone;
             } else {
                 useNewAddress.value = true;
             }
@@ -698,6 +700,8 @@ const selectAddress = (id) => {
     const addr = addresses.value.find(a => a.id === id);
     if (addr) {
         form.value.customer_address = formatFullAddress(addr);
+        form.value.customer_name = addr.customer_name || '';
+        form.value.customer_phone = addr.customer_phone || '';
     }
 };
 
