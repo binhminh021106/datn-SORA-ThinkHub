@@ -7,7 +7,6 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 }, ['guards' => ['sanctum']]);
 
 Broadcast::channel('App.Models.Admin.{id}', function ($user, $id) {
-    \Illuminate\Support\Facades\Log::info("Admin channel auth attempt: User ID = {$user->id}, Target ID = {$id}, Class = " . get_class($user));
     return $user instanceof \App\Models\Admin && (int) $user->id === (int) $id;
 }, ['guards' => ['sanctum']]);
 

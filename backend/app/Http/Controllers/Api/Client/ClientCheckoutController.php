@@ -406,22 +406,24 @@ class ClientCheckoutController extends Controller
                     ]);
                 }
 
-                try {
-                    broadcast(new NewOrderReceived($order->order_code, (float) $order->total_amount));
-                    
-                    // Gửi thông báo cho Admin
-                    $adminsToNotify = \App\Models\Admin::where('status', 'active')->get();
-                    foreach ($adminsToNotify as $adm) {
-                        $adm->notify(new \App\Notifications\AdminAlertNotification(
-                            'Đơn hàng mới: #' . $order->order_code,
-                            'Khách hàng ' . $order->customer_name . ' vừa đặt đơn hàng trị giá ' . number_format($order->total_amount, 0, ',', '.') . 'đ',
-                            'success',
-                            '/admin/orders'
-                        ));
+                \Illuminate\Support\Facades\DB::afterCommit(function () use ($order) {
+                    try {
+                        broadcast(new NewOrderReceived($order->order_code, (float) $order->total_amount));
+                        
+                        // Gửi thông báo cho Admin
+                        $adminsToNotify = \App\Models\Admin::where('status', 'active')->get();
+                        foreach ($adminsToNotify as $adm) {
+                            $adm->notify(new \App\Notifications\AdminAlertNotification(
+                                'Đơn hàng mới: #' . $order->order_code,
+                                'Khách hàng ' . $order->customer_name . ' vừa đặt đơn hàng trị giá ' . number_format($order->total_amount, 0, ',', '.') . 'đ',
+                                'success',
+                                '/admin/orders'
+                            ));
+                        }
+                    } catch (\Exception $e) {
+                        Log::error("Broadcast/Notification thất bại: " . $e->getMessage());
                     }
-                } catch (\Exception $e) {
-                    Log::error("Broadcast/Notification thất bại: " . $e->getMessage());
-                }
+                });
 
                 if ($request->payment_method === 'cod') {
                     $cart->items()->delete();

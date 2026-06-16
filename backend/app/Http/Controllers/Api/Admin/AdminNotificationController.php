@@ -18,7 +18,7 @@ class AdminNotificationController extends Controller
     {
         $admin = $request->user();
         
-        if (!$admin) {
+        if (!$admin || !($admin instanceof \App\Models\Admin)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
@@ -43,14 +43,17 @@ class AdminNotificationController extends Controller
     {
         $admin = $request->user();
         
-        if (!$admin) {
+        if (!$admin || !($admin instanceof \App\Models\Admin)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
         $notification = $admin->notifications()->find($id);
-        if ($notification) {
-            $notification->markAsRead();
+        
+        if (!$notification) {
+            return response()->json(['success' => false, 'message' => 'Không tìm thấy thông báo'], 404);
         }
+
+        $notification->markAsRead();
 
         $unreadCount = $admin->unreadNotifications()->count();
 
@@ -70,11 +73,11 @@ class AdminNotificationController extends Controller
     {
         $admin = $request->user();
         
-        if (!$admin) {
+        if (!$admin || !($admin instanceof \App\Models\Admin)) {
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
-        $admin->unreadNotifications->markAsRead();
+        $admin->unreadNotifications()->update(['read_at' => now()]);
 
         return response()->json([
             'success' => true,

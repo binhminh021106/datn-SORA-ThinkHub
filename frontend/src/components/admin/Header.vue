@@ -583,6 +583,7 @@ const closeUserMenu = (event) => {
 // ===== GLOBAL CHAT NOTIFICATION =====
 const unreadChatCount = ref(0);
 let chatEchoChannel = null;
+let adminAlertChannelName = null;
 
 onMounted(() => {
   initTheme();
@@ -620,7 +621,8 @@ onMounted(() => {
     // Lắng nghe thông báo AdminAlert
     const adminData = adminProfileData.value || JSON.parse(localStorage.getItem('admin_info') || '{}');
     if (adminData && adminData.id) {
-      window.Echo.private(`App.Models.Admin.${adminData.id}`)
+      adminAlertChannelName = `App.Models.Admin.${adminData.id}`;
+      window.Echo.private(adminAlertChannelName)
         .listen('.AdminAlert', (e) => { // Tên event ngắn gọn có dấu chấm
            // Chèn thông báo lên đầu danh sách
            notifications.value.unshift({
@@ -652,9 +654,9 @@ onUnmounted(() => {
   if (timeInterval) clearInterval(timeInterval);
   if (chatEchoChannel) window.Echo?.leave('admin.chat');
   
-  const adminData = adminProfileData.value || JSON.parse(localStorage.getItem('admin_info') || '{}');
-  if (adminData && adminData.id && window.Echo) {
-    window.Echo.leave(`App.Models.Admin.${adminData.id}`);
+  if (window.Echo && adminAlertChannelName) {
+    window.Echo.leave(adminAlertChannelName);
+    adminAlertChannelName = null;
   }
 });
 
