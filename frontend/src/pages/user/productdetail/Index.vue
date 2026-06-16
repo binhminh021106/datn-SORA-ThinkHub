@@ -522,7 +522,7 @@ import { getToken, getHeaders, getFullImage, formatMoney, getProtectedRating } f
 import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener.js';
 import { API_BASE_URL } from '@/utils/env';
 import clientApiClient from '@/utils/clientApiClient';
-import { globalModalState } from '@/store/globalState';
+import { globalModalState } from '@/stores/modalState';
 
 const route = useRoute();
 const router = useRouter();
@@ -752,7 +752,7 @@ const handleToggleCompare = (prod) => {
   // 3. (Tùy chọn) Cập nhật lại danh sách local để nút đổi màu ngay lập tức
   setTimeout(() => {
     try {
-      const stored = localStorage.getItem(`compare_list_${shopSlug.value || 'aurora'}`);
+   const stored = localStorage.getItem(`compare_list_${shopSlug || 'aurora'}`);
       if (stored) {
         compareList.value = JSON.parse(stored);
       }
