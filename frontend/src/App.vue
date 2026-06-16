@@ -86,6 +86,14 @@ useAdminRefreshListener((payload) => {
 </script>
 
 <style>
+:root {
+  --sora-primary: #9f273b;
+  --sora-primary-rgb: 159, 39, 59;
+  --sora-secondary: #e7ce7d;
+  --sora-secondary-rgb: 231, 206, 125;
+  --sora-accent: #cc1e2e;
+}
+
 body {
   margin: 0;
   padding: 0;

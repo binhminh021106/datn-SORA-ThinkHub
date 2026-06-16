@@ -118,9 +118,9 @@
       <!-- TOP SELLING SECTION -->
       <section class="editorial-section top-selling-editorial" style="background-color: #fdfaf7; padding-top: 5rem; padding-bottom: 5rem;" v-if="topSellingProducts.length > 0">
         <div class="container products-container">
-          <div class="section-heading text-center mb-5">
+          <div class="section-heading text-center mb-5" style="max-width: 1000px;">
             <span class="section-kicker text-sora-primary fw-bold" style="font-size: 0.9rem; letter-spacing: 3px;"><i class="bi bi-fire me-1"></i> Bestsellers</span>
-            <h2 class="font-serif">Kiệt tác được khao khát nhất</h2>
+            <h2 class="font-serif text-nowrap">Kiệt tác được khao khát nhất</h2>
           </div>
 
           <div class="editorial-products-grid">
@@ -140,7 +140,7 @@
         <div class="container-fluid px-0 combos-container">
           <div class="section-heading text-center mb-5">
             <span class="section-kicker text-gold">Ưu Đãi Đặc Quyền</span>
-            <h2 class="font-serif">Bộ sưu tập quà tặng hoàn hảo</h2>
+            <h2 class="font-serif text-nowrap">Bộ sưu tập hoàn hảo</h2>
           </div>
 
           <ComboCarousel :combos="data.combos" />
@@ -152,7 +152,7 @@
         <div class="container products-container">
           <div class="section-heading text-center mb-5">
             <span class="section-kicker">Bộ Sưu Tập Mới</span>
-            <h2 class="font-serif">Đón chào những thiết kế tinh xảo nhất từ SORA</h2>
+            <h2 class="font-serif">Đón chào những thiết kế mới nhất từ SORA</h2>
           </div>
 
           <div class="editorial-products-grid">
@@ -703,6 +703,7 @@ onUnmounted(() => {
 
 .font-serif {
   font-family: 'Playfair Display', serif;
+  /* khoảng cách giữa các dòng */
 }
 
 .font-oswald {
@@ -1075,7 +1076,7 @@ onUnmounted(() => {
 }
 
 .editorial-section {
-  padding: clamp(1rem, 3vw, 1rem) 0;
+  padding: clamp(3rem, 5vw, 5rem) 0;
 }
 
 .narrow-container {

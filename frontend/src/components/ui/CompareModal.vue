@@ -76,7 +76,19 @@
           <div class="compare-modal-body">
             <!-- TAB GỢI Ý -->
             <div v-if="comparePopupTab === 'suggestions'">
-              <SoraProductGridSkeleton v-if="isLoadingCompareSuggestions" :count="4" min="130px" gap="15px" />
+              <div v-if="isLoadingCompareSuggestions" class="compare-suggestions-grid">
+                <div v-for="i in 4" :key="i" class="suggestion-card">
+                  <SoraSkeleton variant="image" width="100%" height="auto" radius="6px" class="mb-2" style="aspect-ratio: 1/1;" />
+                  <div class="suggestion-info d-flex flex-column h-100">
+                    <div class="mb-2">
+                      <SoraSkeleton width="100%" height="13px" class="mb-1" radius="2px" />
+                      <SoraSkeleton width="70%" height="13px" radius="2px" />
+                    </div>
+                    <SoraSkeleton width="60%" height="16px" class="mb-2" radius="2px" />
+                    <SoraSkeleton width="100%" height="28px" class="mt-auto" radius="4px" />
+                  </div>
+                </div>
+              </div>
               <div v-else-if="filteredSuggestions.length > 0" class="compare-suggestions-grid">
                 <div v-for="item in filteredSuggestions" :key="item.id" class="suggestion-card">
                   <img :src="getImageUrl(item.thumbnail_image)" :alt="item.name" class="suggestion-img" @error="handleImageError">
@@ -95,7 +107,19 @@
             <!-- TAB YÊU THÍCH -->
             <div v-if="comparePopupTab === 'favourites'">
               <div v-if="!isLoggedIn" class="not-logged-in-msg">Vui lòng đăng nhập để xem danh sách yêu thích.</div>
-              <SoraProductGridSkeleton v-else-if="isLoadingFavourites" :count="4" min="130px" gap="15px" />
+              <div v-else-if="isLoadingFavourites" class="compare-suggestions-grid">
+                <div v-for="i in 4" :key="i" class="suggestion-card">
+                  <SoraSkeleton variant="image" width="100%" height="auto" radius="6px" class="mb-2" style="aspect-ratio: 1/1;" />
+                  <div class="suggestion-info d-flex flex-column h-100">
+                    <div class="mb-2">
+                      <SoraSkeleton width="100%" height="13px" class="mb-1" radius="2px" />
+                      <SoraSkeleton width="70%" height="13px" radius="2px" />
+                    </div>
+                    <SoraSkeleton width="60%" height="16px" class="mb-2" radius="2px" />
+                    <SoraSkeleton width="100%" height="28px" class="mt-auto" radius="4px" />
+                  </div>
+                </div>
+              </div>
               <div v-else-if="filteredFavourites.length > 0" class="compare-suggestions-grid">
                 <div v-for="item in filteredFavourites" :key="item.id" class="suggestion-card">
                   <img :src="getImageUrl(item.thumbnail_image)" :alt="item.name" class="suggestion-img" @error="handleImageError">
@@ -124,7 +148,7 @@ import Swal from 'sweetalert2';
 import apiClient from '@/utils/apiClient';
 import Toast from '@/utils/toastConfig';
 import { globalModalState } from '@/stores/modalState';
-import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
+import SoraSkeleton from '@/components/ui/SoraSkeleton.vue';
 import { getStorageUrl } from '@/utils/env';
 
 const props = defineProps({
