@@ -219,13 +219,11 @@ const router = useRouter()
 const route = useRoute()
 const toast = useToast()
 
-const eventId = route.params.id // Lấy ID từ URL
-
+const eventId = route.params.id 
 const isFetching = ref(true)
 const isSubmitting = ref(false)
 const isLoading = computed(() => isFetching.value)
 
-// Khai báo Form state (Đã đổi target thành mảng giống Create.vue)
 const holidayForm = reactive({
   name: '',
   day: '',
@@ -239,27 +237,29 @@ const holidayForm = reactive({
   status: 'active'
 })
 
-// Tính ngày hôm nay (Ngày cấp)
+// Tính ngày cấp chuẩn từ form
 const currentDateDisplay = computed(() => {
-  const d = new Date()
-  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
+  if (!holidayForm.day || !holidayForm.month) return '...'
+  const yyyy = new Date().getFullYear()
+  const mm = String(holidayForm.month).padStart(2, '0')
+  const dd = String(holidayForm.day).padStart(2, '0')
+  return `${dd}/${mm}/${yyyy}`
 })
 
-// Tính ngày hết hạn (Hôm nay + 3 ngày)
+// Tính ngày hết hạn chuẩn (Cộng 3 ngày)
 const expireDateDisplay = computed(() => {
-  const d = new Date()
+  if (!holidayForm.day || !holidayForm.month) return '...'
+  const yyyy = new Date().getFullYear()
+  const d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
   d.setDate(d.getDate() + 3) 
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
 })
 
-// Computed biến đổi Day/Month cho thẻ <input type="date">
 const displayDate = computed({
   get() {
     if (!holidayForm.month || !holidayForm.day) return ''
     let yy = new Date().getFullYear()
-    if (holidayForm.month === 2 && holidayForm.day === 29) {
-      yy = 2024
-    }
+    if (holidayForm.month === 2 && holidayForm.day === 29) { yy = 2024 }
     const mm = String(holidayForm.month).padStart(2, '0')
     const dd = String(holidayForm.day).padStart(2, '0')
     return `${yy}-${mm}-${dd}`
@@ -280,7 +280,6 @@ const previewHolidayContent = computed(() => {
   return replaceTokens(holidayForm.content || '').replace(/\n/g, '<br>')
 })
 
-// Lấy chi tiết sự kiện
 const fetchEventDetail = async () => {
   isFetching.value = true
   try {
@@ -307,7 +306,6 @@ const fetchEventDetail = async () => {
       router.push({ path: '/admin/email-campaigns' })
     }
   } catch (error) {
-    console.error('Lỗi fetch detail:', error)
     toast.error('Lỗi tải dữ liệu. Sự kiện có thể đã bị xóa.')
     router.push({ path: '/admin/email-campaigns' })
   } finally {
@@ -315,7 +313,6 @@ const fetchEventDetail = async () => {
   }
 }
 
-// Cập nhật sự kiện
 const updateHoliday = async () => {
   if (!holidayForm.name || !holidayForm.day || !holidayForm.month || !holidayForm.subject || !holidayForm.content) {
     toast.warning('Vui lòng nhập đầy đủ các trường thông tin bắt buộc (*).')
@@ -337,7 +334,6 @@ const updateHoliday = async () => {
       toast.error(response.data.message || 'Lỗi khi cập nhật sự kiện.')
     }
   } catch (error) {
-    console.error('Lỗi Update Event:', error)
     if (error.response && error.response.status === 422) {
       toast.error('Dữ liệu cập nhật không hợp lệ.')
     } else {
@@ -374,17 +370,29 @@ function normalizeTargetAudience(value) {
 }
 
 function buildPayload() {
+  let expiresAtFormatted = null
+  if (holidayForm.hasVoucher && holidayForm.day && holidayForm.month) {
+    const yyyy = new Date().getFullYear()
+    const d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
+    d.setDate(d.getDate() + 3) 
+    
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    expiresAtFormatted = `${y}-${m}-${day} 23:59:59` 
+  }
+
   return {
     name: holidayForm.name,
     day: holidayForm.day,
     month: holidayForm.month,
-    // Nối mảng thành chuỗi để gửi lên server
     target_audience: holidayForm.target.length > 0 ? holidayForm.target.join(',') : 'all',
     email_subject: holidayForm.subject,
     email_content: holidayForm.content,
     voucher_code: holidayForm.hasVoucher ? holidayForm.voucherCode : null,
     discount: holidayForm.hasVoucher ? holidayForm.discount : null,
     status: holidayForm.status,
+    expires_at: expiresAtFormatted // Đồng bộ chính xác
   }
 }
 
@@ -407,6 +415,7 @@ onMounted(() => {
   }
 })
 </script>
+
 
 <style scoped>
 /* Base Colors & Utilities Đồng bộ với Create.vue */

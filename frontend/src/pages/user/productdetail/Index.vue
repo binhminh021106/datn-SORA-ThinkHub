@@ -196,15 +196,15 @@
 
             <!-- CỤM NÚT SO SÁNH & YÊU THÍCH -->
             <div class="d-flex flex-row gap-3 mt-4 align-items-center">
-              <button 
-                class="btn-action-sub" 
-                style="flex: 1;"
-                @click="handleToggleCompare({ id: product.id, name: product.name, image: mainImage })"
-                :class="{ 'active': isInCompare(product.id) }"
-              >
-                <i class="bi bi-arrow-left-right me-1"></i>
-                {{ isInCompare(product.id) ? 'Bỏ so sánh' : 'Thêm so sánh' }}
-              </button>
+            <button 
+  class="btn-action-sub" 
+  style="flex: 1;"
+  @click="handleToggleCompare(product)"
+  :class="{ 'active': isInCompare(product.id) }"
+>
+  <i class="bi bi-arrow-left-right me-1"></i>
+  {{ isInCompare(product.id) ? 'Bỏ so sánh' : 'Thêm so sánh' }}
+</button>
 
               <button 
                 class="btn-wishlist-action" 
@@ -328,7 +328,7 @@
             <!-- Sử dụng ProductCard Đã Được Nâng Cấp -->
             <ProductCard
               :product="item"
-              :shop-slug="shopSlug"
+:shop-slug="item.shop_slug || shopSlug"
               :is-in-wishlist="isFavourited(item.id)"
               :is-in-compare="isInCompare(item.id)"
               :show-wishlist="true"
@@ -352,17 +352,17 @@
       </section>
 
       <!-- PRODUCT REVIEWS SECTION -->
-      <section class="product-reviews-section fade-in">
+     <section class="product-reviews-section fade-in">
         <h2 class="section-title text-center font-serif text-sora-primary mb-5"><i class="bi bi-star-fill text-gold me-2"></i>ĐÁNH GIÁ SẢN PHẨM</h2>
         
-        <div class="reviews-overview shadow-sm border border-light-subtle" v-if="product.reviews && product.reviews.length > 0">
+        <div class="reviews-overview shadow-sm border border-light-subtle" v-if="approvedReviews.length > 0">
           <div class="row align-items-center w-100 m-0">
              <div class="col-md-5 text-center border-end border-light-subtle py-4">
                <div class="rating-score display-2 font-oswald fw-bold text-sora-primary lh-1 mb-2">{{ getProtectedRating(product.rating_avg, product.reviews?.length).toFixed(1) }}<span class="fs-4 text-muted">/5</span></div>
                <div class="rating-stars fs-4 text-gold mb-2">
                  <i v-for="n in 5" :key="n" class="bi" :class="n <= Math.round(getProtectedRating(product.rating_avg, product.reviews?.length)) ? 'bi-star-fill' : 'bi-star text-muted'"></i>
                </div>
-               <div class="rating-count text-muted fw-medium font-oswald text-uppercase tracking-widest">{{ product.reviews.length }} nhận xét</div>
+               <div class="rating-count text-muted fw-medium font-oswald text-uppercase tracking-widest">{{ approvedReviews.length }} nhận xét</div>
              </div>
              <div class="col-md-7 px-md-5 py-4 text-center text-md-start">
                <p class="font-serif fst-italic text-secondary fs-5 mb-0 lh-lg">"Những chia sẻ chân thực từ khách hàng đã trải nghiệm sự hoàn mỹ tại SORA."</p>
@@ -370,12 +370,12 @@
           </div>
         </div>
 
-        <div class="reviews-list mt-5" v-if="product.reviews && product.reviews.length > 0">
-          <div class="review-item bg-white p-4 p-md-5 rounded-4 shadow-sm border border-light-subtle mb-4" v-for="review in product.reviews" :key="review.id">
+        <div class="reviews-list mt-5" v-if="approvedReviews.length > 0">
+          <div class="review-item bg-white p-4 p-md-5 rounded-4 shadow-sm border border-light-subtle mb-4" v-for="review in approvedReviews" :key="review.id">
             <div class="d-flex justify-content-between align-items-start mb-4">
               <div class="d-flex align-items-center gap-3">
                 <div class="review-avatar">
-                  <img :src="review.user?.avatar_url || 'https://ui-avatars.com/api/?name=' + (review.user?.fullName || 'Guest') + '&background=9f273b&color=fff'" alt="Avatar" class="rounded-circle object-fit-cover shadow-sm border border-2 border-white" width="55" height="55">
+                  <img :src="review.user?.avatar_url ? getFullImage(review.user.avatar_url) : 'https://ui-avatars.com/api/?name=' + (review.user?.fullName || 'Guest') + '&background=9f273b&color=fff'" alt="Avatar" class="rounded-circle object-fit-cover shadow-sm border border-2 border-white" width="55" height="55" @error="handleImageError">
                 </div>
                 <div class="review-user-info">
                   <div class="d-flex align-items-center gap-2 mb-1">
@@ -394,9 +394,9 @@
               <p class="mb-0">{{ review.comment }}</p>
             </div>
             
-            <div class="review-images d-flex gap-3 flex-wrap mb-4" v-if="review.images && review.images.length > 0">
-              <div v-for="(img, index) in review.images" :key="index" class="cursor-zoom-in rounded-3 overflow-hidden border border-light-subtle shadow-sm" style="width: 90px; height: 90px;" @click="viewFullImage(img)">
-                <img :src="img" alt="Review Image" class="w-100 h-100 object-fit-cover transition-all img-zoom-hover" @error="handleImageError">
+            <div class="review-images d-flex gap-3 flex-wrap mb-4" v-if="parseImages(review.images).length > 0">
+              <div v-for="(img, index) in parseImages(review.images)" :key="index" class="cursor-zoom-in rounded-3 overflow-hidden border border-light-subtle shadow-sm" style="width: 90px; height: 90px;" @click="viewFullImage(img)">
+                <img :src="getFullImage(img)" alt="Review Image" class="w-100 h-100 object-fit-cover transition-all img-zoom-hover" @error="handleImageError">
               </div>
             </div>
             
@@ -456,7 +456,7 @@
                <div class="d-flex flex-column justify-content-center">
                   <small class="text-uppercase font-oswald tracking-widest text-gold fw-bold" style="font-size: 0.7rem;">{{ quickAddProduct.category?.name || 'Trang Sức SORA' }}</small>
                   <h6 class="font-serif fw-bold mb-1 text-dark fs-5">{{ quickAddProduct.name }}</h6>
-                  <span class="text-sora-primary fw-bold font-oswald fs-5">{{ formatMoney(quickAddSelectedPrice) }}</span>
+                  <span class="text-sora-primary fw-bold font-serif fs-5">{{ formatMoney(quickAddSelectedPrice) }}</span>
                </div>
             </div>
 
@@ -500,8 +500,8 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuery } from '@tanstack/vue-query';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 import Toast from '@/utils/toastConfig';
-import { createSoraAlert } from '@/utils/soraAlertConfig';
 
 import ProductCard from '@/components/ui/ProductCard.vue';
 import CompareModal from '@/components/ui/CompareModal.vue';
@@ -580,8 +580,13 @@ const stockProgressWidth = computed(() => {
   const comp = getVariantsComposable();
   return comp ? comp.stockProgressWidth.value : 0;
 });
-const defaultDisplayPrice = computed(() => Number(product.value?.promotional_price || product.value?.base_price || product.value?.variants?.[0]?.price || 0));
-
+const defaultDisplayPrice = computed(() => Number(
+  product.value?.promotional_price || 
+  product.value?.base_price || 
+  product.value?.variants?.[0]?.promotional_price || 
+  product.value?.variants?.[0]?.price || 
+  0
+));
 // Countdown & Recommendations
 const countdown = ref({ days: '00', hours: '00', minutes: '00', seconds: '00' });
 let timerInterval = null;
@@ -634,6 +639,9 @@ const extractImagePath = (image) => {
     ''
   );
 };
+
+
+
 
 const normalizeProductImage = (image) => {
   const path = extractImagePath(image);
@@ -729,7 +737,26 @@ const sizeGuideRows = computed(() => {
 });
 
 const handleToggleCompare = (prod) => {
-  if (compareModalRef.value) compareModalRef.value.toggleCompare(prod);
+  // 1. Chuẩn bị dữ liệu để không bị lỗi ảnh ngầm
+  const compareData = {
+    ...prod,
+    thumbnail_image: prod.thumbnail_image || mainImage.value,
+    image: prod.image || mainImage.value
+  };
+
+  // 2. Gửi tín hiệu sang CompareModal thông qua kho lưu trữ toàn cục (ĐÚNG CHUẨN KIẾN TRÚC HIỆN TẠI)
+  globalModalState.compareProduct = compareData;
+  globalModalState.compareTrigger = Date.now(); 
+
+  // 3. (Tùy chọn) Cập nhật lại danh sách local để nút đổi màu ngay lập tức
+  setTimeout(() => {
+    try {
+      const stored = localStorage.getItem(`compare_list_${shopSlug.value || 'aurora'}`);
+      if (stored) {
+        compareList.value = JSON.parse(stored);
+      }
+    } catch (e) {}
+  }, 100);
 };
 
 // Quick Add computed properties
@@ -822,6 +849,29 @@ const openQuickAdd = async (prod) => {
   }
 };
 
+
+// 1. Chỉ lấy những đánh giá có status = 'approved'
+const approvedReviews = computed(() => {
+  if (!product.value?.reviews || !Array.isArray(product.value.reviews)) return [];
+  return product.value.reviews.filter(r => r.status === 'approved');
+});
+
+// 2. Tính lại trung bình sao cho CHÍNH XÁC với những bài đã duyệt
+const calculatedAvgRating = computed(() => {
+  if (approvedReviews.value.length === 0) return 0;
+  const sum = approvedReviews.value.reduce((acc, cur) => acc + Number(cur.rating), 0);
+  return (sum / approvedReviews.value.length).toFixed(1);
+});
+
+// 3. Hàm giải mã JSON ảnh (rất quan trọng, nếu không v-for ảnh sẽ lỗi trắng trang)
+const parseImages = (images) => {
+  if (!images) return [];
+  if (Array.isArray(images)) return images;
+  try { return JSON.parse(images); } catch(e) { return []; }
+};
+
+
+
 const confirmQuickAdd = async () => {
   if (!isQuickAddAllSelected.value) {
     quickAddError.value = true;
@@ -854,7 +904,10 @@ const confirmQuickAdd = async () => {
 };
 
 // Swal utilities
-const soraAlert = createSoraAlert({
+const soraAlert = Swal.mixin({
+  buttonsStyling: true,
+  confirmButtonColor: '#9f273b',
+  cancelButtonColor: '#6c757d',
   customClass: { confirmButton: 'px-4 py-2 mx-2 rounded-pill shadow-sm fw-bold', cancelButton: 'px-4 py-2 mx-2 rounded-pill fw-bold' }
 });
 
@@ -895,7 +948,7 @@ onUnmounted(() => {
 }); 
 
 const viewFullImage = (url) => {
-  soraAlert.fire({
+  Swal.fire({
     imageUrl: url,
     imageAlt: 'Product Image',
     width: 600,
@@ -983,7 +1036,7 @@ const saveToRecentlyViewed = (prod) => {
     let viewed = JSON.parse(localStorage.getItem('viewed_products') || '[]');
     viewed = viewed.filter(p => p.id !== prod.id);
     viewed.unshift({
-      id: prod.id, slug: route.params.slug || route.params.product_slug, name: prod.name,
+    id: prod.id, slug: route.params.slug || route.params.product_slug, shop_slug: route.params.shop_slug || 'aurora', name: prod.name,
       thumbnail_image: prod.images && prod.images.length > 0 ? prod.images[0] : '',
       brand: prod.brand, base_price: prod.variants && prod.variants.length > 0 ? prod.variants[0].price : 0,
       promotional_price: prod.variants && prod.variants.length > 0 ? prod.variants[0].promotional_price : null

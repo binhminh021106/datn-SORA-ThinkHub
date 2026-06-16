@@ -20,6 +20,8 @@ class HolidayCouponMail extends Mailable implements ShouldQueue
     public $emailContent;
     public $voucherCode;
     public $discount;
+
+    
     public $expiresAt;
     public $applicableScope;
 
@@ -38,6 +40,7 @@ class HolidayCouponMail extends Mailable implements ShouldQueue
         $this->emailContent = $this->prepareEmailContent($this->resolveEmailContent($event));
         $this->discount = $this->resolveDiscountLabel($coupon);
         $this->expiresAt = $this->resolveExpiresAtLabel($coupon);
+       
         $this->applicableScope = $this->resolveApplicableScopeLabel($coupon);
     }
 
