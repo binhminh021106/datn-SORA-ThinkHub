@@ -27,7 +27,7 @@
           <div class="form-group">
             <div class="label-row">
               <label>Mật khẩu</label>
-              <a href="#" class="forgot-password">Quên mật khẩu?</a>
+              <router-link to="/forgot-password" class="forgot-password">Quên mật khẩu?</router-link>
             </div>
             <input v-model="form.password" type="password" placeholder="Nhập mật khẩu" required />
           </div>
