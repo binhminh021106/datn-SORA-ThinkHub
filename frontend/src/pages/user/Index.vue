@@ -1,23 +1,12 @@
 <template>
   <div class="sora-home font-luxury">
-    <Transition name="home-logo-loader">
-      <div v-if="showHomeLogoLoader"
-        class="home-logo-loader vh-100 d-flex flex-column justify-content-center align-items-center bg-light">
-        <div class="logo-pulse-wrapper mb-4">
-          <img src="@/assets/images/icon-logo.png" alt="SORA Logo" class="logo-pulse-img">
-        </div>
-      </div>
-    </Transition>
+    <SoraHomeIntroLoader :show="showHomeLogoLoader" />
 
     <div class="home-page-content" :class="{ 'home-page-content-loading': showHomeLogoLoader }">
-      <section class="home-hero">
-        <div v-if="showHeroSkeleton" class="hero-loading-layer d-flex align-items-center justify-content-center">
-          <div class="hero-loading-content text-center position-relative z-index-2">
-            <div class="hero-loading-brand font-serif fw-bold mb-3">SORA</div>
-            <div class="hero-loading-line mx-auto mb-3"></div>
-            <p class="font-oswald tracking-widest text-uppercase mb-0">Đang chuẩn bị không gian mua sắm</p>
-          </div>
-        </div>
+      <SoraHomeSkeleton v-if="showHomeSkeleton" />
+
+      <template v-else>
+        <section class="home-hero">
 
         <div v-if="heroBanners.length > 0" id="homeEditorialCarousel"
           class="home-hero-media carousel slide carousel-fade" data-bs-ride="carousel" data-bs-interval="6000"
@@ -308,6 +297,8 @@
         </div>
       </section>
 
+      </template>
+
     </div>
   </div>
 </template>
@@ -319,15 +310,14 @@ import soraAlert from '@/utils/soraAlertConfig';
 import ProductCard from '@/components/ui/ProductCard.vue';
 import NewsPostCard from '@/components/ui/NewsPostCard.vue';
 import ComboCarousel from '@/components/ui/ComboCarousel.vue';
+import SoraHomeIntroLoader from '@/components/ui/SoraHomeIntroLoader.vue';
+import SoraHomeSkeleton from '@/components/ui/SoraHomeSkeleton.vue';
 import { getStorageUrl } from '@/utils/env';
 import clientApiClient from '@/utils/clientApiClient';
 import { getUserToken } from '@/composables/useUtilities';
 
-const HOME_INTRO_SESSION_KEY = 'sora_home_intro_seen';
-const navigationEntry = performance.getEntriesByType('navigation')[0];
-const isHardReload = navigationEntry?.type === 'reload';
 const isLoading = ref(true);
-const shouldShowHomeIntro = ref(isHardReload || sessionStorage.getItem(HOME_INTRO_SESSION_KEY) !== '1');
+const shouldShowHomeIntro = ref(!window.__sora_intro_shown);
 const isLogoLoaderMinTimeDone = ref(!shouldShowHomeIntro.value);
 const isHeroImageReady = ref(false);
 const windowWidth = ref(window.innerWidth);
@@ -417,9 +407,9 @@ const galleryDisplayImages = computed(() => {
   return data.products.map((product) => product.thumbnail_image).filter(Boolean).slice(0, 4);
 });
 
-const showHeroSkeleton = computed(() => isLoading.value || (heroImage.value && !isHeroImageReady.value));
 const isHomeReady = computed(() => !isLoading.value && (!heroImage.value || isHeroImageReady.value));
 const showHomeLogoLoader = computed(() => shouldShowHomeIntro.value && (!isHomeReady.value || !isLogoLoaderMinTimeDone.value));
+const showHomeSkeleton = computed(() => isLoading.value && !showHomeLogoLoader.value);
 
 const comboCurrentIndex = ref(0);
 let comboAutoplayTimer = null;
@@ -574,7 +564,7 @@ const handleResize = () => {
 
 watch(showHomeLogoLoader, (isShown) => {
   if (!isShown && shouldShowHomeIntro.value && isHomeReady.value && isLogoLoaderMinTimeDone.value) {
-    sessionStorage.setItem(HOME_INTRO_SESSION_KEY, '1');
+    window.__sora_intro_shown = true;
     shouldShowHomeIntro.value = false;
   }
 });
@@ -746,60 +736,6 @@ onUnmounted(() => {
   max-width: var(--home-container-width);
   padding-left: var(--home-gutter);
   padding-right: var(--home-gutter);
-}
-
-.home-logo-loader {
-  position: fixed;
-  inset: 0;
-  z-index: 9998;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(var(--sora-secondary-rgb), 0.12), transparent 26%),
-    #f8f9fa !important;
-}
-
-.home-page-content {
-  opacity: 1;
-  transition: opacity 0.5s ease, transform 0.5s ease;
-}
-
-.home-page-content-loading {
-  opacity: 0.96;
-  transform: scale(0.996);
-}
-
-.logo-pulse-wrapper {
-  display: inline-block;
-}
-
-.logo-pulse-img {
-  width: 90px;
-  height: auto;
-  object-fit: contain;
-  animation: luxury-pulse 1.8s infinite alternate ease-in-out;
-}
-
-.home-logo-loader-enter-active,
-.home-logo-loader-leave-active {
-  transition: opacity 0.5s ease, transform 0.5s ease, filter 0.5s ease;
-}
-
-.home-logo-loader-enter-from,
-.home-logo-loader-leave-to {
-  opacity: 0;
-  transform: scale(1.035);
-  filter: blur(8px);
-}
-
-@keyframes luxury-pulse {
-  0% {
-    transform: scale(0.95);
-    filter: drop-shadow(0 0 5px rgba(var(--sora-primary-rgb), 0.2)) brightness(1);
-  }
-
-  100% {
-    transform: scale(1.05);
-    filter: drop-shadow(0 0 25px rgba(var(--sora-primary-rgb), 0.8)) brightness(1.15);
-  }
 }
 
 .home-hero {
@@ -1024,44 +960,7 @@ onUnmounted(() => {
   top: 34%;
 }
 
-.hero-loading-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 20;
-  background: linear-gradient(135deg, #fffafa 0%, #fbf2ef 45%, #f8efe4 100%);
-}
 
-.hero-loading-layer::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(110deg, transparent 20%, rgba(255, 255, 255, 0.7) 45%, transparent 70%);
-  transform: translateX(-100%);
-  animation: heroShimmer 1.6s ease-in-out infinite;
-}
-
-.hero-loading-brand {
-  color: var(--sora-primary);
-  font-size: clamp(3.2rem, 8vw, 6rem);
-  letter-spacing: 0.18em;
-}
-
-.hero-loading-line {
-  width: 90px;
-  height: 2px;
-  background: var(--sora-secondary);
-}
-
-.hero-loading-content p {
-  color: #6c3b43;
-  font-size: 0.85rem;
-}
-
-@keyframes heroShimmer {
-  100% {
-    transform: translateX(100%);
-  }
-}
 
 .home-stats-band {
   background: #6a1622;
@@ -1176,7 +1075,7 @@ onUnmounted(() => {
 }
 
 .editorial-section {
-  padding: clamp(3rem, 5vw, 4.5rem) 0;
+  padding: clamp(1rem, 3vw, 1rem) 0;
 }
 
 .narrow-container {
@@ -2019,7 +1918,7 @@ onUnmounted(() => {
 .dark-expertise-section {
   background: linear-gradient(135deg, var(--sora-primary) 0%, var(--sora-primary) 62%, #12090c 100%);
   color: #fff;
-  padding: clamp(3rem, 5vw, 4rem) 0;
+  padding: clamp(1rem, 2vw, 3rem) 0;
 }
 
 .expertise-grid {

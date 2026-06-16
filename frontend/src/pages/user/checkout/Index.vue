@@ -1,7 +1,7 @@
 <template>
   <div class="checkout-page bg-light-custom pb-5" style="min-height: 100vh; font-family: 'Lato', sans-serif;">
     
-    <div class="bg-transparent pt-4 pb-2 border-bottom border-light-subtle bg-white mb-5 shadow-sm">
+    <div class="bg-transparent pt-4 pb-2 border-bottom border-light-subtle bg-white mb-4 shadow-sm">
       <div class="container d-flex justify-content-between align-items-center">
         <nav aria-label="breadcrumb">
           <ol class="breadcrumb mb-0 font-oswald text-uppercase tracking-wide small" style="font-size: 0.75rem;">
