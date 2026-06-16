@@ -286,11 +286,17 @@ const fetchEventDetail = async () => {
     const response = await apiClient.get(`/admin/holiday-events/${eventId}`)
     
     if (response.data && response.data.success) {
-      const data = response.data.data
+     const data = response.data.data
       holidayForm.name = data.name
       const [day = '', month = ''] = String(data.event_date || '').split('/')
-      holidayForm.day = day
-      holidayForm.month = month
+      
+      // Ép kiểu sang số nguyên
+      const parsedDay = Number.parseInt(day, 10)
+      const parsedMonth = Number.parseInt(month, 10)
+      
+      // Kiểm tra NaN, nếu lỗi thì gán rỗng, nếu thành công thì gán số đã ép kiểu
+      holidayForm.day = Number.isNaN(parsedDay) ? '' : parsedDay
+      holidayForm.month = Number.isNaN(parsedMonth) ? '' : parsedMonth
       
       // Xử lý chuỗi đối tượng nhận thành mảng
       holidayForm.target = normalizeTargetAudience(data.target_audience)

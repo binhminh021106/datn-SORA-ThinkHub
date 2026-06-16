@@ -367,12 +367,16 @@ import apiClient from '@/utils/apiClient';
 
 const router = useRouter();
 
-// DÙNG SESSION STORAGE để lưu giữ tab: Khỏi sợ lỗi khi ấn Quay Lại
-const activeTab = ref(sessionStorage.getItem('activeCampaignTab') || 'dashboard');
 
-// Bất cứ khi nào bạn đổi tab, nó lưu vào bộ nhớ. Lúc ấn "Quay lại", nó tự động nhớ!
+const allowedTabs = new Set(['dashboard', 'holidays', 'birthday']);
+
+// DÙNG SESSION STORAGE để lưu giữ tab và VALIDATE dữ liệu
+const savedTab = sessionStorage.getItem('activeCampaignTab');
+const activeTab = ref(allowedTabs.has(savedTab) ? savedTab : 'dashboard');
+
+// Bất cứ khi nào bạn đổi tab, nó lưu vào bộ nhớ (kèm theo kiểm tra an toàn)
 watch(activeTab, (newVal) => {
-  sessionStorage.setItem('activeCampaignTab', newVal);
+  sessionStorage.setItem('activeCampaignTab', allowedTabs.has(newVal) ? newVal : 'dashboard');
 });
 
 const sendingCampaign = ref(null);

@@ -522,6 +522,7 @@ import { getToken, getHeaders, getFullImage, formatMoney, getProtectedRating } f
 import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener.js';
 import { API_BASE_URL } from '@/utils/env';
 import clientApiClient from '@/utils/clientApiClient';
+import { globalModalState } from '@/store/globalState';
 
 const route = useRoute();
 const router = useRouter();
@@ -737,7 +738,7 @@ const sizeGuideRows = computed(() => {
 });
 
 const handleToggleCompare = (prod) => {
-  // 1. Chuẩn bị dữ liệu để không bị lỗi ảnh ngầm
+
   const compareData = {
     ...prod,
     thumbnail_image: prod.thumbnail_image || mainImage.value,
