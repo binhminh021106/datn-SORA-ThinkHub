@@ -15,11 +15,6 @@ const admin = [
     component: () => import('../pages/admin/auth/ForgotPassword.vue'),
   },
   {
-    path: '/admin/reset-password',
-    name: 'admin-reset-password',
-    component: () => import('../pages/admin/auth/ResetPassword.vue'),
-  },
-  {
     path: '/admin/attendance/scanner',
     name: 'admin-attendance-scanner',
     component: () => import('../pages/admin/admin-attendance/AttendanceScanner.vue'),

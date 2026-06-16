@@ -724,9 +724,15 @@ class AdminFaceRecognitionController extends Controller
         ];
     }
 
-    private function isProfileUsable(AdminFaceProfile $profile): bool
+    private function isProfileUsable($profile): bool
     {
-        $descriptors = $profile->face_descriptors;
+        if (!$profile) {
+            return false;
+        }
+
+        $descriptors = is_string($profile->face_descriptors)
+            ? json_decode($profile->face_descriptors, true)
+            : $profile->face_descriptors;
 
         return $profile->is_active
             && $profile->sample_count >= self::MIN_DESCRIPTOR_COUNT
