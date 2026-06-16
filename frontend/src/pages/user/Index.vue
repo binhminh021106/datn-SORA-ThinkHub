@@ -5,7 +5,7 @@
     <div class="home-page-content" :class="{ 'home-page-content-loading': showHomeLogoLoader }">
       <SoraHomeSkeleton v-if="showHomeSkeleton" />
 
-      <template v-else>
+      <template v-else-if="!showHomeLogoLoader">
         <section class="home-hero">
 
         <div v-if="heroBanners.length > 0" id="homeEditorialCarousel"
@@ -315,8 +315,18 @@ import SoraHomeSkeleton from '@/components/ui/SoraHomeSkeleton.vue';
 import { getStorageUrl } from '@/utils/env';
 import clientApiClient from '@/utils/clientApiClient';
 import { getUserToken } from '@/composables/useUtilities';
+import { useQuery } from '@tanstack/vue-query';
 
-const isLoading = ref(true);
+const { data: homeQueryData, isPending: isQueryLoading, isError: isQueryError } = useQuery({
+  queryKey: ['homeData'],
+  queryFn: async () => {
+    const res = await clientApiClient.get('/client/home-data', { ignoreAuthRedirect: true });
+    return res.data?.data || res.data || {};
+  },
+  staleTime: 5 * 60 * 1000,
+});
+
+const isLoading = computed(() => isQueryLoading.value && !data.banners.length);
 const shouldShowHomeIntro = ref(!window.__sora_intro_shown);
 const isLogoLoaderMinTimeDone = ref(!shouldShowHomeIntro.value);
 const isHeroImageReady = ref(false);
@@ -409,7 +419,9 @@ const galleryDisplayImages = computed(() => {
 
 const isHomeReady = computed(() => !isLoading.value && (!heroImage.value || isHeroImageReady.value));
 const showHomeLogoLoader = computed(() => shouldShowHomeIntro.value && (!isHomeReady.value || !isLogoLoaderMinTimeDone.value));
-const showHomeSkeleton = computed(() => isLoading.value && !showHomeLogoLoader.value);
+const showHomeSkeleton = computed(() =>
+  isLoading.value && (!shouldShowHomeIntro.value || isLogoLoaderMinTimeDone.value)
+);
 
 const comboCurrentIndex = ref(0);
 let comboAutoplayTimer = null;
@@ -618,6 +630,17 @@ const markHeroImageReady = (index = 0) => {
   }
 };
 
+watch(heroImage, (newVal) => {
+  if (newVal && !isHeroImageReady.value) {
+    const img = new Image();
+    img.onload = () => markHeroImageReady(0);
+    img.onerror = () => markHeroImageReady(0);
+    img.src = getImageUrl(newVal);
+  } else if (!newVal && !isHeroImageReady.value) {
+    markHeroImageReady(0);
+  }
+}, { immediate: true });
+
 const handleHeroImageError = (event, index = 0) => {
   handleImageError(event);
   markHeroImageReady(index);
@@ -633,35 +656,24 @@ const showWishlistNotification = (isAdded) => {
 };
 
 
-const fetchHomepageData = async () => {
-  isLoading.value = true;
-  isHeroImageReady.value = false;
-
-  try {
-    const res = await clientApiClient.get('/client/home-data', { ignoreAuthRedirect: true });
-    const result = res.data || {};
-    const payload = result.data || result;
-
-    if (result.success || result.status) {
-      data.banners = payload.banners || [];
-      data.coupons = payload.coupons || [];
-      data.categories = payload.categories || [];
-      data.products = payload.products || [];
-      data.combos = payload.combos || [];
-      data.tiers = payload.tiers || [];
-      data.galleries = payload.galleries || [];
-      data.news = payload.news || [];
-
-      if (data.combos.length > 0) {
-        // Carousel component will handle its own autoplay
-      }
-    }
-  } catch (error) {
-    soraAlert.fire({ icon: 'error', title: 'Không thể tải dữ liệu trang chủ' });
-  } finally {
-    isLoading.value = false;
+watch(homeQueryData, (payload) => {
+  if (payload) {
+    data.banners = payload.banners || [];
+    data.coupons = payload.coupons || [];
+    data.categories = payload.categories || [];
+    data.products = payload.products || [];
+    data.combos = payload.combos || [];
+    data.tiers = payload.tiers || [];
+    data.galleries = payload.galleries || [];
+    data.news = payload.news || [];
   }
-};
+}, { immediate: true });
+
+watch(isQueryError, (hasError) => {
+  if (hasError) {
+    soraAlert.fire({ icon: 'error', title: 'Không thể tải dữ liệu trang chủ' });
+  }
+});
 
 onMounted(() => {
   if (shouldShowHomeIntro.value) {
@@ -671,8 +683,6 @@ onMounted(() => {
   }
 
   window.addEventListener('resize', handleResize);
-
-  fetchHomepageData();
   loadWishlist();
 });
 

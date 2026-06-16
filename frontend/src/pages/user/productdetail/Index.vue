@@ -921,6 +921,7 @@ const toggleFavourite = async (prod) => {
 
 // Countdown
 const startCountdown = () => {
+  if (timerInterval) clearInterval(timerInterval);
   const targetTime = new Date().getTime() + (5 * 60 * 60 * 1000 + 59 * 60 * 1000 + 47 * 1000);
   const updateTime = () => {
     const now = new Date().getTime();
