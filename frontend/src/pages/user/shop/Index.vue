@@ -430,14 +430,22 @@ const categories = computed(() => categoriesData.value || []);
 const showAllCategories = ref(false);
 const showAllSidebarCategories = ref(false);
 
+const expandedAttributes = reactive({});
+const filterCollapses = ref({
+  categories: true,
+  colors: true
+});
+
 const dynamicAttributes = computed(() => {
   if (!attrsData.value) return [];
-  const attrs = attrsData.value.filter(attr => !isColorAttribute(attr.name)).map(attr => ({
+  return attrsData.value.filter(attr => !isColorAttribute(attr.name)).map(attr => ({
     id: attr.id,
     name: attr.name,
     values: attr.values
   }));
-  
+});
+
+watch(dynamicAttributes, (attrs) => {
   Object.keys(expandedAttributes).forEach((key) => {
     if (!attrs.some((attr) => attr.name === key)) delete expandedAttributes[key];
   });
@@ -451,10 +459,7 @@ const dynamicAttributes = computed(() => {
     }
   });
   if (hasChanges) filterCollapses.value = newCollapses;
-  return attrs;
-});
-const expandedAttributes = reactive({});
-
+}, { immediate: true });
 const currentPage = ref(1);
 
 const selectedAttributes = ref([]);
@@ -468,11 +473,6 @@ const visibleResultStart = computed(() => {
   return ((Number(pagination.value.current_page) || 1) - 1) * perPage + 1;
 });
 const visibleResultEnd = computed(() => Math.min(pagination.value.total || 0, visibleResultStart.value + allProducts.value.length - 1));
-
-const filterCollapses = ref({
-  categories: true,
-  colors: true
-});
 
 const toggleCollapse = (key) => {
   const newCollapses = { ...filterCollapses.value };
