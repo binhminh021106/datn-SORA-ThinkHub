@@ -166,7 +166,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Toast from '@/utils/toastConfig';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
@@ -188,7 +188,16 @@ const soraAlert = createSoraAlert({
   }
 });
 
-// ==================== THÊM MỚI: TỰ ĐỘNG MERGE ====================
+const notifyCartUpdate = () => {
+  const count = cartItems.value.reduce((t, i) => t + i.quantity, 0);
+  window.dispatchEvent(new CustomEvent('update-cart-count', {
+    detail: { cart_count: count }
+  }));
+};
+
+const handleCartSync = () => {
+  fetchCart(true);
+};
 const checkAndMergeCart = async () => {
   const token = getUserToken();
   const sessionId = localStorage.getItem('cart_session_id');
@@ -304,6 +313,7 @@ const updateQuantity = async (item, change) => {
     if (response.data.success) {
       item.quantity = newQty;
       await fetchCart(true);
+      notifyCartUpdate();
     }
   } catch (error) {
     let errorMsg = 'Không thể cập nhật số lượng.';
@@ -351,8 +361,9 @@ const removeItem = async (itemId) => {
         });
         if (response.data.success) {
           cartItems.value.splice(index, 1);
+          notifyCartUpdate();
           Toast.fire({ icon: 'success', title: 'Đã xóa sản phẩm thành công' });
-          await fetchCart(true); 
+          await fetchCart(true);
         }
       } catch (error) {
         soraAlert.fire({
@@ -387,6 +398,7 @@ const clearCart = async () => {
         if (response.data.success) {
           cartItems.value = [];
           backendSummary.value = { total_items: 0, subtotal: 0 };
+          notifyCartUpdate();
           Toast.fire({ icon: 'success', title: 'Giỏ hàng đã được làm trống' });
         }
       } catch (error) {
@@ -401,6 +413,11 @@ const clearCart = async () => {
 onMounted(async () => {
   await checkAndMergeCart();   // ← Merge trước (nếu có)
   await fetchCart();           // ← Sau đó load giỏ hàng
+  window.addEventListener('update-cart-count', handleCartSync);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('update-cart-count', handleCartSync);
 });
 </script>
 

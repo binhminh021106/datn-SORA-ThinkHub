@@ -80,7 +80,7 @@ class SendBirthdayEmails extends Command
                 $this->warn("Bỏ qua {$user->email}: Trạng thái tài khoản không active.");
                 continue;
             }
-            // 2. Đã xác thực Email
+            // 2. Đã xác thực Email (TẠM BỎ - không yêu cầu xác thực email)
             // if (is_null($user->email_verified_at)) {
             //     $this->warn("Bỏ qua {$user->email}: Chưa xác thực email.");
             //     continue;
@@ -136,7 +136,7 @@ class SendBirthdayEmails extends Command
                 // 4. Mức giảm giá linh hoạt theo Hạng: bạc 5%, vàng 10%, kim cương 15%
                 $userTier = $user->relationLoaded('tier') ? $user->tier : MembershipTier::find($user->tier_id);
                 $tierName = Str::lower(Str::ascii($userTier->name ?? ''));
-                
+
                 $discountPercent = 5; // Mặc định hạng Bạc 5%
                 if (Str::contains($tierName, ['kim cuong', 'diamond'])) {
                     $discountPercent = 15;
@@ -180,7 +180,6 @@ class SendBirthdayEmails extends Command
                 DB::commit();
                 $count++;
                 $this->info("Đã gửi email sinh nhật cho: {$user->email}");
-
             } catch (\Exception $e) {
                 DB::rollBack();
                 // Lưu log thất bại

@@ -388,7 +388,20 @@ const isUpdatingCart = ref(false);
 const cartItems = ref([]);
 const addresses = ref([]);
 const availableCoupons = ref([]);
-const tierDiscountInfo = ref(null); 
+const tierDiscountInfo = ref(null);
+
+// Notify Header cập nhật badge số lượng giỏ hàng
+const notifyCartUpdate = (count = null) => {
+  const total = count ?? cartItems.value.reduce((t, i) => t + i.quantity, 0);
+  window.dispatchEvent(new CustomEvent('update-cart-count', {
+    detail: { cart_count: total }
+  }));
+};
+
+// Lắng nghe sự kiện từ MiniCart để reload giỏ hàng trên trang checkout
+const handleCartSync = () => {
+  fetchInitData();
+};
 
 const selectedAddressId = ref(null);
 const useNewAddress = ref(false);
@@ -725,6 +738,7 @@ const updateQuantity = async (item, delta) => {
         });
         if (res.data.success) {
             item.quantity = newQty;
+            notifyCartUpdate();
             if (selectedCoupon.value && subTotal.value < selectedCoupon.value.min_spend) {
                 selectedCoupon.value = null;
                 Toast.fire({ icon: 'warning', title: 'Đã hủy mã giảm giá vì chưa đạt giá trị tối thiểu', timer: 2000 });
@@ -757,6 +771,7 @@ const removeItem = async (itemId) => {
         });
         if (response.data.success) {
           cartItems.value = cartItems.value.filter(i => i.id !== itemId);
+          notifyCartUpdate();
           if (selectedCoupon.value && subTotal.value < selectedCoupon.value.min_spend) {
               selectedCoupon.value = null;
           }
@@ -869,7 +884,8 @@ const submitOrder = async () => {
             }).then(() => {
                 removeSafeStorage('cart_session_id');
                 removeSafeStorage('birthday_coupon_code');
-                removeSafeStorage('sora_affiliate_code'); // THÊM MỚI: ĐẶT HÀNG XONG THÌ XÓA MÃ AFFILIATE KHỎI COOKIE
+                removeSafeStorage('sora_affiliate_code');
+                notifyCartUpdate(0); // Badge về 0 ngay sau đặt hàng thành công
                 router.push('/checkout/success?order=' + res.data.data.order_code).catch(()=>{});
             });
         }
@@ -909,13 +925,15 @@ onMounted(async () => {
     }
 
     await checkDirectBuy();
-    await fetchInitData(); 
+    await fetchInitData();
     autoApplyStoredBirthdayCoupon();
     isInitializing.value = false;
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.addEventListener('update-cart-count', handleCartSync);
 });
 
 onUnmounted(() => {
+    window.removeEventListener('update-cart-count', handleCartSync);
     if (couponModalInstance) couponModalInstance.dispose();
     if (shippingTimeout) clearTimeout(shippingTimeout);
 });

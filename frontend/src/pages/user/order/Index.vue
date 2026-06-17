@@ -3,7 +3,7 @@
     style="min-height: 100vh; background-color: #f8f9fa; font-family: 'Lato', sans-serif;">
     
 
-    <main class="container">
+    <main class="container mt-2">
       <!-- LAYOUT 2 CỘT: SIDEBAR + NỘI DUNG -->
       <div class="row g-4 g-lg-5 align-items-start">
 
@@ -145,7 +145,7 @@
     <!-- Đánh giá - Màu chủ đạo -->
     <button v-if="order.status === 'delivered' && (!order.reviews || order.reviews.length === 0)"
       v-on:click="openReview(order)"
-      class="editorial-btn w-100 border-0 btn-luxury-gold">
+      class="editorial-btn fw-bold w-100 border-0 btn-luxury-gold">
       <i class="bi bi-star-fill me-1"></i> Đánh giá
     </button>
 
@@ -164,7 +164,7 @@
 
     <!-- Xuất hóa đơn - Màu chủ đạo (để nổi bật tài liệu) -->
     <button v-on:click="exportInvoice(order)"
-      class="editorial-btn w-100 border-0 mt-2 text-white">
+      class="editorial-btn w-100 border-0 mt-2 text-white fw-bold">
       <i class="bi bi-file-earmark-pdf me-1"></i> Xuất hóa đơn
     </button>
   </div>
@@ -508,6 +508,7 @@ onMounted(fetchOrders);
 .btn-luxury-neutral, .btn-luxury-danger, .btn-luxury-success, .btn-luxury-success-light {
   position: relative;
   overflow: hidden;
+  font-family: 'Oswald', sans-serif;
 }
 
 .btn-luxury-neutral::after, 

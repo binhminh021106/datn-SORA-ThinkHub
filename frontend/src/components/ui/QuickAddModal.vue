@@ -307,8 +307,12 @@ const confirmQuickAdd = async () => {
         if (res.data.session_id) {
             setSafeStorage('cart_session_id', res.data.session_id);
         }
-        
-        window.dispatchEvent(new CustomEvent('update-cart-count'));
+
+        const cartRes = await axios.get(`${API_BASE_URL}/client/cart`, { headers });
+        const cartCount = cartRes.data?.summary?.total_items ?? 0;
+        window.dispatchEvent(new CustomEvent('update-cart-count', {
+            detail: { cart_count: cartCount }  
+        }));
         
         pendingSuccessToast = true;
         quickAddModalInstance.hide();

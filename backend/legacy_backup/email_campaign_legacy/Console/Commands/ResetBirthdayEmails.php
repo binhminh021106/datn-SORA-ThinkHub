@@ -12,12 +12,12 @@ use Illuminate\Support\Facades\DB;
 class ResetBirthdayEmails extends Command
 {
     protected $signature = 'sora:reset-birthday-emails
-        {email? : Email user can reset. Bo trong se reset user co sinh nhat hom nay}
-        {--year= : Nam can reset, mac dinh la nam hien tai}
-        {--all : Reset tat ca user trong nam, khong chi sinh nhat hom nay}
-        {--keep-coupons : Chi xoa log, khong xoa voucher sinh nhat cu}';
+        {email? : Email của user cần reset. Bỏ trống sẽ reset user có sinh nhật hôm nay}
+        {--year= : Năm cần reset, mặc định là năm hiện tại}
+        {--all : Reset tất cả user trong năm, không chỉ sinh nhật hôm nay}
+        {--keep-coupons : Chỉ xóa log, không xóa voucher sinh nhật cũ}';
 
-    protected $description = 'Reset log email sinh nhat de co the gui/test lai voucher sinh nhat';
+    protected $description = 'Reset log email sinh nhật để có thể gửi/test lại voucher sinh nhật';
 
     public function handle(): int
     {
@@ -37,7 +37,7 @@ class ResetBirthdayEmails extends Command
         $users = $usersQuery->get(['id', 'email']);
 
         if ($users->isEmpty()) {
-            $this->warn('Khong tim thay user phu hop de reset.');
+            $this->warn('Không tìm thấy user phù hợp để reset.');
             return self::SUCCESS;
         }
 
@@ -60,18 +60,18 @@ class ResetBirthdayEmails extends Command
                     ->delete();
             }
 
-            $this->info("Da xoa {$deletedLogs} log email sinh nhat nam {$year}.");
+            $this->info("Đã xóa {$deletedLogs} log email sinh nhật năm {$year}.");
             if (!$this->option('keep-coupons')) {
-                $this->info("Da xoa {$deletedCoupons} voucher sinh nhat cu lien quan.");
+                $this->info("Đã xóa {$deletedCoupons} voucher sinh nhật cũ liên quan.");
             }
         });
 
-        $this->line('Danh sach user da reset:');
+        $this->line('Danh sách user đã reset:');
         foreach ($users as $user) {
             $this->line("- {$user->email}");
         }
 
-        $this->info('Reset xong. Co the chay: php artisan emails:send-birthday');
+        $this->info('Reset xong. Có thể chạy lệnh: php artisan emails:send-birthday');
 
         return self::SUCCESS;
     }
