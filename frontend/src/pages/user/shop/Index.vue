@@ -25,10 +25,14 @@
           </div>
         </div>
 
-        <div v-if="isLoadingCategories" class="category-skeleton-row mx-auto">
-          <div v-for="item in 5" :key="'cat-skeleton-' + item" class="category-skeleton-item">
-            <SoraSkeleton width="85px" height="85px" circle class="mx-auto mb-2" />
-            <SoraSkeleton width="70px" height="12px" class="mx-auto" />
+        <div v-if="isLoadingCategories" class="mx-auto w-100" style="max-width: 900px;">
+          <div class="row justify-content-center row-cols-2 row-cols-sm-3 row-cols-md-5 g-2 g-md-3 mb-2 pb-2">
+            <div class="col" v-for="item in 5" :key="'cat-skeleton-' + item">
+              <div class="category-circle-item text-center d-flex flex-column align-items-center">
+                <SoraSkeleton width="85px" height="85px" circle class="mx-auto mb-2" />
+                <SoraSkeleton width="70px" height="12px" class="mx-auto" />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -392,8 +396,9 @@
 </template>
 
 <script setup>
-import { ref, shallowRef, onMounted, reactive, computed } from 'vue';
+import { ref, shallowRef, onMounted, reactive, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useQuery, keepPreviousData } from '@tanstack/vue-query';
 import ProductCard from '@/components/ui/ProductCard.vue';
 import QuickAddModal from '@/components/ui/QuickAddModal.vue';
 import CompareModal from '@/components/ui/CompareModal.vue';
@@ -408,7 +413,7 @@ import clientApiClient from '@/utils/clientApiClient';
 
 const route = useRoute();
 const router = useRouter();
-const shopSlug = ref(route.params.shop_slug || 'aurora-jewelry');
+const shopSlug = computed(() => route.params.shop_slug || 'aurora-jewelry');
 
 const soraAlert = createSoraAlert({
   customClass: { confirmButton: 'px-4 py-2 mx-2 rounded shadow-sm fw-bold font-oswald tracking-widest text-uppercase' },
@@ -417,34 +422,46 @@ const soraAlert = createSoraAlert({
 
 const { fetchFavorites, isFavourited, toggleFavourite } = useWishlist();
 
-const isLoadingCategories = ref(true);
-const isLoadingProducts = ref(true);
-const categoryImagesLoaded = ref({});
-const isLoadingAttributes = ref(true);
-const hasLoadedProducts = ref(false);
 const isPageLoading = ref(true);
-let productFetchSequence = 0;
 
-// Thêm AbortController để hủy các request bị đè
-let productAbortController = null;
-
-const categories = shallowRef([]);
+const compareList = ref([]);
+const categoryImagesLoaded = ref({});
+const categories = computed(() => categoriesData.value || []);
 const showAllCategories = ref(false);
 const showAllSidebarCategories = ref(false);
 
-const dynamicAttributes = ref([]);
+const dynamicAttributes = computed(() => {
+  if (!attrsData.value) return [];
+  const attrs = attrsData.value.filter(attr => !isColorAttribute(attr.name)).map(attr => ({
+    id: attr.id,
+    name: attr.name,
+    values: attr.values
+  }));
+  
+  Object.keys(expandedAttributes).forEach((key) => {
+    if (!attrs.some((attr) => attr.name === key)) delete expandedAttributes[key];
+  });
+  
+  const newCollapses = { ...filterCollapses.value };
+  let hasChanges = false;
+  attrs.forEach(attr => {
+    if (newCollapses[attr.name] === undefined) {
+      newCollapses[attr.name] = true;
+      hasChanges = true;
+    }
+  });
+  if (hasChanges) filterCollapses.value = newCollapses;
+  return attrs;
+});
 const expandedAttributes = reactive({});
-const allProducts = shallowRef([]);
-const pagination = ref({ current_page: 1, last_page: 1, total: 0, per_page: 0 });
-const compareList = ref([]);
+
+const currentPage = ref(1);
 
 const selectedAttributes = ref([]);
-const colorOptions = ref([]);
+const colorOptions = computed(() => colorsData.value || []);
 const selectedColors = ref([]);
 const filters = reactive({ sort: 'recommended', categories: '' });
 const hasActiveFilters = computed(() => Boolean(filters.categories || selectedColors.value.length || selectedAttributes.value.length || filters.sort !== 'recommended'));
-const showInitialProductSkeleton = computed(() => isLoadingProducts.value && !hasLoadedProducts.value);
-const isProductRefreshing = computed(() => isLoadingProducts.value && hasLoadedProducts.value);
 const visibleResultStart = computed(() => {
   if (!pagination.value.total) return 0;
   const perPage = Number(pagination.value.per_page) || allProducts.value.length || 1;
@@ -556,133 +573,90 @@ const buildFilterOptionParams = () => {
   return params;
 };
 
-const refreshFilterOptions = () => Promise.all([fetchColors(), fetchAttributes()]);
-
-// CẬP NHẬT 1: SỬ DỤNG SESSION STORAGE CACHE CHO FILTER (COLORS, ATTRS, CATS)
-const fetchColors = async () => {
-  try {
-    const params = buildFilterOptionParams();
-    const cacheKey = `colors_${shopSlug.value}_${params.categories || 'all'}`;
-    const cached = sessionStorage.getItem(cacheKey);
-    if (cached) {
-      colorOptions.value = JSON.parse(cached);
-      return; // Skip gọi API nếu đã có trong Session Cache
-    }
-
-    const { data } = await clientApiClient.get(`/shop/${shopSlug.value}/colors`, {
-      params,
-      ignoreAuthRedirect: true
-    });
-    if (data?.success) {
-      colorOptions.value = data.data;
-      sessionStorage.setItem(cacheKey, JSON.stringify(data.data));
-    }
-  } catch (e) {
-    console.error('Lỗi khi tải màu sắc:', e);
-  }
-};
-
-const fetchAttributes = async () => {
-  isLoadingAttributes.value = true;
-  try {
-    const params = buildFilterOptionParams();
-    const cacheKey = `attrs_${shopSlug.value}_${params.categories || 'all'}`;
-    const cached = sessionStorage.getItem(cacheKey);
-    let attrsData = null;
-
-    if (cached) {
-      attrsData = JSON.parse(cached);
-    } else {
-      const { data } = await clientApiClient.get(`/shop/${shopSlug.value}/attributes`, {
-        params,
-        ignoreAuthRedirect: true
-      });
-      if (data?.success) {
-        attrsData = data.data;
-        sessionStorage.setItem(cacheKey, JSON.stringify(attrsData));
-      }
-    }
-
-    if (attrsData) {
-      dynamicAttributes.value = attrsData.filter(attr => !isColorAttribute(attr.name)).map(attr => ({
-        id: attr.id,
-        name: attr.name,
-        values: attr.values
-      }));
-
-      Object.keys(expandedAttributes).forEach((key) => {
-        if (!dynamicAttributes.value.some((attr) => attr.name === key)) {
-          delete expandedAttributes[key];
-        }
-      });
-
-      const newCollapses = { ...filterCollapses.value };
-      let hasChanges = false;
-      dynamicAttributes.value.forEach(attr => {
-        if (newCollapses[attr.name] === undefined) {
-          newCollapses[attr.name] = true;
-          hasChanges = true;
-        }
-      });
-      if (hasChanges) {
-        filterCollapses.value = newCollapses;
-      }
-    }
-  } catch (e) {
-    console.error('Lỗi khi tải thuộc tính:', e);
-  } finally {
-    isLoadingAttributes.value = false;
-  }
-};
-
-const fetchCategories = async () => {
-  isLoadingCategories.value = true;
-  try {
-    const cacheKey = `categories_${shopSlug.value}`;
-    const cached = sessionStorage.getItem(cacheKey);
-    if (cached) {
-      categories.value = JSON.parse(cached);
-      isLoadingCategories.value = false;
-      return;
-    }
-
+// SỬ DỤNG TANSTACK QUERY ĐỂ QUẢN LÝ CACHE VÀ FETCHING
+const { data: categoriesData, isLoading: isLoadingCategories } = useQuery({
+  queryKey: computed(() => ['shopCategories', shopSlug.value]),
+  queryFn: async () => {
     const { data } = await clientApiClient.get(`/shop/${shopSlug.value}/categories`, { ignoreAuthRedirect: true });
     if (data?.success) {
-      const sorted = data.data.sort((a, b) => {
+      return data.data.sort((a, b) => {
         const orderA = (a.sort_order !== null && a.sort_order !== undefined) ? Number(a.sort_order) : 9999;
         const orderB = (b.sort_order !== null && b.sort_order !== undefined) ? Number(b.sort_order) : 9999;
         return orderA - orderB;
       });
-      categories.value = sorted;
-      sessionStorage.setItem(cacheKey, JSON.stringify(sorted));
     }
-  } catch (e) {
-    console.error('Lỗi khi tải danh mục:', e);
-  } finally {
-    isLoadingCategories.value = false;
-  }
-};
+    return [];
+  },
+  staleTime: 30 * 60 * 1000,
+});
 
-const toggleColor = (color) => {
-  selectedAttributes.value = [];
-  const index = selectedColors.value.indexOf(color);
-  if (index > -1) {
-    selectedColors.value.splice(index, 1);
-  } else {
-    selectedColors.value.push(color);
-  }
-  applyFilters();
-};
+const { data: colorsData } = useQuery({
+  queryKey: computed(() => ['shopColors', shopSlug.value, filters.categories]),
+  queryFn: async () => {
+    const params = buildFilterOptionParams();
+    const { data } = await clientApiClient.get(`/shop/${shopSlug.value}/colors`, { params, ignoreAuthRedirect: true });
+    return data?.success ? data.data : [];
+  },
+  staleTime: 10 * 60 * 1000,
+});
 
-const toggleAttribute = (val) => {
+const { data: attrsData, isLoading: isLoadingAttributes } = useQuery({
+  queryKey: computed(() => ['shopAttributes', shopSlug.value, filters.categories]),
+  queryFn: async () => {
+    const params = buildFilterOptionParams();
+    const { data } = await clientApiClient.get(`/shop/${shopSlug.value}/attributes`, { params, ignoreAuthRedirect: true });
+    return data?.success ? data.data : [];
+  },
+  staleTime: 10 * 60 * 1000,
+});
+
+const { data: productsData, isLoading: isLoadingProducts, isFetching: isProductRefreshing } = useQuery({
+  queryKey: computed(() => ['shopProducts', shopSlug.value, currentPage.value, filters.sort, filters.categories, selectedColors.value, selectedAttributes.value]),
+  queryFn: async ({ signal }) => {
+    const queryPayload = { page: currentPage.value, sort: filters.sort };
+    if (filters.categories) queryPayload.categories = filters.categories;
+    if (selectedColors.value.length > 0) queryPayload.color = selectedColors.value.join(',');
+    if (selectedAttributes.value.length > 0) queryPayload.attribute_values = selectedAttributes.value.join(',');
+
+    const { data } = await clientApiClient.get(`/shop/${shopSlug.value}/products`, {
+      params: queryPayload,
+      signal,
+      ignoreAuthRedirect: true
+    });
+    return data?.success ? data.data : null;
+  },
+  staleTime: 5 * 60 * 1000,
+  placeholderData: keepPreviousData,
+});
+
+const allProducts = computed(() => productsData.value?.data || []);
+const pagination = computed(() => ({
+  current_page: productsData.value?.current_page || 1,
+  last_page: productsData.value?.last_page || 1,
+  total: productsData.value?.total || 0,
+  per_page: productsData.value?.per_page || 0
+}));
+
+const hasLoadedProducts = computed(() => !!productsData.value);
+const showInitialProductSkeleton = computed(() => isLoadingProducts.value && !hasLoadedProducts.value);
+
+const filterByCategory = (categorySlug) => {
   selectedColors.value = [];
-  const index = selectedAttributes.value.indexOf(val);
-  if (index > -1) {
-    selectedAttributes.value.splice(index, 1);
-  } else {
-    selectedAttributes.value.push(val);
-  }
-  applyFilters();
+  selectedAttributes.value = [];
+  filters.categories = filters.categories === categorySlug ? '' : categorySlug;
+  currentPage.value = 1;
+};
+
+const applyFilters = () => {
+  currentPage.value = 1;
+};
+
+const resetFilters = () => {
+  filters.categories = '';
+  filters.sort = 'recommended';
+  selectedAttributes.value = [];
+  selectedColors.value = [];
+  currentPage.value = 1;
 };
 
 const visibleCategories = computed(() => {
@@ -718,7 +692,6 @@ const activeFilterLabels = computed(() => {
 const removeFilter = (item) => {
   if (item.type === 'category') {
     filters.categories = '';
-    refreshFilterOptions();
   } else if (item.type === 'color') {
     selectedColors.value = selectedColors.value.filter((color) => color !== item.value);
   } else if (item.type === 'attribute') {
@@ -726,73 +699,29 @@ const removeFilter = (item) => {
   } else if (item.type === 'sort') {
     filters.sort = 'recommended';
   }
-  applyFilters();
+  currentPage.value = 1;
 };
 
-// CẬP NHẬT 2: THÊM TÍN HIỆU HỦY (ABORT CONTROLLER) ĐỂ HỦY REQUEST CŨ DƯỚI BACKEND
-const fetchProducts = async (page = 1) => {
-  if (productAbortController) {
-    productAbortController.abort();
-  }
-  productAbortController = new AbortController();
-  const signal = productAbortController.signal;
-
-  const requestId = ++productFetchSequence;
-  isLoadingProducts.value = true;
-  try {
-    const queryPayload = { page, sort: filters.sort };
-    if (filters.categories) queryPayload.categories = filters.categories;
-
-    if (selectedColors.value.length > 0) {
-      queryPayload.color = selectedColors.value.join(',');
-    }
-
-    if (selectedAttributes.value.length > 0) {
-      queryPayload.attribute_values = selectedAttributes.value.join(',');
-    }
-
-    const { data } = await clientApiClient.get(`/shop/${shopSlug.value}/products`, {
-      params: queryPayload,
-      signal, // Ngắt kết nối trên network nếu user ấn tiếp 
-      ignoreAuthRedirect: true
-    });
-    if (requestId !== productFetchSequence) return;
-
-    if (data?.success) {
-      allProducts.value = data.data.data;
-      pagination.value = { current_page: data.data.current_page, last_page: data.data.last_page, total: data.data.total, per_page: data.data.per_page };
-      hasLoadedProducts.value = true;
-    }
-  } catch (e) {
-    if (e.name === 'CanceledError' || e.code === 'ERR_CANCELED') {
-      return; // Bỏ qua lỗi hủy request
-    }
-    console.error(e);
-  } finally {
-    if (requestId === productFetchSequence) {
-      isLoadingProducts.value = false;
-    }
-  }
-};
-
-// CẬP NHẬT 3: XÓA 'AWAIT' ĐỂ LOAD SONG SONG BỘ LỌC VÀ SẢN PHẨM
-const filterByCategory = (categorySlug) => {
-  selectedColors.value = [];
+const toggleColor = (color) => {
   selectedAttributes.value = [];
-  filters.categories = filters.categories === categorySlug ? '' : categorySlug;
-  refreshFilterOptions(); // Gọi bất đồng bộ (không await)
-  applyFilters();         // Để products load song song với categories luôn
+  const index = selectedColors.value.indexOf(color);
+  if (index > -1) {
+    selectedColors.value.splice(index, 1);
+  } else {
+    selectedColors.value.push(color);
+  }
+  currentPage.value = 1;
 };
 
-const applyFilters = () => fetchProducts(1);
-
-const resetFilters = () => {
-  filters.categories = '';
-  filters.sort = 'recommended';
-  selectedAttributes.value = [];
+const toggleAttribute = (val) => {
   selectedColors.value = [];
-  refreshFilterOptions();
-  applyFilters();
+  const index = selectedAttributes.value.indexOf(val);
+  if (index > -1) {
+    selectedAttributes.value.splice(index, 1);
+  } else {
+    selectedAttributes.value.push(val);
+  }
+  currentPage.value = 1;
 };
 
 const visiblePages = computed(() => {
@@ -813,7 +742,7 @@ const visiblePages = computed(() => {
 
 const changePage = (page) => {
   if (page >= 1 && page <= pagination.value.last_page) {
-    fetchProducts(page);
+    currentPage.value = page;
     const shopTopBar = document.querySelector('.shop-top-bar');
     if (shopTopBar) {
       const y = shopTopBar.getBoundingClientRect().top + window.scrollY - 80;
@@ -979,13 +908,7 @@ const confirmAddToCart = async () => {
 
 onMounted(() => {
   handleBirthdayCouponFromUrl();
-  Promise.all([
-    fetchFavorites(),
-    fetchCategories(),
-    fetchColors(),
-    fetchAttributes(),
-    fetchProducts(1)
-  ]).then(() => isPageLoading.value = false);
+  fetchFavorites().finally(() => isPageLoading.value = false);
 });
 </script>
 
@@ -1468,17 +1391,7 @@ onMounted(() => {
   background-color: #f5efe8; /* Màu nền nhẹ khi chưa có ảnh */
 }
 
-.category-skeleton-row {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(90px, 1fr));
-  gap: 14px;
-  max-width: 720px;
-  padding: 4px 0 10px;
-}
 
-.category-skeleton-item {
-  min-width: 0;
-}
 
 .sora-card-image img {
   width: 100%;
