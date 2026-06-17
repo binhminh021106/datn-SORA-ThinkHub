@@ -12,12 +12,12 @@
             <div class="combo-bg-overlay"></div>
 
             <div class="combo-left-content">
-              <div class="combo-badges">
+              <h2 class="combo-title font-serif">{{ combo.title }}</h2>
+
+              <div class="combo-badges mb-3">
                 <span class="badge-red">{{ combo.badge }}</span>
                 <span class="badge-light">SỐ LƯỢNG CÓ HẠN</span>
               </div>
-
-              <h2 class="combo-title font-serif">{{ combo.title }}</h2>
 
               <div class="combo-countdown" v-if="combo.endDate">
                 <p class="countdown-label">Thời gian còn lại</p>
@@ -53,8 +53,8 @@
               </div>
 
               <router-link :to="{ name: 'client-combo-detail', params: { slug: combo.slug } }"
-                class="editorial-btn w-100 text-decoration-none group">
-                <i class="bi bi-arrow-right-circle btn-icon"></i>
+                class="editorial-btn text-decoration-none mt-2">
+                <i class="bi bi-arrow-right-circle btn-icon me-2"></i>
                 <span> Xem chi tiết</span>
               </router-link>
             </div>
@@ -358,7 +358,7 @@ onUnmounted(() => {
   font-size: clamp(1.4rem, 2vw, 1.8rem);
   font-weight: 600;
   line-height: 1.2;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
   text-transform: uppercase;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -367,7 +367,7 @@ onUnmounted(() => {
 }
 
 .combo-countdown {
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 .countdown-label {
@@ -377,7 +377,7 @@ onUnmounted(() => {
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .countdown-boxes {
@@ -424,15 +424,15 @@ onUnmounted(() => {
 }
 
 .combo-pricing {
-  margin-bottom: 1.25rem;
-  padding-bottom: 1rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
   border-bottom: 1px solid rgba(var(--sora-secondary-rgb), 0.2);
 }
 
 .discount-text {
   color: #8b7a6a;
   font-size: 0.875rem;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0;
 }
 
 .discount-text span {
@@ -728,14 +728,14 @@ onUnmounted(() => {
 .combo-bg-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.7) 40%, rgba(255, 255, 255, 0.95) 60%, rgba(255, 255, 255, 1) 100%);
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.2) 40%, rgba(255, 255, 255, 0.9) 65%, rgba(255, 255, 255, 1) 100%);
   z-index: 0;
 }
 
 .combo-left-content {
   position: relative;
   z-index: 1;
-  padding: 2.5rem 3.5rem;
+  padding: 1.5rem 2.5rem;
   padding-top: 5rem;
 }
 
@@ -784,23 +784,4 @@ onUnmounted(() => {
   }
 }
 
-.editorial-btn {
-  position: relative;
-  overflow: hidden;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 42px;
-  padding: 0.75rem 1.25rem;
-  background: var(--sora-primary);
-  color: #fff;
-  border: 1px solid rgba(var(--sora-secondary-rgb), 0.5);
-  border-radius: 14px;
-  font-family: 'Oswald', sans-serif;
-  font-size: 0.76rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-}
 </style>

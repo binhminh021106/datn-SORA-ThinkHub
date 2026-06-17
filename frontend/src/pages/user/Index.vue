@@ -1,23 +1,12 @@
 <template>
   <div class="sora-home font-luxury">
-    <Transition name="home-logo-loader">
-      <div v-if="showHomeLogoLoader"
-        class="home-logo-loader vh-100 d-flex flex-column justify-content-center align-items-center bg-light">
-        <div class="logo-pulse-wrapper mb-4">
-          <img src="@/assets/images/icon-logo.png" alt="SORA Logo" class="logo-pulse-img">
-        </div>
-      </div>
-    </Transition>
+    <SoraHomeIntroLoader :show="showHomeLogoLoader" />
 
     <div class="home-page-content" :class="{ 'home-page-content-loading': showHomeLogoLoader }">
-      <section class="home-hero">
-        <div v-if="showHeroSkeleton" class="hero-loading-layer d-flex align-items-center justify-content-center">
-          <div class="hero-loading-content text-center position-relative z-index-2">
-            <div class="hero-loading-brand font-serif fw-bold mb-3">SORA</div>
-            <div class="hero-loading-line mx-auto mb-3"></div>
-            <p class="font-oswald tracking-widest text-uppercase mb-0">Đang chuẩn bị không gian mua sắm</p>
-          </div>
-        </div>
+      <SoraHomeSkeleton v-if="showHomeSkeleton" />
+
+      <template v-else-if="!showHomeLogoLoader">
+        <section class="home-hero">
 
         <div v-if="heroBanners.length > 0" id="homeEditorialCarousel"
           class="home-hero-media carousel slide carousel-fade" data-bs-ride="carousel" data-bs-interval="6000"
@@ -129,9 +118,9 @@
       <!-- TOP SELLING SECTION -->
       <section class="editorial-section top-selling-editorial" style="background-color: #fdfaf7; padding-top: 5rem; padding-bottom: 5rem;" v-if="topSellingProducts.length > 0">
         <div class="container products-container">
-          <div class="section-heading text-center mb-5">
+          <div class="section-heading text-center mb-5" style="max-width: 1000px;">
             <span class="section-kicker text-sora-primary fw-bold" style="font-size: 0.9rem; letter-spacing: 3px;"><i class="bi bi-fire me-1"></i> Bestsellers</span>
-            <h2 class="font-serif">Kiệt tác được khao khát nhất</h2>
+            <h2 class="font-serif text-nowrap">Kiệt tác được khao khát nhất</h2>
           </div>
 
           <div class="editorial-products-grid">
@@ -151,7 +140,7 @@
         <div class="container-fluid px-0 combos-container">
           <div class="section-heading text-center mb-5">
             <span class="section-kicker text-gold">Ưu Đãi Đặc Quyền</span>
-            <h2 class="font-serif">Bộ sưu tập quà tặng hoàn hảo</h2>
+            <h2 class="font-serif text-nowrap">Bộ sưu tập hoàn hảo</h2>
           </div>
 
           <ComboCarousel :combos="data.combos" />
@@ -163,7 +152,7 @@
         <div class="container products-container">
           <div class="section-heading text-center mb-5">
             <span class="section-kicker">Bộ Sưu Tập Mới</span>
-            <h2 class="font-serif">Đón chào những thiết kế tinh xảo nhất từ SORA</h2>
+            <h2 class="font-serif">Đón chào những thiết kế mới nhất từ SORA</h2>
           </div>
 
           <div class="editorial-products-grid">
@@ -308,6 +297,8 @@
         </div>
       </section>
 
+      </template>
+
     </div>
   </div>
 </template>
@@ -319,15 +310,24 @@ import soraAlert from '@/utils/soraAlertConfig';
 import ProductCard from '@/components/ui/ProductCard.vue';
 import NewsPostCard from '@/components/ui/NewsPostCard.vue';
 import ComboCarousel from '@/components/ui/ComboCarousel.vue';
+import SoraHomeIntroLoader from '@/components/ui/SoraHomeIntroLoader.vue';
+import SoraHomeSkeleton from '@/components/ui/SoraHomeSkeleton.vue';
 import { getStorageUrl } from '@/utils/env';
 import clientApiClient from '@/utils/clientApiClient';
 import { getUserToken } from '@/composables/useUtilities';
+import { useQuery } from '@tanstack/vue-query';
 
-const HOME_INTRO_SESSION_KEY = 'sora_home_intro_seen';
-const navigationEntry = performance.getEntriesByType('navigation')[0];
-const isHardReload = navigationEntry?.type === 'reload';
-const isLoading = ref(true);
-const shouldShowHomeIntro = ref(isHardReload || sessionStorage.getItem(HOME_INTRO_SESSION_KEY) !== '1');
+const { data: homeQueryData, isPending: isQueryLoading, isError: isQueryError } = useQuery({
+  queryKey: ['homeData'],
+  queryFn: async () => {
+    const res = await clientApiClient.get('/client/home-data', { ignoreAuthRedirect: true });
+    return res.data?.data || res.data || {};
+  },
+  staleTime: 5 * 60 * 1000,
+});
+
+const isLoading = computed(() => isQueryLoading.value && !data.banners.length);
+const shouldShowHomeIntro = ref(!window.__sora_intro_shown);
 const isLogoLoaderMinTimeDone = ref(!shouldShowHomeIntro.value);
 const isHeroImageReady = ref(false);
 const windowWidth = ref(window.innerWidth);
@@ -417,9 +417,11 @@ const galleryDisplayImages = computed(() => {
   return data.products.map((product) => product.thumbnail_image).filter(Boolean).slice(0, 4);
 });
 
-const showHeroSkeleton = computed(() => isLoading.value || (heroImage.value && !isHeroImageReady.value));
 const isHomeReady = computed(() => !isLoading.value && (!heroImage.value || isHeroImageReady.value));
 const showHomeLogoLoader = computed(() => shouldShowHomeIntro.value && (!isHomeReady.value || !isLogoLoaderMinTimeDone.value));
+const showHomeSkeleton = computed(() =>
+  isLoading.value && (!shouldShowHomeIntro.value || isLogoLoaderMinTimeDone.value)
+);
 
 const comboCurrentIndex = ref(0);
 let comboAutoplayTimer = null;
@@ -574,7 +576,7 @@ const handleResize = () => {
 
 watch(showHomeLogoLoader, (isShown) => {
   if (!isShown && shouldShowHomeIntro.value && isHomeReady.value && isLogoLoaderMinTimeDone.value) {
-    sessionStorage.setItem(HOME_INTRO_SESSION_KEY, '1');
+    window.__sora_intro_shown = true;
     shouldShowHomeIntro.value = false;
   }
 });
@@ -628,6 +630,17 @@ const markHeroImageReady = (index = 0) => {
   }
 };
 
+watch(heroImage, (newVal) => {
+  if (newVal && !isHeroImageReady.value) {
+    const img = new Image();
+    img.onload = () => markHeroImageReady(0);
+    img.onerror = () => markHeroImageReady(0);
+    img.src = getImageUrl(newVal);
+  } else if (!newVal && !isHeroImageReady.value) {
+    markHeroImageReady(0);
+  }
+}, { immediate: true });
+
 const handleHeroImageError = (event, index = 0) => {
   handleImageError(event);
   markHeroImageReady(index);
@@ -643,35 +656,24 @@ const showWishlistNotification = (isAdded) => {
 };
 
 
-const fetchHomepageData = async () => {
-  isLoading.value = true;
-  isHeroImageReady.value = false;
-
-  try {
-    const res = await clientApiClient.get('/client/home-data', { ignoreAuthRedirect: true });
-    const result = res.data || {};
-    const payload = result.data || result;
-
-    if (result.success || result.status) {
-      data.banners = payload.banners || [];
-      data.coupons = payload.coupons || [];
-      data.categories = payload.categories || [];
-      data.products = payload.products || [];
-      data.combos = payload.combos || [];
-      data.tiers = payload.tiers || [];
-      data.galleries = payload.galleries || [];
-      data.news = payload.news || [];
-
-      if (data.combos.length > 0) {
-        // Carousel component will handle its own autoplay
-      }
-    }
-  } catch (error) {
-    soraAlert.fire({ icon: 'error', title: 'Không thể tải dữ liệu trang chủ' });
-  } finally {
-    isLoading.value = false;
+watch(homeQueryData, (payload) => {
+  if (payload) {
+    data.banners = payload.banners || [];
+    data.coupons = payload.coupons || [];
+    data.categories = payload.categories || [];
+    data.products = payload.products || [];
+    data.combos = payload.combos || [];
+    data.tiers = payload.tiers || [];
+    data.galleries = payload.galleries || [];
+    data.news = payload.news || [];
   }
-};
+}, { immediate: true });
+
+watch(isQueryError, (hasError) => {
+  if (hasError) {
+    soraAlert.fire({ icon: 'error', title: 'Không thể tải dữ liệu trang chủ' });
+  }
+});
 
 onMounted(() => {
   if (shouldShowHomeIntro.value) {
@@ -681,8 +683,6 @@ onMounted(() => {
   }
 
   window.addEventListener('resize', handleResize);
-
-  fetchHomepageData();
   loadWishlist();
 });
 
@@ -713,6 +713,7 @@ onUnmounted(() => {
 
 .font-serif {
   font-family: 'Playfair Display', serif;
+  /* khoảng cách giữa các dòng */
 }
 
 .font-oswald {
@@ -746,60 +747,6 @@ onUnmounted(() => {
   max-width: var(--home-container-width);
   padding-left: var(--home-gutter);
   padding-right: var(--home-gutter);
-}
-
-.home-logo-loader {
-  position: fixed;
-  inset: 0;
-  z-index: 9998;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(var(--sora-secondary-rgb), 0.12), transparent 26%),
-    #f8f9fa !important;
-}
-
-.home-page-content {
-  opacity: 1;
-  transition: opacity 0.5s ease, transform 0.5s ease;
-}
-
-.home-page-content-loading {
-  opacity: 0.96;
-  transform: scale(0.996);
-}
-
-.logo-pulse-wrapper {
-  display: inline-block;
-}
-
-.logo-pulse-img {
-  width: 90px;
-  height: auto;
-  object-fit: contain;
-  animation: luxury-pulse 1.8s infinite alternate ease-in-out;
-}
-
-.home-logo-loader-enter-active,
-.home-logo-loader-leave-active {
-  transition: opacity 0.5s ease, transform 0.5s ease, filter 0.5s ease;
-}
-
-.home-logo-loader-enter-from,
-.home-logo-loader-leave-to {
-  opacity: 0;
-  transform: scale(1.035);
-  filter: blur(8px);
-}
-
-@keyframes luxury-pulse {
-  0% {
-    transform: scale(0.95);
-    filter: drop-shadow(0 0 5px rgba(var(--sora-primary-rgb), 0.2)) brightness(1);
-  }
-
-  100% {
-    transform: scale(1.05);
-    filter: drop-shadow(0 0 25px rgba(var(--sora-primary-rgb), 0.8)) brightness(1.15);
-  }
 }
 
 .home-hero {
@@ -1024,44 +971,7 @@ onUnmounted(() => {
   top: 34%;
 }
 
-.hero-loading-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 20;
-  background: linear-gradient(135deg, #fffafa 0%, #fbf2ef 45%, #f8efe4 100%);
-}
 
-.hero-loading-layer::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(110deg, transparent 20%, rgba(255, 255, 255, 0.7) 45%, transparent 70%);
-  transform: translateX(-100%);
-  animation: heroShimmer 1.6s ease-in-out infinite;
-}
-
-.hero-loading-brand {
-  color: var(--sora-primary);
-  font-size: clamp(3.2rem, 8vw, 6rem);
-  letter-spacing: 0.18em;
-}
-
-.hero-loading-line {
-  width: 90px;
-  height: 2px;
-  background: var(--sora-secondary);
-}
-
-.hero-loading-content p {
-  color: #6c3b43;
-  font-size: 0.85rem;
-}
-
-@keyframes heroShimmer {
-  100% {
-    transform: translateX(100%);
-  }
-}
 
 .home-stats-band {
   background: #6a1622;
@@ -1176,7 +1086,7 @@ onUnmounted(() => {
 }
 
 .editorial-section {
-  padding: clamp(3rem, 5vw, 4.5rem) 0;
+  padding: clamp(3rem, 5vw, 5rem) 0;
 }
 
 .narrow-container {
@@ -2019,7 +1929,7 @@ onUnmounted(() => {
 .dark-expertise-section {
   background: linear-gradient(135deg, var(--sora-primary) 0%, var(--sora-primary) 62%, #12090c 100%);
   color: #fff;
-  padding: clamp(3rem, 5vw, 4rem) 0;
+  padding: clamp(1rem, 2vw, 3rem) 0;
 }
 
 .expertise-grid {

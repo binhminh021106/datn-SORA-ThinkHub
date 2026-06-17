@@ -217,30 +217,25 @@ watch(currentSlug, () => {
         <!-- HIỂN THỊ DỮ LIỆU TỪ CACHE HOẶC DATA THẬT -->
         <div v-else class="fade-in">
             <!-- Breadcrumb -->
-            <div class="bg-white py-2 border-bottom shadow-sm">
-                <div class="container">
-                    <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb mb-0 text-small fw-medium">
-                            <li class="breadcrumb-item">
-                                <router-link to="/" class="text-reset text-decoration-none back-link hover-underline">Trang chủ</router-link>
-                            </li>
-                            <li class="breadcrumb-item">
-                                <router-link :to="{ name: 'news' }" class="text-reset text-decoration-none back-link hover-underline">Tin tức</router-link>
-                            </li>
-                            <li class="breadcrumb-item active text-truncate text-main" style="max-width: 300px;" aria-current="page">{{ post.title }}</li>
-                        </ol>
-                    </nav>
-                </div>
+            <div class="container fade-in">
+                <nav aria-label="breadcrumb" class="pt-4 pb-0 mb-2">
+                    <ol class="breadcrumb mb-0 font-oswald text-uppercase tracking-wide small" style="font-size: 0.75rem;">
+                        <li class="breadcrumb-item">
+                            <router-link to="/" class="text-muted text-decoration-none hover-primary">Trang chủ</router-link>
+                        </li>
+                        <li class="breadcrumb-item">
+                            <router-link :to="{ name: 'news' }" class="text-muted text-decoration-none hover-primary">Tin tức</router-link>
+                        </li>
+                        <li class="breadcrumb-item active fw-bold text-main text-truncate" style="max-width: 300px;" aria-current="page">{{ post.title }}</li>
+                    </ol>
+                </nav>
             </div>
 
-            <div class="container my-5">
+            <div class="container my-3">
                 <div class="row">
-
-                    <!-- Nội dung bài viết -->
                     <div class="col-lg-8 pe-lg-5">
                         <article class="article-container bg-white p-4 p-md-5 rounded-4 shadow-sm border border-light-subtle position-relative">
                             
-                            <!-- Indicator nhỏ góc phải báo hiệu đang update ngầm -->
                             <div v-if="post.isPartial && isPostFetching" class="position-absolute top-0 end-0 m-4 d-flex align-items-center text-muted small">
                                 <div class="spinner-border spinner-border-sm text-main me-2" role="status"></div>
                                 Đang tải nội dung...

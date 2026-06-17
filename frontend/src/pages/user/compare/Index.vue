@@ -1,51 +1,71 @@
 <template>
   <div class="compare-page-wrapper">
     <div class="container">
-      <div class="breadcrumb mb-4">
-        <span @click="router.push('/')">Trang chủ</span> <span class="separator">/</span>
-        <span @click="router.push(`/shop/${shopSlug}`)">Sản phẩm</span> <span class="separator">/</span>
-        <span class="current">So sánh sản phẩm</span>
-      </div>
+      <!-- Breadcrumb -->
+      <nav aria-label="breadcrumb" class="pt-1 pb-2 mb-2">
+        <ol class="breadcrumb mb-0 font-oswald text-uppercase tracking-wide small" style="font-size: 0.75rem;">
+          <li class="breadcrumb-item"><router-link to="/" class="text-muted text-decoration-none hover-primary">Trang chủ</router-link></li>
+          <li class="breadcrumb-item"><router-link :to="`/shop/${shopSlug}`" class="text-muted text-decoration-none hover-primary">Sản phẩm</router-link></li>
+          <li class="breadcrumb-item active fw-bold" style="color: rgb(159,39,59);" aria-current="page">So sánh sản phẩm</li>
+        </ol>
+      </nav>
 
       <!-- HEADER MỚI: QUAY LẠI VÀ CHỈ BÁO SP GỐC -->
       <div class="compare-header mb-4 pb-3 border-bottom">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
           <div class="header-left">
-            <h1 class="page-title mb-2">So sánh sản phẩm</h1>
+            <h1 class="page-title font-serif fw-bold text-dark mb-2 fs-3 tracking-wider text-uppercase">So sánh sản phẩm</h1>
             <!-- Hiển thị tên sản phẩm gốc -->
-            <p v-if="baseProductName" class="text-muted mb-0" style="font-size: 15px;">
+            <p v-if="baseProductName" class="text-muted mb-0 font-inter" style="font-size: 14px;">
               Bạn đang so sánh với sản phẩm: <strong style="color: rgb(159,39,59);">{{ baseProductName }}</strong>
             </p>
           </div>
           
           <div class="header-right">
             <!-- Nút Quay lại sản phẩm -->
-            <button class="btn-outline" @click="goBackToBaseProduct">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="me-2" style="vertical-align: middle; margin-top: -2px;">
-                <path d="M19 12H5M12 19l-7-7 7-7"/>
-              </svg>
+            <button class="btn-sora-back" @click="goBackToBaseProduct">
+              <i class="bi bi-arrow-left me-2"></i>
               Quay lại sản phẩm
             </button>
 
-            <label class="diff-toggle ms-md-3">
+            <!-- Toggle: Chỉ hiển thị điểm khác biệt -->
+            <label class="sora-toggle-switch ms-md-3">
               <input type="checkbox" v-model="showDiffOnly">
-              <span>Chỉ hiển thị điểm khác biệt</span>
+              <div class="toggle-slider"></div>
+              <span class="toggle-label font-inter fw-medium text-muted">Chỉ hiển thị điểm khác biệt</span>
             </label>
           </div>
         </div>
       </div>
 
-      <div v-if="isLoading" class="compare-table-skeleton">
-        <div class="d-flex gap-3 mb-4">
-          <SoraSkeleton width="18%" height="160px" radius="8px" />
-          <SoraSkeleton v-for="item in 3" :key="item" width="26%" height="160px" radius="8px" />
-        </div>
-        <SoraListSkeleton :rows="5" :image="false" />
+      <div v-if="isLoading" class="table-responsive skeleton-wrapper">
+        <table class="compare-table hover-column-table">
+          <thead>
+            <tr>
+              <th class="criteria-col empty-th"><SoraSkeleton width="80%" height="20px" class="ms-3" /></th>
+              <th v-for="i in 3" :key="i" class="product-col">
+                <div class="product-card-top d-flex flex-column h-100">
+                  <SoraSkeleton width="80%" height="150px" radius="8px" class="align-self-center mb-3" />
+                  <SoraSkeleton width="90%" height="20px" class="align-self-center mb-2" />
+                  <SoraSkeleton width="100%" height="40px" radius="10px" class="mt-auto" />
+                </div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="r in 6" :key="r">
+              <td class="criteria-col"><SoraSkeleton width="60%" height="16px" class="ms-3" /></td>
+              <td v-for="i in 3" :key="i" class="text-center">
+                <SoraSkeleton width="70%" height="16px" class="mx-auto" />
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       <div v-else-if="products.length === 0" class="empty-state">
         <p>Chưa có sản phẩm nào để so sánh.</p>
-        <button class="btn-primary-outline" @click="router.push(`/shop/${shopSlug}`)">Tiếp tục mua sắm</button>
+        <button class="editorial-btn editorial-btn-outline mt-3" @click="router.push(`/shop/${shopSlug}`)">Tiếp tục mua sắm</button>
       </div>
 
       <div v-else class="table-responsive">
@@ -55,17 +75,19 @@
             <tr>
               <th class="criteria-col empty-th"></th>
               <th v-for="(product, index) in products" :key="product.id" class="product-col" :class="{'best-choice': isBestPrice(product.promotional_price || product.base_price)}">
-                <div class="product-card-top">
-                  <button class="btn-remove" @click="removeProduct(product.id)" title="Xóa khỏi so sánh">✕</button>
-                  <img :src="product.thumbnail_image || 'https://via.placeholder.com/150'" :alt="product.name" class="p-img">
+                <div class="product-card-top d-flex flex-column h-100">
+                  <button class="btn-remove" @click="removeProduct(product.id)" title="Xóa khỏi so sánh"><i class="bi bi-x"></i></button>
+                  <img :src="product.thumbnail_image || 'https://via.placeholder.com/150'" :alt="product.name" class="p-img align-self-center">
                   <h3 class="p-name" @click="goToDetail(product.slug)" :title="product.name">{{ product.name }}</h3>
                   
                   <!-- Tag Sản phẩm gốc được gán tự động vào cột đầu tiên (hoặc trùng với spGoc id) -->
-                  <div v-if="product.id == spGoc || (index === 0 && !spGoc && products.length > 1)" class="base-product-badge">
-                    Sản phẩm gốc
+                  <div class="mb-3" style="min-height: 22px;">
+                    <div v-if="product.id == spGoc || (index === 0 && !spGoc && products.length > 1)" class="base-product-badge">
+                      Sản phẩm gốc
+                    </div>
                   </div>
 
-                  <button class="btn-buy mt-3" @click="goToDetail(product.slug)">XEM CHI TIẾT</button>
+                  <button class="editorial-btn w-100 mt-auto" @click="goToDetail(product.slug)">XEM CHI TIẾT</button>
                 </div>
               </th>
               <!-- Ô thêm sản phẩm (ĐÃ SỬA @CLICK ĐỂ MỞ POPUP) -->
@@ -198,7 +220,16 @@
             <div v-if="comparePopupTab === 'suggestions'">
               <p class="compare-modal-subtitle">Các sản phẩm mới nhất cùng danh mục:</p>
               
-              <SoraProductGridSkeleton v-if="isLoadingCompareSuggestions" :count="4" min="130px" gap="15px" />
+              <div v-if="isLoadingCompareSuggestions" class="compare-suggestions-grid">
+                <div v-for="i in 4" :key="i" class="suggestion-card border-0 px-0">
+                  <SoraSkeleton width="100%" height="auto" style="aspect-ratio: 1/1;" radius="6px" class="mb-3" />
+                  <div class="suggestion-info">
+                    <SoraSkeleton width="90%" height="14px" class="mb-2" />
+                    <SoraSkeleton width="60%" height="16px" class="mb-3" />
+                  </div>
+                  <SoraSkeleton width="100%" height="36px" radius="10px" class="mt-auto" />
+                </div>
+              </div>
 
               <div v-else-if="filteredSuggestions.length === 0" class="empty-msg">
                 <p>Không tìm thấy sản phẩm nào khớp với tìm kiếm của bạn.</p>
@@ -212,7 +243,7 @@
                     <p class="suggestion-price">{{ formatMoney(item.promotional_price || item.base_price) }}</p>
                   </div>
                   <button 
-                    class="btn-add-suggestion"
+                    class="editorial-btn editorial-btn-sm w-100 mt-3"
                     :class="{ 'is-added': isInCompare(item.id) }"
                     @click="toggleCompare(item)"
                   >
@@ -229,7 +260,16 @@
               <div v-if="!isLoggedIn" class="not-logged-in-msg">
                 <p>Vui lòng đăng nhập để xem danh sách yêu thích.</p>
               </div>
-              <SoraProductGridSkeleton v-else-if="isLoadingFavourites" :count="4" min="130px" gap="15px" />
+              <div v-else-if="isLoadingFavourites" class="compare-suggestions-grid">
+                <div v-for="i in 4" :key="i" class="suggestion-card border-0 px-0">
+                  <SoraSkeleton width="100%" height="auto" style="aspect-ratio: 1/1;" radius="6px" class="mb-3" />
+                  <div class="suggestion-info">
+                    <SoraSkeleton width="90%" height="14px" class="mb-2" />
+                    <SoraSkeleton width="60%" height="16px" class="mb-3" />
+                  </div>
+                  <SoraSkeleton width="100%" height="36px" radius="10px" class="mt-auto" />
+                </div>
+              </div>
               <div v-else-if="filteredFavourites.length === 0" class="empty-msg">
                 <p v-if="searchQuery">Không có sản phẩm yêu thích nào khớp với "{{ searchQuery }}".</p>
                 <p v-else>Bạn chưa có sản phẩm yêu thích nào.</p>
@@ -242,7 +282,7 @@
                     <p class="suggestion-price">{{ formatMoney(item.promotional_price || item.base_price) }}</p>
                   </div>
                   <button 
-                    class="btn-add-suggestion"
+                    class="editorial-btn editorial-btn-sm w-100 mt-3"
                     :class="{ 'is-added': isInCompare(item.id) }"
                     @click="toggleCompare(item)"
                   >
@@ -254,7 +294,7 @@
 
           </div>
           <div class="compare-modal-footer">
-            <button class="btn-primary" @click="closeComparePopup">
+            <button class="editorial-btn px-5" @click="closeComparePopup">
               Hoàn tất
             </button>
           </div>
@@ -603,7 +643,7 @@ const truncateHtml = (html, length) => {
 .compare-page-wrapper {
   background: #f8f9fa;
   min-height: 100vh;
-  padding: 40px 0;
+  padding: 10px 0;
 }
 
 .container {
@@ -615,9 +655,17 @@ const truncateHtml = (html, length) => {
   box-shadow: 0 4px 20px rgba(0,0,0,0.03);
 }
 
-.breadcrumb { font-size: 14px; color: #888; cursor: pointer; }
-.breadcrumb .separator { margin: 0 10px; }
-.breadcrumb .current { color: #333; pointer-events: none;}
+/* Breadcrumb Sync */
+.breadcrumb { font-size: 13px; color: #888; background: transparent; padding: 0;}
+.breadcrumb .breadcrumb-item + .breadcrumb-item::before { color: #ccc; }
+.hover-primary:hover { color: #9f273b !important; }
+
+/* Compare Header Elements */
+.font-serif { font-family: "Playfair Display", "Merriweather", serif; }
+.font-inter { font-family: "Inter", sans-serif; }
+.font-oswald { font-family: "Oswald", sans-serif; }
+.tracking-wide { letter-spacing: 0.1em; }
+.tracking-wider { letter-spacing: 0.15em; }
 
 .compare-header {
   border-bottom: 1px solid #eee;
@@ -630,30 +678,70 @@ const truncateHtml = (html, length) => {
 
 .page-title { font-size: 24px; font-weight: 600; color: #333; }
 
-.diff-toggle {
-  display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; color: #555;
+/* Nút quay lại */
+.btn-sora-back {
+  background: transparent;
+  border: 1px solid #ddd;
+  padding: 8px 20px;
+  border-radius: 50px;
+  cursor: pointer;
+  color: #555;
+  font-family: 'Oswald', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+.btn-sora-back:hover {
+  background: #fafafa;
+  border-color: #9f273b;
+  color: #9f273b;
+}
+
+/* Custom Toggle Switch */
+.sora-toggle-switch {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  gap: 10px;
+}
+.sora-toggle-switch input {
+  display: none;
+}
+.toggle-slider {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background-color: #e0e0e0;
+  border-radius: 34px;
+  transition: 0.3s;
+}
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  border-radius: 50%;
+  transition: 0.3s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.sora-toggle-switch input:checked + .toggle-slider {
+  background-color: #9f273b;
+}
+.sora-toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(20px);
+}
+.toggle-label {
+  font-size: 14px;
+  cursor: pointer;
 }
 
 .table-responsive { overflow-x: auto; padding-bottom: 20px; }
-
-/* Nút quay lại */
-.btn-outline {
-  background: transparent;
-  border: 1px solid #ccc;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  color: #555;
-  font-weight: 600;
-  transition: background 0.2s, border-color 0.2s;
-  display: flex;
-  align-items: center;
-}
-.btn-outline:hover {
-  background: #f9f9f9;
-  border-color: #999;
-}
-.me-2 { margin-right: 8px; }
 
 /* ==========================================
    CSS TRICK: HIỆU ỨNG HOVER CẢ CỘT
@@ -710,11 +798,6 @@ const truncateHtml = (html, length) => {
   display: inline-block; padding: 3px 8px; background: #f1f1f1; border-radius: 4px; font-size: 11px; color: #555; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
 }
 
-.btn-buy {
-  width: 100%; padding: 10px; background: transparent; color: rgb(159,39,59); border: 1px solid rgb(159,39,59); border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s;
-}
-.btn-buy:hover { background: rgb(159,39,59); color: #fff;}
-
 .add-more-box {
   height: 100%; min-height: 250px; border: 2px dashed #ddd; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; color: #888; transition: all 0.3s;
 }
@@ -749,7 +832,31 @@ const truncateHtml = (html, length) => {
 .compare-table-skeleton {
   padding: 24px 0;
 }
-.btn-primary-outline { background: transparent; border: 1px solid rgb(159,39,59); color: rgb(159,39,59); padding: 10px 24px; border-radius: 6px; cursor: pointer; margin-top: 15px;}
+
+/* Extra button styles to sync with Home */
+.editorial-btn-outline {
+  background: transparent !important;
+  color: #9f273b !important;
+  border: 1px solid #9f273b !important;
+}
+.editorial-btn-outline:hover {
+  background: #9f273b !important;
+  color: #fff !important;
+}
+.editorial-btn-sm {
+  min-height: 36px !important;
+  padding: 6px 16px !important;
+  font-size: 0.72rem !important;
+  border-radius: 10px !important;
+}
+.editorial-btn-sm.is-added {
+  background: #28a745 !important;
+  border-color: #28a745 !important;
+}
+.editorial-btn-sm.is-added:hover {
+  background: #218838 !important;
+  border-color: #218838 !important;
+}
 
 @media (min-width: 768px) {
   .ms-md-3 { margin-left: 1rem; }
@@ -779,12 +886,8 @@ const truncateHtml = (html, length) => {
 .suggestion-info { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; }
 .suggestion-name { font-size: 13px; font-weight: 500; margin-bottom: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #333; line-height: 1.4;}
 .suggestion-price { font-size: 14px; font-weight: 600; color: rgb(159,39,59); margin-bottom: 10px; }
-.btn-add-suggestion { background: transparent; border: 1px solid rgb(159,39,59); color: rgb(159,39,59); padding: 6px; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: 600; transition: all 0.2s; width: 100%; }
-.btn-add-suggestion:hover { background: rgb(159,39,59); color: #fff; }
-.btn-add-suggestion.is-added { background: rgb(159,39,59); color: #fff; }
 
 .compare-modal-footer { padding: 15px 25px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 15px; background: #fdfdfd; border-radius: 0 0 12px 12px; }
-.btn-primary { background: rgb(159,39,59); border: none; padding: 10px 24px; border-radius: 6px; cursor: pointer; color: #fff; font-weight: 600; transition: opacity 0.2s; }
 
 .fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }

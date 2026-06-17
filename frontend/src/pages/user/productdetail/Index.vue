@@ -8,11 +8,13 @@
     <!-- MAIN CONTENT -->
     <template v-else-if="product">
       <!-- Breadcrumb -->
-      <div class="breadcrumb fade-in">
-        <span>Trang chủ</span> <span class="separator">/</span>
-        <span>Sản phẩm</span> <span class="separator">/</span>
-        <span class="current">{{ product.name }}</span>
-      </div>
+      <nav aria-label="breadcrumb" class="sora-breadcrumb-nav fade-in pt-2 pb-2 mb-2">
+        <ol class="breadcrumb mb-0 font-oswald text-uppercase tracking-wide small" style="font-size: 0.75rem;">
+          <li class="breadcrumb-item"><router-link to="/" class="text-muted text-decoration-none hover-primary">Trang chủ</router-link></li>
+          <li class="breadcrumb-item"><router-link to="/shop" class="text-muted text-decoration-none hover-primary">Sản phẩm</router-link></li>
+          <li class="breadcrumb-item active fw-bold text-sora-primary" aria-current="page">{{ product.name }}</li>
+        </ol>
+      </nav>
 
       <main class="product-container fade-in">
         <div class="product-grid">
@@ -919,6 +921,7 @@ const toggleFavourite = async (prod) => {
 
 // Countdown
 const startCountdown = () => {
+  if (timerInterval) clearInterval(timerInterval);
   const targetTime = new Date().getTime() + (5 * 60 * 60 * 1000 + 59 * 60 * 1000 + 47 * 1000);
   const updateTime = () => {
     const now = new Date().getTime();
@@ -969,43 +972,15 @@ const viewFullImage = (url) => {
 // API & Data functions
 const fetchProductData = async () => {
   const productSlug = currentProductSlug.value;
-  if (!productSlug) return isLoading.value = false;
+  if (!productSlug) return null;
 
-  isLoading.value = true;
-  try {
-    const response = await axios.get(`${API_BASE_URL}/shop/${shopSlug}/products/${productSlug}`);
-    const result = response.data;
+  const response = await axios.get(`${API_BASE_URL}/shop/${shopSlug}/products/${productSlug}`);
+  const result = response.data;
 
-    if (result.success && result.data) {
-      product.value = result.data;
-
-      // Re-initialize variantsComposable with new product
-      variantsComposable = null;
-
-      if (product.value.variants) {
-        product.value.variants.forEach(v => {
-          if (typeof v.attributes === 'string') {
-            try { v.attributes = JSON.parse(v.attributes); } catch (e) { }
-          }
-        });
-      }
-
-      product.value.images = normalizeGalleryImages(product.value.images);
-      mainImage.value = product.value.images[0] || soraPlaceholder;
-
-      saveToRecentlyViewed(product.value);
-      fetchRecommendations('related_category');
-      fetchCombos();
-      startCountdown();
-      return product.value;
-    } else {
-      router.push({ name: 'NotFound' });
-    }
-  } catch (error) {
-    console.error("Lỗi kết nối API:", error);
-    router.push({ name: 'NotFound' });
-  } finally {
-    isLoading.value = false;
+  if (result.success && result.data) {
+    return result.data;
+  } else {
+    throw new Error('Not found');
   }
 };
 
@@ -1020,17 +995,6 @@ const fetchCombos = async () => {
     console.error("Failed to fetch combos", e);
   }
 };
-
-const { isLoading: isProductQueryLoading, isFetching: isProductQueryFetching } = useQuery({
-  queryKey: ['userProductDetail', shopSlug, currentProductSlug],
-  queryFn: fetchProductData,
-  enabled: computed(() => !!currentProductSlug.value),
-  staleTime: 5 * 60 * 1000,
-});
-
-watch([isProductQueryLoading, isProductQueryFetching], ([loading, fetching]) => {
-  isLoading.value = loading || (fetching && !product.value);
-}, { immediate: true });
 
 const saveToRecentlyViewed = (prod) => {
   try {
@@ -1078,6 +1042,51 @@ const fetchRecommendations = async (tab) => {
     isLoadingRecs.value = false;
   }
 };
+
+const { data: productData, isLoading: isProductQueryLoading, isFetching: isProductQueryFetching, isError: isProductQueryError } = useQuery({
+  queryKey: ['userProductDetail', shopSlug, currentProductSlug],
+  queryFn: fetchProductData,
+  enabled: computed(() => !!currentProductSlug.value),
+  staleTime: 5 * 60 * 1000,
+});
+
+watch(productData, (newData) => {
+  if (newData) {
+    const cloned = JSON.parse(JSON.stringify(newData));
+    product.value = cloned;
+    
+    // Re-initialize variantsComposable with new product
+    variantsComposable = null;
+
+    if (product.value.variants) {
+      product.value.variants.forEach(v => {
+        if (typeof v.attributes === 'string') {
+          try { v.attributes = JSON.parse(v.attributes); } catch (e) { }
+        }
+      });
+    }
+
+    product.value.images = normalizeGalleryImages(product.value.images);
+    mainImage.value = product.value.images[0] || soraPlaceholder;
+
+    saveToRecentlyViewed(product.value);
+    fetchRecommendations('related_category');
+    fetchCombos();
+    startCountdown();
+  }
+}, { immediate: true });
+
+watch([isProductQueryLoading, isProductQueryFetching], ([loading, fetching]) => {
+  isLoading.value = loading || (fetching && !product.value);
+}, { immediate: true });
+
+watch(isProductQueryError, (hasError) => {
+  if (hasError) {
+    router.push({ name: 'NotFound' });
+  }
+});
+
+
 
 // MỚI: Xử lý logic gỡ xung đột tự động cho Chi tiết sản phẩm
 const selectAttribute = (attrName, optionId) => {
@@ -1211,9 +1220,8 @@ watch(() => route.params.slug, (newSlug, oldSlug) => {
 .small-spinner { width: 30px; height: 30px; border-width: 2px; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-.breadcrumb { max-width: 1300px; margin: 0 auto 30px auto; font-size: 13px; color: #888; padding: 0 20px; }
-.breadcrumb .separator { margin: 0 10px; color: #ccc; }
-.breadcrumb .current { color: #333; }
+.sora-breadcrumb-nav { max-width: 1300px; margin: 0 auto; padding: 0 20px; }
+.breadcrumb { margin-bottom: 30px; font-size: 13px; color: #888; }
 .product-container, .featured-lines-section, .recommendations-section, .product-description-section { max-width: 1300px; margin: 0 auto; background: #fff; padding: 0 20px 50px 20px; }
 
 /* GRID SẢN PHẨM 2 CỘT */
