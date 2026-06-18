@@ -240,9 +240,9 @@ const validateField = (field) => {
       errs.value.customer_name = 'Vui lòng nhập tên người nhận';
     } else if (val.length < 2 || val.length > 50) {
       errs.value.customer_name = 'Tên phải từ 2 đến 50 ký tự';
-    } else if (!/^[A-Za-zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềấệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ\s]+$/.test(val)) {
+    } else if (!/^[A-Za-zÀ-ỹ\s]+$/.test(val)) {
       errs.value.customer_name = 'Tên không đúng định dạng (chỉ chứa chữ cái và khoảng trắng)';
-    } else if (!/^[A-Za-zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềấệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ]+(?:\s+[A-Za-zàáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềấệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ]+)+$/.test(val)) {
+    } else if (!/^[A-Za-zÀ-ỹ]+(?:\s+[A-Za-zÀ-ỹ]+)+$/.test(val)) {
       errs.value.customer_name = 'Tên không đúng định dạng (phải chứa ít nhất 2 từ)';
     } else {
       errs.value.customer_name = '';
@@ -271,7 +271,7 @@ const validateField = (field) => {
     if (!val) {
       errs.value.shipping_address = 'Vui lòng nhập địa chỉ chi tiết';
     } else if (val.length < 10 || !hasLetters || !hasEnoughWords) {
-      errs.value.shipping_address = 'Địa chỉ không đúng định dạng (tối thiểu 10 ký tự, phải chứa chữ cái và ít nhất 2 từ. VD: Số 12, Đường Nguyễn Văn A)';
+      errs.value.shipping_address = 'Địa chỉ không đúng định dạng (tối thiểu 10 ký tự, gồm chữ và số. VD: Số 12, Đường Nguyễn Văn A)';
     } else if (val.length > 255) {
       errs.value.shipping_address = 'Địa chỉ tối đa 255 ký tự';
     } else {
