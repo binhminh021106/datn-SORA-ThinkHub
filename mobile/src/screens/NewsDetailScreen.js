@@ -49,6 +49,14 @@ const formatDate = (dateString) => {
 
 const formatViews = (views) => new Intl.NumberFormat('vi-VN').format(Number(views) || 0);
 
+const getArticleContent = (article) => (
+  article?.content
+  || article?.body
+  || article?.article_content
+  || article?.description
+  || ''
+);
+
 const normalizeArticleContent = (content) => {
   const origin = API_BASE_URL.replace('/api', '');
   return String(content || '<p>Nội dung bài viết đang được cập nhật.</p>')
@@ -147,7 +155,7 @@ export default function NewsDetailScreen({ navigation, route }) {
     queryKey: ['news', 'detail', slug],
     queryFn: () => fetchNewsDetailQuery(slug),
     enabled: !!slug,
-    initialData: initialArticle || undefined,
+    placeholderData: initialArticle || undefined,
     staleTime: 1000 * 60 * 3,
     gcTime: 1000 * 60 * 15,
   });
@@ -158,8 +166,9 @@ export default function NewsDetailScreen({ navigation, route }) {
   const errorText = articleQuery.isError
     ? articleQuery.error?.message || 'Không thể kết nối đến máy chủ.'
     : '';
+  const articleContent = getArticleContent(article);
 
-  const html = useMemo(() => buildHtml(article?.content), [article?.content]);
+  const html = useMemo(() => buildHtml(articleContent), [articleContent]);
 
   return (
     <>
@@ -242,9 +251,14 @@ export default function NewsDetailScreen({ navigation, route }) {
                     <Text style={styles.bodyKicker}>CÂU CHUYỆN SORA</Text>
                     <View style={styles.headingLine} />
                   </View>
-                  {Platform.OS === 'web' ? (
+                  {articleQuery.isFetching && !articleContent ? (
+                    <View style={styles.contentLoadingBox}>
+                      <ActivityIndicator size="small" color={BRAND_RED} />
+                      <Text style={styles.contentLoadingText}>ĐANG TẢI NỘI DUNG BÀI VIẾT...</Text>
+                    </View>
+                  ) : Platform.OS === 'web' ? (
                     <View style={styles.webArticleContent}>
-                      {renderWebArticleContent(article?.content)}
+                      {renderWebArticleContent(articleContent)}
                     </View>
                   ) : (
                     <NativeWebView
@@ -323,6 +337,18 @@ const styles = StyleSheet.create({
   bodyKicker: { color: BRAND_RED, fontFamily: 'Oswald_600SemiBold', fontSize: 10, letterSpacing: 1.5 },
   webView: { width: '100%', backgroundColor: 'transparent' },
   webArticleContent: { width: '100%', maxWidth: '100%', overflow: 'hidden' },
+  contentLoadingBox: {
+    minHeight: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  contentLoadingText: {
+    color: BRAND_RED,
+    fontFamily: 'Oswald_500Medium',
+    fontSize: 11,
+    letterSpacing: 1,
+  },
   errorBox: { marginBottom: 14, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff4f5', borderWidth: 1, borderColor: '#f0d6da', borderRadius: 6 },
   errorText: { flex: 1, color: '#82404a', fontFamily: 'Oswald_400Regular', fontSize: 12, lineHeight: 17 },
   retryText: { color: BRAND_RED, fontFamily: 'Oswald_600SemiBold', fontSize: 11, letterSpacing: 0.7 },
