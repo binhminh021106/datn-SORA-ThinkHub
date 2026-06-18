@@ -72,7 +72,7 @@
                   <span class="quote-author">{{ msg.reply_to.type === 'user' ? 'Bạn' : 'Nhân viên' }}</span>
                   <p class="quote-text">{{ msg.reply_to.text || (msg.reply_to.message_type === 'image' ? '📷 Hình ảnh' : '📎 File') }}</p>
                 </div>
-                <a :href="msg.file_url" target="_blank" download class="user-file-link" :class="msg.type === 'user' ? 'text-white' : 'text-dark'">
+                <a :href="msg.file_url" target="_blank" rel="noopener noreferrer" download class="user-file-link" :class="msg.type === 'user' ? 'text-white' : 'text-dark'">
                   <i class="bi bi-file-earmark-arrow-down-fill me-1"></i>
                   <span style="font-size: 0.82rem; font-weight: 600;">{{ msg.file_name || msg.text }}</span>
                   <span v-if="msg.file_size" style="font-size: 0.65rem; opacity: 0.75; display: block;">{{ msg.file_size }}</span>

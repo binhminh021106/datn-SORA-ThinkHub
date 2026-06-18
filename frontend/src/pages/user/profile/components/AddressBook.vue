@@ -6,7 +6,7 @@
         <h3 class="h4 font-serif text-dark mb-1">Sổ Địa Chỉ</h3>
         <p class="text-secondary fw-light mb-0">Quản lý địa chỉ nhận hàng của bạn</p>
       </div>
-      <button v-if="!showAddressForm" @click="openAddForm" class="btn btn-main px-4 py-2 text-uppercase fw-medium tracking-wide d-inline-flex align-items-center" style="font-size: 0.85rem;">
+      <button v-if="!showAddressForm" @click="openAddForm" class="editorial-btn px-4 py-2" style="font-size: 0.85rem;">
         <i class="bi bi-plus-lg me-1"></i> Thêm Địa Chỉ
       </button>
     </div>
@@ -21,7 +21,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
         <p class="text-secondary mb-3">Bạn chưa có địa chỉ nào được lưu.</p>
-        <button @click="openAddForm" class="btn btn-main px-5 py-2 text-uppercase tracking-wide d-inline-flex align-items-center fw-medium"><i class="bi bi-plus-lg me-2"></i> Thêm Địa Chỉ Đầu Tiên</button>
+        <button @click="openAddForm" class="editorial-btn px-5 py-2"><i class="bi bi-plus-lg me-2"></i> Thêm Địa Chỉ Đầu Tiên</button>
       </div>
 
       <div v-else class="row g-3">
@@ -45,7 +45,7 @@
                   <a href="#" @click.prevent="openEditForm(addr)" class="text-accent text-decoration-none fw-medium hover-main transition-all">Cập nhật</a>
                   <a href="#" @click.prevent="confirmDelete(addr.id)" class="text-danger-custom text-decoration-none fw-medium transition-all">Xóa</a>
                 </div>
-                <button v-if="!addr.is_default" @click="setDefault(addr.id)" class="btn btn-sm btn-outline-main mt-2 w-100 font-oswald tracking-wide text-uppercase">Làm mặc định</button>
+                <button v-if="!addr.is_default" @click="setDefault(addr.id)" class="editorial-btn-outline mt-2 w-100" style="padding: 0.5rem 1rem; min-height: 36px;">Làm mặc định</button>
               </div>
             </div>
           </div>
@@ -114,10 +114,10 @@
         </div>
 
         <div class="d-flex gap-3">
-          <button type="submit" class="btn btn-main px-5 py-2 text-uppercase fw-medium tracking-wide" :disabled="isSaving">
+          <button type="submit" class="editorial-btn px-5 py-2" :disabled="isSaving">
             <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>Hoàn Thành
           </button>
-          <button type="button" @click="closeForm" class="btn btn-outline-main px-5 py-2 text-uppercase fw-medium tracking-wide">Trở Lại</button>
+          <button type="button" @click="closeForm" class="editorial-btn-outline px-5 py-2">Trở Lại</button>
         </div>
       </form>
     </div>
@@ -240,9 +240,9 @@ const validateField = (field) => {
       errs.value.customer_name = 'Vui lòng nhập tên người nhận';
     } else if (val.length < 2 || val.length > 50) {
       errs.value.customer_name = 'Tên phải từ 2 đến 50 ký tự';
-    } else if (!/^[A-Za-zÀ-ỹ\s]+$/.test(val)) {
+    } else if (!/^[\p{L}\s]+$/u.test(val)) {
       errs.value.customer_name = 'Tên không đúng định dạng (chỉ chứa chữ cái và khoảng trắng)';
-    } else if (!/^[A-Za-zÀ-ỹ]+(?:\s+[A-Za-zÀ-ỹ]+)+$/.test(val)) {
+    } else if (!/^[\p{L}]+(?:\s+[\p{L}]+)+$/u.test(val)) {
       errs.value.customer_name = 'Tên không đúng định dạng (phải chứa ít nhất 2 từ)';
     } else {
       errs.value.customer_name = '';
@@ -271,7 +271,7 @@ const validateField = (field) => {
     if (!val) {
       errs.value.shipping_address = 'Vui lòng nhập địa chỉ chi tiết';
     } else if (val.length < 10 || !hasLetters || !hasEnoughWords) {
-      errs.value.shipping_address = 'Địa chỉ không đúng định dạng (tối thiểu 10 ký tự, gồm chữ và số. VD: Số 12, Đường Nguyễn Văn A)';
+      errs.value.shipping_address = 'Địa chỉ không đúng định dạng (tối thiểu 10 ký tự, phải có chữ và ít nhất 2 từ. VD: Số 12, Đường Nguyễn Văn A)';
     } else if (val.length > 255) {
       errs.value.shipping_address = 'Địa chỉ tối đa 255 ký tự';
     } else {
@@ -437,11 +437,7 @@ onMounted(() => {
 .font-serif { font-family: "Playfair Display", "Merriweather", serif; }
 .tracking-wide { letter-spacing: 0.1em; }
 
-.btn-main { background-color: #9f273b; color: white; border: 1px solid #9f273b; border-radius: 4px; transition: all 0.3s ease; }
-.btn-main:hover { background-color: #7a1c2d; border-color: #7a1c2d; color: white; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(159,39,59,0.3); }
 
-.btn-outline-main { color: #9f273b; border: 1px solid #9f273b; border-radius: 4px; background: transparent; transition: all 0.3s ease; }
-.btn-outline-main:hover { background-color: #9f273b; color: white; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(159,39,59,0.3); }
 
 .tracking-wide { letter-spacing: 0.1em; }
 

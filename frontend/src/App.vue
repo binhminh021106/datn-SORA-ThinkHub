@@ -172,4 +172,31 @@ body {
 .editorial-btn:hover::after {
   transform: rotate(45deg) translateY(200%);
 }
+
+.editorial-btn-outline {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0.75rem 1.25rem;
+  background: transparent;
+  color: var(--sora-primary);
+  border: 1px solid var(--sora-primary);
+  border-radius: 14px;
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.76rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+  text-decoration: none;
+}
+
+.editorial-btn-outline:hover {
+  background: var(--sora-primary);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
 </style>

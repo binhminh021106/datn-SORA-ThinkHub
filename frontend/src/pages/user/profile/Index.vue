@@ -1,20 +1,5 @@
 <template>
-  <div class="profile-page bg-light-custom font-sans pb-5 min-vh-100 position-relative">
-    
-    <div class="container py-2">
-      <div v-if="!isLoggedIn" class="text-center py-5 bg-white shadow-sm p-5 border border-light mb-5">
-        <h4 class="text-danger-custom mb-3">Bạn chưa đăng nhập!</h4>
-        <p class="text-secondary mb-4">Vui lòng đăng nhập để xem và chỉnh sửa thông tin cá nhân.</p>
-        <router-link to="/login" class="btn btn-main px-5 py-2 text-uppercase tracking-wide d-inline-flex align-items-center">Đăng nhập ngay</router-link>
-      </div>
-
-      <div v-else class="row g-4 g-lg-5">
-        
-        <div class="col-lg-3">
-          <ProfileSidebar :user="form" />
-        </div>
-
-        <div class="col-lg-9">
+  <div>
           <SoraListSkeleton v-if="isLoading" :rows="4" :image="false" card />
           
           <div v-else>
@@ -41,10 +26,6 @@
               v-if="activeTab === 'affiliate'" 
             />
           </div>
-        </div>
-
-      </div>
-    </div>
   </div>
 </template>
 
@@ -54,7 +35,6 @@ import { useRouter, useRoute } from 'vue-router';
 import ProfileForm from './components/ProfileForm.vue';
 import PasswordForm from './components/PasswordForm.vue';
 import AddressBook from './components/AddressBook.vue';
-import ProfileSidebar from '@/components/ui/ProfileSidebar.vue';
 import AffiliateTab from './components/AffiliateTab.vue';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
 import { getStorageUrl } from '@/utils/env';

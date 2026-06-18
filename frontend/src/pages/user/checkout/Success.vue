@@ -14,10 +14,10 @@
       </p>
       
       <div class="d-flex justify-content-center gap-3 mt-5">
-        <router-link to="/shop" class="btn btn-outline-secondary rounded-0 px-4 py-3 font-oswald tracking-widest text-uppercase fw-bold transition-all">
+        <router-link to="/shop" class="editorial-btn-outline px-4 py-3">
           Tiếp Tục Mua Sắm
         </router-link>
-        <router-link to="/order" class="btn luxury-btn-solid rounded-0 px-4 py-3 font-oswald tracking-widest text-uppercase fw-bold text-white transition-all">
+        <router-link to="/order" class="editorial-btn px-4 py-3">
           Xem Đơn Hàng
         </router-link>
       </div>

@@ -39,7 +39,7 @@ class ClientOrderController extends Controller
         $orders = Order::with(['items', 'reviews'])
             ->where('user_id', $user->id)
             ->orderBy('created_at', 'desc')
-            ->paginate(10);
+            ->paginate($request->input('per_page', 5));
 
         return response()->json($orders);
     }

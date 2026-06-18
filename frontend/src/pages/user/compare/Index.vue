@@ -65,7 +65,7 @@
 
       <div v-else-if="products.length === 0" class="empty-state">
         <p>Chưa có sản phẩm nào để so sánh.</p>
-        <button class="editorial-btn editorial-btn-outline mt-3" @click="router.push(`/shop/${shopSlug}`)">Tiếp tục mua sắm</button>
+        <button class="editorial-btn-outline px-4 py-2 mt-3" @click="router.push(`/shop/${shopSlug}`)">Tiếp tục mua sắm</button>
       </div>
 
       <div v-else class="table-responsive">

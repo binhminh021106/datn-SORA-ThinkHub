@@ -11,7 +11,7 @@
     <div v-else-if="!combo" class="vh-100 d-flex flex-column justify-content-center align-items-center text-center fade-in">
         <i class="bi bi-box2-heart fs-1 d-block mb-3 text-gold opacity-50"></i>
         <h5 class="font-serif text-muted mb-4">Gói ưu đãi này không tồn tại hoặc đã khép lại.</h5>
-        <router-link :to="{ name: 'client-combos' }" class="btn luxury-btn-outline font-oswald px-4 py-2 tracking-widest text-uppercase">Quay lại Bộ sưu tập</router-link>
+        <router-link :to="{ name: 'client-combos' }" class="editorial-btn-outline px-4 py-2 text-uppercase">Quay lại Bộ sưu tập</router-link>
     </div>
 
     <div v-else class="fade-in">
@@ -55,7 +55,7 @@
           </div>
 
           <div class="col-lg-6">
-            <div class="combo-detail-copy ps-lg-4 pt-2">
+            <div class="combo-detail-copy pt-2">
               <div class="luxury-meta-line d-flex align-items-center gap-3 mb-3 text-uppercase font-oswald tracking-widest small">
                 <span class="luxury-meta fw-medium"><i class="bi bi-stars me-1"></i> Bộ Sưu Tập {{ combo.items.length }} Món</span>
                 <span v-if="combo.theme" class="theme-pill">{{ combo.theme }}</span>
@@ -82,7 +82,7 @@
                   </div>
               </div>
 
-              <div class="combo-items-editorial mb-5">
+              <div class="combo-items-editorial mb-4">
                 <h5 class="section-heading fw-bold mb-4 font-serif fs-4 d-flex align-items-center">
                   <i class="bi bi-gem text-gold me-2"></i> Định Hình Phong Cách
                 </h5>
@@ -169,9 +169,8 @@
                 </div>
               </div>
 
-            </div>
 
-            <div class="luxury-price-summary mb-5 p-4">
+            <div class="luxury-price-summary mb-4 p-4 p-md-5">
                 <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom border-light-subtle">
                   <span class="text-muted font-oswald text-uppercase tracking-wide">Giá Trị Gốc</span>
                   <span class="text-muted text-decoration-line-through fs-5 font-oswald">{{ formatCurrency(originalTotal) }}</span>
@@ -181,32 +180,28 @@
                     Tiết Kiệm Lên Đến <span class="text-danger" style="font-size:1.5rem;">{{ savingsPercentage }}%</span>
                   </span>
                 </div>
-                <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-4">
                   <span class="fw-bold text-dark font-oswald text-uppercase tracking-wide fs-5">Mức Giá Ưu Đãi</span>
                   <span class="fw-bold text-sora-primary display-5 ">{{ formatCurrency(finalPrice) }}</span>
                 </div>
-            </div>
 
-            <div v-if="!canBuyCombo" class="combo-unavailable text-center py-4">
-              <span class="font-oswald tracking-widest text-uppercase text-muted fs-5">
-                <template v-if="timerInfo.type === 'upcoming'">Gói ưu đãi chưa mở bán</template>
-                <template v-else-if="timerInfo.type === 'soldout'">Đã bán hết số lượng</template>
-                <template v-else>Gói ưu đãi đã khép lại</template>
-              </span>
-            </div>
-            
-            <div v-else class="row g-3">
-              <div class="col-sm-6">
-                <button class="btn luxury-btn-outline w-100 py-3 font-oswald tracking-widest text-uppercase" @click="addToCart">
-                  <span v-if="isAddingToCart" class="spinner-border spinner-border-sm me-2"></span>
-                  Thêm Vào Giỏ
-                </button>
-              </div>
-              <div class="col-sm-6">
-                <button class="btn luxury-btn-solid w-100 py-3 font-oswald tracking-widest text-uppercase" @click="buyNow">
-                  Sở Hữu Ngay
-                </button>
-              </div>
+                <div v-if="!canBuyCombo" class="combo-unavailable text-center mt-4 py-4">
+                  <span class="font-oswald tracking-widest text-uppercase text-muted fs-5">
+                    <template v-if="timerInfo.type === 'upcoming'">Gói ưu đãi chưa mở bán</template>
+                    <template v-else-if="timerInfo.type === 'soldout'">Đã bán hết số lượng</template>
+                    <template v-else>Gói ưu đãi đã khép lại</template>
+                  </span>
+                </div>
+                
+                <div v-else class="d-flex flex-column flex-sm-row gap-3 mt-4">
+                  <button class="editorial-btn-outline flex-fill py-3 text-uppercase" @click="addToCart">
+                    <span v-if="isAddingToCart" class="spinner-border spinner-border-sm me-2"></span>
+                    Thêm Vào Giỏ
+                  </button>
+                  <button class="editorial-btn flex-fill py-3 text-uppercase" @click="buyNow">
+                    Sở Hữu Ngay
+                  </button>
+                </div>
             </div>
 
             <div class="shop-feature-row d-flex justify-content-between mt-5 pt-4">
@@ -216,6 +211,7 @@
               </div>
             </div>
 
+            </div>
           </div>
         </div>
       </div>
@@ -314,7 +310,7 @@
                  <i class="bi bi-exclamation-triangle-fill me-1"></i> Vui lòng chọn đầy đủ phân loại.
               </div>
 
-              <button @click="confirmQuickAdd" class="btn luxury-btn-solid w-100 py-3 mt-4 font-oswald tracking-widest text-uppercase fw-bold shadow-sm fs-6">
+              <button @click="confirmQuickAdd" class="editorial-btn w-100 py-3 mt-4 shadow-sm fs-6">
                  <i class="bi bi-bag-plus-fill me-2"></i> Xác nhận thêm
               </button>
             </div>
@@ -527,8 +523,9 @@ const toggleWishlist = async (prod) => {
   
   if (!token) {
     soraAlert.fire({
-      icon: 'warning', title: 'Bạn chưa đăng nhập!', text: 'Vui lòng đăng nhập để lưu trữ bộ sưu tập yêu thích của mình.',
-      confirmButtonText: 'Đăng Nhập Ngay', showCancelButton: true, cancelButtonText: 'Đóng'
+      icon: 'warning', title: '<span class="font-oswald tracking-wider fs-4 text-dark">BẠN CHƯA ĐĂNG NHẬP!</span>', html: '<p class="text-muted font-sans" style="font-size: 0.95rem;">Vui lòng đăng nhập để lưu trữ bộ sưu tập yêu thích của mình.</p>',
+      confirmButtonText: 'Đăng Nhập Ngay', showCancelButton: true, cancelButtonText: 'Đóng', buttonsStyling: false,
+      customClass: { popup: 'border-0 shadow-lg', confirmButton: 'editorial-btn px-4 py-2 ms-2', cancelButton: 'editorial-btn-outline px-4 py-2' }
     }).then((result) => {
       if (result.isConfirmed) router.push('/login');
     });
@@ -859,8 +856,9 @@ const validateSelections = () => {
 const checkValidationAndWarn = () => {
   if (!validateSelections()) {
     soraAlert.fire({
-      icon: 'warning', title: 'Thiếu tùy chọn!', text: 'Vui lòng định hình thiết kế cho tất cả các món trong bộ sưu tập.',
-      confirmButtonText: 'Chọn ngay'
+      icon: 'warning', title: '<span class="font-oswald tracking-wider fs-4 text-dark">THIẾU TÙY CHỌN!</span>', html: '<p class="text-muted font-sans" style="font-size: 0.95rem;">Vui lòng định hình thiết kế cho tất cả các món trong bộ sưu tập.</p>',
+      confirmButtonText: 'Chọn ngay', buttonsStyling: false,
+      customClass: { popup: 'border-0 shadow-lg', confirmButton: 'editorial-btn px-4 py-2' }
     });
     return false;
   }
@@ -1184,7 +1182,7 @@ onUnmounted(() => {
 
 .luxury-price-summary {
   border: 1px solid rgba(197, 158, 74, 0.42);
-  border-radius: 20px;
+  border-radius: 18px;
   background: rgba(255, 252, 246, 0.88);
   box-shadow: 0 18px 44px rgba(65, 35, 24, 0.08);
 }
@@ -1225,8 +1223,7 @@ onUnmounted(() => {
 }
 
 .related-products-section {
-  background:
-    linear-gradient(180deg, rgba(255, 252, 246, 0.92), #fffaf1);
+  background: transparent;
   border-top: 1px solid rgba(197, 158, 74, 0.28);
 }
 
