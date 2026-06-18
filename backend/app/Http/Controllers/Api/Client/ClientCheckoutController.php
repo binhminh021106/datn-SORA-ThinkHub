@@ -11,18 +11,15 @@ use App\Models\ProductVariant;
 use App\Models\UserAddress;
 use App\Models\Coupon;
 use App\Models\Combo;
-use App\Models\Admin;
 use App\Models\TierServiceUsage;
 use App\Models\MembershipTier;
 use App\Http\Requests\Client\Checkout\UserCheckoutRequest;
+use App\Jobs\SendOrderSuccessNotificationsJob;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Mail;
 use App\Events\NewOrderReceived;
-use App\Mail\OrderPlacedMail;
-use App\Mail\AdminNewOrderMail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 
@@ -429,7 +426,7 @@ class ClientCheckoutController extends Controller
                     $cart->items()->delete();
                     $cart->delete();
 
-                    $this->sendOrderConfirmationEmail($order);
+                    $this->queueOrderSuccessNotifications($order);
 
                     return response()->json([
                         'success' => true,
@@ -442,7 +439,12 @@ class ClientCheckoutController extends Controller
                 }
 
                 if ($request->payment_method === 'momo') {
-                    $momoUrl = $this->generateMomoUrl($order, $request->input('checkout_source', 'web'), $cart->id);
+                    $momoUrl = $this->generateMomoUrl(
+                        $order,
+                        $request->input('checkout_source', 'web'),
+                        $cart->id,
+                        $request->input('mobile_return_url')
+                    );
                     return response()->json([
                         'success' => true,
                         'payment_url' => $momoUrl,
@@ -486,7 +488,7 @@ class ClientCheckoutController extends Controller
         return (float) $userTier->min_spent >= (float) $silverTier->min_spent;
     }
 
-    private function generateMomoUrl($order, string $checkoutSource = 'web', ?int $cartId = null)
+    private function generateMomoUrl($order, string $checkoutSource = 'web', ?int $cartId = null, ?string $mobileReturnUrl = null)
     {
         $endpoint = env('MOMO_ENDPOINT');
         $partnerCode = env('MOMO_PARTNER_CODE');
@@ -513,6 +515,7 @@ class ClientCheckoutController extends Controller
         $extraData = base64_encode(json_encode([
             'source' => $checkoutSource === 'mobile' ? 'mobile' : 'web',
             'cart_id' => $cartId,
+            'mobile_return_url' => $this->sanitizeMobileReturnUrl($mobileReturnUrl),
         ]));
         $requestId = time() . "";
         $requestType = "payWithATM";
@@ -554,6 +557,7 @@ class ClientCheckoutController extends Controller
         $extraData = json_decode(base64_decode($request->extraData ?? ''), true) ?: [];
         $isMobileCheckout = ($extraData['source'] ?? 'web') === 'mobile';
         $cartId = isset($extraData['cart_id']) ? (int) $extraData['cart_id'] : null;
+        $mobileReturnUrl = $extraData['mobile_return_url'] ?? null;
 
         $frontendUrl = rtrim(env('FRONTEND_URL', 'http://localhost:5173'), '/');
 
@@ -567,12 +571,12 @@ class ClientCheckoutController extends Controller
                     $order->save();
 
                     $this->clearCartAfterPaidOrder($order, $cartId);
-                    $this->sendOrderConfirmationEmail($order);
+                    $this->queueOrderSuccessNotifications($order);
                 }
             }
 
             if ($isMobileCheckout) {
-                return redirect('sora://order-history?order=' . urlencode($orderCode) . '&payment=success');
+                return redirect($this->buildMobileMomoReturnUrl($mobileReturnUrl, $orderCode, 'success', 'order-history'));
             }
 
             return redirect($frontendUrl . '/checkout/success?order=' . $orderCode);
@@ -580,10 +584,38 @@ class ClientCheckoutController extends Controller
 
         $this->cancelOrderAndRestoreStock($orderCode);
         if ($isMobileCheckout) {
-            return redirect('sora://cart?order=' . urlencode($orderCode) . '&payment=cancelled');
+            return redirect($this->buildMobileMomoReturnUrl($mobileReturnUrl, $orderCode, 'cancelled', 'cart'));
         }
 
         return redirect($frontendUrl . '/checkout/failed?order=' . $orderCode);
+    }
+
+    private function buildMobileMomoReturnUrl(?string $returnUrl, string $orderCode, string $paymentStatus, string $fallbackPath): string
+    {
+        $baseUrl = $this->sanitizeMobileReturnUrl($returnUrl) ?: 'sora://' . $fallbackPath;
+        $separator = str_contains($baseUrl, '?') ? '&' : '?';
+
+        return $baseUrl . $separator . http_build_query([
+            'order' => $orderCode,
+            'payment' => $paymentStatus,
+        ]);
+    }
+
+    private function sanitizeMobileReturnUrl(?string $returnUrl): ?string
+    {
+        if (!$returnUrl) {
+            return null;
+        }
+
+        $returnUrl = trim($returnUrl);
+        $scheme = strtolower((string) parse_url($returnUrl, PHP_URL_SCHEME));
+        $allowedScheme = strtolower((string) env('MOBILE_APP_SCHEME', 'sora'));
+
+        if ($scheme !== $allowedScheme) {
+            return null;
+        }
+
+        return $returnUrl;
     }
 
     private function clearCartAfterPaidOrder(Order $order, ?int $cartId = null): void
@@ -600,34 +632,9 @@ class ClientCheckoutController extends Controller
         }
     }
 
-    private function sendOrderConfirmationEmail($order)
+    private function queueOrderSuccessNotifications(Order $order): void
     {
-        try {
-            $order->load('items');
-
-            if (!empty($order->customer_email)) {
-                Mail::to($order->customer_email)->send(new OrderPlacedMail($order));
-            }
-
-            $adminEmailsEnv = env('ADMIN_ORDER_NOTIFICATION_EMAIL');
-            $adminEmailsToNotify = [];
-
-            if (!empty($adminEmailsEnv)) {
-                $adminEmailsToNotify = array_map('trim', explode(',', $adminEmailsEnv));
-                $adminEmailsToNotify = array_filter($adminEmailsToNotify);
-            } else {
-                $adminEmailsToNotify = Admin::where('role_id', 1)
-                    ->where('status', 'active')
-                    ->pluck('email')
-                    ->toArray();
-            }
-
-            if (!empty($adminEmailsToNotify)) {
-                Mail::to($adminEmailsToNotify)->send(new AdminNewOrderMail($order));
-            }
-        } catch (\Exception $e) {
-            Log::error('Lỗi gửi mail xác nhận đơn hàng ' . $order->order_code . ': ' . $e->getMessage());
-        }
+        SendOrderSuccessNotificationsJob::dispatch($order->id);
     }
 
     private function cancelOrderAndRestoreStock($orderCode)

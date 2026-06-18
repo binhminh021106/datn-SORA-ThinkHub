@@ -16,7 +16,6 @@ import {
   RefreshControl,
   KeyboardAvoidingView,
   Platform,
-  Linking,
   Animated,
   PanResponder,
 } from "react-native";
@@ -24,6 +23,8 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import * as ExpoLinking from "expo-linking";
+import * as WebBrowser from "expo-web-browser";
 import { API_BASE_URL } from "../config/api";
 import { showCustomAlert } from "../components/CustomAlert";
 import { PRICE_FONT_FAMILY, PRICE_FONT_WEIGHT } from "../styles/typography";
@@ -149,6 +150,12 @@ export default function CheckoutScreen({ route }) {
   const [checkoutItems, setCheckoutItems] = useState(route?.params?.checkoutItems || []);
 
   useEffect(() => {
+    if (Array.isArray(route?.params?.checkoutItems)) {
+      setCheckoutItems(route.params.checkoutItems);
+    }
+  }, [route?.params?.refreshAt]);
+
+  useEffect(() => {
     let isMounted = true;
 
     const requireLogin = async () => {
@@ -190,17 +197,32 @@ export default function CheckoutScreen({ route }) {
     queryKey: ["checkout", "init"],
     queryFn: fetchCheckoutInitData,
     enabled: !isCheckingAuth,
-    staleTime: 1000 * 60 * 3,
+    staleTime: 0,
     gcTime: 1000 * 60 * 15,
+    refetchOnMount: "always",
+    refetchOnReconnect: true,
   });
 
   const savedCouponsQuery = useQuery({
     queryKey: ["saved-coupons"],
     queryFn: fetchSavedCoupons,
     enabled: !isCheckingAuth,
-    staleTime: 1000 * 60 * 3,
+    staleTime: 0,
     gcTime: 1000 * 60 * 15,
+    refetchOnMount: "always",
+    refetchOnReconnect: true,
   });
+
+  useEffect(() => {
+    if (isCheckingAuth) return undefined;
+
+    const unsubscribe = navigation.addListener("focus", () => {
+      queryClient.invalidateQueries({ queryKey: ["checkout", "init"] });
+      queryClient.invalidateQueries({ queryKey: ["saved-coupons"] });
+    });
+
+    return unsubscribe;
+  }, [isCheckingAuth, navigation, queryClient]);
 
   useEffect(() => {
     const json = checkoutInitQuery.data;
@@ -785,6 +807,7 @@ export default function CheckoutScreen({ route }) {
         payment_method: paymentMethod,
         shipping_fee: shippingFee,
         checkout_source: "mobile",
+        mobile_return_url: ExpoLinking.createURL("order-history"),
       };
 
       if (appliedCode) {
@@ -863,9 +886,22 @@ export default function CheckoutScreen({ route }) {
 
   async function handleMomoPayment({ paymentUrl, order }) {
     const orderCode = order?.order_code;
+    const returnUrl = ExpoLinking.createURL("order-history");
 
     try {
-      await Linking.openURL(paymentUrl);
+      const browserResult = await WebBrowser.openAuthSessionAsync(paymentUrl, returnUrl);
+      if (browserResult.type === "cancel" || browserResult.type === "dismiss") {
+        showCustomAlert(
+          "Thanh toán MoMo",
+          "Bạn đã đóng cổng thanh toán MoMo. Đơn hàng chưa được xác nhận thanh toán, bạn có thể kiểm tra lại trong lịch sử đơn hàng.",
+          [
+            { text: "Ở lại", style: "cancel" },
+            { text: "Lịch sử đơn", onPress: () => navigation.navigate("OrderHistory") },
+          ],
+          "time-outline"
+        );
+        return;
+      }
     } catch (error) {
       console.log("Error opening MoMo payment URL", error);
       showCustomAlert("Lỗi thanh toán", "Không thể mở cổng thanh toán MoMo. Vui lòng thử lại.");

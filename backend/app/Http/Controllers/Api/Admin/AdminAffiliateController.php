@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AffiliateApplication;
+use App\Services\ExpoPushNotificationService;
+use App\Services\InAppNotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class AdminAffiliateController extends Controller
@@ -49,6 +52,14 @@ class AdminAffiliateController extends Controller
             $user->affiliate_code = $code;
             $user->save();
 
+            $this->notifyAffiliateUser(
+                $user,
+                'Đơn đăng ký affiliate đã được duyệt',
+                'Chúc mừng! Bạn đã trở thành đối tác affiliate của SORA. Mã giới thiệu của bạn là ' . $user->affiliate_code . '.',
+                'approved',
+                ['affiliate_code' => $user->affiliate_code]
+            );
+
             return response()->json([
                 'success' => true, 
                 'message' => 'Đã duyệt đơn và cấp mã ' . $user->affiliate_code . ' cho khách hàng!',
@@ -69,6 +80,16 @@ class AdminAffiliateController extends Controller
                 'status' => 'rejected',
                 'admin_notes' => $request->admin_notes
             ]);
+
+            $this->notifyAffiliateUser(
+                $application->user,
+                'Đơn đăng ký affiliate chưa được duyệt',
+                $request->admin_notes
+                    ? 'SORA đã xem xét đơn đăng ký của bạn. Ghi chú từ admin: ' . $request->admin_notes
+                    : 'SORA đã xem xét đơn đăng ký của bạn. Bạn có thể cập nhật thông tin và thử lại sau.',
+                'rejected',
+                ['application_id' => $application->id]
+            );
 
             return response()->json([
                 'success' => true, 
@@ -116,6 +137,14 @@ class AdminAffiliateController extends Controller
 
             \Illuminate\Support\Facades\DB::commit();
 
+            $this->notifyAffiliateUser(
+                $user,
+                'Mã affiliate đã được vô hiệu hóa',
+                'Tư cách affiliate của bạn đã được SORA cập nhật. Vui lòng liên hệ hỗ trợ nếu cần thêm thông tin.',
+                'revoked',
+                ['application_id' => $application->id]
+            );
+
             return response()->json([
                 'success' => true,
                 'message' => 'Đã vô hiệu hóa mã affiliate của khách hàng.',
@@ -129,6 +158,36 @@ class AdminAffiliateController extends Controller
 
     // quản lý hoa hồng của các đối tác
     // 1. Lấy danh sách tất cả yêu cầu rút tiền
+    private function notifyAffiliateUser($user, string $title, string $body, string $status, array $params = []): void
+    {
+        if (!$user) {
+            return;
+        }
+
+        try {
+            app(InAppNotificationService::class)->createForUser(
+                $user->id,
+                'affiliate',
+                $title,
+                $body,
+                'Affiliate',
+                array_merge(['status' => $status], $params)
+            );
+
+            app(ExpoPushNotificationService::class)->sendToUser(
+                $user,
+                $title,
+                $body,
+                array_merge(['type' => 'affiliate', 'screen' => 'Affiliate', 'status' => $status], $params)
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Affiliate notification failed: ' . $e->getMessage(), [
+                'user_id' => $user->id ?? null,
+                'status' => $status,
+            ]);
+        }
+    }
+
     public function withdrawals()
     {
         $withdrawals = \App\Models\CommissionHistory::with('user:id,fullName,email,phone')

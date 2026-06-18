@@ -12,6 +12,7 @@ use App\Models\MembershipTier;
 use App\Models\TierHistory;
 use App\Models\TierServiceUsage;
 use App\Http\Requests\Admin\Order\AdminUpdateOrderRequest;
+use App\Jobs\SendOrderStatusChangedNotificationJob;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
@@ -260,8 +261,9 @@ class AdminOrderController extends Controller
             $newStatus = $request->status;
             $newPaymentStatus = $request->payment_status;
             $hasChanged = false;
+            $statusChanged = $oldStatus !== $newStatus;
 
-            if ($oldStatus !== $newStatus) {
+            if ($statusChanged) {
                 $order->status = $newStatus;
                 $hasChanged = true;
 
@@ -298,6 +300,10 @@ class AdminOrderController extends Controller
             if ($order->user_id && in_array($newStatus, ['delivered', 'cancelled', 'returned'])) {
                 $this->checkAndUpgradeUserTier($order->user_id);
             }
+
+            if ($statusChanged) {
+                $this->notifyOrderStatusChanged($order, $oldStatus, $newStatus);
+            }
             
             $this->broadcastUpdate("Trạng thái đơn hàng #{$order->order_code} vừa được cập nhật!");
 
@@ -306,6 +312,15 @@ class AdminOrderController extends Controller
             DB::rollBack();
             return response()->json(['success' => false, 'message' => 'Lỗi hệ thống: ' . $e->getMessage()], 500);
         }
+    }
+
+    private function notifyOrderStatusChanged(Order $order, string $oldStatus, string $newStatus): void
+    {
+        if (!$order->user_id) {
+            return;
+        }
+
+        SendOrderStatusChangedNotificationJob::dispatch($order->id, $oldStatus, $newStatus);
     }
 
     public function processRefundAction(Request $request, $id)
@@ -320,7 +335,9 @@ class AdminOrderController extends Controller
         try {
             // [TỐI ƯU ORM] Eager load items sẵn để hàm restore hoạt động mượt mà
             $order = Order::with('items')->findOrFail($id);
-            
+            $refundOldStatus = $order->status;
+            $refundStatusChanged = false;
+
             $order->refund_amount = $request->action === 'reject' ? 0 : $request->refund_amount;
             $order->refund_note = $request->refund_note;
 
@@ -329,6 +346,7 @@ class AdminOrderController extends Controller
                 if ($order->status !== 'returned') {
                     $oldStatus = $order->status;
                     $order->status = 'returned'; 
+                    $refundStatusChanged = true;
                     
                     // Thu hồi hoa hồng vì đơn hoàn trả
                     $this->handleAffiliateCommission($order, 'returned');
@@ -336,6 +354,8 @@ class AdminOrderController extends Controller
                     if (!in_array($oldStatus, ['cancelled', 'returned'])) {
                         $this->restoreOrderResources($order);
                     }
+                } else {
+                    $oldStatus = $order->status;
                 }
 
                 OrderStatusHistory::create([
@@ -367,6 +387,10 @@ class AdminOrderController extends Controller
 
             if ($order->user_id) {
                 $this->checkAndUpgradeUserTier($order->user_id);
+            }
+
+            if ($refundStatusChanged) {
+                $this->notifyOrderStatusChanged($order, $refundOldStatus, $order->status);
             }
 
             $this->broadcastUpdate("Đơn hàng #{$order->order_code} vừa được xử lý hoàn trả/hoàn tiền!");

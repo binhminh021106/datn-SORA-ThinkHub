@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MOBILE_AUTH_URL } from '../config/api';
 import { showCustomAlert } from '../components/CustomAlert';
 import { loginWithGoogle } from '../services/googleAuth';
+import { registerDevicePushToken } from '../services/pushNotifications';
 
 const Alert = {
   alert: (title, message, buttons) => showCustomAlert(title, message, buttons)
@@ -84,6 +85,9 @@ export default function LoginScreen({ navigation }) {
   const persistAuthSession = async (data) => {
     await AsyncStorage.setItem('auth_token', data.access_token);
     await AsyncStorage.setItem('user', JSON.stringify(data.user));
+    registerDevicePushToken().catch((error) => {
+      console.log('Register push token after login failed:', error?.message || error);
+    });
   };
 
   const handlePostLoginCacheRefresh = async () => {
