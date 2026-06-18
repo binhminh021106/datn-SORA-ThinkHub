@@ -54,6 +54,9 @@ use App\Http\Controllers\Api\Client\ClientNewController;
 use App\Http\Controllers\Api\Client\ClientSavedCouponController;
 use App\Http\Controllers\Api\Client\ClientComboController;
 use App\Http\Controllers\Api\Client\ClientCheckoutController;
+use App\Http\Controllers\Api\Client\ClientPushTokenController;
+use App\Http\Controllers\Api\Client\ClientNotificationController;
+use App\Http\Controllers\Api\Client\ClientRecommendationController;
 use App\Http\Controllers\Api\MessageController;
 
 // gửi maill_kh
@@ -134,6 +137,7 @@ Route::prefix('client')->group(function () {
     Route::get('header-data', [ClientHeaderController::class, 'getMegaMenuData']);
     Route::get('search', [ClientHeaderController::class, 'search']);
     Route::get('/home-data', [ClientHomeController::class, 'index']);
+    Route::get('/recommendations/personalized', [ClientRecommendationController::class, 'personalized']);
 
     // API Lấy Bảng Giá Vàng (Thêm mới)
     Route::get('/gold-prices', [ClientHomeController::class, 'goldPrices']);
@@ -170,6 +174,19 @@ Route::prefix('client')->group(function () {
     });
 
     // Hồ Sơ Cá Nhân (Profile)
+    Route::middleware('auth:sanctum')->prefix('push-tokens')->group(function () {
+        Route::post('/', [ClientPushTokenController::class, 'store']);
+        Route::delete('/', [ClientPushTokenController::class, 'destroy']);
+    });
+
+    Route::middleware('auth:sanctum')->prefix('notifications')->group(function () {
+        Route::get('/', [ClientNotificationController::class, 'index']);
+        Route::put('/read-all', [ClientNotificationController::class, 'markAllAsRead']);
+        Route::put('/{id}/read', [ClientNotificationController::class, 'markAsRead']);
+        Route::delete('/read', [ClientNotificationController::class, 'destroyRead']);
+        Route::delete('/{id}', [ClientNotificationController::class, 'destroy']);
+    });
+
     Route::prefix('profile')->middleware('auth:sanctum')->group(function () {
         Route::get('/', [ClientProfileController::class, 'show']);
         Route::post('/', [ClientProfileController::class, 'update']);

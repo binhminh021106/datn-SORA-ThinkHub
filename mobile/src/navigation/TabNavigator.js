@@ -11,6 +11,7 @@ import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
+import ChangePasswordScreen from '../screens/ChangePasswordScreen';
 import AddressScreen from '../screens/AddressScreen';
 import OrderHistoryScreen from '../screens/OrderHistoryScreen';
 import WarrantyScreen from '../screens/WarrantyScreen';
@@ -26,6 +27,7 @@ import NewsDetailScreen from '../screens/NewsDetailScreen';
 import StaffAttendanceScreen from '../screens/StaffAttendanceScreen';
 import AffiliateScreen from '../screens/AffiliateScreen';
 import SavedCouponsScreen from '../screens/SavedCouponsScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -72,6 +74,7 @@ export default function TabNavigator() {
       <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="Checkout" component={CheckoutScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
       <Stack.Screen name="AddressBook" component={AddressScreen} />
       <Stack.Screen name="OrderHistory" component={OrderHistoryScreen} />
       <Stack.Screen name="Warranty" component={WarrantyScreen} />
@@ -86,6 +89,7 @@ export default function TabNavigator() {
       <Stack.Screen name="StaffAttendance" component={StaffAttendanceScreen} />
       <Stack.Screen name="Affiliate" component={AffiliateScreen} />
       <Stack.Screen name="SavedCoupons" component={SavedCouponsScreen} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} />
     </Stack.Navigator>
   );
 }
