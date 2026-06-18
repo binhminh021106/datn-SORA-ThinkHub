@@ -92,4 +92,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(UserSavedCoupon::class, 'user_id');
     }
+
+    public function pushTokens()
+    {
+        return $this->hasMany(UserPushToken::class, 'user_id');
+    }
+
+    public function notifications()
+    {
+        return $this->hasMany(UserNotification::class, 'user_id');
+    }
 }

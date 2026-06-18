@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StatusBar } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import * as Linking from 'expo-linking';
@@ -8,6 +8,8 @@ import { Oswald_400Regular, Oswald_500Medium, Oswald_600SemiBold } from '@expo-g
 import { PlayfairDisplay_400Regular, PlayfairDisplay_400Regular_Italic, PlayfairDisplay_700Bold } from '@expo-google-fonts/playfair-display';
 import CustomAlertComponent, { customAlertRef } from './src/components/CustomAlert';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { getExpoNotificationsModule, registerDevicePushToken } from './src/services/pushNotifications';
+import { flushPendingNotificationNavigation, navigateFromNotification, navigationRef } from './src/navigation/navigationRef';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,6 +42,47 @@ const linking = {
   },
 };
 
+function PushNotificationBridge() {
+  useEffect(() => {
+    let responseSubscription = null;
+    let isMounted = true;
+
+    const setupNotifications = async () => {
+      const Notifications = await getExpoNotificationsModule();
+      if (!Notifications || !isMounted) {
+        return;
+      }
+
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowBanner: true,
+          shouldShowList: true,
+          shouldPlaySound: true,
+          shouldSetBadge: false,
+        }),
+      });
+
+      registerDevicePushToken().catch((error) => {
+        console.log('Register push token failed:', error?.message || error);
+      });
+
+      responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
+        const data = response?.notification?.request?.content?.data || {};
+        navigateFromNotification(data);
+      });
+    };
+
+    setupNotifications();
+
+    return () => {
+      isMounted = false;
+      responseSubscription?.remove?.();
+    };
+  }, []);
+
+  return null;
+}
+
 export default function App() {
   let [fontsLoaded] = useFonts({
     Oswald_400Regular,
@@ -56,8 +99,13 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <NavigationContainer linking={linking}>
+      <NavigationContainer
+        ref={navigationRef}
+        linking={linking}
+        onReady={flushPendingNotificationNavigation}
+      >
         <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
+        <PushNotificationBridge />
         <TabNavigator />
         <CustomAlertComponent ref={customAlertRef} />
       </NavigationContainer>
