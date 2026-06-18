@@ -163,6 +163,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { getStorageUrl } from '@/utils/env';
+import clientApiClient from '@/utils/clientApiClient';
 
 const props = defineProps({
   /** Cho phép truyền thẳng user data từ parent */
@@ -320,10 +321,37 @@ const handleLogout = () => {
   window.location.href = '/login';
 };
 
+// ===== FETCH PROFILE =====
+const fetchProfile = async () => {
+  if (!getToken()) return;
+  try {
+    const res = await clientApiClient.get('/client/profile', { ignoreAuthRedirect: true });
+    if (res.data && res.data.status) {
+      const u = res.data.data;
+      userData.value.fullName = u.fullName || u.name || '';
+      userData.value.email = u.email || '';
+      userData.value.avatar_url = u.avatar_url || '';
+      userData.value.tier = u.tier || null;
+
+      // Cập nhật lại localStorage để đồng bộ với Header nếu cần
+      try {
+        let authState = JSON.parse(localStorage.getItem('auth') || '{}');
+        if (!authState.user) authState.user = {};
+        authState.user.fullName = userData.value.fullName;
+        authState.user.avatar_url = userData.value.avatar_url;
+        localStorage.setItem('auth', JSON.stringify(authState));
+      } catch(e) {}
+    }
+  } catch (err) {
+    // Bỏ qua lỗi
+  }
+};
+
 // ===== LIFECYCLE =====
 onMounted(() => {
   if (!props.user) {
     loadUserFromStorage();
+    fetchProfile();
   }
 });
 </script>

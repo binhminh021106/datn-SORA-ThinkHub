@@ -417,16 +417,69 @@ const handleReorder = async (order) => {
 
 const confirmCancel = async (order) => {
   soraAlert.fire({
-    title: 'Hủy đơn hàng',
-    text: `Bạn muốn hủy đơn ${order.order_code}? Vui lòng nhập lý do:`,
-    input: 'textarea',
-    inputPlaceholder: 'Lý do hủy đơn (Vd: Thay đổi địa chỉ, Đổi ý...)',
+    title: `<span class="font-oswald tracking-wider fs-4 text-dark">HỦY ĐƠN HÀNG <span class="text-sora-primary">#${order.order_code}</span></span>`,
+    html: `
+      <div class="text-center mb-4">
+        <p class="text-muted font-sans" style="font-size: 0.95rem;">Hành động này không thể hoàn tác. Vui lòng cho chúng tôi biết lý do bạn muốn hủy đơn hàng này.</p>
+      </div>
+      <div class="text-start p-3 bg-light rounded-3 border">
+        <label class="form-label fw-bold text-dark font-serif" style="font-size: 0.95rem;">Lý do hủy đơn <span class="text-danger">*</span></label>
+        <div class="position-relative">
+          <select id="cancelReasonSelect" class="form-select border-secondary shadow-none mb-3 py-2 font-sans" style="font-size: 0.9rem; cursor: pointer; background-color: #fff;" onchange="
+            const wrapper = document.getElementById('cancelReasonTextareaWrapper');
+            const textarea = document.getElementById('cancelReasonTextarea');
+            if(this.value === 'Lý do khác') {
+              wrapper.style.display = 'block';
+              textarea.focus();
+            } else {
+              wrapper.style.display = 'none';
+            }
+          ">
+            <option value="" disabled selected>-- Chọn lý do phù hợp --</option>
+            <option value="Tôi muốn thay đổi sản phẩm (màu sắc, kích thước, số lượng…)">Tôi muốn thay đổi sản phẩm (màu sắc, kích thước, số lượng…)</option>
+            <option value="Tôi muốn thay đổi địa chỉ nhận hàng">Tôi muốn thay đổi địa chỉ nhận hàng</option>
+            <option value="Tôi muốn thay đổi phương thức thanh toán">Tôi muốn thay đổi phương thức thanh toán</option>
+            <option value="Tôi tìm được nơi bán khác với giá tốt hơn">Tôi tìm được nơi bán khác với giá tốt hơn</option>
+            <option value="Tôi không còn nhu cầu mua nữa">Tôi không còn nhu cầu mua nữa</option>
+            <option value="Tôi đã đặt nhầm đơn hàng">Tôi đã đặt nhầm đơn hàng</option>
+            <option value="Thời gian giao hàng quá lâu">Thời gian giao hàng quá lâu</option>
+            <option value="Người bán không phản hồi thắc mắc/yêu cầu của tôi">Người bán không phản hồi thắc mắc/yêu cầu của tôi</option>
+            <option value="Tôi muốn gộp đơn với đơn hàng khác">Tôi muốn gộp đơn với đơn hàng khác</option>
+            <option value="Lý do khác">Lý do khác (Vui lòng nhập chi tiết)...</option>
+          </select>
+        </div>
+        <div id="cancelReasonTextareaWrapper" style="display: none; animation: fadeIn 0.3s ease;">
+          <textarea id="cancelReasonTextarea" class="form-control border-secondary shadow-none py-2 font-sans" rows="3" style="font-size: 0.9rem; resize: none;" placeholder="Chia sẻ thêm lý do cụ thể của bạn để chúng tôi cải thiện dịch vụ..."></textarea>
+        </div>
+      </div>
+    `,
     icon: 'warning',
     showCancelButton: true,
     confirmButtonText: 'Xác nhận hủy',
     cancelButtonText: 'Đóng',
+    buttonsStyling: false,
+    customClass: {
+      popup: 'border-0 shadow-lg rounded-4',
+      confirmButton: 'btn btn-danger px-4 py-2 rounded-0 text-uppercase fw-bold font-sans tracking-wide ms-2',
+      cancelButton: 'btn btn-secondary px-4 py-2 rounded-0 text-uppercase fw-bold font-sans tracking-wide'
+    },
     reverseButtons: true,
-    inputValidator: (value) => { if (!value || value.length < 5) return 'Vui lòng nhập lý do (ít nhất 5 ký tự)!'; }
+    preConfirm: () => {
+      const selectVal = document.getElementById('cancelReasonSelect').value;
+      if (!selectVal) {
+        soraAlert.showValidationMessage('Vui lòng chọn một lý do!');
+        return false;
+      }
+      if (selectVal === 'Lý do khác') {
+        const textVal = document.getElementById('cancelReasonTextarea').value.trim();
+        if (!textVal || textVal.length < 5) {
+          soraAlert.showValidationMessage('Vui lòng nhập lý do cụ thể (ít nhất 5 ký tự)!');
+          return false;
+        }
+        return textVal;
+      }
+      return selectVal;
+    }
   }).then(async (result) => {
     if (result.isConfirmed) {
       try {
