@@ -515,7 +515,7 @@ class ClientCheckoutController extends Controller
         $extraData = base64_encode(json_encode([
             'source' => $checkoutSource === 'mobile' ? 'mobile' : 'web',
             'cart_id' => $cartId,
-            'mobile_return_url' => $mobileReturnUrl,
+            'mobile_return_url' => $this->sanitizeMobileReturnUrl($mobileReturnUrl),
         ]));
         $requestId = time() . "";
         $requestType = "payWithATM";
@@ -592,13 +592,30 @@ class ClientCheckoutController extends Controller
 
     private function buildMobileMomoReturnUrl(?string $returnUrl, string $orderCode, string $paymentStatus, string $fallbackPath): string
     {
-        $baseUrl = $returnUrl ?: 'sora://' . $fallbackPath;
+        $baseUrl = $this->sanitizeMobileReturnUrl($returnUrl) ?: 'sora://' . $fallbackPath;
         $separator = str_contains($baseUrl, '?') ? '&' : '?';
 
         return $baseUrl . $separator . http_build_query([
             'order' => $orderCode,
             'payment' => $paymentStatus,
         ]);
+    }
+
+    private function sanitizeMobileReturnUrl(?string $returnUrl): ?string
+    {
+        if (!$returnUrl) {
+            return null;
+        }
+
+        $returnUrl = trim($returnUrl);
+        $scheme = strtolower((string) parse_url($returnUrl, PHP_URL_SCHEME));
+        $allowedScheme = strtolower((string) env('MOBILE_APP_SCHEME', 'sora'));
+
+        if ($scheme !== $allowedScheme) {
+            return null;
+        }
+
+        return $returnUrl;
     }
 
     private function clearCartAfterPaidOrder(Order $order, ?int $cartId = null): void

@@ -80,6 +80,8 @@ class SendOrderStatusChangedNotificationJob implements ShouldQueue
                 'old_status' => $this->oldStatus,
                 'new_status' => $this->newStatus,
             ]);
+
+            throw $e;
         }
     }
 }

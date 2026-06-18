@@ -16,7 +16,16 @@ export const fetchPersonalizedRecommendations = async ({ limit = 10 } = {}) => {
     headers,
   });
   const text = await response.text();
-  const json = text ? JSON.parse(text) : {};
+  let json = {};
+
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch (error) {
+    const apiError = new Error('Máy chủ trả về phản hồi không hợp lệ.');
+    apiError.status = response.status;
+    apiError.raw = text;
+    throw apiError;
+  }
 
   if (!response.ok || !json.success) {
     throw new Error(json.message || 'Không thể tải gợi ý sản phẩm.');

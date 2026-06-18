@@ -11,7 +11,7 @@ class ClientNotificationController extends Controller
     public function index(Request $request)
     {
         $userId = $request->user()->id;
-        $perPage = min((int) $request->input('per_page', 10), 30);
+        $perPage = max(1, min((int) $request->input('per_page', 10), 30));
         $typeGroup = $request->input('type_group');
         $typeMap = [
             'order' => ['order_success', 'order_status'],
@@ -25,7 +25,12 @@ class ClientNotificationController extends Controller
             $query->whereIn('type', $typeMap[$typeGroup]);
         }
 
-        $notifications = $query->latest()
+        $filteredUnreadCount = (clone $query)
+            ->whereNull('read_at')
+            ->count();
+
+        $notifications = (clone $query)
+            ->latest()
             ->paginate($perPage);
 
         return response()->json([
@@ -34,9 +39,7 @@ class ClientNotificationController extends Controller
             'unread_count' => UserNotification::where('user_id', $userId)
                 ->whereNull('read_at')
                 ->count(),
-            'filtered_unread_count' => (clone $query)
-                ->whereNull('read_at')
-                ->count(),
+            'filtered_unread_count' => $filteredUnreadCount,
         ]);
     }
 

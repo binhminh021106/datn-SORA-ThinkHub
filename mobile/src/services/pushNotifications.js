@@ -4,6 +4,29 @@ import { API_BASE_URL } from '../config/api';
 
 const PUSH_TOKEN_STORAGE_KEY = 'sora_expo_push_token';
 
+const parsePushApiResponse = async (response) => {
+  const text = await response.text();
+  let json = {};
+
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch (error) {
+    const apiError = new Error('Máy chủ trả về phản hồi không hợp lệ.');
+    apiError.status = response.status;
+    apiError.raw = text;
+    throw apiError;
+  }
+
+  if (!response.ok || json.success === false) {
+    const apiError = new Error(json.message || 'Không thể đồng bộ push token.');
+    apiError.status = response.status;
+    apiError.payload = json;
+    throw apiError;
+  }
+
+  return json;
+};
+
 export const getExpoNotificationsModule = async () => {
   try {
     return await import('expo-notifications');
@@ -72,7 +95,7 @@ export const registerDevicePushToken = async () => {
     return null;
   }
 
-  await fetch(`${API_BASE_URL}/client/push-tokens`, {
+  const response = await fetch(`${API_BASE_URL}/client/push-tokens`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${authToken}`,
@@ -85,6 +108,7 @@ export const registerDevicePushToken = async () => {
       device_name: Platform.OS,
     }),
   });
+  await parsePushApiResponse(response);
 
   await AsyncStorage.setItem(PUSH_TOKEN_STORAGE_KEY, expoPushToken);
   return expoPushToken;
@@ -98,17 +122,15 @@ export const unregisterDevicePushToken = async () => {
     return;
   }
 
-  try {
-    await fetch(`${API_BASE_URL}/client/push-tokens`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${authToken}`,
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ expo_push_token: expoPushToken }),
-    });
-  } finally {
-    await AsyncStorage.removeItem(PUSH_TOKEN_STORAGE_KEY);
-  }
+  const response = await fetch(`${API_BASE_URL}/client/push-tokens`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ expo_push_token: expoPushToken }),
+  });
+  await parsePushApiResponse(response);
+  await AsyncStorage.removeItem(PUSH_TOKEN_STORAGE_KEY);
 };

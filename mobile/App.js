@@ -9,7 +9,7 @@ import { PlayfairDisplay_400Regular, PlayfairDisplay_400Regular_Italic, Playfair
 import CustomAlertComponent, { customAlertRef } from './src/components/CustomAlert';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { getExpoNotificationsModule, registerDevicePushToken } from './src/services/pushNotifications';
-import { navigateFromNotification, navigationRef } from './src/navigation/navigationRef';
+import { flushPendingNotificationNavigation, navigateFromNotification, navigationRef } from './src/navigation/navigationRef';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -99,7 +99,11 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <NavigationContainer ref={navigationRef} linking={linking}>
+      <NavigationContainer
+        ref={navigationRef}
+        linking={linking}
+        onReady={flushPendingNotificationNavigation}
+      >
         <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
         <PushNotificationBridge />
         <TabNavigator />
