@@ -27,7 +27,7 @@
               </button>
             </div>
           </div>
-          <button @click="openWithdrawModal" class="btn btn-main font-oswald tracking-wide px-4 py-2 shadow-sm rounded-pill">
+          <button @click="openWithdrawModal" class="editorial-btn shadow-sm rounded-pill">
             <i class="bi bi-wallet2 me-2"></i> Yêu cầu Rút tiền
           </button>
         </div>
@@ -144,7 +144,7 @@
         <p class="text-muted max-w-600 mx-auto mb-2 font-luxury">Rất tiếc, hồ sơ của bạn hiện tại chưa phù hợp với tiêu chí của chương trình Đại sứ SORA.</p>
         <p v-if="adminNotes" class="text-danger small fst-italic mb-4 font-luxury">"{{ adminNotes }}"</p>
         
-        <button @click="resetForm" class="btn btn-outline-main font-oswald tracking-wide text-uppercase px-4 py-2">
+        <button @click="resetForm" class="editorial-btn-outline px-4 py-2">
           Đăng ký lại
         </button>
       </div>
@@ -170,7 +170,7 @@
           </div>
 
           <div class="text-center mt-5">
-            <button type="submit" class="btn btn-main text-uppercase tracking-wide font-oswald px-5 py-3 w-100 shadow" :disabled="isSubmitting">
+            <button type="submit" class="editorial-btn px-5 py-3 w-100 shadow" :disabled="isSubmitting">
               <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>
               <i v-else class="bi bi-send me-2"></i> Gửi Đơn Đăng Ký
             </button>
@@ -222,7 +222,7 @@
             
             <div class="modal-footer border-top border-secondary border-opacity-10 p-3 bg-light rounded-bottom-4 justify-content-center">
               <button type="button" class="btn btn-secondary font-oswald text-uppercase tracking-wide px-4 py-2" data-bs-dismiss="modal" style="border-radius: 4px;">Hủy bỏ</button>
-              <button type="submit" class="btn btn-main font-oswald text-uppercase tracking-wide px-5 py-2 shadow" :disabled="isWithdrawing || dashboardStats.available_balance < 200000">
+              <button type="submit" class="editorial-btn px-5 py-2 shadow" :disabled="isWithdrawing || dashboardStats.available_balance < 200000">
                 <span v-if="isWithdrawing" class="spinner-border spinner-border-sm me-2"></span>
                 Xác Nhận Rút Tiền
               </button>
@@ -438,11 +438,7 @@ onMounted(() => {
 .tracking-widest { letter-spacing: 0.15em; }
 .tracking-wide { letter-spacing: 0.1em; }
 
-.btn-main { background-color: #9f273b; color: white; border: 1px solid #9f273b; border-radius: 4px; transition: all 0.3s ease; }
-.btn-main:hover { background-color: #7a1c2d; border-color: #7a1c2d; color: white; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(159,39,59,0.3); }
 
-.btn-outline-main { color: #9f273b; border: 1px solid #9f273b; border-radius: 4px; background: transparent; transition: all 0.3s ease; }
-.btn-outline-main:hover { background-color: #9f273b; color: white; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(159,39,59,0.3); }
 
 .fade-in { animation: fadeIn 0.5s ease-in; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

@@ -1,19 +1,5 @@
 <template>
-  <div class="order-history-wrapper pb-5"
-    style="min-height: 100vh; background-color: #f8f9fa; font-family: 'Lato', sans-serif;">
-    
-
-    <main class="container mt-2">
-      <!-- LAYOUT 2 CỘT: SIDEBAR + NỘI DUNG -->
-      <div class="row g-4 g-lg-5 align-items-start">
-
-        <!-- SIDEBAR TRÁI -->
-        <div class="col-lg-3">
-          <ProfileSidebar />
-        </div>
-
-        <!-- NỘI DUNG CHÍNH BÊN PHẢI -->
-        <div class="col-lg-9">
+  <div>
 
       <SoraListSkeleton v-if="isLoading" :rows="4" image-size="72px" card />
 
@@ -45,8 +31,8 @@
                 style="width: auto;" v-model="sortBy">
                 <option value="newest">Sắp xếp: Mới nhất</option>
                 <option value="oldest">Sắp xếp: Cũ nhất</option>
-                <option value="price_desc">Giá: Cao đến Thấp</option>
-                <option value="price_asc">Giá: Thấp đến Cao</option>
+                <option value="price_desc">Giá giảm dần</option>
+                <option value="price_asc">Giá tăng dần</option>
               </select>
             </div>
           </div>
@@ -64,7 +50,7 @@
             v-for="order in displayOrders" :key="order.id">
 
             <div
-              class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+              class="card-header bg-white border-bottom-0 pt-3 pb-0 px-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
               <div class="d-flex align-items-center gap-3">
                 <span class="fw-bold text-dark fs-5 font-oswald" style="letter-spacing: 1px;">#<span
                     v-text="order.order_code"></span></span>
@@ -78,9 +64,9 @@
               </span>
             </div>
 
-            <div class="card-body p-4">
+            <div class="card-body p-3">
               <div v-if="!['cancelled', 'returned'].includes(order.status)"
-                class="order-stepper-horizontal d-none d-md-flex mb-5 mt-2">
+                class="order-stepper-horizontal d-none d-md-flex mb-3 mt-1">
                 <div v-for="(step, index) in orderSteps" :key="index" class="stepper-step"
                   :class="{ 'completed': isStepCompleted(order.status, step.value), 'active': order.status === step.value }">
                   <div class="step-icon-wrap">
@@ -92,19 +78,19 @@
                 </div>
               </div>
               <div v-else
-                class="alert bg-light border border-light-subtle rounded-0 mb-5 d-flex align-items-center py-2 px-3">
+                class="alert bg-light border border-light-subtle rounded-0 mb-3 d-flex align-items-center py-2 px-3">
                 <i class="bi bi-x-circle-fill text-secondary me-2 fs-5"></i>
                 <div class="text-muted small"><strong>Đơn hàng đã bị hủy.</strong> Quá trình giao dịch đã dừng lại.
                 </div>
               </div>
 
-              <hr class="mt-0 mb-4 border-light-subtle">
+              <hr class="mt-0 mb-3 border-light-subtle">
 
               <div class="row align-items-center">
                 <div class="col-lg-8 border-end-lg pe-lg-4">
                   <div v-for="item in order.items.slice(0, 2)" :key="item.id"
-                    class="d-flex align-items-center gap-3 mb-3">
-                    <div class="img-wrapper border p-1" style="width: 70px; height: 70px; background: #fff;">
+                    class="d-flex align-items-center gap-2 mb-2">
+                    <div class="img-wrapper border p-1" style="width: 60px; height: 60px; background: #fff;">
                       <img :src="getImageUrl(item.variant_image)" v-on:error="handleImageError"
                         class="w-100 h-100 object-fit-cover">
                     </div>
@@ -124,9 +110,9 @@
                   </div>
                 </div>
 
-                <div class="col-lg-4 text-lg-end mt-4 mt-lg-0 ps-lg-4">
+                <div class="col-lg-4 text-lg-end mt-3 mt-lg-0 ps-lg-3">
                   <p class="text-muted small mb-1 text-uppercase fw-bold" style="letter-spacing: 1px;">Thành tiền</p>
-                  <h3 class="fw-bold text-primary-custom mb-4 font-oswald" v-text="formatPrice(order.total_amount)"></h3>
+                  <h3 class="fw-bold text-primary-custom mb-3 font-oswald" v-text="formatPrice(order.total_amount)"></h3>
 
                   <div class="d-flex flex-column gap-2">
                     <!-- Chi tiết đơn hàng - Màu trung tính -->
@@ -197,9 +183,6 @@
             class="editorial-btn border-0 px-5 py-3 mt-2">Bắt đầu mua sắm</button>
         </div>
       </div>
-        </div><!-- end col-lg-9 -->
-      </div><!-- end row -->
-    </main>
 
     <!-- MODALS -->
     <OrderDetailModal :is-open="isModalOpen" :order="selectedOrder" v-on:close="closeModal"
@@ -222,7 +205,6 @@ import OrderDetailModal from './OrderDetailModal.vue';
 import ReviewModal from './ReviewModal.vue';
 import ViewReviewModal from './ViewReviewModal.vue';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
-import ProfileSidebar from '@/components/ui/ProfileSidebar.vue';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
 import { getStorageUrl } from '@/utils/env';
 import clientApiClient from '@/utils/clientApiClient';
@@ -321,7 +303,7 @@ const resetFilters = () => { filterStatus.value = 'all'; filterDate.value = 'all
 const fetchOrders = async (page = 1) => {
   isLoading.value = true;
   try {
-    const res = await clientApiClient.get('/client/orders', { params: { page } });
+    const res = await clientApiClient.get('/client/orders', { params: { page, per_page: 5 } });
     orders.value = res.data.data || [];
     pagination.value = { current_page: res.data.current_page, last_page: res.data.last_page };
   } catch (err) { Toast.fire({ icon: 'error', title: 'Lỗi tải danh sách đơn hàng' }); }
@@ -393,11 +375,18 @@ const handleReorder = async (order) => {
     // Tắt loading và hiện thông báo thành công
     soraAlert.fire({
       icon: 'success',
-      title: 'Đã thêm vào giỏ',
-      text: 'Các sản phẩm trong đơn hàng này đã được thêm lại vào giỏ hàng của bạn.',
+      title: '<span class="font-oswald tracking-wider fs-4 text-dark">ĐÃ THÊM VÀO GIỎ</span>',
+      html: '<p class="text-muted font-sans" style="font-size: 0.95rem;">Các sản phẩm trong đơn hàng này đã được thêm lại vào giỏ hàng của bạn.</p>',
       confirmButtonText: 'Đến giỏ hàng',
       showCancelButton: true,
-      cancelButtonText: 'Tiếp tục xem'
+      cancelButtonText: 'Tiếp tục xem',
+      buttonsStyling: false,
+      customClass: {
+        popup: 'border-0 shadow-lg',
+        confirmButton: 'editorial-btn px-4 py-2 ms-2',
+        cancelButton: 'editorial-btn-outline px-4 py-2'
+      },
+      reverseButtons: true
     }).then((result) => {
       if (result.isConfirmed) {
         router.push('/cart');
@@ -414,41 +403,42 @@ const handleReorder = async (order) => {
   }
 };
 
+const escapeHtml = (v = '') =>
+  String(v)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+
 const confirmCancel = async (order) => {
+  const safeOrderCode = escapeHtml(order?.order_code ?? '');
   soraAlert.fire({
-    title: `<span class="font-oswald tracking-wider fs-4 text-dark">HỦY ĐƠN HÀNG <span class="text-sora-primary">#${order.order_code}</span></span>`,
+    title: `<span class="font-oswald tracking-wider fs-4 text-dark">HỦY ĐƠN HÀNG <span class="text-sora-primary">#${safeOrderCode}</span></span>`,
     html: `
       <div class="text-center mb-4">
         <p class="text-muted font-sans" style="font-size: 0.95rem;">Hành động này không thể hoàn tác. Vui lòng cho chúng tôi biết lý do bạn muốn hủy đơn hàng này.</p>
       </div>
-      <div class="text-start p-3 bg-light rounded-3 border">
+      <div class="text-start p-3 bg-light border" style="border-radius: 4px;">
         <label class="form-label fw-bold text-dark font-serif" style="font-size: 0.95rem;">Lý do hủy đơn <span class="text-danger">*</span></label>
-        <div class="position-relative">
-          <select id="cancelReasonSelect" class="form-select border-secondary shadow-none mb-3 py-2 font-sans" style="font-size: 0.9rem; cursor: pointer; background-color: #fff;" onchange="
-            const wrapper = document.getElementById('cancelReasonTextareaWrapper');
-            const textarea = document.getElementById('cancelReasonTextarea');
-            if(this.value === 'Lý do khác') {
-              wrapper.style.display = 'block';
-              textarea.focus();
-            } else {
-              wrapper.style.display = 'none';
-            }
-          ">
-            <option value="" disabled selected>-- Chọn lý do phù hợp --</option>
-            <option value="Tôi muốn thay đổi sản phẩm (màu sắc, kích thước, số lượng…)">Tôi muốn thay đổi sản phẩm (màu sắc, kích thước, số lượng…)</option>
-            <option value="Tôi muốn thay đổi địa chỉ nhận hàng">Tôi muốn thay đổi địa chỉ nhận hàng</option>
-            <option value="Tôi muốn thay đổi phương thức thanh toán">Tôi muốn thay đổi phương thức thanh toán</option>
-            <option value="Tôi tìm được nơi bán khác với giá tốt hơn">Tôi tìm được nơi bán khác với giá tốt hơn</option>
-            <option value="Tôi không còn nhu cầu mua nữa">Tôi không còn nhu cầu mua nữa</option>
-            <option value="Tôi đã đặt nhầm đơn hàng">Tôi đã đặt nhầm đơn hàng</option>
-            <option value="Thời gian giao hàng quá lâu">Thời gian giao hàng quá lâu</option>
-            <option value="Người bán không phản hồi thắc mắc/yêu cầu của tôi">Người bán không phản hồi thắc mắc/yêu cầu của tôi</option>
-            <option value="Tôi muốn gộp đơn với đơn hàng khác">Tôi muốn gộp đơn với đơn hàng khác</option>
-            <option value="Lý do khác">Lý do khác (Vui lòng nhập chi tiết)...</option>
-          </select>
+        <div class="custom-radio-group mt-2">
+          ${[
+            'Tôi muốn thay đổi địa chỉ nhận hàng',
+            'Tôi muốn thay đổi phương thức thanh toán',
+            'Tôi muốn thêm/bớt sản phẩm trong đơn',
+            'Thời gian giao hàng quá lâu',
+            'Lý do khác'
+          ].map((reason, idx) => `
+            <div class="form-check mb-2">
+              <input class="form-check-input cancel-reason-radio" type="radio" name="cancelReason" id="reason${idx}" value="${reason}">
+              <label class="form-check-label font-sans text-secondary" style="font-size: 0.9rem; cursor: pointer;" for="reason${idx}">
+                ${reason === 'Lý do khác' ? 'Lý do khác (Vui lòng nhập chi tiết)...' : reason}
+              </label>
+            </div>
+          `).join('')}
         </div>
-        <div id="cancelReasonTextareaWrapper" style="display: none; animation: fadeIn 0.3s ease;">
-          <textarea id="cancelReasonTextarea" class="form-control border-secondary shadow-none py-2 font-sans" rows="3" style="font-size: 0.9rem; resize: none;" placeholder="Chia sẻ thêm lý do cụ thể của bạn để chúng tôi cải thiện dịch vụ..."></textarea>
+        <div id="cancelReasonTextareaWrapper" style="display: none; animation: fadeIn 0.3s ease; margin-top: 10px;">
+          <textarea id="cancelReasonTextarea" class="form-control border-secondary shadow-none py-2 font-sans" rows="3" style="font-size: 0.9rem; resize: none; border-radius: 4px;" placeholder="Chia sẻ thêm lý do cụ thể của bạn để chúng tôi cải thiện dịch vụ..."></textarea>
         </div>
       </div>
     `,
@@ -458,17 +448,33 @@ const confirmCancel = async (order) => {
     cancelButtonText: 'Đóng',
     buttonsStyling: false,
     customClass: {
-      popup: 'border-0 shadow-lg rounded-4',
-      confirmButton: 'btn btn-danger px-4 py-2 rounded-0 text-uppercase fw-bold font-sans tracking-wide ms-2',
-      cancelButton: 'btn btn-secondary px-4 py-2 rounded-0 text-uppercase fw-bold font-sans tracking-wide'
+      popup: 'border-0 shadow-lg',
+      confirmButton: 'editorial-btn px-4 py-2 ms-2',
+      cancelButton: 'editorial-btn-outline px-4 py-2'
     },
     reverseButtons: true,
+    didOpen: () => {
+      const radios = document.querySelectorAll('.cancel-reason-radio');
+      const wrapper = document.getElementById('cancelReasonTextareaWrapper');
+      const textarea = document.getElementById('cancelReasonTextarea');
+      radios.forEach(radio => {
+        radio.addEventListener('change', function () {
+          if (this.value === 'Lý do khác') {
+            if (wrapper) wrapper.style.display = 'block';
+            if (textarea) textarea.focus();
+          } else {
+            if (wrapper) wrapper.style.display = 'none';
+          }
+        });
+      });
+    },
     preConfirm: () => {
-      const selectVal = document.getElementById('cancelReasonSelect').value;
-      if (!selectVal) {
+      const selectedRadio = document.querySelector('.cancel-reason-radio:checked');
+      if (!selectedRadio) {
         soraAlert.showValidationMessage('Vui lòng chọn một lý do!');
         return false;
       }
+      const selectVal = selectedRadio.value;
       if (selectVal === 'Lý do khác') {
         const textVal = document.getElementById('cancelReasonTextarea').value.trim();
         if (!textVal || textVal.length < 5) {
@@ -492,6 +498,7 @@ const confirmCancel = async (order) => {
     }
   });
 };
+
 const exportInvoice = async (order) => {
   if (!order?.order_code) return;
 

@@ -323,9 +323,13 @@ const handleLogout = () => {
 
 // ===== FETCH PROFILE =====
 const fetchProfile = async () => {
-  if (!getToken()) return;
+  const token = getToken();
+  if (!token) return;
   try {
-    const res = await clientApiClient.get('/client/profile', { ignoreAuthRedirect: true });
+    const res = await clientApiClient.get('/client/profile', {
+      ignoreAuthRedirect: true,
+      headers: { Authorization: `Bearer ${token}` }
+    });
     if (res.data && res.data.status) {
       const u = res.data.data;
       userData.value.fullName = u.fullName || u.name || '';

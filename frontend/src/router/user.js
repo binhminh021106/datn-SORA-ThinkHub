@@ -18,11 +18,7 @@ const user = [
         name: 'cart',
         component: () => import('../pages/user/cart/Index.vue'),
       },
-      {
-        path: 'order',
-        name: 'order',
-        component: () => import('../pages/user/order/Index.vue'),
-      },
+
       {
         path: 'orderHistory',
         name: 'orderHistory',
@@ -73,11 +69,7 @@ const user = [
         name: 'client-combo-detail',
         component: () => import('../pages/user/combo/Detail.vue'),
       },
-      {
-        path: 'favourite',
-        name: 'favourite',
-        component: () => import('../pages/user/favourite/Index.vue'),
-      },
+
       {
         path: 'about',
         name: 'about',
@@ -114,9 +106,25 @@ const user = [
         component: () => import('../pages/user/compare/Index.vue'),
       },
       {
-        path: 'profile',
-        name: 'profile',
-        component: () => import('../pages/user/profile/Index.vue')
+        path: '',
+        component: () => import('../layouts/UserAccountLayout.vue'),
+        children: [
+          {
+            path: 'profile',
+            name: 'profile',
+            component: () => import('../pages/user/profile/Index.vue')
+          },
+          {
+            path: 'order',
+            name: 'order',
+            component: () => import('../pages/user/order/Index.vue'),
+          },
+          {
+            path: 'favourite',
+            name: 'favourite',
+            component: () => import('../pages/user/favourite/Index.vue'),
+          },
+        ]
       },
       
       {
