@@ -58,6 +58,33 @@ const PROGRESS_STEPS = [
 
 const STATUS_STEP_INDEX = { pending: 0, confirmed: 1, shipping: 2, delivered: 3 };
 
+const TRACKING_STEP_DETAILS = [
+  {
+    key: 'pending',
+    title: 'Đơn hàng đã được tạo',
+    description: 'SORA đã ghi nhận đơn hàng và đang chờ xác nhận từ cửa hàng.',
+    icon: 'receipt-outline',
+  },
+  {
+    key: 'confirmed',
+    title: 'Đơn hàng đã được xác nhận',
+    description: 'Sản phẩm đã được kiểm tra tồn kho và chuyển sang bước chuẩn bị.',
+    icon: 'shield-checkmark-outline',
+  },
+  {
+    key: 'shipping',
+    title: 'Đang giao hàng',
+    description: 'Đơn hàng đang trên đường giao đến địa chỉ nhận hàng của bạn.',
+    icon: 'bicycle-outline',
+  },
+  {
+    key: 'delivered',
+    title: 'Giao hàng thành công',
+    description: 'Đơn hàng đã hoàn tất. Bạn có thể đánh giá sản phẩm sau khi trải nghiệm.',
+    icon: 'checkmark-circle-outline',
+  },
+];
+
 const getPaymentMethodLabel = (m) => ({ cod: 'COD', momo: 'Ví MoMo', bank: 'Chuyển khoản', vnpay: 'VNPay' }[m] || m || 'N/A');
 const getPaymentStatusLabel = (ps) => ps === 'paid' ? { label: 'Đã thanh toán', color: '#22c55e' } : { label: 'Chờ thanh toán', color: '#f59e0b' };
 const getItemImage = (path) => {
@@ -231,6 +258,99 @@ const ProgressTimeline = ({ order }) => {
   );
 };
 
+const DetailedTrackingTimeline = ({ order }) => {
+  const histories = order?.histories || [];
+  const curStatus = order?.status;
+  const curStepIdx = STATUS_STEP_INDEX[curStatus] ?? -1;
+  const isAbnormal = ['cancelled', 'return_requested', 'returned'].includes(curStatus);
+
+  const timeMap = {};
+  const noteMap = {};
+  histories.forEach((history) => {
+    timeMap[history.new_status] = history.created_at;
+    if (history.note) noteMap[history.new_status] = history.note;
+  });
+  if (!timeMap.pending) timeMap.pending = order?.created_at;
+
+  if (isAbnormal) {
+    const abnormalConfig = getStatusConfig(curStatus);
+    const createdStep = TRACKING_STEP_DETAILS[0];
+
+    return (
+      <View style={dt.container}>
+        <View style={dt.row}>
+          <View style={[dt.iconCircle, dt.iconDone]}>
+            <Ionicons name={createdStep.icon} size={17} color="#fff" />
+          </View>
+          <View style={dt.content}>
+            <Text style={[dt.title, dt.titleDone]}>{createdStep.title}</Text>
+            <Text style={dt.desc}>{noteMap.pending || createdStep.description}</Text>
+            {!!timeMap.pending && <Text style={dt.time}>{formatDate(timeMap.pending)}</Text>}
+          </View>
+        </View>
+
+        <View style={dt.row}>
+          <View style={[dt.iconCircle, { backgroundColor: abnormalConfig.bg, borderColor: '#e8b7be' }]}>
+            <Ionicons name={abnormalConfig.icon} size={18} color={abnormalConfig.color} />
+          </View>
+          <View style={dt.content}>
+            <Text style={[dt.title, { color: abnormalConfig.color }]}>{abnormalConfig.label}</Text>
+            <Text style={dt.desc}>{noteMap[curStatus] || 'Đơn hàng đã chuyển sang trạng thái đặc biệt. Vui lòng liên hệ SORA nếu cần hỗ trợ thêm.'}</Text>
+            <Text style={dt.time}>{formatDate(timeMap[curStatus] || order?.updated_at)}</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={dt.container}>
+      {TRACKING_STEP_DETAILS.map((step, index) => {
+        const completed = curStepIdx > index;
+        const current = curStepIdx === index;
+        const upcoming = curStepIdx < index;
+        const timestamp = timeMap[step.key];
+
+        return (
+          <View key={step.key} style={dt.row}>
+            {index < TRACKING_STEP_DETAILS.length - 1 && (
+              <View style={[dt.verticalLine, completed && dt.verticalLineActive]} />
+            )}
+            <View style={[
+              dt.iconCircle,
+              completed && dt.iconDone,
+              current && dt.iconCurrent,
+              upcoming && dt.iconUpcoming,
+            ]}>
+              <Ionicons
+                name={completed ? 'checkmark' : step.icon}
+                size={completed ? 16 : 17}
+                color={completed || current ? '#fff' : '#b8a9a9'}
+              />
+            </View>
+            <View style={dt.content}>
+              <View style={dt.titleRow}>
+                <Text style={[dt.title, (completed || current) && dt.titleDone]}>{step.title}</Text>
+                {current && (
+                  <View style={dt.currentPill}>
+                    <Text style={dt.currentPillText}>Đang xử lý</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={[dt.desc, upcoming && dt.descMuted]}>
+                {noteMap[step.key] || step.description}
+              </Text>
+              <Text style={[dt.time, upcoming && dt.timeMuted]}>
+                {timestamp ? formatDate(timestamp) : 'Chưa cập nhật'}
+              </Text>
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+};
+
 const pt = StyleSheet.create({
   container: { flexDirection: 'row', paddingHorizontal: 6, paddingVertical: 12, alignItems: 'flex-start', position: 'relative' },
   stepCol: { flex: 1, alignItems: 'center', position: 'relative' },
@@ -276,6 +396,43 @@ const pt = StyleSheet.create({
 });
 
 // ─── Star Rating ─────────────────────────────────────────────────────────────
+const dt = StyleSheet.create({
+  container: { paddingVertical: 4 },
+  row: { flexDirection: 'row', position: 'relative', paddingBottom: 18 },
+  verticalLine: {
+    position: 'absolute',
+    left: 18,
+    top: 38,
+    bottom: -2,
+    width: 2,
+    backgroundColor: '#eadfe1',
+  },
+  verticalLineActive: { backgroundColor: '#e7ce7d' },
+  iconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    marginRight: 12,
+    zIndex: 1,
+  },
+  iconDone: { backgroundColor: '#9f273b', borderColor: '#9f273b' },
+  iconCurrent: { backgroundColor: '#9f273b', borderColor: '#e7ce7d' },
+  iconUpcoming: { backgroundColor: '#fff', borderColor: '#eadfe1' },
+  content: { flex: 1, paddingTop: 1 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  title: { flex: 1, fontFamily: 'Oswald_600SemiBold', fontSize: 13, color: '#7a7070', letterSpacing: 0.2 },
+  titleDone: { color: '#9f273b' },
+  currentPill: { backgroundColor: '#fff5f6', borderWidth: 1, borderColor: '#e8b7be', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999 },
+  currentPillText: { fontFamily: 'Oswald_500Medium', fontSize: 10, color: '#9f273b' },
+  desc: { fontFamily: 'Oswald_400Regular', fontSize: 12, color: '#6b6060', lineHeight: 18 },
+  descMuted: { color: '#aaa0a0' },
+  time: { marginTop: 4, fontFamily: 'Oswald_400Regular', fontSize: 11, color: '#b9912f' },
+  timeMuted: { color: '#b8a9a9' },
+});
+
 const StarRating = ({ rating, onRate, size = 28 }) => (
   <View style={{ flexDirection: 'row', gap: 6 }}>
     {[1,2,3,4,5].map(star => (
@@ -453,6 +610,15 @@ const DraggableDetailSheet = ({ visible, onClose, order, loading, reviewedOrders
             showsVerticalScrollIndicator={false}
             scrollEventThrottle={16}
           >
+            <View style={ds.section}>
+              <View style={ds.sectionHead}>
+                <Ionicons name="navigate-circle-outline" size={14} color="#9f273b" />
+                <Text style={ds.sectionTitle}>THEO DÕI ĐƠN HÀNG</Text>
+              </View>
+              <View style={[ds.infoBox, ds.trackingBox]}>
+                <DetailedTrackingTimeline order={order} />
+              </View>
+            </View>
             {/* Giao hàng */}
             <View style={ds.section}>
               <View style={ds.sectionHead}>
@@ -588,8 +754,9 @@ const ds = StyleSheet.create({
   body: { flex: 1 },
   section: { paddingHorizontal: 16, marginTop: 16 },
   sectionHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
-  sectionTitle: { fontFamily: 'Oswald_600SemiBold', fontSize: 12, color: '#374151', letterSpacing: 0.8 },
-  infoBox: { backgroundColor: '#f9fafb', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 4 },
+  sectionTitle: { fontFamily: 'Oswald_600SemiBold', fontSize: 12, color: '#9f273b', letterSpacing: 0.8 },
+  infoBox: { backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4, borderWidth: 1, borderColor: '#f0eeee' },
+  trackingBox: { backgroundColor: '#fffdf6', borderColor: '#ebd5a3', paddingTop: 14, paddingBottom: 0 },
 
   itemRow: { flexDirection: 'row', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
   itemImg: { width: 60, height: 70, borderRadius: 8, backgroundColor: '#f3f4f6' },

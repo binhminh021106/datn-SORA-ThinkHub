@@ -38,48 +38,74 @@
       </div>
 
       <!-- Body -->
-      <div class="flex-grow-1 chat-body-scroll p-3" ref="chatBodyRef" style="background-color: #f8f9fa;" @click="closeEmojiPicker">
-        <div v-for="msg in messages" :key="msg.id" class="d-flex mb-3" :class="msg.type === 'user' ? 'justify-content-end' : 'justify-content-start'">
+      <div class="flex-grow-1 chat-body-scroll p-3" ref="chatBodyRef" style="background-color: #f8f9fa;" @click="closeAllPickers">
+        <div v-for="msg in messages" :key="msg.id" class="d-flex mb-3 msg-row" :class="msg.type === 'user' ? 'justify-content-end' : 'justify-content-start'" @mouseenter="hoveredMsgId = msg.id" @mouseleave="hoveredMsgId = null">
           <div v-if="msg.type === 'admin'" class="me-2 mt-auto">
             <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.7rem;">NV</div>
           </div>
 
           <!-- Image message -->
           <template v-if="msg.message_type === 'image'">
-            <div style="max-width: 80%;">
-              <img :src="msg.file_url" :alt="msg.file_name || 'image'" class="user-chat-image" @click="openLightbox(msg.file_url)" />
-              <div>
-                <small :class="msg.type === 'user' ? 'text-white-50' : 'text-muted'" style="font-size: 0.65rem;">{{ msg.time }}</small>
+            <div class="msg-bubble-wrap" :class="msg.type === 'user' ? 'align-items-end' : 'align-items-start'">
+              <div style="max-width: 100%; position: relative;">
+                <!-- Quote block -->
+                <div v-if="msg.reply_to" class="quote-block mb-1" :class="msg.type === 'user' ? 'quote-block-user' : 'quote-block-admin'">
+                  <span class="quote-author">{{ msg.reply_to.type === 'user' ? 'Bạn' : 'Nhân viên' }}</span>
+                  <p class="quote-text">{{ msg.reply_to.text || (msg.reply_to.message_type === 'image' ? '📷 Hình ảnh' : '📎 File') }}</p>
+                </div>
+                <img :src="msg.file_url" :alt="msg.file_name || 'image'" class="user-chat-image" @click="openLightbox(msg.file_url)" />
+                <div><small :class="msg.type === 'user' ? 'text-white-50' : 'text-muted'" style="font-size: 0.65rem;">{{ msg.time }}</small></div>
+              </div>
+              <!-- Action bar below bubble -->
+              <div class="msg-actions-bar" :class="msg.type === 'user' ? 'justify-content-end' : 'justify-content-start'" v-show="hoveredMsgId === msg.id">
+                <button class="msg-action-btn" @click.stop="setReply(msg)" title="Trả lời">↩</button>
               </div>
             </div>
           </template>
+
           <!-- File message -->
           <template v-else-if="msg.message_type === 'file'">
-            <div
-              class="p-2 shadow-sm rounded"
-              :class="msg.type === 'user' ? 'bg-primary text-white text-end rounded-user' : 'bg-white border text-start rounded-bot'"
-              style="max-width: 80%;"
-            >
-              <a :href="msg.file_url" target="_blank" download class="user-file-link" :class="msg.type === 'user' ? 'text-white' : 'text-dark'">
-                <i class="bi bi-file-earmark-arrow-down-fill me-1"></i>
-                <span style="font-size: 0.82rem; font-weight: 600;">{{ msg.file_name || msg.text }}</span>
-                <span v-if="msg.file_size" style="font-size: 0.65rem; opacity: 0.75; display: block;">{{ msg.file_size }}</span>
-              </a>
-              <small :class="msg.type === 'user' ? 'text-white-50' : 'text-muted'" style="font-size: 0.65rem;">{{ msg.time }}</small>
+            <div class="msg-bubble-wrap" :class="msg.type === 'user' ? 'align-items-end' : 'align-items-start'">
+              <div class="p-2 shadow-sm rounded" :class="msg.type === 'user' ? 'bg-primary text-white text-end rounded-user' : 'bg-white border text-start rounded-bot'" style="max-width: 100%;">
+                <!-- Quote block -->
+                <div v-if="msg.reply_to" class="quote-block mb-1" :class="msg.type === 'user' ? 'quote-block-user' : 'quote-block-admin'">
+                  <span class="quote-author">{{ msg.reply_to.type === 'user' ? 'Bạn' : 'Nhân viên' }}</span>
+                  <p class="quote-text">{{ msg.reply_to.text || (msg.reply_to.message_type === 'image' ? '📷 Hình ảnh' : '📎 File') }}</p>
+                </div>
+                <a :href="msg.file_url" target="_blank" download class="user-file-link" :class="msg.type === 'user' ? 'text-white' : 'text-dark'">
+                  <i class="bi bi-file-earmark-arrow-down-fill me-1"></i>
+                  <span style="font-size: 0.82rem; font-weight: 600;">{{ msg.file_name || msg.text }}</span>
+                  <span v-if="msg.file_size" style="font-size: 0.65rem; opacity: 0.75; display: block;">{{ msg.file_size }}</span>
+                </a>
+                <small :class="msg.type === 'user' ? 'text-white-50' : 'text-muted'" style="font-size: 0.65rem;">{{ msg.time }}</small>
+              </div>
+              <!-- Action bar below bubble -->
+              <div class="msg-actions-bar" :class="msg.type === 'user' ? 'justify-content-end' : 'justify-content-start'" v-show="hoveredMsgId === msg.id">
+                <button class="msg-action-btn" @click.stop="setReply(msg)" title="Trả lời">↩</button>
+              </div>
             </div>
           </template>
+
           <!-- Text/Emoji message -->
           <template v-else>
-            <div 
-              class="p-2 shadow-sm rounded"
-              :class="msg.type === 'user' ? 'bg-primary text-white text-end rounded-user' : 'bg-white border text-start rounded-bot'"
-              style="max-width: 80%;"
-            >
-              <p class="mb-0" style="font-size: 0.9rem; line-height: 1.4;" v-text="msg.text"></p>
-              <small :class="msg.type === 'user' ? 'text-white-50' : 'text-muted'" style="font-size: 0.65rem;">{{ msg.time }}</small>
+            <div class="msg-bubble-wrap" :class="msg.type === 'user' ? 'align-items-end' : 'align-items-start'">
+              <div class="p-2 shadow-sm rounded" :class="msg.type === 'user' ? 'bg-primary text-white text-end rounded-user' : 'bg-white border text-start rounded-bot'" style="max-width: 100%;">
+                <!-- Quote block -->
+                <div v-if="msg.reply_to" class="quote-block" :class="msg.type === 'user' ? 'quote-block-user' : 'quote-block-admin'">
+                  <span class="quote-author">{{ msg.reply_to.type === 'user' ? 'Bạn' : 'Nhân viên' }}</span>
+                  <p class="quote-text">{{ msg.reply_to.text || (msg.reply_to.message_type === 'image' ? '📷 Hình ảnh' : '📎 File') }}</p>
+                </div>
+                <p class="mb-0" style="font-size: 0.9rem; line-height: 1.4;" v-text="msg.text"></p>
+                <small :class="msg.type === 'user' ? 'text-white-50' : 'text-muted'" style="font-size: 0.65rem;">{{ msg.time }}</small>
+              </div>
+              <!-- Action bar below bubble -->
+              <div class="msg-actions-bar" :class="msg.type === 'user' ? 'justify-content-end' : 'justify-content-start'" v-show="hoveredMsgId === msg.id">
+                <button class="msg-action-btn" @click.stop="setReply(msg)" title="Trả lời">↩</button>
+              </div>
             </div>
           </template>
         </div>
+
         
         <div v-if="isTyping" class="mb-3 d-flex justify-content-start">
           <div class="me-2 mt-auto">
@@ -91,6 +117,15 @@
              <span class="spinner-grow spinner-grow-sm text-secondary" style="width: 0.5rem; height: 0.5rem;"></span>
           </div>
         </div>
+      </div>
+
+      <!-- Reply Preview Bar -->
+      <div v-if="replyTo" class="reply-preview-bar">
+        <div class="reply-preview-content">
+          <span class="reply-preview-label">↩ Đang trả lời <strong>{{ replyTo.type === 'user' ? 'chính mình' : 'Nhân viên' }}</strong></span>
+          <p class="reply-preview-text">{{ replyTo.text || (replyTo.message_type === 'image' ? '📷 Hình ảnh' : '📎 File') }}</p>
+        </div>
+        <button class="reply-cancel-btn" @click="clearReply" title="Hủy trả lời"><i class="bi bi-x"></i></button>
       </div>
 
       <!-- File Preview (compact) -->
@@ -211,13 +246,17 @@ const fileInputRef = ref(null);
 const selectedFile = ref(null);
 const selectedFilePreview = ref(null);
 
-// Emoji
+// Emoji (input)
 const showEmojiPicker = ref(false);
 const emojiSearch = ref('');
 const activeCategory = ref('smileys');
 
 // Lightbox
 const lightboxUrl = ref(null);
+
+// Reply
+const hoveredMsgId = ref(null);
+const replyTo = ref(null);
 
 // clientApiClient handles auth token and headers automatically
 
@@ -267,13 +306,20 @@ const scrollToBottom = async () => {
 
 const openLightbox = (url) => { lightboxUrl.value = url; };
 
-// ===== EMOJI =====
+// ===== EMOJI (input) =====
 const toggleEmojiPicker = () => { showEmojiPicker.value = !showEmojiPicker.value; };
-const closeEmojiPicker = () => { showEmojiPicker.value = false; };
+const closeAllPickers = () => { showEmojiPicker.value = false; };
 const insertEmoji = (emoji) => {
   inputText.value += emoji;
   messageInputRef.value?.focus();
 };
+
+// ===== REPLY =====
+const setReply = (msg) => {
+  replyTo.value = msg;
+  nextTick(() => messageInputRef.value?.focus());
+};
+const clearReply = () => { replyTo.value = null; };
 
 // ===== FILE UPLOAD =====
 const triggerFileInput = () => { fileInputRef.value?.click(); };
@@ -408,6 +454,8 @@ const sendMessage = async () => {
     const file = selectedFile.value;
     const isImage = file.type.startsWith('image/');
     const tempId = Date.now();
+    const currentReply = replyTo.value;
+    clearReply();
     const tempMsg = {
       id: tempId,
       type: 'user',
@@ -416,7 +464,8 @@ const sendMessage = async () => {
       file_url: selectedFilePreview.value || '',
       file_name: file.name,
       file_size: formatFileSize(file.size),
-      time: formatTime()
+      time: formatTime(),
+      reply_to: currentReply || null
     };
     messages.value.push(tempMsg);
     removeSelectedFile();
@@ -440,7 +489,8 @@ const sendMessage = async () => {
             file_url: realMsg.file_url,
             file_name: realMsg.file_name,
             file_size: realMsg.file_size,
-            time: formatTimeFromTs(realMsg.created_at)
+            time: formatTimeFromTs(realMsg.created_at),
+            reply_to: tempMsg.reply_to
           };
         }
       }
@@ -451,12 +501,15 @@ const sendMessage = async () => {
   } else {
     // Gửi text
     const userMessage = inputText.value;
+    const currentReply = replyTo.value;
+    clearReply();
     const tempMsg = {
       id: Date.now(),
       type: 'user',
       message_type: 'text',
       text: userMessage,
-      time: formatTime()
+      time: formatTime(),
+      reply_to: currentReply || null
     };
     messages.value.push(tempMsg);
     inputText.value = '';
@@ -481,7 +534,8 @@ const sendMessage = async () => {
             type: 'user',
             message_type: 'text',
             text: realMsg.content,
-            time: formatTimeFromTs(realMsg.created_at)
+            time: formatTimeFromTs(realMsg.created_at),
+            reply_to: tempMsg.reply_to
           };
         }
       }
@@ -781,4 +835,115 @@ onUnmounted(() => {
   justify-content: center;
 }
 .user-lightbox-close:hover { background: rgba(255,255,255,0.3); }
+
+/* ===== MSG BUBBLE WRAP ===== */
+.msg-bubble-wrap {
+  display: flex;
+  flex-direction: column;
+  max-width: 80%;
+}
+
+/* ===== ACTION BAR (below bubble) ===== */
+.msg-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 2px;
+  margin-top: 2px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+  height: 0;
+  overflow: visible;
+}
+.msg-row:hover .msg-actions-bar {
+  opacity: 1;
+  pointer-events: auto;
+  height: auto;
+}
+
+.msg-action-btn {
+  background: #f8f9fa;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 2px 6px;
+  border-radius: 12px;
+  line-height: 1.4;
+  transition: background 0.15s, transform 0.15s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.msg-action-btn:hover { background: #e9ecef; transform: scale(1.1); }
+
+/* ===== REPLY PREVIEW BAR ===== */
+.reply-preview-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 14px;
+  background: #eff6ff;
+  border-top: 2px solid #93c5fd;
+  border-left: 4px solid #3b82f6;
+  animation: slideUp 0.18s ease;
+}
+.reply-preview-content { flex: 1; min-width: 0; }
+.reply-preview-label {
+  display: block;
+  font-size: 0.72rem;
+  color: #3b82f6;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.reply-preview-text {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.reply-cancel-btn {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 50%;
+  font-size: 1rem;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.reply-cancel-btn:hover { background: #fee2e2; color: #dc2626; }
+
+/* ===== QUOTE BLOCK in bubble ===== */
+.quote-block {
+  border-radius: 6px;
+  padding: 5px 10px;
+  margin-bottom: 6px;
+  font-size: 0.78rem;
+}
+.quote-block-user {
+  background: rgba(255,255,255,0.2);
+  border-left: 3px solid rgba(255,255,255,0.7);
+}
+.quote-block-admin {
+  background: #f0f4ff;
+  border-left: 3px solid #93c5fd;
+}
+.quote-author {
+  display: block;
+  font-weight: 700;
+  font-size: 0.7rem;
+  margin-bottom: 2px;
+  opacity: 0.85;
+}
+.quote-text {
+  margin: 0;
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 </style>

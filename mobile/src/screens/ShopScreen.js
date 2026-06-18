@@ -19,6 +19,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { API_BASE_URL } from '../config/api';
 import SmartImage from '../components/SmartImage';
 import ProductCard from '../components/ProductCard';
+import { CategorySkeleton, ProductCardSkeleton } from '../components/Skeletons';
 import { showCustomAlert } from '../components/CustomAlert';
 import { prefetchImageUrls } from '../utils/imagePrefetch';
 
@@ -43,6 +44,9 @@ const PRICE_FILTER_RANGES = {
 
 const DIMENSION_FILTERS = ['1', '2'];
 const SIZE_FILTERS = ['14 – 2', '16 cm', '18 cm', '45 cm', '50 cm', '8 – 14', 'Ni 10', 'Ni 12', 'Ni 14'];
+const SHOP_SKELETON_CARDS = Array.from({ length: 6 }, (_, index) => `shop-skeleton-${index}`);
+const CATEGORY_SKELETON_ITEMS = Array.from({ length: 5 }, (_, index) => `category-skeleton-${index}`);
+const EMPTY_LIST = [];
 
 const getStorageUrl = (path) => {
   if (!path) return '';
@@ -60,6 +64,12 @@ const getStorageUrl = (path) => {
 };
 
 const getAuthToken = async () => AsyncStorage.getItem('auth_token');
+
+const normalizeRouteArray = (value) => {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === 'string' && value.trim()) return [value.trim()];
+  return [];
+};
 
 const getFavouriteHeaders = (token) => ({
   Accept: 'application/json',
@@ -199,6 +209,11 @@ export default function ShopScreen({ navigation, route }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [wishlistIds, setWishlistIds] = useState([]);
   const [wishlistLoadingIds, setWishlistLoadingIds] = useState([]);
+  const [pendingPageDirection, setPendingPageDirection] = useState(null);
+
+  const renderProductSkeleton = useCallback((key) => (
+    <ProductCardSkeleton key={key} width={productCardWidth} />
+  ), [productCardWidth]);
 
   const categoryQuery = useQuery({
     queryKey: ['shop-categories'],
@@ -238,11 +253,12 @@ export default function ShopScreen({ navigation, route }) {
 
   const { refetch: refetchCategories } = categoryQuery;
   const { refetch: refetchProducts } = productQuery;
-  const categories = categoryQuery.data || [];
-  const products = productQuery.data?.products || [];
+  const categories = categoryQuery.data || EMPTY_LIST;
+  const products = productQuery.data?.products || EMPTY_LIST;
   const pagination = productQuery.data?.pagination || { current_page: currentPage, last_page: 1, total: 0 };
   const isLoadingProducts = productQuery.isLoading;
   const isFetchingProducts = productQuery.isFetching;
+  const isPaginatingProducts = isFetchingProducts && !isLoadingProducts && !!pendingPageDirection;
 
   const displayCategories = categories;
 
@@ -255,6 +271,36 @@ export default function ShopScreen({ navigation, route }) {
     ? ((Number(pagination.current_page) - 1) * 6) + 1
     : 0;
   const productRangeEnd = Math.min(Number(pagination.current_page) * 6, Number(pagination.total) || 0);
+  const advancedFilterSummary = [
+    ...selectedColors,
+    ...selectedMaterials,
+    ...selectedDimensions,
+    ...selectedSizes,
+    selectedPrice,
+  ].filter(Boolean).join(' · ');
+
+  useEffect(() => {
+    if (!isFetchingProducts) {
+      setPendingPageDirection(null);
+    }
+  }, [isFetchingProducts]);
+
+  const handleChangePage = (direction) => {
+    if (isFetchingProducts) return;
+
+    setCurrentPage((page) => {
+      const lastPage = Number(pagination.last_page) || page;
+      const nextPage = direction === 'prev'
+        ? Math.max(page - 1, 1)
+        : Math.min(page + 1, lastPage);
+
+      if (nextPage !== page) {
+        setPendingPageDirection(direction);
+      }
+
+      return nextPage;
+    });
+  };
 
   const loadWishlist = useCallback(async () => {
     try {
@@ -375,18 +421,40 @@ export default function ShopScreen({ navigation, route }) {
   useEffect(() => {
     const categorySlug = route.params?.categorySlug;
     const keyword = route.params?.keyword?.toString().trim() || '';
-    if (!categorySlug && !keyword) return;
+    const routeColors = normalizeRouteArray(route.params?.selectedColors);
+    const routeMaterials = normalizeRouteArray(route.params?.selectedMaterials);
+    const routeDimensions = normalizeRouteArray(route.params?.selectedDimensions);
+    const routeSizes = normalizeRouteArray(route.params?.selectedSizes);
+    const routePrice = route.params?.selectedPrice || null;
+    const hasAdvancedFilters = (
+      routeColors.length > 0 ||
+      routeMaterials.length > 0 ||
+      routeDimensions.length > 0 ||
+      routeSizes.length > 0 ||
+      routePrice
+    );
+    if (!categorySlug && !keyword && !hasAdvancedFilters) return;
 
     setSearchKeyword(keyword);
     setActiveCategory(categorySlug ? categorySlug.toString() : '');
     setActiveFilter('Tất cả');
-    setSelectedColors([]);
-    setSelectedMaterials([]);
-    setSelectedDimensions([]);
-    setSelectedSizes([]);
-    setSelectedPrice(null);
+    setSelectedColors(routeColors);
+    setSelectedMaterials(routeMaterials);
+    setSelectedDimensions(routeDimensions);
+    setSelectedSizes(routeSizes);
+    setSelectedPrice(routePrice);
     setCurrentPage(1);
-  }, [route.params?.categoryRequestId, route.params?.categorySlug, route.params?.searchRequestId, route.params?.keyword]);
+  }, [
+    route.params?.categoryRequestId,
+    route.params?.categorySlug,
+    route.params?.searchRequestId,
+    route.params?.keyword,
+    route.params?.selectedColors,
+    route.params?.selectedMaterials,
+    route.params?.selectedDimensions,
+    route.params?.selectedSizes,
+    route.params?.selectedPrice,
+  ]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -484,7 +552,9 @@ export default function ShopScreen({ navigation, route }) {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoryList}
           >
-            {displayCategories.map((cat) => {
+            {categoryQuery.isLoading ? CATEGORY_SKELETON_ITEMS.map((item) => (
+              <CategorySkeleton key={item} size={72} textWidth={58} style={styles.categoryItem} />
+            )) : displayCategories.map((cat) => {
               const categoryKey = cat.slug || cat.id;
               const categoryImage = cat.thumbnail ? getStorageUrl(cat.thumbnail) : cat.image;
               const categoryName = cat.label || cat.name;
@@ -513,13 +583,14 @@ export default function ShopScreen({ navigation, route }) {
             <Text style={styles.resultCount}>
               {isLoadingProducts
                 ? 'Đang tải sản phẩm...'
-                : isFetchingProducts
-                  ? 'Đang cập nhật sản phẩm...'
                 : `Hiển thị ${productRangeStart}-${productRangeEnd} của ${pagination.total}`}
             </Text>
             <Text style={styles.resultSub}>Danh mục: {activeCategoryLabel}</Text>
             {searchKeyword ? (
               <Text style={styles.resultSub}>Từ khóa: "{searchKeyword}"</Text>
+            ) : null}
+            {advancedFilterSummary ? (
+              <Text style={styles.resultSub} numberOfLines={2}>Lọc: {advancedFilterSummary}</Text>
             ) : null}
           </View>
           <TouchableOpacity
@@ -556,10 +627,7 @@ export default function ShopScreen({ navigation, route }) {
 
         <View style={[styles.productGrid, { width: productGridWidth }]}>
           {isLoadingProducts ? (
-            <View style={styles.loadingBox}>
-              <ActivityIndicator size="large" color="#9f273b" />
-              <Text style={styles.loadingText}>Đang tải cửa hàng SORA...</Text>
-            </View>
+            SHOP_SKELETON_CARDS.map(renderProductSkeleton)
           ) : products.length === 0 ? (
             <View style={styles.emptyBox}>
               <MaterialCommunityIcons name="diamond-stone" size={36} color="#d8c69a" />
@@ -577,14 +645,6 @@ export default function ShopScreen({ navigation, route }) {
               isWishlistLoading={wishlistLoadingIds.includes(product.id?.toString())}
             />
           ))}
-          {isFetchingProducts && !isLoadingProducts && (
-            <View style={styles.pageLoadingOverlay} pointerEvents="auto">
-              <View style={styles.pageLoadingCard}>
-                <ActivityIndicator size="small" color="#9f273b" />
-                <Text style={styles.pageLoadingText}>Đang chuyển trang...</Text>
-              </View>
-            </View>
-          )}
         </View>
 
         {!isLoadingProducts && pagination.last_page > 1 && (
@@ -592,9 +652,13 @@ export default function ShopScreen({ navigation, route }) {
             <TouchableOpacity
               style={[styles.pageButton, (pagination.current_page <= 1 || isFetchingProducts) && styles.pageButtonDisabled]}
               disabled={pagination.current_page <= 1 || isFetchingProducts}
-              onPress={() => setCurrentPage((page) => Math.max(page - 1, 1))}
+              onPress={() => handleChangePage('prev')}
             >
-              <Ionicons name="chevron-back" size={16} color={pagination.current_page <= 1 || isFetchingProducts ? '#bbb' : '#9f273b'} />
+              {isPaginatingProducts && pendingPageDirection === 'prev' ? (
+                <ActivityIndicator size="small" color="#9f273b" />
+              ) : (
+                <Ionicons name="chevron-back" size={16} color={pagination.current_page <= 1 || isFetchingProducts ? '#bbb' : '#9f273b'} />
+              )}
             </TouchableOpacity>
 
             <Text style={styles.pageStatus}>
@@ -604,9 +668,13 @@ export default function ShopScreen({ navigation, route }) {
             <TouchableOpacity
               style={[styles.pageButton, (pagination.current_page >= pagination.last_page || isFetchingProducts) && styles.pageButtonDisabled]}
               disabled={pagination.current_page >= pagination.last_page || isFetchingProducts}
-              onPress={() => setCurrentPage((page) => Math.min(page + 1, Number(pagination.last_page) || page))}
+              onPress={() => handleChangePage('next')}
             >
-              <Ionicons name="chevron-forward" size={16} color={pagination.current_page >= pagination.last_page || isFetchingProducts ? '#bbb' : '#9f273b'} />
+              {isPaginatingProducts && pendingPageDirection === 'next' ? (
+                <ActivityIndicator size="small" color="#9f273b" />
+              ) : (
+                <Ionicons name="chevron-forward" size={16} color={pagination.current_page >= pagination.last_page || isFetchingProducts ? '#bbb' : '#9f273b'} />
+              )}
             </TouchableOpacity>
           </View>
         )}
@@ -961,52 +1029,6 @@ const styles = StyleSheet.create({
     gap: CARD_GAP,
     paddingHorizontal: 18,
     minHeight: 240,
-  },
-  loadingBox: {
-    width: '100%',
-    minHeight: 260,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  loadingText: {
-    fontFamily: 'Oswald_500Medium',
-    fontSize: 12,
-    color: '#9f273b',
-    marginTop: 10,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  pageLoadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.62)',
-  },
-  pageLoadingCard: {
-    minWidth: 152,
-    minHeight: 46,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ead9dc',
-    backgroundColor: '#fff',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    shadowColor: '#9f273b',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  pageLoadingText: {
-    fontFamily: 'Oswald_500Medium',
-    fontSize: 12,
-    color: '#9f273b',
-    letterSpacing: 0.5,
   },
   emptyBox: {
     width: '100%',

@@ -236,24 +236,47 @@ const validateField = (field) => {
   if (field === 'customer_name') {
     let val = (v.customer_name || '').trim().replace(/\s+/g, ' ');
     v.customer_name = val;
-    if (!val) errs.value.customer_name = 'Vui lòng nhập tên người nhận';
-    else if (val.length < 2 || val.length > 50) errs.value.customer_name = 'Tên phải từ 2 đến 50 ký tự';
-    else if (!/^[A-Za-zÀ-ỹ]+(?:\s+[A-Za-zÀ-ỹ]+)+$/.test(val)) errs.value.customer_name = 'Tên phải chứa ít nhất 2 từ';
-    else errs.value.customer_name = '';
+    if (!val) {
+      errs.value.customer_name = 'Vui lòng nhập tên người nhận';
+    } else if (val.length < 2 || val.length > 50) {
+      errs.value.customer_name = 'Tên phải từ 2 đến 50 ký tự';
+    } else if (!/^[A-Za-zÀ-ỹ\s]+$/.test(val)) {
+      errs.value.customer_name = 'Tên không đúng định dạng (chỉ chứa chữ cái và khoảng trắng)';
+    } else if (!/^[A-Za-zÀ-ỹ]+(?:\s+[A-Za-zÀ-ỹ]+)+$/.test(val)) {
+      errs.value.customer_name = 'Tên không đúng định dạng (phải chứa ít nhất 2 từ)';
+    } else {
+      errs.value.customer_name = '';
+    }
   }
   if (field === 'customer_phone') {
     let val = (v.customer_phone || '').replace(/\D/g, '');
     v.customer_phone = val;
-    if (!val) errs.value.customer_phone = 'Vui lòng nhập số điện thoại';
-    else if (!/^0[3|5|7|8|9][0-9]{8}$/.test(val)) errs.value.customer_phone = 'Số điện thoại không hợp lệ';
-    else errs.value.customer_phone = '';
+    if (!val) {
+      errs.value.customer_phone = 'Vui lòng nhập số điện thoại';
+    } else if (val.length !== 10) {
+      errs.value.customer_phone = 'Số điện thoại không đúng định dạng (phải có đúng 10 chữ số)';
+    } else if (!/^0[3|5|7|8|9][0-9]{8}$/.test(val)) {
+      errs.value.customer_phone = 'Số điện thoại không đúng định dạng (phải bắt đầu bằng 03, 05, 07, 08 hoặc 09)';
+    } else {
+      errs.value.customer_phone = '';
+    }
   }
   if (field === 'shipping_address') {
-    let val = v.shipping_address || '';
-    if (!val) errs.value.shipping_address = 'Vui lòng nhập địa chỉ chi tiết';
-    else if (val.length < 5) errs.value.shipping_address = 'Địa chỉ quá ngắn';
-    else if (val.length > 255) errs.value.shipping_address = 'Địa chỉ tối đa 255 ký tự';
-    else errs.value.shipping_address = '';
+    let val = (v.shipping_address || '').trim().replace(/\s+/g, ' ');
+    v.shipping_address = val;
+    
+    const hasLetters = /[A-Za-zÀ-ỹ]/.test(val);
+    const hasEnoughWords = val.split(' ').length >= 2;
+
+    if (!val) {
+      errs.value.shipping_address = 'Vui lòng nhập địa chỉ chi tiết';
+    } else if (val.length < 10 || !hasLetters || !hasEnoughWords) {
+      errs.value.shipping_address = 'Địa chỉ không đúng định dạng (tối thiểu 10 ký tự, gồm chữ và số. VD: Số 12, Đường Nguyễn Văn A)';
+    } else if (val.length > 255) {
+      errs.value.shipping_address = 'Địa chỉ tối đa 255 ký tự';
+    } else {
+      errs.value.shipping_address = '';
+    }
   }
   if (field === 'city') errs.value.city = v.city ? '' : 'Vui lòng chọn Tỉnh/TP';
   if (field === 'district') errs.value.district = (!addressHasDistrictLevel.value || v.district) ? '' : 'Vui lòng chọn Quận/Huyện';

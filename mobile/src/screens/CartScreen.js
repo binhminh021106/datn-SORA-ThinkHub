@@ -19,7 +19,7 @@ import {
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { API_BASE_URL } from "../config/api";
 import { showCustomAlert } from "../components/CustomAlert";
 import SmartImage from '../components/SmartImage';
@@ -419,10 +419,12 @@ const mapBackendItem = (item) => {
 
 export default function CartScreen() {
   const navigation = useNavigation();
+  const queryClient = useQueryClient();
   const [items, setItems] = useState([]);
   const [selected, setSelected] = useState([]);
   const [lightboxImg, setLightboxImg] = useState(null);
   const [scrollEnabled, setScrollEnabled] = useState(true);
+  const [isPreparingCheckout, setIsPreparingCheckout] = useState(false);
   const hasLoadedCartRef = useRef(false);
 
   // Read auth token & guest session ID for API requests
@@ -448,22 +450,24 @@ export default function CartScreen() {
     return headers;
   };
 
+  const fetchCartItemsFromServer = useCallback(async () => {
+    const headers = await getHeaders();
+    const response = await fetch(`${API_BASE_URL}/client/cart`, {
+      method: 'GET',
+      headers,
+    });
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(result?.message || 'Unable to load cart');
+    }
+
+    return Array.isArray(result.data) ? result.data.map(mapBackendItem) : [];
+  }, []);
+
   const cartQuery = useQuery({
     queryKey: ['cart'],
-    queryFn: async () => {
-      const headers = await getHeaders();
-      const response = await fetch(`${API_BASE_URL}/client/cart`, {
-        method: 'GET',
-        headers,
-      });
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result?.message || 'Unable to load cart');
-      }
-
-      return Array.isArray(result.data) ? result.data.map(mapBackendItem) : [];
-    },
+    queryFn: fetchCartItemsFromServer,
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 10,
     refetchOnMount: false,
@@ -640,6 +644,57 @@ export default function CartScreen() {
     0,
   );
 
+  const handleGoToCheckout = async () => {
+    const currentSelectedIds = [...selected];
+    if (currentSelectedIds.length === 0) {
+      showCustomAlert(
+        "Giỏ hàng",
+        "Vui lòng chọn ít nhất 1 sản phẩm để thanh toán!"
+      );
+      return;
+    }
+
+    const token = await AsyncStorage.getItem('auth_token');
+    if (!token) {
+      navigation.navigate("Login");
+      return;
+    }
+
+    setIsPreparingCheckout(true);
+    try {
+      const freshCartItems = await fetchCartItemsFromServer();
+      const selectedIdSet = new Set(currentSelectedIds.map((id) => id.toString()));
+      const freshSelectedItems = freshCartItems.filter((item) => selectedIdSet.has(item.id.toString()));
+
+      if (freshSelectedItems.length === 0) {
+        showCustomAlert(
+          "Giỏ hàng",
+          "Các sản phẩm đã chọn không còn trong giỏ hàng. Vui lòng chọn lại trước khi thanh toán."
+        );
+        return;
+      }
+
+      queryClient.setQueryData(['cart'], freshCartItems);
+      setItems(freshCartItems);
+      setSelected(freshSelectedItems.map((item) => item.id));
+      queryClient.removeQueries({ queryKey: ["checkout", "init"], exact: true });
+      queryClient.removeQueries({ queryKey: ["saved-coupons"], exact: true });
+
+      navigation.navigate("Checkout", {
+        checkoutItems: freshSelectedItems,
+        refreshAt: Date.now(),
+      });
+    } catch (error) {
+      console.log("Error preparing checkout:", error);
+      showCustomAlert(
+        "Giỏ hàng",
+        "Không thể cập nhật giỏ hàng mới nhất. Vui lòng thử lại."
+      );
+    } finally {
+      setIsPreparingCheckout(false);
+    }
+  };
+
   const totalQty = items.reduce((sum, i) => sum + i.qty, 0);
   const isLoading = cartQuery.isLoading && items.length === 0;
   const refreshing = cartQuery.isRefetching && items.length > 0;
@@ -780,32 +835,23 @@ export default function CartScreen() {
             <Text style={s.checkoutTotal}>{fmt(subtotal)}</Text>
           </View>
           <TouchableOpacity
-            style={s.checkoutBtn}
-            onPress={async () => {
-              const selectedItems = items.filter((i) => selected.includes(i.id));
-              if (selectedItems.length === 0) {
-                showCustomAlert(
-                  "Giỏ hàng",
-                  "Vui lòng chọn ít nhất 1 sản phẩm để thanh toán!"
-                );
-                return;
-              }
-              const token = await AsyncStorage.getItem('auth_token');
-              if (!token) {
-                navigation.navigate("Login");
-                return;
-              }
-
-              navigation.navigate("Checkout", { checkoutItems: selectedItems });
-            }}
+            style={[s.checkoutBtn, isPreparingCheckout && s.checkoutBtnDisabled]}
+            onPress={handleGoToCheckout}
+            disabled={isPreparingCheckout}
           >
-            <Ionicons
-              name="card-outline"
-              size={18}
-              color="#fff"
-              style={{ marginRight: 8 }}
-            />
-            <Text style={s.checkoutBtnTxt}>THANH TOÁN</Text>
+            {isPreparingCheckout ? (
+              <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
+            ) : (
+              <Ionicons
+                name="card-outline"
+                size={18}
+                color="#fff"
+                style={{ marginRight: 8 }}
+              />
+            )}
+            <Text style={s.checkoutBtnTxt}>
+              {isPreparingCheckout ? "ĐANG TẢI" : "THANH TOÁN"}
+            </Text>
           </TouchableOpacity>
         </View>
       )}
@@ -1100,10 +1146,14 @@ const s = StyleSheet.create({
   checkoutBtn: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "#9f273b",
-    paddingHorizontal: 22,
-    paddingVertical: 14,
+    width: 150,
+    height: 48,
     borderRadius: 10,
+  },
+  checkoutBtnDisabled: {
+    opacity: 0.78,
   },
   checkoutBtnTxt: {
     fontFamily: "Oswald_600SemiBold",

@@ -13,6 +13,8 @@ import { MOBILE_AUTH_URL, API_BASE_URL } from '../config/api';
 import { showCustomAlert } from '../components/CustomAlert';
 import SmartImage from '../components/SmartImage';
 import { PRICE_FONT_FAMILY, PRICE_FONT_WEIGHT } from '../styles/typography';
+import { unregisterDevicePushToken } from '../services/pushNotifications';
+import { fetchNotifications } from '../services/notifications';
 
 const Alert = {
   alert: (title, message, buttons) => showCustomAlert(title, message, buttons)
@@ -302,14 +304,19 @@ function TierCard({ user, allTiers }) {
 }
 
 // ─── MenuItem ────────────────────────────────────────────────────────────────
-function MenuItem({ icon, label, onPress, danger }) {
+function MenuItem({ icon, label, onPress, danger, badge }) {
   return (
     <TouchableOpacity style={s.menuItem} onPress={onPress} activeOpacity={0.7}>
       <View style={[s.menuIconWrap, danger && s.menuIconDanger]}>
         <Ionicons name={icon} size={20} color={danger ? '#cc1e2e' : '#9f273b'} />
       </View>
       <Text style={[s.menuLabel, danger && s.menuLabelDanger]}>{label}</Text>
-      {!danger && <Ionicons name="chevron-forward" size={16} color="#ccc" style={{ marginLeft: 'auto' }} />}
+      {!!badge && !danger && (
+        <View style={s.menuBadge}>
+          <Text style={s.menuBadgeText}>{badge > 99 ? '99+' : badge}</Text>
+        </View>
+      )}
+      {!danger && <Ionicons name="chevron-forward" size={16} color="#ccc" style={{ marginLeft: badge ? 0 : 'auto' }} />}
     </TouchableOpacity>
   );
 }
@@ -335,15 +342,25 @@ export default function ProfileScreen() {
   const user = profileData?.user || null;
   const allTiers = user?.all_tiers || [];
   const isLoggedIn = !!profileData?.isLoggedIn;
+  const notificationsPreviewQuery = useQuery({
+    queryKey: ['notifications', 'preview'],
+    queryFn: () => fetchNotifications({ page: 1, perPage: 1 }),
+    enabled: isLoggedIn,
+    staleTime: 30 * 1000,
+  });
+  const unreadNotifications = notificationsPreviewQuery.data?.unread_count || 0;
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
       await refetchProfile();
+      if (isLoggedIn) {
+        await notificationsPreviewQuery.refetch();
+      }
     } finally {
       setRefreshing(false);
     }
-  }, [refetchProfile]);
+  }, [isLoggedIn, notificationsPreviewQuery, refetchProfile]);
 
   useFocusEffect(
     useCallback(() => {
@@ -375,6 +392,7 @@ export default function ProfileScreen() {
   const confirmLogout = async () => {
     setShowLogoutModal(false);
     try {
+      await unregisterDevicePushToken();
       const token = await AsyncStorage.getItem('auth_token');
       if (token) {
         await fetch(`${MOBILE_AUTH_URL}/logout`, {
@@ -530,12 +548,13 @@ export default function ProfileScreen() {
         </View>
         <View style={s.section}>
           <MenuItem icon="person-outline" label="Thông tin cá nhân" onPress={() => navigation.navigate('EditProfile')} />
+          <MenuItem icon="key-outline" label="Đổi mật khẩu" onPress={() => navigation.navigate('ChangePassword')} />
+          <MenuItem icon="notifications-outline" label="Thông báo" badge={unreadNotifications} onPress={() => navigation.navigate('Notifications')} />
           <MenuItem icon="receipt-outline" label="Lịch sử đơn hàng" onPress={() => navigation.navigate('OrderHistory')} />
           <MenuItem icon="heart-outline" label="Sản phẩm yêu thích" onPress={() => navigation.navigate('Wishlist')} />
           <MenuItem icon="location-outline" label="Sổ địa chỉ" onPress={() => navigation.navigate('AddressBook')} />
           <MenuItem icon="ticket-outline" label="Mã giảm giá của tôi" onPress={() => navigation.navigate('SavedCoupons')} />
           <MenuItem icon="megaphone-outline" label="Tiếp thị liên kết" onPress={() => navigation.navigate('Affiliate')} />
-          <MenuItem icon="gift-outline" label="Ưu đãi & Thành viên" onPress={() => Alert.alert('Thành viên SORA', 'Ưu đãi và thứ hạng của bạn được cập nhật trực quan tại Thẻ thành viên phía trên!')} />
         </View>
 
         <View style={s.sectionTitle}>
@@ -815,6 +834,8 @@ const s = StyleSheet.create({
   menuIconWrap: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#fdf5f6', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
   menuIconDanger: { backgroundColor: '#fff0f0' },
   menuLabel: { fontFamily: 'Oswald_400Regular', fontSize: 14, color: '#333', letterSpacing: 0.3 },
+  menuBadge: { minWidth: 24, height: 22, borderRadius: 11, paddingHorizontal: 7, backgroundColor: '#9f273b', alignItems: 'center', justifyContent: 'center', marginLeft: 'auto', marginRight: 8 },
+  menuBadgeText: { fontFamily: 'Oswald_600SemiBold', fontSize: 11, color: '#fff' },
   menuLabelDanger: { color: '#cc1e2e' },
 
   // Custom Modal Styles
