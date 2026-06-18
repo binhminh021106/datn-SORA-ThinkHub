@@ -736,7 +736,7 @@ onMounted(() => {
     
     // Nghe Broadcast đơn hàng mới từ Reverb
     adminChannel.listen('.NewOrderReceived', (data) => {
-      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'CÓ ĐƠN HÀNG MỚI!', html: `Mã đơn: <b>${data.orderCode}</b>`, showConfirmButton: false, timer: 5000 });
+      // Chỉ invalidate lại danh sách đơn hàng. Toast đã được xử lý chung ở Header.vue
       queryClient.invalidateQueries(['admin-orders']);
     });
 

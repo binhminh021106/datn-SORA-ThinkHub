@@ -533,7 +533,7 @@ const mainImage = ref('');
 const isLoading = ref(true);
 const showSizeGuideModal = ref(false);
 
-const shopSlug = route.params.shop_slug || 'aurora';
+const shopSlug = computed(() => route.params.shop_slug || 'aurora');
 const currentProductSlug = computed(() => route.params.slug || route.params.product_slug || '');
 const soraPlaceholder = '/Sora-placeholder.png';
 
@@ -974,7 +974,7 @@ const fetchProductData = async () => {
   const productSlug = currentProductSlug.value;
   if (!productSlug) return null;
 
-  const response = await axios.get(`${API_BASE_URL}/shop/${shopSlug}/products/${productSlug}`);
+  const response = await axios.get(`${API_BASE_URL}/shop/${shopSlug.value}/products/${productSlug}`);
   const result = response.data;
 
   if (result.success && result.data) {
@@ -1029,7 +1029,7 @@ const fetchRecommendations = async (tab) => {
   }
 
   try {
-    let url = new URL(`${API_BASE_URL}/shop/${shopSlug}/products`);
+    let url = new URL(`${API_BASE_URL}/shop/${shopSlug.value}/products`);
     url.searchParams.append('per_page', '8');
     if (product.value?.id) url.searchParams.append('exclude_id', product.value.id);
     if (tab === 'related_category' && product.value?.category?.slug) url.searchParams.append('categories', product.value.category.slug);

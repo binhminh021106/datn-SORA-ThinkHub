@@ -34,7 +34,7 @@ use App\Http\Controllers\Api\Admin\AdminAttendanceController;
 use App\Http\Controllers\Api\Admin\AdminAffiliateController;
 use App\Http\Controllers\Api\Admin\AdminFaceRecognitionController;
 use App\Http\Controllers\Api\Admin\AdminWorkShiftController;
-
+use App\Http\Controllers\Api\Admin\AdminNotificationController;
 // Controllers Client
 use App\Http\Controllers\Api\Client\ProductDetailController;
 use App\Http\Controllers\Api\Client\ClientCartController;
@@ -271,6 +271,13 @@ Route::prefix('admin')->group(function () {
 
         // Lấy thông tin admin hiện tại
         Route::get('me', [AdminAccountController::class, 'me']);
+
+        // Thông báo
+        Route::controller(AdminNotificationController::class)->prefix('notifications')->group(function () {
+            Route::get('/', 'index');
+            Route::post('/mark-all-read', 'markAllAsRead');
+            Route::patch('/{id}/read', 'markAsRead');
+        });
 
 
         Route::controller(AdminProfileController::class)->group(function () {

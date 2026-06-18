@@ -6,6 +6,10 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return $user instanceof \App\Models\User && (int) $user->id === (int) $id;
 }, ['guards' => ['sanctum']]);
 
+Broadcast::channel('App.Models.Admin.{id}', function ($user, $id) {
+    return $user instanceof \App\Models\Admin && (int) $user->id === (int) $id;
+}, ['guards' => ['sanctum']]);
+
 // Kênh cho Real-time chat user-specific: chỉ owner hoặc Admin mới vào được
 Broadcast::channel('chat.{id}', function ($user, $id) {
     // Người dùng thường: chỉ vào kênh của chính mình
