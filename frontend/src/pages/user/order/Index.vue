@@ -124,51 +124,50 @@
                   </div>
                 </div>
 
-<div class="col-lg-4 text-lg-end mt-4 mt-lg-0 ps-lg-4">
-  <p class="text-muted small mb-1 text-uppercase fw-bold" style="letter-spacing: 1px;">Thành tiền</p>
-  <h3 class="fw-bold text-primary-custom mb-4 font-oswald" v-text="formatPrice(order.total_amount)"></h3>
+                <div class="col-lg-4 text-lg-end mt-4 mt-lg-0 ps-lg-4">
+                  <p class="text-muted small mb-1 text-uppercase fw-bold" style="letter-spacing: 1px;">Thành tiền</p>
+                  <h3 class="fw-bold text-primary-custom mb-4 font-oswald" v-text="formatPrice(order.total_amount)"></h3>
 
-  <div class="d-flex flex-column gap-2">
-    <!-- Chi tiết đơn hàng - Màu trung tính -->
-    <!-- Chi tiết đơn hàng - Màu trung tính -->
-    <button v-on:click="openDetails(order)"
-      class="btn py-2 px-2 fw-bold small text-uppercase w-100 btn-luxury-neutral">
-      Chi tiết đơn hàng
-    </button>
+                  <div class="d-flex flex-column gap-2">
+                    <!-- Chi tiết đơn hàng - Màu trung tính -->
+                    <button v-on:click="openDetails(order)"
+                      class="btn py-2 px-2 fw-bold small text-uppercase w-100 btn-luxury-neutral">
+                      Chi tiết đơn hàng
+                    </button>
 
-    <!-- Hủy đơn - Nền đỏ nhạt, chữ đỏ đậm -->
-    <button v-if="order.status === 'pending'" v-on:click="confirmCancel(order)"
-      class="btn py-2 px-4 small fw-bold text-uppercase w-100 btn-luxury-danger">
-      Hủy đơn
-    </button>
+                    <!-- Hủy đơn - Nền đỏ nhạt, chữ đỏ đậm -->
+                    <button v-if="order.status === 'pending'" v-on:click="confirmCancel(order)"
+                      class="btn py-2 px-4 small fw-bold text-uppercase w-100 btn-luxury-danger">
+                      Hủy đơn
+                    </button>
 
-    <!-- Đánh giá - Màu chủ đạo -->
-    <button v-if="order.status === 'delivered' && (!order.reviews || order.reviews.length === 0)"
-      v-on:click="openReview(order)"
-      class="editorial-btn fw-bold w-100 border-0 btn-luxury-gold">
-      <i class="bi bi-star-fill me-1"></i> Đánh giá
-    </button>
+                    <!-- Đánh giá - Màu chủ đạo -->
+                    <button v-if="order.status === 'delivered' && (!order.reviews || order.reviews.length === 0)"
+                      v-on:click="openReview(order)"
+                      class="editorial-btn fw-bold w-100 border-0 btn-luxury-gold">
+                      <i class="bi bi-star-fill me-1"></i> Đánh giá
+                    </button>
 
-    <!-- Xem đánh giá - Màu xanh lá -->
-    <button v-if="order.status === 'delivered' && order.reviews && order.reviews.length > 0"
-      v-on:click="openViewReview(order)"
-      class="btn py-2 px-4 small fw-bold text-uppercase w-100 btn-luxury-success">
-      <i class="bi bi-eye-fill me-1"></i> Xem đánh giá
-    </button>
+                    <!-- Xem đánh giá - Màu xanh lá -->
+                    <button v-if="order.status === 'delivered' && order.reviews && order.reviews.length > 0"
+                      v-on:click="openViewReview(order)"
+                      class="btn py-2 px-4 small fw-bold text-uppercase w-100 btn-luxury-success">
+                      <i class="bi bi-eye-fill me-1"></i> Xem đánh giá
+                    </button>
 
-    <!-- Mua lại - Màu xanh lá nhạt -->
-    <button v-on:click="handleReorder(order)"
-      class="btn py-2 px-4 small fw-bold text-uppercase w-100 mt-2 btn-luxury-success-light">
-      Mua lại
-    </button>
+                    <!-- Mua lại - Màu xanh lá nhạt -->
+                    <button v-on:click="handleReorder(order)"
+                      class="btn py-2 px-4 small fw-bold text-uppercase w-100 mt-2 btn-luxury-success-light">
+                      Mua lại
+                    </button>
 
-    <!-- Xuất hóa đơn - Màu chủ đạo (để nổi bật tài liệu) -->
-    <button v-on:click="exportInvoice(order)"
-      class="editorial-btn w-100 border-0 mt-2 text-white fw-bold">
-      <i class="bi bi-file-earmark-pdf me-1"></i> Xuất hóa đơn
-    </button>
-  </div>
-</div>
+                    <!-- Xuất hóa đơn - Màu chủ đạo (để nổi bật tài liệu) -->
+                    <button v-on:click="exportInvoice(order)"
+                      class="editorial-btn w-100 border-0 mt-2 text-white fw-bold">
+                      <i class="bi bi-file-earmark-pdf me-1"></i> Xuất hóa đơn
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -525,6 +524,12 @@ onMounted(fetchOrders);
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&display=swap');
+
+.font-oswald {
+  font-family: 'Oswald', sans-serif !important;
+}
+
 .text-primary-custom {
   color: #9f273b !important;
 }
