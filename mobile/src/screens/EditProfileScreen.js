@@ -366,31 +366,60 @@ export default function EditProfileScreen() {
         return;
       }
 
-      const formData = new FormData();
-      formData.append('fullName', fullName.trim());
-      if (phone) formData.append('phone', phone.replace(/[^0-9]/g, ''));
-      if (dbBirthday) formData.append('birthday', dbBirthday);
-      if (gender) formData.append('gender', gender);
+      const profilePayload = {
+        fullName: fullName.trim(),
+        phone: phone ? phone.replace(/[^0-9]/g, '') : '',
+        ...(dbBirthday ? { birthday: dbBirthday } : {}),
+        ...(gender ? { gender } : {}),
+      };
 
-      if (selectedImageUri) {
-        const uriParts = selectedImageUri.split('/');
-        const fileName = uriParts[uriParts.length - 1];
-        const ext = fileName.split('.').pop().toLowerCase();
-        formData.append('avatar', {
-          uri: Platform.OS === 'android' ? selectedImageUri : selectedImageUri.replace('file://', ''),
-          name: fileName,
-          type: `image/${ext === 'jpg' ? 'jpeg' : ext}`,
+      let requestHeaders = {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      };
+      let requestBody;
+
+      if (Platform.OS === 'web' && !selectedImageUri) {
+        requestHeaders = {
+          ...requestHeaders,
+          'Content-Type': 'application/json',
+        };
+        requestBody = JSON.stringify(profilePayload);
+      } else {
+        const formData = new FormData();
+        Object.entries(profilePayload).forEach(([key, value]) => {
+          if (value !== null && value !== undefined && value !== '') {
+            formData.append(key, String(value));
+          }
         });
+
+        if (selectedImageUri) {
+          const uriParts = selectedImageUri.split('/');
+          const rawFileName = uriParts[uriParts.length - 1]?.split('?')[0] || 'avatar.jpg';
+          const fileName = rawFileName.includes('.') ? rawFileName : 'avatar.jpg';
+          const ext = (fileName.split('.').pop() || 'jpg').toLowerCase();
+          const mimeType = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+
+          if (Platform.OS === 'web') {
+            const imageResponse = await fetch(selectedImageUri);
+            const imageBlob = await imageResponse.blob();
+            formData.append('avatar', imageBlob, fileName);
+          } else {
+            formData.append('avatar', {
+              uri: Platform.OS === 'android' ? selectedImageUri : selectedImageUri.replace('file://', ''),
+              name: fileName,
+              type: mimeType,
+            });
+          }
+        }
+
+        requestBody = formData;
       }
 
       const response = await fetch(`${API_BASE_URL}/client/profile`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/json',
-          'Content-Type': 'multipart/form-data',
-        },
-        body: formData,
+        headers: requestHeaders,
+        body: requestBody,
       });
 
       // Always try to parse JSON; fallback gracefully

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, FlatList, SafeAreaView, TextInput, useWindowDimensions, StatusBar, Animated, TouchableWithoutFeedback, RefreshControl, ActivityIndicator, Linking } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -7,17 +7,31 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MOBILE_AUTH_URL, API_BASE_URL } from '../config/api';
 import { showCustomAlert } from '../components/CustomAlert';
 import ProductCard from '../components/ProductCard';
+import SmartImage from '../components/SmartImage';
+import {
+  BannerSkeleton,
+  CategorySkeleton,
+  ComboSkeleton,
+  CouponSkeleton,
+  NewsCardSkeleton,
+  ProductCardSkeleton,
+  SkeletonDot,
+} from '../components/Skeletons';
 import HomeSideMenu from '../components/home/HomeSideMenu';
 import GoldPriceModal from '../components/home/GoldPriceModal';
 import { PRICE_FONT_FAMILY, PRICE_FONT_WEIGHT } from '../styles/typography';
 import { prefetchImageUrls } from '../utils/imagePrefetch';
-import { saveCouponToWallet } from '../services/savedCoupons';
+import { fetchSavedCoupons, saveCouponToWallet } from '../services/savedCoupons';
+import { fetchPersonalizedRecommendations } from '../services/recommendations';
 
 const COMBO_CARD_GAP = 14;
 const COMBO_SIDE_SPACER = 24;
-
-// Top-level require để Metro bundler nhận đúng static asset
-const SORA_PLACEHOLDER = require('../../assets/Sora-placeholder.png');
+const HOME_CATEGORY_SKELETON_ITEMS = Array.from({ length: 5 }, (_, index) => `home-category-skeleton-${index}`);
+const HOME_PRODUCT_SKELETON_ITEMS = Array.from({ length: 4 }, (_, index) => `home-product-skeleton-${index}`);
+const HOME_COUPON_SKELETON_ITEMS = Array.from({ length: 2 }, (_, index) => `home-coupon-skeleton-${index}`);
+const HOME_COMBO_SKELETON_ITEMS = Array.from({ length: 2 }, (_, index) => `home-combo-skeleton-${index}`);
+const HOME_NEWS_SKELETON_ITEMS = Array.from({ length: 3 }, (_, index) => `home-news-skeleton-${index}`);
+const EMPTY_LIST = [];
 
 // Dummy Data
 const BANNERS = [
@@ -146,44 +160,12 @@ const fetchHeaderQueryData = async () => {
 };
 
 function SoraFallbackImage({ uri, style, resizeMode = 'cover' }) {
-  const [hasError, setHasError] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  useEffect(() => {
-    setHasError(false);
-    setIsLoaded(false);
-  }, [uri]);
-
-  if (!uri || hasError) {
-    return (
-      <View style={[{ overflow: 'hidden' }, style]}>
-        <Image
-          source={SORA_PLACEHOLDER}
-          style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]}
-          resizeMode="cover"
-        />
-      </View>
-    );
-  }
-
   return (
-    <View style={[{ overflow: 'hidden', backgroundColor: '#fff' }, style]}>
-      <Image
-        source={SORA_PLACEHOLDER}
-        style={[StyleSheet.absoluteFill, { width: '100%', height: '100%' }]}
-        resizeMode="cover"
-      />
-      <Image
-        source={{ uri }}
-        style={[
-          StyleSheet.absoluteFill,
-          { width: '100%', height: '100%', opacity: isLoaded ? 1 : 0 },
-        ]}
-        resizeMode={resizeMode}
-        onLoadEnd={() => setIsLoaded(true)}
-        onError={() => setHasError(true)}
-      />
-    </View>
+    <SmartImage
+      source={{ uri }}
+      style={style}
+      resizeMode={resizeMode}
+    />
   );
 }
 
@@ -230,18 +212,38 @@ export default function HomeScreen({ navigation }) {
     queryFn: fetchHeaderQueryData,
     staleTime: 1000 * 60 * 10,
   });
+  const {
+    data: savedCouponsData,
+  } = useQuery({
+    queryKey: ['saved-coupons'],
+    queryFn: fetchSavedCoupons,
+    enabled: isLoggedIn,
+    staleTime: 1000 * 60 * 3,
+  });
+  const {
+    data: personalizedRecommendations,
+    isLoading: isRecommendationsLoading,
+    refetch: refetchRecommendations,
+  } = useQuery({
+    queryKey: ['personalized-recommendations'],
+    queryFn: () => fetchPersonalizedRecommendations({ limit: 10 }),
+    staleTime: 1000 * 60 * 2,
+  });
 
-  const banners = homeData?.banners || [];
-  const homeCategories = homeData?.categories || [];
-  const bestSellers = homeData?.products || [];
-  const newsList = homeData?.news || [];
-  const coupons = homeData?.coupons || [];
-  const combos = homeData?.combos || [];
-  const tiers = homeData?.tiers || [];
-  const dbCategories = headerData?.categories || [];
+  const banners = homeData?.banners || EMPTY_LIST;
+  const homeCategories = homeData?.categories || EMPTY_LIST;
+  const bestSellers = homeData?.products || EMPTY_LIST;
+  const newsList = homeData?.news || EMPTY_LIST;
+  const coupons = homeData?.coupons || EMPTY_LIST;
+  const combos = homeData?.combos || EMPTY_LIST;
+  const tiers = homeData?.tiers || EMPTY_LIST;
+  const personalizedProducts = personalizedRecommendations?.products || EMPTY_LIST;
+  const dbCategories = headerData?.categories || EMPTY_LIST;
+  const isHomeInitialLoading = isHomeQueryLoading && !refreshing && !homeData;
   const [wishlistIds, setWishlistIds] = useState([]);
   const [wishlistLoadingIds, setWishlistLoadingIds] = useState([]);
   const [savingCouponIds, setSavingCouponIds] = useState([]);
+  const [optimisticSavedCouponIds, setOptimisticSavedCouponIds] = useState([]);
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
   const bannerDotAnimations = useRef([]).current;
   const bannerFlatListRef = useRef(null);
@@ -250,6 +252,19 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => {
     if (!isMenuOpen) slideAnim.setValue(-menuWidth);
   }, [isMenuOpen, menuWidth, slideAnim]);
+
+  const savedCouponIds = useMemo(() => {
+    if (!isLoggedIn) return [];
+
+    const idSet = new Set(
+      (savedCouponsData || [])
+        .map((coupon) => coupon.coupon_id?.toString())
+        .filter(Boolean)
+    );
+    optimisticSavedCouponIds.forEach((id) => idSet.add(id));
+
+    return Array.from(idSet);
+  }, [isLoggedIn, optimisticSavedCouponIds, savedCouponsData]);
 
   const onBannerScroll = (event) => {
     const slideSize = event.nativeEvent.layoutMeasurement.width;
@@ -331,6 +346,7 @@ export default function HomeScreen({ navigation }) {
 
         setWishlistIds(updatedIds.map(id => id.toString()));
         await saveLocalWishlist(updatedItems);
+        queryClient.invalidateQueries({ queryKey: ['personalized-recommendations'] });
         return;
       }
 
@@ -375,6 +391,7 @@ export default function HomeScreen({ navigation }) {
 
       setWishlistIds(updatedIds.map(id => id.toString()));
       await saveLocalWishlist(updatedItems);
+      queryClient.invalidateQueries({ queryKey: ['personalized-recommendations'] });
     } catch (e) {
       console.log('Error saving wishlist in HomeScreen:', e);
     } finally {
@@ -406,6 +423,9 @@ export default function HomeScreen({ navigation }) {
         queryClient.invalidateQueries({ queryKey: ['saved-coupons'] }),
         queryClient.invalidateQueries({ queryKey: ['checkout', 'init'] }),
       ]);
+      setOptimisticSavedCouponIds((prev) => (
+        prev.includes(couponId) ? prev : [...prev, couponId]
+      ));
       showCustomAlert(
         'Mã giảm giá',
         result.message || `Đã lưu mã "${coupon.code}" vào ví ưu đãi cá nhân.`,
@@ -694,8 +714,9 @@ export default function HomeScreen({ navigation }) {
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    Promise.all([loadUser(), refetchHomeData(), refetchHeaderData()]).finally(() => setRefreshing(false));
-  }, [loadUser, refetchHeaderData, refetchHomeData]);
+    Promise.all([loadUser(), refetchHomeData(), refetchHeaderData(), refetchRecommendations()])
+      .finally(() => setRefreshing(false));
+  }, [loadUser, refetchHeaderData, refetchHomeData, refetchRecommendations]);
 
   const toggleMenu = () => {
     if (isMenuOpen) {
@@ -739,15 +760,6 @@ export default function HomeScreen({ navigation }) {
       />
     );
   };
-
-  if (isHomeQueryLoading && !refreshing && banners.length === 0) {
-    return (
-      <SafeAreaView style={[styles.safeArea, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#9f273b" />
-        <Text style={{ marginTop: 10, fontFamily: "Oswald_500Medium", color: "#9f273b", fontSize: 13, letterSpacing: 1, textTransform: 'uppercase' }}>Đang tải trang chủ SORA...</Text>
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -985,6 +997,9 @@ export default function HomeScreen({ navigation }) {
 
         {/* Hero Banner Carousel */}
         <View style={[styles.bannerSection, { width: bannerWidth }]}>
+          {isHomeInitialLoading ? (
+            <BannerSkeleton width={bannerWidth} height={bannerHeight} />
+          ) : (
           <FlatList
             ref={bannerFlatListRef}
             data={banners.length > 0 ? banners : BANNERS}
@@ -1029,9 +1044,12 @@ export default function HomeScreen({ navigation }) {
               );
             }}
           />
+          )}
           {/* Pagination dots */}
           <View style={styles.paginationContainer}>
-            {bannerItems.map((b, idx) => (
+            {isHomeInitialLoading ? [0, 1, 2].map((item) => (
+              <SkeletonDot key={item} />
+            )) : bannerItems.map((b, idx) => (
               <View
                 key={b.id.toString()}
                 style={styles.dotSlot}
@@ -1060,7 +1078,9 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.categoriesContainer}>
           <Text style={styles.sectionTitle}>DANH MỤC</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesList}>
-            {homeCategories.map((cat) => (
+            {isHomeInitialLoading ? HOME_CATEGORY_SKELETON_ITEMS.map((item) => (
+              <CategorySkeleton key={item} style={styles.categoryItem} />
+            )) : homeCategories.map((cat) => (
               <TouchableOpacity
                 key={cat.id.toString()}
                 style={styles.categoryItem}
@@ -1090,18 +1110,64 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          <FlatList
-            data={bestSellers}
-            renderItem={renderProduct}
-            keyExtractor={item => item.id.toString()}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.productList}
-          />
+          {isHomeInitialLoading ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productList}>
+              {HOME_PRODUCT_SKELETON_ITEMS.map((item) => (
+                <ProductCardSkeleton key={item} width={165} style={styles.bestSellerProductCard} />
+              ))}
+            </ScrollView>
+          ) : (
+            <FlatList
+              data={bestSellers}
+              renderItem={renderProduct}
+              keyExtractor={item => item.id.toString()}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.productList}
+            />
+          )}
         </View>
 
+        {(isHomeInitialLoading || isRecommendationsLoading || personalizedProducts.length > 0) && (
+          <View style={styles.sectionContainer}>
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={styles.sectionTitle}>GỢI Ý DÀNH CHO BẠN</Text>
+                {!!personalizedRecommendations?.reason && (
+                  <Text style={styles.personalizedReason} numberOfLines={2}>
+                    {personalizedRecommendations.reason}
+                  </Text>
+                )}
+              </View>
+              <TouchableOpacity
+                style={styles.viewMoreButton}
+                onPress={() => navigation.navigate('Shop')}
+              >
+                <Text style={styles.viewMoreText}>Xem Thêm</Text>
+              </TouchableOpacity>
+            </View>
+
+            {isHomeInitialLoading || isRecommendationsLoading ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.productList}>
+                {HOME_PRODUCT_SKELETON_ITEMS.map((item) => (
+                  <ProductCardSkeleton key={`personalized-${item}`} width={165} style={styles.bestSellerProductCard} />
+                ))}
+              </ScrollView>
+            ) : (
+              <FlatList
+                data={personalizedProducts}
+                renderItem={renderProduct}
+                keyExtractor={(item) => `personalized-${item.id}`}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.productList}
+              />
+            )}
+          </View>
+        )}
+
         {/* Coupons/Voucher Section */}
-        {coupons.length > 0 && (
+        {(isHomeInitialLoading || coupons.length > 0) && (
           <View style={styles.couponsContainer}>
             <View style={styles.sectionHeaderCompact}>
               <Text style={styles.sectionGoldLabel}>ĐẶC QUYỀN MUA SẮM</Text>
@@ -1112,9 +1178,12 @@ export default function HomeScreen({ navigation }) {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.couponsList}
             >
-              {coupons.map((coupon) => {
+              {isHomeInitialLoading ? HOME_COUPON_SKELETON_ITEMS.map((item) => (
+                <CouponSkeleton key={item} />
+              )) : coupons.map((coupon) => {
                 const couponKey = coupon.id.toString();
                 const isSavingCoupon = savingCouponIds.includes(couponKey);
+                const isSavedCoupon = savedCouponIds.includes(couponKey);
 
                 return (
                 <View key={couponKey} style={styles.couponCard}>
@@ -1137,15 +1206,21 @@ export default function HomeScreen({ navigation }) {
                         Đơn từ {formatCurrency(coupon.min_order_value)}
                       </Text>
                       <TouchableOpacity
-                        style={[styles.couponSaveBtn, isSavingCoupon && styles.couponSaveBtnDisabled]}
+                        style={[
+                          styles.couponSaveBtn,
+                          (isSavingCoupon || isSavedCoupon) && styles.couponSaveBtnDisabled,
+                          isSavedCoupon && styles.couponSavedBtn,
+                        ]}
                         onPress={() => handleSaveCoupon(coupon)}
-                        disabled={isSavingCoupon}
+                        disabled={isSavingCoupon || isSavedCoupon}
                         activeOpacity={0.8}
                       >
                         {isSavingCoupon ? (
-                          <ActivityIndicator size={14} color="#fff" />
+                          <ActivityIndicator size={10} color="#fff" />
                         ) : (
-                          <Text style={styles.couponSaveBtnTxt}>LƯU MÃ NGAY</Text>
+                          <Text style={styles.couponSaveBtnTxt} numberOfLines={1}>
+                            {isSavedCoupon ? 'ĐÃ THÊM MÃ' : 'LƯU MÃ NGAY'}
+                          </Text>
                         )}
                       </TouchableOpacity>
                     </View>
@@ -1158,7 +1233,7 @@ export default function HomeScreen({ navigation }) {
         )}
 
         {/* Limited Combos Section */}
-        {combos.length > 0 && (
+        {(isHomeInitialLoading || combos.length > 0) && (
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeaderCompact}>
               <Text style={styles.sectionGoldLabel}>ĐỒNG ĐIỆU</Text>
@@ -1174,7 +1249,9 @@ export default function HomeScreen({ navigation }) {
               decelerationRate="fast"
               disableIntervalMomentum={true}
             >
-              {combos.map((combo) => {
+              {isHomeInitialLoading ? HOME_COMBO_SKELETON_ITEMS.map((item) => (
+                <ComboSkeleton key={item} width={comboCardWidth} />
+              )) : combos.map((combo) => {
                 const comboKey = combo.id.toString();
                 const comboImagePath = combo.thumbnail_image || combo.image || combo.products?.[0]?.thumbnail_image;
                 const comboImageUrl = comboImagePath ? getStorageUrl(comboImagePath) : '';
@@ -1298,7 +1375,9 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.sectionTitle}>Kiến Thức Trang Sức</Text>
           </View>
 
-          {(newsList.length > 0 ? newsList : NEWS).map((article) => {
+          {isHomeInitialLoading ? HOME_NEWS_SKELETON_ITEMS.map((item) => (
+            <NewsCardSkeleton key={item} />
+          )) : (newsList.length > 0 ? newsList : NEWS).map((article) => {
             const isDbNews = !!article.image_url;
             const imgUrl = isDbNews ? getStorageUrl(article.image_url) : article.image;
             const tag = isDbNews ? (article.category || 'CẨM NANG') : article.tag;
@@ -1700,9 +1779,13 @@ const styles = StyleSheet.create({
   couponSaveBtnDisabled: {
     opacity: 0.75,
   },
+  couponSavedBtn: {
+    backgroundColor: '#7d7a70',
+    minWidth: 88,
+  },
   couponSaveBtnTxt: {
     fontFamily: 'Oswald_500Medium',
-    fontSize: 9.5,
+    fontSize: 9,
     color: '#fef3ce',
     fontWeight: 'bold',
     letterSpacing: 0.5,
@@ -2000,6 +2083,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: 'PlayfairDisplay_700Bold',
     color: '#333',
+  },
+  personalizedReason: {
+    maxWidth: 230,
+    marginTop: 4,
+    fontSize: 11,
+    lineHeight: 15,
+    fontFamily: 'Oswald_400Regular',
+    color: '#8a7d7d',
   },
 
   // === NEWS SECTION ===

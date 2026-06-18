@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "SORA",
+    "slug": "sora",
     "scheme": "sora",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/logo2.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -28,7 +28,13 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "extra": {
+      "eas": {
+        "projectId": "6f4844b7-a344-4377-bdd1-78d763648111"
+      }
+    },
     "plugins": [
+      "expo-notifications",
       "expo-web-browser",
       [
         "expo-camera",
