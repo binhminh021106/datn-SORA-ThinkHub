@@ -68,12 +68,15 @@ class ClientCartController extends Controller
                 $cartItem->quantity = $newQuantity;
                 $cartItem->save();
 
+                $cart->load('items');
+                $totalItems = $cart->items->sum('quantity');
                 return response()->json([
                     'success'    => true,
                     'message'    => 'Đã thêm sản phẩm vào giỏ hàng.',
-                    'data'       => $cartItem->load(['variant.product', 'variant.attributeValues.attribute']),
-                    'session_id' => $request->header('X-Cart-Session-Id')
-                ]);
+                    'data' => $cartItem->load(['variant.product', 'variant.attributeValues.attribute']),
+                    'session_id' => $request->header('X-Cart-Session-Id'),
+                    'cart_count' => $totalItems,
+]);
             });
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 400);

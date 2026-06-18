@@ -1,10 +1,10 @@
 <template>
-  <div class="cart-wrapper pb-5" style="min-height: 100vh; font-family: 'Lato', sans-serif;">
+  <div class="cart-wrapper pb-5" style="min-height: 100vh; font-family: 'Manrope', sans-serif;">
 
     <main class="container mt-5">
       <div class="d-flex flex-wrap align-items-center justify-content-between mb-5 gap-3">
         <div>
-          <h2 class="fs-1 text-dark mb-0" style="font-family: 'Playfair Display', serif;">Giỏ hàng của bạn</h2>
+          <h2 class="fs-1 text-dark mb-0" style="font-family: 'Manrope', sans-serif; font-weight: 700;">Giỏ hàng của bạn</h2>
           <span class="text-secondary fw-light border-bottom border-danger-custom pb-1">
             {{ totalItems }} Sản phẩm trong danh sách
           </span>
@@ -34,7 +34,7 @@
       <div v-else-if="cartItems.length === 0" class="text-center py-5 bg-white shadow-sm rounded-0 border-top border-4 border-danger-custom">
         <div class="py-5">
           <i class="bi bi-cart-x fs-1 text-muted opacity-50 mb-3 d-block" style="font-size: 4rem !important;"></i>
-          <p class="fs-5 text-secondary mb-4" style="font-family: 'Playfair Display', serif;">Giỏ hàng của bạn đang trống.</p>
+          <p class="fs-5 text-secondary mb-4" style="font-family: 'Manrope', sans-serif; font-weight: 500;">Giỏ hàng của bạn đang trống.</p>
           <button @click="router.push('/shop')" class="btn btn-primary-custom rounded-pill px-5 py-3 text-uppercase text-white shadow-sm fw-bold">
             Tiếp tục mua sắm
           </button>
@@ -65,7 +65,7 @@
               </div>
               
               <div class="flex-grow-1">
-                <h3 class="fs-5 text-dark mb-1 fw-bold" style="font-family: 'Playfair Display', serif;">{{ getItemName(item) }}</h3>
+                <h3 class="fs-5 text-dark mb-1 fw-bold" style="font-family: 'Manrope', sans-serif;">{{ getItemName(item) }}</h3>
                 
                 <p class="small text-secondary text-uppercase mb-2 fw-semibold" style="letter-spacing: 0.05em;">
                   <span v-if="item.combo_id" class="text-sora-primary"><i class="bi bi-stars me-1"></i> GÓI ƯU ĐÃI (COMBO)</span>
@@ -128,7 +128,7 @@
         <!-- Cột phải: Summary -->
         <div class="col-lg-4">
           <div class="card border-0 shadow-lg rounded-4 p-4 sticky-top summary-card" style="top: 100px;">
-            <h3 class="fs-4 text-white mb-4 pb-3 border-bottom border-light border-opacity-25" style="font-family: 'Playfair Display', serif;"><i class="bi bi-receipt me-2"></i> Tổng quan</h3>
+            <h3 class="fs-4 text-white mb-4 pb-3 border-bottom border-light border-opacity-25" style="font-family: 'Manrope', sans-serif; font-weight: 700;"><i class="bi bi-receipt me-2"></i> Tổng quan</h3>
             
             <div class="mb-4">
               <div class="d-flex justify-content-between mb-3 text-light text-opacity-75">
@@ -166,7 +166,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Toast from '@/utils/toastConfig';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
@@ -188,7 +188,21 @@ const soraAlert = createSoraAlert({
   }
 });
 
-// ==================== THÊM MỚI: TỰ ĐỘNG MERGE ====================
+const notifyCartUpdate = () => {
+  const count = cartItems.value.reduce((t, i) => t + i.quantity, 0);
+  window.dispatchEvent(new CustomEvent('update-cart-count', {
+    detail: { cart_count: count, source: 'internal' } // Thêm nguồn 'internal'
+  }));
+};
+
+const handleCartSync = (event) => {
+  // Bỏ qua nếu sự kiện xuất phát từ chính trang Giỏ hàng (nội bộ)
+  // để tránh việc gọi lại API fetchCart 2 lần liên tiếp
+  if (event.detail && event.detail.source === 'internal') {
+    return;
+  }
+  fetchCart(true);
+};
 const checkAndMergeCart = async () => {
   const token = getUserToken();
   const sessionId = localStorage.getItem('cart_session_id');
@@ -304,6 +318,7 @@ const updateQuantity = async (item, change) => {
     if (response.data.success) {
       item.quantity = newQty;
       await fetchCart(true);
+      notifyCartUpdate();
     }
   } catch (error) {
     let errorMsg = 'Không thể cập nhật số lượng.';
@@ -351,8 +366,9 @@ const removeItem = async (itemId) => {
         });
         if (response.data.success) {
           cartItems.value.splice(index, 1);
+          notifyCartUpdate();
           Toast.fire({ icon: 'success', title: 'Đã xóa sản phẩm thành công' });
-          await fetchCart(true); 
+          await fetchCart(true);
         }
       } catch (error) {
         soraAlert.fire({
@@ -387,6 +403,7 @@ const clearCart = async () => {
         if (response.data.success) {
           cartItems.value = [];
           backendSummary.value = { total_items: 0, subtotal: 0 };
+          notifyCartUpdate();
           Toast.fire({ icon: 'success', title: 'Giỏ hàng đã được làm trống' });
         }
       } catch (error) {
@@ -401,12 +418,18 @@ const clearCart = async () => {
 onMounted(async () => {
   await checkAndMergeCart();   // ← Merge trước (nếu có)
   await fetchCart();           // ← Sau đó load giỏ hàng
+  window.addEventListener('update-cart-count', handleCartSync);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('update-cart-count', handleCartSync);
 });
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap');
 
-.cart-wrapper { background-color: #fcfcfc; }
+.cart-wrapper { background-color: #fcfcfc; font-family: 'Manrope', sans-serif; }
 
 .quantity-picker {
   display: flex;

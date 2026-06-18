@@ -307,8 +307,25 @@ const confirmQuickAdd = async () => {
         if (res.data.session_id) {
             setSafeStorage('cart_session_id', res.data.session_id);
         }
+
+        // Lấy số lượng giỏ hàng ngay từ kết quả của POST API nếu có
+        let cartCount = 1;
+        if (res.data.summary && typeof res.data.summary.total_items !== 'undefined') {
+             cartCount = res.data.summary.total_items;
+        } else if (typeof res.data.cart_count !== 'undefined') {
+             cartCount = res.data.cart_count;
+        } else {
+            // Không chặn try-catch nếu GET lỗi. Lỗi GET chỉ là lỗi phụ.
+            cartCount = await new Promise((resolve) => {
+                 axios.get(`${API_BASE_URL}/client/cart`, { headers })
+                 .then(cartRes => resolve(cartRes.data?.summary?.total_items ?? 0))
+                 .catch(() => resolve(1)); // Giả định có 1 sản phẩm nếu không thể lấy từ server
+            });
+        }
         
-        window.dispatchEvent(new CustomEvent('update-cart-count'));
+        window.dispatchEvent(new CustomEvent('update-cart-count', {
+            detail: { cart_count: cartCount }  
+        }));
         
         pendingSuccessToast = true;
         quickAddModalInstance.hide();
