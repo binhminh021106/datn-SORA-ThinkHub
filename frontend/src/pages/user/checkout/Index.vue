@@ -531,6 +531,13 @@ const fetchCartSnapshot = async () => {
             cartItems.value = res.data.cart_items || [];
             availableCoupons.value = res.data.coupons || [];
             tierDiscountInfo.value = res.data.tier_discount || null;
+            
+            if (
+                selectedCoupon.value &&
+                !availableCoupons.value.some(c => c.id === selectedCoupon.value.id)
+            ) {
+                selectedCoupon.value = null;
+            }
         }
     } catch (error) {
         console.error('Lỗi khi tải snapshot giỏ hàng:', error);
@@ -1105,6 +1112,7 @@ onMounted(async () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     window.addEventListener('update-cart-count', handleCartSync);
     window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
 });
 
 onUnmounted(() => {

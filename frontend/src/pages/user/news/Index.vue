@@ -397,6 +397,7 @@ const handleScroll = () => {
 onMounted(() => {
     updateListingSeo();
     window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
 });
 
 onUnmounted(() => {

@@ -60,9 +60,35 @@ clientApiClient.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
+// Lọc lỗi nhạy cảm để không hiển thị ra UI
+const sanitizeErrorMessage = (error) => {
+  if (error.response?.data && typeof error.response.data.message === 'string') {
+    const status = error.response.status;
+    const url = error.config?.url || 'unknown_url';
+    const msg = error.response.data.message.toLowerCase();
+    const isSensitive = 
+      status >= 500 ||
+      msg.includes('curl error') ||
+      msg.includes('pusher error') ||
+      msg.includes('sqlstate') ||
+      msg.includes('connection refused') ||
+      msg.includes('syntax error');
+
+    if (isSensitive) {
+      console.error(`[API Error Masked] HTTP ${status} | URL: ${url}`);
+      console.error('[Original Error Data]:', error.response.data);
+      console.error('[Full Error Object]:', error);
+      
+      error.response.data.message = 'Hệ thống đang gặp sự cố. Vui lòng thử lại sau!';
+    }
+  }
+};
+
 clientApiClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    sanitizeErrorMessage(error);
+
     if (error.response?.status === 401) {
       clearUserAuthStorage();
 

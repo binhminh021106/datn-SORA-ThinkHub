@@ -448,6 +448,7 @@ const handleScroll = () => {
 
 onMounted(() => {
   window.addEventListener('scroll', handleScroll, { passive: true });
+  handleScroll();
 });
 
 onUnmounted(() => {
