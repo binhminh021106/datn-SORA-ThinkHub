@@ -1,5 +1,5 @@
 <template>
-  <div class="brand-edit-wrapper pb-5 mb-5">
+  <div class="brand-edit-wrapper ">
     <div class="container-fluid py-4" v-if="isLoaded">
       
       <div class="row mb-4 align-items-center">

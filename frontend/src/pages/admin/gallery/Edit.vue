@@ -1,5 +1,5 @@
 <template>
-  <div class="gallery-edit-wrapper pb-5 mb-5">
+  <div class="gallery-edit-wrapper ">
     
     <!-- SKELETON CHỜ KHI KHÔNG CÓ CACHE -->
     <div v-if="isLoading" class="container-fluid py-4">

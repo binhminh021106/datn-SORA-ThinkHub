@@ -1,5 +1,5 @@
 <template>
-  <div class="gallery-index-wrapper pb-5 mb-5">
+  <div class="gallery-index-wrapper ">
     
     <!-- HIỂU ỨNG LOGO SHIMMER CHỈ XUẤT HIỆN DUY NHẤT LẦN ĐẦU TẢI TRANG -->
     <div v-if="isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">

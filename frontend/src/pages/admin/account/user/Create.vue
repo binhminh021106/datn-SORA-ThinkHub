@@ -1,5 +1,5 @@
 <template>
-    <div class="user-create-wrapper pb-5 mb-5">
+    <div class="user-create-wrapper ">
         <div class="container-fluid py-4">
             <div class="d-flex align-items-center mb-4">
                 <router-link :to="{ name: 'admin-users' }"

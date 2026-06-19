@@ -1,5 +1,5 @@
 <template>
-  <div class="container-fluid py-4 pb-5 mb-5 page-container">
+  <div class="container-fluid py-4  page-container">
     
     <!-- Shimmer Khởi động -->
     <div v-if="isFirstVisit && isLoadingShifts" class="d-flex flex-column justify-content-center align-items-center w-100 shimmer-wrapper">

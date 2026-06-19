@@ -1,5 +1,5 @@
 <template>
-  <div class="inventory-index-wrapper pb-5 mb-5">
+  <div class="inventory-index-wrapper ">
     <!-- MÀN HÌNH CHỜ BAN ĐẦU -->
     <div v-if="isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100"
       style="min-height: 70vh;">

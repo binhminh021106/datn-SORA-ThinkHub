@@ -1,5 +1,5 @@
 <template>
-  <div class="category-index-wrapper pb-5 mb-5">
+  <div class="category-index-wrapper">
     
     <!-- Lần tải đầu tiên và dữ liệu hoàn toàn trống trong cache -->
     <div v-if="isLoading && isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">

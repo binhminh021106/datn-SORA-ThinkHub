@@ -1,5 +1,5 @@
 <template>
-  <div class="user-index-wrapper pb-5 mb-5">
+  <div class="user-index-wrapper ">
     
     <div v-if="isPageLoading" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
       <h1 class="logo-shimmer mb-3">ThinkHub</h1>
