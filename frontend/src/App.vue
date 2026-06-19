@@ -173,6 +173,20 @@ body {
   transform: rotate(45deg) translateY(200%);
 }
 
+.editorial-btn:disabled, .editorial-btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  background: var(--sora-primary);
+  border-color: var(--sora-primary);
+  color: #fff;
+}
+
+.editorial-btn:disabled::after, .editorial-btn[disabled]::after {
+  display: none;
+}
+
 .editorial-btn-outline {
   position: relative;
   overflow: hidden;

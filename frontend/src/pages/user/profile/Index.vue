@@ -2,6 +2,13 @@
   <div>
           <SoraListSkeleton v-if="isLoading" :rows="4" :image="false" card />
           
+          <div v-else-if="!isLoggedIn" class="alert alert-warning m-4 bg-light-custom border-main text-main p-4 text-center rounded-0 font-inter shadow-sm">
+            <i class="bi bi-exclamation-triangle-fill fs-3 mb-2 d-block"></i>
+            <h5 class="font-oswald fw-bold tracking-wide">PHIÊN ĐĂNG NHẬP HẾT HẠN</h5>
+            <p class="mb-3 small text-muted">Vui lòng đăng nhập lại để tiếp tục sử dụng các tính năng tài khoản.</p>
+            <router-link to="/login" class="btn editorial-btn px-4 py-2">Đăng nhập ngay</router-link>
+          </div>
+
           <div v-else>
             <ProfileForm 
               v-if="activeTab === 'profile'" 

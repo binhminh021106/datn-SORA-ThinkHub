@@ -77,10 +77,16 @@
                   </div>
                 </div>
               </div>
-              <div v-else
+              <div v-else-if="order.status === 'cancelled'"
                 class="alert bg-light border border-light-subtle rounded-0 mb-3 d-flex align-items-center py-2 px-3">
                 <i class="bi bi-x-circle-fill text-secondary me-2 fs-5"></i>
                 <div class="text-muted small"><strong>Đơn hàng đã bị hủy.</strong> Quá trình giao dịch đã dừng lại.
+                </div>
+              </div>
+              <div v-else-if="order.status === 'returned'"
+                class="alert bg-light border border-light-subtle rounded-0 mb-3 d-flex align-items-center py-2 px-3">
+                <i class="bi bi-arrow-return-left text-secondary me-2 fs-5"></i>
+                <div class="text-muted small"><strong>Đơn hàng hoàn/trả.</strong> Hàng hóa đã được hoàn lại.
                 </div>
               </div>
 
