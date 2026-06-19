@@ -20,7 +20,6 @@
             </button>
             <ul class="dropdown-menu dropdown-menu-end shadow">
               <li><a class="dropdown-item fw-semibold" href="#" @click.prevent="openImportModal"><i class="bi bi-cloud-arrow-up me-2 text-primary"></i>Nhập sản phẩm (Import)</a></li>
-              <li><a class="dropdown-item fw-semibold" href="#" @click.prevent="exportProducts"><i class="bi bi-download me-2 text-success"></i>Xuất danh sách (Export)</a></li>
               <li><hr class="dropdown-divider"></li>
               <li><a class="dropdown-item text-muted" href="#" @click.prevent="downloadTemplate"><i class="bi bi-file-earmark-arrow-down me-2"></i>Tải file Excel mẫu</a></li>
             </ul>
@@ -415,6 +414,15 @@ import ImportProductModal from './ImportProductModal.vue';
 
 const route = useRoute();
 
+const escapeHtml = (unsafe) => {
+  return (unsafe || '').toString()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
 const searchQuery = ref('');
 const debouncedSearchQuery = ref('');
 const activeTab = ref('all');
@@ -789,7 +797,7 @@ const confirmBulkForceDelete = () => {
   if (selectedProductIds.value.length === 0) return;
 
   const selectedProducts = products.value.filter(p => selectedProductIds.value.includes(p.id));
-  const namesHtml = selectedProducts.map(p => `<li>${p.name}</li>`).join('');
+  const namesHtml = selectedProducts.map(p => `<li>${escapeHtml(p.name)}</li>`).join('');
 
   Swal.fire({
     title: 'Xóa vĩnh viễn hàng loạt?',
@@ -821,7 +829,7 @@ const confirmBulkForceDelete = () => {
         Swal.fire({
           title: 'Kết quả Xóa',
           html: resultHtml,
-          icon: failed_products.length > 0 ? 'warning' : 'success'
+          icon: failed_products?.length > 0 ? 'warning' : 'success'
         });
         
         await refetchProducts();
@@ -878,9 +886,10 @@ const restoreProduct = (id) => {
 };
 
 const forceDeleteProduct = (id, name) => {
+  const safeName = escapeHtml(name);
   Swal.fire({ 
     title: 'Xóa vĩnh viễn?', 
-    html: `Sản phẩm <b>"${name}"</b> và tất cả biến thể, hình ảnh sẽ bị xóa hoàn toàn khỏi hệ thống.<br><br><b class="text-danger">Hành động này không thể hoàn tác!</b>`, 
+    html: `Sản phẩm <b>"${safeName}"</b> và tất cả biến thể, hình ảnh sẽ bị xóa hoàn toàn khỏi hệ thống.<br><br><b class="text-danger">Hành động này không thể hoàn tác!</b>`, 
     icon: 'error', 
     showCancelButton: true, 
     confirmButtonColor: '#d33', 

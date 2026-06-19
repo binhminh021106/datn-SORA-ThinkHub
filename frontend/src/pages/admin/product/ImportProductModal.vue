@@ -56,7 +56,16 @@ import { ref } from 'vue';
 import Swal from 'sweetalert2';
 import adminApiClient from '@/utils/adminApiClient';
 
-const emit = defineEmits(['download-template', 'import-success']);
+const emit = defineEmits(['import-success']);
+
+const escapeHtml = (unsafe) => {
+  return (unsafe || '').toString()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
 
 const fileInput = ref(null);
 const selectedFile = ref(null);
@@ -130,10 +139,10 @@ const handleUpload = async () => {
       // Nếu API trả về mảng errors cụ thể từng dòng
       const errs = error.response.data.errors;
       if (Array.isArray(errs)) {
-        errorText = errs.slice(0, 5).join('<br>') + (errs.length > 5 ? '<br>...và nhiều lỗi khác' : '');
+        errorText = errs.slice(0, 5).map(e => escapeHtml(e)).join('<br>') + (errs.length > 5 ? '<br>...và nhiều lỗi khác' : '');
       }
     } else if (error.response?.data?.message) {
-      errorText = error.response.data.message;
+      errorText = escapeHtml(error.response.data.message);
     }
 
     Swal.fire({

@@ -160,16 +160,14 @@ class ProductImportController extends Controller
 
             $rows = SimpleExcelReader::create($file->getRealPath(), $file->getClientOriginalExtension())->getRows();
 
-            if ($rows->isEmpty()) {
-                throw new \Exception("File Excel trống, không có dữ liệu.");
-            }
-
             $currentProduct = null;
             $successCount = 0;
             $variantCount = 0;
             $errors = [];
+            $hasData = false;
 
             foreach ($rows as $index => $row) {
+                $hasData = true;
                 $rowNumber = $index + 2; // +2 vì index bắt đầu từ 0 và dòng 1 là header
 
                 try {
@@ -225,7 +223,9 @@ class ProductImportController extends Controller
 
                         // URL Ảnh
                         $thumbnailUrl = trim($row['Link Ảnh Đại Diện'] ?? '');
-                        // (Ở phiên bản nâng cao, ta có thể Http::get($thumbnailUrl) để lưu file về máy)
+                        if (!empty($thumbnailUrl) && !filter_var($thumbnailUrl, FILTER_VALIDATE_URL)) {
+                            throw new \Exception("Dòng {$rowNumber}: Link ảnh đại diện không hợp lệ.");
+                        }
 
                         $currentProduct = Product::create([
                             'category_id' => $category->id,
@@ -321,6 +321,10 @@ class ProductImportController extends Controller
                 } catch (\Exception $e) {
                     $errors[] = $e->getMessage();
                 }
+            }
+
+            if (!$hasData && empty($errors)) {
+                throw new \Exception("File Excel trống, không có dữ liệu.");
             }
 
             if (!empty($errors)) {
