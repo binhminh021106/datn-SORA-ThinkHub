@@ -127,7 +127,7 @@
                 </section>
 
                 <!-- Sidebar -->
-                <aside class="sidebar-column">
+                <aside class="sidebar-column custom-scrollbar" :style="{ top: sidebarTop, maxHeight: 'calc(100vh - ' + sidebarTop + ' - 20px)', overflowY: 'auto' }">
                     <!-- Widget Tìm kiếm -->
                     <div class="sidebar-widget search-widget border-light-subtle shadow-sm bg-white">
                         <h4 class="font-serif text-main"><i class="bi bi-search me-2 text-accent"></i> Tìm kiếm</h4>
@@ -205,7 +205,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 import { useQuery, keepPreviousData } from '@tanstack/vue-query';
 import NewsPostCard from '@/components/ui/NewsPostCard.vue';
@@ -375,8 +375,33 @@ const changePage = (page) => {
     }
 };
 
+const sidebarTop = ref('100px');
+let lastScrollY = 0;
+let isHeaderHidden = false;
+
+const handleScroll = () => {
+    const currentScrollY = window.scrollY;
+    if (currentScrollY > 200) {
+        if (currentScrollY > lastScrollY && !isHeaderHidden) {
+            isHeaderHidden = true;
+        } else if (currentScrollY < lastScrollY && isHeaderHidden) {
+            isHeaderHidden = false;
+        }
+    } else {
+        isHeaderHidden = false;
+    }
+    sidebarTop.value = isHeaderHidden ? '20px' : '100px';
+    lastScrollY = currentScrollY;
+};
+
 onMounted(() => {
     updateListingSeo();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+});
+
+onUnmounted(() => {
+    window.removeEventListener('scroll', handleScroll);
 });
 </script>
 
@@ -559,7 +584,7 @@ h1, h2, h3, h4, h5, h6 { font-family: 'Inter', sans-serif; font-weight: 700; col
 .product-card:hover .product-title, .product-title-link:hover .product-title { color: var(--primary) !important; }
 
 /* Sidebar Widgets */
-.sidebar-column { display: flex; flex-direction: column; gap: 30px; position: sticky; top: 100px; }
+.sidebar-column { display: flex; flex-direction: column; gap: 30px; position: sticky; transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
 .sidebar-widget { padding: 25px; border-radius: 12px; }
 .sidebar-widget h4 { border-bottom: 1px dashed #ccc; padding-bottom: 15px; display: flex; align-items: center; }
 

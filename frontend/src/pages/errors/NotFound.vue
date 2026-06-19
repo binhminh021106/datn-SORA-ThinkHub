@@ -14,13 +14,13 @@
       Dạ, có vẻ như đường dẫn Quý khách đang tìm kiếm không tồn tại, đã bị đổi tên hoặc tạm thời không thể truy cập.
     </p>
 
-    <div class="d-flex gap-3 flex-wrap justify-content-center">
-      <button @click="$router.go(-1)" class="btn btn-outline-gold rounded-pill px-4 py-2 font-luxury fw-bold transition-all">
+    <div class="d-flex gap-3 flex-wrap justify-content-center mt-3">
+      <button @click="$router.go(-1)" class="editorial-btn-outline px-4 py-2">
         <i class="bi bi-arrow-left me-2"></i> Quay lại
       </button>
       
-      <router-link to="/" class="btn btn-brand-solid rounded-pill px-5 py-2 font-luxury fw-bold shadow-sm transition-all text-decoration-none">
-        <i class="bi bi-house-door-fill me-2 text-white"></i> Trở về Trang Chủ
+      <router-link to="/" class="editorial-btn px-5 py-2 text-decoration-none">
+        <i class="bi bi-house-door-fill me-2"></i> Trở về Trang Chủ
       </router-link>
     </div>
 

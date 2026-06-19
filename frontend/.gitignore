@@ -39,6 +39,8 @@ __screenshots__/
 
 # .env
 .env
+.env-local
+.env*
 # frontend/.env
 frontend/.env
 # backend/.env

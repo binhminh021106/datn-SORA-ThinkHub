@@ -35,7 +35,7 @@
         <div class="py-5">
           <i class="bi bi-cart-x fs-1 text-muted opacity-50 mb-3 d-block" style="font-size: 4rem !important;"></i>
           <p class="fs-5 text-secondary mb-4" style="font-family: 'Manrope', sans-serif; font-weight: 500;">Giỏ hàng của bạn đang trống.</p>
-          <button @click="router.push('/shop')" class="btn btn-primary-custom rounded-pill px-5 py-3 text-uppercase text-white shadow-sm fw-bold">
+          <button @click="router.push('/shop')" class="editorial-btn px-5 py-3">
             Tiếp tục mua sắm
           </button>
         </div>
@@ -149,7 +149,7 @@
               <p class="text-end small text-light text-opacity-50 mb-0">Giá đã bao gồm thuế VAT</p>
             </div>
 
-            <router-link to="/checkout" class="btn btn-gold w-100 rounded-pill py-3 fw-bold text-uppercase shadow-lg btn-checkout d-flex align-items-center justify-content-center gap-2">
+            <router-link to="/checkout" class="editorial-btn w-100 py-3 d-flex align-items-center justify-content-center gap-2">
                 Thanh toán an toàn <i class="bi bi-shield-lock-fill fs-5"></i>
             </router-link>
 
@@ -346,12 +346,18 @@ const updateQuantity = async (item, change) => {
 
 const removeItem = async (itemId) => {
   soraAlert.fire({
-    title: 'Xóa khỏi giỏ hàng?',
-    text: "Bạn có chắc chắn muốn bỏ mặt hàng này không?",
+    title: '<span class="font-oswald tracking-wider fs-4 text-dark">XÓA KHỎI GIỎ HÀNG?</span>',
+    html: '<p class="text-muted font-sans" style="font-size: 0.95rem;">Bạn có chắc chắn muốn bỏ mặt hàng này không?</p>',
     icon: 'question',
     showCancelButton: true,
     confirmButtonText: 'Đồng ý xóa',
     cancelButtonText: 'Hủy bỏ',
+    buttonsStyling: false,
+    customClass: {
+      popup: 'border-0 shadow-lg',
+      confirmButton: 'editorial-btn px-4 py-2 ms-2',
+      cancelButton: 'editorial-btn-outline px-4 py-2'
+    },
     reverseButtons: true 
   }).then(async (result) => {
     if (result.isConfirmed) {
@@ -385,12 +391,18 @@ const removeItem = async (itemId) => {
 
 const clearCart = async () => {
   soraAlert.fire({
-    title: 'Làm trống giỏ hàng?',
-    text: "Toàn bộ sản phẩm sẽ bị xóa khỏi giỏ. Bạn không thể hoàn tác hành động này!",
+    title: '<span class="font-oswald tracking-wider fs-4 text-dark">LÀM TRỐNG GIỎ HÀNG?</span>',
+    html: '<p class="text-muted font-sans" style="font-size: 0.95rem;">Toàn bộ sản phẩm sẽ bị xóa khỏi giỏ. Bạn không thể hoàn tác hành động này!</p>',
     icon: 'warning',
     showCancelButton: true,
     confirmButtonText: 'Làm trống ngay',
     cancelButtonText: 'Giữ lại',
+    buttonsStyling: false,
+    customClass: {
+      popup: 'border-0 shadow-lg',
+      confirmButton: 'editorial-btn px-4 py-2 ms-2',
+      cancelButton: 'editorial-btn-outline px-4 py-2'
+    },
     reverseButtons: true
   }).then(async (result) => {
     if (result.isConfirmed) {

@@ -26,7 +26,7 @@
                     <h3 class="fs-4 text-dark mb-3 font-serif">Giỏ hàng trống</h3>
                     <p class="text-secondary mb-4">Không có sản phẩm nào để thanh toán. Vui lòng quay lại cửa hàng.</p>
                     <button @click="router.push('/shop')"
-                        class="btn luxury-btn-solid rounded-0 px-5 py-3 text-uppercase fw-bold tracking-wider">
+                        class="editorial-btn px-5 py-3">
                         Tiếp tục mua sắm
                     </button>
                 </div>
@@ -34,7 +34,7 @@
 
             <div v-else class="row g-5">
                 <div class="col-lg-7">
-                    <div class="bg-white p-4 p-md-5 shadow-sm border border-light-subtle mb-4">
+                    <div class="bg-white p-4 p-md-5 shadow-sm border border-light-subtle position-sticky" :style="{ top: stickyTop, transition: 'top 0.3s cubic-bezier(0.4, 0, 0.2, 1)', zIndex: 10 }">
                         <h4 class="font-serif fw-bold text-dark mb-4 pb-3 border-bottom d-flex align-items-center">
                             <i class="bi bi-geo-alt-fill text-gold me-2"></i> Thông Tin Giao Hàng
                         </h4>
@@ -247,7 +247,7 @@
                 </div>
 
                 <div class="col-lg-5">
-                    <div class="bg-white shadow-sm border border-light-subtle sticky-top" style="top: 100px;">
+                    <div class="bg-white shadow-sm border border-light-subtle sticky-top" :style="{ top: stickyTop, transition: 'top 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }">
                         <div class="p-4 bg-light border-bottom">
                             <h4
                                 class="font-serif fw-bold text-dark mb-0 d-flex align-items-center justify-content-between">
@@ -339,7 +339,7 @@
                                         v-else-if="selectedCoupon">Đã áp dụng: {{ selectedCoupon.code }}</small>
                                 </div>
                                 <button v-if="!isCouponBlocked" @click="openCouponModal" type="button"
-                                    class="btn luxury-btn-outline btn-sm py-2 px-3 font-oswald tracking-widest text-uppercase fw-bold">
+                                    class="editorial-btn-outline py-2 px-3 text-nowrap">
                                     {{ selectedCoupon ? 'Đổi Mã' : 'Chọn Mã' }}
                                 </button>
                             </div>
@@ -416,7 +416,7 @@
 
                         <div class="p-4 pt-0 bg-white">
                             <button @click="submitOrder" :disabled="isSubmitting || cartItems.length === 0"
-                                class="btn luxury-btn-solid w-100 py-3 font-oswald tracking-widest text-uppercase fw-bold shadow-sm fs-5 d-flex justify-content-center align-items-center">
+                                class="editorial-btn w-100 py-3 shadow-sm fs-5 d-flex justify-content-center align-items-center">
                                 <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>
                                 <i v-if="!isSubmitting" class="bi bi-bag-check-fill me-2"></i>
                                 {{ isSubmitting ? 'ĐANG XỬ LÝ...' : (form.payment_method === 'momo' ? 'THANH TOÁN QUA MOMO' : 'HOÀN TẤT ĐẶT HÀNG') }}
@@ -478,10 +478,10 @@
                     </div>
                     <div class="modal-footer border-top bg-white p-3">
                         <button type="button" @click="clearCoupon"
-                            class="btn btn-outline-secondary rounded-0 font-oswald tracking-widest text-uppercase fw-bold px-4"
+                            class="editorial-btn-outline px-4"
                             v-if="selectedCoupon">Bỏ Chọn</button>
                         <button type="button"
-                            class="btn luxury-btn-solid rounded-0 font-oswald tracking-widest text-uppercase fw-bold px-4 ms-auto"
+                            class="editorial-btn px-4 ms-auto"
                             data-bs-dismiss="modal">Đồng ý</button>
                     </div>
                 </div>
@@ -521,14 +521,37 @@ const notifyCartUpdate = (count = null, source = 'internal') => {
     }));
 };
 
+const fetchCartSnapshot = async () => {
+    try {
+        const res = await clientApiClient.get('/client/checkout/init', {
+            ensureCartSession: true,
+            ignoreAuthRedirect: true
+        });
+        if (res.data?.success) {
+            cartItems.value = res.data.cart_items || [];
+            availableCoupons.value = res.data.coupons || [];
+            tierDiscountInfo.value = res.data.tier_discount || null;
+            
+            if (
+                selectedCoupon.value &&
+                !availableCoupons.value.some(c => c.id === selectedCoupon.value.id)
+            ) {
+                selectedCoupon.value = null;
+            }
+        }
+    } catch (error) {
+        console.error('Lỗi khi tải snapshot giỏ hàng:', error);
+    }
+};
+
 // Lắng nghe sự kiện từ MiniCart để reload giỏ hàng trên trang checkout
-const handleCartSync = (event) => {
+const handleCartSync = async (event) => {
     // Nếu sự kiện xuất phát từ nội bộ (do người dùng sửa giỏ hàng tại checkout),
-    // ta bỏ qua việc fetchInitData() để không làm mất dữ liệu form.
-    if (event.detail && event.detail.source === 'internal') {
+    // ta bỏ qua việc tải lại dữ liệu để không làm mất dữ liệu form.
+    if (event?.detail?.source === 'internal') {
         return;
     }
-    fetchInitData();
+    await fetchCartSnapshot();
 };
 
 const selectedAddressId = ref(null);
@@ -810,10 +833,15 @@ const fetchInitData = async () => {
         if (error.response && error.response.status === 401) {
             soraAlert.fire({
                 icon: 'info',
-                title: 'Yêu cầu đăng nhập',
-                text: 'Vui lòng đăng nhập để tiếp tục thanh toán.',
+                title: '<span class="font-oswald tracking-wider fs-4 text-dark">YÊU CẦU ĐĂNG NHẬP</span>',
+                html: '<p class="text-muted font-sans" style="font-size: 0.95rem;">Vui lòng đăng nhập để tiếp tục thanh toán.</p>',
                 confirmButtonText: 'Đăng nhập ngay',
-                allowOutsideClick: false
+                allowOutsideClick: false,
+                buttonsStyling: false,
+                customClass: {
+                    popup: 'border-0 shadow-lg',
+                    confirmButton: 'editorial-btn px-4 py-2'
+                }
             }).then(() => {
                 router.push({ name: 'login' });
             });
@@ -882,12 +910,18 @@ const updateQuantity = async (item, delta) => {
 
 const removeItem = async (itemId) => {
     soraAlert.fire({
-        title: 'Xóa sản phẩm?',
-        text: "Bạn có chắc chắn muốn bỏ mặt hàng này khỏi giỏ không?",
+        title: '<span class="font-oswald tracking-wider fs-4 text-dark">XÓA SẢN PHẨM?</span>',
+        html: '<p class="text-muted font-sans" style="font-size: 0.95rem;">Bạn có chắc chắn muốn bỏ mặt hàng này khỏi giỏ không?</p>',
         icon: 'question',
         showCancelButton: true,
         confirmButtonText: 'Đồng ý xóa',
         cancelButtonText: 'Hủy bỏ',
+        buttonsStyling: false,
+        customClass: {
+            popup: 'border-0 shadow-lg',
+            confirmButton: 'editorial-btn px-4 py-2 ms-2',
+            cancelButton: 'editorial-btn-outline px-4 py-2'
+        },
         reverseButtons: true
     }).then(async (result) => {
         if (result.isConfirmed) {
@@ -1030,6 +1064,25 @@ const submitOrder = async () => {
     }
 };
 
+const stickyTop = ref('100px');
+let lastScrollY = 0;
+let isHeaderHidden = false;
+
+const handleScroll = () => {
+    const currentScrollY = window.scrollY;
+    if (currentScrollY > 200) {
+        if (currentScrollY > lastScrollY && !isHeaderHidden) {
+            isHeaderHidden = true;
+        } else if (currentScrollY < lastScrollY && isHeaderHidden) {
+            isHeaderHidden = false;
+        }
+    } else {
+        isHeaderHidden = false;
+    }
+    stickyTop.value = isHeaderHidden ? '20px' : '100px';
+    lastScrollY = currentScrollY;
+};
+
 onMounted(async () => {
     const token = getSafeStorage('auth_token');
     if (!token) {
@@ -1058,10 +1111,13 @@ onMounted(async () => {
     isInitializing.value = false;
     window.scrollTo({ top: 0, behavior: 'smooth' });
     window.addEventListener('update-cart-count', handleCartSync);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
 });
 
 onUnmounted(() => {
     window.removeEventListener('update-cart-count', handleCartSync);
+    window.removeEventListener('scroll', handleScroll);
     if (couponModalInstance) couponModalInstance.dispose();
     if (shippingTimeout) clearTimeout(shippingTimeout);
 });

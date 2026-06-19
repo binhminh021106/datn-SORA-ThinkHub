@@ -46,10 +46,10 @@
                 <div
                   class="circle-img-wrapper rounded-circle bg-white shadow-sm d-flex align-items-center justify-content-center mb-2 transition-transform duration-400 group-hover-scale position-relative"
                   style="width: 85px; height: 85px; padding: 2px;">
-                  <SoraSkeleton v-show="!categoryImagesLoaded[cat.id]" variant="image" width="100%" height="100%" circle class="position-absolute top-0 start-0" />
-                  <img :src="getImageUrl(cat.thumbnail)" loading="lazy" :alt="cat.name" 
-                    @load="categoryImagesLoaded[cat.id] = true"
-                    @error="handleImageError"
+                  <SoraSkeleton v-show="!categoryImagesLoaded[cat.id]" variant="image" width="100%" height="100%" circle
+                    class="position-absolute top-0 start-0" />
+                  <img :src="getImageUrl(cat.thumbnail)" loading="lazy" :alt="cat.name"
+                    @load="categoryImagesLoaded[cat.id] = true" @error="handleImageError"
                     class="w-100 h-100 object-fit-contain rounded-circle transition-transform duration-500 group-hover-scale-img"
                     :style="{ opacity: categoryImagesLoaded[cat.id] ? 1 : 0, transition: 'opacity 0.4s ease' }">
                 </div>
@@ -71,7 +71,7 @@
         <!-- SIDEBAR BỘ LỌC (LEFT) -->
         <div class="col-lg-2 col-md-3 d-none d-md-block sidebar-filter pe-3 pt-2"
           style="flex-basis: 23%; max-width: 23%;">
-          <div class="filter-panel">
+          <div class="filter-panel position-sticky custom-scrollbar" :style="{ top: filterTop, transition: 'top 0.3s cubic-bezier(0.4, 0, 0.2, 1)', zIndex: 10, maxHeight: 'calc(100vh - ' + filterTop + ' - 20px)', overflowY: 'auto' }">
 
             <div class="filter-header mb-4 border-bottom pb-3">
               <h5 class="text-uppercase fw-bold mb-0 d-flex align-items-center"
@@ -210,25 +210,28 @@
 
           <div
             class="shop-top-bar d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom sora-border-light">
-            <div class="result-count text-muted mb-3 mb-md-0" style="font-size: 1.2rem;">
-              <span v-if="!isLoadingProducts">Hiển thị {{ visibleResultStart }}–{{ visibleResultEnd }} của {{
-                pagination.total
-                }} kết
-                quả</span>
+            <div class="result-count text-muted mb-3 mb-md-0 font-oswald text-uppercase tracking-wide" style="font-size: 0.9rem;">
+              <span v-if="!isLoadingProducts">Hiển thị {{ visibleResultStart }}–{{ visibleResultEnd }} của {{ pagination.total }} kết quả</span>
               <span v-else>Đang tải dữ liệu...</span>
             </div>
 
             <div class="d-flex align-items-center gap-4">
-              <div class="sort-dropdown d-flex align-items-center gap-2">
-                <span class="text-dark fw-medium" style="font-size: 1.25rem;">Sắp xếp:</span>
-                <select v-model="filters.sort" @change="applyFilters"
-                  class="form-select border-0 shadow-none cursor-pointer text-muted px-1"
-                  style="width: auto; background-color: transparent; font-size: 0.95rem;">
-                  <option value="recommended">Mặc định</option>
-                  <option value="new">Mới nhất</option>
-                  <option value="price_asc">Giá: Thấp đến Cao</option>
-                  <option value="price_desc">Giá: Cao đến Thấp</option>
-                </select>
+              <div class="dropdown sort-dropdown position-relative">
+                <button class="btn btn-link text-decoration-none text-dark fw-bold d-flex align-items-center p-0 font-oswald text-uppercase tracking-wide" type="button" @click.stop="isSortDropdownOpen = !isSortDropdownOpen" style="font-size: 0.95rem;">
+                  Sắp xếp: 
+                  <span class="ms-2 text-muted fw-normal font-inter text-capitalize" style="letter-spacing: 0;">{{ sortOptions[filters.sort] }}</span>
+                  <i class="bi fs-6 text-muted ms-2" :class="isSortDropdownOpen ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                </button>
+                <div v-show="isSortDropdownOpen" class="dropdown-menu-wrapper position-absolute shadow border-light-subtle rounded-1 bg-white" style="right: 0; top: 100%; min-width: 180px; z-index: 1000; margin-top: 8px;">
+                  <!-- Cầu nối tàng hình -->
+                  <div class="position-absolute w-100 bg-transparent" style="height: 12px; top: -12px; left: 0;"></div>
+                  <ul class="dropdown-menu position-static d-block w-100 shadow-none border-0 m-0" style="padding: 0.5rem 0;">
+                    <li><a class="dropdown-item custom-sort-item py-2 font-inter" :class="{ 'active-sort': filters.sort === 'recommended' }" href="#" @click.prevent="setSort('recommended')">Mặc định</a></li>
+                    <li><a class="dropdown-item custom-sort-item py-2 font-inter" :class="{ 'active-sort': filters.sort === 'new' }" href="#" @click.prevent="setSort('new')">Mới nhất</a></li>
+                    <li><a class="dropdown-item custom-sort-item py-2 font-inter" :class="{ 'active-sort': filters.sort === 'price_asc' }" href="#" @click.prevent="setSort('price_asc')">Giá tăng dần</a></li>
+                    <li><a class="dropdown-item custom-sort-item py-2 font-inter" :class="{ 'active-sort': filters.sort === 'price_desc' }" href="#" @click.prevent="setSort('price_desc')">Giá giảm dần</a></li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
@@ -278,7 +281,7 @@
                   :class="{ 'active': page !== '...' && Number(page) === Number(pagination.current_page), 'disabled': page === '...' }">
                   <span v-if="page === '...'" class="page-link border-0 text-muted bg-transparent px-2">...</span>
                   <button v-else class="page-link shadow-sm font-serif fw-bold" @click="changePage(page)">{{ page
-                  }}</button>
+                    }}</button>
                 </li>
 
                 <li class="page-item"
@@ -396,7 +399,7 @@
 </template>
 
 <script setup>
-import { ref, shallowRef, onMounted, reactive, computed, watch } from 'vue';
+import { ref, shallowRef, onMounted, onUnmounted, reactive, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuery, keepPreviousData } from '@tanstack/vue-query';
 import ProductCard from '@/components/ui/ProductCard.vue';
@@ -424,6 +427,34 @@ const { fetchFavorites, isFavourited, toggleFavourite } = useWishlist();
 
 const isPageLoading = ref(true);
 
+const filterTop = ref('100px');
+let lastScrollY = 0;
+let isHeaderHidden = false;
+
+const handleScroll = () => {
+  const currentScrollY = window.scrollY;
+  if (currentScrollY > 200) {
+    if (currentScrollY > lastScrollY && !isHeaderHidden) {
+      isHeaderHidden = true;
+    } else if (currentScrollY < lastScrollY && isHeaderHidden) {
+      isHeaderHidden = false;
+    }
+  } else {
+    isHeaderHidden = false;
+  }
+  filterTop.value = isHeaderHidden ? '20px' : '100px';
+  lastScrollY = currentScrollY;
+};
+
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll, { passive: true });
+  handleScroll();
+});
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll);
+});
+
 const compareList = ref([]);
 const categoryImagesLoaded = ref({});
 const categories = computed(() => categoriesData.value || []);
@@ -436,30 +467,6 @@ const filterCollapses = ref({
   colors: true
 });
 
-const dynamicAttributes = computed(() => {
-  if (!attrsData.value) return [];
-  return attrsData.value.filter(attr => !isColorAttribute(attr.name)).map(attr => ({
-    id: attr.id,
-    name: attr.name,
-    values: attr.values
-  }));
-});
-
-watch(dynamicAttributes, (attrs) => {
-  Object.keys(expandedAttributes).forEach((key) => {
-    if (!attrs.some((attr) => attr.name === key)) delete expandedAttributes[key];
-  });
-  
-  const newCollapses = { ...filterCollapses.value };
-  let hasChanges = false;
-  attrs.forEach(attr => {
-    if (newCollapses[attr.name] === undefined) {
-      newCollapses[attr.name] = true;
-      hasChanges = true;
-    }
-  });
-  if (hasChanges) filterCollapses.value = newCollapses;
-}, { immediate: true });
 const currentPage = ref(1);
 
 const selectedAttributes = ref([]);
@@ -610,6 +617,31 @@ const { data: attrsData, isLoading: isLoadingAttributes } = useQuery({
   staleTime: 10 * 60 * 1000,
 });
 
+const dynamicAttributes = computed(() => {
+  if (!attrsData.value) return [];
+  return attrsData.value.filter(attr => !isColorAttribute(attr.name)).map(attr => ({
+    id: attr.id,
+    name: attr.name,
+    values: attr.values
+  }));
+});
+
+watch(dynamicAttributes, (attrs) => {
+  Object.keys(expandedAttributes).forEach((key) => {
+    if (!attrs.some((attr) => attr.name === key)) delete expandedAttributes[key];
+  });
+
+  const newCollapses = { ...filterCollapses.value };
+  let hasChanges = false;
+  attrs.forEach(attr => {
+    if (newCollapses[attr.name] === undefined) {
+      newCollapses[attr.name] = true;
+      hasChanges = true;
+    }
+  });
+  if (hasChanges) filterCollapses.value = newCollapses;
+}, { immediate: true });
+
 const { data: productsData, isLoading: isLoadingProducts, isFetching: isProductRefreshing } = useQuery({
   queryKey: computed(() => ['shopProducts', shopSlug.value, currentPage.value, filters.sort, filters.categories, selectedColors.value, selectedAttributes.value]),
   queryFn: async ({ signal }) => {
@@ -646,6 +678,33 @@ const filterByCategory = (categorySlug) => {
   filters.categories = filters.categories === categorySlug ? '' : categorySlug;
   currentPage.value = 1;
 };
+
+const sortOptions = {
+  'recommended': 'Mặc định',
+  'new': 'Mới nhất',
+  'price_asc': 'Giá tăng dần',
+  'price_desc': 'Giá giảm dần'
+};
+
+const isSortDropdownOpen = ref(false);
+
+const setSort = (val) => {
+  filters.sort = val;
+  isSortDropdownOpen.value = false;
+  applyFilters();
+};
+
+const closeSortDropdown = () => {
+  isSortDropdownOpen.value = false;
+};
+
+onMounted(() => {
+  window.addEventListener('click', closeSortDropdown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('click', closeSortDropdown);
+});
 
 const applyFilters = () => {
   currentPage.value = 1;
@@ -1186,6 +1245,27 @@ onMounted(() => {
 }
 
 /* -------------------------------------
+   CSS CUSTOM CHO DROPDOWN SẮP XẾP
+   ------------------------------------- */
+.custom-sort-item {
+  color: #444;
+  transition: all 0.2s ease;
+}
+
+.custom-sort-item:hover,
+.custom-sort-item:focus {
+  background-color: #fcf4f5 !important;
+  color: var(--sora-primary) !important;
+}
+
+.custom-sort-item.active-sort,
+.custom-sort-item:active {
+  background-color: #fdf5f6 !important;
+  color: var(--sora-primary) !important;
+  font-weight: 600;
+}
+
+/* -------------------------------------
    CSS MỚI DÀNH CHO BỘ LỌC CHECKBOX (THUỘC TÍNH)
    ------------------------------------- */
 .attr-checkbox-item {
@@ -1263,9 +1343,8 @@ onMounted(() => {
 }
 
 .category-elegant-item .cat-name {
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: #555;
-  font-family: 'Playfair Display', serif;
   transition: all 0.3s ease;
 }
 
@@ -1388,7 +1467,8 @@ onMounted(() => {
 .circle-img-wrapper {
   position: relative;
   overflow: hidden;
-  background-color: #f5efe8; /* Màu nền nhẹ khi chưa có ảnh */
+  background-color: #f5efe8;
+  /* Màu nền nhẹ khi chưa có ảnh */
 }
 
 

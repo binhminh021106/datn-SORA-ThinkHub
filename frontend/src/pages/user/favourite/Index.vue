@@ -1,16 +1,5 @@
 <template>
-  <div class="favorite-page bg-light-custom font-sans pb-5 min-vh-100 position-relative">
-    <div class="container py-2">
-      <!-- LAYOUT 2 CỘT: SIDEBAR + NỘI DUNG -->
-      <div class="row g-4 g-lg-5 align-items-start">
-
-        <!-- SIDEBAR TRÁI -->
-        <div class="col-lg-3">
-          <ProfileSidebar />
-        </div>
-
-        <!-- NỘI DUNG CHÍNH BÊN PHẢI -->
-        <div class="col-lg-9">
+  <div>
 
       <!-- CẢNH BÁO NẾU CHƯA ĐĂNG NHẬP -->
       <div v-if="!isLoggedIn" class="text-center py-5 bg-white shadow-sm p-5 border border-light mb-5">
@@ -62,9 +51,6 @@
         </div>
       </div>
 
-        </div><!-- end col-lg-9 -->
-      </div><!-- end row -->
-    </div><!-- end container -->
 
     <!-- MODALS (outside layout) -->
     <!-- TÍCH HỢP COMPONENT COMPARE MODAL -->
@@ -136,7 +122,6 @@ import Toast from '@/utils/toastConfig';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
 import ProductCard from '@/components/ui/ProductCard.vue';
 import CompareModal from '@/components/ui/CompareModal.vue';
-import ProfileSidebar from '@/components/ui/ProfileSidebar.vue';
 import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
 import { getStorageUrl } from '@/utils/env';

@@ -35,11 +35,17 @@ class ClientOrderController extends Controller
             ], 401);
         }
 
+        $validated = $request->validate([
+            'per_page' => 'nullable|integer|min:1|max:50',
+        ]);
+
+        $perPage = $validated['per_page'] ?? 5;
+
         // Đã thêm 'reviews' vào để load kèm trạng thái đánh giá
         $orders = Order::with(['items', 'reviews'])
             ->where('user_id', $user->id)
             ->orderBy('created_at', 'desc')
-            ->paginate(10);
+            ->paginate($perPage);
 
         return response()->json($orders);
     }
