@@ -439,7 +439,7 @@ onMounted(() => {
 
 
 
-.tracking-wide { letter-spacing: 0.1em; }
+
 
 .transition-all { transition: all 0.3s ease; }
 .hover-shadow:hover { box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.05); border-color: #e7ce7d !important; }
