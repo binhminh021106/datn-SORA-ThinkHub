@@ -1,5 +1,5 @@
 <template>
-  <div class="admin-contact-page p-4 min-vh-100">
+  <div class="admin-contact-page min-vh-100">
     <!-- Tiêu đề & Thống kê & Bộ lọc -->
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
       <div>

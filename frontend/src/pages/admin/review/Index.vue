@@ -1,5 +1,5 @@
 <template>
-  <div class="review-index-wrapper pb-5 mb-5">
+  <div class="review-index-wrapper ">
     
     <!-- KHÓA CỨNG: Shimmer Logo chỉ hiện đúng 1 lần duy nhất khi vừa F5 hoặc vừa vào trang -->
     <div v-if="isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">

@@ -1,5 +1,5 @@
 <template>
-    <div class="news-create-wrapper pb-5 mb-5">
+    <div class="news-create-wrapper ">
         <div class="container-fluid py-4">
             <form @submit.prevent="handleSave" autocomplete="off">
                 <!-- Header -->

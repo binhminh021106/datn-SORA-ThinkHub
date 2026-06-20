@@ -1,5 +1,5 @@
 <template>
-  <div class="combo-create-wrapper pb-5 mb-5">
+  <div class="combo-create-wrapper ">
     <div class="container-fluid py-4" v-if="!isPageLoading">
       
       <div class="row mb-4 align-items-center">

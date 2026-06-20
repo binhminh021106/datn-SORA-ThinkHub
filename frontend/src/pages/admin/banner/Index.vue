@@ -1,5 +1,5 @@
 <template>
-  <div class="banner-index-wrapper pb-5 mb-5">
+  <div class="banner-index-wrapper">
     
     <!-- 1. SHIMMER CHỈ CHẠY 1 LẦN ĐẦU TIÊN KHI CHƯA CÓ CACHE (isLoading) -->
     <div v-if="isLoading" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">

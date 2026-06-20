@@ -1,5 +1,5 @@
 <template>
-  <div class="order-edit-wrapper pb-5 mb-5">
+  <div class="order-edit-wrapper ">
     
     <!-- HIỆU ỨNG SKELETON KHI ĐANG LOAD TRANG -->
     <div v-if="isPageLoading" class="container-fluid py-4">

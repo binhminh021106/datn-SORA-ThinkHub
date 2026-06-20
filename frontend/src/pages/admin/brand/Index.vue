@@ -1,5 +1,5 @@
 <template>
-  <div class="brand-index-wrapper pb-5 mb-5">
+  <div class="brand-index-wrapper">
     
     <!-- MÀN HÌNH CHỜ ĐỘC LẬP (SHIMMER) CHỈ CHẠY 1 LẦN ĐẦU TIÊN VÀO TRANG -->
     <div v-if="isPageLoading" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
