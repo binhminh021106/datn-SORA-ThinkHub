@@ -405,7 +405,7 @@ watch(() => route.hash, (newHash) => {
 .text-accent { color: #e7ce7d !important; }
 
 /* Font Serif cho sự sang trọng */
-.font-serif { font-family: "Playfair Display", "Merriweather", serif; }
+.font-serif { font-family: "Playfair Display", serif; }
 .max-w-2xl { max-width: 45rem; }
 .tracking-wide { letter-spacing: 0.1em; }
 

@@ -348,7 +348,7 @@ const tierBannerClass = computed(() => {
 .text-accent { color: #e7ce7d !important; }
 .text-danger-custom { color: #cc1e2e !important; }
 
-.font-serif { font-family: "Playfair Display", "Merriweather", serif; }
+.font-serif { font-family: "Playfair Display", serif; }
 
 
 

@@ -361,7 +361,7 @@ onUnmounted(() => {
 .text-danger-custom { color: #cc1e2e !important; }
 
 /* Font chữ */
-.font-serif { font-family: "Playfair Display", "Merriweather", serif; }
+.font-serif { font-family: "Playfair Display", serif; }
 .font-oswald { font-family: 'Oswald', sans-serif; }
 .divider { width: 4rem; height: 2px; }
 .object-fit-cover { object-fit: cover !important; }

@@ -362,7 +362,7 @@ onMounted(() => {
 
 <style scoped>
 .profile-sidebar {
-  font-family: 'Lato', 'Segoe UI', sans-serif;
+  font-family: 'Manrope', sans-serif;
 }
 
 .sidebar-user-card {
@@ -454,5 +454,5 @@ onMounted(() => {
   color: #cc1e2e !important;
 }
 
-.font-serif { font-family: "Playfair Display", "Merriweather", serif; }
+.font-serif { font-family: "Playfair Display", serif; }
 </style>

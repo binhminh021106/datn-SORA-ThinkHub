@@ -323,7 +323,7 @@ onMounted(() => {
 
 /* Font Serif cho tiêu đề */
 .font-serif {
-  font-family: "Playfair Display", "Merriweather", serif;
+  font-family: "Playfair Display", serif;
 }
 
 /* Các tiện ích tùy chỉnh */

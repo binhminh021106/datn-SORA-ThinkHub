@@ -191,7 +191,7 @@ const subscribeNewsletter = () => {
 .tracking-wide { letter-spacing: 1px; }
 
 .site-footer {
-  font-family: 'Arial', sans-serif;
+  font-family: 'Manrope', sans-serif;
   background-color: #9f273b;
 }
 
