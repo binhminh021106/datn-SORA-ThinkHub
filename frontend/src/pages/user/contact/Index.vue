@@ -203,6 +203,8 @@ const submitContactForm = async () => {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap');
+
 /* Màu sắc thương hiệu SORA */
 .bg-light-custom { background-color: #faf9f8 !important; }
 .bg-main { background-color: #9f273b !important; }
@@ -247,7 +249,7 @@ const submitContactForm = async () => {
 
 /* Font Serif cho tiêu đề */
 .font-serif {
-  font-family: "Playfair Display", serif;
+  font-family: 'Josefin Sans', sans-serif;
 }
 .max-w-2xl { max-width: 42rem; }
 

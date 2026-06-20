@@ -173,9 +173,9 @@ const sendMessage = async () => {
 
 <style scoped>
 /* Toàn bộ CSS giữ nguyên form Luxury cũ không thay đổi */
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Manrope:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Manrope:wght@300;400;500;600;700&display=swap');
 .font-luxury { font-family: 'Manrope', sans-serif; }
-.font-serif { font-family: 'Playfair Display', serif; }
+.font-serif { font-family: 'Josefin Sans', sans-serif; }
 .tracking-widest { letter-spacing: 0.15em; }
 .sora-chatbot-wrapper { position: fixed; bottom: 25px; right: 25px; z-index: 999999; display: flex; flex-direction: column; align-items: flex-end; pointer-events: none; }
 .btn-chatbot-trigger, .chat-window { pointer-events: auto; }

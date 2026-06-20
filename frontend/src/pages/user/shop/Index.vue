@@ -973,7 +973,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Oswald:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Josefin+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Oswald:wght@400;500;600;700&display=swap');
 
 .shop-page {
   --sora-primary: #9f273b;
@@ -986,7 +986,7 @@ onMounted(() => {
 }
 
 .playfair-font {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Josefin Sans', sans-serif;
 }
 
 .font-oswald {
@@ -994,7 +994,7 @@ onMounted(() => {
 }
 
 .font-serif {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Josefin Sans', sans-serif;
 }
 
 .cursor-pointer {
@@ -1552,7 +1552,7 @@ onMounted(() => {
 }
 
 .sora-card-category {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Josefin Sans', sans-serif;
   font-style: italic;
   color: #666;
   font-size: 0.95rem;

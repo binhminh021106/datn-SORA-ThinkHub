@@ -701,7 +701,7 @@ onMounted(fetchOrders);
 }
 
 .font-serif {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Josefin Sans', sans-serif;
 }
 
 .tracking-wider {

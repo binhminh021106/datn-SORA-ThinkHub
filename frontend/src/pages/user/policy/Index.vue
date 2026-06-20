@@ -397,6 +397,8 @@ watch(() => route.hash, (newHash) => {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap');
+
 /* Cấu hình màu chuẩn của SORA */
 .bg-light-custom { background-color: #faf9f8 !important; }
 .bg-main { background-color: #9f273b !important; }
@@ -405,7 +407,7 @@ watch(() => route.hash, (newHash) => {
 .text-accent { color: #e7ce7d !important; }
 
 /* Font Serif cho sự sang trọng */
-.font-serif { font-family: "Playfair Display", serif; }
+.font-serif { font-family: 'Josefin Sans', sans-serif; }
 .max-w-2xl { max-width: 45rem; }
 .tracking-wide { letter-spacing: 0.1em; }
 

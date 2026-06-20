@@ -77,7 +77,9 @@ apiClient.interceptors.response.use(
         return Promise.reject(error);
       }
 
-      if (isAdminRequest) {
+      const isUserOnAdminPage = currentPath.startsWith('/admin');
+
+      if (isUserOnAdminPage) {
         if (!currentPath.includes('/admin/login')) {
           window.location.href = '/admin/login';
         }
