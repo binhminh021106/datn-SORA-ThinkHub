@@ -1,5 +1,19 @@
 <template>
-  <div>
+  <div class="order-history-wrapper pb-5"
+    style="min-height: 100vh; background-color: #f8f9fa; font-family: 'Manrope', sans-serif;">
+    
+
+    <main class="container mt-2">
+      <!-- LAYOUT 2 CỘT: SIDEBAR + NỘI DUNG -->
+      <div class="row g-4 g-lg-5 align-items-start">
+
+        <!-- SIDEBAR TRÁI -->
+        <div class="col-lg-3">
+          <ProfileSidebar />
+        </div>
+
+        <!-- NỘI DUNG CHÍNH BÊN PHẢI -->
+        <div class="col-lg-9">
 
       <SoraListSkeleton v-if="isLoading" :rows="4" image-size="72px" card />
 
@@ -199,6 +213,10 @@
 
     <ViewReviewModal :is-open="isViewReviewModalOpen" :order="selectedOrderForViewReview" v-on:close="closeViewReviewModal" />
   </div>
+
+        </div> <!-- Đóng .row -->
+      </main> <!-- Đóng main.container -->
+    </div>
 </template>
 
 <script setup>

@@ -152,9 +152,9 @@ onMounted(() => {
   --shadow-sora: 0 10px 40px rgba(0, 0, 0, 0.08);
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Montserrat:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Manrope:wght@300;400;500;600;700&display=swap');
 
-.font-luxury { font-family: 'Montserrat', sans-serif; }
+.font-luxury { font-family: 'Manrope', sans-serif; }
 .font-serif { font-family: 'Playfair Display', serif; }
 .bg-sora-cream { background-color: #FCFBF8; }
 .bg-sora-dark { background-color: #1A1A1A; }
@@ -241,7 +241,7 @@ onMounted(() => {
 
 /* Typography cho Giá tiền */
 .price-text {
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Manrope', sans-serif;
   font-size: 1.15rem;
   letter-spacing: 0.5px;
 }

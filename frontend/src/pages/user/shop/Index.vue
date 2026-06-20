@@ -467,6 +467,7 @@ const filterCollapses = ref({
   colors: true
 });
 
+
 const currentPage = ref(1);
 
 const selectedAttributes = ref([]);
@@ -630,7 +631,7 @@ watch(dynamicAttributes, (attrs) => {
   Object.keys(expandedAttributes).forEach((key) => {
     if (!attrs.some((attr) => attr.name === key)) delete expandedAttributes[key];
   });
-
+  
   const newCollapses = { ...filterCollapses.value };
   let hasChanges = false;
   attrs.forEach(attr => {
@@ -972,7 +973,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Oswald:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&family=Oswald:wght@400;500;600;700&display=swap');
 
 .shop-page {
   --sora-primary: #9f273b;
@@ -980,7 +981,7 @@ onMounted(() => {
   --sora-accent: #cc1e2e;
   --sora-text: #2c2c2c;
   --sora-border: #eaeaea;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Manrope', sans-serif;
   color: var(--sora-text);
 }
 

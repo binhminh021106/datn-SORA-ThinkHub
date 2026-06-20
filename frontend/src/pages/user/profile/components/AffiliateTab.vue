@@ -432,7 +432,7 @@ onMounted(() => {
 .bg-primary-luxury { background-color: #9f273b !important; }
 .text-primary-luxury { color: #9f273b !important; }
 .text-gold { color: #e7ce7d !important; }
-.font-luxury { font-family: 'Montserrat', sans-serif; }
+.font-luxury { font-family: 'Manrope', sans-serif; }
 .font-serif { font-family: 'Playfair Display', serif; }
 .font-oswald { font-family: 'Oswald', sans-serif; }
 .tracking-widest { letter-spacing: 0.15em; }

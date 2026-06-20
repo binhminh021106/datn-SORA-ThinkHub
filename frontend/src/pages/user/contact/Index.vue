@@ -247,7 +247,7 @@ const submitContactForm = async () => {
 
 /* Font Serif cho tiêu đề */
 .font-serif {
-  font-family: "Playfair Display", "Merriweather", serif;
+  font-family: "Playfair Display", serif;
 }
 .max-w-2xl { max-width: 42rem; }
 

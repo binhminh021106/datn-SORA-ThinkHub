@@ -75,7 +75,7 @@
                   <div class="product-info">
                     <h4 class="font-serif text-truncate mb-1">{{ product.name }}</h4>
                     <p class="text-truncate mb-1"
-                      style="font-size: 11px; color: #8b7a6a; font-family: 'Inter', sans-serif;">{{ product.code
+                      style="font-size: 11px; color: #8b7a6a; font-family: 'Manrope', sans-serif;">{{ product.code
                       }}</p>
                     <strong class="font-sans text-sora-primary" style="font-size: 15px;">{{ product.price
                     }}</strong>
@@ -333,7 +333,7 @@ onUnmounted(() => {
   background-color: var(--sora-primary);
   color: #fff;
   border-radius: 50px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Manrope', sans-serif;
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -346,7 +346,7 @@ onUnmounted(() => {
   background-color: rgba(var(--sora-secondary-rgb), 0.2);
   color: #2a1810;
   border-radius: 50px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Manrope', sans-serif;
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -372,7 +372,7 @@ onUnmounted(() => {
 
 .countdown-label {
   color: #8b7a6a;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Manrope', sans-serif;
   font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0.1em;
@@ -410,7 +410,7 @@ onUnmounted(() => {
 .time-label {
   margin-top: 0.5rem;
   color: #8b7a6a;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Manrope', sans-serif;
   font-size: 0.6rem;
   font-weight: 600;
   letter-spacing: 0.1em;
