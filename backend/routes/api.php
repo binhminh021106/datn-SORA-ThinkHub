@@ -363,8 +363,14 @@ Route::prefix('admin')->group(function () {
 
         // Quản lý Sản phẩm (Mã: admin_products)
         Route::middleware(['check.module:admin_products'])->group(function () {
+            // Import / Export Excel
+            Route::get('products/import/template', [\App\Http\Controllers\Api\Admin\ProductImportController::class, 'downloadTemplate']);
+            Route::post('products/import', [\App\Http\Controllers\Api\Admin\ProductImportController::class, 'import']);
+
             Route::apiResource('products', AdminProductController::class);
             Route::post('products/{id}/restore', [AdminProductController::class, 'restore']);
+            Route::delete('products/{id}/force', [AdminProductController::class, 'forceDelete']);
+            Route::post('products/bulk-force-delete', [AdminProductController::class, 'bulkForceDelete']);
 
             Route::apiResource('attributes', AdminAttributeController::class)->except(['show']);
             Route::post('attribute-values', [AdminAttributeValueController::class, 'store']);

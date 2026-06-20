@@ -1,5 +1,5 @@
 <template>
-  <div class="attendance-dashboard-wrapper pb-5 mb-5">
+  <div class="attendance-dashboard-wrapper">
 
     <div v-if="isFirstVisit && isLoading"
       class="d-flex flex-column justify-content-center align-items-center w-100 shimmer-wrapper">

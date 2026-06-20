@@ -1,5 +1,5 @@
 <template>
-  <div class="product-index-wrapper pb-5 mb-5">
+  <div class="product-index-wrapper ">
 
     <div v-if="isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100"
       style="min-height: 70vh;">
@@ -14,9 +14,21 @@
           <h3 class="fw-bold text-dark mb-0">Kho Trang Sức</h3>
         </div>
         <div class="col-md-6 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end align-items-center gap-3">
-<button class="btn btn-light border shadow-sm fw-bold text-dark px-4 py-2" @click="fetchData(true)">
+          <div class="dropdown">
+            <button class="btn btn-light border shadow-sm fw-bold text-dark px-4 py-2 dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-file-earmark-excel me-1 text-success"></i> Excel
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow">
+              <li><a class="dropdown-item fw-semibold" href="#" @click.prevent="openImportModal"><i class="bi bi-cloud-arrow-up me-2 text-primary"></i>Nhập sản phẩm (Import)</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item text-muted" href="#" @click.prevent="downloadTemplate"><i class="bi bi-file-earmark-arrow-down me-2"></i>Tải file Excel mẫu</a></li>
+            </ul>
+          </div>
+          
+          <button class="btn btn-light border shadow-sm fw-bold text-dark px-4 py-2" @click="fetchData(true)">
             <i class="bi bi-arrow-clockwise me-1"></i> Làm mới
           </button>
+          
           <router-link :to="{ name: 'admin-products-create' }"
             class="btn btn-brand px-4 py-2 fw-bold shadow-sm text-white rounded-pill">
             <i class="bi bi-plus-circle me-1"></i> Thêm Sản phẩm
@@ -103,6 +115,12 @@
             <i class="bi bi-list-ul me-2"></i>Danh sách Sản phẩm
             <div v-if="isSilentLoading || isTableLoading" class="spinner-border spinner-border-sm text-brand ms-2"
               role="status"></div>
+            
+            <button v-if="activeTab === 'deleted' && selectedProductIds.length > 0" 
+                    class="btn btn-sm btn-danger ms-3 shadow-sm rounded-pill px-3"
+                    @click="confirmBulkForceDelete">
+              <i class="bi bi-trash3-fill me-1"></i> Xóa vĩnh viễn đã chọn ({{ selectedProductIds.length }})
+            </button>
           </h6>
           <div class="search-box position-relative" style="width: 300px; max-width: 100%;">
             <input type="text" class="form-control rounded-pill pe-5 shadow-sm bg-light border-0" v-model="searchQuery"
@@ -117,6 +135,9 @@
               style="table-layout: fixed; width: 100%; min-width: 1000px;">
               <thead class="bg-light">
                 <tr>
+                  <th v-if="activeTab === 'deleted'" class="py-3 px-3 text-center border-0" style="width: 50px;">
+                    <input class="form-check-input cursor-pointer shadow-sm border-secondary" type="checkbox" :checked="isAllSelected" @change="toggleSelectAll">
+                  </th>
                   <th class="py-3 px-4 text-secondary border-0" style="width: 28%;">Sản phẩm (Bản gốc)</th>
                   <th class="py-3 px-4 text-secondary border-0" style="width: 17%;">Phân loại</th>
                   <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 15%;">Số Biến thể</th>
@@ -126,12 +147,15 @@
               </thead>
               <tbody :class="{ 'pe-none': isSilentLoading }">
                 <tr v-if="paginatedProducts.length === 0 && !isSilentLoading && !isTableLoading">
-                  <td colspan="5" class="text-center py-5 text-muted">
+                  <td :colspan="activeTab === 'deleted' ? 6 : 5" class="text-center py-5 text-muted">
                     <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>Không có dữ liệu.
                   </td>
                 </tr>
                 <tr v-else v-for="product in paginatedProducts" :key="product.id"
                   :class="{ 'bg-light opacity-75': product.deleted_at }">
+                  <td v-if="activeTab === 'deleted'" class="px-3 text-center">
+                    <input class="form-check-input cursor-pointer border-secondary shadow-sm" type="checkbox" :value="product.id" v-model="selectedProductIds">
+                  </td>
                   <td class="px-4 py-3">
                     <div class="d-flex align-items-center">
                       <div
@@ -237,8 +261,10 @@
                         @click="confirmDelete(product.id, product.name)"><i class="bi bi-trash"></i></button>
                     </template>
                     <template v-else>
-                      <button class="btn btn-sm btn-light text-success shadow-sm border"
-                        @click="restoreProduct(product.id)"><i class="bi bi-arrow-counterclockwise"></i></button>
+                      <button class="btn btn-sm btn-light text-success shadow-sm border me-2"
+                        @click="restoreProduct(product.id)" title="Khôi phục"><i class="bi bi-arrow-counterclockwise"></i></button>
+                      <button class="btn btn-sm btn-light text-danger shadow-sm border"
+                        @click="forceDeleteProduct(product.id, product.name)" title="Xóa vĩnh viễn"><i class="bi bi-trash3-fill"></i></button>
                     </template>
                   </td>
                 </tr>
@@ -256,9 +282,9 @@
           <ul class="pagination pagination-sm mb-0 shadow-sm">
             <li class="page-item" :class="{ disabled: currentPage === 1 }"><button class="page-link text-brand"
                 @click="currentPage--"><i class="bi bi-chevron-left"></i></button></li>
-            <li class="page-item" v-for="page in totalPages" :key="page" :class="{ active: currentPage === page }">
+            <li class="page-item" v-for="(page, index) in visiblePages" :key="index" :class="{ active: currentPage === page, disabled: page === '...' }">
               <button class="page-link" :class="currentPage === page ? 'bg-brand border-brand text-white' : 'text-dark'"
-                @click="currentPage = page">{{ page }}</button></li>
+                @click="page !== '...' && (currentPage = page)" :disabled="page === '...'">{{ page }}</button></li>
             <li class="page-item" :class="{ disabled: currentPage === totalPages }"><button class="page-link text-brand"
                 @click="currentPage++"><i class="bi bi-chevron-right"></i></button></li>
           </ul>
@@ -365,6 +391,12 @@
       </div>
     </div>
 
+    <!-- Import Modal -->
+    <ImportProductModal 
+      @download-template="downloadTemplate" 
+      @import-success="fetchData(true)" 
+    />
+
   </div>
 </template>
 
@@ -378,8 +410,18 @@ import adminApiClient from '@/utils/adminApiClient';
 
 import SoraImage from '@/components/ui/SoraImage.vue';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
+import ImportProductModal from './ImportProductModal.vue';
 
 const route = useRoute();
+
+const escapeHtml = (unsafe) => {
+  return (unsafe || '').toString()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
 
 const searchQuery = ref('');
 const debouncedSearchQuery = ref('');
@@ -655,6 +697,38 @@ const openQuickView = async (id) => {
   }
 };
 
+const openImportModal = () => {
+  const modal = new window.bootstrap.Modal(document.getElementById('importProductModal'));
+  modal.show();
+};
+
+const exportProducts = () => {
+  Swal.fire({
+    title: 'Đang xuất dữ liệu',
+    text: 'Tính năng export đang được xây dựng (Backend sẽ xử lý soon)...',
+    icon: 'info',
+    toast: true,
+    position: 'top-end',
+    timer: 2000,
+    showConfirmButton: false
+  });
+};
+
+const downloadTemplate = async () => {
+  try {
+    const res = await adminApiClient.get('/products/import/template', { responseType: 'blob' });
+    const url = window.URL.createObjectURL(new Blob([res.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'Product_Import_Template.xlsx');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (error) {
+    Swal.fire('Lỗi', 'Không thể tải file mẫu. Vui lòng thử lại sau.', 'error');
+  }
+};
+
 
 const switchTab = (tabId) => {
   activeTab.value = tabId;
@@ -680,7 +754,93 @@ const processedProducts = computed(() => {
 });
 
 const totalPages = computed(() => Math.ceil(processedProducts.value.length / itemsPerPage) || 1);
+
+const visiblePages = computed(() => {
+  const current = currentPage.value;
+  const total = totalPages.value;
+  
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, '...', total];
+  }
+
+  if (current >= total - 3) {
+    return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+  }
+
+  return [1, '...', current - 1, current, current + 1, '...', total];
+});
+
 const paginatedProducts = computed(() => { const start = (currentPage.value - 1) * itemsPerPage; return processedProducts.value.slice(start, start + itemsPerPage); });
+
+// BULK ACTIONS
+const selectedProductIds = ref([]);
+const isAllSelected = computed(() => {
+  if (paginatedProducts.value.length === 0) return false;
+  return paginatedProducts.value.every(p => selectedProductIds.value.includes(p.id));
+});
+const toggleSelectAll = () => {
+  if (isAllSelected.value) {
+    selectedProductIds.value = selectedProductIds.value.filter(id => !paginatedProducts.value.some(p => p.id === id));
+  } else {
+    const newIds = paginatedProducts.value.map(p => p.id).filter(id => !selectedProductIds.value.includes(id));
+    selectedProductIds.value = [...selectedProductIds.value, ...newIds];
+  }
+};
+
+watch(activeTab, () => { selectedProductIds.value = []; });
+
+const confirmBulkForceDelete = () => {
+  if (selectedProductIds.value.length === 0) return;
+
+  const selectedProducts = products.value.filter(p => selectedProductIds.value.includes(p.id));
+  const namesHtml = selectedProducts.map(p => `<li>${escapeHtml(p.name)}</li>`).join('');
+
+  Swal.fire({
+    title: 'Xóa vĩnh viễn hàng loạt?',
+    html: `<div class="text-start">Bạn đang chọn xóa vĩnh viễn <b>${selectedProducts.length}</b> sản phẩm. Hành động này không thể hoàn tác!<br><br><ul class="text-danger" style="max-height: 150px; overflow-y: auto;">${namesHtml}</ul></div>`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Xóa tất cả đã chọn',
+    cancelButtonText: 'Hủy'
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      isSilentLoading.value = true;
+      try {
+        const res = await adminApiClient.post('/products/bulk-force-delete', { product_ids: selectedProductIds.value });
+        const { success_count, failed_products } = res.data;
+        
+        selectedProductIds.value = [];
+        
+        let resultHtml = `Đã xóa thành công: <b>${success_count}</b> sản phẩm.<br>`;
+        if (failed_products && failed_products.length > 0) {
+          resultHtml += `<br><b class="text-danger">Thất bại ${failed_products.length} sản phẩm:</b><ul class="text-start text-danger small mt-2" style="max-height: 150px; overflow-y: auto;">`;
+          failed_products.forEach(f => {
+            resultHtml += `<li>${f.name}: ${f.reason}</li>`;
+          });
+          resultHtml += `</ul>`;
+        }
+
+        Swal.fire({
+          title: 'Kết quả Xóa',
+          html: resultHtml,
+          icon: failed_products?.length > 0 ? 'warning' : 'success'
+        });
+        
+        await refetchProducts();
+      } catch (e) {
+        Swal.fire('Lỗi', e.response?.data?.message || 'Không thể xóa hàng loạt do lỗi máy chủ.', 'error');
+      } finally {
+        isSilentLoading.value = false;
+      }
+    }
+  });
+};
 
 const confirmDelete = (id, name) => {
   Swal.fire({ title: 'Xóa Sản phẩm?', text: `Sản phẩm "${name}" cùng toàn bộ Biến thể sẽ bị xóa!`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Đồng ý' }).then(async (result) => {
@@ -718,6 +878,34 @@ const restoreProduct = (id) => {
         await refetchProducts();
       } catch (e) {
         Swal.fire('Lỗi', 'Không thể khôi phục', 'error');
+      } finally {
+        isSilentLoading.value = false;
+      }
+    }
+  });
+};
+
+const forceDeleteProduct = (id, name) => {
+  const safeName = escapeHtml(name);
+  Swal.fire({ 
+    title: 'Xóa vĩnh viễn?', 
+    html: `Sản phẩm <b>"${safeName}"</b> và tất cả biến thể, hình ảnh sẽ bị xóa hoàn toàn khỏi hệ thống.<br><br><b class="text-danger">Hành động này không thể hoàn tác!</b>`, 
+    icon: 'error', 
+    showCancelButton: true, 
+    confirmButtonColor: '#d33', 
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Xóa vĩnh viễn',
+    cancelButtonText: 'Hủy'
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      isSilentLoading.value = true;
+      try {
+        const res = await adminApiClient.delete(`/products/${id}/force`);
+        productDetailCache.delete(id);
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.data.message || 'Đã xóa vĩnh viễn', showConfirmButton: false, timer: 2000 });
+        await refetchProducts();
+      } catch (e) {
+        Swal.fire('Lỗi xóa vĩnh viễn', e.response?.data?.message || 'Không thể xóa vĩnh viễn do lỗi kết nối hoặc dữ liệu.', 'error');
       } finally {
         isSilentLoading.value = false;
       }

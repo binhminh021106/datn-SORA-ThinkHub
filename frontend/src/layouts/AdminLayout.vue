@@ -173,7 +173,6 @@ onBeforeUnmount(() => {
 
 .main-content {
   background-color: var(--bs-body-bg);
-  padding-bottom: 2rem;
 }
 
 .fade-enter-active,

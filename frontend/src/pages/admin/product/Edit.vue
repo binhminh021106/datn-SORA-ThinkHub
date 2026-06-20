@@ -1,5 +1,5 @@
 <template>
-    <div class="product-create-wrapper pb-5 mb-5">
+    <div class="product-create-wrapper ">
         <div class="container-fluid py-4" v-if="!isPageLoading">
 
             <div class="row mb-4 align-items-center">
@@ -91,8 +91,9 @@
                                             <label class="form-label fw-bold">Giá tham khảo <span
                                                     class="text-danger">*</span></label>
                                             <div class="input-group">
-                                                <input type="number" class="form-control py-2"
-                                                    v-model.number="form.base_price" required min="0">
+                                                <input type="text" class="form-control py-2"
+                                                    :value="formatCurrency(form.base_price)"
+                                                    @input="updateBasePrice($event)" required>
                                                 <span class="input-group-text bg-light">VNĐ</span>
                                             </div>
                                         </div>
@@ -273,17 +274,18 @@
                                                     </td>
 
                                                     <td>
-                                                        <input type="number"
+                                                        <input type="text"
                                                             class="form-control form-control-sm text-end fw-bold text-brand"
-                                                            :class="{ 'is-invalid': v.priceError }" v-model="v.price"
-                                                            min="0" required @input="validateRow(index)">
+                                                            :class="{ 'is-invalid': v.priceError }" 
+                                                            :value="formatCurrency(v.price)"
+                                                            required @input="updateVariantPrice(index, 'price', $event)">
                                                     </td>
                                                     <td>
-                                                        <input type="number"
+                                                        <input type="text"
                                                             class="form-control form-control-sm text-end"
                                                             :class="{ 'is-invalid': v.saleError }"
-                                                            v-model="v.promotional_price" min="0"
-                                                            @input="validateRow(index)">
+                                                            :value="formatCurrency(v.promotional_price)"
+                                                            @input="updateVariantPrice(index, 'promotional_price', $event)">
                                                     </td>
                                                     <td>
                                                         <input type="number"
@@ -552,6 +554,25 @@ const generateSlug = () => {
     s = s.replace(/ý|ỳ|ỷ|ỹ|ỵ/gi, 'y');
     s = s.replace(/đ/gi, 'd');
     form.value.slug = s.replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '').replace(/\-\-+/g, '-');
+};
+
+const formatCurrency = (value) => {
+    if (value === null || value === undefined || value === '') return '';
+    let num = value.toString().replace(/\D/g, '');
+    return num.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+};
+
+const updateBasePrice = (event) => {
+    let rawValue = event.target.value.replace(/\D/g, '');
+    form.value.base_price = rawValue ? parseInt(rawValue, 10) : '';
+    event.target.value = formatCurrency(rawValue);
+};
+
+const updateVariantPrice = (index, field, event) => {
+    let rawValue = event.target.value.replace(/\D/g, '');
+    variants.value[index][field] = rawValue ? parseInt(rawValue, 10) : '';
+    event.target.value = formatCurrency(rawValue);
+    validateRow(index);
 };
 
 const handleThumbUpload = (e) => {

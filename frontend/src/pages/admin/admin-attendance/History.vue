@@ -1,5 +1,5 @@
 <template>
-  <div class="attendance-history-wrapper pb-5 mb-5">
+  <div class="attendance-history-wrapper">
     
     <!-- 1. SHIMMER LOGO (Chỉ hiện lần đầu tiên) -->
     <div v-if="isFirstVisit && isLoading" class="d-flex flex-column justify-content-center align-items-center w-100 shimmer-wrapper">

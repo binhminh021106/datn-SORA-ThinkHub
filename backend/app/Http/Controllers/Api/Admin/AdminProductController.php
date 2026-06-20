@@ -220,4 +220,175 @@ class AdminProductController extends Controller
             return response()->json(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()], 500);
         }
     }
+
+    public function forceDelete($id)
+    {
+        DB::beginTransaction();
+        try {
+            $product = Product::withTrashed()->findOrFail($id);
+
+            // Lấy danh sách biến thể
+            $variants = $product->variants()->withTrashed()->get();
+            $variantIds = $variants->pluck('id')->toArray();
+            $safeVariantIds = empty($variantIds) ? [0] : $variantIds;
+
+            // KIỂM TRA RÀNG BUỘC
+            $isUsedInCombo = DB::table('combo_items')
+                ->where('product_id', $id)
+                ->orWhereIn('product_variant_id', $safeVariantIds)
+                ->exists();
+            if ($isUsedInCombo) {
+                return response()->json(['success' => false, 'message' => 'Không thể xóa vĩnh viễn: Sản phẩm đang nằm trong Combo khuyến mãi.'], 400);
+            }
+
+            $isUsedInOrder = DB::table('order_items')
+                ->where('product_id', $id)
+                ->orWhereIn('product_variant_id', $safeVariantIds)
+                ->exists();
+            if ($isUsedInOrder) {
+                return response()->json(['success' => false, 'message' => 'Không thể xóa vĩnh viễn: Sản phẩm đã phát sinh trong Đơn hàng.'], 400);
+            }
+
+            $isUsedInCart = false;
+            if (!empty($variantIds)) {
+                $isUsedInCart = DB::table('cart_items')->whereIn('product_variant_id', $variantIds)->exists();
+            }
+            if ($isUsedInCart) {
+                return response()->json(['success' => false, 'message' => 'Không thể xóa vĩnh viễn: Sản phẩm đang nằm trong Giỏ hàng của khách.'], 400);
+            }
+
+            // XÓA FILE ẢNH VẬT LÝ
+            if ($product->thumbnail_image && Storage::disk('public')->exists($product->thumbnail_image)) {
+                // Không xóa ảnh placeholder mặc định
+                if (!str_contains($product->thumbnail_image, 'products/defaults/')) {
+                    Storage::disk('public')->delete($product->thumbnail_image);
+                }
+            }
+
+            foreach ($variants as $variant) {
+                if ($variant->image_url && Storage::disk('public')->exists($variant->image_url)) {
+                    Storage::disk('public')->delete($variant->image_url);
+                }
+            }
+
+            $productImages = DB::table('product_images')->where('product_id', $id)->get();
+            foreach ($productImages as $pImg) {
+                if ($pImg->image_url && Storage::disk('public')->exists($pImg->image_url)) {
+                    Storage::disk('public')->delete($pImg->image_url);
+                }
+            }
+
+            // XÓA DỮ LIỆU DATABASE (CASCADE)
+            DB::table('product_images')->where('product_id', $id)->delete();
+            
+            if (!empty($variantIds)) {
+                DB::table('product_variant_attributes')->whereIn('variant_id', $variantIds)->delete();
+                ProductVariant::withTrashed()->where('product_id', $id)->forceDelete();
+            }
+
+            $product->forceDelete();
+
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'Sản phẩm đã được xóa vĩnh viễn cùng toàn bộ dữ liệu liên quan.']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function bulkForceDelete(Request $request)
+    {
+        $ids = $request->input('product_ids', []);
+        if (empty($ids) || !is_array($ids)) {
+            return response()->json(['success' => false, 'message' => 'Vui lòng chọn ít nhất 1 sản phẩm để xóa.'], 400);
+        }
+
+        $successCount = 0;
+        $failedProducts = [];
+
+        foreach ($ids as $id) {
+            DB::beginTransaction();
+            try {
+                $product = Product::withTrashed()->findOrFail($id);
+
+                // Lấy danh sách biến thể
+                $variants = $product->variants()->withTrashed()->get();
+                $variantIds = $variants->pluck('id')->toArray();
+                $safeVariantIds = empty($variantIds) ? [0] : $variantIds;
+
+                // KIỂM TRA RÀNG BUỘC
+                $isUsedInCombo = DB::table('combo_items')
+                    ->where('product_id', $id)
+                    ->orWhereIn('product_variant_id', $safeVariantIds)
+                    ->exists();
+                if ($isUsedInCombo) {
+                    throw new \Exception("Sản phẩm đang nằm trong Combo khuyến mãi.");
+                }
+
+                $isUsedInOrder = DB::table('order_items')
+                    ->where('product_id', $id)
+                    ->orWhereIn('product_variant_id', $safeVariantIds)
+                    ->exists();
+                if ($isUsedInOrder) {
+                    throw new \Exception("Sản phẩm đã phát sinh trong Đơn hàng.");
+                }
+
+                $isUsedInCart = false;
+                if (!empty($variantIds)) {
+                    $isUsedInCart = DB::table('cart_items')->whereIn('product_variant_id', $variantIds)->exists();
+                }
+                if ($isUsedInCart) {
+                    throw new \Exception("Sản phẩm đang nằm trong Giỏ hàng của khách.");
+                }
+
+                // XÓA FILE ẢNH VẬT LÝ
+                if ($product->thumbnail_image && Storage::disk('public')->exists($product->thumbnail_image)) {
+                    // Không xóa ảnh placeholder mặc định
+                    if (!str_contains($product->thumbnail_image, 'products/defaults/')) {
+                        Storage::disk('public')->delete($product->thumbnail_image);
+                    }
+                }
+
+                foreach ($variants as $variant) {
+                    if ($variant->image_url && Storage::disk('public')->exists($variant->image_url)) {
+                        Storage::disk('public')->delete($variant->image_url);
+                    }
+                }
+
+                $productImages = DB::table('product_images')->where('product_id', $id)->get();
+                foreach ($productImages as $pImg) {
+                    if ($pImg->image_url && Storage::disk('public')->exists($pImg->image_url)) {
+                        Storage::disk('public')->delete($pImg->image_url);
+                    }
+                }
+
+                // XÓA DỮ LIỆU DATABASE (CASCADE)
+                DB::table('product_images')->where('product_id', $id)->delete();
+                
+                if (!empty($variantIds)) {
+                    DB::table('product_variant_attributes')->whereIn('variant_id', $variantIds)->delete();
+                    ProductVariant::withTrashed()->where('product_id', $id)->forceDelete();
+                }
+
+                $product->forceDelete();
+
+                DB::commit();
+                $successCount++;
+            } catch (\Exception $e) {
+                DB::rollBack();
+                $failedProducts[] = [
+                    'id' => $id,
+                    'name' => isset($product) ? $product->name : "ID: $id",
+                    'reason' => $e->getMessage()
+                ];
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'success_count' => $successCount,
+            'failed_products' => $failedProducts,
+            'message' => 'Đã xử lý yêu cầu xóa hàng loạt.'
+        ]);
+    }
 }

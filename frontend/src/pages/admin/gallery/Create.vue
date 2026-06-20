@@ -1,5 +1,5 @@
 <template>
-  <div class="gallery-create-wrapper pb-5 mb-5">
+  <div class="gallery-create-wrapper ">
     <div class="container-fluid py-4">
       
       <div class="row mb-4 align-items-center">

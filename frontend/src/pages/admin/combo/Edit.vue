@@ -1,5 +1,5 @@
 <template>
-  <div class="combo-edit-wrapper pb-5 mb-5">
+  <div class="combo-edit-wrapper ">
     <div class="container-fluid py-4" v-if="!isPageLoading">
       
       <!-- HEADER -->

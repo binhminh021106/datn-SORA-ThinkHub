@@ -1,5 +1,5 @@
 <template>
-  <div class="order-returns-wrapper pb-5 mb-5">
+  <div class="order-returns-wrapper ">
     
     <!-- HIỂU ỨNG LOGO SHIMMER CHO LẦN ĐẦU TẢI TRANG DUY NHẤT -->
     <div v-if="isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">

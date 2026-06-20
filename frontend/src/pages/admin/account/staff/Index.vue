@@ -1,5 +1,5 @@
 <template>
-  <div class="staff-index-wrapper pb-5 mb-5">
+  <div class="staff-index-wrapper ">
     
     <div class="container-fluid py-4" v-if="!isLoading">
       <div class="row mb-4 align-items-center">
