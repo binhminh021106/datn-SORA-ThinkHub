@@ -429,7 +429,7 @@ onUnmounted(() => { if (timer) clearInterval(timer); });
   color: #9f273b;
   font-size: 26px;
   margin: 0 0 8px;
-  font-family: 'Playfair Display', serif;
+  font-family: 'Josefin Sans', sans-serif;
 }
 
 .subtitle {

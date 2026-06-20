@@ -415,7 +415,7 @@ onUnmounted(() => {
 }
 </style>
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Oswald:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Oswald:wght@400;500;600;700&display=swap');
 
 .bg-light-custom { background-color: var(--bg-light) !important; }
 .bg-main { background-color: var(--primary) !important; }
@@ -433,7 +433,7 @@ onUnmounted(() => {
 
 .object-fit-cover { object-fit: cover !important; }
 .font-inter { font-family: 'Manrope', sans-serif; }
-.font-serif { font-family: "Playfair Display", serif !important; }
+.font-serif { font-family: 'Josefin Sans', sans-serif !important; }
 .font-oswald { font-family: "Oswald", sans-serif !important; }
 .tracking-wide { letter-spacing: 0.1em; }
 

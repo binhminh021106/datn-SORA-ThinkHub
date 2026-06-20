@@ -1411,7 +1411,7 @@ input[type=number] { -moz-appearance: textfield; }
 .bg-light-custom { background-color: #faf9f8 !important; }
 .border-main { border-color: #9f273b !important; }
 .font-oswald { font-family: 'Oswald', sans-serif; }
-.font-serif { font-family: "Playfair Display", serif; }
+.font-serif { font-family: 'Josefin Sans', sans-serif; }
 .tracking-widest { letter-spacing: 2px; }
 
 .product-reviews-section { padding-top: 40px; border-top: 1px solid #eee; margin-top: 20px; max-width: 1300px; margin-left: auto; margin-right: auto; background: #fff; padding-bottom: 50px; padding-left: 20px; padding-right: 20px; }

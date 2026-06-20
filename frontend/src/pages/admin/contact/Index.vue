@@ -275,7 +275,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.font-serif { font-family: "Playfair Display", serif; }
+.font-serif { font-family: 'Josefin Sans', sans-serif; }
 .avatar-circle { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
 
 /* Màu cho dòng đang chờ xử lý */

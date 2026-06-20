@@ -434,7 +434,7 @@ onMounted(() => {
 .text-main { color: #9f273b !important; }
 .text-accent { color: #e7ce7d !important; }
 .text-danger-custom { color: #cc1e2e !important; }
-.font-serif { font-family: "Playfair Display", serif; }
+.font-serif { font-family: 'Josefin Sans', sans-serif; }
 .tracking-wide { letter-spacing: 0.1em; }
 
 

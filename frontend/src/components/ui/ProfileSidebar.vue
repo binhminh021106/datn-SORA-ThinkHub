@@ -454,5 +454,5 @@ onMounted(() => {
   color: #cc1e2e !important;
 }
 
-.font-serif { font-family: "Playfair Display", serif; }
+.font-serif { font-family: 'Josefin Sans', sans-serif; }
 </style>
