@@ -318,7 +318,7 @@ class ClientOrderController extends Controller
         // Bao bọc toàn bộ code bằng try-catch để bắt mọi lỗi PHP/SQL
         try {
             $user = auth('sanctum')->user();
-            $order = Order::where('order_code', $order_code)->first();
+            $order = Order::with('items')->where('order_code', $order_code)->first();
 
             if (!$order) {
                 return response()->json(['success' => false, 'message' => 'Không tìm thấy đơn hàng'], 404);
@@ -332,12 +332,6 @@ class ClientOrderController extends Controller
                 return response()->json(['success' => false, 'message' => 'Bạn không có quyền đánh giá đơn hàng này'], 403);
             }
 
-            // Kiểm tra xem đơn hàng đã đánh giá chưa
-            $existingReview = Review::where('order_id', $order->id)->first();
-            if ($existingReview) {
-                return response()->json(['success' => false, 'message' => 'Đơn hàng này đã được đánh giá.'], 400);
-            }
-
             // Validate dữ liệu từ FormData
             $request->validate([
                 'reviews' => 'required|array',
@@ -348,13 +342,19 @@ class ClientOrderController extends Controller
                 'reviews.*.images.*'   => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             ]);
 
-            $order->loadMissing('items');
             $orderProductIds = $order->items->pluck('product_id')->filter()->unique()->values();
             $orderComboIds = $order->items->pluck('combo_id')->filter()->unique()->values();
 
             foreach ($request->reviews as $itemData) {
                 $productId = $itemData['product_id'] ?? null;
                 $comboId = $itemData['combo_id'] ?? null;
+
+                if ($productId && $comboId) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Mỗi đánh giá chỉ được gắn với một sản phẩm hoặc một combo.',
+                    ], 422);
+                }
 
                 if (!$productId && !$comboId) {
                     return response()->json([
@@ -379,6 +379,18 @@ class ClientOrderController extends Controller
             }
 
             DB::beginTransaction();
+
+            $lockedOrder = Order::where('id', $order->id)->lockForUpdate()->first();
+            if (!$lockedOrder) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'Không tìm thấy đơn hàng'], 404);
+            }
+
+            $existingReview = Review::where('order_id', $lockedOrder->id)->lockForUpdate()->first();
+            if ($existingReview) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'Đơn hàng này đã được đánh giá.'], 400);
+            }
 
             $reviewedProductIds = collect();
             $reviewedComboIds = collect();

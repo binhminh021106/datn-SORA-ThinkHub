@@ -413,9 +413,10 @@ export default function CompareScreen({ navigation }) {
                   </View>
                   {criteria.map((row, rowIndex) => {
                     const isDifferentRow = hasDifference(row.value);
+                    const rowKey = `${row.type || 'criteria'}-${rowIndex}-${row.label}`;
                     return (
                     <View
-                      key={row.label}
+                      key={rowKey}
                       style={[
                         styles.criteriaBlock,
                         rowIndex % 2 === 1 && styles.criteriaBlockAlt,
@@ -436,7 +437,7 @@ export default function CompareScreen({ navigation }) {
                           const isDescriptionExpanded = !!expandedDescriptions[product.id];
                           return (
                             <View
-                              key={`${row.label}-${product.id}`}
+                              key={`${rowKey}-${product.id}`}
                               style={[
                                 styles.criteriaValueCell,
                                 isDifferentRow && styles.criteriaDifferentCell,

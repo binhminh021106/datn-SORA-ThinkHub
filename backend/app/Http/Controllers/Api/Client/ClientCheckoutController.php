@@ -682,10 +682,8 @@ class ClientCheckoutController extends Controller
             return redirect($frontendUrl . '/checkout/success?order=' . urlencode($orderCode));
         }
 
-        $this->cancelOrderAndRestoreStock($orderCode);
-
         if ($isMobileCheckout) {
-            return redirect($this->buildMobilePaymentReturnUrl($mobileReturnUrl, $orderCode, 'cancelled', 'cart'));
+            return redirect($this->buildMobilePaymentReturnUrl($mobileReturnUrl, $orderCode, 'pending', 'order-history'));
         }
 
         return redirect($frontendUrl . '/checkout/failed?order=' . urlencode($orderCode));
@@ -726,8 +724,6 @@ class ClientCheckoutController extends Controller
                 'Message' => 'Confirm Success',
             ]);
         }
-
-        $this->cancelOrderAndRestoreStock($orderCode);
 
         return response()->json([
             'RspCode' => '00',
@@ -896,20 +892,32 @@ class ClientCheckoutController extends Controller
 
     private function markOnlineOrderAsPaid(string $orderCode): ?Order
     {
-        $order = Order::with('items')->where('order_code', $orderCode)->first();
-        if (!$order) {
-            return null;
-        }
+        return DB::transaction(function () use ($orderCode) {
+            $order = Order::with('items')->where('order_code', $orderCode)->lockForUpdate()->first();
+            if (!$order) {
+                return null;
+            }
 
-        if ($order->payment_status !== 'paid') {
-            $order->payment_status = 'paid';
-            $order->save();
+            if (in_array($order->status, ['cancelled', 'returned'], true)) {
+                Log::warning('Skip marking online order as paid because order is no longer payable.', [
+                    'order_code' => $orderCode,
+                    'status' => $order->status,
+                    'payment_status' => $order->payment_status,
+                ]);
 
-            $this->clearCartAfterPaidOrder($order);
-            $this->queueOrderSuccessNotifications($order);
-        }
+                return $order;
+            }
 
-        return $order;
+            if ($order->payment_status !== 'paid') {
+                $order->payment_status = 'paid';
+                $order->save();
+
+                $this->clearCartAfterPaidOrder($order);
+                $this->queueOrderSuccessNotifications($order);
+            }
+
+            return $order;
+        });
     }
 
     private function clearCartAfterPaidOrder(Order $order, ?int $cartId = null): void
