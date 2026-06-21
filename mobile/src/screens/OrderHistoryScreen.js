@@ -7,8 +7,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
+import * as WebBrowser from 'expo-web-browser';
+import * as ExpoLinking from 'expo-linking';
 import { API_BASE_URL } from '../config/api';
 import { showCustomAlert } from '../components/CustomAlert';
 import { PRICE_FONT_FAMILY, PRICE_FONT_WEIGHT } from '../styles/typography';
@@ -57,7 +59,6 @@ const PROGRESS_STEPS = [
 ];
 
 const STATUS_STEP_INDEX = { pending: 0, confirmed: 1, shipping: 2, delivered: 3 };
-
 const TRACKING_STEP_DETAILS = [
   {
     key: 'pending',
@@ -87,6 +88,11 @@ const TRACKING_STEP_DETAILS = [
 
 const getPaymentMethodLabel = (m) => ({ cod: 'COD', momo: 'Ví MoMo', bank: 'Chuyển khoản', vnpay: 'VNPay' }[m] || m || 'N/A');
 const getPaymentStatusLabel = (ps) => ps === 'paid' ? { label: 'Đã thanh toán', color: '#22c55e' } : { label: 'Chờ thanh toán', color: '#f59e0b' };
+const isPendingMomoPayment = (order) => (
+  order?.payment_method === 'momo'
+  && order?.status === 'pending'
+  && order?.payment_status === 'unpaid'
+);
 const getItemImage = (path) => {
   if (!path) return 'https://images.unsplash.com/photo-1605100804763-247f67b854d4?q=80&w=300';
   return path.startsWith('http') ? path : `${API_BASE_URL.replace('/api','')}/storage/${path}`;
@@ -111,6 +117,28 @@ const getFirstValidationError = (result) => {
   }
 
   return result?.message;
+};
+
+const normalizeReviewItems = (order) => {
+  const seenKeys = new Set();
+  return (order?.items || [])
+    .filter((item) => item.product_id || item.combo_id)
+    .map((item) => {
+      const key = item.product_id ? `product-${item.product_id}` : `combo-${item.combo_id}`;
+      if (seenKeys.has(key)) return null;
+      seenKeys.add(key);
+
+      return {
+        product_id: item.product_id || null,
+        combo_id: item.combo_id || null,
+        name: item.product_name,
+        image: getItemImage(item.variant_image),
+        rating: 0,
+        comment: '',
+        images: [],
+      };
+    })
+    .filter(Boolean);
 };
 
 const fetchOrderHistoryQuery = async () => {
@@ -471,7 +499,21 @@ const dr = StyleSheet.create({
 });
 
 // ─── Draggable Detail Sheet ───────────────────────────────────────────────────
-const DraggableDetailSheet = ({ visible, onClose, order, loading, reviewedOrders, onOpenReview, onOpenReturn, onOpenCancel, onReorder }) => {
+const DraggableDetailSheet = ({
+  visible,
+  onClose,
+  order,
+  loading,
+  isRefreshingDetail,
+  onRefreshDetail,
+  reviewedOrders,
+  onOpenReview,
+  onOpenReturn,
+  onOpenCancel,
+  onRetryPayment,
+  retryingPaymentCode,
+  onReorder,
+}) => {
   const translateY = useRef(new Animated.Value(SCREEN_H)).current;
   const lastY = useRef(SNAP_COLLAPSED);
   const isExpanded = useRef(false);
@@ -553,6 +595,8 @@ const DraggableDetailSheet = ({ visible, onClose, order, loading, reviewedOrders
   if (!visible) return null;
 
   const alreadyReviewed = order && reviewedOrders[order.order_code];
+  const canRetryPayment = isPendingMomoPayment(order);
+  const isRetryingPayment = retryingPaymentCode === order?.order_code;
 
   return (
     <View style={ds.overlay} pointerEvents="box-none">
@@ -582,9 +626,24 @@ const DraggableDetailSheet = ({ visible, onClose, order, loading, reviewedOrders
           ) : order ? (
             <>
               <View style={[ds.section, { marginTop: 12, marginBottom: 8 }]}>
-                <View style={ds.sectionHead}>
-                  <Ionicons name="time-outline" size={14} color="#9f273b" />
-                  <Text style={ds.sectionTitle}>TIẾN TRÌNH</Text>
+                <View style={ds.progressSectionHead}>
+                  <View style={ds.progressTitleRow}>
+                    <Ionicons name="time-outline" size={14} color="#9f273b" />
+                    <Text style={ds.sectionTitle}>TIẾN TRÌNH</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[ds.refreshBtn, isRefreshingDetail && ds.refreshBtnDisabled]}
+                    onPress={onRefreshDetail}
+                    disabled={isRefreshingDetail}
+                    activeOpacity={0.8}
+                  >
+                    {isRefreshingDetail ? (
+                      <ActivityIndicator size="small" color="#9f273b" />
+                    ) : (
+                      <Ionicons name="refresh" size={15} color="#9f273b" />
+                    )}
+                    <Text style={ds.refreshText}>Cập nhật</Text>
+                  </TouchableOpacity>
                 </View>
                 <View style={ds.infoBox}>
                   <ProgressTimeline order={order} />
@@ -682,6 +741,29 @@ const DraggableDetailSheet = ({ visible, onClose, order, loading, reviewedOrders
                 <SummaryRow label="Phương thức"         value={getPaymentMethodLabel(order.payment_method)} />
                 {order.payment_status && (() => { const ps = getPaymentStatusLabel(order.payment_status); return <SummaryRow label="Trạng thái TT" value={ps.label} valueColor={ps.color} bold />; })()}
               </View>
+              {canRetryPayment && (
+                <View style={ds.paymentReminderBox}>
+                  <View style={ds.paymentReminderIcon}>
+                    <Ionicons name="time-outline" size={18} color="#9f273b" />
+                  </View>
+                  <View style={ds.paymentReminderCopy}>
+                    <Text style={ds.paymentReminderTitle}>Đơn hàng đang chờ thanh toán MoMo</Text>
+                    <Text style={ds.paymentReminderText}>Bạn có thể mở lại cổng MoMo để hoàn tất thanh toán đơn hàng này.</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[ds.retryPayBtn, isRetryingPayment && ds.retryPayBtnDisabled]}
+                    onPress={() => onRetryPayment(order)}
+                    disabled={isRetryingPayment}
+                    activeOpacity={0.85}
+                  >
+                    {isRetryingPayment ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={ds.retryPayBtnText}>THANH TOÁN</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
 
 
@@ -754,9 +836,14 @@ const ds = StyleSheet.create({
   body: { flex: 1 },
   section: { paddingHorizontal: 16, marginTop: 16 },
   sectionHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
+  progressSectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 },
+  progressTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
   sectionTitle: { fontFamily: 'Oswald_600SemiBold', fontSize: 12, color: '#9f273b', letterSpacing: 0.8 },
   infoBox: { backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 4, borderWidth: 1, borderColor: '#f0eeee' },
   trackingBox: { backgroundColor: '#fffdf6', borderColor: '#ebd5a3', paddingTop: 14, paddingBottom: 0 },
+  refreshBtn: { minWidth: 92, height: 34, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1, borderColor: '#ead9dc', backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  refreshBtnDisabled: { opacity: 0.72 },
+  refreshText: { fontFamily: 'Oswald_600SemiBold', fontSize: 11, color: '#9f273b' },
 
   itemRow: { flexDirection: 'row', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
   itemImg: { width: 60, height: 70, borderRadius: 8, backgroundColor: '#f3f4f6' },
@@ -775,6 +862,14 @@ const ds = StyleSheet.create({
   sumKeyTotal: { fontFamily: 'Oswald_600SemiBold', fontSize: 14, color: '#111' },
   sumVal: { fontFamily: PRICE_FONT_FAMILY, fontWeight: PRICE_FONT_WEIGHT, fontSize: 13, color: '#111' },
   sumValTotal: { fontFamily: PRICE_FONT_FAMILY, fontWeight: PRICE_FONT_WEIGHT, fontSize: 18, color: '#9f273b' },
+  paymentReminderBox: { marginTop: 10, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#e8b7be', backgroundColor: '#fff5f6', flexDirection: 'row', alignItems: 'center', gap: 9 },
+  paymentReminderIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
+  paymentReminderCopy: { flex: 1 },
+  paymentReminderTitle: { fontFamily: 'Oswald_600SemiBold', fontSize: 12, color: '#9f273b' },
+  paymentReminderText: { marginTop: 2, fontFamily: 'Oswald_400Regular', fontSize: 10.5, lineHeight: 15, color: '#7f6065' },
+  retryPayBtn: { minWidth: 88, height: 34, paddingHorizontal: 10, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#9f273b' },
+  retryPayBtnDisabled: { opacity: 0.72 },
+  retryPayBtnText: { fontFamily: 'Oswald_600SemiBold', fontSize: 10.5, color: '#fff', letterSpacing: 0.7 },
 
   histRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
   histDot: { width: 10, height: 10, borderRadius: 5, marginTop: 3, marginRight: 10 },
@@ -798,8 +893,10 @@ const ds = StyleSheet.create({
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function OrderHistoryScreen() {
   const navigation = useNavigation();
+  const queryClient = useQueryClient();
   const [selectedTab, setSelectedTab] = useState(0);
   const [reviewedOverrides, setReviewedOverrides] = useState({});
+  const [retryingPaymentCode, setRetryingPaymentCode] = useState(null);
 
   // Detail sheet
   const [showDetail, setShowDetail]       = useState(false);
@@ -841,13 +938,15 @@ export default function OrderHistoryScreen() {
   const {
     data: detailOrder,
     isLoading: loadingDetail,
+    isFetching: isFetchingDetail,
     isError: isDetailError,
     error: detailError,
+    refetch: refetchDetailOrder,
   } = useQuery({
     queryKey: ['order-detail', detailOrderCode],
     queryFn: () => fetchOrderDetailQuery(detailOrderCode),
     enabled: showDetail && !!detailOrderCode,
-    staleTime: 2 * 60 * 1000,
+    staleTime: 10 * 1000,
     gcTime: 15 * 60 * 1000,
   });
 
@@ -990,10 +1089,16 @@ export default function OrderHistoryScreen() {
 
   // ── Review ───────────────────────────────────────────────────────────────
   const openReview = (order) => {
+    const items = normalizeReviewItems(order);
+    if (items.length === 0) {
+      Alert.alert('Thông báo', 'Đơn hàng này chưa có sản phẩm hợp lệ để đánh giá.');
+      return;
+    }
+
     setShowDetail(false);
     setTimeout(() => {
       setReviewOrder(order);
-      setReviewItems((order.items || []).map(item => ({ product_id: item.product_id||null, combo_id: item.combo_id||null, name: item.product_name, image: getItemImage(item.variant_image), rating: 5, comment: '', images: [] })));
+      setReviewItems(items);
       setShowReviewModal(true);
     }, 250);
   };
@@ -1008,6 +1113,12 @@ export default function OrderHistoryScreen() {
     }
   };
   const submitReview = async () => {
+    const missingRatingItem = reviewItems.find((item) => !item.rating || item.rating < 1);
+    if (missingRatingItem) {
+      Alert.alert('Chọn số sao', `Vui lòng chọn số sao cho "${missingRatingItem.name}".`);
+      return;
+    }
+
     setIsSubmittingReview(true);
     try {
       const token = await AsyncStorage.getItem('auth_token');
@@ -1024,7 +1135,15 @@ export default function OrderHistoryScreen() {
       });
       const res = await fetch(`${API_BASE_URL}/client/orders/${reviewOrder.order_code}/review`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, Accept: 'application/json', 'Content-Type': 'multipart/form-data' }, body: formData });
       let result; try { result = await res.json(); } catch(_) {}
-      if (result?.success) { setShowReviewModal(false); setReviewedOverrides(prev=>({...prev,[reviewOrder.order_code]:true})); Alert.alert('Cảm ơn ⭐', 'Đánh giá đã được ghi nhận!'); }
+      if (result?.success) {
+        setShowReviewModal(false);
+        setReviewedOverrides(prev=>({...prev,[reviewOrder.order_code]:true}));
+        queryClient.invalidateQueries({ queryKey: ['home-data'] });
+        queryClient.invalidateQueries({ queryKey: ['shop-products'] });
+        queryClient.invalidateQueries({ queryKey: ['product-detail'] });
+        refetchOrders();
+        Alert.alert('Cảm ơn ⭐', 'Đánh giá đã được ghi nhận!');
+      }
       else Alert.alert('Lỗi', result?.message || 'Không thể gửi đánh giá.');
     } catch(_) { Alert.alert('Lỗi','Không thể kết nối.'); }
     finally { setIsSubmittingReview(false); }
@@ -1049,6 +1168,69 @@ export default function OrderHistoryScreen() {
 
   // ── Reorder ──────────────────────────────────────────────────────────────
   const handleReorder = (code) => Alert.alert('Mua lại','Thêm toàn bộ sản phẩm vào giỏ hàng?',[{text:'Huỷ',style:'cancel'},{text:'MUA LẠI',onPress:async()=>{try{const token=await AsyncStorage.getItem('auth_token');const res=await fetch(`${API_BASE_URL}/client/orders/${code}/reorder`,{method:'POST',headers:{Authorization:`Bearer ${token}`,Accept:'application/json'}});const d=await res.json();if(res.ok&&d.success)Alert.alert('Thành công','Đã thêm vào giỏ!',[{text:'Xem giỏ',onPress:()=>navigation.navigate('Cart')},{text:'OK'}]);else Alert.alert('Thất bại',d.message||'Không thể mua lại.');}catch(_){Alert.alert('Lỗi','Không thể kết nối.');}}}]);
+
+  const handleRetryMomoPayment = async (order) => {
+    if (!order?.order_code || retryingPaymentCode) return;
+
+    setRetryingPaymentCode(order.order_code);
+    try {
+      const token = await AsyncStorage.getItem('auth_token');
+      if (!token) {
+        Alert.alert('Cần đăng nhập', 'Vui lòng đăng nhập lại để tiếp tục thanh toán.');
+        return;
+      }
+
+      const returnUrl = ExpoLinking.createURL('order-history');
+      const res = await fetch(`${API_BASE_URL}/client/checkout/orders/${order.order_code}/momo-retry`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          checkout_source: 'mobile',
+          mobile_return_url: returnUrl,
+        }),
+      });
+      const data = await parseJsonSafely(res);
+
+      if (!res.ok || !data.success || !data.payment_url) {
+        Alert.alert('Không thể thanh toán lại', getFirstValidationError(data) || 'Đơn hàng này chưa thể mở lại cổng MoMo.');
+        return;
+      }
+
+      const browserResult = await WebBrowser.openAuthSessionAsync(data.payment_url, returnUrl);
+      let latestOrder = null;
+      try {
+        latestOrder = await fetchOrderDetailQuery(order.order_code);
+      } catch (refreshError) {
+        console.log('Refresh MoMo order status failed:', refreshError);
+      }
+      await Promise.all([
+        refetchOrders(),
+        detailOrderCode === order.order_code ? refetchDetailOrder() : Promise.resolve(),
+      ]);
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['order-detail'] });
+
+      if (latestOrder?.payment_status === 'paid') {
+        Alert.alert('Thanh toán thành công', 'MoMo đã xác nhận thanh toán cho đơn hàng này.');
+      } else if (browserResult.type === 'cancel' || browserResult.type === 'dismiss') {
+        Alert.alert(
+          'Thanh toán MoMo',
+          'Bạn đã đóng cổng thanh toán. Nếu chưa hoàn tất thanh toán, đơn hàng vẫn sẽ ở trạng thái chờ thanh toán.'
+        );
+      } else {
+        Alert.alert('Đơn hàng đang chờ thanh toán', 'Nếu MoMo chưa đồng bộ kịp, bạn có thể mở lịch sử đơn hàng để kiểm tra lại sau.');
+      }
+    } catch (error) {
+      console.log('Retry MoMo payment failed:', error);
+      Alert.alert('Lỗi thanh toán', 'Không thể mở lại cổng thanh toán MoMo. Vui lòng thử lại.');
+    } finally {
+      setRetryingPaymentCode(null);
+    }
+  };
 
   if (isLoading) return <View style={s.center}><ActivityIndicator size="large" color="#9f273b" />
       <Text style={{ marginTop: 10, fontFamily: "Oswald_500Medium", color: "#9f273b", fontSize: 13, letterSpacing: 1, textTransform: 'uppercase' }}>Đang tải lịch sử đơn hàng...</Text>
@@ -1091,11 +1273,14 @@ export default function OrderHistoryScreen() {
         ) : filtered.map(order => {
           const st = getStatusConfig(order.status);
           const alreadyReviewed = reviewedOrders[order.order_code];
+          const pendingMomoPayment = isPendingMomoPayment(order);
           return (
             <TouchableOpacity key={order.id} style={s.card} onPress={() => openDetail(order.order_code)} activeOpacity={0.93}>
               <View style={s.cardHead}>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.cardCode}>{order.order_code}</Text>
+                  <View style={s.cardCodeRow}>
+                    <Text style={s.cardCode}>{order.order_code}</Text>
+                  </View>
                   <Text style={s.cardDate}>{formatDate(order.created_at)}</Text>
                 </View>
                 <View style={[s.badge, { backgroundColor: st.bg }]}>
@@ -1119,6 +1304,12 @@ export default function OrderHistoryScreen() {
                   </View>
                 ))}
                 {(order.items?.length||0) > 2 && <Text style={s.moreItems}>+{order.items.length-2} sản phẩm khác</Text>}
+                {pendingMomoPayment && (
+                  <View style={s.cardPaymentReminder}>
+                    <Ionicons name="time-outline" size={13} color="#9f273b" />
+                    <Text style={s.cardPaymentReminderText}>Đơn MoMo đang chờ thanh toán</Text>
+                  </View>
+                )}
               </View>
 
               <View style={s.cardFoot}>
@@ -1130,6 +1321,20 @@ export default function OrderHistoryScreen() {
                   {order.status === 'pending' && (
                     <TouchableOpacity style={[s.chip,s.chipRed]} onPress={(e) => { e.stopPropagation?.(); openCancel(order.order_code); }} activeOpacity={0.8}>
                       <Text style={s.chipRedTxt}>HỦY ĐƠN</Text>
+                    </TouchableOpacity>
+                  )}
+                  {pendingMomoPayment && (
+                    <TouchableOpacity
+                      style={[s.chip, s.chipPay, retryingPaymentCode === order.order_code && s.chipDisabled]}
+                      onPress={(e) => { e.stopPropagation?.(); handleRetryMomoPayment(order); }}
+                      disabled={retryingPaymentCode === order.order_code}
+                      activeOpacity={0.8}
+                    >
+                      {retryingPaymentCode === order.order_code ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={s.chipPayTxt}>THANH TOÁN</Text>
+                      )}
                     </TouchableOpacity>
                   )}
                   {order.status === 'delivered' && (
@@ -1163,10 +1368,14 @@ export default function OrderHistoryScreen() {
         onClose={() => setShowDetail(false)}
         order={detailOrder}
         loading={loadingDetail}
+        isRefreshingDetail={isFetchingDetail && !loadingDetail}
+        onRefreshDetail={refetchDetailOrder}
         reviewedOrders={reviewedOrders}
         onOpenReview={openReview}
         onOpenReturn={openReturn}
         onOpenCancel={openCancel}
+        onRetryPayment={handleRetryMomoPayment}
+        retryingPaymentCode={retryingPaymentCode}
         onReorder={handleReorder}
       />
 
@@ -1228,7 +1437,7 @@ export default function OrderHistoryScreen() {
                   <Text style={s.reviewLbl}>Chất lượng sản phẩm</Text>
                   <View style={{ alignItems:'center', marginBottom:4 }}>
                     <StarRating rating={rItem.rating} onRate={(r) => updateReviewItem(idx,'rating',r)} size={32}/>
-                    <Text style={s.reviewHint}>{['','Rất tệ','Tệ','Bình thường','Tốt','Rất tốt'][rItem.rating]}</Text>
+                    <Text style={s.reviewHint}>{['Chọn số sao','Rất tệ','Tệ','Bình thường','Tốt','Rất tốt'][rItem.rating]}</Text>
                   </View>
                   <TextInput style={s.reviewInput} value={rItem.comment} onChangeText={(v)=>updateReviewItem(idx,'comment',v)} placeholder="Chia sẻ trải nghiệm..." placeholderTextColor="#9ca3af" multiline numberOfLines={3} textAlignVertical="top"/>
                   <View style={s.reviewImgRow}>
@@ -1318,6 +1527,7 @@ const s = StyleSheet.create({
 
   card: { backgroundColor:'#fff', borderRadius:12, marginBottom:10, shadowColor:'#000', shadowOffset:{width:0,height:1}, shadowOpacity:0.07, shadowRadius:4, elevation:2 },
   cardHead: { flexDirection:'row', alignItems:'center', paddingHorizontal:14, paddingVertical:12, borderBottomWidth:1, borderBottomColor:'#f3f4f6' },
+  cardCodeRow: { flexDirection:'row', alignItems:'center', gap:7 },
   cardCode: { fontFamily:'Oswald_600SemiBold', fontSize:14, color:'#111' },
   cardDate: { fontFamily:'Oswald_400Regular', fontSize:11, color:'#9ca3af', marginTop:1 },
   badge: { flexDirection:'row', alignItems:'center', paddingHorizontal:8, paddingVertical:4, borderRadius:20 },
@@ -1333,6 +1543,8 @@ const s = StyleSheet.create({
   itemPrice: { fontFamily:PRICE_FONT_FAMILY, fontWeight:PRICE_FONT_WEIGHT, fontSize:13, color:'#9f273b' },
   itemQty: { fontFamily:'Oswald_400Regular', fontSize:12, color:'#6b7280' },
   moreItems: { fontFamily:'Oswald_400Regular', fontSize:11, color:'#9ca3af', textAlign:'center', paddingVertical:4 },
+  cardPaymentReminder: { marginTop: 2, paddingVertical: 7, paddingHorizontal: 9, borderRadius: 8, borderWidth: 1, borderColor: '#e8b7be', backgroundColor: '#fff5f6', flexDirection: 'row', alignItems: 'center', gap: 6 },
+  cardPaymentReminderText: { flex: 1, fontFamily: 'Oswald_500Medium', fontSize: 11, color: '#9f273b' },
 
   cardFoot: { paddingHorizontal:14, paddingVertical:10, borderTopWidth:1, borderTopColor:'#f3f4f6' },
   totalRow: { flexDirection:'row', justifyContent:'space-between', marginBottom:8 },
@@ -1343,6 +1555,9 @@ const s = StyleSheet.create({
   chip: { flexDirection:'row', alignItems:'center', paddingHorizontal:10, paddingVertical:5, borderRadius:20, gap:3 },
   chipRed:     { borderWidth:1, borderColor:'#e8b7be', backgroundColor:'#fff4f4' },
   chipRedTxt:  { fontFamily:'Oswald_600SemiBold', fontSize:10, color:'#9f273b' },
+  chipPay:     { minWidth: 82, justifyContent: 'center', backgroundColor:'#9f273b' },
+  chipPayTxt:  { fontFamily:'Oswald_600SemiBold', fontSize:10, color:'#fff' },
+  chipDisabled: { opacity: 0.72 },
   chipPurple:    { borderWidth:1, borderColor:'#d8b4fe', backgroundColor:'#faf5ff' },
   chipPurpleTxt: { fontFamily:'Oswald_600SemiBold', fontSize:10, color:'#9333ea' },
   chipStar:    { borderWidth:1, borderColor:'#fde68a', backgroundColor:'#fffbeb' },

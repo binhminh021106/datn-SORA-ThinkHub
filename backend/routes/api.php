@@ -221,8 +221,11 @@ Route::prefix('client')->group(function () {
     Route::prefix('checkout')->group(function () {
         Route::get('/init', [ClientCheckoutController::class, 'initData']);
         Route::post('/', [ClientCheckoutController::class, 'processCheckout']);
+        Route::post('/orders/{order_code}/momo-retry', [ClientCheckoutController::class, 'retryMomoPayment']);
         Route::get('/momo-return', [ClientCheckoutController::class, 'momoReturn']);
         Route::post('/momo-return', [ClientCheckoutController::class, 'momoReturn']);
+        Route::get('/vnpay-return', [ClientCheckoutController::class, 'vnpayReturn']);
+        Route::get('/vnpay-ipn', [ClientCheckoutController::class, 'vnpayIpn']);
     });
     Route::get('orders/{order_code}/invoice', [ClientOrderController::class, 'invoice'])
         ->name('client.orders.invoice');
