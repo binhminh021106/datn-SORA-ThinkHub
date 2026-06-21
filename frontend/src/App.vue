@@ -139,7 +139,7 @@ body {
   background: var(--sora-primary);
   color: #fff;
   border: 1px solid rgba(var(--sora-secondary-rgb), 0.5);
-  border-radius: 14px;
+  border-radius: 10px;
   font-family: 'Oswald', sans-serif;
   font-size: 0.76rem;
   letter-spacing: 0.14em;
@@ -198,7 +198,7 @@ body {
   background: transparent;
   color: var(--sora-primary);
   border: 1px solid var(--sora-primary);
-  border-radius: 14px;
+  border-radius: 10px;
   font-family: 'Oswald', sans-serif;
   font-size: 0.76rem;
   letter-spacing: 0.14em;

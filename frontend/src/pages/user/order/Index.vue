@@ -372,19 +372,44 @@ const handleReorder = async (order) => {
     });
 
     // Bắn request tới backend để add vào bảng Carts
-    await clientApiClient.post(`/client/orders/${order.order_code}/reorder`, {}, {
+    const response = await clientApiClient.post(`/client/orders/${order.order_code}/reorder`, {}, {
       ensureCartSession: true,
       ignoreAuthRedirect: true
     });
 
-    // Tắt loading và hiện thông báo thành công
+    const data = response.data?.data || {};
+    const added = data.added || [];
+    const outOfStock = data.out_of_stock || [];
+
+    let htmlContent = '<div class="text-start mt-3" style="font-family: \'Josefin Sans\', sans-serif;">';
+    
+    if (added.length > 0) {
+        htmlContent += `<div class="mb-3">
+            <h6 class="text-success fw-bold font-oswald tracking-wide"><i class="bi bi-check-circle-fill me-1"></i> ĐÃ THÊM VÀO GIỎ:</h6>
+            <ul class="text-muted small ps-3 mb-0" style="list-style-type: disc;">
+                ${added.map(name => `<li>${name}</li>`).join('')}
+            </ul>
+        </div>`;
+    }
+
+    if (outOfStock.length > 0) {
+        htmlContent += `<div>
+            <h6 class="text-danger fw-bold font-oswald tracking-wide"><i class="bi bi-x-circle-fill me-1"></i> HẾT HÀNG (KHÔNG THỂ THÊM):</h6>
+            <ul class="text-muted small ps-3 mb-0" style="list-style-type: disc;">
+                ${outOfStock.map(name => `<li>${name}</li>`).join('')}
+            </ul>
+        </div>`;
+    }
+    htmlContent += '</div>';
+
+    // Tắt loading và hiện thông báo
     soraAlert.fire({
-      icon: 'success',
-      title: '<span class="font-oswald tracking-wider fs-4 text-dark">ĐÃ THÊM VÀO GIỎ</span>',
-      html: '<p class="text-muted font-sans" style="font-size: 0.95rem;">Các sản phẩm trong đơn hàng này đã được thêm lại vào giỏ hàng của bạn.</p>',
+      icon: outOfStock.length > 0 ? 'warning' : 'success',
+      title: '<span class="font-oswald tracking-wider fs-4 text-dark">KẾT QUẢ THÊM GIỎ HÀNG</span>',
+      html: htmlContent,
       confirmButtonText: 'Đến giỏ hàng',
       showCancelButton: true,
-      cancelButtonText: 'Tiếp tục xem',
+      cancelButtonText: 'Đóng',
       buttonsStyling: false,
       customClass: {
         popup: 'border-0 shadow-lg',
@@ -399,11 +424,30 @@ const handleReorder = async (order) => {
     });
 
   } catch (err) {
-    // Bắt lỗi nếu API trả về fail
+    // Bắt lỗi nếu API trả về fail (ví dụ tất cả đều hết hàng)
+    const errData = err.response?.data?.data || {};
+    const outOfStock = errData.out_of_stock || [];
+    let errorHtml = err.response?.data?.message || 'Không thể thêm sản phẩm vào giỏ hàng lúc này.';
+
+    if (outOfStock.length > 0) {
+        errorHtml = `<div class="text-start mt-3" style="font-family: 'Josefin Sans', sans-serif;">
+            <p class="text-danger fw-bold mb-2">${errorHtml}</p>
+            <ul class="text-muted small ps-3 mb-0" style="list-style-type: disc;">
+                ${outOfStock.map(name => `<li>${name}</li>`).join('')}
+            </ul>
+        </div>`;
+    }
+
     soraAlert.fire({
       icon: 'error',
-      title: 'Lỗi',
-      text: err.response?.data?.message || 'Không thể thêm sản phẩm vào giỏ hàng lúc này.'
+      title: '<span class="font-oswald tracking-wider fs-4 text-dark">LỖI THÊM VÀO GIỎ</span>',
+      html: errorHtml,
+      confirmButtonText: 'Đóng',
+      buttonsStyling: false,
+      customClass: {
+        popup: 'border-0 shadow-lg',
+        confirmButton: 'editorial-btn px-4 py-2'
+      }
     });
   }
 };
@@ -608,7 +652,7 @@ onMounted(fetchOrders);
   background-color: #f8f9fa;
   border: 1px solid #dee2e6;
   color: #495057;
-  border-radius: 14px;
+  border-radius: 10px;
   transition: all 0.3s ease;
 }
 .btn-luxury-neutral:hover {
@@ -622,7 +666,7 @@ onMounted(fetchOrders);
   background-color: #FCF0F1;
   color: #9F273B;
   border: 1px solid transparent;
-  border-radius: 14px;
+  border-radius: 10px;
   transition: all 0.3s ease;
 }
 .btn-luxury-danger:hover {
@@ -645,7 +689,7 @@ onMounted(fetchOrders);
   background-color: #009981;
   color: #fff;
   border: 1px solid transparent;
-  border-radius: 14px;
+  border-radius: 10px;
   transition: all 0.3s ease;
 }
 .btn-luxury-success:hover {
@@ -658,7 +702,7 @@ onMounted(fetchOrders);
   background-color: #E2F3E5;
   color: #009981;
   border: 1px solid transparent;
-  border-radius: 14px;
+  border-radius: 10px;
   transition: all 0.3s ease;
 }
 .btn-luxury-success-light:hover {
@@ -844,7 +888,7 @@ onMounted(fetchOrders);
   background: var(--sora-primary, #9f273b);
   color: #fff;
   border: 1px solid rgba(var(--sora-secondary-rgb, 231, 206, 125), 0.5);
-  border-radius: 14px;
+  border-radius: 10px;
   font-family: 'Oswald', sans-serif;
   font-size: 0.76rem;
   letter-spacing: 0.14em;

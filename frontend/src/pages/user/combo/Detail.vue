@@ -1,5 +1,5 @@
 <template>
-  <div class="combo-detail-page pb-5">
+  <div class="combo-detail-page">
     
     <div v-if="isLoading" class="container pt-4 pb-5 fade-in">
       <SoraComboDetailSkeleton />
@@ -918,7 +918,7 @@ watch(() => route.params.slug, (newSlug) => {
 });
 
 const imageTop = ref('100px');
-let lastScrollY = 0;
+let lastScrollY = typeof window !== 'undefined' ? window.scrollY : 0;
 let isHeaderHidden = false;
 
 const handleScroll = () => {

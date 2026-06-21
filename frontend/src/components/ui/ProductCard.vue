@@ -29,25 +29,31 @@
         <i :class="heartIconClass" class="fs-5 transition-colors" style="margin-top: 2px;"></i>
       </button>
 
-      <div v-if="showBadges" class="position-absolute start-0 d-flex flex-column gap-2 z-index-2 pointer-events-none text-start" :style="{ top: showCompare ? '60px' : '15px', left: '15px' }">
-        <span v-if="product.is_new" class="badge bg-white text-dark border border-light-subtle shadow-sm font-oswald tracking-widest px-2 py-1 rounded-0" style="font-size: 0.65rem;">MỚI</span>
-        <span v-if="product.promotional_price" class="badge text-white shadow-sm font-oswald tracking-widest px-2 py-1 rounded-0" style="background-color: #cc1e2e; font-size: 0.65rem;">SALE</span>
+      <div v-if="showBadges" class="position-absolute start-0 d-flex flex-column gap-2 z-index-3 pointer-events-none text-start" :style="{ top: showCompare ? '60px' : '15px', left: '15px' }">
+        <span v-if="product.is_new && !isOutOfStock" class="badge bg-white text-dark border border-light-subtle shadow-sm font-oswald tracking-widest px-2 py-1 rounded-0" style="font-size: 0.65rem;">MỚI</span>
+        <span v-if="product.promotional_price && !isOutOfStock" class="badge text-white shadow-sm font-oswald tracking-widest px-2 py-1 rounded-0" style="background-color: #cc1e2e; font-size: 0.65rem;">SALE</span>
       </div>
 
       <router-link
         :to="{ name: 'productDetail', params: { shop_slug: shopSlug, slug: product.slug } }"
         class="d-block w-100 text-decoration-none"
       >
-        <div class="ratio ratio-1x1 w-100 overflow-hidden">
+        <div class="ratio ratio-1x1 w-100 overflow-hidden position-relative">
+          <div v-if="isOutOfStock" class="position-absolute w-100 h-100 d-flex align-items-center justify-content-center pointer-events-none" style="background-color: rgba(255, 255, 255, 0.4); z-index: 3; top: 0; left: 0;">
+             <div class="sold-out-overlay font-oswald tracking-widest text-uppercase px-4 py-2 shadow-sm" style="background-color: rgba(42, 24, 16, 0.85); color: #e7ce7d; font-size: 0.85rem; letter-spacing: 4px; border: 1px solid rgba(231, 206, 125, 0.3);">
+               ĐÃ BÁN HẾT
+             </div>
+          </div>
           <img
             :src="getImageUrl(product.thumbnail_image)"
             :alt="product.name"
             class="sora-main-img object-fit-cover w-100 h-100 bg-white"
+            :class="{ 'opacity-75': isOutOfStock }"
             style="object-position: center;"
             @error="handleImageError"
           >
           <img
-            v-if="showHoverImage && hasHoverImage(product)"
+            v-if="showHoverImage && hasHoverImage(product) && !isOutOfStock"
             :src="getImageUrl(product.hover_image)"
             :alt="product.name + ' hover'"
             class="sora-hover-img position-absolute top-0 start-0 w-100 h-100 object-fit-cover"
@@ -70,8 +76,11 @@
           <div class="d-flex justify-content-between align-items-center mb-2">
             <p class="font-serif fst-italic text-muted small mb-0">{{ product.category?.name || 'Trang sức SORA' }}</p>
             
-            <!-- Luxury constraint: Show only one badge (Scarcity > Sold Count > In Stock) -->
-            <span v-if="product.stock_quantity > 0 && product.stock_quantity <= 5" class="small font-oswald text-uppercase tracking-widest" style="font-size: 0.7rem; color: #cc1e2e;">
+            <!-- Luxury constraint: Show only one badge (Out of Stock > Scarcity > Sold Count > In Stock) -->
+            <span v-if="isOutOfStock" class="small font-oswald text-uppercase tracking-widest text-secondary" style="font-size: 0.7rem; opacity: 0.8;">
+              <i class="bi bi-slash-circle me-1"></i>Hết hàng
+            </span>
+            <span v-else-if="product.stock_quantity > 0 && product.stock_quantity <= 5" class="small font-oswald text-uppercase tracking-widest" style="font-size: 0.7rem; color: #cc1e2e;">
               Còn {{ product.stock_quantity }}
             </span>
             <span v-else-if="product.sold_count > 0" class="small text-muted font-oswald text-uppercase tracking-widest" style="font-size: 0.7rem;">
@@ -114,13 +123,16 @@
         <div v-if="showAddToCart" :class="['related-btn-add', { 'hover-only': hoverAddToCart }]">
           <button
             type="button"
-            @click.stop="handleQuickAddClick"
-            class="btn luxury-btn-solid w-100 rounded-0 py-3 font-oswald tracking-widest text-uppercase fw-bold shadow-none fs-6 d-flex align-items-center justify-content-center"
+            @click.stop="isOutOfStock ? null : handleQuickAddClick()"
+            class="btn w-100 rounded-0 py-3 font-oswald tracking-widest text-uppercase fw-bold shadow-none fs-6 d-flex align-items-center justify-content-center"
+            :class="isOutOfStock ? 'luxury-btn-sold-out' : 'luxury-btn-solid'"
+            :disabled="isOutOfStock"
+            :style="isOutOfStock ? 'cursor: not-allowed;' : ''"
           >
-            <span class="cart-icon-wrapper d-flex align-items-center justify-content-center overflow-hidden">
+            <span v-if="!isOutOfStock" class="cart-icon-wrapper d-flex align-items-center justify-content-center overflow-hidden">
               <i class="bi bi-cart-plus fs-5 text-white"></i>
             </span>
-            <span>Thêm vào giỏ</span>
+            <span>{{ isOutOfStock ? 'Đã bán hết' : 'Thêm vào giỏ' }}</span>
           </button>
         </div>
       </div>
@@ -175,6 +187,32 @@ const priceInfo = computed(() => {
     oldPrice: Number(p.promotional_price) > 0 && Number(p.promotional_price) < Number(p.base_price) ? Number(p.base_price) : null,
     discount: Number(p.promotional_price) > 0 && Number(p.promotional_price) < Number(p.base_price) ? Math.round((Number(p.base_price) - Number(p.promotional_price)) / Number(p.base_price) * 100) : 0
   };
+});
+
+const isOutOfStock = computed(() => {
+  const p = props.product;
+  
+  // Nếu là Combo (thường nhận biết qua is_combo hoặc thiếu thuộc tính category nhưng có items)
+  // và status là inactive hoặc hêt hạn
+  if (p.is_combo || (p.items && !p.category)) {
+      if (p.status && p.status !== 'active') return true;
+      if (p.is_active === false || p.is_active === 0) return true;
+      return false; // Mặc định Combo nếu đang active thì coi như còn hàng để user bấm vào xem chi tiết
+  }
+
+  // Ưu tiên total_stock nếu backend trả về (ví dụ từ ClientHomeController, ShopController)
+  if (p.total_stock !== undefined && p.total_stock !== null) {
+      return Number(p.total_stock) <= 0;
+  }
+
+  // Nếu là Sản phẩm thường có phân loại tải kèm (variants)
+  if (p.variants && p.variants.length > 0) {
+    const totalStock = p.variants.reduce((sum, v) => sum + Number(v.stock_quantity || 0), 0);
+    return totalStock <= 0;
+  }
+  
+  // Dự phòng (nếu có stock_quantity trực tiếp trên bảng products)
+  return p.stock_quantity !== undefined && p.stock_quantity !== null && Number(p.stock_quantity) <= 0;
 });
 
 const heartIconClass = computed(() => {
@@ -321,6 +359,14 @@ const hasHoverImage = (product) => {
   border-color: #cc1e2e;
   color: white;
   box-shadow: 0 8px 20px rgba(204,30,46,0.3);
+}
+
+.luxury-btn-sold-out {
+  background-color: #2a1810 !important;
+  color: #e7ce7d !important;
+  border: 1px solid #2a1810 !important;
+  opacity: 0.8;
+  transition: all 0.3s ease;
 }
 
 .cart-icon-wrapper {

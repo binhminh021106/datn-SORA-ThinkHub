@@ -41,11 +41,15 @@
              <i class="bi bi-exclamation-triangle-fill me-1"></i> Vui lòng chọn đầy đủ phân loại.
           </div>
           <div class="text-danger small fst-italic mt-2 fw-bold bg-danger bg-opacity-10 p-2 rounded" v-else-if="quickAddMatrix && Object.keys(quickAddMatrix).length > 0 && !quickAddSelectedVariant && isQuickAddAllSelected">
-             <i class="bi bi-x-circle-fill me-1"></i> Phiên bản này đã hết hàng hoặc không tồn tại.
+             <i class="bi bi-x-circle-fill me-1"></i> Phiên bản này không tồn tại.
+          </div>
+          <div class="text-danger small fst-italic mt-2 fw-bold bg-danger bg-opacity-10 p-2 rounded" v-else-if="quickAddSelectedVariant && Number(quickAddSelectedVariant.stock_quantity) <= 0">
+             <i class="bi bi-slash-circle me-1"></i> Phiên bản này đã hết hàng.
           </div>
 
-          <button @click="confirmQuickAdd" :disabled="isAdding" class="editorial-btn w-100 py-3 mt-4 px-4 font-oswald tracking-widest fw-bold text-uppercase d-flex justify-content-center align-items-center">
+          <button @click="confirmQuickAdd" :disabled="isAdding || (quickAddSelectedVariant && Number(quickAddSelectedVariant.stock_quantity) <= 0)" class="editorial-btn w-100 py-3 mt-4 px-4 font-oswald tracking-widest fw-bold text-uppercase d-flex justify-content-center align-items-center" :style="(quickAddSelectedVariant && Number(quickAddSelectedVariant.stock_quantity) <= 0) ? 'background-color: #6c757d !important; border-color: #6c757d !important; cursor: not-allowed; opacity: 0.8;' : ''">
              <span v-if="isAdding" class="spinner-border spinner-border-sm me-2"></span>
+             <span v-else-if="quickAddSelectedVariant && Number(quickAddSelectedVariant.stock_quantity) <= 0"><i class="bi bi-slash-circle me-2"></i> ĐÃ HẾT HÀNG</span>
              <span v-else><i class="bi bi-bag-plus-fill me-2"></i> Xác nhận thêm</span>
           </button>
         </div>
@@ -150,10 +154,12 @@ const isOptionAvailable = (attrName, attrValue) => {
         const vAttrs = variant.formatted_attributes;
         if (!vAttrs) return false;
 
-        return Object.entries(testSelections).every(([key, value]) => {
+        const isMatch = Object.entries(testSelections).every(([key, value]) => {
             if (!value) return true; 
             return String(vAttrs[key]) === String(value);
         });
+        
+        return isMatch && Number(variant.stock_quantity) > 0;
     });
 };
 
@@ -171,7 +177,7 @@ const handleSelect = (attrName, val) => {
                 const testValid = quickAddProduct.value.variants.some(variant => {
                     const vAttrs = variant.formatted_attributes;
                     if (!vAttrs) return false;
-                    return String(vAttrs[attrName]) === String(val) && String(vAttrs[key]) === String(quickAddSelections.value[key]);
+                    return String(vAttrs[attrName]) === String(val) && String(vAttrs[key]) === String(quickAddSelections.value[key]) && Number(variant.stock_quantity) > 0;
                 });
                 if (testValid) {
                     newSelections[key] = quickAddSelections.value[key];

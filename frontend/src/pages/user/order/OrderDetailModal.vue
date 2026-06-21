@@ -854,7 +854,7 @@ const handleDownloadInvoice = async () => {
   background-color: #f8f9fa;
   border: 1px solid #dee2e6;
   color: #495057;
-  border-radius: 14px;
+  border-radius: 10px;
   transition: all 0.3s ease;
 }
 .btn-luxury-neutral:hover {
@@ -868,7 +868,7 @@ const handleDownloadInvoice = async () => {
   background-color: #FCF0F1;
   color: #9F273B;
   border: 1px solid transparent;
-  border-radius: 14px;
+  border-radius: 10px;
   transition: all 0.3s ease;
 }
 .btn-luxury-danger:hover {
@@ -891,7 +891,7 @@ const handleDownloadInvoice = async () => {
   background-color: #009981;
   color: #fff;
   border: 1px solid transparent;
-  border-radius: 14px;
+  border-radius: 10px;
   transition: all 0.3s ease;
 }
 .btn-luxury-success:hover {
@@ -904,7 +904,7 @@ const handleDownloadInvoice = async () => {
   background-color: #E2F3E5;
   color: #009981;
   border: 1px solid transparent;
-  border-radius: 14px;
+  border-radius: 10px;
   transition: all 0.3s ease;
 }
 .btn-luxury-success-light:hover {
@@ -925,7 +925,7 @@ const handleDownloadInvoice = async () => {
   background: var(--sora-primary, #9f273b);
   color: #fff;
   border: 1px solid rgba(var(--sora-secondary-rgb, 231, 206, 125), 0.5);
-  border-radius: 14px;
+  border-radius: 10px;
   font-family: 'Oswald', sans-serif;
   font-size: 0.76rem;
   letter-spacing: 0.14em;
