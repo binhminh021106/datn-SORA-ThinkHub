@@ -640,6 +640,8 @@ const truncateHtml = (html, length) => {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap');
+
 .compare-page-wrapper {
   background: #f8f9fa;
   min-height: 100vh;
@@ -661,8 +663,8 @@ const truncateHtml = (html, length) => {
 .hover-primary:hover { color: #9f273b !important; }
 
 /* Compare Header Elements */
-.font-serif { font-family: "Playfair Display", "Merriweather", serif; }
-.font-inter { font-family: "Inter", sans-serif; }
+.font-serif { font-family: 'Josefin Sans', sans-serif; }
+.font-inter { font-family: "Manrope", sans-serif; }
 .font-oswald { font-family: "Oswald", sans-serif; }
 .tracking-wide { letter-spacing: 0.1em; }
 .tracking-wider { letter-spacing: 0.15em; }

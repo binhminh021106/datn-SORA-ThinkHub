@@ -361,8 +361,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap');
+
 .profile-sidebar {
-  font-family: 'Lato', 'Segoe UI', sans-serif;
+  font-family: 'Manrope', sans-serif;
 }
 
 .sidebar-user-card {
@@ -454,5 +456,5 @@ onMounted(() => {
   color: #cc1e2e !important;
 }
 
-.font-serif { font-family: "Playfair Display", "Merriweather", serif; }
+.font-serif { font-family: 'Josefin Sans', sans-serif; }
 </style>

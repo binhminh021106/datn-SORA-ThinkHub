@@ -415,7 +415,7 @@ onUnmounted(() => {
 }
 </style>
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Oswald:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Oswald:wght@400;500;600;700&display=swap');
 
 .bg-light-custom { background-color: var(--bg-light) !important; }
 .bg-main { background-color: var(--primary) !important; }
@@ -432,8 +432,8 @@ onUnmounted(() => {
 .btn-outline-main:hover { background-color: var(--primary); color: white; }
 
 .object-fit-cover { object-fit: cover !important; }
-.font-inter { font-family: 'Inter', sans-serif; }
-.font-serif { font-family: "Playfair Display", serif !important; }
+.font-inter { font-family: 'Manrope', sans-serif; }
+.font-serif { font-family: 'Josefin Sans', sans-serif !important; }
 .font-oswald { font-family: "Oswald", sans-serif !important; }
 .tracking-wide { letter-spacing: 0.1em; }
 
@@ -445,10 +445,10 @@ onUnmounted(() => {
 .author-link:hover { color: var(--primary); text-decoration: underline; }
 
 /* Giao diện Page */
-.blog-page { font-family: 'Inter', sans-serif; background-color: var(--bg-light); min-height: 100vh; color: var(--text-dark); display: flex; flex-direction: column; }
+.blog-page { font-family: 'Manrope', sans-serif; background-color: var(--bg-light); min-height: 100vh; color: var(--text-dark); display: flex; flex-direction: column; }
 .text-reset { text-decoration: none; color: inherit; transition: color 0.2s; }
 
-h1, h2, h3, h4, h5, h6 { font-family: 'Inter', sans-serif; font-weight: 700; color: var(--text-dark); }
+h1, h2, h3, h4, h5, h6 { font-family: 'Manrope', sans-serif; font-weight: 700; color: var(--text-dark); }
 .hover-primary:hover { color: #9f273b !important;}
 
 /* Hero Banner (Sora Banner Style) */

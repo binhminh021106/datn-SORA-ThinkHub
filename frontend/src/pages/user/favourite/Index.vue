@@ -347,7 +347,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Oswald:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Oswald:wght@400;500;600;700&display=swap');
 
 /* Màu sắc thương hiệu SORA */
 .bg-light-custom { background-color: #faf9f8 !important; }
@@ -361,7 +361,7 @@ onUnmounted(() => {
 .text-danger-custom { color: #cc1e2e !important; }
 
 /* Font chữ */
-.font-serif { font-family: "Playfair Display", "Merriweather", serif; }
+.font-serif { font-family: 'Josefin Sans', sans-serif; }
 .font-oswald { font-family: 'Oswald', sans-serif; }
 .divider { width: 4rem; height: 2px; }
 .object-fit-cover { object-fit: cover !important; }

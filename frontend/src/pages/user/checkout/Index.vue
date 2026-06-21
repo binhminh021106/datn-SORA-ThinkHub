@@ -1,5 +1,5 @@
 <template>
-    <div class="checkout-page bg-light-custom pb-5" style="min-height: 100vh; font-family: 'Lato', sans-serif;">
+    <div class="checkout-page bg-light-custom pb-5" style="min-height: 100vh; font-family: 'Manrope', sans-serif;">
 
         <div class="bg-transparent pt-4 pb-2 border-bottom border-light-subtle bg-white mb-4 shadow-sm">
             <div class="container d-flex justify-content-between align-items-center">
@@ -1148,14 +1148,14 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Josefin+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap');
 
 .bg-light-custom {
     background-color: #faf9f6;
 }
 
 .font-serif {
-    font-family: 'Playfair Display', serif;
+    font-family: 'Josefin Sans', sans-serif;
 }
 
 .font-oswald {

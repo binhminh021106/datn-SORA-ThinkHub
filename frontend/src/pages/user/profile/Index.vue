@@ -210,7 +210,7 @@ const tierBorderColor = computed(() => {
 .text-accent { color: #e7ce7d !important; }
 .text-danger-custom { color: #cc1e2e !important; }
 
-.font-serif { font-family: "Playfair Display", "Merriweather", serif; }
+.font-serif { font-family: 'Josefin Sans', sans-serif; }
 .font-oswald { font-family: 'Oswald', sans-serif; }
 .divider { width: 4rem; height: 2px; }
 .object-fit-cover { object-fit: cover !important; }

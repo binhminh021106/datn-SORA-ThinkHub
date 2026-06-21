@@ -434,12 +434,12 @@ onMounted(() => {
 .text-main { color: #9f273b !important; }
 .text-accent { color: #e7ce7d !important; }
 .text-danger-custom { color: #cc1e2e !important; }
-.font-serif { font-family: "Playfair Display", "Merriweather", serif; }
+.font-serif { font-family: 'Josefin Sans', sans-serif; }
 .tracking-wide { letter-spacing: 0.1em; }
 
 
 
-.tracking-wide { letter-spacing: 0.1em; }
+
 
 .transition-all { transition: all 0.3s ease; }
 .hover-shadow:hover { box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.05); border-color: #e7ce7d !important; }

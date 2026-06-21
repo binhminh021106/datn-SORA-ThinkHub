@@ -142,14 +142,14 @@ const handleError = (msg) => {
   font-size: 48px;
   font-weight: bold;
   letter-spacing: 12px;
-  font-family: 'Playfair Display', 'Times New Roman', serif;
+  font-family: 'Josefin Sans', sans-serif;
 }
 
 .auth-title {
   color: #9f273b;
   font-size: 26px;
   margin: 0 0 8px;
-  font-family: 'Playfair Display', serif;
+  font-family: 'Josefin Sans', sans-serif;
 }
 
 .text-error {

@@ -335,7 +335,7 @@ watch(currentSlug, () => {
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Oswald:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Oswald:wght@400;500;600;700&display=swap');
 
 /* MÀU SẮC THƯƠNG HIỆU SORA */
 .bg-light-custom { background-color: #faf9f8 !important; }
@@ -355,14 +355,14 @@ watch(currentSlug, () => {
 
 /* Font chữ & Định dạng cơ bản */
 .post-detail-page {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Manrope', sans-serif;
     color: #2c2c2c;
 }
 h1, h2, h3, h4, h5, h6 { 
-    font-family: 'Inter', sans-serif !important; 
+    font-family: 'Manrope', sans-serif !important; 
     font-weight: 700; 
 }
-.font-serif { font-family: "Playfair Display", "Merriweather", serif; }
+.font-serif { font-family: 'Josefin Sans', sans-serif; }
 .font-oswald { font-family: "Oswald", sans-serif !important; }
 .object-fit-cover { object-fit: cover !important; }
 .tracking-wide { letter-spacing: 0.1em; }
@@ -393,7 +393,7 @@ h1, h2, h3, h4, h5, h6 {
     color: #9f273b;
     margin-top: 30px;
     margin-bottom: 15px;
-    font-family: "Playfair Display", serif;
+    font-family: 'Josefin Sans', sans-serif;
 }
 
 .article-body :deep(p) {

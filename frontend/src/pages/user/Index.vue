@@ -692,7 +692,7 @@ onUnmounted(() => {
 </script>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Montserrat:wght@300;400;500;600&family=Oswald:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Manrope:wght@300;400;500;600;700&family=Oswald:wght@400;500;600;700&display=swap');
 
 :root {
   --sora-primary: #9f273b;
@@ -708,11 +708,11 @@ onUnmounted(() => {
 
 <style scoped>
 .font-luxury {
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Manrope', sans-serif;
 }
 
 .font-serif {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Josefin Sans', sans-serif;
   /* khoảng cách giữa các dòng */
 }
 
@@ -721,7 +721,7 @@ onUnmounted(() => {
 }
 
 .font-sans {
-  font-family: 'Inter', 'Montserrat', sans-serif;
+  font-family: 'Manrope', sans-serif;
 }
 
 .tracking-widest {
@@ -1338,7 +1338,7 @@ onUnmounted(() => {
   background-color: var(--sora-primary);
   color: #fff;
   border-radius: 50px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Manrope', sans-serif;
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -1351,7 +1351,7 @@ onUnmounted(() => {
   background-color: rgba(var(--sora-secondary-rgb), 0.2);
   color: #2a1810;
   border-radius: 50px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Manrope', sans-serif;
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -1377,7 +1377,7 @@ onUnmounted(() => {
 
 .countdown-label {
   color: #8b7a6a;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Manrope', sans-serif;
   font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0.1em;
@@ -1415,7 +1415,7 @@ onUnmounted(() => {
 .time-label {
   margin-top: 0.5rem;
   color: #8b7a6a;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Manrope', sans-serif;
   font-size: 0.6rem;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -1472,7 +1472,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Manrope', sans-serif;
   font-size: 0.95rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -2058,7 +2058,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.4rem;
   color: rgba(255, 238, 196, 0.92);
-  font-family: 'Playfair Display', serif;
+  font-family: 'Josefin Sans', sans-serif;
   font-size: 1rem;
   letter-spacing: 0.05em;
 }
