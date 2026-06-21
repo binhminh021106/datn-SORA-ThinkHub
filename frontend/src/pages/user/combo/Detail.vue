@@ -31,7 +31,7 @@
         <div class="row g-0 g-lg-5 mb-5 pb-5 combo-detail-hero-row">
           
           <div class="col-lg-6 mb-4 mb-lg-0">
-            <div class="sticky-top" style="top: 100px; z-index: 1;">
+            <div class="sticky-top" :style="{ top: imageTop, transition: 'top 0.3s cubic-bezier(0.4, 0, 0.2, 1)', zIndex: 1 }">
               <div class="luxury-image-wrapper position-relative overflow-hidden cursor-zoom-in" style="aspect-ratio: 1 / 1;" @click="viewFullImage(getImage(combo.thumbnail_image))">
                 <div class="image-display-surface"></div>
                 <div class="position-absolute top-0 start-0 z-index-2 mt-4 ms-4">
@@ -917,16 +917,38 @@ watch(() => route.params.slug, (newSlug) => {
     if(newSlug && route.name === 'client-combo-detail') fetchDetail(newSlug);
 });
 
+const imageTop = ref('100px');
+let lastScrollY = 0;
+let isHeaderHidden = false;
+
+const handleScroll = () => {
+  const currentScrollY = window.scrollY;
+  if (currentScrollY > 200) {
+    if (currentScrollY > lastScrollY && !isHeaderHidden) {
+      isHeaderHidden = true;
+    } else if (currentScrollY < lastScrollY && isHeaderHidden) {
+      isHeaderHidden = false;
+    }
+  } else {
+    isHeaderHidden = false;
+  }
+  imageTop.value = isHeaderHidden ? '20px' : '100px';
+  lastScrollY = currentScrollY;
+};
+
 onMounted(() => {
     fetchFavorites();
     fetchDetail(route.params.slug);
     timerInterval = setInterval(() => { currentTime.value = new Date().getTime(); }, 1000);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
 });
 
 onUnmounted(() => {
     if (timerInterval) clearInterval(timerInterval);
     document.querySelectorAll('.swal2-container').forEach(el => el.remove());
     if (quickAddModalInstance) quickAddModalInstance.dispose();
+    window.removeEventListener('scroll', handleScroll);
 });
 </script>
 
@@ -966,7 +988,7 @@ onUnmounted(() => {
 }
 
 .combo-detail-hero-row {
-  border-bottom: 1px solid rgba(197, 158, 74, 0.32) !important;
+  /* removed border-bottom to avoid duplicate line with related-products-section */
 }
 
 .combo-detail-copy {
