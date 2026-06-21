@@ -9,11 +9,14 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderStatusHistory;
 use App\Models\Cart;
+use App\Models\Combo;
+use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Coupon;
 use App\Models\Review; // BẮT BUỘC: Đảm bảo bạn đã thêm dòng này
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;   // ← Thêm dòng này
@@ -345,7 +348,40 @@ class ClientOrderController extends Controller
                 'reviews.*.images.*'   => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             ]);
 
+            $order->loadMissing('items');
+            $orderProductIds = $order->items->pluck('product_id')->filter()->unique()->values();
+            $orderComboIds = $order->items->pluck('combo_id')->filter()->unique()->values();
+
+            foreach ($request->reviews as $itemData) {
+                $productId = $itemData['product_id'] ?? null;
+                $comboId = $itemData['combo_id'] ?? null;
+
+                if (!$productId && !$comboId) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Mỗi đánh giá cần gắn với một sản phẩm hoặc combo trong đơn hàng.',
+                    ], 422);
+                }
+
+                if ($productId && !$orderProductIds->contains((int) $productId)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Sản phẩm đánh giá không thuộc đơn hàng này.',
+                    ], 422);
+                }
+
+                if ($comboId && !$orderComboIds->contains((int) $comboId)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Combo đánh giá không thuộc đơn hàng này.',
+                    ], 422);
+                }
+            }
+
             DB::beginTransaction();
+
+            $reviewedProductIds = collect();
+            $reviewedComboIds = collect();
 
             foreach ($request->reviews as $itemData) {
                 $imagePaths = [];
@@ -366,7 +402,18 @@ class ClientOrderController extends Controller
                     'images'     => empty($imagePaths) ? null : $imagePaths,
                     'status'     => 'approved', // Sửa từ 'published' thành 'approved' khớp với DB ENUM
                 ]);
+
+                if (!empty($itemData['product_id'])) {
+                    $reviewedProductIds->push((int) $itemData['product_id']);
+                }
+
+                if (!empty($itemData['combo_id'])) {
+                    $reviewedComboIds->push((int) $itemData['combo_id']);
+                }
             }
+
+            $reviewedProductIds->unique()->each(fn ($productId) => $this->syncProductRatingStats($productId));
+            $reviewedComboIds->unique()->each(fn ($comboId) => $this->syncComboRatingStats($comboId));
 
             DB::commit();
 
@@ -391,6 +438,38 @@ class ClientOrderController extends Controller
                 'message' => 'Lỗi Backend: ' . $e->getMessage() . ' (Dòng ' . $e->getLine() . ')'
             ], 500);
         }
+    }
+
+    private function syncProductRatingStats(int $productId): void
+    {
+        $product = Product::find($productId);
+        if (!$product) {
+            return;
+        }
+
+        $stats = Review::where('product_id', $productId)->where('status', 'approved');
+        $product->forceFill([
+            'rating_avg' => round((float) ($stats->avg('rating') ?? 0), 2),
+            'review_count' => (clone $stats)->count(),
+        ])->save();
+    }
+
+    private function syncComboRatingStats(int $comboId): void
+    {
+        if (!Schema::hasColumn('combos', 'rating_avg') || !Schema::hasColumn('combos', 'review_count')) {
+            return;
+        }
+
+        $combo = Combo::find($comboId);
+        if (!$combo) {
+            return;
+        }
+
+        $stats = Review::where('combo_id', $comboId)->where('status', 'approved');
+        $combo->forceFill([
+            'rating_avg' => round((float) ($stats->avg('rating') ?? 0), 2),
+            'review_count' => (clone $stats)->count(),
+        ])->save();
     }
 
     /**

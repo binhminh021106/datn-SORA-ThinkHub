@@ -455,6 +455,24 @@ class ClientCheckoutController extends Controller
                         'message' => 'Đang chuyển hướng sang Ví MoMo...'
                     ]);
                 }
+
+                if ($request->payment_method === 'vnpay') {
+                    $vnpayUrl = $this->generateVnpayUrl(
+                        $order,
+                        $request->input('checkout_source', 'web'),
+                        $request->input('mobile_return_url')
+                    );
+
+                    return response()->json([
+                        'success' => true,
+                        'payment_url' => $vnpayUrl,
+                        'data' => [
+                            'order_code'   => $order->order_code,
+                            'total_amount' => $order->total_amount
+                        ],
+                        'message' => 'Đang chuyển hướng sang VNPay...'
+                    ]);
+                }
             });
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
@@ -550,6 +568,255 @@ class ClientCheckoutController extends Controller
         throw new \Exception("MoMo API Error: " . ($result['message'] ?? 'Lỗi tạo link'));
     }
 
+    private function generateVnpayUrl($order, string $checkoutSource = 'web', ?string $mobileReturnUrl = null): string
+    {
+        $paymentUrl = env('VNPAY_PAYMENT_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html');
+        $tmnCode = env('VNPAY_TMN_CODE');
+        $hashSecret = env('VNPAY_HASH_SECRET');
+
+        $missing = [];
+        if (empty($paymentUrl)) $missing[] = 'VNPAY_PAYMENT_URL';
+        if (empty($tmnCode)) $missing[] = 'VNPAY_TMN_CODE';
+        if (empty($hashSecret)) $missing[] = 'VNPAY_HASH_SECRET';
+
+        if (!empty($missing)) {
+            throw new \Exception('Thiếu cấu hình VNPay: ' . implode(', ', $missing));
+        }
+
+        $returnUrl = url('/api/client/checkout/vnpay-return');
+        $returnParams = [
+            'source' => $checkoutSource === 'mobile' ? 'mobile' : 'web',
+        ];
+
+        $safeMobileReturnUrl = $this->sanitizeMobileReturnUrl($mobileReturnUrl);
+        if ($safeMobileReturnUrl) {
+            $returnParams['mobile_return_url'] = $safeMobileReturnUrl;
+        }
+
+        $returnUrl .= '?' . http_build_query($returnParams);
+
+        $inputData = [
+            'vnp_Version' => '2.1.0',
+            'vnp_TmnCode' => $tmnCode,
+            'vnp_Amount' => (int) round($order->total_amount) * 100,
+            'vnp_Command' => 'pay',
+            'vnp_CreateDate' => now('Asia/Ho_Chi_Minh')->format('YmdHis'),
+            'vnp_CurrCode' => 'VND',
+            'vnp_IpAddr' => request()->ip() ?: '127.0.0.1',
+            'vnp_Locale' => 'vn',
+            'vnp_OrderInfo' => 'Thanh toan don hang SORA ' . $order->order_code,
+            'vnp_OrderType' => 'other',
+            'vnp_ReturnUrl' => $returnUrl,
+            'vnp_TxnRef' => $order->order_code,
+            'vnp_ExpireDate' => now('Asia/Ho_Chi_Minh')->addMinutes(15)->format('YmdHis'),
+        ];
+
+        ksort($inputData);
+
+        $hashData = $this->buildVnpayHashData($inputData);
+        $secureHash = hash_hmac('sha512', $hashData, $hashSecret);
+
+        return $paymentUrl . '?' . http_build_query($inputData) . '&vnp_SecureHash=' . $secureHash;
+    }
+
+    private function buildVnpayHashData(array $params): string
+    {
+        ksort($params);
+        $hashData = [];
+
+        foreach ($params as $key => $value) {
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            $hashData[] = urlencode($key) . '=' . urlencode($value);
+        }
+
+        return implode('&', $hashData);
+    }
+
+    private function verifyVnpaySignature(Request $request): bool
+    {
+        $hashSecret = env('VNPAY_HASH_SECRET');
+        $secureHash = $request->query('vnp_SecureHash');
+
+        if (!$hashSecret || !$secureHash) {
+            return false;
+        }
+
+        $inputData = array_filter(
+            $request->query(),
+            fn ($value, $key) => str_starts_with($key, 'vnp_'),
+            ARRAY_FILTER_USE_BOTH
+        );
+        unset($inputData['vnp_SecureHash'], $inputData['vnp_SecureHashType']);
+
+        $hashData = $this->buildVnpayHashData($inputData);
+        $calculatedHash = hash_hmac('sha512', $hashData, $hashSecret);
+
+        return hash_equals(strtolower($calculatedHash), strtolower($secureHash));
+    }
+
+    public function vnpayReturn(Request $request)
+    {
+        $orderCode = (string) $request->query('vnp_TxnRef', '');
+        $isMobileCheckout = $request->query('source', 'web') === 'mobile';
+        $mobileReturnUrl = $request->query('mobile_return_url');
+        $frontendUrl = rtrim(env('FRONTEND_URL', 'http://localhost:5173'), '/');
+
+        if (!$this->verifyVnpaySignature($request)) {
+            if ($isMobileCheckout) {
+                return redirect($this->buildMobilePaymentReturnUrl($mobileReturnUrl, $orderCode, 'failed', 'cart'));
+            }
+
+            return redirect($frontendUrl . '/checkout/failed?order=' . urlencode($orderCode));
+        }
+
+        if ($request->query('vnp_ResponseCode') === '00' && $request->query('vnp_TransactionStatus') === '00') {
+            $this->markOnlineOrderAsPaid($orderCode);
+
+            if ($isMobileCheckout) {
+                return redirect($this->buildMobilePaymentReturnUrl($mobileReturnUrl, $orderCode, 'success', 'order-history'));
+            }
+
+            return redirect($frontendUrl . '/checkout/success?order=' . urlencode($orderCode));
+        }
+
+        $this->cancelOrderAndRestoreStock($orderCode);
+
+        if ($isMobileCheckout) {
+            return redirect($this->buildMobilePaymentReturnUrl($mobileReturnUrl, $orderCode, 'cancelled', 'cart'));
+        }
+
+        return redirect($frontendUrl . '/checkout/failed?order=' . urlencode($orderCode));
+    }
+
+    public function vnpayIpn(Request $request)
+    {
+        $orderCode = (string) $request->query('vnp_TxnRef', '');
+
+        if (!$this->verifyVnpaySignature($request)) {
+            return response()->json([
+                'RspCode' => '97',
+                'Message' => 'Invalid signature',
+            ]);
+        }
+
+        $order = Order::where('order_code', $orderCode)->first();
+        if (!$order) {
+            return response()->json([
+                'RspCode' => '01',
+                'Message' => 'Order not found',
+            ]);
+        }
+
+        $expectedAmount = (int) round($order->total_amount) * 100;
+        if ((int) $request->query('vnp_Amount') !== $expectedAmount) {
+            return response()->json([
+                'RspCode' => '04',
+                'Message' => 'Invalid amount',
+            ]);
+        }
+
+        if ($request->query('vnp_ResponseCode') === '00' && $request->query('vnp_TransactionStatus') === '00') {
+            $this->markOnlineOrderAsPaid($orderCode);
+
+            return response()->json([
+                'RspCode' => '00',
+                'Message' => 'Confirm Success',
+            ]);
+        }
+
+        $this->cancelOrderAndRestoreStock($orderCode);
+
+        return response()->json([
+            'RspCode' => '00',
+            'Message' => 'Confirm Success',
+        ]);
+    }
+
+    public function retryMomoPayment(Request $request, string $order_code)
+    {
+        $user = auth('sanctum')->user();
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vui lòng đăng nhập để tiếp tục thanh toán.',
+            ], 401);
+        }
+
+        $order = Order::where('order_code', $order_code)->first();
+
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không tìm thấy đơn hàng.',
+            ], 404);
+        }
+
+        if (!$order->user_id || $user->id !== $order->user_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Bạn không có quyền thanh toán đơn hàng này.',
+            ], 403);
+        }
+
+        if ($order->payment_method !== 'momo') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Đơn hàng này không sử dụng phương thức thanh toán MoMo.',
+            ], 422);
+        }
+
+        if ($order->payment_status === 'paid') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Đơn hàng này đã được thanh toán.',
+            ], 422);
+        }
+
+        if ($order->status !== 'pending' || $order->payment_status !== 'unpaid') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Đơn hàng này không còn ở trạng thái chờ thanh toán.',
+            ], 422);
+        }
+
+        $amount = (int) round($order->total_amount);
+        if ($amount < 10000 || $amount > 50000000) {
+            return response()->json([
+                'success' => false,
+                'message' => 'MoMo chỉ hỗ trợ đơn hàng từ 10.000đ đến 50.000.000đ.',
+            ], 422);
+        }
+
+        try {
+            $paymentUrl = $this->generateMomoUrl(
+                $order,
+                $request->input('checkout_source', 'mobile'),
+                null,
+                $request->input('mobile_return_url')
+            );
+
+            return response()->json([
+                'success' => true,
+                'payment_url' => $paymentUrl,
+                'data' => [
+                    'order_code' => $order->order_code,
+                    'total_amount' => $order->total_amount,
+                    'payment_status' => $order->payment_status,
+                    'status' => $order->status,
+                ],
+                'message' => 'Đang mở lại cổng thanh toán MoMo...',
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
     public function momoReturn(Request $request)
     {
         $parts = explode('_', $request->orderId);
@@ -592,6 +859,11 @@ class ClientCheckoutController extends Controller
 
     private function buildMobileMomoReturnUrl(?string $returnUrl, string $orderCode, string $paymentStatus, string $fallbackPath): string
     {
+        return $this->buildMobilePaymentReturnUrl($returnUrl, $orderCode, $paymentStatus, $fallbackPath);
+    }
+
+    private function buildMobilePaymentReturnUrl(?string $returnUrl, string $orderCode, string $paymentStatus, string $fallbackPath): string
+    {
         $baseUrl = $this->sanitizeMobileReturnUrl($returnUrl) ?: 'sora://' . $fallbackPath;
         $separator = str_contains($baseUrl, '?') ? '&' : '?';
 
@@ -609,13 +881,35 @@ class ClientCheckoutController extends Controller
 
         $returnUrl = trim($returnUrl);
         $scheme = strtolower((string) parse_url($returnUrl, PHP_URL_SCHEME));
-        $allowedScheme = strtolower((string) env('MOBILE_APP_SCHEME', 'sora'));
+        $allowedSchemes = collect(explode(',', (string) env('MOBILE_APP_ALLOWED_SCHEMES', 'sora,exp,exps')))
+            ->map(fn ($item) => strtolower(trim($item)))
+            ->filter()
+            ->values()
+            ->all();
 
-        if ($scheme !== $allowedScheme) {
+        if (!in_array($scheme, $allowedSchemes, true)) {
             return null;
         }
 
         return $returnUrl;
+    }
+
+    private function markOnlineOrderAsPaid(string $orderCode): ?Order
+    {
+        $order = Order::with('items')->where('order_code', $orderCode)->first();
+        if (!$order) {
+            return null;
+        }
+
+        if ($order->payment_status !== 'paid') {
+            $order->payment_status = 'paid';
+            $order->save();
+
+            $this->clearCartAfterPaidOrder($order);
+            $this->queueOrderSuccessNotifications($order);
+        }
+
+        return $order;
     }
 
     private function clearCartAfterPaidOrder(Order $order, ?int $cartId = null): void

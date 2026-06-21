@@ -241,6 +241,24 @@
                                     </div>
                                     <div class="radio-indicator flex-shrink-0 ms-3"></div>
                                 </label>
+
+                                <label class="payment-method-box d-flex align-items-center justify-content-between p-3"
+                                    :class="{ 'active': form.payment_method === 'vnpay' }">
+                                    <input type="radio" name="payment_method" value="vnpay" v-model="form.payment_method"
+                                        class="d-none">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="icon-wrap rounded-circle d-flex justify-content-center align-items-center flex-shrink-0 border"
+                                            style="width: 45px; height: 45px; background-color: #009981; color: white;">
+                                            <i class="bi bi-credit-card-2-front fs-5"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-1 fw-bold text-dark font-oswald tracking-wide text-uppercase"
+                                                style="color: #009981 !important;">Thanh toán qua VNPay</h6>
+                                            <small class="text-muted">Thanh toán bằng thẻ ATM, tài khoản ngân hàng hoặc VNPay QR</small>
+                                        </div>
+                                    </div>
+                                    <div class="radio-indicator flex-shrink-0 ms-3"></div>
+                                </label>
                             </div>
                         </form>
                     </div>
@@ -419,7 +437,7 @@
                                 class="editorial-btn w-100 py-3 shadow-sm fs-5 d-flex justify-content-center align-items-center">
                                 <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>
                                 <i v-if="!isSubmitting" class="bi bi-bag-check-fill me-2"></i>
-                                {{ isSubmitting ? 'ĐANG XỬ LÝ...' : (form.payment_method === 'momo' ? 'THANH TOÁN QUA MOMO' : 'HOÀN TẤT ĐẶT HÀNG') }}
+                                {{ isSubmitting ? 'ĐANG XỬ LÝ...' : submitButtonText }}
                             </button>
                         </div>
                     </div>
@@ -578,6 +596,12 @@ const form = ref({
     order_note: '',
     payment_method: 'cod',
     affiliate_code: '' // BỔ SUNG BIẾN CHỨA MÃ AFFILIATE
+});
+
+const submitButtonText = computed(() => {
+    if (form.value.payment_method === 'momo') return 'THANH TOÁN QUA MOMO';
+    if (form.value.payment_method === 'vnpay') return 'THANH TOÁN QUA VNPAY';
+    return 'HOÀN TẤT ĐẶT HÀNG';
 });
 
 const soraAlert = createSoraAlert({

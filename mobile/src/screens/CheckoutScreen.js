@@ -40,7 +40,12 @@ const CustomAlertShim = {
 
 const { width, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-const fmt = (n) => n.toLocaleString("vi-VN") + "đ";
+const fmt = (n) =>
+  new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+    maximumFractionDigits: 0,
+  }).format(Number(n) || 0);
 const MOMO_MIN_AMOUNT = 10000;
 const MOMO_MAX_AMOUNT = 50000000;
 const NEW_ADDRESS_API_URL = "https://esgoo.net/api-tinhthanh-new/4/0.htm";
@@ -846,13 +851,15 @@ export default function CheckoutScreen({ route }) {
         setIsConfirmModalVisible(false);
         if (json.payment_url) {
           setIsPlacingOrder(false);
-          handleMomoPayment({
+          handleOnlinePayment({
             paymentUrl: json.payment_url,
             order: json.data,
+            method: paymentMethod,
           });
           return;
-        } else if (paymentMethod === "momo") {
-          showCustomAlert("Lỗi thanh toán", json.message || "MoMo chưa trả về đường dẫn thanh toán. Vui lòng thử lại.");
+        } else if (paymentMethod === "momo" || paymentMethod === "vnpay") {
+          const gatewayName = paymentMethod === "vnpay" ? "VNPay" : "MoMo";
+          showCustomAlert("Lỗi thanh toán", json.message || `${gatewayName} chưa trả về đường dẫn thanh toán. Vui lòng thử lại.`);
         } else {
           queryClient.invalidateQueries({ queryKey: ["cart"] });
           queryClient.invalidateQueries({ queryKey: ["checkout", "init"] });
@@ -884,16 +891,17 @@ export default function CheckoutScreen({ route }) {
     setIsConfirmModalVisible(false);
   };
 
-  async function handleMomoPayment({ paymentUrl, order }) {
+  async function handleOnlinePayment({ paymentUrl, order, method }) {
     const orderCode = order?.order_code;
     const returnUrl = ExpoLinking.createURL("order-history");
+    const gatewayName = method === "vnpay" ? "VNPay" : "MoMo";
 
     try {
       const browserResult = await WebBrowser.openAuthSessionAsync(paymentUrl, returnUrl);
       if (browserResult.type === "cancel" || browserResult.type === "dismiss") {
         showCustomAlert(
-          "Thanh toán MoMo",
-          "Bạn đã đóng cổng thanh toán MoMo. Đơn hàng chưa được xác nhận thanh toán, bạn có thể kiểm tra lại trong lịch sử đơn hàng.",
+          `Thanh toán ${gatewayName}`,
+          `Bạn đã đóng cổng thanh toán ${gatewayName}. Đơn hàng chưa được xác nhận thanh toán, bạn có thể kiểm tra lại trong lịch sử đơn hàng.`,
           [
             { text: "Ở lại", style: "cancel" },
             { text: "Lịch sử đơn", onPress: () => navigation.navigate("OrderHistory") },
@@ -903,15 +911,15 @@ export default function CheckoutScreen({ route }) {
         return;
       }
     } catch (error) {
-      console.log("Error opening MoMo payment URL", error);
-      showCustomAlert("Lỗi thanh toán", "Không thể mở cổng thanh toán MoMo. Vui lòng thử lại.");
+      console.log(`Error opening ${gatewayName} payment URL`, error);
+      showCustomAlert("Lỗi thanh toán", `Không thể mở cổng thanh toán ${gatewayName}. Vui lòng thử lại.`);
       return;
     }
 
     if (!orderCode) {
       showCustomAlert(
         "Đơn hàng đang xử lý",
-        "Đơn hàng MoMo đã được tạo nhưng app chưa nhận được mã đơn để kiểm tra tự động. Bạn có thể vào lịch sử đơn hàng để theo dõi.",
+        `Đơn hàng ${gatewayName} đã được tạo nhưng app chưa nhận được mã đơn để kiểm tra tự động. Bạn có thể vào lịch sử đơn hàng để theo dõi.`,
         [
           { text: "Ở lại", style: "cancel" },
           { text: "Lịch sử đơn", onPress: () => navigation.navigate("OrderHistory") },
@@ -937,7 +945,7 @@ export default function CheckoutScreen({ route }) {
 
         showCustomAlert(
           "Đơn hàng đang chờ thanh toán",
-          "MoMo chưa xác nhận thanh toán cho đơn hàng này. Bạn có thể vào lịch sử đơn hàng để kiểm tra lại sau.",
+          `${gatewayName} chưa xác nhận thanh toán cho đơn hàng này. Bạn có thể vào lịch sử đơn hàng để kiểm tra lại sau.`,
           [
             { text: "Ở lại", style: "cancel" },
             { text: "Lịch sử đơn", onPress: () => navigation.navigate("OrderHistory") },
@@ -945,10 +953,10 @@ export default function CheckoutScreen({ route }) {
           "time-outline"
         );
       } catch (error) {
-        console.log("Error checking MoMo order status", error);
+        console.log(`Error checking ${gatewayName} order status`, error);
         showCustomAlert(
           "Chưa kiểm tra được thanh toán",
-          "App chưa kiểm tra được trạng thái MoMo. Vui lòng vào lịch sử đơn hàng để theo dõi đơn vừa tạo.",
+          `App chưa kiểm tra được trạng thái ${gatewayName}. Vui lòng vào lịch sử đơn hàng để theo dõi đơn vừa tạo.`,
           [
             { text: "Ở lại", style: "cancel" },
             { text: "Lịch sử đơn", onPress: () => navigation.navigate("OrderHistory") },

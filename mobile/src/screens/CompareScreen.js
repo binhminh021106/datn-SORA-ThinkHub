@@ -46,6 +46,28 @@ const getDescription = (value) => {
   return value.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 };
 
+const getCompareRecommendation = (products) => {
+  if (products.length < 2) {
+    return 'Thêm ít nhất 2 sản phẩm để SORA chỉ ra điểm khác biệt rõ hơn.';
+  }
+
+  const availableProducts = products.filter((product) => Number(product.stock_quantity || 0) > 0);
+  const candidates = availableProducts.length > 0 ? availableProducts : products;
+  const best = candidates.reduce((winner, product) => {
+    if (!winner) return product;
+    const productPrice = getPrice(product);
+    const winnerPrice = getPrice(winner);
+    if (productPrice > 0 && (winnerPrice === 0 || productPrice < winnerPrice)) return product;
+    return winner;
+  }, null);
+
+  if (!best) {
+    return 'Các sản phẩm đang khá tương đồng, hãy ưu tiên mẫu hợp phong cách của bạn nhất.';
+  }
+
+  return `${best.name} đang là lựa chọn đáng cân nhắc nhờ mức giá tốt${Number(best.stock_quantity || 0) > 0 ? ' và còn hàng' : ''}.`;
+};
+
 const readStoredCompareProducts = async () => {
   const stored = await AsyncStorage.getItem(STORAGE_KEY);
   const items = stored ? JSON.parse(stored) : [];
@@ -208,8 +230,7 @@ export default function CompareScreen({ navigation }) {
     return new Set(values).size > 1;
   };
 
-  const criteria = useMemo(() => {
-    const rows = [
+  const rawCriteria = useMemo(() => ([
       { label: 'Mức giá', type: 'price', value: (product) => formatCurrency(getPrice(product)) },
       {
         label: 'Tồn kho',
@@ -223,10 +244,22 @@ export default function CompareScreen({ navigation }) {
         value: (product) => product.specifications?.[key] || 'Chưa cập nhật',
       })),
       { label: 'Mô tả', type: 'description', value: (product) => getDescription(product.description) },
-    ];
+  ]), [specificationKeys]);
 
-    return showDiffOnly ? rows.filter((row) => hasDifference(row.value)) : rows;
-  }, [products, showDiffOnly, specificationKeys]);
+  const differenceCount = useMemo(
+    () => rawCriteria.filter((row) => hasDifference(row.value)).length,
+    [rawCriteria, products]
+  );
+
+  const compareRecommendation = useMemo(
+    () => getCompareRecommendation(products),
+    [products]
+  );
+
+  const criteria = useMemo(
+    () => showDiffOnly ? rawCriteria.filter((row) => hasDifference(row.value)) : rawCriteria,
+    [products, rawCriteria, showDiffOnly]
+  );
 
   return (
     <>
@@ -290,6 +323,23 @@ export default function CompareScreen({ navigation }) {
               )}
             </View>
           </View>
+
+          {products.length > 0 && (
+            <View style={styles.insightPanel}>
+              <View style={styles.insightMetric}>
+                <Text style={styles.insightNumber}>{differenceCount}</Text>
+                <Text style={styles.insightLabel}>điểm khác biệt</Text>
+              </View>
+              <View style={styles.insightDivider} />
+              <View style={styles.insightCopy}>
+                <View style={styles.insightTitleRow}>
+                  <Ionicons name="sparkles-outline" size={15} color="#9f273b" />
+                  <Text style={styles.insightTitle}>Gợi ý nhanh</Text>
+                </View>
+                <Text style={styles.insightText}>{compareRecommendation}</Text>
+              </View>
+            </View>
+          )}
 
           {isLoading ? (
             <View style={styles.centerState}>
@@ -361,15 +411,38 @@ export default function CompareScreen({ navigation }) {
                       )}
                     </View>
                   </View>
-                  {criteria.map((row, rowIndex) => (
-                    <View key={row.label} style={[styles.criteriaBlock, rowIndex % 2 === 1 && styles.criteriaBlockAlt]}>
-                      <Text style={styles.criteriaTitle}>{row.label}</Text>
+                  {criteria.map((row, rowIndex) => {
+                    const isDifferentRow = hasDifference(row.value);
+                    return (
+                    <View
+                      key={row.label}
+                      style={[
+                        styles.criteriaBlock,
+                        rowIndex % 2 === 1 && styles.criteriaBlockAlt,
+                        isDifferentRow && styles.criteriaBlockDifferent,
+                      ]}
+                    >
+                      <View style={styles.criteriaTitleRow}>
+                        <Text style={[styles.criteriaTitle, styles.criteriaTitleInRow]}>{row.label}</Text>
+                        {isDifferentRow && (
+                          <View style={styles.differenceBadge}>
+                            <Text style={styles.differenceBadgeText}>KHÁC BIỆT</Text>
+                          </View>
+                        )}
+                      </View>
                       <View style={styles.criteriaValueRow}>
                         {products.map((product) => {
                           const value = row.value(product);
                           const isDescriptionExpanded = !!expandedDescriptions[product.id];
                           return (
-                            <View key={`${row.label}-${product.id}`} style={styles.criteriaValueCell}>
+                            <View
+                              key={`${row.label}-${product.id}`}
+                              style={[
+                                styles.criteriaValueCell,
+                                isDifferentRow && styles.criteriaDifferentCell,
+                                row.type === 'price' && bestPrice !== null && getPrice(product) === bestPrice && styles.criteriaBestCell,
+                              ]}
+                            >
                               <Text
                                 style={[
                                   styles.criteriaValue,
@@ -403,7 +476,8 @@ export default function CompareScreen({ navigation }) {
                         )}
                       </View>
                     </View>
-                  ))}
+                  );
+                  })}
                 </View>
               </ScrollView>
             </>
@@ -492,6 +566,15 @@ const styles = StyleSheet.create({
   diffToggle: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   diffToggleText: { fontFamily: 'Oswald_400Regular', fontSize: 11, color: '#666' },
   clearBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fffafa' },
+  insightPanel: { marginHorizontal: 14, marginTop: 12, marginBottom: 4, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#ead8a3', backgroundColor: '#fffdf6', flexDirection: 'row', alignItems: 'center' },
+  insightMetric: { width: 74, alignItems: 'center', justifyContent: 'center' },
+  insightNumber: { fontFamily: PRICE_FONT_FAMILY, fontWeight: PRICE_FONT_WEIGHT, fontSize: 25, color: '#9f273b' },
+  insightLabel: { marginTop: 1, textAlign: 'center', fontFamily: 'Oswald_400Regular', fontSize: 10, color: '#8c826e' },
+  insightDivider: { width: 1, alignSelf: 'stretch', marginHorizontal: 10, backgroundColor: '#ead8a3' },
+  insightCopy: { flex: 1 },
+  insightTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 },
+  insightTitle: { fontFamily: 'Oswald_600SemiBold', fontSize: 12, color: '#9f273b', letterSpacing: 0.5 },
+  insightText: { fontFamily: 'Oswald_400Regular', fontSize: 12, lineHeight: 17, color: '#5f5647' },
   centerState: { minHeight: 330, paddingHorizontal: 28, alignItems: 'center', justifyContent: 'center' },
   stateText: { marginTop: 9, textAlign: 'center', fontFamily: 'Oswald_400Regular', fontSize: 13, color: '#888' },
   emptyTitle: { marginTop: 12, fontFamily: 'PlayfairDisplay_700Bold', fontSize: 19, color: '#333' },
@@ -515,10 +598,17 @@ const styles = StyleSheet.create({
   criteriaTable: { minWidth: '100%' },
   criteriaBlock: { paddingTop: 11, borderTopWidth: 1, borderTopColor: '#eee', backgroundColor: '#fff' },
   criteriaBlockAlt: { backgroundColor: '#fffdf9' },
+  criteriaBlockDifferent: { borderLeftWidth: 3, borderLeftColor: '#e7ce7d', backgroundColor: '#fffaf0' },
   criteriaIdentityBlock: { backgroundColor: '#fffafa' },
+  criteriaTitleRow: { paddingHorizontal: 14, paddingBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 8 },
   criteriaTitle: { paddingHorizontal: 14, paddingBottom: 8, fontFamily: 'Oswald_600SemiBold', fontSize: 12, color: '#9f273b', textTransform: 'uppercase' },
+  criteriaTitleInRow: { paddingHorizontal: 0, paddingBottom: 0 },
+  differenceBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, backgroundColor: '#e7ce7d' },
+  differenceBadgeText: { fontFamily: 'Oswald_600SemiBold', fontSize: 8.5, color: '#6e5315', letterSpacing: 0.4 },
   criteriaValueRow: { flexDirection: 'row', paddingHorizontal: 12, gap: 10 },
   criteriaValueCell: { width: PRODUCT_COLUMN_WIDTH, minHeight: 54, padding: 10, borderRadius: 6, backgroundColor: '#fafafa' },
+  criteriaDifferentCell: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#f0dfb1' },
+  criteriaBestCell: { backgroundColor: '#fff7df', borderColor: '#e7ce7d' },
   criteriaPlaceholderCell: { borderWidth: 1, borderStyle: 'dashed', borderColor: '#ead9dc', backgroundColor: '#fffafa' },
   criteriaValue: { fontFamily: 'Oswald_400Regular', fontSize: 12, lineHeight: 17, color: '#555' },
   criteriaPriceValue: { fontFamily: PRICE_FONT_FAMILY, fontWeight: PRICE_FONT_WEIGHT, fontSize: 14, color: '#9f273b' },

@@ -12,6 +12,11 @@
         Cảm ơn bạn đã lựa chọn trang sức SORA. Đơn hàng của bạn đã được xác nhận và đang được xử lý.<br>
         Mã đơn hàng: <strong class="text-sora-primary font-monospace fs-5 ms-1">{{ orderCode }}</strong>
       </p>
+
+      <div v-if="orderTotal !== null" class="bg-light border rounded-3 px-4 py-3 mb-4">
+        <div class="text-muted small font-oswald tracking-widest text-uppercase mb-1">Tổng thanh toán</div>
+        <div class="fs-3 fw-bold text-sora-primary font-oswald">{{ formatCurrency(orderTotal) }}</div>
+      </div>
       
       <div class="d-flex justify-content-center gap-3 mt-5">
         <router-link to="/shop" class="editorial-btn-outline px-4 py-3">
@@ -27,14 +32,34 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import clientApiClient from '@/utils/clientApiClient';
 
 const route = useRoute();
 const orderCode = computed(() => route.query.order || 'N/A');
+const orderTotal = ref(null);
+
+const formatCurrency = (value) =>
+    new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND',
+        maximumFractionDigits: 0,
+    }).format(Number(value) || 0);
 
 onMounted(async () => {
+    if (orderCode.value && orderCode.value !== 'N/A') {
+        try {
+            const res = await clientApiClient.get(`/client/orders/${orderCode.value}`, {
+                ignoreAuthRedirect: true,
+            });
+            const order = res.data?.data || res.data;
+            orderTotal.value = order?.total_amount ?? null;
+        } catch (error) {
+            console.error('Không thể tải tổng tiền đơn hàng:', error);
+        }
+    }
+
     // Chỉ khi khách hàng đến được trang Success này (nghĩa là tiền đã vào tài khoản)
     // Thì mới tiến hành gọi API xóa sạch Giỏ hàng.
     try {

@@ -45,7 +45,17 @@ const linking = {
 function PushNotificationBridge() {
   useEffect(() => {
     let responseSubscription = null;
+    let receivedSubscription = null;
     let isMounted = true;
+
+    const refreshNotificationRelatedQueries = (data = {}) => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+
+      if (data.type === 'order_status' || data.screen === 'OrderHistory') {
+        queryClient.invalidateQueries({ queryKey: ['orders'] });
+        queryClient.invalidateQueries({ queryKey: ['order-detail'] });
+      }
+    };
 
     const setupNotifications = async () => {
       const Notifications = await getExpoNotificationsModule();
@@ -66,8 +76,14 @@ function PushNotificationBridge() {
         console.log('Register push token failed:', error?.message || error);
       });
 
+      receivedSubscription = Notifications.addNotificationReceivedListener((notification) => {
+        const data = notification?.request?.content?.data || {};
+        refreshNotificationRelatedQueries(data);
+      });
+
       responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
         const data = response?.notification?.request?.content?.data || {};
+        refreshNotificationRelatedQueries(data);
         navigateFromNotification(data);
       });
     };
@@ -76,6 +92,7 @@ function PushNotificationBridge() {
 
     return () => {
       isMounted = false;
+      receivedSubscription?.remove?.();
       responseSubscription?.remove?.();
     };
   }, []);
