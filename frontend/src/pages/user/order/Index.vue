@@ -387,7 +387,7 @@ const handleReorder = async (order) => {
         htmlContent += `<div class="mb-3">
             <h6 class="text-success fw-bold font-oswald tracking-wide"><i class="bi bi-check-circle-fill me-1"></i> ĐÃ THÊM VÀO GIỎ:</h6>
             <ul class="text-muted small ps-3 mb-0" style="list-style-type: disc;">
-                ${added.map(name => `<li>${name}</li>`).join('')}
+                ${added.map(name => `<li>${escapeHtml(name)}</li>`).join('')}
             </ul>
         </div>`;
     }
@@ -396,7 +396,7 @@ const handleReorder = async (order) => {
         htmlContent += `<div>
             <h6 class="text-danger fw-bold font-oswald tracking-wide"><i class="bi bi-x-circle-fill me-1"></i> HẾT HÀNG (KHÔNG THỂ THÊM):</h6>
             <ul class="text-muted small ps-3 mb-0" style="list-style-type: disc;">
-                ${outOfStock.map(name => `<li>${name}</li>`).join('')}
+                ${outOfStock.map(name => `<li>${escapeHtml(name)}</li>`).join('')}
             </ul>
         </div>`;
     }
@@ -427,13 +427,13 @@ const handleReorder = async (order) => {
     // Bắt lỗi nếu API trả về fail (ví dụ tất cả đều hết hàng)
     const errData = err.response?.data?.data || {};
     const outOfStock = errData.out_of_stock || [];
-    let errorHtml = err.response?.data?.message || 'Không thể thêm sản phẩm vào giỏ hàng lúc này.';
+    let errorHtml = escapeHtml(err.response?.data?.message || 'Không thể thêm sản phẩm vào giỏ hàng lúc này.');
 
     if (outOfStock.length > 0) {
         errorHtml = `<div class="text-start mt-3" style="font-family: 'Josefin Sans', sans-serif;">
             <p class="text-danger fw-bold mb-2">${errorHtml}</p>
             <ul class="text-muted small ps-3 mb-0" style="list-style-type: disc;">
-                ${outOfStock.map(name => `<li>${name}</li>`).join('')}
+                ${outOfStock.map(name => `<li>${escapeHtml(name)}</li>`).join('')}
             </ul>
         </div>`;
     }

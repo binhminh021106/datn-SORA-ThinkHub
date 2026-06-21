@@ -80,8 +80,8 @@
             <span v-if="isOutOfStock" class="small font-oswald text-uppercase tracking-widest text-secondary" style="font-size: 0.7rem; opacity: 0.8;">
               <i class="bi bi-slash-circle me-1"></i>Hết hàng
             </span>
-            <span v-else-if="product.stock_quantity > 0 && product.stock_quantity <= 5" class="small font-oswald text-uppercase tracking-widest" style="font-size: 0.7rem; color: #cc1e2e;">
-              Còn {{ product.stock_quantity }}
+            <span v-else-if="effectiveStock > 0 && effectiveStock <= 5" class="small font-oswald text-uppercase tracking-widest" style="font-size: 0.7rem; color: #cc1e2e;">
+              Còn {{ effectiveStock }}
             </span>
             <span v-else-if="product.sold_count > 0" class="small text-muted font-oswald text-uppercase tracking-widest" style="font-size: 0.7rem;">
               Đã bán {{ product.sold_count }}
@@ -189,6 +189,20 @@ const priceInfo = computed(() => {
   };
 });
 
+const effectiveStock = computed(() => {
+  const p = props.product;
+  
+  if (p.total_stock !== undefined && p.total_stock !== null) {
+      return Number(p.total_stock);
+  }
+
+  if (p.variants && p.variants.length > 0) {
+    return p.variants.reduce((sum, v) => sum + Number(v.stock_quantity || 0), 0);
+  }
+  
+  return p.stock_quantity !== undefined && p.stock_quantity !== null ? Number(p.stock_quantity) : 0;
+});
+
 const isOutOfStock = computed(() => {
   const p = props.product;
   
@@ -200,19 +214,7 @@ const isOutOfStock = computed(() => {
       return false; // Mặc định Combo nếu đang active thì coi như còn hàng để user bấm vào xem chi tiết
   }
 
-  // Ưu tiên total_stock nếu backend trả về (ví dụ từ ClientHomeController, ShopController)
-  if (p.total_stock !== undefined && p.total_stock !== null) {
-      return Number(p.total_stock) <= 0;
-  }
-
-  // Nếu là Sản phẩm thường có phân loại tải kèm (variants)
-  if (p.variants && p.variants.length > 0) {
-    const totalStock = p.variants.reduce((sum, v) => sum + Number(v.stock_quantity || 0), 0);
-    return totalStock <= 0;
-  }
-  
-  // Dự phòng (nếu có stock_quantity trực tiếp trên bảng products)
-  return p.stock_quantity !== undefined && p.stock_quantity !== null && Number(p.stock_quantity) <= 0;
+  return effectiveStock.value <= 0;
 });
 
 const heartIconClass = computed(() => {
