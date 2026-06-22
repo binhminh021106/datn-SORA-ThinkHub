@@ -27,7 +27,7 @@ class AdminUpdateComboRequest extends FormRequest
         $comboId = $this->route('combo'); 
 
         return [
-            'name'                  => 'required|string|max:255',
+            'name'                  => 'required|string|min:3|max:255',
             'slug'                  => 'required|string|unique:combos,slug,' . $comboId . '|max:255',
             'description'           => 'nullable|string',
             'thumbnail_image'       => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
@@ -35,7 +35,7 @@ class AdminUpdateComboRequest extends FormRequest
             'target_age_group'      => 'nullable|string|max:100',
             'theme'                 => 'nullable|string|max:255',
             'discount_type'         => 'required|in:percentage,fixed_amount',
-            'discount_value'        => 'required|numeric|min:0' . ($this->input('discount_type') === 'percentage' ? '|max:100' : ''),
+            'discount_value'        => 'required|numeric|' . ($this->input('discount_type') === 'percentage' ? 'min:1|max:100' : 'min:1000'),
             'is_discount_stackable' => 'required|boolean',
             'usage_limit'           => 'nullable|integer|min:1',
             'start_date'            => 'nullable|date',
@@ -53,6 +53,7 @@ class AdminUpdateComboRequest extends FormRequest
     {
         return [
             'name.required'                  => 'Vui lòng nhập tên Combo.',
+            'name.min'                       => 'Tên Combo phải có ít nhất 3 ký tự.',
             'slug.unique'                    => 'Combo (Slug) này đã được sử dụng cho Combo khác.',
             'thumbnail_image.image'          => 'Tệp tải lên phải là định dạng hình ảnh.',
             'thumbnail_image.max'            => 'Kích thước ảnh không được vượt quá 5MB.',

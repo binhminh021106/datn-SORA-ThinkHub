@@ -26,7 +26,7 @@ class AdminUpdateCategoryRequest extends FormRequest
     {
         $id = $this->route('category');
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'min:3', 'max:255'],
             'slug' => [
                 'required', 
                 'string', 
@@ -46,6 +46,7 @@ class AdminUpdateCategoryRequest extends FormRequest
     {
         return [
             'name.required' => 'Tên danh mục không được để trống.',
+            'name.min' => 'Tên danh mục phải có ít nhất 3 ký tự.',
             'name.max' => 'Tên danh mục không được vượt quá 255 ký tự.',
             'slug.required' => 'Danh mục (Slug) không được để trống.',
             'slug.unique' => 'Danh mục này đã trùng với một danh mục khác trên hệ thống.',

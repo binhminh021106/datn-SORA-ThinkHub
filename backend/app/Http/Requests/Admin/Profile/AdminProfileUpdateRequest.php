@@ -16,7 +16,7 @@ class AdminProfileUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'min:3', 'max:255'],
             'email' => [
                 'required',
                 'string',
@@ -25,6 +25,13 @@ class AdminProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'name.min' => 'Tên phải có ít nhất 3 ký tự.',
         ];
     }
 }

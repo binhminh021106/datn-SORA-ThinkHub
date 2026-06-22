@@ -27,13 +27,16 @@ class AdminUpdateCouponRequest extends FormRequest
                 'sometimes',
                 'required',
                 'string',
+                'min:3',
                 'max:255'
             ],
             'code' => [
                 'sometimes',
                 'required',
                 'string',
+                'min:5',
                 'max:50',
+                'regex:/^[A-Z0-9]+$/',
                 Rule::unique('coupons', 'code')
                     ->ignore($couponId)
                     ->whereNull('deleted_at'),
@@ -42,7 +45,7 @@ class AdminUpdateCouponRequest extends FormRequest
                 'sometimes',
                 'required',
                 'integer',
-                'min:1'
+                'min:0'
             ],
             'type' => [
                 'sometimes',
@@ -53,7 +56,7 @@ class AdminUpdateCouponRequest extends FormRequest
                 'sometimes',
                 'required',
                 'integer',
-                'min:1',
+                $this->type === 'percentage' ? 'min:1' : 'min:1000',
                 $this->type === 'percentage' ? 'max:100' : '',
             ],
             'usage_limit' => [
@@ -66,7 +69,8 @@ class AdminUpdateCouponRequest extends FormRequest
                 'sometimes',
                 'required',
                 'integer',
-                'min:1'
+                'min:1',
+                'lte:usage_limit'
             ],
             'expires_at' => [
                 'sometimes',
@@ -90,12 +94,14 @@ class AdminUpdateCouponRequest extends FormRequest
         return [
             'required' => ':attribute không được để trống.',
             'code.unique' => 'Mã giảm giá này đã tồn tại trong hệ thống.',
+            'code.regex' => 'Mã giảm giá chỉ được chứa CHỮ IN HOA và SỐ, không có khoảng trắng hay ký tự đặc biệt.',
             'type.in' => 'Loại giảm giá không hợp lệ (chỉ chấp nhận cố định hoặc phần trăm).',
             'integer' => ':attribute phải là con số.',
             'min' => ':attribute không được nhỏ hơn :min.',
             'max' => ':attribute không được lớn hơn :max.',
             'after' => ':attribute phải là một thời điểm trong tương lai.',
             'date' => ':attribute không đúng định dạng ngày tháng.',
+            'usage_limit_per_user.lte' => 'Lượt dùng mỗi khách không được vượt quá tổng lượt dùng.',
         ];
     }
 

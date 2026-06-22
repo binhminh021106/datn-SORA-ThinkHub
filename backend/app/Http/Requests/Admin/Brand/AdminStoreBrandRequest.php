@@ -14,7 +14,7 @@ class AdminStoreBrandRequest extends FormRequest
     public function rules()
     {
         return [
-            'name'        => 'required|string|max:255|unique:brands,name,NULL,id,deleted_at,NULL',
+            'name'        => 'required|string|min:3|max:255|unique:brands,name,NULL,id,deleted_at,NULL',
             'slug'        => 'required|string|max:255|unique:brands,slug,NULL,id,deleted_at,NULL',
             'logo'        => 'nullable|image|mimes:jpeg,png,jpg,webp,svg|max:15360', //15mb
             'description' => 'nullable|string|max:5000',
@@ -26,6 +26,7 @@ class AdminStoreBrandRequest extends FormRequest
     {
         return [
             'name.required'    => 'Tên thương hiệu không được để trống.',
+            'name.min'         => 'Tên thương hiệu phải có ít nhất 3 ký tự.',
             'name.max'         => 'Tên thương hiệu không được vượt quá 255 ký tự.',
             'slug.required'    => 'Thương hiệu (slug) không được để trống.',
             'name.unique'      => 'Thương hiệu (name/slug) này đã tồn tại, vui lòng chọn tên khác.',
