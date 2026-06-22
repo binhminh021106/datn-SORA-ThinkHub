@@ -204,6 +204,10 @@ const updateBrandMutation = useMutation({
 });
 
 const updateBrand = () => {
+  if (!form.value.name || form.value.name.trim().length < 3) {
+    Swal.fire('Lỗi', 'Tên thương hiệu phải có ít nhất 3 ký tự.', 'warning');
+    return;
+  }
   const formData = new FormData();
   formData.append('_method', 'PUT');
   formData.append('name', form.value.name);

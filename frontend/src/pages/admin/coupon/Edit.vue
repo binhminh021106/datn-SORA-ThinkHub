@@ -271,6 +271,11 @@ const { mutate: updateCoupon, isLoading: isUpdating } = useMutation({
 });
 
 const submitForm = () => {
+    if (!form.value.name || form.value.name.trim().length < 3) { Swal.fire('Lỗi', 'Tên chương trình phải có ít nhất 3 ký tự.', 'warning'); return; }
+    if (!form.value.code || form.value.code.trim().length < 5 || !/^[A-Z0-9]+$/.test(form.value.code)) { Swal.fire('Lỗi', 'Mã code phải có ít nhất 5 ký tự và chỉ chứa chữ in hoa, số.', 'warning'); return; }
+    if (form.value.type === 'fixed' && form.value.value < 1000) { Swal.fire('Lỗi', 'Mức giảm giá tiền mặt phải từ 1.000 VNĐ trở lên.', 'warning'); return; }
+    if (form.value.type === 'percentage' && (form.value.value < 1 || form.value.value > 100)) { Swal.fire('Lỗi', 'Mức giảm giá phần trăm phải từ 1% đến 100%.', 'warning'); return; }
+    if (form.value.usage_limit_per_user > form.value.usage_limit) { Swal.fire('Lỗi', 'Giới hạn mỗi user không được vượt quá tổng số lượng mã.', 'warning'); return; }
     errors.value = {}; 
     const payload = { ...form.value, expires_at: formatForPayload(form.value.expires_at) };
     updateCoupon(payload);

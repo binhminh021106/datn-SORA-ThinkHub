@@ -286,7 +286,8 @@
                                                     <td>
                                                         <input type="number"
                                                             class="form-control form-control-sm text-center"
-                                                            v-model="v.stock_quantity" min="0" required>
+                                                            :class="{ 'is-invalid': v.stockError }"
+                                                            v-model="v.stock_quantity" min="1" required>
                                                     </td>
                                                     <td class="text-center">
                                                         <button type="button"
@@ -474,7 +475,7 @@ const manageAttrName = ref('');
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
 
 const canProceedToStep2 = computed(() => {
-    return form.value.name && form.value.category_id && form.value.base_price >= 0 && thumbnailFile.value;
+    return form.value.name && form.value.name.trim().length >= 3 && form.value.category_id && form.value.base_price > 0 && thumbnailFile.value;
 });
 
 const proceedIfValid = () => {
@@ -623,7 +624,7 @@ const addVariantRow = () => {
     variants.value.push({
         sku: newSku, price: form.value.base_price, promotional_price: 0, stock_quantity: 10,
         imageFile: null, preview: null, attributes: rowAttrs,
-        hasDuplicateError: false, attrError: false, priceError: false, saleError: false
+        hasDuplicateError: false, attrError: false, priceError: false, saleError: false, stockError: false
     });
 };
 
@@ -757,8 +758,9 @@ const deleteAttribute = async (id) => {
 
 const validateRow = (index) => {
     const v = variants.value[index];
-    v.priceError = v.price < 0 || v.price === '';
+    v.priceError = v.price <= 0 || v.price === '';
     v.saleError = parseFloat(v.promotional_price) > parseFloat(v.price);
+    v.stockError = v.stock_quantity === '' || v.stock_quantity <= 0;
 };
 
 const validateDuplicates = () => {
@@ -803,16 +805,23 @@ const validateDuplicates = () => {
 };
 
 const submitProduct = async () => {
+    if (!form.value.name || form.value.name.trim().length < 3) {
+        Swal.fire('Lỗi Dữ liệu', 'Tên sản phẩm phải có ít nhất 3 ký tự.', 'error'); return;
+    }
+    if (!form.value.base_price || form.value.base_price <= 0) {
+        Swal.fire('Lỗi Dữ liệu', 'Giá tham khảo phải lớn hơn 0.', 'error'); return;
+    }
+
     validateDuplicates();
     let hasHardError = false;
 
     variants.value.forEach((v, i) => {
         validateRow(i);
-        if (v.priceError || v.saleError || v.attrError || v.hasDuplicateError) hasHardError = true;
+        if (v.priceError || v.saleError || v.attrError || v.hasDuplicateError || v.stockError) hasHardError = true;
     });
 
     if (hasHardError) {
-        Swal.fire('Lỗi Dữ liệu', 'Vui lòng kiểm tra các dòng bị bôi đỏ (Chưa chọn thuộc tính, sai giá, hoặc trùng lặp).', 'error'); return;
+        Swal.fire('Lỗi Dữ liệu', 'Vui lòng kiểm tra các dòng bị bôi đỏ (Chưa chọn thuộc tính, giá tiền không hợp lệ, tồn kho phải lớn hơn 0, hoặc trùng lặp biến thể).', 'error'); return;
     }
 
     isSaving.value = true;

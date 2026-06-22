@@ -614,6 +614,9 @@ const createMutation = useMutation({
 });
 
 const submitCombo = () => {
+  if (!form.value.name || form.value.name.trim().length < 3) { Swal.fire('Lỗi', 'Tên Combo phải có ít nhất 3 ký tự.', 'warning'); return; }
+  if (form.value.discount_type === 'fixed_amount' && form.value.discount_value < 1000) { Swal.fire('Lỗi', 'Mức giảm giá tiền mặt phải từ 1.000 VNĐ trở lên.', 'warning'); return; }
+  if (form.value.discount_type === 'percentage' && form.value.discount_value < 1) { Swal.fire('Lỗi', 'Mức giảm giá phần trăm phải từ 1% trở lên.', 'warning'); return; }
   if (!thumbnailFile.value) { Swal.fire('Lỗi', 'Vui lòng tải ảnh đại diện', 'error'); return; }
   const hasEmptyProduct = comboItems.value.some(item => !item.product_id);
   if (hasEmptyProduct) { Swal.fire('Lỗi', 'Vui lòng chọn đầy đủ Sản phẩm', 'error'); return; }

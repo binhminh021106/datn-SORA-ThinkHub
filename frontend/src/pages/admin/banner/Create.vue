@@ -157,6 +157,10 @@ onMounted(async () => {
 });
 
 const submitBanner = async () => {
+  if (!form.value.title || form.value.title.trim().length < 3) {
+    Swal.fire('Lỗi', 'Tên chiến dịch phải có ít nhất 3 ký tự.', 'warning');
+    return;
+  }
   if (!fileDesk.value) {
     return Swal.fire('Lưu ý', 'Vui lòng chọn Ảnh Desktop!', 'warning');
   }

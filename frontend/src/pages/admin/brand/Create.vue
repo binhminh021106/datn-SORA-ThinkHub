@@ -115,6 +115,10 @@ const handleLogoUpload = (e) => {
 };
 
 const submitBrand = async () => {
+  if (!form.value.name || form.value.name.trim().length < 3) {
+    Swal.fire('Lỗi', 'Tên thương hiệu phải có ít nhất 3 ký tự.', 'warning');
+    return;
+  }
   isSaving.value = true;
   try {
     const formData = new FormData();

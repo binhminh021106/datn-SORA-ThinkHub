@@ -201,6 +201,10 @@ const generateSlug = () => {
 };
 
 const saveCategory = async () => {
+    if (!form.value.name || form.value.name.trim().length < 3) {
+        Swal.fire('Lỗi', 'Tên danh mục phải có ít nhất 3 ký tự.', 'warning');
+        return;
+    }
     form.value.attributes_schema = form.value.attributes_schema.filter(attr => attr.trim() !== '');
     
     isSaving.value = true;

@@ -324,6 +324,10 @@ const { mutate: mutateUpdate, isPending: isSaving } = useMutation({
 });
 
 const updateCategory = () => {
+    if (!form.value.name || form.value.name.trim().length < 3) {
+        Swal.fire('Lỗi', 'Tên danh mục phải có ít nhất 3 ký tự.', 'warning');
+        return;
+    }
     if (form.value.attributes_schema) {
         form.value.attributes_schema = form.value.attributes_schema.filter(attr => attr.trim() !== '');
     }
