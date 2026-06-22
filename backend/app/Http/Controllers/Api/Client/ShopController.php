@@ -95,6 +95,7 @@ class ShopController extends Controller
             $product->hover_image = null;
             $product->review_count = (int) ($product->reviews_count ?? $product->review_count ?? 0);
             $product->rating_avg = (float) ($product->reviews_avg_rating ?? $product->rating_avg ?? 0);
+            $product->total_stock = (int) ($product->variants ? $product->variants->sum('stock_quantity') : 0);
 
             if ($product->variants && $product->variants->count() > 0) {
                 $hoverCandidate = $product->variants->first(function ($variant) use ($product) {

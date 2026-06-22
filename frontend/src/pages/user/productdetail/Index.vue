@@ -32,13 +32,19 @@
               </button>
             </div>
             
-            <!-- ẢNH CHÍNH & NÚT YÊU THÍCH NỔI -->
             <div class="main-image-wrapper position-relative">
               <button class="main-wishlist-btn" :class="{ 'active': isFavourited(product.id) }" @click.stop="toggleFavourite(product)" :title="isFavourited(product.id) ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'" :disabled="isTogglingFav === product.id">
                   <span v-if="isTogglingFav === product.id" class="spinner-border spinner-border-sm text-danger" style="width: 1rem; height: 1rem;"></span>
                   <i v-else :class="isFavourited(product.id) ? 'bi bi-suit-heart-fill text-danger' : 'bi bi-suit-heart'"></i>
               </button>
-              <img :src="mainImage" :alt="product.name" class="main-img" @error="handleImageError">
+              
+              <div v-if="isCompletelyOutOfStock" class="position-absolute w-100 h-100 d-flex align-items-center justify-content-center pointer-events-none" style="background-color: rgba(255, 255, 255, 0.5); z-index: 3; top: 0; left: 0;">
+                 <div class="sold-out-overlay font-oswald tracking-widest text-uppercase px-5 py-3 shadow-lg" style="background-color: rgba(42, 24, 16, 0.95); color: #e7ce7d; font-size: 1.2rem; letter-spacing: 5px; border: 1px solid rgba(231, 206, 125, 0.4); transform: rotate(-15deg); border-radius: 4px;">
+                   ĐÃ BÁN HẾT
+                 </div>
+              </div>
+
+              <img :src="mainImage" :alt="product.name" class="main-img" :class="{ 'opacity-50': isCompletelyOutOfStock }" @error="handleImageError">
             </div>
           </div>
 
@@ -175,22 +181,26 @@
               </template>
             </div>
 
-            <div class="action-area">
+            <div class="action-area" :class="{ 'opacity-75': isCurrentSelectionOutOfStock }">
               <div class="quantity-selector">
-                <button class="qty-btn" @click="updateQuantity(-1)">-</button>
+                <button class="qty-btn" @click="updateQuantity(-1)" :disabled="isCurrentSelectionOutOfStock">-</button>
                 <input type="number" 
                        v-model.number="selectedQuantity" 
                        @change="validateQuantity"
-                       class="qty-input">
-                <button class="qty-btn" @click="updateQuantity(1)">+</button>
+                       class="qty-input"
+                       :disabled="isCurrentSelectionOutOfStock">
+                <button class="qty-btn" @click="updateQuantity(1)" :disabled="isCurrentSelectionOutOfStock">+</button>
               </div>
 
               <div class="action-buttons">
                 <button 
-                  class="btn-add-cart"
-                  @click="addToCart"
+                  class="btn-add-cart d-flex align-items-center justify-content-center"
+                  @click="isCurrentSelectionOutOfStock ? null : addToCart()"
+                  :disabled="isCurrentSelectionOutOfStock"
+                  :style="isCurrentSelectionOutOfStock ? 'background-color: #2a1810; color: #e7ce7d; border-color: #2a1810; cursor: not-allowed; opacity: 0.85;' : ''"
                 >
-                  THÊM VÀO GIỎ
+                  <i v-if="isCurrentSelectionOutOfStock" class="bi bi-x-circle me-2 fs-5"></i>
+                  {{ isCompletelyOutOfStock ? 'ĐÃ BÁN HẾT' : (isCurrentSelectionOutOfStock ? 'PHIÊN BẢN HẾT HÀNG' : 'THÊM VÀO GIỎ') }}
                 </button>
                 <button class="btn-consult">TƯ VẤN NGAY</button>
               </div>
@@ -599,6 +609,30 @@ const isLoadingRecs = ref(false);
 const recSliderRef = ref(null);
 const shopBrands = ref([]);
 const combos = ref([]);
+
+const isCompletelyOutOfStock = computed(() => {
+  if (!product.value) return false;
+  
+  if (product.value.is_combo || (product.value.items && !product.value.category)) {
+      if (product.value.status && product.value.status !== 'active') return true;
+      if (product.value.is_active === false || product.value.is_active === 0) return true;
+      return false; 
+  }
+
+  if (product.value.variants && product.value.variants.length > 0) {
+    const totalStock = product.value.variants.reduce((sum, v) => sum + Number(v.stock_quantity || 0), 0);
+    return totalStock <= 0;
+  }
+  return product.value.stock_quantity !== undefined && product.value.stock_quantity !== null && Number(product.value.stock_quantity) <= 0;
+});
+
+const isCurrentSelectionOutOfStock = computed(() => {
+  if (isCompletelyOutOfStock.value) return true;
+  if (isAllAttributesSelected.value && currentVariant.value) {
+    return currentStock.value <= 0;
+  }
+  return false;
+});
 
 // Compare & Quick Add
 const compareModalRef = ref(null);

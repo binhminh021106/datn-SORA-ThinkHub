@@ -116,7 +116,7 @@
       </section>
 
       <!-- TOP SELLING SECTION -->
-      <section class="editorial-section top-selling-editorial" style="background-color: #fdfaf7; padding-top: 5rem; padding-bottom: 5rem;" v-if="topSellingProducts.length > 0">
+      <section class="editorial-section top-selling-editorial" style="background-color: #fdfaf7; padding-top: 4rem;" v-if="topSellingProducts.length > 0">
         <div class="container products-container">
           <div class="section-heading text-center mb-5" style="max-width: 1000px;">
             <span class="section-kicker text-sora-primary fw-bold" style="font-size: 0.9rem; letter-spacing: 3px;"><i class="bi bi-fire me-1"></i> Bestsellers</span>
@@ -130,7 +130,7 @@
           </div>
 
           <div class="text-center mt-5 pt-3">
-            <router-link :to="{ name: 'shop', query: { sort: 'best_selling' } }" class="editorial-btn text-decoration-none">Khám phá toàn bộ Bestsellers</router-link>
+            <router-link :to="{ name: 'shop', query: { sort: 'best_selling' } }" class="editorial-btn text-decoration-none">Khám phá Bestsellers</router-link>
           </div>
         </div>
       </section>
@@ -162,7 +162,7 @@
           </div>
 
           <div class="text-center mt-5 pt-2">
-            <router-link :to="{ name: 'shop' }" class="editorial-btn text-decoration-none">Khám phá tất cả tác
+            <router-link :to="{ name: 'shop' }" class="editorial-btn text-decoration-none">Xem tất cả tác
               phẩm</router-link>
           </div>
         </div>
@@ -233,7 +233,7 @@
           </div>
           <div class="text-center mt-5 pt-3">
             <router-link :to="{ name: 'services' }"
-              class="editorial-btn text-decoration-none">Khám phá tất cả dịch
+              class="editorial-btn text-decoration-none">Xem tất cả dịch
               vụ</router-link>
           </div>
         </div>
@@ -902,7 +902,7 @@ onUnmounted(() => {
   background: var(--sora-primary);
   color: #fff;
   border: 1px solid rgba(var(--sora-secondary-rgb), 0.5);
-  border-radius: 14px;
+  border-radius: 10px;
   font-family: 'Oswald', sans-serif;
   font-size: 0.76rem;
   letter-spacing: 0.14em;
@@ -1086,7 +1086,7 @@ onUnmounted(() => {
 }
 
 .editorial-section {
-  padding: clamp(3rem, 5vw, 5rem) 0;
+  padding: clamp(3rem, 5vw, 4rem) 0;
 }
 
 .narrow-container {
@@ -1804,10 +1804,16 @@ onUnmounted(() => {
   gap: clamp(2rem, 4vw, 3.5rem);
 }
 
-.craft-row-top,
-.craft-row-bottom {
+.craft-row-top {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: clamp(1.5rem, 3vw, 3rem);
+}
+
+.craft-row-bottom {
+  display: flex;
+  align-items: flex-end;
   justify-content: space-between;
   gap: clamp(1.5rem, 3vw, 3rem);
 }

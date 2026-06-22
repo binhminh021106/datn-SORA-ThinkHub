@@ -511,7 +511,7 @@ const fetchFavouritesForCompare = async () => {
   background: var(--sora-primary, #9f273b);
   color: #fff;
   border: 1px solid rgba(var(--sora-secondary-rgb, 231, 206, 125), 0.5);
-  border-radius: 14px;
+  border-radius: 10px;
   font-family: 'Oswald', sans-serif;
   font-size: 0.76rem;
   letter-spacing: 0.14em;
@@ -544,7 +544,7 @@ const fetchFavouritesForCompare = async () => {
   transform: rotate(45deg) translateY(200%);
 }
 
-.btn-clear-compare { width: auto; background: #fff; color: #9f273b; border: 1px solid #9f273b; cursor: pointer; padding: 10px 24px; border-radius: 14px; font-weight: 600; transition: all 0.2s; white-space: nowrap; }
+.btn-clear-compare { width: auto; background: #fff; color: #9f273b; border: 1px solid #9f273b; cursor: pointer; padding: 10px 24px; border-radius: 10px; font-weight: 600; transition: all 0.2s; white-space: nowrap; }
 .btn-clear-compare:hover,
 .editorial-btn.btn-clear-compare:hover {
   background: #f8f0ef;
@@ -554,7 +554,7 @@ const fetchFavouritesForCompare = async () => {
   box-shadow: none;
 }
 
-.btn-go-compare { width: auto; background: var(--sora-primary, #9f273b); color: #fff; border: 1px solid transparent; padding: 10px 24px; border-radius: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 8px 16px rgba(159,39,59,0.16); white-space: nowrap; }
+.btn-go-compare { width: auto; background: var(--sora-primary, #9f273b); color: #fff; border: 1px solid transparent; padding: 10px 24px; border-radius: 10px; font-weight: 600; cursor: pointer; box-shadow: 0 8px 16px rgba(159,39,59,0.16); white-space: nowrap; }
 .btn-go-compare:disabled { background: #d1d1d1; color: #fff; cursor: not-allowed; box-shadow: none; }
 
 .slide-up-enter-active, .slide-up-leave-active { transition: transform 0.3s ease, opacity 0.3s; }

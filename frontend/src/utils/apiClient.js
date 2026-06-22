@@ -19,11 +19,11 @@ apiClient.interceptors.request.use(
     const requestUrl = config.url || '';
     const isAdminRequest = requestUrl.includes('/admin/');
     const token = isAdminRequest ? getAdminToken() : getUserToken();
-    
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     return config;
   },
   (error) => {
@@ -37,7 +37,7 @@ const sanitizeErrorMessage = (error) => {
     const status = error.response.status;
     const url = error.config?.url || 'unknown_url';
     const msg = error.response.data.message.toLowerCase();
-    const isSensitive = 
+    const isSensitive =
       status >= 500 ||
       msg.includes('curl error') ||
       msg.includes('pusher error') ||
@@ -49,7 +49,7 @@ const sanitizeErrorMessage = (error) => {
       console.error(`[API Error Masked] HTTP ${status} | URL: ${url}`);
       console.error('[Original Error Data]:', error.response.data);
       console.error('[Full Error Object]:', error);
-      
+
       error.response.data.message = 'Hệ thống đang gặp sự cố. Vui lòng thử lại sau!';
     }
   }
@@ -91,7 +91,7 @@ apiClient.interceptors.response.use(
         }
       }
     }
-    
+
     return Promise.reject(error);
   }
 );

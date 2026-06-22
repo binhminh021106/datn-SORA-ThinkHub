@@ -67,6 +67,7 @@ class ClientHomeController extends Controller
                     ->select('id', 'name', 'slug', 'thumbnail_image', 'base_price', 'promotional_price', 'review_count', 'rating_avg', 'created_at')
                     ->withCount('reviews')
                     ->withAvg('reviews', 'rating')
+                    ->withSum('variants', 'stock_quantity')
                     ->orderBy('is_featured', 'desc')
                     ->orderBy('id', 'desc')
                     ->take(8)
@@ -76,6 +77,7 @@ class ClientHomeController extends Controller
                         $arr['review_count'] = (int) ($product->reviews_count ?? $product->review_count ?? 0);
                         $arr['rating_avg'] = (float) ($product->reviews_avg_rating ?? $product->rating_avg ?? 0);
                         $arr['is_new'] = $product->created_at >= Carbon::now()->subDays(15);
+                        $arr['total_stock'] = (int) ($product->variants_sum_stock_quantity ?? 0);
                         return $arr;
                     })->toArray();
 

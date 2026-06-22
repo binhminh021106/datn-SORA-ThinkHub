@@ -538,40 +538,118 @@ class ClientOrderController extends Controller
             $cart->save();
         }
 
-        // 2. LƯU CHUẨN XÁC VÀO BẢNG CHI TIẾT GIỎ HÀNG (CartItem)
+        $addedItems = [];
+        $outOfStockItems = [];
+
+        // 2. LƯU CHUẨN XÁC VÀO BẢNG CHI TIẾT GIỎ HÀNG (CartItem) NẾU CÒN HÀNG
         foreach ($order->items as $item) {
-            
+            $isAvailable = true;
+            $qtyToAdd = $item->quantity;
+
             // Trường hợp 1: Sản phẩm lẻ
             if ($item->product_variant_id) {
-                $cartItem = \App\Models\CartItem::where('cart_id', $cart->id)
-                    ->where('product_variant_id', $item->product_variant_id)
-                    ->whereNull('combo_id')
-                    ->first();
-
-                if ($cartItem) {
-                    $cartItem->increment('quantity', $item->quantity);
+                $variant = \App\Models\ProductVariant::with('product')->find($item->product_variant_id);
+                // Cần kiểm tra tồn kho và trạng thái sản phẩm
+                if (!$variant || $variant->stock_quantity <= 0 || (isset($variant->product->is_active) && !$variant->product->is_active)) {
+                    $isAvailable = false;
                 } else {
-                    $newCartItem = new \App\Models\CartItem();
-                    $newCartItem->cart_id = $cart->id;
-                    $newCartItem->product_variant_id = $item->product_variant_id;
-                    $newCartItem->quantity = $item->quantity;
-                    $newCartItem->save();
+                    $qtyToAdd = min($item->quantity, $variant->stock_quantity);
                 }
             } 
             // Trường hợp 2: Sản phẩm là Combo
             elseif ($item->combo_id) {
-                $newCartItem = new \App\Models\CartItem();
-                $newCartItem->cart_id = $cart->id;
-                $newCartItem->combo_id = $item->combo_id;
-                $newCartItem->combo_selections = $item->combo_selections; 
-                $newCartItem->quantity = $item->quantity;
-                $newCartItem->save();
+                $combo = \App\Models\Combo::find($item->combo_id);
+                // Giả định Combo có trường status hoặc is_active
+                if (!$combo || (isset($combo->status) && $combo->status !== 'active') || (isset($combo->is_active) && !$combo->is_active)) {
+                    $isAvailable = false;
+                } else {
+                    if (is_array($item->combo_selections)) {
+                        foreach ($item->combo_selections as $selection) {
+                            $vId = $selection['selected_variant_id'] ?? null;
+                            if ($vId) {
+                                $variant = \App\Models\ProductVariant::find($vId);
+                                if (!$variant || $variant->stock_quantity <= 0) {
+                                    $isAvailable = false;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                }
+                // Removed hardcoded $qtyToAdd = 1; to preserve the original $item->quantity
+
+            if ($isAvailable) {
+                $addedItems[] = $item->product_name;
+
+                if ($item->product_variant_id) {
+                    $cartItem = \App\Models\CartItem::where('cart_id', $cart->id)
+                        ->where('product_variant_id', $item->product_variant_id)
+                        ->whereNull('combo_id')
+                        ->first();
+
+                    if ($cartItem) {
+                        // Tránh việc cộng dồn vượt quá tồn kho, nhưng tạm thời cứ cộng (Cart Controller sẽ check lại khi thanh toán)
+                        $cartItem->increment('quantity', $qtyToAdd);
+                    } else {
+                        $newCartItem = new \App\Models\CartItem();
+                        $newCartItem->cart_id = $cart->id;
+                        $newCartItem->product_variant_id = $item->product_variant_id;
+                        $newCartItem->quantity = $qtyToAdd;
+                        $newCartItem->save();
+                    }
+                } elseif ($item->combo_id) {
+                    $incomingSelections = $item->combo_selections;
+                    if (is_array($incomingSelections)) {
+                        array_multisort($incomingSelections);
+                    }
+                    $incomingJson = json_encode($incomingSelections);
+
+                    $existingComboItem = \App\Models\CartItem::where('cart_id', $cart->id)
+                        ->where('combo_id', $item->combo_id)
+                        ->get()
+                        ->first(function ($cartItem) use ($incomingJson) {
+                            $selections = $cartItem->combo_selections;
+                            if (is_array($selections)) {
+                                array_multisort($selections);
+                            }
+                            return json_encode($selections) === $incomingJson;
+                        });
+
+                    if ($existingComboItem) {
+                        $existingComboItem->increment('quantity', $qtyToAdd);
+                    } else {
+                        $newCartItem = new \App\Models\CartItem();
+                        $newCartItem->cart_id = $cart->id;
+                        $newCartItem->combo_id = $item->combo_id;
+                        $newCartItem->combo_selections = $item->combo_selections; 
+                        $newCartItem->quantity = $qtyToAdd;
+                        $newCartItem->save();
+                    }
+                }
+            } else {
+                $outOfStockItems[] = $item->product_name;
             }
+        }
+
+        if (empty($addedItems) && !empty($outOfStockItems)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tất cả sản phẩm trong đơn hàng này đã hết hàng hoặc không còn bán.',
+                'data' => [
+                    'added' => $addedItems,
+                    'out_of_stock' => $outOfStockItems
+                ]
+            ], 400);
         }
 
         return response()->json([
             'success' => true, 
-            'message' => 'Các sản phẩm đã được thêm lại vào giỏ hàng thành công.'
+            'message' => 'Các sản phẩm đã được xử lý thêm vào giỏ hàng.',
+            'data' => [
+                'added' => $addedItems,
+                'out_of_stock' => $outOfStockItems
+            ]
         ]);
     }
         /**

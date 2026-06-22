@@ -355,7 +355,7 @@ onMounted(() => {
   background: var(--sora-primary);
   color: #fff;
   border: 1px solid rgba(var(--sora-secondary-rgb), 0.5);
-  border-radius: 14px;
+  border-radius: 10px;
   font-family: 'Oswald', sans-serif;
   font-size: 0.76rem;
   letter-spacing: 0.14em;

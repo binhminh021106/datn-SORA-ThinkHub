@@ -279,6 +279,7 @@ class ProductRecommendationService
             'hover_image' => $hoverImage,
             'review_count' => (int) ($product->reviews_count ?? 0),
             'rating_avg' => (float) ($product->reviews_avg_rating ?? 0),
+            'total_stock' => (int) ($product->variants ? $product->variants->sum('stock_quantity') : 0),
             'category' => $product->category,
             'brand' => $product->brand,
         ];
