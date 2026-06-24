@@ -89,7 +89,7 @@
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label fw-bold">Giá trị giảm <span class="text-danger">*</span></label>
                                         <div class="input-group">
-                                            <input type="number" class="form-control" v-model="form.value" :class="{'is-invalid': errors.value}" min="1">
+                                            <input type="number" class="form-control" v-model.number="form.value" :class="{'is-invalid': errors.value}" min="1">
                                             <span class="input-group-text bg-light fw-bold">{{ form.type === 'percentage' ? '%' : 'VNĐ' }}</span>
                                         </div>
                                         <div class="invalid-feedback d-block" v-if="errors.value">{{ errors.value?.[0] }}</div>
@@ -97,7 +97,7 @@
 
                                     <div class="col-md-12 mb-4">
                                         <label class="form-label fw-bold">Mức chi tiêu tối thiểu (VNĐ) <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control" v-model="form.min_spend" :class="{'is-invalid': errors.min_spend}" min="1">
+                                        <input type="number" class="form-control" v-model.number="form.min_spend" :class="{'is-invalid': errors.min_spend}" min="0">
                                         <div class="invalid-feedback">{{ errors.min_spend?.[0] }}</div>
                                         <small class="text-muted fst-italic">Đơn hàng phải đạt giá trị này mới được áp dụng mã.</small>
                                     </div>
@@ -106,13 +106,13 @@
 
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label fw-bold">Tổng lượt sử dụng <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control" v-model="form.usage_limit" :class="{'is-invalid': errors.usage_limit}" min="1">
+                                        <input type="number" class="form-control" v-model.number="form.usage_limit" :class="{'is-invalid': errors.usage_limit}" min="1">
                                         <div class="invalid-feedback">{{ errors.usage_limit?.[0] }}</div>
                                     </div>
 
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label fw-bold">Lượt dùng mỗi khách hàng <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control" v-model="form.usage_limit_per_user" :class="{'is-invalid': errors.usage_limit_per_user}" min="1">
+                                        <input type="number" class="form-control" v-model.number="form.usage_limit_per_user" :class="{'is-invalid': errors.usage_limit_per_user}" min="1">
                                         <div class="invalid-feedback">{{ errors.usage_limit_per_user?.[0] }}</div>
                                     </div>
 
@@ -192,6 +192,11 @@ const generateCode = () => {
 };
 
 const saveCoupon = async () => {
+    if (!form.value.name || form.value.name.trim().length < 3) { Swal.fire('Lỗi', 'Tên chương trình phải có ít nhất 3 ký tự.', 'warning'); return; }
+    if (!form.value.code || form.value.code.trim().length < 5 || !/^[A-Z0-9]+$/.test(form.value.code)) { Swal.fire('Lỗi', 'Mã code phải có ít nhất 5 ký tự và chỉ chứa chữ in hoa, số.', 'warning'); return; }
+    if (form.value.type === 'fixed' && form.value.value < 1000) { Swal.fire('Lỗi', 'Mức giảm giá tiền mặt phải từ 1.000 VNĐ trở lên.', 'warning'); return; }
+    if (form.value.type === 'percentage' && (form.value.value < 1 || form.value.value > 100)) { Swal.fire('Lỗi', 'Mức giảm giá phần trăm phải từ 1% đến 100%.', 'warning'); return; }
+    if (form.value.usage_limit_per_user > form.value.usage_limit) { Swal.fire('Lỗi', 'Giới hạn mỗi user không được vượt quá tổng số lượng mã.', 'warning'); return; }
     isSaving.value = true;
     errors.value = {}; 
     

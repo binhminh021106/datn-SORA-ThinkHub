@@ -487,10 +487,7 @@ const { data: reviewsData, isFetching: isFetchingReviews, refetch: refetchReview
 const localReviews = ref([]);
 const pagination = ref({ current_page: 1, last_page: 1, total: 0 });
 
-watch(reviewsData, (newVal) => {
-  if (newVal) {
-     isFirstLoad.value = false;
-  }
+const syncReviews = (newVal) => {
   if (newVal && newVal.data) {
     localReviews.value = newVal.data.map(r => ({
       ...r,
@@ -504,6 +501,13 @@ watch(reviewsData, (newVal) => {
       total: newVal.total
     };
   }
+};
+
+watch(reviewsData, (newVal) => {
+  if (newVal) {
+     isFirstLoad.value = false;
+  }
+  syncReviews(newVal);
 }, { immediate: true });
 
 watch(isFetchingReviews, (isFetching) => {

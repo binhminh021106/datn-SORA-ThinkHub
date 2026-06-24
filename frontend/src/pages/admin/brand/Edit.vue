@@ -131,17 +131,20 @@ const handleLogoUpload = (e) => {
 
 const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
   if (e.response) {
-    let errorHtml = '';
+    let errorText = '';
     if (e.response.data && e.response.data.errors) {
-        errorHtml = '<ul class="text-start text-danger small mt-2" style="max-height: 200px; overflow-y: auto; padding-left: 20px;">';
         Object.values(e.response.data.errors).flat().forEach(msg => {
-            errorHtml += `<li class="mb-1">${msg}</li>`;
+            errorText += `• ${msg}\n`;
         });
-        errorHtml += '</ul>';
     } else {
-        errorHtml = `<p class="text-danger">${e.response.data.message || defaultMsg}</p>`;
+        let errorMsg = e.response.data.message || '';
+        if (errorMsg.includes('Duplicate entry') && (errorMsg.includes('brands.slug') || errorMsg.includes('brands_slug_unique'))) {
+            errorText = '• Tên thương hiệu này đã tồn tại hoặc nằm trong thùng rác.\n• Slug này đã bị trùng với thương hiệu khác.';
+        } else {
+            errorText = errorMsg || defaultMsg;
+        }
     }
-    Swal.fire({ title: 'Dữ liệu không hợp lệ', html: errorHtml, icon: 'error', confirmButtonColor: '#dc3545' });
+    Swal.fire({ title: 'Dữ liệu không hợp lệ', text: errorText, icon: 'error', confirmButtonColor: '#dc3545' });
   } else {
     Swal.fire('Lỗi', 'Mất kết nối Server', 'error');
   }
@@ -204,6 +207,10 @@ const updateBrandMutation = useMutation({
 });
 
 const updateBrand = () => {
+  if (!form.value.name || form.value.name.trim().length < 3) {
+    Swal.fire('Lỗi', 'Tên thương hiệu phải có ít nhất 3 ký tự.', 'warning');
+    return;
+  }
   const formData = new FormData();
   formData.append('_method', 'PUT');
   formData.append('name', form.value.name);

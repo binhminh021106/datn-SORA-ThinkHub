@@ -14,7 +14,7 @@
             <div class="combo-left-content">
               <h2 class="combo-title font-serif">{{ combo.title }}</h2>
 
-              <div class="combo-badges mb-3">
+              <div class="combo-badges mb-3 d-flex flex-wrap gap-2">
                 <span class="badge-red">{{ combo.badge }}</span>
                 <span class="badge-light">SỐ LƯỢNG CÓ HẠN</span>
               </div>
@@ -767,21 +767,103 @@ onUnmounted(() => {
 }
 
 @media (max-width: 767.98px) {
-  .sora-combo-carousel { height: 850px; }
+  .sora-combo-carousel { 
+    height: auto; 
+    padding: 0;
+    margin-bottom: 2rem;
+    display: block;
+  }
+  .combo-track-new {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 1rem;
+    padding: 1rem;
+    padding-bottom: 2rem;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    height: auto;
+    perspective: none;
+  }
+  .combo-track-new::-webkit-scrollbar {
+    display: none;
+  }
   .combo-card-wrapper {
     position: relative;
-    left: auto;
-    top: auto;
-    width: 100%;
-    height: 100%;
+    left: auto !important;
+    top: auto !important;
+    width: 90vw;
+    flex: 0 0 auto;
+    height: auto;
     transform: none !important;
+    scroll-snap-align: center;
+    opacity: 1 !important;
+    z-index: 1 !important;
+    box-shadow: 0 10px 30px rgba(var(--sora-primary-rgb), 0.15) !important;
+    pointer-events: auto !important;
   }
-  .combo-card-inner { flex-direction: column; }
+  .combo-card-inner { flex-direction: column; height: auto; }
   .combo-left-panel, .combo-right-panel { width: 100%; }
+  .combo-left-panel { 
+    height: auto; 
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+  .combo-bg-image {
+    position: relative;
+    height: 240px !important;
+    width: 100%;
+    inset: auto;
+  }
+  .combo-bg-overlay { display: none !important; }
+  .combo-left-content { 
+    padding: 1.25rem !important; 
+    padding-top: 1rem !important;
+    background-color: #ffffff;
+  }
+  .combo-title {
+    font-size: 1.35rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  .combo-badges {
+    margin-bottom: 1rem !important;
+  }
+  .time-value {
+    width: 45px !important;
+    height: 45px !important;
+    font-size: 1.1rem !important;
+    border-radius: 8px !important;
+  }
+  .countdown-boxes {
+    gap: 0.4rem !important;
+  }
+  .time-separator {
+    margin-top: -1rem !important;
+  }
+  .discount-price {
+    font-size: 1.6rem !important;
+  }
+  .original-price {
+    font-size: 1.05rem !important;
+  }
   .combo-right-panel {
     border-left: none;
-    border-top: 1px solid rgba(var(--sora-secondary-rgb), 0.2);
+    border-top: 1px dashed rgba(var(--sora-secondary-rgb), 0.3);
+    padding: 1.25rem !important;
+    height: auto;
   }
+  .combo-products-title {
+    font-size: 1.15rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+  .product-img-box {
+    width: 72px !important;
+    height: 72px !important;
+  }
+  .combo-nav-btn { display: none; }
+  .combo-overlay { display: none !important; }
+  .combo-products-scroll { height: auto; max-height: 250px; }
 }
 
 </style>

@@ -248,4 +248,48 @@ class AdminCategoryController extends Controller
             ], 500);
         }
     }
+
+    public function forceDelete($id)
+    {
+        $admin = request()->user();
+        if (!$admin || !$admin->role_id) {
+            return response()->json(['success' => false, 'message' => 'Lỗi xác thực.'], 401);
+        }
+        $role = \Illuminate\Support\Facades\DB::table('roles')->where('id', $admin->role_id)->first();
+        if (!$role || (int) $role->level !== 1) {
+            return response()->json(['success' => false, 'message' => 'Truy cập bị từ chối: Chỉ Super Admin (Level 1) mới có quyền xóa vĩnh viễn.'], 403);
+        }
+
+        $category = Category::onlyTrashed()->withCount(['children' => function ($query) {
+            $query->withTrashed();
+        }])->findOrFail($id);
+
+        if ($category->children_count > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể xóa vĩnh viễn! Danh mục này đang chứa ' . $category->children_count . ' danh mục con.'
+            ], 400);
+        }
+
+        try {
+            $category->forceDelete();
+
+            if ($category->thumbnail && Storage::disk('public')->exists($category->thumbnail)) {
+                Storage::disk('public')->delete($category->thumbnail);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Đã xóa vĩnh viễn danh mục'
+            ]);
+        } catch (QueryException $e) {
+            if ($e->getCode() == 23000) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không thể xóa vĩnh viễn vì danh mục này đang chứa sản phẩm.'
+                ], 422);
+            }
+            throw $e;
+        }
+    }
 }

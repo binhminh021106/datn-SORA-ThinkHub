@@ -25,7 +25,7 @@ class AdminStoreCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'min:3', 'max:255'],
             'slug' => ['required', 'string', 'max:255', Rule::unique('categories', 'slug')->whereNull('deleted_at')],
             'parent_id' => ['nullable', 'integer', 'exists:categories,id'],
             'description' => ['nullable', 'string', 'max:5000'],
@@ -40,6 +40,7 @@ class AdminStoreCategoryRequest extends FormRequest
     {
         return [
             'name.required' => 'Tên danh mục không được để trống.',
+            'name.min' => 'Tên danh mục phải có ít nhất 3 ký tự.',
             'name.max' => 'Tên danh mục không được vượt quá 255 ký tự.',
             'slug.required' => 'Danh mục (Slug) không được để trống.',
             'slug.unique' => 'Danh mục này đã tồn tại trên hệ thống. Vui lòng chọn tên khác.',

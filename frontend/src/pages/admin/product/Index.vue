@@ -116,7 +116,7 @@
             <div v-if="isSilentLoading || isTableLoading" class="spinner-border spinner-border-sm text-brand ms-2"
               role="status"></div>
             
-            <button v-if="activeTab === 'deleted' && selectedProductIds.length > 0" 
+            <button v-if="activeTab === 'deleted' && selectedProductIds.length > 0 && isHighestRole" 
                     class="btn btn-sm btn-danger ms-3 shadow-sm rounded-pill px-3"
                     @click="confirmBulkForceDelete">
               <i class="bi bi-trash3-fill me-1"></i> Xóa vĩnh viễn đã chọn ({{ selectedProductIds.length }})
@@ -263,7 +263,7 @@
                     <template v-else>
                       <button class="btn btn-sm btn-light text-success shadow-sm border me-2"
                         @click="restoreProduct(product.id)" title="Khôi phục"><i class="bi bi-arrow-counterclockwise"></i></button>
-                      <button class="btn btn-sm btn-light text-danger shadow-sm border"
+                      <button v-if="isHighestRole" class="btn btn-sm btn-light text-danger shadow-sm border"
                         @click="forceDeleteProduct(product.id, product.name)" title="Xóa vĩnh viễn"><i class="bi bi-trash3-fill"></i></button>
                     </template>
                   </td>
@@ -401,7 +401,7 @@
 </template>
 
 <script setup>
-import { ref, onBeforeUnmount, computed, watch } from 'vue';
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
@@ -438,6 +438,22 @@ const isFetchingDetail = ref(false);
 
 // Tách isFirstLoad thành một biến reactive cục bộ để kiểm soát màn hình loading chào mừng độc lập khi đổi route
 const isFirstLoad = ref(true);
+
+const isHighestRole = ref(false);
+onMounted(async () => {
+  try {
+    const userLevelStr = localStorage.getItem('admin_level') || sessionStorage.getItem('admin_level');
+    const userLevel = userLevelStr ? parseInt(userLevelStr) : (JSON.parse(localStorage.getItem('admin_info') || '{}')?.role?.level || 999);
+    const res = await adminApiClient.get('/roles');
+    const roles = Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
+    if (roles && roles.length > 0) {
+      const minLevel = Math.min(...roles.map(r => r.level));
+      isHighestRole.value = (userLevel === minLevel);
+    }
+  } catch (e) {
+    console.warn('Lỗi xác thực quyền xóa vĩnh viễn', e);
+  }
+});
 
 let quickViewModalInstance = null;
 let isUnmounted = false;

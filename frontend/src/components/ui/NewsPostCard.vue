@@ -169,4 +169,17 @@ const excerpt = computed(() => {
 .card-link:hover {
   color: #cc1e2e !important;
 }
+
+@media (max-width: 768px) {
+  .product-title {
+    font-size: 1.15rem !important;
+  }
+  .card-excerpt {
+    font-size: 0.85rem !important;
+    -webkit-line-clamp: 2;
+  }
+  .card-body {
+    padding: 1rem !important;
+  }
+}
 </style>

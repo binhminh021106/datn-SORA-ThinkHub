@@ -353,9 +353,10 @@ Route::prefix('admin')->group(function () {
         // Quản lý Danh mục (Mã: admin_categories)
         Route::middleware(['check.module:admin_categories'])->group(function () {
             Route::get('categories/tree', [AdminCategoryController::class, 'getTree']);
-            Route::post('categories/{id}/restore', [AdminCategoryController::class, 'restore']);
-            Route::post('categories/reorder', [AdminCategoryController::class, 'reorder']);
             Route::apiResource('categories', AdminCategoryController::class);
+            Route::post('categories/{id}/restore', [AdminCategoryController::class, 'restore']);
+            Route::delete('categories/{id}/force', [AdminCategoryController::class, 'forceDelete']);
+            Route::post('categories/reorder', [AdminCategoryController::class, 'reorder']);
         });
 
         // Dashboard
@@ -383,6 +384,7 @@ Route::prefix('admin')->group(function () {
         Route::middleware(['check.module:admin_brands'])->group(function () {
             Route::apiResource('brands', AdminBrandController::class);
             Route::post('brands/{id}/restore', [AdminBrandController::class, 'restore']);
+            Route::delete('brands/{id}/force', [AdminBrandController::class, 'forceDelete']);
             Route::post('brands/reorder', [AdminBrandController::class, 'reorder']);
         });
 

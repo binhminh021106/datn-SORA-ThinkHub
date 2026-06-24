@@ -178,4 +178,38 @@ class AdminBrandController extends Controller
             'message' => 'Đã cập nhật thứ tự'
         ]);
     }
+
+    public function forceDelete($id)
+    {
+        $admin = request()->user();
+        if (!$admin || !$admin->role_id) {
+            return response()->json(['success' => false, 'message' => 'Lỗi xác thực.'], 401);
+        }
+        $role = \Illuminate\Support\Facades\DB::table('roles')->where('id', $admin->role_id)->first();
+        if (!$role || (int) $role->level !== 1) {
+            return response()->json(['success' => false, 'message' => 'Truy cập bị từ chối: Chỉ Super Admin (Level 1) mới có quyền xóa vĩnh viễn.'], 403);
+        }
+
+        $brand = Brand::onlyTrashed()->withCount(['products' => function ($query) {
+            $query->withTrashed();
+        }])->findOrFail($id);
+        
+        if ($brand->products_count > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể xóa vĩnh viễn thương hiệu này vì đang có sản phẩm thuộc thương hiệu.'
+            ], 422);
+        }
+
+        $brand->forceDelete();
+
+        if ($brand->logo) {
+            Storage::disk('public')->delete($brand->logo);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã xóa vĩnh viễn thương hiệu'
+        ]);
+    }
 }

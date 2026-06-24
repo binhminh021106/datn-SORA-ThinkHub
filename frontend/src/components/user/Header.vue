@@ -26,7 +26,7 @@
         </div>
 
         <div class="header-icons d-flex justify-content-end align-items-center gap-4" style="flex: 1;">
-          <a href="#" @click.prevent="safeNavigate('favourite')" class="icon-link hover-primary transition-color">
+          <a href="#" @click.prevent="safeNavigate('favourite')" class="icon-link hover-primary transition-color d-none d-lg-flex">
             <i class="bi bi-heart"></i>
           </a>
 
@@ -80,7 +80,7 @@
           </div>
 
           <a href="#" @click.prevent="openMiniCart"
-            class="icon-link position-relative hover-primary transition-color d-flex align-items-center">
+            class="icon-link position-relative hover-primary transition-color d-none d-lg-flex align-items-center">
             <i class="bi bi-bag"></i>
             <span v-if="cartItemCount > 0" class="cart-badge">{{ cartItemCount > 99 ? '99+' : cartItemCount }}</span>
           </a>

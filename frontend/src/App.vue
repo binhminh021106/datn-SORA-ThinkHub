@@ -100,6 +100,13 @@ body {
   background-color: #f8f9fa;
 }
 
+/* Disable browser default password eye icon */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear,
+input::-webkit-credentials-auto-fill-button {
+  display: none !important;
+}
+
 .app-auth-check-screen {
   min-height: 100vh;
   background-color: #f8f9fa;

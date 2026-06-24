@@ -491,6 +491,12 @@ const updateStatusMutation = useMutation({
   onMutate: async ({ id }) => { isUpdatingStatusId.value = id; },
   onSuccess: (data, variables) => {
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
+    
+    const user = localUsers.value.find(u => u.id === variables.id);
+    if (user) {
+      user.isStatusChanged = false;
+    }
+
     queryClient.setQueryData(['adminUsers'], (old) => {
       if (!old) return old;
       return {

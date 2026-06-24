@@ -29,10 +29,13 @@
 
           <div class="form-floating mb-3 position-relative">
             <input :type="showPassword ? 'text' : 'password'" class="form-control pe-5" id="password"
-              v-model="form.password" placeholder="Password" required>
+              v-model="form.password" placeholder="Password" required autocomplete="new-password"
+              readonly onfocus="this.removeAttribute('readonly');">
             <label for="password">Mật khẩu</label>
             <button type="button" class="btn border-0 position-absolute top-50 end-0 translate-middle-y text-muted me-1"
-              @click="showPassword = !showPassword">
+              @click="showPassword = !showPassword"
+              :aria-label="showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
+              :aria-pressed="showPassword">
               <i class="bi" :class="showPassword ? 'bi-eye-slash' : 'bi-eye'"></i>
             </button>
           </div>
@@ -40,7 +43,7 @@
           <div class="d-flex justify-content-between align-items-center mb-4 small">
             <div class="form-check">
               <input class="form-check-input" type="checkbox" id="rememberMe" v-model="form.remember">
-              <label class="form-check-label text-muted" for="rememberMe">Ghi nhớ tôi</label>
+              <label class="form-check-label text-muted" for="rememberMe">Nhớ mật khẩu</label>
             </div>
 
             <!-- ĐÃ SỬA: Thay thẻ <a> thành <router-link> trỏ về route quên mật khẩu -->
@@ -106,7 +109,7 @@ const handleLogin = async () => {
 
       localStorage.setItem('admin_info', JSON.stringify(data.admin));
 
-      // "Ghi nhớ tôi" chỉ nhớ email để tiện đăng nhập lần sau.
+      // Luôn ghi nhớ email (tài khoản)
       if (form.value.remember) {
         localStorage.setItem('admin_remember_email', form.value.email);
       } else {
@@ -141,9 +144,9 @@ const handleLogin = async () => {
 };
 
 onMounted(() => {
-  const remembered = localStorage.getItem('admin_remember_email');
-  if (remembered) {
-    form.value.email = remembered;
+  const rememberedEmail = localStorage.getItem('admin_remember_email');
+  if (rememberedEmail) {
+    form.value.email = rememberedEmail;
     form.value.remember = true;
   }
 });

@@ -363,7 +363,18 @@ const updateStaffMutation = useMutation({
   },
   onError: (err) => {
     if (err.response && err.response.data) {
-      Swal.fire('Lỗi', err.response.data.message || Object.values(err.response.data.errors).flat().join('\n'), 'error');
+      let errorMsg = err.response.data.message || '';
+      if (errorMsg.includes('Duplicate entry')) {
+        let text = 'Dữ liệu này đã tồn tại hoặc nằm trong thùng rác.';
+        if (errorMsg.includes('staff_email_unique') || errorMsg.includes('email')) {
+          text = 'Email này đã tồn tại hoặc nằm trong thùng rác.';
+        } else if (errorMsg.includes('staff_phone_unique') || errorMsg.includes('phone')) {
+          text = 'Số điện thoại này đã tồn tại hoặc nằm trong thùng rác.';
+        }
+        Swal.fire('Lỗi', text, 'error');
+      } else {
+        Swal.fire('Lỗi', errorMsg || (err.response.data.errors ? Object.values(err.response.data.errors).flat().join('\n') : 'Lỗi hệ thống'), 'error');
+      }
     } else {
       Swal.fire('Lỗi', 'Không thể kết nối máy chủ để cập nhật dữ liệu.', 'error');
     }

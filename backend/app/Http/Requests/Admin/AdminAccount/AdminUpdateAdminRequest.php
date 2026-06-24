@@ -27,7 +27,7 @@ class AdminUpdateAdminRequest extends FormRequest
             'password' => ['nullable', 'string', 'min:8'],
 
             'role_id'  => ['required', 'integer', 'exists:roles,id'],
-            'phone'    => ['nullable', 'string', 'max:20', 'regex:/^[0-9\-\+\s\(\)]+$/'],
+            'phone'    => ['nullable', 'string', 'max:20', 'regex:/^[0-9\-\+\s\(\)]+$/', Rule::unique('admins', 'phone')->ignore($adminId)->whereNull('deleted_at')],
             'status'   => ['required', 'string', Rule::in(['active', 'locked'])],
             'avatar'   => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120'],
             'address'  => ['nullable', 'string', 'max:255'],
@@ -47,6 +47,7 @@ class AdminUpdateAdminRequest extends FormRequest
             'role_id.exists'    => 'Chức vụ không hợp lệ hoặc đã bị xóa.',
             'phone.regex'       => 'Số điện thoại chỉ được chứa chữ số và các ký tự (+, -, ngoặc).',
             'phone.max'         => 'Số điện thoại quá dài (tối đa 20 ký tự).',
+            'phone.unique'      => 'Số điện thoại này đã bị trùng với một tài khoản khác trên hệ thống.',
             'status.required'   => 'Vui lòng chọn trạng thái.',
             'status.in'         => 'Trạng thái không hợp lệ.',
             'avatar.image'      => 'File tải lên phải là hình ảnh.',

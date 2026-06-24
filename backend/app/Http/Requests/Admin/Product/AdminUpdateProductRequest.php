@@ -31,9 +31,9 @@ class AdminUpdateProductRequest extends FormRequest
         return [
             'category_id'       => 'required|exists:categories,id',
             'brand_id'          => 'nullable|exists:brands,id',
-            'name'              => 'required|string|max:255',
+            'name'              => 'required|string|min:3|max:255',
             'slug'              => 'required|string|max:255|unique:products,slug,' . $productId,
-            'base_price'        => 'required|numeric|min:0',
+            'base_price'        => 'required|numeric|min:1',
             'thumbnail_image'   => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048', 
             'status'            => 'required|in:published,draft,hidden',
             'affiliate_commission_rate' => 'nullable|numeric|min:0|max:100',
@@ -54,9 +54,9 @@ class AdminUpdateProductRequest extends FormRequest
                 }
             }],
             
-            'parsed_variants.*.price'             => 'required|numeric|min:0',
+            'parsed_variants.*.price'             => 'required|numeric|min:1',
             'parsed_variants.*.promotional_price' => 'nullable|numeric|min:0|lte:parsed_variants.*.price',
-            'parsed_variants.*.stock_quantity'    => 'required|integer|min:0',
+            'parsed_variants.*.stock_quantity'    => 'required|integer|min:1',
             
             // YÊU CẦU ẢNH: Chỉ bắt buộc nếu biến thể này chưa có ảnh cũ (current_image rỗng)
             'parsed_variants.*.image_file'        => 'required_without:parsed_variants.*.current_image|nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
@@ -66,9 +66,13 @@ class AdminUpdateProductRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'name.min' => 'Tên sản phẩm phải có ít nhất 3 ký tự.',
+            'base_price.min' => 'Giá tham khảo phải lớn hơn 0.',
             'slug.unique' => 'Sản phẩm (slug) này đã tồn tại trên một sản phẩm khác.',
             'parsed_variants.*.sku.distinct' => 'Có mã SKU bị trùng lặp bên trong lưới biến thể đang gửi.',
+            'parsed_variants.*.price.min' => 'Giá bán của biến thể phải lớn hơn 0.',
             'parsed_variants.*.promotional_price.lte' => 'Giá khuyến mãi không được lớn hơn Giá bán.',
+            'parsed_variants.*.stock_quantity.min' => 'Tồn kho của biến thể phải lớn hơn 0.',
             'parsed_variants.*.image_file.required_without' => 'Vui lòng chọn ảnh cho biến thể mới thêm.',
             'parsed_variants.*.image_file.max' => 'Ảnh của biến thể không được vượt quá 15MB.',
         ];

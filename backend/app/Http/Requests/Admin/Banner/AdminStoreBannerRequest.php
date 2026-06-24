@@ -14,7 +14,7 @@ class AdminStoreBannerRequest extends FormRequest
     public function rules()
     {
         return [
-            'title'         => 'required|string|max:255',
+            'title'         => 'required|string|min:3|max:255',
             'brand_id'      => 'nullable|exists:brands,id',
             'position'      => 'nullable|string|max:50',
             'target_url'    => 'nullable|url|max:500', 
@@ -30,6 +30,7 @@ class AdminStoreBannerRequest extends FormRequest
     {
         return [
             'title.required'         => 'Tên chiến dịch banner không được để trống.',
+            'title.min'              => 'Tên chiến dịch banner phải có ít nhất 3 ký tự.',
             'image_desktop.required' => 'Vui lòng chọn ảnh cho màn hình Desktop.',
             'image_mobile.required'  => 'Vui lòng chọn ảnh cho màn hình Mobile.',
             'image_desktop.max'      => 'Ảnh Desktop không được vượt quá 10MB.',

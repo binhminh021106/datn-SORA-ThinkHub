@@ -315,7 +315,16 @@ const { mutate: mutateUpdate, isPending: isSaving } = useMutation({
         } else if (err.response.status === 401) {
             Swal.fire('Lỗi xác thực', 'Phiên đăng nhập đã hết hạn!', 'error');
         } else {
-            Swal.fire('Lỗi', err.response.data.message || 'Có lỗi xảy ra', 'error');
+            let errorMsg = err.response.data.message || '';
+            if (errorMsg.includes('Duplicate entry') && (errorMsg.includes('categories.slug') || errorMsg.includes('categories_slug_unique'))) {
+                let errorHtml = '<ul class="text-start text-danger small mt-2" style="max-height: 200px; overflow-y: auto; padding-left: 20px;">' +
+                            '<li class="mb-1">Tên danh mục này đã tồn tại hoặc nằm trong thùng rác.</li>' +
+                            '<li class="mb-1">Slug này đã bị trùng với danh mục khác.</li>' +
+                            '</ul>';
+                Swal.fire({ title: 'Dữ liệu không hợp lệ', html: errorHtml, icon: 'error', confirmButtonColor: '#dc3545' });
+            } else {
+                Swal.fire('Lỗi', errorMsg || 'Có lỗi xảy ra', 'error');
+            }
         }
     } else {
         Swal.fire('Lỗi', 'Mất kết nối server', 'error'); 
@@ -324,6 +333,10 @@ const { mutate: mutateUpdate, isPending: isSaving } = useMutation({
 });
 
 const updateCategory = () => {
+    if (!form.value.name || form.value.name.trim().length < 3) {
+        Swal.fire('Lỗi', 'Tên danh mục phải có ít nhất 3 ký tự.', 'warning');
+        return;
+    }
     if (form.value.attributes_schema) {
         form.value.attributes_schema = form.value.attributes_schema.filter(attr => attr.trim() !== '');
     }

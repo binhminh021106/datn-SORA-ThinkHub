@@ -221,6 +221,10 @@ const { mutate: updateBanner, isPending: isUpdating } = useMutation({
 });
 
 const submitForm = () => {
+  if (!form.value.title || form.value.title.trim().length < 3) {
+    Swal.fire('Lỗi', 'Tên chiến dịch phải có ít nhất 3 ký tự.', 'warning');
+    return;
+  }
   if (form.value.start_date && form.value.end_date) {
     if (new Date(form.value.end_date) <= new Date(form.value.start_date)) {
       return Swal.fire('Lỗi', 'Thời gian kết thúc phải diễn ra sau bắt đầu!', 'warning');

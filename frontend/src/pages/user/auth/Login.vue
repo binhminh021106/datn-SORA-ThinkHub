@@ -6,15 +6,15 @@
         <div class="banner-overlay"></div>
         <div class="banner-content">
           <img src="../../../assets/images/logo2.png" alt="SORA Jewelry Logo" class="brand-logo-img" />
-          <p class="brand-slogan">Vẻ đẹp vượt thời gian</p>
+          <p class="brand-slogan">Tôn Vinh Vẻ Đẹp Độc Bản</p>
         </div>
       </div>
 
       <!-- Cột phải: Form Đăng nhập -->
       <div class="auth-box">
         <div class="auth-header">
-          <h2 class="auth-title">Chào mừng trở lại</h2>
-          <p class="subtitle">Đăng nhập để trải nghiệm mua sắm tuyệt vời</p>
+          <h2 class="auth-title font-serif tracking-widest">ĐẶC QUYỀN THÀNH VIÊN</h2>
+          <p class="subtitle">Đăng nhập để tiếp tục hành trình mua sắm đẳng cấp cùng SORA.</p>
         </div>
 
         <div v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</div>
@@ -29,7 +29,21 @@
               <label>Mật khẩu</label>
               <router-link to="/forgot-password" class="forgot-password">Quên mật khẩu?</router-link>
             </div>
-            <input v-model="form.password" type="password" placeholder="Nhập mật khẩu" required />
+            <div class="password-input-wrapper">
+              <input v-model="form.password" :type="showPassword ? 'text' : 'password'" placeholder="Nhập mật khẩu"
+                required autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" />
+              <button type="button" class="password-toggle" @click="showPassword = !showPassword"
+                :aria-label="showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
+                :aria-pressed="showPassword">
+                <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+              </button>
+            </div>
+          </div>
+          <div class="form-group remember-group">
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="form.remember" />
+              <span> Nhớ mật khẩu</span>
+            </label>
           </div>
           <button type="submit" class="btn-primary" :disabled="isLoading">
             {{ isLoading ? 'ĐANG XỬ LÝ...' : 'ĐĂNG NHẬP' }}
@@ -83,7 +97,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import Toast from '@/utils/toastConfig';
 import { API_BASE_URL } from '@/utils/env';
 import clientApiClient from '@/utils/clientApiClient';
@@ -94,10 +108,12 @@ const LoginWithGoogle = () => {
 
 const isLoading = ref(false);
 const errorMessage = ref('');
+const showPassword = ref(false);
 
 const form = reactive({
   email: '',
-  password: ''
+  password: '',
+  remember: false
 });
 
 const handleLogin = async () => {
@@ -117,6 +133,13 @@ const handleLogin = async () => {
 
     // Đồng bộ giỏ hàng Guest vào tài khoản
     const sessionId = localStorage.getItem('cart_session_id');
+
+    if (form.remember) {
+      localStorage.setItem('user_remember_email', form.email);
+    } else {
+      localStorage.removeItem('user_remember_email');
+    }
+
     if (sessionId) {
       try {
         await clientApiClient.post('/client/cart/merge', {}, {
@@ -145,6 +168,14 @@ const handleLogin = async () => {
   }
 };
 
+onMounted(() => {
+  const rememberedEmail = localStorage.getItem('user_remember_email');
+  if (rememberedEmail) {
+    form.email = rememberedEmail;
+    form.remember = true;
+  }
+});
+
 const handleSocialLogin = (platform) => {
   Toast.fire({ icon: 'info', title: `Tính năng đăng nhập bằng ${platform} đang được phát triển!` });
 };
@@ -168,7 +199,7 @@ const handleSocialLogin = (platform) => {
   width: 100%;
   max-width: 950px;
   min-height: 600px;
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 20px 50px rgba(159, 39, 59, 0.15);
 }
@@ -202,20 +233,27 @@ const handleSocialLogin = (platform) => {
   align-items: center;
 }
 
+/* Ánh sáng dịu (spotlight) chiếu hắt từ sau logo để làm nổi bật logo tự nhiên */
+
+
 .brand-logo-img {
   max-width: 180px;
   height: auto;
   margin-bottom: 25px;
-  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+  /* Viền stroke vàng cực mỏng, không bị "nhựa", cộng với bóng đổ tối để nổi bật */
+  filter: drop-shadow(0 0 1.5px #e7ce7d) 
+          drop-shadow(0 0 1.5px rgba(231, 206, 125, 0.01)) 
+          drop-shadow(0 4px 6px rgba(0, 0, 0, 0.01));
 }
 
 .brand-slogan {
   font-size: 15px;
-  letter-spacing: 2px;
+  letter-spacing: 3px;
   color: #e7ce7d;
   text-transform: uppercase;
   margin: 0;
   font-weight: 500;
+  font-family: 'Oswald', sans-serif;
 }
 
 .auth-box {
@@ -235,7 +273,8 @@ const handleSocialLogin = (platform) => {
   color: #9f273b;
   font-size: 26px;
   margin: 0 0 8px;
-  font-family: 'Josefin Sans', sans-serif;
+  font-family: 'Playfair Display', 'Lora', serif;
+  text-transform: uppercase;
 }
 
 .subtitle {
@@ -263,6 +302,28 @@ const handleSocialLogin = (platform) => {
   display: inline-block;
 }
 
+.remember-group {
+  margin-top: -10px;
+  margin-bottom: 20px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: normal !important;
+  color: #666 !important;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #9f273b;
+  margin: 0;
+  cursor: pointer;
+}
+
 .forgot-password {
   font-size: 13px;
   color: #9f273b;
@@ -278,7 +339,7 @@ const handleSocialLogin = (platform) => {
   width: 100%;
   padding: 14px 16px;
   border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  border-radius: 4px;
   font-size: 14px;
   transition: all 0.3s;
   background-color: #fafafa;
@@ -292,19 +353,48 @@ const handleSocialLogin = (platform) => {
   box-shadow: 0 0 0 4px rgba(231, 206, 125, 0.15);
 }
 
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.3s;
+}
+
+.password-toggle:hover {
+  color: #9f273b;
+}
+
+.password-toggle:focus {
+  outline: none;
+}
+
 .btn-primary {
   width: 100%;
   padding: 15px;
   background-color: #9f273b;
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 4px;
   font-size: 15px;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.3s;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
+  letter-spacing: 2px;
+  font-family: 'Oswald', sans-serif;
   margin-top: 10px;
 }
 
@@ -354,7 +444,7 @@ const handleSocialLogin = (platform) => {
   padding: 12px;
   background: white;
   border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  border-radius: 4px;
   font-size: 14px;
   font-weight: 500;
   color: #444;
@@ -393,7 +483,7 @@ const handleSocialLogin = (platform) => {
 
 .alert {
   padding: 12px;
-  border-radius: 8px;
+  border-radius: 4px;
   margin-bottom: 20px;
   font-size: 14px;
 }
