@@ -95,7 +95,7 @@
                          <div class="position-absolute top-0 start-0 m-3 z-index-2">
                              <span class="item-index-badge font-oswald px-3 py-1 shadow-sm">Món {{ index + 1 }}</span>
                          </div>
-                         <div class="editorial-image-frame position-relative w-100 cursor-zoom-in" style="height: 320px;" @click="viewFullImage(getDisplayImage(item))">
+                         <div class="editorial-image-frame position-relative w-100 cursor-zoom-in" tabindex="0" @click="viewFullImage(getDisplayImage(item))" @keydown.enter.space.prevent="viewFullImage(getDisplayImage(item))">
                             <img :src="getDisplayImage(item)" class="w-100 h-100 object-fit-cover transition-all img-zoom-hover" @error="handleImageError">
                          </div>
                       </div>
@@ -226,7 +226,7 @@
           <div class="position-relative">
             <swiper
               :modules="swiperModules"
-              :slides-per-view="1"
+              :slides-per-view="2"
               :space-between="20"
               :navigation="{ nextEl: '.related-next', prevEl: '.related-prev' }"
               :breakpoints="{
@@ -1144,8 +1144,16 @@ onUnmounted(() => {
     linear-gradient(145deg, #fffaf1, #efe1cf);
 }
 
+.editorial-image-frame {
+  height: 320px;
+}
+
 .editorial-image-frame img {
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   z-index: 1;
   padding: 0;
 }
@@ -1294,25 +1302,83 @@ onUnmounted(() => {
 
   .timer-countdown {
     width: 100%;
-    flex-wrap: wrap;
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
   }
 
   .timer-countdown span {
-    flex: 1 1 calc(50% - 8px);
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    height: 52px !important;
+    padding: 4px !important;
+  }
+
+  .timer-countdown strong {
+    font-size: 1rem !important;
+  }
+
+  .timer-countdown small {
+    font-size: 0.55rem !important;
+  }
+
+  .luxury-product-card > .d-flex {
+    flex-direction: row !important;
+    align-items: stretch;
   }
 
   .editorial-image-cell {
-    min-height: 220px;
-    border-right: 0;
-    border-bottom: 1px solid rgba(197, 158, 74, 0.28);
+    width: 38% !important;
+    min-height: auto !important;
+    border-bottom: none !important;
+    border-right: 1px solid rgba(197, 158, 74, 0.28);
+    display: flex;
+  }
+
+  .editorial-image-frame {
+    height: auto !important;
+    min-height: 140px;
+    flex: 1;
+  }
+
+  .luxury-product-card > .d-flex > .p-4 {
+    width: 62% !important;
+    padding: 12px 10px !important;
+  }
+
+  .item-title {
+    font-size: 1rem !important;
+  }
+  
+  .item-category {
+    font-size: 0.6rem !important;
+  }
+
+  .attr-chip .chip-inner {
+    padding: 4px 8px !important;
+    min-width: 38px !important;
+  }
+
+  .attr-chip .chip-inner span {
+    font-size: 0.75rem !important;
   }
 
   .shop-feature-row {
-    flex-wrap: wrap;
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
   }
 
   .feature-pill {
-    flex: 1 1 calc(50% - 10px);
+    flex: 1 1 0 !important;
+    padding: 8px 4px !important;
+  }
+
+  .feature-pill i {
+    font-size: 1.2rem !important;
+  }
+
+  .feature-pill span {
+    font-size: 0.55rem !important;
+    letter-spacing: 0 !important;
   }
 }
 
@@ -1321,8 +1387,12 @@ onUnmounted(() => {
     height: 330px;
   }
 
+  .shop-feature-row {
+    flex-wrap: wrap !important;
+  }
+
   .feature-pill {
-    flex-basis: 100%;
+    flex: 1 1 40% !important;
   }
 }
 </style>

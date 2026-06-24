@@ -14,7 +14,7 @@
           <i class="bi bi-stars me-2"></i>Thông Tin Thị Trường
         </p>
         <h1 class="display-3 fw-bold font-serif mb-3 text-white text-uppercase">Bảng Giá Vàng Hôm Nay</h1>
-        <p class="banner-subtitle fw-light fs-5 mb-0 font-serif text-white">
+        <p class="banner-subtitle fw-light fs-5 mb-0 font-serif text-white d-none d-md-block">
           <i class="bi bi-clock-history me-2"></i>Cập nhật lúc: 
           <span class="text-gold fw-semibold">{{ data.last_updated || 'Đang kết nối...' }}</span>
         </p>
@@ -389,15 +389,22 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .sora-banner {
-    min-height: 320px;
+    min-height: 160px;
   }
 
   .banner-content h1 {
-    font-size: 2.45rem;
+    font-size: clamp(1.1rem, 4.5vw, 1.4rem) !important;
+    white-space: nowrap;
+    margin-bottom: 0 !important;
+  }
+
+  .banner-content p.text-champagne {
+    margin-bottom: 0.25rem !important;
+    font-size: 0.75rem;
   }
 
   .banner-subtitle {
-    font-size: 1rem !important;
+    font-size: 0.9rem !important;
   }
 
   .banner-line-art {
@@ -405,8 +412,9 @@ onMounted(() => {
   }
 
   .banner-monogram {
-    bottom: 38px;
-    font-size: 3.5rem;
+    bottom: 10px;
+    font-size: 1.8rem;
+    white-space: nowrap;
   }
 }
 

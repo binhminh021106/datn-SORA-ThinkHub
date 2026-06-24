@@ -220,9 +220,10 @@
                       <select
                         class="form-select form-select-sm border shadow-sm fw-semibold cursor-pointer flex-shrink-0"
                         style="width: 120px; font-size: 0.8rem; border-color: #ced4da !important;"
-                        :class="getStatusSelectClass(product.localStatus || product.status)"
-                        v-model="product.localStatus" @change="checkStatusChange(product)"
-                        :disabled="product.isUpdatingStatus">
+                        :class="getStatusSelectClass(localStatuses[product.id] || product.status)"
+                        :value="localStatuses[product.id] || product.status"
+                        @change="(e) => checkStatusChange(product, e.target.value)"
+                        :disabled="updatingStatuses[product.id]">
                         <option value="published">Đang bán</option>
                         <option value="draft">Bản nháp</option>
                         <option value="hidden">Đang ẩn</option>
@@ -230,11 +231,11 @@
 
                       <div class="d-flex align-items-center justify-content-start"
                         style="min-width: 55px; height: 28px; flex-shrink: 0 !important;">
-                        <div v-if="product.isUpdatingStatus" class="spinner-border text-brand ms-1"
+                        <div v-if="updatingStatuses[product.id]" class="spinner-border text-brand ms-1"
                           style="width: 1.25rem; height: 1.25rem; border-width: 0.15em; flex-shrink: 0 !important;"
                           role="status"></div>
 
-                        <template v-else-if="product.isStatusChanged">
+                        <template v-else-if="statusChanged[product.id]">
                           <button @click="saveProductStatus(product)"
                             class="btn btn-sm btn-success rounded-circle shadow-sm d-flex align-items-center justify-content-center ms-1"
                             style="width: 24px; height: 24px; padding: 0; flex-shrink: 0 !important;" title="Lưu">
@@ -512,34 +513,35 @@ const getLevelColor = (level) => {
   }
 };
 
-const checkStatusChange = (product) => {
-  product.isStatusChanged = (product.localStatus !== product.status);
+const localStatuses = ref({});
+const statusChanged = ref({});
+const updatingStatuses = ref({});
+
+const checkStatusChange = (product, newStatus) => {
+  localStatuses.value[product.id] = newStatus;
+  statusChanged.value[product.id] = (newStatus !== product.status);
 };
 
 const cancelStatusChange = (product) => {
-  product.localStatus = product.status;
-  product.isStatusChanged = false;
+  localStatuses.value[product.id] = product.status;
+  statusChanged.value[product.id] = false;
 };
 
 const saveProductStatus = async (product) => {
-  product.isUpdatingStatus = true;
-  const formData = new FormData();
-  formData.append('_method', 'PUT');
-  formData.append('category_id', product.category_id);
-  if (product.brand_id) formData.append('brand_id', product.brand_id);
-  formData.append('name', product.name);
-  formData.append('slug', product.slug);
-  formData.append('base_price', product.base_price);
-  formData.append('status', product.localStatus);
-  formData.append('variants_data', '[]');
+  updatingStatuses.value[product.id] = true;
 
   try {
-    await adminApiClient.post(`/products/${product.id}`, formData);
+    await adminApiClient.put(`/products/${product.id}/status`, {
+      status: localStatuses.value[product.id]
+    });
 
-    product.status = product.localStatus;
-    product.isStatusChanged = false;
+    product.status = localStatuses.value[product.id];
+    statusChanged.value[product.id] = false;
     productDetailCache.delete(product.id);
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
+    
+    // Tải lại danh sách để sản phẩm lập tức nhảy sang tab tương ứng
+    fetchData(true);
   } catch (error) {
     cancelStatusChange(product);
     if (error.response && error.response.status === 401) {
@@ -548,7 +550,7 @@ const saveProductStatus = async (product) => {
       Swal.fire('Lỗi', 'Không thể cập nhật trạng thái lúc này', 'error');
     }
   } finally {
-    product.isUpdatingStatus = false;
+    updatingStatuses.value[product.id] = false;
   }
 };
 
@@ -563,15 +565,23 @@ const getStatusSelectClass = (status) => {
 
 const fetchProducts = async () => {
   const res = await adminApiClient.get('/products');
-  return res.data.data.map(p => ({
+  const items = res.data.data.map(p => ({
     ...p,
-    localStatus: p.status,
-    isStatusChanged: false,
-    isUpdatingStatus: false,
     review_count: p.review_count || 0,
     rating_avg: p.rating_avg || 0,
     _searchText: removeAccents(`${p.name || ''} ${p.slug || ''} ${p.sku || ''}`)
   }));
+  
+  // Khởi tạo các state local cho từng sản phẩm
+  items.forEach(p => {
+    if (!statusChanged.value[p.id] && !updatingStatuses.value[p.id]) {
+      localStatuses.value[p.id] = p.status;
+      statusChanged.value[p.id] = false;
+      updatingStatuses.value[p.id] = false;
+    }
+  });
+  
+  return items;
 };
 
 const { data: productsData, isLoading: isProductsInitialLoading, isFetching: isTableLoading, refetch: refetchProducts } = useQuery({

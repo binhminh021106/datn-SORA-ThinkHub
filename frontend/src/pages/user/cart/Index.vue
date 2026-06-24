@@ -84,6 +84,10 @@
                   </span>
                 </div>
                 
+                <div v-if="item.combo_id && item.combo?.status !== 'active'" class="text-danger small fw-bold mt-2"><i class="bi bi-exclamation-triangle"></i> Gói ưu đãi này đã kết thúc. Vui lòng xóa khỏi giỏ.</div>
+                <div v-else-if="!item.combo_id && item.variant?.product?.status !== 'published'" class="text-danger small fw-bold mt-2"><i class="bi bi-exclamation-triangle"></i> Sản phẩm đã ngừng kinh doanh. Vui lòng xóa.</div>
+                <div v-else-if="!item.combo_id && item.quantity > (item.variant?.stock_quantity || 0)" class="text-danger small fw-bold mt-2"><i class="bi bi-exclamation-triangle"></i> Chỉ còn {{ item.variant?.stock_quantity || 0 }} sản phẩm trong kho.</div>
+                
                 <div class="d-flex d-md-none justify-content-between align-items-center mt-3">
                   <span class="fw-bold text-primary-custom text-nowrap">{{ formatPrice(getItemPrice(item)) }}</span>
                   <button @click="removeItem(item.id)" class="btn btn-link text-danger p-0 text-decoration-none fw-bold small"><i class="bi bi-trash-fill"></i> Xóa</button>
@@ -149,9 +153,12 @@
               <p class="text-end small text-light text-opacity-50 mb-0">Giá đã bao gồm thuế VAT</p>
             </div>
 
-            <router-link to="/checkout" class="editorial-btn w-100 py-3 d-flex align-items-center justify-content-center gap-2">
+            <router-link v-if="!hasInvalidItems" to="/checkout" class="editorial-btn w-100 py-3 d-flex align-items-center justify-content-center gap-2">
                 Thanh toán an toàn <i class="bi bi-shield-lock-fill fs-5"></i>
             </router-link>
+            <button v-else disabled class="editorial-btn w-100 py-3 d-flex align-items-center justify-content-center gap-2" style="opacity: 0.6; cursor: not-allowed;" title="Vui lòng xóa các sản phẩm lỗi/hết hàng để tiếp tục">
+                Thanh toán an toàn <i class="bi bi-shield-lock-fill fs-5"></i>
+            </button>
 
             <div class="mt-4 pt-4 border-top border-light border-opacity-10 d-flex justify-content-center gap-4 text-gold opacity-75">
               <i class="bi bi-arrow-repeat fs-4" title="Đổi trả 7 ngày"></i>
@@ -265,6 +272,13 @@ const summary = computed(() => {
   return { subtotal };
 });
 
+const hasInvalidItems = computed(() => {
+  return cartItems.value.some(item => {
+    if (item.combo_id) return item.combo?.status !== 'active';
+    return item.variant?.product?.status !== 'published' || item.quantity > (item.variant?.stock_quantity || 0);
+  });
+});
+
 const getImageUrl = (path) => {
   if (!path) return defaultPlaceholder;
   if (path.startsWith('http')) return path;
@@ -283,7 +297,21 @@ const fetchCart = async (isBackground = false) => {
       ignoreAuthRedirect: true
     });
     if (response.data && response.data.success) {
-      cartItems.value = (response.data.data || []).map(item => ({ ...item, isUpdating: false }));
+      const newItems = response.data.data || [];
+      
+      if (isBackground && cartItems.value.length > 0) {
+        let hasIssues = false;
+        newItems.forEach(item => {
+           if (item.combo_id && item.combo?.status !== 'active') hasIssues = true;
+           if (!item.combo_id && item.variant?.product?.status !== 'published') hasIssues = true;
+           if (!item.combo_id && item.quantity > (item.variant?.stock_quantity || 0)) hasIssues = true;
+        });
+        if (hasIssues && !hasInvalidItems.value) {
+           Toast.fire({ icon: 'warning', title: 'Giỏ hàng vừa được cập nhật do kho hàng có thay đổi' });
+        }
+      }
+
+      cartItems.value = newItems.map(item => ({ ...item, isUpdating: false }));
       if (response.data.summary) backendSummary.value = response.data.summary;
     }
   } catch (error) {

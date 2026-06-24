@@ -15,7 +15,7 @@
           <i class="bi bi-stars me-2"></i>Dịch vụ đặc quyền
         </p>
         <h1 class="display-3 fw-bold font-serif mb-3 text-white text-uppercase">Dấu Ấn Độc Bản</h1>
-        <p class="banner-subtitle fw-light fs-5 mb-0 font-serif text-white">
+        <p class="banner-subtitle fw-light fs-5 mb-0 font-serif text-white d-none d-md-block">
           Nghệ thuật chăm sóc tinh tế đến từng chi tiết.
         </p>
       </div>
@@ -481,15 +481,22 @@
 
 @media (max-width: 768px) {
   .sora-banner {
-    min-height: 320px;
+    min-height: 160px;
   }
 
   .banner-content h1 {
-    font-size: 2.45rem;
+    font-size: clamp(1.1rem, 4.5vw, 1.4rem) !important;
+    white-space: nowrap;
+    margin-bottom: 0 !important;
+  }
+
+  .banner-content p.text-champagne {
+    margin-bottom: 0.25rem !important;
+    font-size: 0.75rem;
   }
 
   .banner-subtitle {
-    font-size: 1rem !important;
+    font-size: 0.9rem !important;
   }
 
   .banner-line-art {
@@ -497,8 +504,9 @@
   }
 
   .banner-monogram {
-    bottom: 38px;
-    font-size: 3.5rem;
+    bottom: 10px;
+    font-size: 1.8rem;
+    white-space: nowrap;
   }
 }
 

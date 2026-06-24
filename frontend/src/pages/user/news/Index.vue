@@ -17,7 +17,7 @@
                 <h1 class="display-3 fw-bold font-serif mb-3 text-white text-uppercase" v-else-if="authorQuery">TÁC GIẢ: "{{ authorQuery }}"</h1>
                 <h1 class="display-3 fw-bold font-serif mb-3 text-white text-uppercase" v-else-if="categoryQuery">DANH MỤC: "{{ categoryQuery }}"</h1>
                 <h1 class="display-3 fw-bold font-serif mb-3 text-white text-uppercase" v-else>SORA BLOG</h1>
-                <p class="banner-subtitle fw-light fs-5 mb-0 font-serif text-white">
+                <p class="banner-subtitle fw-light fs-5 mb-0 font-serif text-white d-none d-md-block">
                     Khám phá xu hướng trang sức & bí quyết làm đẹp tinh tế mỗi ngày.
                 </p>
             </div>
@@ -626,13 +626,15 @@ h1, h2, h3, h4, h5, h6 { font-family: 'Manrope', sans-serif; font-weight: 700; c
 }
 
 @media (max-width: 768px) {
-    .sora-banner { min-height: 320px; }
-    .banner-content h1 { font-size: 2.45rem; }
-    .banner-subtitle { font-size: 1rem !important; }
+    .sora-banner { min-height: 160px; }
+    .banner-content h1 { font-size: clamp(1.1rem, 4.5vw, 1.4rem) !important; white-space: normal; margin-bottom: 0 !important; }
+    .banner-content p.text-champagne { margin-bottom: 0.25rem !important; font-size: 0.75rem; }
+    .banner-subtitle { font-size: 0.9rem !important; }
     .banner-line-art { display: none; }
     .banner-monogram {
-        bottom: 38px;
-        font-size: 3.5rem;
+        bottom: 10px;
+        font-size: 1.8rem;
+        white-space: nowrap;
     }
 }
 
