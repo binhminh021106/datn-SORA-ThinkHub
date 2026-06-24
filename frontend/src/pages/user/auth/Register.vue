@@ -36,7 +36,9 @@
             <label>Mật khẩu</label>
             <div class="password-input-wrapper">
               <input v-model="form.password" :type="showPassword ? 'text' : 'password'" placeholder="Tạo mật khẩu (ít nhất 6 ký tự)" required />
-              <button type="button" class="password-toggle" @click="showPassword = !showPassword">
+              <button type="button" class="password-toggle" @click="showPassword = !showPassword"
+                :aria-label="showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
+                :aria-pressed="showPassword">
                 <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
               </button>
             </div>
@@ -46,7 +48,9 @@
             <label>Xác nhận mật khẩu</label>
             <div class="password-input-wrapper">
               <input v-model="form.password_confirmation" :type="showConfirmPassword ? 'text' : 'password'" placeholder="Nhập lại mật khẩu" required />
-              <button type="button" class="password-toggle" @click="showConfirmPassword = !showConfirmPassword">
+              <button type="button" class="password-toggle" @click="showConfirmPassword = !showConfirmPassword"
+                :aria-label="showConfirmPassword ? 'Ẩn mật khẩu xác nhận' : 'Hiện mật khẩu xác nhận'"
+                :aria-pressed="showConfirmPassword">
                 <i :class="showConfirmPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
               </button>
             </div>

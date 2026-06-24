@@ -33,7 +33,9 @@
               readonly onfocus="this.removeAttribute('readonly');">
             <label for="password">Mật khẩu</label>
             <button type="button" class="btn border-0 position-absolute top-50 end-0 translate-middle-y text-muted me-1"
-              @click="showPassword = !showPassword">
+              @click="showPassword = !showPassword"
+              :aria-label="showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
+              :aria-pressed="showPassword">
               <i class="bi" :class="showPassword ? 'bi-eye-slash' : 'bi-eye'"></i>
             </button>
           </div>
@@ -108,13 +110,10 @@ const handleLogin = async () => {
       localStorage.setItem('admin_info', JSON.stringify(data.admin));
 
       // Luôn ghi nhớ email (tài khoản)
-      localStorage.setItem('admin_remember_email', form.value.email);
-
-      // "Nhớ mật khẩu" - lưu mật khẩu (obfuscated) nếu được chọn
       if (form.value.remember) {
-        localStorage.setItem('admin_remember_password', btoa(form.value.password));
+        localStorage.setItem('admin_remember_email', form.value.email);
       } else {
-        localStorage.removeItem('admin_remember_password');
+        localStorage.removeItem('admin_remember_email');
       }
 
       // Xóa toàn bộ cache của TanStack Query để tránh kẹt dữ liệu từ phiên làm việc trước
@@ -148,16 +147,7 @@ onMounted(() => {
   const rememberedEmail = localStorage.getItem('admin_remember_email');
   if (rememberedEmail) {
     form.value.email = rememberedEmail;
-  }
-
-  const rememberedPassword = localStorage.getItem('admin_remember_password');
-  if (rememberedPassword) {
-    try {
-      form.value.password = atob(rememberedPassword);
-      form.value.remember = true;
-    } catch (e) {
-      localStorage.removeItem('admin_remember_password');
-    }
+    form.value.remember = true;
   }
 });
 </script>

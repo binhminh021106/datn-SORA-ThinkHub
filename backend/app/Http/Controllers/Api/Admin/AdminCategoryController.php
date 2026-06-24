@@ -260,7 +260,9 @@ class AdminCategoryController extends Controller
             return response()->json(['success' => false, 'message' => 'Truy cập bị từ chối: Chỉ Super Admin (Level 1) mới có quyền xóa vĩnh viễn.'], 403);
         }
 
-        $category = Category::onlyTrashed()->withCount('children')->findOrFail($id);
+        $category = Category::onlyTrashed()->withCount(['children' => function ($query) {
+            $query->withTrashed();
+        }])->findOrFail($id);
 
         if ($category->children_count > 0) {
             return response()->json([

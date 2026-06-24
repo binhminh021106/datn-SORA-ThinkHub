@@ -7,7 +7,7 @@
       <div class="row mb-4 align-items-center">
         <label for="currentPassword" class="col-sm-3 col-form-label text-sm-end text-secondary fw-medium">Mật Khẩu Hiện Tại</label>
         <div class="col-sm-9 col-md-7 position-relative">
-          <input :type="showCurrentPassword ? 'text' : 'password'" class="form-control custom-input" id="currentPassword" v-model="passwordForm.current_password" required placeholder="Nhập mật khẩu hiện tại">
+          <input :type="showCurrentPassword ? 'text' : 'password'" class="form-control custom-input pe-5" id="currentPassword" v-model="passwordForm.current_password" required placeholder="Nhập mật khẩu hiện tại">
           <button type="button" class="password-toggle" @click="showCurrentPassword = !showCurrentPassword">
             <i :class="showCurrentPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
           </button>

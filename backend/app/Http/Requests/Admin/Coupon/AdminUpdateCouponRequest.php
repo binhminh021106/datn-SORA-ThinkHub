@@ -22,11 +22,17 @@ class AdminUpdateCouponRequest extends FormRequest
             $coupon = \App\Models\Coupon::withTrashed()->find($couponId);
             if ($coupon) {
                 $merge = [];
-                if (!$this->has('type')) {
+                // Only merge type if value is present to validate value limits correctly
+                if ($this->has('value') && !$this->has('type')) {
                     $merge['type'] = $coupon->type;
                 }
-                if (!$this->has('usage_limit')) {
+                // Only merge usage_limit if usage_limit_per_user is present to validate lte:usage_limit rule
+                if ($this->has('usage_limit_per_user') && !$this->has('usage_limit')) {
                     $merge['usage_limit'] = $coupon->usage_limit;
+                }
+                // Merge usage_limit_per_user if usage_limit is present so we ensure limit-per-user doesn't exceed new limit
+                if ($this->has('usage_limit') && !$this->has('usage_limit_per_user')) {
+                    $merge['usage_limit_per_user'] = $coupon->usage_limit_per_user;
                 }
                 if (!empty($merge)) {
                     $this->merge($merge);

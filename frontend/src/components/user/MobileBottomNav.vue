@@ -7,8 +7,8 @@
     </a>
 
     <!-- Nút Danh mục / Sản phẩm -->
-    <a href="#" @click.prevent="navigate('shop')" class="nav-item" :class="{ 'active': ['shop', 'productDetail', 'category'].includes($route.name) }">
-      <i class="bi" :class="['shop', 'productDetail', 'category'].includes($route.name) ? 'bi-gem-fill' : 'bi-gem'"></i>
+    <a href="#" @click.prevent="navigate('shop')" class="nav-item" :class="{ 'active': ['shop', 'productDetail', 'category-detail', 'favourite'].includes($route.name) }">
+      <i class="bi" :class="['shop', 'productDetail', 'category-detail', 'favourite'].includes($route.name) ? 'bi-gem-fill' : 'bi-gem'"></i>
       <span>Cửa hàng</span>
     </a>
 

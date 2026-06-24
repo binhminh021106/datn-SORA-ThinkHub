@@ -190,7 +190,9 @@ class AdminBrandController extends Controller
             return response()->json(['success' => false, 'message' => 'Truy cập bị từ chối: Chỉ Super Admin (Level 1) mới có quyền xóa vĩnh viễn.'], 403);
         }
 
-        $brand = Brand::onlyTrashed()->withCount('products')->findOrFail($id);
+        $brand = Brand::onlyTrashed()->withCount(['products' => function ($query) {
+            $query->withTrashed();
+        }])->findOrFail($id);
         
         if ($brand->products_count > 0) {
             return response()->json([

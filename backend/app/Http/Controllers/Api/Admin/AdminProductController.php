@@ -247,7 +247,7 @@ class AdminProductController extends Controller
                 ->orWhereIn('product_variant_id', $safeVariantIds)
                 ->exists();
             if ($isUsedInCombo) {
-                return response()->json(['success' => false, 'message' => 'Không thể xóa vĩnh viễn: Sản phẩm đang nằm trong Combo khuyến mãi.'], 400);
+                throw new \Exception("Sản phẩm đang nằm trong Combo khuyến mãi.");
             }
 
             $isUsedInOrder = DB::table('order_items')
@@ -255,7 +255,7 @@ class AdminProductController extends Controller
                 ->orWhereIn('product_variant_id', $safeVariantIds)
                 ->exists();
             if ($isUsedInOrder) {
-                return response()->json(['success' => false, 'message' => 'Không thể xóa vĩnh viễn: Sản phẩm đã phát sinh trong Đơn hàng.'], 400);
+                throw new \Exception("Sản phẩm đã phát sinh trong Đơn hàng.");
             }
 
             $isUsedInCart = false;
@@ -263,7 +263,7 @@ class AdminProductController extends Controller
                 $isUsedInCart = DB::table('cart_items')->whereIn('product_variant_id', $variantIds)->exists();
             }
             if ($isUsedInCart) {
-                return response()->json(['success' => false, 'message' => 'Không thể xóa vĩnh viễn: Sản phẩm đang nằm trong Giỏ hàng của khách.'], 400);
+                throw new \Exception("Sản phẩm đang nằm trong Giỏ hàng của khách.");
             }
 
             // XÓA FILE ẢNH VẬT LÝ
@@ -299,9 +299,12 @@ class AdminProductController extends Controller
 
             DB::commit();
             return response()->json(['success' => true, 'message' => 'Sản phẩm đã được xóa vĩnh viễn cùng toàn bộ dữ liệu liên quan.']);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Lỗi: Không tìm thấy sản phẩm cần xóa hoặc sản phẩm chưa nằm trong thùng rác.'], 404);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()], 500);
+            return response()->json(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()], 400);
         }
     }
 
@@ -325,6 +328,7 @@ class AdminProductController extends Controller
         $failedProducts = [];
 
         foreach ($ids as $id) {
+            $product = null;
             DB::beginTransaction();
             try {
                 $product = Product::onlyTrashed()->findOrFail($id);

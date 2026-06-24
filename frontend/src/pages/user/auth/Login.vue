@@ -32,7 +32,9 @@
             <div class="password-input-wrapper">
               <input v-model="form.password" :type="showPassword ? 'text' : 'password'" placeholder="Nhập mật khẩu"
                 required autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" />
-              <button type="button" class="password-toggle" @click="showPassword = !showPassword">
+              <button type="button" class="password-toggle" @click="showPassword = !showPassword"
+                :aria-label="showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
+                :aria-pressed="showPassword">
                 <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
               </button>
             </div>
@@ -132,13 +134,10 @@ const handleLogin = async () => {
     // Đồng bộ giỏ hàng Guest vào tài khoản
     const sessionId = localStorage.getItem('cart_session_id');
 
-    // Luôn ghi nhớ email
-    localStorage.setItem('user_remember_email', form.email);
-    // Nhớ mật khẩu nếu được tích
     if (form.remember) {
-      localStorage.setItem('user_remember_password', btoa(form.password));
+      localStorage.setItem('user_remember_email', form.email);
     } else {
-      localStorage.removeItem('user_remember_password');
+      localStorage.removeItem('user_remember_email');
     }
 
     if (sessionId) {
@@ -173,16 +172,7 @@ onMounted(() => {
   const rememberedEmail = localStorage.getItem('user_remember_email');
   if (rememberedEmail) {
     form.email = rememberedEmail;
-  }
-
-  const rememberedPassword = localStorage.getItem('user_remember_password');
-  if (rememberedPassword) {
-    try {
-      form.password = atob(rememberedPassword);
-      form.remember = true;
-    } catch (e) {
-      localStorage.removeItem('user_remember_password');
-    }
+    form.remember = true;
   }
 });
 
