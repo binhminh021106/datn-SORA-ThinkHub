@@ -627,7 +627,7 @@ h1, h2, h3, h4, h5, h6 { font-family: 'Manrope', sans-serif; font-weight: 700; c
 
 @media (max-width: 768px) {
     .sora-banner { min-height: 160px; }
-    .banner-content h1 { font-size: clamp(1.1rem, 4.5vw, 1.4rem) !important; white-space: nowrap; margin-bottom: 0 !important; }
+    .banner-content h1 { font-size: clamp(1.1rem, 4.5vw, 1.4rem) !important; white-space: normal; margin-bottom: 0 !important; }
     .banner-content p.text-champagne { margin-bottom: 0.25rem !important; font-size: 0.75rem; }
     .banner-subtitle { font-size: 0.9rem !important; }
     .banner-line-art { display: none; }

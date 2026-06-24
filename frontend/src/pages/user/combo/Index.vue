@@ -960,10 +960,6 @@ onUnmounted(() => {
     font-size: 0.75rem;
   }
 
-  .banner-subtitle {
-    font-size: 0.9rem !important;
-  }
-
   .banner-line-art {
     display: none;
   }

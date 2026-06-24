@@ -65,8 +65,12 @@ class AdminComboController extends Controller
             }
 
             DB::commit();
-            \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
-            event(new ComboUpdated($combo->id, ['action' => 'created']));
+            try {
+                \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
+                event(new ComboUpdated($combo->id, ['action' => 'created']));
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Combo created side effect error: ' . $e->getMessage());
+            }
             return response()->json(['success' => true, 'message' => 'Tạo Combo thành công!']);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -107,8 +111,12 @@ class AdminComboController extends Controller
             }
 
             DB::commit();
-            \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
-            event(new ComboUpdated($combo->id, ['action' => 'updated']));
+            try {
+                \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
+                event(new ComboUpdated($combo->id, ['action' => 'updated']));
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Combo updated side effect error: ' . $e->getMessage());
+            }
             return response()->json(['success' => true, 'message' => 'Cập nhật Combo thành công!']);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -123,8 +131,12 @@ class AdminComboController extends Controller
         $combo = Combo::findOrFail($id);
         $combo->update(['status' => $request->status]);
 
-        \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
-        event(new ComboUpdated($combo->id, ['action' => 'status_updated']));
+        try {
+            \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
+            event(new ComboUpdated($combo->id, ['action' => 'status_updated']));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Combo status update side effect error: ' . $e->getMessage());
+        }
 
         return response()->json(['success' => true, 'message' => 'Cập nhật trạng thái thành công!']);
     }
@@ -133,8 +145,12 @@ class AdminComboController extends Controller
     {
         $combo = Combo::findOrFail($id);
         $combo->delete();
-        \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
-        event(new ComboUpdated($combo->id, ['action' => 'deleted']));
+        try {
+            \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
+            event(new ComboUpdated($combo->id, ['action' => 'deleted']));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Combo deleted side effect error: ' . $e->getMessage());
+        }
         return response()->json(['success' => true, 'message' => 'Đã đưa Combo vào thùng rác.']);
     }
 
@@ -142,8 +158,12 @@ class AdminComboController extends Controller
     {
         $combo = Combo::withTrashed()->findOrFail($id);
         $combo->restore();
-        \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
-        event(new ComboUpdated($combo->id, ['action' => 'restored']));
+        try {
+            \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
+            event(new ComboUpdated($combo->id, ['action' => 'restored']));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Combo restored side effect error: ' . $e->getMessage());
+        }
         return response()->json(['success' => true, 'message' => 'Đã khôi phục Combo.']);
     }
 }

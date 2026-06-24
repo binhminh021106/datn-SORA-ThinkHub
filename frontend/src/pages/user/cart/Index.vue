@@ -306,7 +306,7 @@ const fetchCart = async (isBackground = false) => {
            if (!item.combo_id && item.variant?.product?.status !== 'published') hasIssues = true;
            if (!item.combo_id && item.quantity > (item.variant?.stock_quantity || 0)) hasIssues = true;
         });
-        if (hasIssues) {
+        if (hasIssues && !hasInvalidItems.value) {
            Toast.fire({ icon: 'warning', title: 'Giỏ hàng vừa được cập nhật do kho hàng có thay đổi' });
         }
       }

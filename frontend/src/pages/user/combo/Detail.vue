@@ -95,7 +95,7 @@
                          <div class="position-absolute top-0 start-0 m-3 z-index-2">
                              <span class="item-index-badge font-oswald px-3 py-1 shadow-sm">Món {{ index + 1 }}</span>
                          </div>
-                         <div class="editorial-image-frame position-relative w-100 cursor-zoom-in" @click="viewFullImage(getDisplayImage(item))">
+                         <div class="editorial-image-frame position-relative w-100 cursor-zoom-in" tabindex="0" @click="viewFullImage(getDisplayImage(item))" @keydown.enter.space.prevent="viewFullImage(getDisplayImage(item))">
                             <img :src="getDisplayImage(item)" class="w-100 h-100 object-fit-cover transition-all img-zoom-hover" @error="handleImageError">
                          </div>
                       </div>
@@ -1387,8 +1387,12 @@ onUnmounted(() => {
     height: 330px;
   }
 
+  .shop-feature-row {
+    flex-wrap: wrap !important;
+  }
+
   .feature-pill {
-    flex-basis: 100%;
+    flex: 1 1 40% !important;
   }
 }
 </style>

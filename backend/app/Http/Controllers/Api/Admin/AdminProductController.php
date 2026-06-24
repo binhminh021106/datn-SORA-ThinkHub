@@ -112,8 +112,12 @@ class AdminProductController extends Controller
             }
 
             DB::commit();
-            \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
-            event(new ProductUpdated($product->id, ['action' => 'created']));
+            try {
+                \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
+                event(new ProductUpdated($product->id, ['action' => 'created']));
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Product created side effect error: ' . $e->getMessage());
+            }
             return response()->json(['success' => true, 'message' => 'Xuất bản sản phẩm thành công']);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -180,8 +184,12 @@ class AdminProductController extends Controller
             }
 
             DB::commit();
-            \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
-            event(new ProductUpdated($product->id, ['action' => 'updated']));
+            try {
+                \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
+                event(new ProductUpdated($product->id, ['action' => 'updated']));
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Product updated side effect error: ' . $e->getMessage());
+            }
             return response()->json(['success' => true, 'message' => 'Cập nhật sản phẩm thành công']);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -195,16 +203,21 @@ class AdminProductController extends Controller
             'status' => 'required|in:published,draft,hidden'
         ]);
 
+        $product = Product::findOrFail($id);
+        
         DB::beginTransaction();
         try {
-            $product = Product::findOrFail($id);
             $product->update([
                 'status' => $request->status
             ]);
 
             DB::commit();
-            \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
-            event(new ProductUpdated($product->id, ['action' => 'updated']));
+            try {
+                \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
+                event(new ProductUpdated($product->id, ['action' => 'updated']));
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Product status update side effect error: ' . $e->getMessage());
+            }
             return response()->json(['success' => true, 'message' => 'Cập nhật trạng thái sản phẩm thành công']);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -221,8 +234,12 @@ class AdminProductController extends Controller
             $product->delete();
 
             DB::commit();
-            \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
-            event(new ProductUpdated($product->id, ['action' => 'deleted']));
+            try {
+                \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
+                event(new ProductUpdated($product->id, ['action' => 'deleted']));
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Product deleted side effect error: ' . $e->getMessage());
+            }
             return response()->json(['success' => true, 'message' => 'Sản phẩm và Biến thể đã vào thùng rác']);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -239,8 +256,12 @@ class AdminProductController extends Controller
             $product->variants()->withTrashed()->restore();
 
             DB::commit();
-            \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
-            event(new ProductUpdated($product->id, ['action' => 'restored']));
+            try {
+                \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
+                event(new ProductUpdated($product->id, ['action' => 'restored']));
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Product restored side effect error: ' . $e->getMessage());
+            }
             return response()->json(['success' => true, 'message' => 'Sản phẩm và Biến thể đã được khôi phục']);
         } catch (\Exception $e) {
             DB::rollBack();

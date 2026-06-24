@@ -36,29 +36,36 @@ export function useRealtimeSync() {
     });
   };
 
-  onMounted(() => {
+  let retryCount = 0;
+  let retryTimer = null;
+
+  const initEcho = () => {
     if (window.Echo && typeof window.Echo.channel === 'function') {
       channel = window.Echo.channel('public-admin');
       
-      // Lắng nghe các event từ Backend
       channel.listen('.ProductUpdated', (payload) => {
-        console.log('[Reverb] Product Updated:', payload);
         handleSyncEvent(payload);
       });
       
       channel.listen('.ComboUpdated', (payload) => {
-        console.log('[Reverb] Combo Updated:', payload);
         handleSyncEvent(payload);
       });
 
       channel.listen('.NewsUpdated', (payload) => {
-        console.log('[Reverb] News Updated:', payload);
         handleSyncEvent(payload);
       });
+    } else if (retryCount < 20) {
+      retryCount++;
+      retryTimer = setTimeout(initEcho, 500);
     }
+  };
+
+  onMounted(() => {
+    initEcho();
   });
 
   onBeforeUnmount(() => {
+    if (retryTimer) clearTimeout(retryTimer);
     if (channel && typeof channel.stopListening === 'function') {
       channel.stopListening('.ProductUpdated');
       channel.stopListening('.ComboUpdated');

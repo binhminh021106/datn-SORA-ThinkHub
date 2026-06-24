@@ -574,7 +574,7 @@ const fetchProducts = async () => {
   
   // Khởi tạo các state local cho từng sản phẩm
   items.forEach(p => {
-    if (localStatuses.value[p.id] === undefined) {
+    if (!statusChanged.value[p.id] && !updatingStatuses.value[p.id]) {
       localStatuses.value[p.id] = p.status;
       statusChanged.value[p.id] = false;
       updatingStatuses.value[p.id] = false;
