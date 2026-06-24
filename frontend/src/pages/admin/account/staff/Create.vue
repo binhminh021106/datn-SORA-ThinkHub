@@ -182,7 +182,18 @@ const saveStaff = async () => {
       Swal.fire({ icon: 'success', title: 'Thành công', text: data.message, timer: 1500, showConfirmButton: false });
       router.push({ name: 'admin-staff-index' });
     } else {
-      Swal.fire('Lỗi', data.message || Object.values(data.errors).flat().join('\n'), 'error');
+      let errorMsg = data.message || '';
+      if (errorMsg.includes('Duplicate entry')) {
+        let text = 'Dữ liệu này đã tồn tại hoặc nằm trong thùng rác.';
+        if (errorMsg.includes('staff_email_unique') || errorMsg.includes('email')) {
+          text = 'Email này đã tồn tại hoặc nằm trong thùng rác.';
+        } else if (errorMsg.includes('staff_phone_unique') || errorMsg.includes('phone')) {
+          text = 'Số điện thoại này đã tồn tại hoặc nằm trong thùng rác.';
+        }
+        Swal.fire('Lỗi', text, 'error');
+      } else {
+        Swal.fire('Lỗi', data.message || (data.errors ? Object.values(data.errors).flat().join('\n') : 'Lỗi hệ thống'), 'error');
+      }
     }
   } catch (err) { Swal.fire('Lỗi', 'Mất kết nối', 'error'); } finally { isSaving.value = false; }
 };

@@ -172,7 +172,7 @@
           <div class="mt-5">
             <button type="submit" class="editorial-btn px-5 py-3 sora-btn-submit" :disabled="isSubmitting">
               <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>
-              <span v-else>GỬI ĐƠN ĐĂNG KÝ TỚI SORA</span>
+              {{ isSubmitting ? 'ĐANG GỬI...' : 'GỬI ĐƠN ĐĂNG KÝ TỚI SORA' }}
             </button>
           </div>
         </form>

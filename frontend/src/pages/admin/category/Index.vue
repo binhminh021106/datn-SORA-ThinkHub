@@ -223,11 +223,10 @@
                         <i class="bi bi-trash"></i>
                       </button>
                     </template>
-                    <template v-else>
-                      <button class="btn btn-sm btn-light text-success shadow-sm border" @click="restoreCategory(cat.id)" title="Khôi phục">
-                        <i class="bi bi-arrow-counterclockwise"></i>
-                      </button>
-                    </template>
+                      <template v-else>
+                        <button class="btn btn-sm btn-light text-success shadow-sm border me-2" @click="restoreCategory(cat.id)" title="Khôi phục"><i class="bi bi-arrow-counterclockwise"></i></button>
+                        <button v-if="isHighestRole" class="btn btn-sm btn-light text-danger shadow-sm border" @click="forceDeleteCategory(cat)" title="Xóa vĩnh viễn"><i class="bi bi-trash3-fill"></i></button>
+                      </template>
                   </td>
                 </tr>
               </tbody>
@@ -313,6 +312,23 @@ import defaultImage from '../../../assets/images/defaults/placeholder.png';
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 const route = useRoute();
 const queryClient = useQueryClient();
+
+const isHighestRole = ref(false);
+const isTableLoading = ref(false);
+onMounted(async () => {
+  try {
+    const userLevelStr = localStorage.getItem('admin_level') || sessionStorage.getItem('admin_level');
+    const userLevel = userLevelStr ? parseInt(userLevelStr) : (JSON.parse(localStorage.getItem('admin_info') || '{}')?.role?.level || 999);
+    const res = await axios.get(`${API_URL}/admin/roles`, { headers: getHeaders() });
+    const roles = Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
+    if (roles && roles.length > 0) {
+      const minLevel = Math.min(...roles.map(r => r.level));
+      isHighestRole.value = (userLevel === minLevel);
+    }
+  } catch (e) {
+    console.warn('Lỗi xác thực quyền xóa vĩnh viễn', e);
+  }
+});
 
 const systemModules = ref([]);
 const currentPageLevel = ref(null);
@@ -510,6 +526,8 @@ const { mutate: mutateStatus } = useMutation({
   },
   onSuccess: (res, variables) => {
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
+    const cat = categories.value.find(c => c.id === variables.id);
+    if (cat) cat.isStatusChanged = false;
     queryClient.invalidateQueries({ queryKey: ['admin-categories-all'] });
   },
   onError: (error, variables) => {
@@ -594,7 +612,7 @@ const confirmDelete = (id, name) => {
 };
 
 // TANSTACK MUTATION: Khôi phục danh mục
-const { mutate: mutateRestore } = useMutation({
+const { mutate: restoreCategoryMutation } = useMutation({
   mutationFn: async (id) => {
     return axios.post(`${API_URL}/admin/categories/${id}/restore`, {}, { headers: getHeaders() });
   },
@@ -608,15 +626,27 @@ const { mutate: mutateRestore } = useMutation({
 });
 
 const restoreCategory = (id) => {
-  Swal.fire({ 
-    title: 'Khôi phục danh mục?', 
-    icon: 'info', 
-    showCancelButton: true, 
-    confirmButtonColor: '#009981', 
-    confirmButtonText: 'Khôi phục' 
-  }).then((result) => {
+  Swal.fire({ title: 'Khôi phục?', text: "Khôi phục danh mục này?", icon: 'info', showCancelButton: true, confirmButtonColor: '#009981', confirmButtonText: 'Đồng ý' }).then((result) => {
     if (result.isConfirmed) {
-      mutateRestore(id);
+      restoreCategoryMutation.mutate(id);
+    }
+  });
+};
+
+const forceDeleteCategory = (category) => {
+  Swal.fire({ title: 'Xóa vĩnh viễn?', html: `Danh mục <b>"${category.name}"</b> sẽ bị xóa hoàn toàn khỏi hệ thống.<br><br><b class="text-danger">Hành động này không thể hoàn tác!</b>`, icon: 'error', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Xóa vĩnh viễn', cancelButtonText: 'Hủy' }).then(async (result) => {
+    if (result.isConfirmed) {
+      isTableLoading.value = true;
+      try {
+        const res = await axios.delete(`${API_URL}/admin/categories/${category.id}/force`, { headers: getHeaders() });
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.data.message || 'Đã xóa vĩnh viễn', showConfirmButton: false, timer: 1500 });
+        queryClient.invalidateQueries({ queryKey: ['admin-categories-all'] });
+        queryClient.invalidateQueries({ queryKey: ['admin-categories-tree'] });
+      } catch (err) {
+        handleAxiosError(err, 'Không thể xóa vĩnh viễn. Danh mục này có thể đang chứa danh mục con hoặc chứa sản phẩm.');
+      } finally {
+        isTableLoading.value = false;
+      }
     }
   });
 };

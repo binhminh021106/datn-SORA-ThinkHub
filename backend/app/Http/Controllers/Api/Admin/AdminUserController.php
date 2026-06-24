@@ -42,7 +42,7 @@ class AdminUserController extends Controller
                 if ($request->filled('shipping_address')) {
                     $newUser->addresses()->create([
                         'customer_name'    => $newUser->fullName,
-                        'customer_phone'   => $newUser->phone,
+                        'customer_phone'   => $newUser->phone ?? '',
                         'shipping_address' => $request->shipping_address,
                         'city'             => $request->city,
                         'district'         => $request->district,
@@ -100,7 +100,7 @@ class AdminUserController extends Controller
                 if (array_key_exists('fullName', $data) || array_key_exists('phone', $data)) {
                     $user->addresses()->update([
                         'customer_name'  => $user->fullName,
-                        'customer_phone' => $user->phone,
+                        'customer_phone' => $user->phone ?? '',
                     ]);
                 }
 
@@ -109,7 +109,7 @@ class AdminUserController extends Controller
                         ['is_default' => 1], 
                         [
                             'customer_name'    => $user->fullName,
-                            'customer_phone'   => $user->phone,
+                            'customer_phone'   => $user->phone ?? '',
                             'shipping_address' => $request->shipping_address,
                             'city'             => $request->city,
                             'district'         => $request->district,

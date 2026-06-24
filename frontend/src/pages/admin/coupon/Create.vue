@@ -89,7 +89,7 @@
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label fw-bold">Giá trị giảm <span class="text-danger">*</span></label>
                                         <div class="input-group">
-                                            <input type="number" class="form-control" v-model="form.value" :class="{'is-invalid': errors.value}" min="1">
+                                            <input type="number" class="form-control" v-model.number="form.value" :class="{'is-invalid': errors.value}" min="1">
                                             <span class="input-group-text bg-light fw-bold">{{ form.type === 'percentage' ? '%' : 'VNĐ' }}</span>
                                         </div>
                                         <div class="invalid-feedback d-block" v-if="errors.value">{{ errors.value?.[0] }}</div>
@@ -97,7 +97,7 @@
 
                                     <div class="col-md-12 mb-4">
                                         <label class="form-label fw-bold">Mức chi tiêu tối thiểu (VNĐ) <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control" v-model="form.min_spend" :class="{'is-invalid': errors.min_spend}" min="1">
+                                        <input type="number" class="form-control" v-model.number="form.min_spend" :class="{'is-invalid': errors.min_spend}" min="1">
                                         <div class="invalid-feedback">{{ errors.min_spend?.[0] }}</div>
                                         <small class="text-muted fst-italic">Đơn hàng phải đạt giá trị này mới được áp dụng mã.</small>
                                     </div>
@@ -106,13 +106,13 @@
 
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label fw-bold">Tổng lượt sử dụng <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control" v-model="form.usage_limit" :class="{'is-invalid': errors.usage_limit}" min="1">
+                                        <input type="number" class="form-control" v-model.number="form.usage_limit" :class="{'is-invalid': errors.usage_limit}" min="1">
                                         <div class="invalid-feedback">{{ errors.usage_limit?.[0] }}</div>
                                     </div>
 
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label fw-bold">Lượt dùng mỗi khách hàng <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control" v-model="form.usage_limit_per_user" :class="{'is-invalid': errors.usage_limit_per_user}" min="1">
+                                        <input type="number" class="form-control" v-model.number="form.usage_limit_per_user" :class="{'is-invalid': errors.usage_limit_per_user}" min="1">
                                         <div class="invalid-feedback">{{ errors.usage_limit_per_user?.[0] }}</div>
                                     </div>
 

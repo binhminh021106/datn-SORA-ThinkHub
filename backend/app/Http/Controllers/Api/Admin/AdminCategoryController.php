@@ -248,4 +248,37 @@ class AdminCategoryController extends Controller
             ], 500);
         }
     }
+
+    public function forceDelete($id)
+    {
+        $category = Category::withTrashed()->withCount('children')->findOrFail($id);
+
+        if ($category->children_count > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể xóa vĩnh viễn! Danh mục này đang chứa ' . $category->children_count . ' danh mục con.'
+            ], 400);
+        }
+
+        try {
+            if ($category->thumbnail && Storage::disk('public')->exists($category->thumbnail)) {
+                Storage::disk('public')->delete($category->thumbnail);
+            }
+
+            $category->forceDelete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Đã xóa vĩnh viễn danh mục'
+            ]);
+        } catch (QueryException $e) {
+            if ($e->getCode() == 23000) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không thể xóa vĩnh viễn vì danh mục này đang chứa sản phẩm.'
+                ], 422);
+            }
+            throw $e;
+        }
+    }
 }

@@ -324,7 +324,18 @@ const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
       errorHtml += '</ul>';
       Swal.fire({ title: 'Dữ liệu không hợp lệ', html: errorHtml, icon: 'error', confirmButtonColor: '#dc3545' });
     } else {
-      Swal.fire('Lỗi', e.response.data.message || defaultMsg, 'error');
+      let errorMsg = e.response.data.message || '';
+      if (errorMsg.includes('Duplicate entry')) {
+        let text = 'Dữ liệu này đã tồn tại hoặc nằm trong thùng rác.';
+        if (errorMsg.includes('users_email_unique') || errorMsg.includes('users.email') || errorMsg.includes('email')) {
+          text = 'Email này đã tồn tại hoặc nằm trong thùng rác.';
+        } else if (errorMsg.includes('users_phone_unique') || errorMsg.includes('users.phone') || errorMsg.includes('phone')) {
+          text = 'Số điện thoại này đã tồn tại hoặc nằm trong thùng rác.';
+        }
+        Swal.fire('Lỗi', text, 'error');
+      } else {
+        Swal.fire('Lỗi', errorMsg || defaultMsg, 'error');
+      }
     }
   } else {
     Swal.fire('Lỗi', 'Mất kết nối Server', 'error');

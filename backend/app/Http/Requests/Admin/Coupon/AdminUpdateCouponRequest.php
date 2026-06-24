@@ -56,8 +56,18 @@ class AdminUpdateCouponRequest extends FormRequest
                 'sometimes',
                 'required',
                 'integer',
-                $this->type === 'percentage' ? 'min:1' : 'min:1000',
-                $this->type === 'percentage' ? 'max:100' : '',
+                function ($attribute, $value, $fail) use ($couponId) {
+                    $type = $this->input('type') ?? \App\Models\Coupon::where('id', $couponId)->value('type');
+                    if ($type === 'percentage') {
+                        if ($value < 1 || $value > 100) {
+                            $fail('Giá trị giảm theo phần trăm phải từ 1 đến 100.');
+                        }
+                    } else {
+                        if ($value < 1000) {
+                            $fail('Giá trị giảm tiền mặt phải từ 1.000 trở lên.');
+                        }
+                    }
+                },
             ],
             'usage_limit' => [
                 'sometimes',

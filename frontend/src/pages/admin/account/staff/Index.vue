@@ -541,6 +541,11 @@ const updateStatusMutation = useMutation({
   onSuccess: (data, variables) => {
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
     
+    const staff = localStaffs.value.find(s => s.id === variables.id);
+    if (staff) {
+      staff.isStatusChanged = false;
+    }
+
     // Đồng bộ nóng (optimistic updates) dữ liệu cache mà không cần reload
     queryClient.setQueryData(['adminStaffs'], (old) => {
       if (!old) return old;

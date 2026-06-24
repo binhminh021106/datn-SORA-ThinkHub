@@ -139,7 +139,15 @@ const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
         });
         errorHtml += '</ul>';
     } else {
-        errorHtml = `<p class="text-danger">${e.response.data.message || defaultMsg}</p>`;
+        let errorMsg = e.response.data.message || '';
+        if (errorMsg.includes('Duplicate entry') && (errorMsg.includes('brands.slug') || errorMsg.includes('brands_slug_unique'))) {
+            errorHtml = '<ul class="text-start text-danger small mt-2" style="max-height: 200px; overflow-y: auto; padding-left: 20px;">' +
+                        '<li class="mb-1">Tên thương hiệu này đã tồn tại hoặc nằm trong thùng rác.</li>' +
+                        '<li class="mb-1">Slug này đã bị trùng với thương hiệu khác.</li>' +
+                        '</ul>';
+        } else {
+            errorHtml = `<p class="text-danger">${errorMsg || defaultMsg}</p>`;
+        }
     }
     Swal.fire({ title: 'Dữ liệu không hợp lệ', html: errorHtml, icon: 'error', confirmButtonColor: '#dc3545' });
   } else {

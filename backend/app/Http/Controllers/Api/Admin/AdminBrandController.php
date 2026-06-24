@@ -178,4 +178,27 @@ class AdminBrandController extends Controller
             'message' => 'Đã cập nhật thứ tự'
         ]);
     }
+
+    public function forceDelete($id)
+    {
+        $brand = Brand::withTrashed()->withCount('products')->findOrFail($id);
+        
+        if ($brand->products_count > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể xóa vĩnh viễn thương hiệu này vì đang có sản phẩm thuộc thương hiệu.'
+            ], 422);
+        }
+
+        if ($brand->logo) {
+            Storage::disk('public')->delete($brand->logo);
+        }
+
+        $brand->forceDelete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã xóa vĩnh viễn thương hiệu'
+        ]);
+    }
 }

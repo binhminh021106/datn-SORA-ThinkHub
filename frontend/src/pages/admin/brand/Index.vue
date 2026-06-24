@@ -207,7 +207,8 @@
                         <button class="btn btn-sm btn-light text-danger shadow-sm border" @click="confirmDelete(brand.id, brand.name)" title="Xóa"><i class="bi bi-trash"></i></button>
                       </template>
                       <template v-else>
-                        <button class="btn btn-sm btn-light text-success shadow-sm border" @click="restoreBrand(brand.id)" title="Khôi phục"><i class="bi bi-arrow-counterclockwise"></i> Khôi phục</button>
+                        <button class="btn btn-sm btn-light text-success shadow-sm border me-2" @click="restoreBrand(brand.id)" title="Khôi phục"><i class="bi bi-arrow-counterclockwise"></i></button>
+                        <button v-if="isHighestRole" class="btn btn-sm btn-light text-danger shadow-sm border" @click="forceDeleteBrand(brand)" title="Xóa vĩnh viễn"><i class="bi bi-trash3-fill"></i></button>
                       </template>
                     </td>
                   </tr>
@@ -308,6 +309,22 @@ const reorderList = ref([]);
 
 const selectedBrand = ref(null);
 let quickViewModalInstance = null;
+
+const isHighestRole = ref(false);
+onMounted(async () => {
+  try {
+    const userLevelStr = localStorage.getItem('admin_level') || sessionStorage.getItem('admin_level');
+    const userLevel = userLevelStr ? parseInt(userLevelStr) : (JSON.parse(localStorage.getItem('admin_info') || '{}')?.role?.level || 999);
+    const res = await axios.get(`${API_URL}/admin/roles`, { headers: getHeaders() });
+    const roles = Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
+    if (roles && roles.length > 0) {
+      const minLevel = Math.min(...roles.map(r => r.level));
+      isHighestRole.value = (userLevel === minLevel);
+    }
+  } catch (e) {
+    console.warn('Lỗi xác thực quyền xóa vĩnh viễn', e);
+  }
+});
 
 onBeforeUnmount(() => {
   if (quickViewModalInstance) quickViewModalInstance.hide();
@@ -533,6 +550,8 @@ const updateStatusMutation = useMutation({
   onMutate: ({ id }) => { isUpdatingStatusId.value = id; },
   onSuccess: (data, variables) => {
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
+    const brand = localBrands.value.find(b => b.id === variables.id);
+    if (brand) brand.isStatusChanged = false;
     queryClient.setQueryData(['adminBrands'], (old) => {
       if (!old) return old;
       return {
@@ -617,6 +636,27 @@ const restoreBrand = (id) => {
   Swal.fire({ title: 'Khôi phục?', text: "Khôi phục thương hiệu này?", icon: 'info', showCancelButton: true, confirmButtonColor: '#009981', confirmButtonText: 'Đồng ý' }).then((result) => {
     if (result.isConfirmed) {
       restoreBrandMutation.mutate(id);
+    }
+  });
+};
+
+const forceDeleteBrand = (brand) => {
+  if (brand.products_count > 0) {
+    Swal.fire('Lỗi', `Không thể xóa vĩnh viễn vì thương hiệu này đang chứa ${brand.products_count} sản phẩm!`, 'error');
+    return;
+  }
+  Swal.fire({ title: 'Xóa vĩnh viễn?', html: `Thương hiệu <b>"${brand.name}"</b> sẽ bị xóa hoàn toàn khỏi hệ thống.<br><br><b class="text-danger">Hành động này không thể hoàn tác!</b>`, icon: 'error', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Xóa vĩnh viễn', cancelButtonText: 'Hủy' }).then(async (result) => {
+    if (result.isConfirmed) {
+      isTableLoading.value = true;
+      try {
+        const res = await axios.delete(`${API_URL}/admin/brands/${brand.id}/force`, { headers: getHeaders() });
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: res.data.message || 'Đã xóa vĩnh viễn', showConfirmButton: false, timer: 1500 });
+        queryClient.invalidateQueries({ queryKey: ['adminBrands'] });
+      } catch (err) {
+        handleAxiosError(err, 'Không thể xóa vĩnh viễn do lỗi kết nối hoặc ràng buộc dữ liệu.');
+      } finally {
+        isTableLoading.value = false;
+      }
     }
   });
 };

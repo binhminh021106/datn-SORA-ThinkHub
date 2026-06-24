@@ -58,7 +58,7 @@ class AdminUpdateComboRequest extends FormRequest
             'thumbnail_image.image'          => 'Tệp tải lên phải là định dạng hình ảnh.',
             'thumbnail_image.max'            => 'Kích thước ảnh không được vượt quá 5MB.',
             'discount_value.max'             => 'Mức giảm giá theo phần trăm không được vượt quá 100%.',
-            'discount_value.min'             => 'Mức giảm giá không được là số âm.',
+            'discount_value.min'             => $this->input('discount_type') === 'percentage' ? 'Mức giảm giá phần trăm phải từ 1% trở lên.' : 'Mức giảm giá tiền mặt phải từ 1.000đ trở lên.',
             'end_date.after_or_equal'        => 'Ngày kết thúc không được sớm hơn ngày bắt đầu.',
             'usage_limit.min'                => 'Giới hạn số lượt mua không hợp lệ.',
             'parsed_items.min'               => 'Combo phải có ít nhất 2 sản phẩm.',
