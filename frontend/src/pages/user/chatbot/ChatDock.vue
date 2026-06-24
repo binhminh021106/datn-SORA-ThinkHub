@@ -166,4 +166,10 @@ watch(() => activeLive.value, (newVal) => {
   opacity: 0;
   transform: translateY(10px);
 }
+
+@media (max-width: 991.98px) {
+  .chat-dock-wrapper {
+    bottom: calc(85px + env(safe-area-inset-bottom, 0px));
+  }
+}
 </style>

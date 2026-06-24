@@ -123,10 +123,22 @@
             <h2 class="font-serif text-md-nowrap">Kiệt tác được khao khát nhất</h2>
           </div>
 
-          <div class="editorial-products-grid">
+          <div class="editorial-products-grid d-none d-md-grid">
             <ProductCard v-for="product in topSellingProducts" :key="'ts-' + product.id" :product="product"
               :is-in-wishlist="isInWishlist(product.id)" :show-wishlist="true" :show-add-to-cart="true"
               :show-compare="true" :hover-add-to-cart="true" shop-slug="sora" />
+          </div>
+          <div class="d-block d-md-none">
+            <div class="editorial-products-row-mobile mb-3">
+              <ProductCard v-for="product in topSellingProducts.slice(0, Math.ceil(topSellingProducts.length / 2))" :key="'ts-m1-' + product.id" :product="product"
+                :is-in-wishlist="isInWishlist(product.id)" :show-wishlist="true" :show-add-to-cart="true"
+                :show-compare="false" :hover-add-to-cart="true" shop-slug="sora" />
+            </div>
+            <div class="editorial-products-row-mobile">
+              <ProductCard v-for="product in topSellingProducts.slice(Math.ceil(topSellingProducts.length / 2))" :key="'ts-m2-' + product.id" :product="product"
+                :is-in-wishlist="isInWishlist(product.id)" :show-wishlist="true" :show-add-to-cart="true"
+                :show-compare="false" :hover-add-to-cart="true" shop-slug="sora" />
+            </div>
           </div>
 
           <div class="text-center mt-5 pt-3">
@@ -155,10 +167,22 @@
             <h2 class="font-serif">Đón chào những thiết kế mới nhất từ SORA</h2>
           </div>
 
-          <div class="editorial-products-grid">
+          <div class="editorial-products-grid d-none d-md-grid">
             <ProductCard v-for="product in featuredProducts" :key="product.id" :product="product"
               :is-in-wishlist="isInWishlist(product.id)" :show-wishlist="true" :show-add-to-cart="true"
               :show-compare="true" :hover-add-to-cart="true" shop-slug="sora" />
+          </div>
+          <div class="d-block d-md-none">
+            <div class="editorial-products-row-mobile mb-3">
+              <ProductCard v-for="product in featuredProducts.slice(0, Math.ceil(featuredProducts.length / 2))" :key="'fp-m1-' + product.id" :product="product"
+                :is-in-wishlist="isInWishlist(product.id)" :show-wishlist="true" :show-add-to-cart="true"
+                :show-compare="false" :hover-add-to-cart="true" shop-slug="sora" />
+            </div>
+            <div class="editorial-products-row-mobile">
+              <ProductCard v-for="product in featuredProducts.slice(Math.ceil(featuredProducts.length / 2))" :key="'fp-m2-' + product.id" :product="product"
+                :is-in-wishlist="isInWishlist(product.id)" :show-wishlist="true" :show-add-to-cart="true"
+                :show-compare="false" :hover-add-to-cart="true" shop-slug="sora" />
+            </div>
           </div>
 
           <div class="text-center mt-5 pt-2">
@@ -2190,11 +2214,33 @@ onUnmounted(() => {
     grid-template-columns: 1fr;
   }
 
-  .craft-row-top,
+  .craft-row-top {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 1.5rem;
+  }
+
   .craft-row-bottom {
     flex-direction: column;
     align-items: stretch;
-    gap: 2rem;
+    gap: 1.5rem;
+  }
+
+  .craft-copy {
+    padding: 0 !important;
+  }
+
+  .craft-copy h2 {
+    font-size: 1.5rem !important;
+  }
+
+  .craft-list li {
+    font-size: 0.85rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .craft-list li strong {
+    font-size: 0.95rem !important;
   }
 
   .craft-image,
@@ -2214,8 +2260,32 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
+  /* --- Spacing Overrides for Mobile --- */
+  .editorial-section {
+    padding: 1.5rem 0 !important;
+  }
+  
+  .editorial-section.top-selling-editorial {
+    padding-top: 1.5rem !important;
+  }
+
+  .mb-5 {
+    margin-bottom: 1.5rem !important;
+  }
+
+  .mt-5 {
+    margin-top: 1.5rem !important;
+  }
+
+  .section-heading.mb-5 {
+    margin-bottom: 1.25rem !important;
+  }
+
+  /* --- Hero Banner Overrides --- */
   .home-hero {
-    min-height: 560px;
+    min-height: unset;
+    aspect-ratio: 3 / 4;
+    height: auto;
   }
 
   .home-hero-control {
@@ -2232,11 +2302,23 @@ onUnmounted(() => {
   }
 
   .home-hero-copy h1 {
-    font-size: clamp(3rem, 16vw, 4.8rem);
+    font-size: clamp(2rem, 12vw, 3.5rem);
+  }
+
+  .home-hero-copy p {
+    font-size: 0.85rem !important;
   }
 
   .bottom-cta-copy h2 {
-    font-size: clamp(2.4rem, 11vw, 3.8rem);
+    font-size: clamp(1.8rem, 9vw, 2.5rem);
+  }
+
+  .section-heading h2 {
+    font-size: 1.5rem !important;
+  }
+
+  .section-heading .section-subtext {
+    font-size: 0.75rem !important;
   }
 
   .home-stats-band {
@@ -2245,38 +2327,112 @@ onUnmounted(() => {
   }
 
   .stat-container {
-    grid-template-columns: 1fr;
-    gap: 1rem;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
   }
 
-  .editorial-products-grid,
-  .expertise-grid,
+  .stat-item strong {
+    font-size: 1.25rem !important;
+  }
+
+  .stat-item span {
+    font-size: 0.55rem !important;
+  }
+
+  .editorial-products-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .editorial-products-row-mobile {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 0.75rem;
+    padding-bottom: 0.5rem;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .editorial-products-row-mobile::-webkit-scrollbar {
+    display: none;
+  }
+
+  .editorial-products-row-mobile > * {
+    flex: 0 0 calc(50% - 0.375rem);
+    scroll-snap-align: start;
+  }
+
+  .expertise-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
   .news-grid {
-    grid-template-columns: 1fr;
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 1rem;
+    padding-bottom: 1rem;
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .news-grid::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+
+  .news-grid > * {
+    flex: 0 0 85%;
+    scroll-snap-align: center;
   }
 
   .testimonial-grid {
-    grid-template-columns: minmax(0, 250px);
-    justify-content: center;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
   }
 
   .testimonial-tile {
-    height: 250px;
+    height: 220px;
   }
 
   .testimonial-copy {
-    padding: 1.35rem;
+    padding: 0.75rem;
+  }
+
+  .testimonial-copy h3 {
+    font-size: 0.65rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .testimonial-copy p {
+    font-size: 0.7rem;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .testimonial-badges span {
+    font-size: 0.55rem;
+    padding: 0.2rem 0.4rem;
   }
 
   .testimonial-watermark {
-    right: 0.7rem;
-    font-size: 4.4rem;
+    right: 0.25rem;
+    font-size: 2.8rem;
   }
 
   .testimonial-brand {
-    top: 0.9rem;
-    right: 1rem;
-    font-size: 0.9rem;
+    top: 0.5rem;
+    right: 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .testimonial-brand img {
+    width: 16px;
+    height: 16px;
   }
 
   .story-image,

@@ -645,7 +645,10 @@ const forceDeleteBrand = (brand) => {
     Swal.fire('Lỗi', `Không thể xóa vĩnh viễn vì thương hiệu này đang chứa ${brand.products_count} sản phẩm!`, 'error');
     return;
   }
-  Swal.fire({ title: 'Xóa vĩnh viễn?', html: `Thương hiệu <b>"${brand.name}"</b> sẽ bị xóa hoàn toàn khỏi hệ thống.<br><br><b class="text-danger">Hành động này không thể hoàn tác!</b>`, icon: 'error', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Xóa vĩnh viễn', cancelButtonText: 'Hủy' }).then(async (result) => {
+  const safeName = String(brand.name).replace(/[&<>"']/g, function (m) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+  });
+  Swal.fire({ title: 'Xóa vĩnh viễn?', html: `Thương hiệu <b>"${safeName}"</b> sẽ bị xóa hoàn toàn khỏi hệ thống.<br><br><b class="text-danger">Hành động này không thể hoàn tác!</b>`, icon: 'error', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Xóa vĩnh viễn', cancelButtonText: 'Hủy' }).then(async (result) => {
     if (result.isConfirmed) {
       isTableLoading.value = true;
       try {

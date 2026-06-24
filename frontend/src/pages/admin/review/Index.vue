@@ -513,7 +513,6 @@ watch(reviewsData, (newVal) => {
 watch(isFetchingReviews, (isFetching) => {
   if (!isFetching) {
      isFirstLoad.value = false; 
-     syncReviews(reviewsData.value);
   }
 });
 

@@ -111,7 +111,7 @@
 
                                     <div class="col-md-12 mb-4">
                                         <label class="form-label fw-bold">Mức chi tiêu tối thiểu (VNĐ) <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control" v-model.number="form.min_spend" :class="{'is-invalid': errors.min_spend}" min="1">
+                                        <input type="number" class="form-control" v-model.number="form.min_spend" :class="{'is-invalid': errors.min_spend}" min="0">
                                         <div class="invalid-feedback">{{ errors.min_spend?.[0] }}</div>
                                     </div>
 

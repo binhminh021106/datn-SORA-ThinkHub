@@ -6,7 +6,7 @@
         <div class="banner-overlay"></div>
         <div class="banner-content">
           <img src="../../../assets/images/logo2.png" alt="SORA Jewelry Logo" class="brand-logo-img" />
-          <p class="brand-slogan">Vẻ đẹp vượt thời gian</p>
+          <p class="brand-slogan">Tôn Vinh Vẻ Đẹp Độc Bản</p>
         </div>
         <router-link to="/login" class="back-link">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -28,9 +28,9 @@
         </router-link>
 
         <div class="auth-header">
-          <h2 class="auth-title">Khôi Phục Mật Khẩu</h2>
+          <h2 class="auth-title font-serif tracking-widest">QUÊN MẬT KHẨU</h2>
           
-          <p class="subtitle" v-if="step === 1">Nhập email đã đăng ký để nhận mã xác nhận.</p>
+          <p class="subtitle" v-if="step === 1">Đừng lo lắng, chúng tôi sẽ giúp bạn lấy lại tài khoản</p>
           <p class="subtitle" v-if="step === 2">Vui lòng kiểm tra email <strong>{{ form.email }}</strong></p>
           <p class="subtitle" v-if="step === 3">Tạo mật khẩu mới cho tài khoản của bạn.</p>
         </div>
@@ -326,7 +326,7 @@ onUnmounted(() => { if (timer) clearInterval(timer); });
   width: 100%;
   max-width: 950px;
   min-height: 600px;
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 20px 50px rgba(159, 39, 59, 0.15);
 }
@@ -335,7 +335,7 @@ onUnmounted(() => { if (timer) clearInterval(timer); });
 .auth-banner {
   flex: 1;
   position: relative;
-  background: #1a060d; /* Removed Unsplash URL to prevent metadata leakage */
+  background: #1a060d;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -365,16 +365,19 @@ onUnmounted(() => { if (timer) clearInterval(timer); });
   max-width: 180px;
   height: auto;
   margin-bottom: 25px;
-  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+  filter: drop-shadow(0 0 1.5px #e7ce7d) 
+          drop-shadow(0 0 1.5px rgba(231, 206, 125, 0.01)) 
+          drop-shadow(0 4px 6px rgba(0, 0, 0, 0.01));
 }
 
 .brand-slogan {
   font-size: 15px;
-  letter-spacing: 2px;
+  letter-spacing: 3px;
   color: #e7ce7d;
   text-transform: uppercase;
   margin: 0;
   font-weight: 500;
+  font-family: 'Oswald', sans-serif;
 }
 
 .back-link {
@@ -429,7 +432,8 @@ onUnmounted(() => { if (timer) clearInterval(timer); });
   color: #9f273b;
   font-size: 26px;
   margin: 0 0 8px;
-  font-family: 'Josefin Sans', sans-serif;
+  font-family: 'Playfair Display', 'Lora', serif;
+  text-transform: uppercase;
 }
 
 .subtitle {
@@ -458,7 +462,7 @@ onUnmounted(() => { if (timer) clearInterval(timer); });
   width: 100%;
   padding: 14px 16px;
   border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  border-radius: 4px;
   font-size: 14px;
   transition: all 0.3s;
   background-color: #fafafa;
@@ -509,7 +513,7 @@ onUnmounted(() => { if (timer) clearInterval(timer); });
   font-size: 24px;
   font-weight: bold;
   border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  border-radius: 4px;
   background-color: #fafafa;
   color: #444;
   transition: all 0.3s;
@@ -521,6 +525,13 @@ onUnmounted(() => { if (timer) clearInterval(timer); });
   background-color: #fff;
   box-shadow: 0 4px 15px rgba(231, 206, 125, 0.15);
   transform: translateY(-2px);
+}
+
+.alert {
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  font-size: 14px;
 }
 
 .otp-actions {
@@ -582,13 +593,15 @@ onUnmounted(() => { if (timer) clearInterval(timer); });
   background-color: #9f273b;
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 4px;
   font-size: 15px;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.3s;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
+  letter-spacing: 2px;
+  font-family: 'Oswald', sans-serif;
+  margin-top: 10px;
 }
 
 .btn-primary:hover:not(:disabled) {

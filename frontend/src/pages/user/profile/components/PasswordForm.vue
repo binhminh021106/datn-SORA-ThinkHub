@@ -6,22 +6,31 @@
     <form @submit.prevent="changePassword">
       <div class="row mb-4 align-items-center">
         <label for="currentPassword" class="col-sm-3 col-form-label text-sm-end text-secondary fw-medium">Mật Khẩu Hiện Tại</label>
-        <div class="col-sm-9 col-md-7">
-          <input type="password" class="form-control custom-input" id="currentPassword" v-model="passwordForm.current_password" required placeholder="Nhập mật khẩu hiện tại">
+        <div class="col-sm-9 col-md-7 position-relative">
+          <input :type="showCurrentPassword ? 'text' : 'password'" class="form-control custom-input" id="currentPassword" v-model="passwordForm.current_password" required placeholder="Nhập mật khẩu hiện tại">
+          <button type="button" class="password-toggle" @click="showCurrentPassword = !showCurrentPassword">
+            <i :class="showCurrentPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+          </button>
         </div>
       </div>
       
       <div class="row mb-4 align-items-center">
         <label for="newPassword" class="col-sm-3 col-form-label text-sm-end text-secondary fw-medium">Mật Khẩu Mới</label>
-        <div class="col-sm-9 col-md-7">
-          <input type="password" class="form-control custom-input" id="newPassword" v-model="passwordForm.password" required minlength="6" placeholder="Nhập mật khẩu mới (ít nhất 6 ký tự)">
+        <div class="col-sm-9 col-md-7 position-relative">
+          <input :type="showNewPassword ? 'text' : 'password'" class="form-control custom-input pe-5" id="newPassword" v-model="passwordForm.password" required minlength="6" placeholder="Nhập mật khẩu mới (ít nhất 6 ký tự)">
+          <button type="button" class="password-toggle" @click="showNewPassword = !showNewPassword">
+            <i :class="showNewPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+          </button>
         </div>
       </div>
 
       <div class="row mb-4 align-items-center">
         <label for="confirmPassword" class="col-sm-3 col-form-label text-sm-end text-secondary fw-medium">Xác Nhận Mật Khẩu</label>
-        <div class="col-sm-9 col-md-7">
-          <input type="password" class="form-control custom-input" id="confirmPassword" v-model="passwordForm.password_confirmation" required placeholder="Nhập lại mật khẩu mới">
+        <div class="col-sm-9 col-md-7 position-relative">
+          <input :type="showConfirmPassword ? 'text' : 'password'" class="form-control custom-input pe-5" id="confirmPassword" v-model="passwordForm.password_confirmation" required placeholder="Nhập lại mật khẩu mới">
+          <button type="button" class="password-toggle" @click="showConfirmPassword = !showConfirmPassword">
+            <i :class="showConfirmPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+          </button>
         </div>
       </div>
 
@@ -43,6 +52,9 @@ import { createSoraAlert } from '@/utils/soraAlertConfig';
 import clientApiClient from '@/utils/clientApiClient';
 
 const isChangingPassword = ref(false);
+const showCurrentPassword = ref(false);
+const showNewPassword = ref(false);
+const showConfirmPassword = ref(false);
 const passwordForm = ref({
   current_password: '', password: '', password_confirmation: ''
 });
@@ -105,6 +117,30 @@ const changePassword = async () => {
 .custom-input:focus {
   border-color: #9f273b;
   box-shadow: 0 0 0 0.2rem rgba(159, 39, 59, 0.15);
+  outline: none;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.3s;
+}
+
+.password-toggle:hover {
+  color: #9f273b;
+}
+
+.password-toggle:focus {
   outline: none;
 }
 </style>

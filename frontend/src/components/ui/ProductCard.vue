@@ -66,12 +66,12 @@
     </div>
 
     <div class="position-relative flex-grow-1 bg-white d-flex flex-column">
-      <div class="p-4 text-start d-flex flex-column flex-grow-1" style="padding-bottom: 64px !important;">
+      <div class="p-4 text-start d-flex flex-column flex-grow-1 product-card-body">
         <router-link
           :to="{ name: 'productDetail', params: { shop_slug: shopSlug, slug: product.slug } }"
           class="text-decoration-none flex-grow-1 d-flex flex-column justify-content-center"
         >
-          <h6 class="text-dark font-oswald text-uppercase tracking-widest fw-bold mb-2 text-truncate-2 fs-5 lh-base">{{ product.name }}</h6>
+          <h6 class="text-dark font-oswald text-uppercase tracking-widest fw-bold mb-2 text-truncate-2 fs-5 lh-base product-name">{{ product.name }}</h6>
           
           <div class="d-flex justify-content-between align-items-center mb-2">
             <p class="font-serif fst-italic text-muted small mb-0">{{ product.category?.name || 'Trang sức SORA' }}</p>
@@ -106,8 +106,8 @@
             </template>
             <template v-else>
               <div class="d-flex align-items-baseline gap-2 flex-wrap">
-                <span class="text-sora-primary fw-bold font-oswald fs-5">{{ formatCurrency(priceInfo.price) }}</span>
-                <span v-if="priceInfo.oldPrice" class="text-muted text-decoration-line-through small fw-light font-oswald" style="font-size: 0.85rem;">
+                <span class="text-sora-primary fw-bold font-oswald fs-5 product-price">{{ formatCurrency(priceInfo.price) }}</span>
+                <span v-if="priceInfo.oldPrice" class="text-muted text-decoration-line-through small fw-light font-oswald product-old-price" style="font-size: 0.85rem;">
                   {{ formatCurrency(priceInfo.oldPrice) }}
                 </span>
               </div>
@@ -124,7 +124,7 @@
           <button
             type="button"
             @click.stop="isOutOfStock ? null : handleQuickAddClick()"
-            class="btn w-100 rounded-0 py-3 font-oswald tracking-widest text-uppercase fw-bold shadow-none fs-6 d-flex align-items-center justify-content-center"
+            class="btn w-100 rounded-0 py-3 font-oswald tracking-widest text-uppercase fw-bold shadow-none fs-6 d-flex align-items-center justify-content-center btn-add-cart"
             :class="isOutOfStock ? 'luxury-btn-sold-out' : 'luxury-btn-solid'"
             :disabled="isOutOfStock"
             :style="isOutOfStock ? 'cursor: not-allowed;' : ''"
@@ -388,5 +388,38 @@ const hasHoverImage = (product) => {
   -webkit-box-orient: vertical;
   overflow: hidden;
   min-height: 2.8rem;
+}
+
+.product-card-body {
+  padding-bottom: 64px !important;
+}
+
+@media (max-width: 767.98px) {
+  .product-card-body {
+    padding: 0.75rem !important;
+    padding-bottom: 48px !important;
+  }
+  .product-name {
+    font-size: 0.85rem !important;
+    line-height: 1.3 !important;
+    margin-bottom: 0.25rem !important;
+    min-height: 2.2rem;
+    letter-spacing: 0.5px;
+  }
+  .product-price {
+    font-size: 1rem !important;
+  }
+  .product-old-price {
+    font-size: 0.7rem !important;
+  }
+  .btn-add-cart {
+    padding-top: 0.65rem !important;
+    padding-bottom: 0.65rem !important;
+    font-size: 0.75rem !important;
+    letter-spacing: 1px;
+  }
+  .cart-icon-wrapper i {
+    font-size: 1.1rem !important;
+  }
 }
 </style>

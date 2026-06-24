@@ -527,12 +527,18 @@ const { mutate: mutateStatus } = useMutation({
   onSuccess: (res, variables) => {
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
     const cat = categories.value.find(c => c.id === variables.id);
-    if (cat) cat.isStatusChanged = false;
+    if (cat) {
+        cat.isStatusChanged = false;
+        cat.isUpdatingStatus = false;
+    }
     queryClient.invalidateQueries({ queryKey: ['admin-categories-all'] });
   },
   onError: (error, variables) => {
     const cat = categories.value.find(c => c.id === variables.id);
-    if (cat) cancelStatusChange(cat);
+    if (cat) {
+        cancelStatusChange(cat);
+        cat.isUpdatingStatus = false;
+    }
     handleAxiosError(error, 'Không thể cập nhật trạng thái');
   }
 });
@@ -628,13 +634,16 @@ const { mutate: restoreCategoryMutation } = useMutation({
 const restoreCategory = (id) => {
   Swal.fire({ title: 'Khôi phục?', text: "Khôi phục danh mục này?", icon: 'info', showCancelButton: true, confirmButtonColor: '#009981', confirmButtonText: 'Đồng ý' }).then((result) => {
     if (result.isConfirmed) {
-      restoreCategoryMutation.mutate(id);
+      restoreCategoryMutation(id);
     }
   });
 };
 
 const forceDeleteCategory = (category) => {
-  Swal.fire({ title: 'Xóa vĩnh viễn?', html: `Danh mục <b>"${category.name}"</b> sẽ bị xóa hoàn toàn khỏi hệ thống.<br><br><b class="text-danger">Hành động này không thể hoàn tác!</b>`, icon: 'error', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Xóa vĩnh viễn', cancelButtonText: 'Hủy' }).then(async (result) => {
+  const safeName = String(category.name).replace(/[&<>"']/g, function (m) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+  });
+  Swal.fire({ title: 'Xóa vĩnh viễn?', html: `Danh mục <b>"${safeName}"</b> sẽ bị xóa hoàn toàn khỏi hệ thống.<br><br><b class="text-danger">Hành động này không thể hoàn tác!</b>`, icon: 'error', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Xóa vĩnh viễn', cancelButtonText: 'Hủy' }).then(async (result) => {
     if (result.isConfirmed) {
       isTableLoading.value = true;
       try {

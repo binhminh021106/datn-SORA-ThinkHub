@@ -15,6 +15,26 @@ class AdminUpdateCouponRequest extends FormRequest
         return true; 
     }
 
+    protected function prepareForValidation()
+    {
+        $couponId = $this->route('id');
+        if ($couponId) {
+            $coupon = \App\Models\Coupon::withTrashed()->find($couponId);
+            if ($coupon) {
+                $merge = [];
+                if (!$this->has('type')) {
+                    $merge['type'] = $coupon->type;
+                }
+                if (!$this->has('usage_limit')) {
+                    $merge['usage_limit'] = $coupon->usage_limit;
+                }
+                if (!empty($merge)) {
+                    $this->merge($merge);
+                }
+            }
+        }
+    }
+
     /**
      * Get the validation rules that apply to the request.
      */
@@ -57,7 +77,7 @@ class AdminUpdateCouponRequest extends FormRequest
                 'required',
                 'integer',
                 function ($attribute, $value, $fail) use ($couponId) {
-                    $type = $this->input('type') ?? \App\Models\Coupon::where('id', $couponId)->value('type');
+                    $type = $this->input('type') ?? \App\Models\Coupon::withTrashed()->where('id', $couponId)->value('type');
                     if ($type === 'percentage') {
                         if ($value < 1 || $value > 100) {
                             $fail('Giá trị giảm theo phần trăm phải từ 1 đến 100.');

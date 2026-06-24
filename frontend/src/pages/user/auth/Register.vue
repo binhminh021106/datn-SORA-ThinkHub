@@ -5,13 +5,13 @@
         <div class="banner-overlay"></div>
         <div class="banner-content">
           <img src="../../../assets/images/logo2.png" alt="SORA Jewelry Logo" class="brand-logo-img" />
-          <p class="brand-slogan">Vẻ đẹp vượt thời gian</p>
+          <p class="brand-slogan">Tôn Vinh Vẻ Đẹp Độc Bản</p>
         </div>
       </div>
 
       <div class="auth-box">
         <div class="auth-header">
-          <h2 class="auth-title">Tạo tài khoản mới</h2>
+          <h2 class="auth-title font-serif tracking-widest">TẠO TÀI KHOẢN MỚI</h2>
           <p class="subtitle">Trở thành thành viên của SORA ngay hôm nay</p>
         </div>
 
@@ -34,12 +34,22 @@
           </div>
           <div class="form-group">
             <label>Mật khẩu</label>
-            <input v-model="form.password" type="password" placeholder="Tạo mật khẩu (ít nhất 6 ký tự)" required />
+            <div class="password-input-wrapper">
+              <input v-model="form.password" :type="showPassword ? 'text' : 'password'" placeholder="Tạo mật khẩu (ít nhất 6 ký tự)" required />
+              <button type="button" class="password-toggle" @click="showPassword = !showPassword">
+                <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+              </button>
+            </div>
           </div>
 
           <div class="form-group">
             <label>Xác nhận mật khẩu</label>
-            <input v-model="form.password_confirmation" type="password" placeholder="Nhập lại mật khẩu" required />
+            <div class="password-input-wrapper">
+              <input v-model="form.password_confirmation" :type="showConfirmPassword ? 'text' : 'password'" placeholder="Nhập lại mật khẩu" required />
+              <button type="button" class="password-toggle" @click="showConfirmPassword = !showConfirmPassword">
+                <i :class="showConfirmPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+              </button>
+            </div>
           </div>
 
           <button type="submit" class="btn-primary" :disabled="isLoading">
@@ -102,6 +112,8 @@ import clientApiClient from '@/utils/clientApiClient';
 
 const isLoading = ref(false);
 const errorMessage = ref('');
+const showPassword = ref(false);
+const showConfirmPassword = ref(false);
 
 const LoginWithGoogle = () => {
   window.location.href = `${API_BASE_URL}/auth/google/redirect`;
@@ -183,7 +195,7 @@ const handleSocialLogin = (platform) => {
   width: 100%;
   max-width: 950px;
   min-height: 600px;
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 20px 50px rgba(159, 39, 59, 0.15);
 }
@@ -220,26 +232,24 @@ const handleSocialLogin = (platform) => {
   align-items: center;
 }
 
-/* CẬP NHẬT MỚI: Style cho Logo ảnh (thay thế brand-name-large cũ) */
 .brand-logo-img {
   max-width: 180px;
-  /* Điều chỉnh kích thước logo cho phù hợp */
   height: auto;
   margin-bottom: 25px;
-  /* Khoảng cách giữa logo và slogan */
-  /* Hiệu ứng đổ bóng nhẹ cho logo nổi bật hơn trên nền overlay */
-  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+  filter: drop-shadow(0 0 1.5px #e7ce7d) 
+          drop-shadow(0 0 1.5px rgba(231, 206, 125, 0.01)) 
+          drop-shadow(0 4px 6px rgba(0, 0, 0, 0.01));
 }
 
 /* Điều chỉnh lại slogan một chút */
 .brand-slogan {
   font-size: 15px;
-  letter-spacing: 2px;
+  letter-spacing: 3px;
   color: #e7ce7d;
-  /* Màu vàng gold của SORA */
   text-transform: uppercase;
   margin: 0;
   font-weight: 500;
+  font-family: 'Oswald', sans-serif;
 }
 
 /* Phần code CSS còn lại của Form (Cột phải) giữ nguyên 100% */
@@ -261,7 +271,8 @@ const handleSocialLogin = (platform) => {
   color: #9f273b;
   font-size: 26px;
   margin: 0 0 8px;
-  font-family: 'Josefin Sans', sans-serif;
+  font-family: 'Playfair Display', 'Lora', serif;
+  text-transform: uppercase;
 }
 
 .subtitle {
@@ -286,7 +297,7 @@ const handleSocialLogin = (platform) => {
   width: 100%;
   padding: 12px 16px;
   border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  border-radius: 4px;
   font-size: 14px;
   transition: all 0.3s;
   background-color: #fafafa;
@@ -300,19 +311,48 @@ const handleSocialLogin = (platform) => {
   box-shadow: 0 0 0 4px rgba(231, 206, 125, 0.15);
 }
 
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.3s;
+}
+
+.password-toggle:hover {
+  color: #9f273b;
+}
+
+.password-toggle:focus {
+  outline: none;
+}
+
 .btn-primary {
   width: 100%;
   padding: 14px;
   background-color: #9f273b;
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 4px;
   font-size: 15px;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.3s;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
+  letter-spacing: 2px;
+  font-family: 'Oswald', sans-serif;
   margin-top: 10px;
 }
 
@@ -362,7 +402,7 @@ const handleSocialLogin = (platform) => {
   padding: 12px;
   background: white;
   border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  border-radius: 4px;
   font-size: 14px;
   font-weight: 500;
   color: #444;
@@ -401,7 +441,7 @@ const handleSocialLogin = (platform) => {
 
 .alert {
   padding: 12px;
-  border-radius: 8px;
+  border-radius: 4px;
   margin-bottom: 15px;
   font-size: 14px;
 }

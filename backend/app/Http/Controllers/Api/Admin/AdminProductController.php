@@ -223,9 +223,18 @@ class AdminProductController extends Controller
 
     public function forceDelete($id)
     {
+        $admin = request()->user();
+        if (!$admin || !$admin->role_id) {
+            return response()->json(['success' => false, 'message' => 'Lỗi xác thực.'], 401);
+        }
+        $role = \Illuminate\Support\Facades\DB::table('roles')->where('id', $admin->role_id)->first();
+        if (!$role || (int) $role->level !== 1) {
+            return response()->json(['success' => false, 'message' => 'Truy cập bị từ chối: Chỉ Super Admin (Level 1) mới có quyền xóa vĩnh viễn.'], 403);
+        }
+
         DB::beginTransaction();
         try {
-            $product = Product::withTrashed()->findOrFail($id);
+            $product = Product::onlyTrashed()->findOrFail($id);
 
             // Lấy danh sách biến thể
             $variants = $product->variants()->withTrashed()->get();
@@ -298,6 +307,15 @@ class AdminProductController extends Controller
 
     public function bulkForceDelete(Request $request)
     {
+        $admin = $request->user();
+        if (!$admin || !$admin->role_id) {
+            return response()->json(['success' => false, 'message' => 'Lỗi xác thực.'], 401);
+        }
+        $role = \Illuminate\Support\Facades\DB::table('roles')->where('id', $admin->role_id)->first();
+        if (!$role || (int) $role->level !== 1) {
+            return response()->json(['success' => false, 'message' => 'Truy cập bị từ chối: Chỉ Super Admin (Level 1) mới có quyền xóa vĩnh viễn.'], 403);
+        }
+
         $ids = $request->input('product_ids', []);
         if (empty($ids) || !is_array($ids)) {
             return response()->json(['success' => false, 'message' => 'Vui lòng chọn ít nhất 1 sản phẩm để xóa.'], 400);
@@ -309,7 +327,7 @@ class AdminProductController extends Controller
         foreach ($ids as $id) {
             DB::beginTransaction();
             try {
-                $product = Product::withTrashed()->findOrFail($id);
+                $product = Product::onlyTrashed()->findOrFail($id);
 
                 // Lấy danh sách biến thể
                 $variants = $product->variants()->withTrashed()->get();

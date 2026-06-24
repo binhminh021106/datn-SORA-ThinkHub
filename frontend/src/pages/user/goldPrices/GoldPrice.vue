@@ -338,6 +338,12 @@ onMounted(() => {
   text-shadow: 0 10px 35px rgba(0, 0, 0, 0.32);
 }
 
+@media (min-width: 768px) {
+  .banner-content h1 {
+    white-space: nowrap;
+  }
+}
+
 .banner-subtitle {
   color: rgba(255, 248, 231, 0.9);
   line-height: 1.75;

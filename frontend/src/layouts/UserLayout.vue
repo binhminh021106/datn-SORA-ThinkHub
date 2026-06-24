@@ -7,6 +7,7 @@
     </main>
 
     <Footer />
+    <MobileBottomNav />
     <ChatDock />
 
     <transition name="fade">
@@ -28,6 +29,7 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import Header from '../components/user/Header.vue';
 import Footer from '../components/user/Footer.vue';
+import MobileBottomNav from '../components/user/MobileBottomNav.vue';
 import ChatDock from '@/pages/user/chatbot/ChatDock.vue';
 
 const isVisible = ref(false);
@@ -85,5 +87,19 @@ onUnmounted(() => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+@media (max-width: 991.98px) {
+  /* Provide space at the bottom for MobileBottomNav */
+  main.flex-grow-1 {
+    padding-bottom: calc(65px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .scroll-to-top-btn {
+    bottom: calc(160px + env(safe-area-inset-bottom, 0px));
+    right: 20px;
+    width: 40px;
+    height: 40px;
+  }
 }
 </style>
