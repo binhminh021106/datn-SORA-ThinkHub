@@ -112,6 +112,7 @@ class AdminProductController extends Controller
             }
 
             DB::commit();
+            \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
             event(new ProductUpdated($product->id, ['action' => 'created']));
             return response()->json(['success' => true, 'message' => 'Xuất bản sản phẩm thành công']);
         } catch (\Exception $e) {
@@ -179,8 +180,32 @@ class AdminProductController extends Controller
             }
 
             DB::commit();
+            \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
             event(new ProductUpdated($product->id, ['action' => 'updated']));
             return response()->json(['success' => true, 'message' => 'Cập nhật sản phẩm thành công']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function updateStatus(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|in:published,draft,hidden'
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $product = Product::findOrFail($id);
+            $product->update([
+                'status' => $request->status
+            ]);
+
+            DB::commit();
+            \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
+            event(new ProductUpdated($product->id, ['action' => 'updated']));
+            return response()->json(['success' => true, 'message' => 'Cập nhật trạng thái sản phẩm thành công']);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()], 500);
@@ -196,6 +221,7 @@ class AdminProductController extends Controller
             $product->delete();
 
             DB::commit();
+            \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
             event(new ProductUpdated($product->id, ['action' => 'deleted']));
             return response()->json(['success' => true, 'message' => 'Sản phẩm và Biến thể đã vào thùng rác']);
         } catch (\Exception $e) {
@@ -213,6 +239,7 @@ class AdminProductController extends Controller
             $product->variants()->withTrashed()->restore();
 
             DB::commit();
+            \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
             event(new ProductUpdated($product->id, ['action' => 'restored']));
             return response()->json(['success' => true, 'message' => 'Sản phẩm và Biến thể đã được khôi phục']);
         } catch (\Exception $e) {
@@ -298,6 +325,8 @@ class AdminProductController extends Controller
             $product->forceDelete();
 
             DB::commit();
+            \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
+            event(new ProductUpdated($id, ['action' => 'force_deleted']));
             return response()->json(['success' => true, 'message' => 'Sản phẩm đã được xóa vĩnh viễn cùng toàn bộ dữ liệu liên quan.']);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             DB::rollBack();
@@ -404,6 +433,10 @@ class AdminProductController extends Controller
                     'reason' => $e->getMessage()
                 ];
             }
+        }
+        if ($successCount > 0) {
+            \Illuminate\Support\Facades\Cache::forget('sora_home_data_v4');
+            event(new ProductUpdated(0, ['action' => 'bulk_force_deleted']));
         }
 
         return response()->json([

@@ -130,12 +130,29 @@ const newsLoadError = computed(() => (
 ));
 
 // Mutation cập nhật nhanh trạng thái
+const updatingStatuses = ref({});
+
 const toggleStatusMutation = useMutation({
     mutationFn: async ({ id, status }) => {
         return axios.patch(`${apiUrl}/admin/news/${id}`, { status }, { headers: getHeaders() });
     },
-    onSuccess: () => {
+    onMutate: ({ id }) => {
+        updatingStatuses.value[id] = true;
+    },
+    onSettled: (data, error, variables) => {
+        updatingStatuses.value[variables.id] = false;
+    },
+    onSuccess: (data, variables) => {
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
+        
+        // Cập nhật local cache ngay lập tức để giao diện không bị delay
+        queryClient.setQueryData(['admin-news-all'], (oldData) => {
+            if (!oldData) return oldData;
+            return oldData.map(item => 
+                item.id === variables.id ? { ...item, status: variables.status } : item
+            );
+        });
+        
         queryClient.invalidateQueries({ queryKey: ['admin-news-all'] });
     },
     onError: () => {
@@ -294,6 +311,8 @@ async function handleToggleStatus(newsItem) {
     });
 
     if (result.isConfirmed) {
+        // Tránh double click khi đang xử lý
+        if (updatingStatuses.value[newsItem.id]) return;
         toggleStatusMutation.mutate({ id: newsItem.id, status: newStatus });
     }
 }
@@ -558,8 +577,9 @@ useAdminRefreshListener((payload) => {
                                     <td class="px-4 text-end">
                                         <div class="d-flex justify-content-end align-items-center gap-2">
                                             <template v-if="!item.deleted_at">
-                                                <div class="form-check form-switch m-0 d-flex align-items-center me-1" v-if="hasRole(['admin'])" title="Đổi trạng thái xuất bản/ẩn">
-                                                    <input class="form-check-input custom-switch" type="checkbox" role="switch" :checked="item.status === 'published'" @click.prevent="handleToggleStatus(item)">
+                                                <div class="form-check form-switch m-0 d-flex align-items-center me-1" v-if="hasRole(['admin'])" title="Đổi trạng thái xuất bản/ẩn" style="min-width: 40px; justify-content: center;">
+                                                    <div v-if="updatingStatuses[item.id]" class="spinner-border spinner-border-sm text-brand" role="status" style="width: 1.25rem; height: 1.25rem; border-width: 0.15em;"></div>
+                                                    <input v-else class="form-check-input custom-switch" type="checkbox" role="switch" :checked="item.status === 'published'" @click.prevent="handleToggleStatus(item)" :disabled="updatingStatuses[item.id]">
                                                 </div>
                                                 
                                                 <button class="btn btn-sm btn-light text-info shadow-sm border" @click="viewOnFrontend(item.slug)" title="Xem bài viết">

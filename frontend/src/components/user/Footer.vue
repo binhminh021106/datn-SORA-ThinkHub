@@ -40,14 +40,14 @@
       <div class="container py-3">
         <div class="row g-5">
           
-          <div class="col-lg-3 col-md-6 text-center text-md-start">
+          <div class="col-lg-3 col-md-6 text-start mb-4 mb-md-0">
             <a href="#" @click.prevent="safeNavigate('home')" class="d-inline-block mb-4">
               <img src="../../assets/images/logo1.png" alt="SORA Logo" class="footer-logo filter-white" @error="handleLogoError">
             </a>
             <p class="text-light opacity-75 small mb-4 pe-md-3" style="line-height: 1.8;">
               SORA mang đến những thiết kế trang sức tinh tế, tôn vinh vẻ đẹp đích thực và phong cách cá nhân của bạn. Mỗi chế tác là một tác phẩm nghệ thuật.
             </p>
-            <div class="social-links d-flex gap-3 justify-content-center justify-content-md-start">
+            <div class="social-links d-flex gap-3 justify-content-start mb-4 mb-md-0">
               <a href="#" class="social-btn"><i class="bi bi-facebook"></i></a>
               <a href="#" class="social-btn"><i class="bi bi-instagram"></i></a>
               <a href="#" class="social-btn"><i class="bi bi-twitter-x"></i></a>
@@ -55,7 +55,7 @@
             </div>
           </div>
 
-          <div class="col-lg-3 col-md-6">
+          <div class="col-lg-3 col-md-6 col-6">
             <h5 class="footer-title font-oswald text-uppercase mb-4 text-white">Liên Kết Nhanh</h5>
             <ul class="footer-links list-unstyled m-0 p-0">
               <li><a href="#" @click.prevent="safeNavigate('home')">Trang Chủ</a></li>
@@ -66,7 +66,7 @@
             </ul>
           </div>
 
-          <div class="col-lg-3 col-md-6">
+          <div class="col-lg-3 col-md-6 col-6">
             <h5 class="footer-title font-oswald text-uppercase mb-4 text-white">Hỗ Trợ Khách Hàng</h5>
             <ul class="footer-links list-unstyled m-0 p-0">
               <li><a href="#" @click.prevent="safeNavigate('contact')">Trung Tâm Trợ Giúp</a></li>
@@ -299,5 +299,38 @@ const subscribeNewsletter = () => {
 }
 .hover-secondary:hover {
   color: #e7ce7d !important;
+}
+
+@media (max-width: 767.98px) {
+  .trust-item h6 {
+    font-size: 0.8rem;
+  }
+  .trust-item p {
+    font-size: 0.65rem;
+  }
+  .trust-item i {
+    font-size: 1.8rem !important;
+  }
+  .footer-logo {
+    height: 55px;
+  }
+  .main-footer {
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+  }
+  .footer-title {
+    font-size: 0.95rem;
+    margin-bottom: 0.75rem !important;
+  }
+  .footer-links a {
+    font-size: 0.8rem;
+  }
+  .newsletter-form {
+    max-width: 320px;
+  }
+  .bottom-footer {
+    padding-top: 1.5rem !important;
+    padding-bottom: 1.5rem !important;
+  }
 }
 </style>

@@ -372,6 +372,7 @@ Route::prefix('admin')->group(function () {
             Route::post('products/import', [\App\Http\Controllers\Api\Admin\ProductImportController::class, 'import']);
 
             Route::apiResource('products', AdminProductController::class);
+            Route::put('products/{id}/status', [AdminProductController::class, 'updateStatus']);
             Route::post('products/{id}/restore', [AdminProductController::class, 'restore']);
             Route::delete('products/{id}/force', [AdminProductController::class, 'forceDelete']);
             Route::post('products/bulk-force-delete', [AdminProductController::class, 'bulkForceDelete']);

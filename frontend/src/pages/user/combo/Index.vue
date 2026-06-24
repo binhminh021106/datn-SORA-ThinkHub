@@ -14,7 +14,7 @@
           <i class="bi bi-stars me-2"></i>SORA Exclusive
         </p>
         <h1 class="display-3 fw-bold font-serif mb-3 text-white text-uppercase">GÓI QUÀ TẶNG & ƯU ĐÃI</h1>
-        <p class="banner-subtitle fw-light fs-5 mb-0 font-serif">
+        <p class="banner-subtitle fw-light fs-5 mb-0 font-serif d-none d-md-block">
           Những sự kết hợp hoàn hảo được tuyển chọn bởi các nghệ nhân SORA.
         </p>
       </div>
@@ -182,7 +182,6 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import clientApiClient from '@/utils/clientApiClient';
-import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener.js';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
 import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
 
@@ -298,9 +297,9 @@ const fetchCombos = async (gender = null) => {
   }
 };
 
-usePublicRefreshListener({
-  combos: () => fetchCombos(activeFilter.value),
-});
+const handleRealtimeRefresh = () => {
+  fetchCombos(activeFilter.value);
+};
 
 const filterCombo = (gender) => {
   activeFilter.value = gender;
@@ -352,12 +351,14 @@ const displayCombos = computed(() => {
 onMounted(() => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
   fetchCombos();
+  window.addEventListener('realtime-refresh-data', handleRealtimeRefresh);
   timerInterval = setInterval(() => {
     currentTime.value = new Date().getTime();
   }, 1000);
 });
 
 onUnmounted(() => {
+  window.removeEventListener('realtime-refresh-data', handleRealtimeRefresh);
   if (timerInterval) clearInterval(timerInterval);
 });
 </script>
@@ -945,15 +946,22 @@ onUnmounted(() => {
 
 @media (max-width: 767.98px) {
   .sora-banner {
-    min-height: 320px;
+    min-height: 160px;
   }
 
   .banner-content h1 {
-    font-size: 2.45rem;
+    font-size: clamp(1.1rem, 4.5vw, 1.4rem) !important;
+    white-space: nowrap;
+    margin-bottom: 0 !important;
+  }
+
+  .banner-content p.text-champagne {
+    margin-bottom: 0.25rem !important;
+    font-size: 0.75rem;
   }
 
   .banner-subtitle {
-    font-size: 1rem !important;
+    font-size: 0.9rem !important;
   }
 
   .banner-line-art {
@@ -961,9 +969,9 @@ onUnmounted(() => {
   }
 
   .banner-monogram {
-    bottom: 38px;
-    font-size: 3rem;
-    white-space: normal;
+    bottom: 10px;
+    font-size: 1.8rem;
+    white-space: nowrap;
   }
 
   .filter-group {
@@ -980,14 +988,48 @@ onUnmounted(() => {
     border-radius: 20px;
   }
 
-  .combo-offer-panel,
+  .combo-offer-panel {
+    padding: 20px 16px;
+  }
+
   .combo-products-panel {
-    padding: 24px;
+    padding: 20px 16px;
+  }
+
+  .combo-offer-panel .mb-4 {
+    margin-bottom: 0.75rem !important;
+  }
+
+  .combo-offer-panel .mb-3 {
+    margin-bottom: 0.5rem !important;
+  }
+
+  .combo-title {
+    font-size: clamp(1.1rem, 5vw, 1.5rem);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .time-box {
-    width: 58px;
-    height: 64px;
+    width: 52px;
+    height: 58px;
+  }
+
+  .time-box .num {
+    font-size: 1.25rem;
+  }
+
+  .time-box .label {
+    font-size: 0.6rem;
+  }
+
+  .new-price {
+    font-size: 1.65rem;
+  }
+
+  .old-price {
+    font-size: 0.8rem;
   }
 
   .combo-item-card {

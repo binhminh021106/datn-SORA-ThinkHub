@@ -13,6 +13,7 @@ import { ref, onMounted, onBeforeUnmount, provide, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import apiClient from '@/utils/apiClient';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
+import { useRealtimeSync } from '@/composables/useRealtimeSync.js';
 
 // Nhúng modal global vào App
 import QuickAddModal from '@/components/ui/QuickAddModal.vue';
@@ -83,6 +84,9 @@ useAdminRefreshListener((payload) => {
     checkAuthentication();
   }
 });
+
+// Khởi chạy listener lắng nghe sự kiện đồng bộ từ Backend (Sản phẩm, Combo)
+useRealtimeSync();
 </script>
 
 <style>
