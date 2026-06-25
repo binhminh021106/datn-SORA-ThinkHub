@@ -437,6 +437,11 @@ const fetchContacts = async () => {
     const res = await axios.get(`${API_URL}/admin/messages/conversations`, axiosConfig());
     if (res.data.status) {
       contacts.value = res.data.data;
+      contacts.value.forEach(user => {
+        if (user.unread_count > 0) {
+          unreadMap.value[user.id] = user.unread_count;
+        }
+      });
     }
   } catch (err) {
     console.error('Lỗi lấy danh sách:', err);

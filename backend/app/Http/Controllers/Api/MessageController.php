@@ -62,8 +62,8 @@ class MessageController extends Controller
 
             $message = Message::create([
                 'sender_id'    => $senderId,
-                'receiver_id'  => $request->receiver_id ?? 1,
-                'content'      => $request->content,
+                'receiver_id'  => $request->input('receiver_id', 1),
+                'content'      => $request->input('content'),
                 'message_type' => 'text',
                 'is_read'      => false,
             ]);
@@ -87,12 +87,24 @@ class MessageController extends Controller
         $partnerId = $request->query('partner_id');
 
         if ($partnerId) {
+            // Mark unread messages as read
+            Message::where('sender_id', $partnerId)
+                ->where('receiver_id', $userId)
+                ->where('is_read', false)
+                ->update(['is_read' => true]);
+
             $messages = Message::where(function($q) use ($userId, $partnerId) {
                 $q->where('sender_id', $userId)->where('receiver_id', $partnerId);
             })->orWhere(function($q) use ($userId, $partnerId) {
                 $q->where('sender_id', $partnerId)->where('receiver_id', $userId);
             })->orderBy('created_at', 'asc')->get();
         } else {
+            // If fetching all own messages, we might not know who the partner is to mark as read,
+            // but usually this branch is just a fallback. Let's mark messages sent to us as read too.
+            Message::where('receiver_id', $userId)
+                ->where('is_read', false)
+                ->update(['is_read' => true]);
+
             $messages = Message::where('sender_id', $userId)
                                ->orWhere('receiver_id', $userId)
                                ->orderBy('created_at', 'asc')->get();
@@ -133,6 +145,14 @@ class MessageController extends Controller
         return array_search($user->id, $userIds);
     })
       ->values();
+
+        // Calculate unread count and attach to each user
+        foreach ($users as $user) {
+            $user->unread_count = Message::where('sender_id', $user->id)
+                ->where('receiver_id', $adminId)
+                ->where('is_read', false)
+                ->count();
+        }
 
         return response()->json(['status' => true, 'data' => $users]);
     }
