@@ -47,21 +47,28 @@ const CustomAlertComponent = forwardRef((props, ref) => {
     }
   };
 
+  const getAlertText = () => `${title || ''} ${message || ''}`
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase();
+
   const getIconColor = () => {
-    const t = title.toLowerCase();
-    if (t.includes('thành công') || t.includes('cảm ơn') || t.includes('đã gửi') || t.includes('hoàn tất')) return '#2e7d32'; // Green
-    if (t.includes('lỗi') || t.includes('thất bại') || t.includes('xoá') || t.includes('hủy') || t.includes('huỷ')) return '#c62828'; // Red
-    if (t.includes('cảnh báo') || t.includes('thông báo') || t.includes('yêu cầu')) return '#f57c00'; // Orange
+    const t = getAlertText();
+    if (t.includes('thanh cong') || t.includes('cam on') || t.includes('da gui') || t.includes('hoan tat') || t.includes('da them')) return '#2e7d32'; // Green
+    if (t.includes('loi') || t.includes('that bai') || t.includes('xoa') || t.includes('huy')) return '#c62828'; // Red
+    if (t.includes('canh bao') || t.includes('thong bao') || t.includes('yeu cau')) return '#f57c00'; // Orange
     return '#9f273b'; // SORA main Burgundy
   };
 
   const getIconName = () => {
     if (icon !== 'information-circle') return icon;
-    const t = title.toLowerCase();
-    if (t.includes('thành công') || t.includes('cảm ơn') || t.includes('đã gửi') || t.includes('hoàn tất')) return 'checkmark-circle-outline';
-    if (t.includes('lỗi') || t.includes('thất bại')) return 'alert-circle-outline';
-    if (t.includes('xoá') || t.includes('hủy') || t.includes('huỷ')) return 'trash-outline';
-    if (t.includes('cảnh báo') || t.includes('thông báo')) return 'warning-outline';
+    const t = getAlertText();
+    if (t.includes('thanh cong') || t.includes('cam on') || t.includes('da gui') || t.includes('hoan tat') || t.includes('da them')) return 'checkmark-circle-outline';
+    if (t.includes('loi') || t.includes('that bai')) return 'alert-circle-outline';
+    if (t.includes('xoa') || t.includes('huy')) return 'trash-outline';
+    if (t.includes('canh bao') || t.includes('thong bao') || t.includes('yeu cau')) return 'warning-outline';
     return 'information-circle-outline';
   };
 

@@ -20,7 +20,7 @@ class UserStoreOrderRequest extends FormRequest
             'customer_address' => 'required|string|max:1000',
             'order_note'       => 'nullable|string|max:1000',
             'coupon_code'      => 'nullable|string|exists:coupons,code',
-            'payment_method'   => 'required|in:cod,vnpay,momo,bank_transfer',
+            'payment_method'   => 'required|in:cod,momo,bank_transfer',
         ];
     }
 

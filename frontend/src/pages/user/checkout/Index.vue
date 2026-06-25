@@ -248,17 +248,19 @@
                                         class="d-none">
                                     <div class="d-flex align-items-center gap-3">
                                         <div class="icon-wrap rounded-circle d-flex justify-content-center align-items-center flex-shrink-0 border"
-                                            style="width: 45px; height: 45px; background-color: #009981; color: white;">
-                                            <i class="bi bi-credit-card-2-front fs-5"></i>
+                                            style="width: 45px; height: 45px; background-color: #005baa; color: white;">
+                                            <i class="bi bi-credit-card-2-back fs-5"></i>
                                         </div>
                                         <div>
                                             <h6 class="mb-1 fw-bold text-dark font-oswald tracking-wide text-uppercase"
-                                                style="color: #009981 !important;">Thanh toán qua VNPay</h6>
-                                            <small class="text-muted">Thanh toán bằng thẻ ATM, tài khoản ngân hàng hoặc VNPay QR</small>
+                                                style="color: #005baa !important;">Thanh toán qua VNPay</h6>
+                                            <small class="text-muted">Thanh toán bằng thẻ ATM, QR hoặc tài khoản ngân hàng qua VNPay Sandbox</small>
                                         </div>
                                     </div>
                                     <div class="radio-indicator flex-shrink-0 ms-3"></div>
                                 </label>
+
+
                             </div>
                         </form>
                     </div>
@@ -599,9 +601,9 @@ const form = ref({
 });
 
 const submitButtonText = computed(() => {
-    if (form.value.payment_method === 'momo') return 'THANH TOÁN QUA MOMO';
-    if (form.value.payment_method === 'vnpay') return 'THANH TOÁN QUA VNPAY';
-    return 'HOÀN TẤT ĐẶT HÀNG';
+    if (form.value.payment_method === 'momo') return 'THANH TOAN QUA MOMO';
+    if (form.value.payment_method === 'vnpay') return 'THANH TOAN QUA VNPAY';
+    return 'HOAN TAT DAT HANG';
 });
 
 const soraAlert = createSoraAlert({
@@ -1046,6 +1048,7 @@ const submitOrder = async () => {
         payment_method: form.value.payment_method,
         coupon_code: selectedCoupon.value && !isCouponBlocked.value ? selectedCoupon.value.code : null,
         shipping_fee: shippingFee.value,
+        checkout_source: 'web',
         affiliate_code: form.value.affiliate_code || null // KẸP MÃ AFFILIATE VÀO PAYLOAD GỬI LÊN SERVER
     };
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Client;
 
 use App\Http\Controllers\Controller;
 use App\Models\Coupon;
+use App\Models\Order;
 use App\Models\UserSavedCoupon;
 use Illuminate\Http\Request;
 
@@ -130,6 +131,8 @@ class ClientSavedCouponController extends Controller
             'min_order_value' => (float) ($coupon->min_spend ?? 0),
             'usage_limit' => $coupon->usage_limit,
             'usage_count' => (int) ($coupon->usage_count ?? 0),
+            'usage_limit_per_user' => $coupon->usage_limit_per_user,
+            'user_usage_count' => $status['user_usage_count'],
             'expires_at' => optional($coupon->expires_at)->toDateTimeString(),
             'saved_at' => optional($savedCoupon->saved_at)->toDateTimeString(),
             'is_saved' => true,
@@ -146,6 +149,9 @@ class ClientSavedCouponController extends Controller
         $isActive = $coupon->status === 'active';
         $isExpired = $coupon->expires_at && now()->greaterThan($coupon->expires_at);
         $isUsageAvailable = $coupon->usage_limit === null || (int) $coupon->usage_count < (int) $coupon->usage_limit;
+        $userUsageLimit = (int) ($coupon->usage_limit_per_user ?? 0);
+        $userUsageCount = $userUsageLimit > 0 ? $this->countUserCouponUsage($coupon, (int) $user->id) : 0;
+        $isUserUsageAvailable = $userUsageLimit <= 0 || $userUsageCount < $userUsageLimit;
         $disabledReason = null;
 
         if (!$isActive) {
@@ -154,6 +160,8 @@ class ClientSavedCouponController extends Controller
             $disabledReason = 'Mã giảm giá đã hết hạn.';
         } elseif (!$isUsageAvailable) {
             $disabledReason = 'Mã giảm giá đã hết lượt sử dụng.';
+        } elseif (!$isUserUsageAvailable) {
+            $disabledReason = 'Bạn đã sử dụng hết lượt cho mã này.';
         } elseif ($coupon->type === 'birthday' && ((int) $coupon->user_id !== (int) $user->id || $coupon->is_used)) {
             $disabledReason = 'Mã sinh nhật không còn khả dụng.';
         }
@@ -162,6 +170,8 @@ class ClientSavedCouponController extends Controller
             'is_active' => $isActive,
             'is_expired' => (bool) $isExpired,
             'is_usage_available' => $isUsageAvailable,
+            'is_user_usage_available' => $isUserUsageAvailable,
+            'user_usage_count' => $userUsageCount,
             'is_selectable' => $disabledReason === null,
             'disabled_reason' => $disabledReason,
         ];
@@ -170,5 +180,14 @@ class ClientSavedCouponController extends Controller
     private function canUserSeeCoupon(Coupon $coupon, $user): bool
     {
         return $coupon->user_id === null || (int) $coupon->user_id === (int) $user->id;
+    }
+
+    private function countUserCouponUsage(Coupon $coupon, int $userId): int
+    {
+        return Order::where('user_id', $userId)
+            ->where('coupon_id', $coupon->id)
+            ->where('status', '!=', 'cancelled')
+            ->where('payment_status', 'paid')
+            ->count();
     }
 }

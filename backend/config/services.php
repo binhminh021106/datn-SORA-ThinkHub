@@ -28,12 +28,6 @@ return [
         'key' => env('GOONG_API_KEY'),
     ],
 
-    'sepay' => [
-        'webhook_token' => env('SEPAY_WEBHOOK_TOKEN'),
-        'bank_acc' => env('SEPAY_BANK_ACC'),
-        'bank_name' => env('SEPAY_BANK_NAME'),
-    ],
-
     'ai' => [
         'provider' => env('AI_PROVIDER', 'freemodel'),
         'key' => env('AI_API_KEY'),

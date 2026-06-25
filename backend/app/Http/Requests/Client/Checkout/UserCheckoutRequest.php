@@ -20,11 +20,12 @@ class UserCheckoutRequest extends FormRequest
             'customer_address' => 'required_without:user_address_id|string|max:1000|nullable',
             'customer_email'   => 'required|email|max:255',
             'order_note'       => 'nullable|string|max:1000',
-            'payment_method'   => 'required|in:cod,vnpay,momo,bank_transfer',
+            'payment_method'   => 'required|in:cod,momo,vnpay,bank_transfer',
             'coupon_code'      => 'nullable|string|exists:coupons,code',
             'affiliate_code'   => 'nullable|string|max:50',
             'shipping_fee'     => 'required|integer|min:0|max:200000',
             'checkout_source'  => 'nullable|in:web,mobile',
+            'mobile_return_url' => 'nullable|string|max:1000',
         ];
     }
 
