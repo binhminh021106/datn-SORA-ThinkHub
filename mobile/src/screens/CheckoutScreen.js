@@ -809,7 +809,7 @@ export default function CheckoutScreen({ route }) {
         customer_email: customerInfo.customerEmail,
         customer_address: customerInfo.customerAddress,
         order_note: note,
-        payment_method: paymentMethod,
+        payment_method: paymentMethod === 'bank' ? 'bank_transfer' : paymentMethod,
         shipping_fee: shippingFee,
         checkout_source: "mobile",
         mobile_return_url: ExpoLinking.createURL("order-history"),

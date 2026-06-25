@@ -514,7 +514,13 @@ class ClientCheckoutController extends Controller
     private function hasUserReachedCouponLimit(Coupon $coupon, $user): bool
     {
         $limit = (int) ($coupon->usage_limit_per_user ?? 0);
-        if (!$user || $limit <= 0) {
+        
+        // Block coupons with user quota if not authenticated
+        if (!$user) {
+            return $limit > 0; // Reject if coupon has per-user limit
+        }
+        
+        if ($limit <= 0) {
             return false;
         }
 
@@ -526,7 +532,7 @@ class ClientCheckoutController extends Controller
         return Order::where('user_id', $userId)
             ->where('coupon_id', $coupon->id)
             ->where('status', '!=', 'cancelled')
-            ->where('payment_status', '!=', 'failed')
+            ->where('payment_status', 'paid')
             ->count();
     }
 
@@ -742,10 +748,14 @@ class ClientCheckoutController extends Controller
         }
 
         try {
+            // Find user's cart to persist cart ID across retry attempts
+            $userCart = Cart::where('user_id', $user->id)->first();
+            $cartId = $userCart ? $userCart->id : null;
+            
             $paymentUrl = $this->generateMomoUrl(
                 $order,
                 $request->input('checkout_source', 'mobile'),
-                null,
+                $cartId,
                 $request->input('mobile_return_url')
             );
 
@@ -816,10 +826,14 @@ class ClientCheckoutController extends Controller
         }
 
         try {
+            // Find user's cart to persist cart ID across retry attempts
+            $userCart = Cart::where('user_id', $user->id)->first();
+            $cartId = $userCart ? $userCart->id : null;
+            
             $paymentUrl = $this->generateVnpayUrl(
                 $order,
                 $request->input('checkout_source', 'mobile'),
-                null,
+                $cartId,
                 $request->input('mobile_return_url')
             );
 
@@ -885,6 +899,14 @@ class ClientCheckoutController extends Controller
     public function vnpayReturn(Request $request)
     {
         $hashSecret = env('VNPAY_HASH_SECRET');
+        
+        // Fail closed: check secret is configured before proceeding
+        if (empty($hashSecret)) {
+            Log::error('VNPay callback failed: VNPAY_HASH_SECRET is not configured.');
+            $frontendUrl = rtrim(env('FRONTEND_URL', 'http://localhost:5173'), '/');
+            return redirect($frontendUrl . '/checkout/failed?reason=config');
+        }
+        
         $secureHash = (string) $request->query('vnp_SecureHash', '');
         $inputData = collect($request->query())
             ->filter(fn ($value, $key) => str_starts_with($key, 'vnp_') && !in_array($key, ['vnp_SecureHash', 'vnp_SecureHashType'], true))
@@ -930,8 +952,16 @@ class ClientCheckoutController extends Controller
                 'order_code' => $orderCode,
                 'txn_ref' => $request->query('vnp_TxnRef'),
             ]);
+            
+            // Do not cancel order on unverified callback to prevent abuse
+            if ($isMobileCheckout) {
+                return redirect($this->buildMobilePaymentReturnUrl($mobileReturnUrl, $orderCode, 'cancelled', 'cart'));
+            }
+
+            return redirect($frontendUrl . '/checkout/failed?order=' . $orderCode);
         }
 
+        // Only cancel order after signature verification succeeds
         $this->cancelOrderAndRestoreStock($orderCode);
 
         if ($isMobileCheckout) {

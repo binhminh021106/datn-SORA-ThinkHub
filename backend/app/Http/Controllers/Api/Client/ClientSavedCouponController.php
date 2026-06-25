@@ -187,7 +187,7 @@ class ClientSavedCouponController extends Controller
         return Order::where('user_id', $userId)
             ->where('coupon_id', $coupon->id)
             ->where('status', '!=', 'cancelled')
-            ->where('payment_status', '!=', 'failed')
+            ->where('payment_status', 'paid')
             ->count();
     }
 }

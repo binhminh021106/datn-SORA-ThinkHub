@@ -68,7 +68,7 @@ const CustomAlertComponent = forwardRef((props, ref) => {
     if (t.includes('thanh cong') || t.includes('cam on') || t.includes('da gui') || t.includes('hoan tat') || t.includes('da them')) return 'checkmark-circle-outline';
     if (t.includes('loi') || t.includes('that bai')) return 'alert-circle-outline';
     if (t.includes('xoa') || t.includes('huy')) return 'trash-outline';
-    if (t.includes('canh bao') || t.includes('thong bao')) return 'warning-outline';
+    if (t.includes('canh bao') || t.includes('thong bao') || t.includes('yeu cau')) return 'warning-outline';
     return 'information-circle-outline';
   };
 
