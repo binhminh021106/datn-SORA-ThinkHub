@@ -39,7 +39,7 @@
 
       <!-- Body -->
       <div class="flex-grow-1 chat-body-scroll p-3" ref="chatBodyRef" style="background-color: #f8f9fa;" @click="closeAllPickers">
-        <div v-for="msg in messages" :key="msg.id" class="d-flex mb-3 msg-row" :class="msg.type === 'user' ? 'justify-content-end' : 'justify-content-start'" @mouseenter="hoveredMsgId = msg.id" @mouseleave="hoveredMsgId = null">
+        <div v-for="msg in messages" :key="msg.id" :id="'msg-' + msg.id" class="d-flex mb-3 msg-row" :class="msg.type === 'user' ? 'justify-content-end' : 'justify-content-start'" @mouseenter="hoveredMsgId = msg.id" @mouseleave="hoveredMsgId = null">
           <div v-if="msg.type === 'admin'" class="me-2 mt-auto">
             <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.7rem;">NV</div>
           </div>
@@ -49,16 +49,15 @@
             <div class="msg-bubble-wrap" :class="msg.type === 'user' ? 'align-items-end' : 'align-items-start'">
               <div style="max-width: 100%; position: relative;">
                 <!-- Quote block -->
-                <div v-if="msg.reply_to" class="quote-block mb-1" :class="msg.type === 'user' ? 'quote-block-user' : 'quote-block-admin'">
-                  <span class="quote-author">{{ msg.reply_to.type === 'user' ? 'Bạn' : 'Nhân viên' }}</span>
-                  <p class="quote-text">{{ msg.reply_to.text || (msg.reply_to.message_type === 'image' ? '📷 Hình ảnh' : '📎 File') }}</p>
+                <div v-if="msg.reply_to" class="quote-block mb-1" :class="msg.type === 'user' ? 'quote-block-user' : 'quote-block-admin'" @click="scrollToMessage(msg.reply_to.id)" style="cursor: pointer;">
+                  <p class="quote-text"><i class="bi bi-reply-fill me-1 opacity-75"></i>{{ msg.reply_to.text || (msg.reply_to.message_type === 'image' ? '📷 Hình ảnh' : '📎 File') }}</p>
                 </div>
                 <img :src="msg.file_url" :alt="msg.file_name || 'image'" class="user-chat-image" @click="openLightbox(msg.file_url)" />
                 <div><small :class="msg.type === 'user' ? 'text-white-50' : 'text-muted'" style="font-size: 0.65rem;">{{ msg.time }}</small></div>
               </div>
-              <!-- Action bar below bubble -->
-              <div class="msg-actions-bar" :class="msg.type === 'user' ? 'justify-content-end' : 'justify-content-start'" v-show="hoveredMsgId === msg.id">
-                <button class="msg-action-btn" @click.stop="setReply(msg)" title="Trả lời">↩</button>
+              <!-- Action bar beside bubble -->
+              <div class="msg-actions-side" v-show="hoveredMsgId === msg.id">
+                <button class="msg-action-btn-pro" @click.stop="setReply(msg)" title="Trả lời"><i class="bi bi-reply-fill"></i></button>
               </div>
             </div>
           </template>
@@ -68,9 +67,8 @@
             <div class="msg-bubble-wrap" :class="msg.type === 'user' ? 'align-items-end' : 'align-items-start'">
               <div class="p-2 shadow-sm rounded" :class="msg.type === 'user' ? 'bg-primary text-white text-end rounded-user' : 'bg-white border text-start rounded-bot'" style="max-width: 100%;">
                 <!-- Quote block -->
-                <div v-if="msg.reply_to" class="quote-block mb-1" :class="msg.type === 'user' ? 'quote-block-user' : 'quote-block-admin'">
-                  <span class="quote-author">{{ msg.reply_to.type === 'user' ? 'Bạn' : 'Nhân viên' }}</span>
-                  <p class="quote-text">{{ msg.reply_to.text || (msg.reply_to.message_type === 'image' ? '📷 Hình ảnh' : '📎 File') }}</p>
+                <div v-if="msg.reply_to" class="quote-block mb-1" :class="msg.type === 'user' ? 'quote-block-user' : 'quote-block-admin'" @click="scrollToMessage(msg.reply_to.id)" style="cursor: pointer;">
+                  <p class="quote-text"><i class="bi bi-reply-fill me-1 opacity-75"></i>{{ msg.reply_to.text || (msg.reply_to.message_type === 'image' ? '📷 Hình ảnh' : '📎 File') }}</p>
                 </div>
                 <a :href="msg.file_url" target="_blank" rel="noopener noreferrer" download class="user-file-link" :class="msg.type === 'user' ? 'text-white' : 'text-dark'">
                   <i class="bi bi-file-earmark-arrow-down-fill me-1"></i>
@@ -79,9 +77,9 @@
                 </a>
                 <small :class="msg.type === 'user' ? 'text-white-50' : 'text-muted'" style="font-size: 0.65rem;">{{ msg.time }}</small>
               </div>
-              <!-- Action bar below bubble -->
-              <div class="msg-actions-bar" :class="msg.type === 'user' ? 'justify-content-end' : 'justify-content-start'" v-show="hoveredMsgId === msg.id">
-                <button class="msg-action-btn" @click.stop="setReply(msg)" title="Trả lời">↩</button>
+              <!-- Action bar beside bubble -->
+              <div class="msg-actions-side" v-show="hoveredMsgId === msg.id">
+                <button class="msg-action-btn-pro" @click.stop="setReply(msg)" title="Trả lời"><i class="bi bi-reply-fill"></i></button>
               </div>
             </div>
           </template>
@@ -91,16 +89,15 @@
             <div class="msg-bubble-wrap" :class="msg.type === 'user' ? 'align-items-end' : 'align-items-start'">
               <div class="p-2 shadow-sm rounded" :class="msg.type === 'user' ? 'bg-primary text-white text-end rounded-user' : 'bg-white border text-start rounded-bot'" style="max-width: 100%;">
                 <!-- Quote block -->
-                <div v-if="msg.reply_to" class="quote-block" :class="msg.type === 'user' ? 'quote-block-user' : 'quote-block-admin'">
-                  <span class="quote-author">{{ msg.reply_to.type === 'user' ? 'Bạn' : 'Nhân viên' }}</span>
-                  <p class="quote-text">{{ msg.reply_to.text || (msg.reply_to.message_type === 'image' ? '📷 Hình ảnh' : '📎 File') }}</p>
+                <div v-if="msg.reply_to" class="quote-block mb-1" :class="msg.type === 'user' ? 'quote-block-user' : 'quote-block-admin'" @click="scrollToMessage(msg.reply_to.id)" style="cursor: pointer;">
+                  <p class="quote-text"><i class="bi bi-reply-fill me-1 opacity-75"></i>{{ msg.reply_to.text || (msg.reply_to.message_type === 'image' ? '📷 Hình ảnh' : '📎 File') }}</p>
                 </div>
-                <p class="mb-0" style="font-size: 0.9rem; line-height: 1.4;" v-text="msg.text"></p>
+                <p class="mb-0 text-break" style="font-size: 0.9rem; line-height: 1.4;" v-text="msg.text"></p>
                 <small :class="msg.type === 'user' ? 'text-white-50' : 'text-muted'" style="font-size: 0.65rem;">{{ msg.time }}</small>
               </div>
-              <!-- Action bar below bubble -->
-              <div class="msg-actions-bar" :class="msg.type === 'user' ? 'justify-content-end' : 'justify-content-start'" v-show="hoveredMsgId === msg.id">
-                <button class="msg-action-btn" @click.stop="setReply(msg)" title="Trả lời">↩</button>
+              <!-- Action bar beside bubble -->
+              <div class="msg-actions-side" v-show="hoveredMsgId === msg.id">
+                <button class="msg-action-btn-pro" @click.stop="setReply(msg)" title="Trả lời"><i class="bi bi-reply-fill"></i></button>
               </div>
             </div>
           </template>
@@ -122,8 +119,7 @@
       <!-- Reply Preview Bar -->
       <div v-if="replyTo" class="reply-preview-bar">
         <div class="reply-preview-content">
-          <span class="reply-preview-label">↩ Đang trả lời <strong>{{ replyTo.type === 'user' ? 'chính mình' : 'Nhân viên' }}</strong></span>
-          <p class="reply-preview-text">{{ replyTo.text || (replyTo.message_type === 'image' ? '📷 Hình ảnh' : '📎 File') }}</p>
+          <p class="reply-preview-text mb-0"><i class="bi bi-reply-fill me-1 text-primary"></i>{{ replyTo.text || (replyTo.message_type === 'image' ? '📷 Hình ảnh' : '📎 File') }}</p>
         </div>
         <button class="reply-cancel-btn" @click="clearReply" title="Hủy trả lời"><i class="bi bi-x"></i></button>
       </div>
@@ -140,9 +136,6 @@
       <div class="bg-white border-top" style="position: relative;">
         <!-- Emoji Picker -->
         <div v-if="showEmojiPicker" class="user-emoji-picker" @click.stop>
-          <div class="emoji-search">
-            <input v-model="emojiSearch" placeholder="Tìm emoji..." class="emoji-search-input" />
-          </div>
           <div class="emoji-categories">
             <button
               v-for="cat in emojiCategories"
@@ -186,24 +179,30 @@
           </button>
         </div>
 
-        <form @submit.prevent="sendMessage" class="d-flex align-items-center gap-2 px-2 pb-2">
-          <input 
-            type="text" 
-            v-model="inputText" 
-            class="form-control rounded-pill bg-light border-0 px-3 py-2" 
-            placeholder="Nhập tin nhắn..."
-            :disabled="!isLoggedIn"
-            ref="messageInputRef"
-            style="font-size: 0.88rem;"
-          >
-          <button
-            type="submit"
-            class="btn btn-primary rounded-circle p-2 d-flex align-items-center justify-content-center"
-            style="width: 38px; height: 38px; flex-shrink: 0;"
-            :disabled="(!inputText.trim() && !selectedFile) || !isLoggedIn"
-          >
-            <i class="bi bi-send-fill" style="font-size: 0.85rem;"></i>
-          </button>
+        <form @submit.prevent="sendMessage" class="d-flex flex-column px-2 pb-2">
+          <div class="d-flex align-items-center gap-2">
+            <input 
+              type="text" 
+              v-model="inputText" 
+              class="form-control rounded-pill bg-light border-0 px-3 py-2" 
+              placeholder="Nhập tin nhắn..."
+              :disabled="!isLoggedIn"
+              ref="messageInputRef"
+              style="font-size: 0.88rem;"
+              maxlength="500"
+            >
+            <button
+              type="submit"
+              class="btn btn-primary rounded-circle p-2 d-flex align-items-center justify-content-center"
+              style="width: 38px; height: 38px; flex-shrink: 0;"
+              :disabled="(!inputText.trim() && !selectedFile) || !isLoggedIn"
+            >
+              <i class="bi bi-send-fill" style="font-size: 0.85rem;"></i>
+            </button>
+          </div>
+          <div class="text-end px-2 pt-1" v-if="isLoggedIn">
+             <small class="text-muted" style="font-size: 0.65rem;">{{ inputText.length }}/500 ký tự</small>
+          </div>
         </form>
         <div v-if="!isLoggedIn" class="text-center pb-2 text-danger" style="font-size: 0.75rem;">
           Vui lòng đăng nhập để gửi tin nhắn cho CSKH!
@@ -295,6 +294,15 @@ const formatFileSize = (bytes) => {
   if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
   if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB';
   return bytes + ' B';
+};
+
+const scrollToMessage = (id) => {
+  const el = document.getElementById('msg-' + id);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('highlight-msg');
+    setTimeout(() => el.classList.remove('highlight-msg'), 2000);
+  }
 };
 
 const scrollToBottom = async () => {
@@ -623,6 +631,7 @@ onUnmounted(() => {
 
 .chat-body-scroll {
   overflow-y: auto;
+  scroll-behavior: smooth;
 }
 .chat-body-scroll::-webkit-scrollbar { width: 5px; }
 .chat-body-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -719,13 +728,14 @@ onUnmounted(() => {
 /* ===== EMOJI PICKER (User) ===== */
 .user-emoji-picker {
   position: absolute;
-  bottom: 100%;
-  left: 0;
-  right: 0;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 14px 14px 0 0;
-  box-shadow: 0 -8px 24px rgba(0,0,0,0.12);
+  bottom: calc(100% + 5px);
+  left: 10px;
+  right: 10px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(229, 231, 235, 0.5);
+  border-radius: 14px;
+  box-shadow: 0 -8px 24px rgba(0,0,0,0.08);
   z-index: 200;
   overflow: hidden;
   animation: slideUp 0.2s ease;
@@ -734,21 +744,6 @@ onUnmounted(() => {
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
-}
-
-.emoji-search {
-  padding: 8px 10px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.emoji-search-input {
-  width: 100%;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 5px 10px;
-  font-size: 0.8rem;
-  outline: none;
-  background: #f8f9fa;
 }
 
 .emoji-categories {
@@ -840,40 +835,62 @@ onUnmounted(() => {
 .msg-bubble-wrap {
   display: flex;
   flex-direction: column;
-  max-width: 80%;
+  max-width: 70%;
+  position: relative;
 }
 
-/* ===== ACTION BAR (below bubble) ===== */
-.msg-actions-bar {
+/* ===== ACTION BAR (beside bubble) ===== */
+.msg-actions-side {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 1px 2px;
-  margin-top: 2px;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.15s;
-  height: 0;
-  overflow: visible;
+  transition: all 0.2s ease;
+  transform: translateY(-50%) scale(0.9);
+  position: absolute;
+  top: 50%;
 }
-.msg-row:hover .msg-actions-bar {
+.msg-row.justify-content-end .msg-actions-side {
+  right: calc(100% + 8px);
+}
+.msg-row.justify-content-start .msg-actions-side {
+  left: calc(100% + 8px);
+}
+.msg-row:hover .msg-actions-side {
   opacity: 1;
   pointer-events: auto;
-  height: auto;
+  transform: translateY(-50%) scale(1);
 }
 
-.msg-action-btn {
-  background: #f8f9fa;
-  border: 1px solid #e5e7eb;
-  cursor: pointer;
-  font-size: 0.85rem;
-  padding: 2px 6px;
-  border-radius: 12px;
-  line-height: 1.4;
-  transition: background 0.15s, transform 0.15s;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+.highlight-msg {
+  animation: highlight 2s ease;
 }
-.msg-action-btn:hover { background: #e9ecef; transform: scale(1.1); }
+@keyframes highlight {
+  0% { background-color: rgba(59, 130, 246, 0.2); border-radius: 8px; }
+  100% { background-color: transparent; border-radius: 8px; }
+}
+
+.msg-action-btn-pro {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0,0,0,0.05);
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 0.95rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+}
+.msg-action-btn-pro:hover { 
+  background: #3b82f6; 
+  color: white; 
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+}
 
 /* ===== REPLY PREVIEW BAR ===== */
 .reply-preview-bar {

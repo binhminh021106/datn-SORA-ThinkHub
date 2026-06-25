@@ -99,12 +99,6 @@ class MessageController extends Controller
                 $q->where('sender_id', $partnerId)->where('receiver_id', $userId);
             })->orderBy('created_at', 'asc')->get();
         } else {
-            // If fetching all own messages, we might not know who the partner is to mark as read,
-            // but usually this branch is just a fallback. Let's mark messages sent to us as read too.
-            Message::where('receiver_id', $userId)
-                ->where('is_read', false)
-                ->update(['is_read' => true]);
-
             $messages = Message::where('sender_id', $userId)
                                ->orWhere('receiver_id', $userId)
                                ->orderBy('created_at', 'asc')->get();
@@ -146,12 +140,16 @@ class MessageController extends Controller
     })
       ->values();
 
-        // Calculate unread count and attach to each user
+        // Calculate unread count and attach to each user in one query to avoid N+1
+        $unreadCounts = Message::where('receiver_id', $adminId)
+            ->whereIn('sender_id', $userIds)
+            ->where('is_read', false)
+            ->select('sender_id', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
+            ->groupBy('sender_id')
+            ->pluck('count', 'sender_id');
+
         foreach ($users as $user) {
-            $user->unread_count = Message::where('sender_id', $user->id)
-                ->where('receiver_id', $adminId)
-                ->where('is_read', false)
-                ->count();
+            $user->unread_count = $unreadCounts->get($user->id, 0);
         }
 
         return response()->json(['status' => true, 'data' => $users]);
