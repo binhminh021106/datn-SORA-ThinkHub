@@ -365,7 +365,7 @@ export default function CheckoutScreen({ route }) {
   const [appliedCouponSource, setAppliedCouponSource] = useState(null);
   const [isSavedCouponModalVisible, setIsSavedCouponModalVisible] = useState(false);
   const [selectedSavedCouponCode, setSelectedSavedCouponCode] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("cod"); // vnpay, momo, cod, bank
+  const [paymentMethod, setPaymentMethod] = useState("cod"); // momo, cod, bank
   const [note, setNote] = useState("");
 
   // Custom Modal for Order Success
@@ -857,7 +857,7 @@ export default function CheckoutScreen({ route }) {
             method: paymentMethod,
           });
           return;
-        } else if (paymentMethod === "momo" || paymentMethod === "vnpay") {
+        } else if (["momo", "vnpay"].includes(paymentMethod)) {
           const gatewayName = paymentMethod === "vnpay" ? "VNPay" : "MoMo";
           showCustomAlert("Lỗi thanh toán", json.message || `${gatewayName} chưa trả về đường dẫn thanh toán. Vui lòng thử lại.`);
         } else {
@@ -1283,7 +1283,6 @@ export default function CheckoutScreen({ route }) {
             </View>
           )}
 
-          {/* CỔNG VNPAY */}
           <TouchableOpacity
             style={[
               s.payMethodRow,
@@ -1309,8 +1308,16 @@ export default function CheckoutScreen({ route }) {
               />
               <Text style={s.payMethodLabel}>Cổng thanh toán VNPay</Text>
             </View>
-            <Text style={s.payBadge}>Ưu đãi thẻ</Text>
+            <Text style={s.payBadge}>Tự động</Text>
           </TouchableOpacity>
+          {paymentMethod === "vnpay" && (
+            <View style={s.momoPaymentHint}>
+              <Ionicons name="information-circle-outline" size={14} color="#9f273b" />
+              <Text style={s.momoPaymentHintText}>
+                App sẽ mở cổng VNPay. Thanh toán xong, quay lại ứng dụng để kiểm tra đơn hàng.
+              </Text>
+            </View>
+          )}
 
           {/* CỔNG CHUYỂN KHOẢN NGÂN HÀNG */}
           <TouchableOpacity
@@ -1779,7 +1786,7 @@ export default function CheckoutScreen({ route }) {
                     : paymentMethod === "momo"
                       ? "Ví điện tử MoMo"
                       : paymentMethod === "vnpay"
-                        ? "Cổng VNPay"
+                        ? "Cổng thanh toán VNPay"
                         : paymentMethod === "bank"
                           ? "Chuyển khoản trực tiếp"
                           : ""}

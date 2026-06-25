@@ -163,6 +163,9 @@ class ClientOrderController extends Controller
                     if ($coupon->usage_limit !== null && $coupon->usage_count >= $coupon->usage_limit) {
                         throw new \Exception("Mã giảm giá đã hết lượt sử dụng.");
                     }
+                    if ($this->hasUserReachedCouponLimit($coupon, $user)) {
+                        throw new \Exception("Bạn đã sử dụng hết lượt cho mã giảm giá này.");
+                    }
                     if ($subTotal < $coupon->min_spend) {
                         throw new \Exception("Chưa đạt giá trị đơn hàng tối thiểu để dùng mã này.");
                     }
@@ -226,6 +229,25 @@ class ClientOrderController extends Controller
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
         }
+    }
+
+    private function hasUserReachedCouponLimit(Coupon $coupon, $user): bool
+    {
+        $limit = (int) ($coupon->usage_limit_per_user ?? 0);
+        if (!$user || $limit <= 0) {
+            return false;
+        }
+
+        return $this->countUserCouponUsage($coupon, (int) $user->id) >= $limit;
+    }
+
+    private function countUserCouponUsage(Coupon $coupon, int $userId): int
+    {
+        return Order::where('user_id', $userId)
+            ->where('coupon_id', $coupon->id)
+            ->where('status', '!=', 'cancelled')
+            ->where('payment_status', '!=', 'failed')
+            ->count();
     }
 
     /**
