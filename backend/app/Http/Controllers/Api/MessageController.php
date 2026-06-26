@@ -24,9 +24,10 @@ class MessageController extends Controller
             return response()->json(['status' => false, 'message' => 'Vui lòng đăng nhập'], 401);
         }
 
-        $receiverId = $request->input('receiver_id');
-        if (!$isAdmin && !$receiverId) {
-            $receiverId = 1; // Default to Admin for normal users
+        if (!$isAdmin) {
+            $receiverId = 1; // Force receiver to Admin for normal users
+        } else {
+            $receiverId = $request->input('receiver_id');
         }
 
         if (!$receiverId) {
@@ -38,6 +39,20 @@ class MessageController extends Controller
         }
 
         $replyToId = $request->input('reply_to_id');
+        if ($replyToId) {
+            $repliedMessage = Message::find($replyToId);
+            if (!$repliedMessage) {
+                return response()->json(['status' => false, 'message' => 'Tin nhắn được trả lời không tồn tại'], 422);
+            }
+            
+            $belongsToConversation = 
+                ($repliedMessage->sender_id == $senderId && $repliedMessage->receiver_id == $receiverId) ||
+                ($repliedMessage->sender_id == $receiverId && $repliedMessage->receiver_id == $senderId);
+                
+            if (!$belongsToConversation) {
+                return response()->json(['status' => false, 'message' => 'Tin nhắn không thuộc cuộc trò chuyện này'], 422);
+            }
+        }
 
         // Nếu gửi file
         if ($request->hasFile('file')) {
@@ -101,7 +116,11 @@ class MessageController extends Controller
     {
         $isAdmin = $request->is('api/admin/*');
         $userId = $isAdmin ? 1 : Auth::guard('sanctum')->id();
-        $partnerId = $request->query('partner_id');
+        if (!$isAdmin) {
+            $partnerId = 1;
+        } else {
+            $partnerId = $request->query('partner_id');
+        }
 
         if ($partnerId) {
             // Mark unread messages as read

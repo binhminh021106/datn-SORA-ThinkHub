@@ -121,9 +121,13 @@
 
               <div
                 v-for="(msg, index) in messages"
-                :key="index"
+                :key="msg.id || index"
+                :id="'msg-' + msg.id"
                 class="message-row"
                 :class="isAdminMessage(msg) ? 'message-sent' : 'message-received'"
+                @mouseenter="hoveredMsgId = msg.id"
+                @mouseleave="hoveredMsgId = null"
+                @click="hoveredMsgId = hoveredMsgId === msg.id ? null : msg.id"
               >
                 <!-- Avatar (chỉ show khi không phải admin) -->
                 <div v-if="!isAdminMessage(msg)" class="msg-avatar">
@@ -131,6 +135,23 @@
                 </div>
 
                 <div class="message-group">
+                  <!-- Trích dẫn tin nhắn -->
+                  <div
+                    v-if="msg.reply_to"
+                    class="quote-block"
+                    :class="isAdminMessage(msg) ? 'quote-block-sent' : 'quote-block-received'"
+                    @click.stop="scrollToMessage(msg.reply_to.id)"
+                  >
+                    <span class="quote-block-label">
+                      <i class="bi bi-reply-fill"></i> Trả lời: {{ msg.reply_to.sender_id === 1 ? 'Chính mình' : 'Khách hàng' }}
+                    </span>
+                    <div class="reply-preview-text" style="max-width: 200px;">
+                      <i v-if="msg.reply_to.message_type === 'image'" class="bi bi-image"></i>
+                      <i v-else-if="msg.reply_to.message_type === 'file'" class="bi bi-file-earmark"></i>
+                      {{ msg.reply_to.content || 'Đã gửi một tệp' }}
+                    </div>
+                  </div>
+
                   <!-- File/Image message -->
                   <template v-if="msg.message_type === 'image'">
                     <div class="message-bubble img-bubble" :class="isAdminMessage(msg) ? 'bubble-sent' : 'bubble-received'">
@@ -165,6 +186,11 @@
                       <i class="bi bi-check2-all text-primary" style="font-size: 0.7rem;"></i>
                     </span>
                   </div>
+                  
+                  <!-- Action bar beside bubble -->
+                  <div class="msg-actions-side" :class="{ 'show-actions': hoveredMsgId === msg.id }">
+                    <button class="msg-action-btn-pro" @click.stop="setReply(msg)" title="Trả lời"><i class="bi bi-reply-fill"></i></button>
+                  </div>
                 </div>
               </div>
 
@@ -179,23 +205,40 @@
             </template>
           </div>
 
-          <!-- File Preview -->
-          <div v-if="selectedFile" class="file-preview-bar">
-            <div class="file-preview-content">
-              <img v-if="selectedFilePreview" :src="selectedFilePreview" alt="preview" class="file-preview-thumb" />
-              <i v-else class="bi bi-file-earmark-fill file-preview-icon"></i>
-              <div class="file-preview-info">
-                <span class="file-preview-name">{{ selectedFile.name }}</span>
-                <span class="file-preview-size">{{ formatFileSize(selectedFile.size) }}</span>
+          <!-- Input Area Wrapper -->
+          <div class="chat-input-wrapper">
+            <!-- File Preview -->
+            <div v-if="selectedFile" class="file-preview-bar">
+              <div class="file-preview-content">
+                <img v-if="selectedFilePreview" :src="selectedFilePreview" alt="preview" class="file-preview-thumb" />
+                <i v-else class="bi bi-file-earmark-fill file-preview-icon"></i>
+                <div class="file-preview-info">
+                  <span class="file-preview-name">{{ selectedFile.name }}</span>
+                  <span class="file-preview-size">{{ formatFileSize(selectedFile.size) }}</span>
+                </div>
               </div>
+              <button class="file-preview-remove" @click="removeSelectedFile">
+                <i class="bi bi-x-lg"></i>
+              </button>
             </div>
-            <button class="file-preview-remove" @click="removeSelectedFile">
-              <i class="bi bi-x-lg"></i>
-            </button>
-          </div>
 
-          <!-- Input Area -->
-          <div class="chat-input-area">
+            <!-- Reply Preview -->
+            <div v-if="replyTo" class="reply-preview-bar">
+              <div class="reply-preview-content">
+                <span class="reply-preview-label">
+                  Đang trả lời: {{ replyTo.sender_id === 1 ? 'Chính mình' : 'Khách hàng' }}
+                </span>
+                <p class="reply-preview-text">
+                  <i v-if="replyTo.message_type === 'image'" class="bi bi-image"></i>
+                  <i v-else-if="replyTo.message_type === 'file'" class="bi bi-file-earmark"></i>
+                  {{ replyTo.content || 'Đã gửi một tệp' }}
+                </p>
+              </div>
+              <button class="reply-cancel-btn" @click="clearReply"><i class="bi bi-x-lg"></i></button>
+            </div>
+
+            <!-- Input Area -->
+            <div class="chat-input-area">
             <div class="input-toolbar">
               <!-- File Upload Button -->
               <button class="toolbar-btn" title="Đính kèm file" @click.stop="triggerFileInput">
@@ -252,6 +295,7 @@
                 <div v-else class="spinner-border spinner-border-sm" role="status"></div>
               </button>
             </form>
+          </div>
           </div>
         </template>
 
@@ -391,6 +435,29 @@ const scrollToBottom = async () => {
 const openImage = (url) => { lightboxUrl.value = url; };
 const isAdminMessage = (msg) => Number(msg.receiver_id) === Number(activeUserId.value);
 
+const replyTo = ref(null);
+const hoveredMsgId = ref(null);
+
+const setReply = (msg) => {
+  replyTo.value = msg;
+  messageInputRef.value?.focus();
+};
+
+const clearReply = () => {
+  replyTo.value = null;
+};
+
+const scrollToMessage = (msgId) => {
+  const el = document.getElementById('msg-' + msgId);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('highlight-msg');
+    setTimeout(() => {
+      el.classList.remove('highlight-msg');
+    }, 2000);
+  }
+};
+
 // ===== EMOJI =====
 const toggleEmojiPicker = () => {
   showEmojiPicker.value = !showEmojiPicker.value;
@@ -474,7 +541,12 @@ const selectUser = async (user) => {
   try {
     const res = await axios.get(`${API_URL}/admin/messages?partner_id=${user.id}`, axiosConfig());
     if (res.data.status) {
-      messages.value = res.data.data;
+      messages.value = res.data.data.map(m => {
+        if (m.reply_to_message) {
+          m.reply_to = m.reply_to_message;
+        }
+        return m;
+      });
       messages.value.forEach(m => renderedIds.value.add(m.id));
       scrollToBottom();
     }
@@ -497,6 +569,8 @@ const sendMessage = async () => {
     // Gửi file
     const file = selectedFile.value;
     const isImage = file.type.startsWith('image/');
+    const currentReply = replyTo.value;
+    clearReply();
     const optimisticMsg = {
       id: tempId,
       sender_id: 1,
@@ -506,7 +580,8 @@ const sendMessage = async () => {
       file_url: selectedFilePreview.value || '',
       file_name: file.name,
       file_size: formatFileSize(file.size),
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      reply_to: currentReply || null
     };
     messages.value.push(optimisticMsg);
     renderedIds.value.add(tempId);
@@ -517,6 +592,9 @@ const sendMessage = async () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('receiver_id', activeUserId.value);
+      if (optimisticMsg.reply_to?.id) {
+        formData.append('reply_to_id', optimisticMsg.reply_to.id);
+      }
       const res = await axios.post(`${API_URL}/admin/messages`, formData, {
         headers: {
           Authorization: `Bearer ${getToken()}`,
@@ -526,6 +604,9 @@ const sendMessage = async () => {
       });
       if (res.data.status) {
         const realMsg = res.data.data;
+        if (realMsg.reply_to_message) {
+          realMsg.reply_to = realMsg.reply_to_message;
+        }
         if (renderedIds.value.has(realMsg.id)) {
           messages.value = messages.value.filter(m => m.id !== tempId);
           renderedIds.value.delete(tempId);
@@ -549,13 +630,16 @@ const sendMessage = async () => {
     // Gửi text
     const text = newMessage.value.trim();
     newMessage.value = '';
+    const currentReply = replyTo.value;
+    clearReply();
     const optimisticMsg = {
       id: tempId,
       sender_id: 1,
       receiver_id: activeUserId.value,
       content: text,
       message_type: 'text',
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      reply_to: currentReply || null
     };
     messages.value.push(optimisticMsg);
     renderedIds.value.add(tempId);
@@ -565,11 +649,15 @@ const sendMessage = async () => {
     try {
       const res = await axios.post(`${API_URL}/admin/messages`, {
         receiver_id: activeUserId.value,
-        content: text
+        content: text,
+        reply_to_id: optimisticMsg.reply_to?.id || null
       }, axiosConfig());
 
       if (res.data.status) {
         const realMsg = res.data.data;
+        if (realMsg.reply_to_message) {
+          realMsg.reply_to = realMsg.reply_to_message;
+        }
         if (renderedIds.value.has(realMsg.id)) {
           messages.value = messages.value.filter(m => m.id !== tempId);
           renderedIds.value.delete(tempId);
@@ -631,6 +719,9 @@ onMounted(() => {
     window.Echo.private(ADMIN_CHAT_CHANNEL)
       .listen('.MessageSent', (e) => {
         const msg = e.message;
+        if (msg.reply_to_message) {
+          msg.reply_to = msg.reply_to_message;
+        }
 
         if (renderedIds.value.has(msg.id)) return;
 
@@ -1003,6 +1094,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   max-width: 65%;
+  position: relative;
 }
 
 .message-sent .message-group { align-items: flex-end; }
@@ -1204,12 +1296,139 @@ onUnmounted(() => {
 }
 .file-preview-remove:hover { background: #fee2e2; color: #dc2626; }
 
+/* ===== ACTION BAR (beside bubble) ===== */
+.msg-actions-side {
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  transform: translateY(-50%) scale(0.9);
+  position: absolute;
+  top: 50%;
+}
+.message-sent .msg-actions-side {
+  right: calc(100% + 8px);
+}
+.message-received .msg-actions-side {
+  left: calc(100% + 8px);
+}
+.message-row:hover .msg-actions-side,
+.msg-actions-side.show-actions {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%) scale(1);
+}
+
+.highlight-msg {
+  animation: highlight 2s ease;
+}
+@keyframes highlight {
+  0% { background-color: rgba(59, 130, 246, 0.2); border-radius: 8px; }
+  100% { background-color: transparent; border-radius: 8px; }
+}
+
+.msg-action-btn-pro {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0,0,0,0.05);
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 0.95rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+}
+.msg-action-btn-pro:hover { 
+  background: #3b82f6; 
+  color: white; 
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+}
+
+/* ===== REPLY PREVIEW BAR ===== */
+.reply-preview-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 14px;
+  background: #eff6ff;
+  border-top: 2px solid #93c5fd;
+  border-left: 4px solid #3b82f6;
+  animation: fadeInUp 0.18s ease;
+}
+.reply-preview-content { flex: 1; min-width: 0; }
+.reply-preview-label {
+  display: block;
+  font-size: 0.72rem;
+  color: #3b82f6;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.reply-preview-text {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.reply-cancel-btn {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 50%;
+  font-size: 1rem;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.reply-cancel-btn:hover { background: #fee2e2; color: #dc2626; }
+
+/* ===== QUOTE BLOCK in bubble ===== */
+.quote-block {
+  border-radius: 6px;
+  padding: 5px 10px;
+  margin-bottom: 6px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.quote-block:hover { opacity: 0.8; }
+.quote-block-sent {
+  background: rgba(255,255,255,0.2);
+  border-left: 3px solid rgba(255,255,255,0.7);
+  color: inherit;
+}
+.quote-block-received {
+  background: rgba(0,0,0,0.04);
+  border-left: 3px solid #93c5fd;
+  color: inherit;
+}
+.quote-block-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.7rem;
+  margin-bottom: 2px;
+  opacity: 0.85;
+}
+
 /* ===== INPUT AREA ===== */
-.chat-input-area {
-  border-top: 1px solid var(--bs-border-color, #f0f0f0);
-  background: var(--bs-body-bg, white);
-  padding: 12px 16px;
+.chat-input-wrapper {
   position: relative;
+  background: var(--bs-body-bg, white);
+  border-top: 1px solid var(--bs-border-color, #f0f0f0);
+}
+
+.chat-input-area {
+  padding: 12px 16px;
 }
 
 .input-toolbar {
@@ -1294,16 +1513,18 @@ onUnmounted(() => {
   bottom: 100%;
   left: 0;
   width: 320px;
-  background: var(--bs-body-bg, #fff);
-  border: 1px solid var(--bs-border-color, #e5e7eb);
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(229, 231, 235, 0.4);
   border-radius: 16px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+  box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   z-index: 1000;
   overflow: hidden;
   animation: fadeInUp 0.2s ease;
 }
 
-.admin-emoji { left: 0; bottom: calc(100% + 4px); }
+.admin-emoji { left: 16px; bottom: calc(100% + 5px); }
 
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(8px); }
@@ -1330,8 +1551,12 @@ onUnmounted(() => {
   display: flex;
   padding: 8px 10px;
   gap: 4px;
-  border-bottom: 1px solid var(--bs-border-color, #f0f0f0);
+  border-bottom: 1px solid rgba(0,0,0,0.05);
   overflow-x: auto;
+  scrollbar-width: none;
+}
+.emoji-categories::-webkit-scrollbar {
+  display: none;
 }
 
 .emoji-cat-btn {
@@ -1346,16 +1571,17 @@ onUnmounted(() => {
 }
 
 .emoji-cat-btn:hover, .emoji-cat-btn.active {
-  background: var(--bs-secondary-bg, #f3f4f6);
+  background: rgba(255, 255, 255, 0.6);
 }
 
 .emoji-grid {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   padding: 8px;
   gap: 2px;
   max-height: 200px;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .emoji-btn {
@@ -1370,7 +1596,7 @@ onUnmounted(() => {
   text-align: center;
 }
 
-.emoji-btn:hover { background: var(--bs-secondary-bg, #f3f4f6); }
+.emoji-btn:hover { background: rgba(255, 255, 255, 0.6); }
 
 /* ===== DELETE MODAL ===== */
 .delete-modal-overlay {
