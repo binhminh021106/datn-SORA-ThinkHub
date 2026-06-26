@@ -20,6 +20,7 @@ class Message extends Model
         'file_url',
         'file_name',
         'file_size',
+        'reply_to_id',
     ];
 
     // Người gửi là ai?
@@ -32,5 +33,11 @@ class Message extends Model
     public function receiver()
     {
         return $this->belongsTo(User::class, 'receiver_id');
+    }
+
+    // Tin nhắn được trả lời
+    public function replyToMessage()
+    {
+        return $this->belongsTo(Message::class, 'reply_to_id');
     }
 }

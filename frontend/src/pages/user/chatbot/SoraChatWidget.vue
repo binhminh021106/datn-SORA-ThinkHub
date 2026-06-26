@@ -39,7 +39,7 @@
 
       <!-- Body -->
       <div class="flex-grow-1 chat-body-scroll p-3" ref="chatBodyRef" style="background-color: #f8f9fa;" @click="closeAllPickers">
-        <div v-for="msg in messages" :key="msg.id" :id="'msg-' + msg.id" class="d-flex mb-3 msg-row" :class="msg.type === 'user' ? 'justify-content-end' : 'justify-content-start'" @mouseenter="hoveredMsgId = msg.id" @mouseleave="hoveredMsgId = null">
+        <div v-for="msg in messages" :key="msg.id" :id="'msg-' + msg.id" class="d-flex mb-3 msg-row" :class="msg.type === 'user' ? 'justify-content-end' : 'justify-content-start'" @mouseenter="hoveredMsgId = msg.id" @mouseleave="hoveredMsgId = null" @click="hoveredMsgId = hoveredMsgId === msg.id ? null : msg.id">
           <div v-if="msg.type === 'admin'" class="me-2 mt-auto">
             <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.7rem;">NV</div>
           </div>
@@ -56,7 +56,7 @@
                 <div><small :class="msg.type === 'user' ? 'text-white-50' : 'text-muted'" style="font-size: 0.65rem;">{{ msg.time }}</small></div>
               </div>
               <!-- Action bar beside bubble -->
-              <div class="msg-actions-side" v-show="hoveredMsgId === msg.id">
+              <div class="msg-actions-side" :class="{ 'show-actions': hoveredMsgId === msg.id }">
                 <button class="msg-action-btn-pro" @click.stop="setReply(msg)" title="Trả lời"><i class="bi bi-reply-fill"></i></button>
               </div>
             </div>
@@ -78,7 +78,7 @@
                 <small :class="msg.type === 'user' ? 'text-white-50' : 'text-muted'" style="font-size: 0.65rem;">{{ msg.time }}</small>
               </div>
               <!-- Action bar beside bubble -->
-              <div class="msg-actions-side" v-show="hoveredMsgId === msg.id">
+              <div class="msg-actions-side" :class="{ 'show-actions': hoveredMsgId === msg.id }">
                 <button class="msg-action-btn-pro" @click.stop="setReply(msg)" title="Trả lời"><i class="bi bi-reply-fill"></i></button>
               </div>
             </div>
@@ -96,7 +96,7 @@
                 <small :class="msg.type === 'user' ? 'text-white-50' : 'text-muted'" style="font-size: 0.65rem;">{{ msg.time }}</small>
               </div>
               <!-- Action bar beside bubble -->
-              <div class="msg-actions-side" v-show="hoveredMsgId === msg.id">
+              <div class="msg-actions-side" :class="{ 'show-actions': hoveredMsgId === msg.id }">
                 <button class="msg-action-btn-pro" @click.stop="setReply(msg)" title="Trả lời"><i class="bi bi-reply-fill"></i></button>
               </div>
             </div>
@@ -399,7 +399,13 @@ const fetchHistory = async () => {
           file_url: m.file_url || null,
           file_name: m.file_name || null,
           file_size: m.file_size || null,
-          time: formatTimeFromTs(m.created_at)
+          time: formatTimeFromTs(m.created_at),
+          reply_to: m.reply_to_message ? {
+            id: m.reply_to_message.id,
+            type: Number(m.reply_to_message.sender_id) === Number(userId.value) ? 'user' : 'admin',
+            message_type: m.reply_to_message.message_type || 'text',
+            text: m.reply_to_message.content
+          } : null
         };
 
       });
@@ -483,6 +489,9 @@ const sendMessage = async () => {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('receiver_id', 1);
+      if (tempMsg.reply_to?.id) {
+        formData.append('reply_to_id', tempMsg.reply_to.id);
+      }
       const res = await clientApiClient.post('/client/messages', formData);
       if (res.data.status) {
         const realMsg = res.data.data;
@@ -529,7 +538,8 @@ const sendMessage = async () => {
     try {
       const res = await clientApiClient.post('/client/messages', {
         receiver_id: 1,
-        content: userMessage
+        content: userMessage,
+        reply_to_id: tempMsg.reply_to?.id || null
       });
 
       if (res.data.status) {
@@ -731,11 +741,10 @@ onUnmounted(() => {
   bottom: calc(100% + 5px);
   left: 10px;
   right: 10px;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(229, 231, 235, 0.5);
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(229, 231, 235, 0.3);
   border-radius: 14px;
-  box-shadow: 0 -8px 24px rgba(0,0,0,0.08);
+  box-shadow: 0 -4px 16px rgba(0,0,0,0.05);
   z-index: 200;
   overflow: hidden;
   animation: slideUp 0.2s ease;
@@ -750,7 +759,7 @@ onUnmounted(() => {
   display: flex;
   padding: 6px 8px;
   gap: 2px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
   overflow-x: auto;
 }
 
@@ -764,7 +773,7 @@ onUnmounted(() => {
   transition: background 0.15s;
   flex-shrink: 0;
 }
-.emoji-cat-btn:hover, .emoji-cat-btn.active { background: #f3f4f6; }
+.emoji-cat-btn:hover, .emoji-cat-btn.active { background: rgba(255, 255, 255, 0.6); }
 
 .emoji-grid {
   display: grid;
@@ -786,7 +795,7 @@ onUnmounted(() => {
   line-height: 1;
   text-align: center;
 }
-.emoji-btn:hover { background: #f3f4f6; }
+.emoji-btn:hover { background: rgba(255, 255, 255, 0.6); }
 
 /* ===== LIGHTBOX ===== */
 .user-lightbox {
@@ -856,7 +865,8 @@ onUnmounted(() => {
 .msg-row.justify-content-start .msg-actions-side {
   left: calc(100% + 8px);
 }
-.msg-row:hover .msg-actions-side {
+.msg-row:hover .msg-actions-side,
+.msg-actions-side.show-actions {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(-50%) scale(1);
