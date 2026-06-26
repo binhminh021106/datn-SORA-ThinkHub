@@ -24,11 +24,40 @@ class MessageController extends Controller
             return response()->json(['status' => false, 'message' => 'Vui lòng đăng nhập'], 401);
         }
 
+        if (!$isAdmin) {
+            $receiverId = 1; // Force receiver to Admin for normal users
+        } else {
+            $receiverId = $request->input('receiver_id');
+        }
+
+        if (!$receiverId) {
+            return response()->json(['status' => false, 'message' => 'Vui lòng cung cấp receiver_id'], 422);
+        }
+
+        if ($senderId == $receiverId) {
+            return response()->json(['status' => false, 'message' => 'Không thể gửi tin nhắn cho chính mình'], 422);
+        }
+
+        $replyToId = $request->input('reply_to_id');
+        if ($replyToId) {
+            $repliedMessage = Message::find($replyToId);
+            if (!$repliedMessage) {
+                return response()->json(['status' => false, 'message' => 'Tin nhắn được trả lời không tồn tại'], 422);
+            }
+            
+            $belongsToConversation = 
+                ($repliedMessage->sender_id == $senderId && $repliedMessage->receiver_id == $receiverId) ||
+                ($repliedMessage->sender_id == $receiverId && $repliedMessage->receiver_id == $senderId);
+                
+            if (!$belongsToConversation) {
+                return response()->json(['status' => false, 'message' => 'Tin nhắn không thuộc cuộc trò chuyện này'], 422);
+            }
+        }
+
         // Nếu gửi file
         if ($request->hasFile('file')) {
             $request->validate([
                 'file' => 'required|file|max:20480', // max 20MB
-                'receiver_id' => 'nullable|integer',
             ]);
 
             $file = $request->file('file');
@@ -45,29 +74,32 @@ class MessageController extends Controller
 
             $message = Message::create([
                 'sender_id'    => $senderId,
-                'receiver_id'  => $request->receiver_id ?? 1,
+                'receiver_id'  => $receiverId,
                 'content'      => $originalName, // Nội dung là tên file
                 'message_type' => $messageType,
                 'file_url'     => $fileUrl,
                 'file_name'    => $originalName,
                 'file_size'    => $fileSize,
                 'is_read'      => false,
+                'reply_to_id'  => $replyToId,
             ]);
         } else {
             // Gửi text/emoji
             $request->validate([
                 'content'     => 'required|string|max:5000',
-                'receiver_id' => 'nullable|integer',
             ]);
 
             $message = Message::create([
                 'sender_id'    => $senderId,
-                'receiver_id'  => $request->receiver_id ?? 1,
-                'content'      => $request->content,
+                'receiver_id'  => $receiverId,
+                'content'      => $request->input('content'),
                 'message_type' => 'text',
                 'is_read'      => false,
+                'reply_to_id'  => $replyToId,
             ]);
         }
+
+        $message->load('replyToMessage');
 
         // Phát sóng cho cả 2 bên (Event đã broadcast trên kênh sender + receiver)
         // Không dùng toOthers() vì sẽ bị loại trừ nhầm bên nhận
@@ -84,16 +116,26 @@ class MessageController extends Controller
     {
         $isAdmin = $request->is('api/admin/*');
         $userId = $isAdmin ? 1 : Auth::guard('sanctum')->id();
-        $partnerId = $request->query('partner_id');
+        if (!$isAdmin) {
+            $partnerId = 1;
+        } else {
+            $partnerId = $request->query('partner_id');
+        }
 
         if ($partnerId) {
-            $messages = Message::where(function($q) use ($userId, $partnerId) {
+            // Mark unread messages as read
+            Message::where('sender_id', $partnerId)
+                ->where('receiver_id', $userId)
+                ->where('is_read', false)
+                ->update(['is_read' => true]);
+
+            $messages = Message::with('replyToMessage')->where(function($q) use ($userId, $partnerId) {
                 $q->where('sender_id', $userId)->where('receiver_id', $partnerId);
             })->orWhere(function($q) use ($userId, $partnerId) {
                 $q->where('sender_id', $partnerId)->where('receiver_id', $userId);
             })->orderBy('created_at', 'asc')->get();
         } else {
-            $messages = Message::where('sender_id', $userId)
+            $messages = Message::with('replyToMessage')->where('sender_id', $userId)
                                ->orWhere('receiver_id', $userId)
                                ->orderBy('created_at', 'asc')->get();
         }
@@ -133,6 +175,18 @@ class MessageController extends Controller
         return array_search($user->id, $userIds);
     })
       ->values();
+
+        // Calculate unread count and attach to each user in one query to avoid N+1
+        $unreadCounts = Message::where('receiver_id', $adminId)
+            ->whereIn('sender_id', $userIds)
+            ->where('is_read', false)
+            ->select('sender_id', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
+            ->groupBy('sender_id')
+            ->pluck('count', 'sender_id');
+
+        foreach ($users as $user) {
+            $user->unread_count = $unreadCounts->get($user->id, 0);
+        }
 
         return response()->json(['status' => true, 'data' => $users]);
     }
