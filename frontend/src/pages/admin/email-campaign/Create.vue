@@ -292,19 +292,12 @@ const holidaySubject = computed(() => {
 })
 
 const saveHoliday = async () => {
-  console.log("1. vào saveHoliday");
-
   if (!holidayForm.name || !holidayForm.day || !holidayForm.month || !holidayForm.content) {
-    console.log("Thiếu dữ liệu bắt buộc");
     toast.warning('Vui lòng nhập đầy đủ các trường thông tin bắt buộc (*).')
     return
   }
-console.log("hasVoucher:", holidayForm.hasVoucher)
-console.log("voucherCode:", holidayForm.voucherCode)
-console.log("discount:", holidayForm.discount)
 
   if (holidayForm.hasVoucher && (!holidayForm.voucherCode || !holidayForm.discount)) {
-    console.log("Thiếu voucher");
     toast.warning('Vui lòng nhập đầy đủ Mã quà tặng và Mức ưu đãi.')
     return
   }
@@ -312,16 +305,10 @@ console.log("discount:", holidayForm.discount)
   isSubmitting.value = true
 
   try {
-    console.log("2. chuẩn bị gửi API");
-    console.log(buildPayload());
-
     const response = await apiClient.post(
       '/admin/holiday-events',
       buildPayload()
     )
-
-    console.log("3. đã nhận response");
-    console.log(response);
 
     if (response.data && response.data.success) {
       toast.success('Thêm mới sự kiện thành công!')
@@ -330,13 +317,6 @@ console.log("discount:", holidayForm.discount)
       toast.error(response.data.message || 'Lỗi khi thêm mới sự kiện.')
     }
   } catch (error) {
-    console.log("4. lỗi");
-    console.log(error);
-
-    if (error.response) {
-      console.log(error.response.data);
-    }
-
     if (error.response && error.response.status === 422) {
       toast.error('Dữ liệu không hợp lệ, vui lòng kiểm tra lại form.')
     } else {
@@ -346,7 +326,6 @@ console.log("discount:", holidayForm.discount)
     isSubmitting.value = false
   }
 }
-
 function buildPayload() {
   let expiresAtFormatted = null
   

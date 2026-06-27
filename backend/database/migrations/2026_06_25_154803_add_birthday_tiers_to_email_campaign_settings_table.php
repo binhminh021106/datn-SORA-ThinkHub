@@ -23,6 +23,7 @@ return new class extends Migration
     {
         Schema::table('email_campaign_settings', function (Blueprint $table) {
             //
+              $table->dropColumn('birthday_tiers');
         });
     }
 };

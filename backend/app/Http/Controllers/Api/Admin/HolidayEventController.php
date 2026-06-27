@@ -19,50 +19,45 @@ class HolidayEventController extends Controller
         return response()->json(['success' => true, 'data' => $events]);
     }
 
-    public function store(Request $request)
+  public function store(Request $request)
     {
-        try {
-            $this->mergeEventDate($request);
+        // 1. Gộp ngày tháng
+        $this->mergeEventDate($request);
 
-            $validated = $request->validate([
-                'name' => 'required|string|max:255',
-                'event_date' => ['required', 'string', 'max:5', 'regex:/^\d{2}\/\d{2}$/'],
-                'target_audience' => 'required|string',
-                'email_subject' => 'required|string',
-                'email_content' => 'required|string',
-                'voucher_code' => 'nullable|string',
-                'discount' => 'nullable|string|max:50',
-                'status' => 'required|in:active,inactive',
-                'expires_at' => 'nullable|string',
-            ]);
+        // 2. Validation (Nếu lỗi, Laravel tự động ngắt và trả về status 422)
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'event_date' => ['required', 'string', 'max:5', 'regex:/^\d{2}\/\d{2}$/'],
+            'target_audience' => 'required|string',
+            'email_subject' => 'required|string',
+            'email_content' => 'required|string',
+            'voucher_code' => 'nullable|string',
+            'discount' => 'nullable|string|max:50',
+            'status' => 'required|in:active,inactive',
+            'expires_at' => 'nullable|string',
+        ]);
 
-            $discount = $validated['discount'] ?? null;
-            $expiresAt = $validated['expires_at'] ?? null; 
-            
-            unset($validated['discount'], $validated['expires_at']); 
+        // 3. Tách dữ liệu không thuộc bảng HolidayEvent
+        $discount = $validated['discount'] ?? null;
+        $expiresAt = $validated['expires_at'] ?? null; 
+        unset($validated['discount'], $validated['expires_at']); 
 
-            $event = HolidayEvent::create($validated);
+        // 4. Lưu vào Database
+        $event = HolidayEvent::create($validated);
 
-            $this->syncVoucherDiscount([
-                'voucher_code' => $request->input('voucher_code'),
-                'name' => $validated['name']
-            ], $discount, $expiresAt);
+        // 5. Đồng bộ Voucher
+        $this->syncVoucherDiscount([
+            'voucher_code' => $request->input('voucher_code'),
+            'name' => $validated['name'],
+            'event_date' => $validated['event_date'] // Bổ sung event_date để hàm sync tính được hạn sử dụng
+        ], $discount, $expiresAt);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Them su kien thanh cong',
-                'data' => $event,
-            ]);
-
-        } catch (\Throwable $e) {
-            // ĐÂY LÀ CHÌA KHÓA: Ép lỗi in thẳng ra Response thay vì giấu đi
-            return response()->json([
-                'success' => false,
-                'message' => 'LỖI CHÍNH XÁC LÀ: ' . $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ], 500);
-        }
+        // 6. Trả về thành công
+        return response()->json([
+            'success' => true,
+            'message' => 'Thêm sự kiện thành công',
+            'data' => $event,
+        ]);
     }
 
     public function show($id)

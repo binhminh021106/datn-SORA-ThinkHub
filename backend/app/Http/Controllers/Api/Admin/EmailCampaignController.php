@@ -126,13 +126,15 @@ private function syncBirthdayVouchers(array $tiers): void
             $isPercentage = str_contains($rawDiscount, '%');
             $numericValue = (float) preg_replace('/[^0-9.]/', '', $rawDiscount);
 
-            // Bỏ qua nếu giá trị <= 0 VÀ KHÔNG PHẢI là freeship
+      
             if ($numericValue <= 0 && !$isFreeship) continue;
 
-            $coupon = Coupon::firstOrNew(['code' => $tier['voucherCode']]);
-            $coupon->name = 'Quà tặng sinh nhật hạng: ' . $tier['name'];
+       
+            $coupon = Coupon::query()->firstOrNew(['code' => $tier['voucherCode']]);
             
-            // Xử lý gán type
+            $coupon->name = 'Quà tặng sinh nhật hạng: ' . $tier['name'];
+
+           
             if ($isFreeship) {
                 $coupon->type = 'freeship';
                 $coupon->value = 0;
@@ -140,10 +142,16 @@ private function syncBirthdayVouchers(array $tiers): void
                 $coupon->type = $isPercentage ? 'percentage' : 'fixed';
                 $coupon->value = $numericValue;
             }
-            
-            $coupon->min_spend = 0; 
-            $coupon->usage_count = 0;
+
+            $coupon->min_spend = 0;
             $coupon->status = 'active';
+
+          
+            if (!$coupon->exists) {
+                $coupon->usage_count = 0;
+                $coupon->is_used = false;
+            }
+
             $coupon->save();
         }
     }
