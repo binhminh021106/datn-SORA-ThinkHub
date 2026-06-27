@@ -175,6 +175,7 @@ const isRegistering = ref(false);
 const uiState = ref('setup');
 const scanProgress = ref(0);
 const scanningAction = ref('');
+let activeScanSession = 0;
 
 const scanningTitle = computed(() => {
   if (scanningAction.value === 'register') return 'Đăng ký khuôn mặt';
@@ -212,6 +213,7 @@ const startScanningMode = async (action) => {
 };
 
 const stopScanningMode = () => {
+  activeScanSession++;
   stopAutoScan();
   stopCamera();
   uiState.value = 'setup';
@@ -253,7 +255,7 @@ const isReady = computed(() => isCameraActive.value && !isLoadingModels.value &&
 const cameraPanelStyle = computed(() => ({
   aspectRatio: cameraAspectRatio.value,
 }));
-const canRegister = computed(() => !!selectedAdminId.value && (!profile.value?.has_profile || profile.value.sample_count < 5) && !isProcessing.value);
+const canRegister = computed(() => !!selectedAdminId.value && (!profile.value?.has_profile || profile.value.requires_reset || profile.value.sample_count < 5) && !isProcessing.value);
 const canResetProfile = computed(() => !!selectedAdminId.value && !!profile.value?.has_profile && !isProcessing.value);
 const selectedAdmin = computed(() => admins.value.find((admin) => String(admin.id) === String(selectedAdminId.value)));
 const selectedAdminLabel = computed(() => selectedAdmin.value ? displayAdminName(selectedAdmin.value) : 'Chưa chọn');
@@ -498,6 +500,7 @@ const registerFace = async () => {
     errorMessage.value = 'Vui lòng chọn nhân sự trước khi ghi mẫu.';
     return;
   }
+  const currentSession = ++activeScanSession;
 
   await runFaceAction(async () => {
     const descriptors = [];
@@ -519,6 +522,7 @@ const registerFace = async () => {
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           const descriptor = await getDescriptor();
+          if (activeScanSession !== currentSession) return;
           descriptors.push(descriptor);
           success = true;
           // Play a small success feedback if possible, or just delay
@@ -553,6 +557,7 @@ const registerFace = async () => {
       model_name: MODEL_NAME,
       model_version: MODEL_VERSION,
     });
+    if (activeScanSession !== currentSession) return;
 
     resultType.value = 'success';
     resultMessage.value = response.data?.message || 'Đã lưu mẫu khuôn mặt.';
@@ -561,12 +566,15 @@ const registerFace = async () => {
 };
 
 const verifyFace = async () => {
+  const currentSession = ++activeScanSession;
   await runFaceAction(async () => {
     const descriptor = await getDescriptor();
+    if (activeScanSession !== currentSession) return;
     const response = await apiClient.post('/admin/face-recognition/verify', {
       descriptor,
       threshold: THRESHOLD,
     });
+    if (activeScanSession !== currentSession) return;
 
     const data = response.data?.data || {};
     applyRecognitionData(data);
@@ -594,13 +602,16 @@ const verifyFace = async () => {
 };
 
 const attendanceByFace = async (confirmCheckout = false, options = {}) => {
+  const currentSession = ++activeScanSession;
   await runFaceAction(async () => {
     const descriptor = await getDescriptor();
+    if (activeScanSession !== currentSession) return;
     const response = await apiClient.post('/admin/face-recognition/attendance', {
       descriptor,
       threshold: THRESHOLD,
       confirm_checkout: confirmCheckout,
     });
+    if (activeScanSession !== currentSession) return;
 
     const data = response.data?.data || {};
     applyRecognitionData(data);
@@ -622,11 +633,13 @@ const attendanceByFace = async (confirmCheckout = false, options = {}) => {
       });
 
       if (result.isConfirmed) {
+        if (activeScanSession !== currentSession) return;
         const confirmedResponse = await apiClient.post('/admin/face-recognition/attendance', {
           descriptor,
           threshold: THRESHOLD,
           confirm_checkout: true,
         });
+        if (activeScanSession !== currentSession) return;
         const confirmedData = confirmedResponse.data?.data || {};
         applyRecognitionData(confirmedData);
         resultType.value = 'success';

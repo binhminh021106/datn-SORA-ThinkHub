@@ -138,9 +138,10 @@ private function syncBirthdayVouchers(array $tiers): void
 
             $couponName = 'Quà tặng sinh nhật hạng: ' . $tier['name'];
             $coupon = Coupon::query()->firstOrNew([
-                'code' => $tier['voucherCode'],
-                'name' => $couponName
+                'code' => $tier['voucherCode']
             ]);
+            
+            $coupon->name = $couponName;
             
             if ($isFreeship) {
                 $coupon->type = 'freeship';
@@ -150,9 +151,10 @@ private function syncBirthdayVouchers(array $tiers): void
                 $coupon->value = $numericValue;
             }
 
+            $coupon->min_spend = 0;
+            $coupon->status = 'active';
+
             if (!$coupon->exists) {
-                $coupon->min_spend = 0;
-                $coupon->status = 'active';
                 $coupon->usage_count = 0;
                 $coupon->is_used = false;
             }

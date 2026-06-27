@@ -730,7 +730,7 @@ const lowStockProducts = computed(() => dashboardData.value?.lowStockProducts ||
 const recentReviews = computed(() => dashboardData.value?.recentReviews || []);
 const activeCombos = computed(() => dashboardData.value?.activeCombos || []);
 const staffStats = computed(() => dashboardData.value?.staffStats || {
-  total: 8,
+  total: 0,
   current_shift: 'Không có ca làm'
 });
 

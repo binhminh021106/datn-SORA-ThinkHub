@@ -37,12 +37,13 @@ window.Echo = new Echo({
         return {
             authorize: (socketId, callback) => {
                 let token = null;
-                // Nếu channel liên quan đến admin (ví dụ admin-notifications, App.Models.Admin...) thì dùng Admin Token
-                if (channel.name.includes('admin') || channel.name.includes('Admin')) {
-                    token = getAdminToken() || getUserToken();
+                const adminChannels = ['admin-notifications', 'admin-orders', 'App.Models.Admin'];
+                const isAdminChannel = adminChannels.some(prefix => channel.name.includes(prefix));
+                
+                if (isAdminChannel) {
+                    token = getAdminToken();
                 } else {
-                    // Nếu là channel của user (chat, order, App.Models.User...) thì dùng User Token
-                    token = getUserToken() || getAdminToken();
+                    token = getUserToken();
                 }
 
                 if (!token) {

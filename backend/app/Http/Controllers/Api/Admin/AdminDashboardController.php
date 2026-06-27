@@ -214,7 +214,7 @@ class AdminDashboardController extends Controller
             $chartData = $this->getDynamicChartData($today->copy()->startOfYear(), $today->copy()->endOfDay());
 
             // 7. NHÂN SỰ (STAFF STATS)
-            $totalStaff = Schema::hasTable('admins') ? DB::table('admins')->count() : User::where('role_id', '!=', 2)->count();
+            $totalStaff = Schema::hasTable('admins') ? DB::table('admins')->whereNull('deleted_at')->count() : User::where('role_id', '!=', 2)->count();
             
             // Tìm ca làm việc hiện tại
             $nowTime = Carbon::now()->format('H:i:s');

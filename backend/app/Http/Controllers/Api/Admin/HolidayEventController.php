@@ -141,7 +141,7 @@ class HolidayEventController extends Controller
         ]);
     }
 
-  private function syncVoucherDiscount(array $eventData, ?string $discount): void
+  private function syncVoucherDiscount(array $eventData, ?string $discount, ?string $expiresAt = null): void
     {
         if (empty($eventData['voucher_code']) || empty($discount)) {
             return;
@@ -166,7 +166,9 @@ class HolidayEventController extends Controller
         }
         
         // TÍNH TOÁN HẠN SỬ DỤNG (+3 NGÀY) CHUẨN XÁC TẠI BACKEND
-        if (!empty($eventData['event_date'])) {
+        if ($expiresAt) {
+            $coupon->expires_at = Carbon::parse($expiresAt)->endOfDay();
+        } elseif (!empty($eventData['event_date'])) {
             try {
                 $eventDateObj = Carbon::createFromFormat('d/m/Y', $eventData['event_date'] . '/' . now()->year)->startOfDay();
                 if ($eventDateObj->copy()->addDays(3)->endOfDay()->isPast()) {
