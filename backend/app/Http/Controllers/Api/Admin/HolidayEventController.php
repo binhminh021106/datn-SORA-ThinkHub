@@ -167,9 +167,11 @@ class HolidayEventController extends Controller
         
         // TÍNH TOÁN HẠN SỬ DỤNG (+3 NGÀY) CHUẨN XÁC TẠI BACKEND
         if (!empty($eventData['event_date'])) {
-            $currentYear = now()->year;
             try {
-                $eventDateObj = Carbon::createFromFormat('d/m/Y', $eventData['event_date'] . '/' . $currentYear);
+                $eventDateObj = Carbon::createFromFormat('d/m/Y', $eventData['event_date'] . '/' . now()->year)->startOfDay();
+                if ($eventDateObj->copy()->addDays(3)->endOfDay()->isPast()) {
+                    $eventDateObj->addYear();
+                }
                 $coupon->expires_at = $eventDateObj->addDays(3)->endOfDay(); 
             } catch (\Exception $e) {
                 $coupon->expires_at = null;
@@ -188,8 +190,17 @@ class HolidayEventController extends Controller
 
     if ($numericValue <= 0) return null;
 
-    // Logic: Nếu không có % hoặc không có 'đ' thì mặc định là phần trăm
-    $isFixed = Str::contains(Str::lower($rawDiscount), 'đ') || Str::contains(Str::lower($rawDiscount), 'vnd');
+    $lower = Str::lower($rawDiscount);
+    $isFixed = Str::contains($lower, 'đ') || Str::contains($lower, 'vnd');
+    $isPercentage = Str::contains($lower, '%');
+
+    if (!$isFixed && !$isPercentage) {
+        return null;
+    }
+
+    if ($isPercentage && $numericValue > 100) {
+        return null;
+    }
     
     return [
         'type' => $isFixed ? 'fixed' : 'percentage',
