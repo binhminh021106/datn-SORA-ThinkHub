@@ -213,6 +213,47 @@ class AdminDashboardController extends Controller
             $today = Carbon::today();
             $chartData = $this->getDynamicChartData($today->copy()->startOfYear(), $today->copy()->endOfDay());
 
+            // 7. NHÂN SỰ (STAFF STATS)
+            $totalStaff = Schema::hasTable('admins') ? DB::table('admins')->count() : User::where('role_id', '!=', 2)->count();
+            
+            // Tìm ca làm việc hiện tại
+            $nowTime = Carbon::now()->format('H:i:s');
+            $currentShiftInfo = "Không có ca làm";
+
+            if (Schema::hasTable('work_shifts')) {
+                // Ca bình thường
+                $currentShift = DB::table('work_shifts')
+                    ->where('start_time', '<=', $nowTime)
+                    ->where('end_time', '>=', $nowTime)
+                    ->whereNull('deleted_at')
+                    ->where('is_active', true)
+                    ->first();
+                
+                if (!$currentShift) {
+                    // Xử lý ca qua đêm (start_time > end_time)
+                    $currentShift = DB::table('work_shifts')
+                        ->where('is_overnight', true)
+                        ->whereNull('deleted_at')
+                        ->where('is_active', true)
+                        ->where(function ($q) use ($nowTime) {
+                            $q->where('start_time', '<=', $nowTime)
+                              ->orWhere('end_time', '>=', $nowTime);
+                        })
+                        ->first();
+                }
+
+                if ($currentShift) {
+                    $start = Carbon::parse($currentShift->start_time)->format('H:i');
+                    $end = Carbon::parse($currentShift->end_time)->format('H:i');
+                    $currentShiftInfo = "{$currentShift->name} ($start - $end)";
+                }
+            }
+
+            $staffStats = [
+                'total' => $totalStaff,
+                'current_shift' => $currentShiftInfo
+            ];
+
             return response()->json([
                 'success' => true,
                 'message' => 'Lấy dữ liệu Dashboard thành công',
@@ -232,6 +273,7 @@ class AdminDashboardController extends Controller
                     'recentReviews' => $recentReviews,
                     'activeCombos' => $activeCombos,
                     'paymentStats' => $chartData['paymentStats'],
+                    'staffStats' => $staffStats,
                     'chartData' => [
                         'labels' => $chartData['labels'],
                         'values' => $chartData['values']
