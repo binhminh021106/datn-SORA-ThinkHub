@@ -36,7 +36,15 @@ window.Echo = new Echo({
     authorizer: (channel, options) => {
         return {
             authorize: (socketId, callback) => {
-                const token = getAdminToken() || getUserToken();
+                let token = null;
+                // Nếu channel liên quan đến admin (ví dụ admin-notifications, App.Models.Admin...) thì dùng Admin Token
+                if (channel.name.includes('admin') || channel.name.includes('Admin')) {
+                    token = getAdminToken() || getUserToken();
+                } else {
+                    // Nếu là channel của user (chat, order, App.Models.User...) thì dùng User Token
+                    token = getUserToken() || getAdminToken();
+                }
+
                 if (!token) {
                     callback(true, { message: 'Missing auth token' });
                     return;
