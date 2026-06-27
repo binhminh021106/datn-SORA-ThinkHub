@@ -10,7 +10,7 @@ use App\Models\EmailLog;
 use App\Models\HolidayEvent;
 use App\Models\MembershipTier;
 use App\Models\User;
-use App\Services\AudienceFilterService; // Import Service lọc người dùng mới
+use App\Services\AudienceFilterService; 
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Mail;
 
 class EmailCampaignService
 {
-    private string $birthdayColumn = 'birthday';
+    private string $birthdayColumn = 'birthday'; // Nhớ đảm bảo cột này đúng với DB của bạn
     private string $genderColumn = 'gender';
 
     public function sendBirthdayCampaign(bool $respectAutoSetting = false, bool $preventDuplicateSends = false): array
@@ -29,7 +29,7 @@ class EmailCampaignService
             return [
                 'success' => true,
                 'sent_count' => 0,
-                'message' => 'Email sinh nhat tu dong dang tat.',
+                'message' => 'Email sinh nhật tự động đang tắt.',
             ];
         }
 
@@ -44,24 +44,13 @@ class EmailCampaignService
             return [
                 'success' => true,
                 'sent_count' => 0,
-                'message' => 'Hom nay khong co khach hang nao sinh nhat.',
+                'message' => 'Hôm nay không có khách hàng nào sinh nhật.',
             ];
         }
 
         $sentCount = 0;
 
         foreach ($birthdayUsers as $user) {
-            $user = User::with('tier')
-                ->whereKey($user->id)
-                ->whereMonth($this->birthdayColumn, $today->month)
-                ->whereDay($this->birthdayColumn, $today->day)
-                ->whereNotNull('email')
-                ->first();
-
-            if (!$user) {
-                continue;
-            }
-
             if ($preventDuplicateSends) {
                 $alreadySent = EmailLog::where('user_id', $user->id)
                     ->where('event_type', 'birthday')
@@ -75,11 +64,15 @@ class EmailCampaignService
             }
 
             try {
-                if (!$this->isSilverTierOrAbove($user)) {
-                    continue;
-                }
+                
 
+                // Lấy mã Coupon theo đúng cấu hình Admin đã cài đặt
                 $coupon = $this->createBirthdayCoupon($user, $today);
+
+                // Nếu hạng của User không được Admin cấu hình mã quà tặng thì bỏ qua
+                if (!$coupon) {
+                    continue; 
+                }
 
                 Mail::to($user->email)->send(new BirthdayVoucherMail($user, $coupon));
 
@@ -102,7 +95,7 @@ class EmailCampaignService
         return [
             'success' => true,
             'sent_count' => $sentCount,
-            'message' => "Hoan tat! Da gui thanh cong {$sentCount} email sinh nhat.",
+            'message' => "Hoàn tất! Đã gửi thành công {$sentCount} email sinh nhật.",
         ];
     }
 
@@ -119,55 +112,46 @@ class EmailCampaignService
             return [
                 'success' => true,
                 'sent_count' => 0,
-                'message' => 'Hom nay khong co su kien ngay le nao duoc cai dat.',
+                'message' => 'Hôm nay không có sự kiện ngày lễ nào được cài đặt.',
             ];
         }
 
         $totalSentCount = 0;
         
-        // Khởi tạo Service bộ lọc mảng từ Canvas
         $audienceService = new AudienceFilterService();
 
-        foreach ($eventsToday as $event) {
-            $event = HolidayEvent::whereKey($event->id)
-                ->where('status', 'active')
-                ->where('event_date', $todayStr)
-                ->first();
-
-            if (!$event) {
-                continue;
-            }
-
+       foreach ($eventsToday as $event) {
             $targets = $this->normalizeTargetAudience($event->getRawOriginal('target_audience') ?? $event->target_audience);
-
-            // Gọi AudienceFilterService để quét danh sách Users
             $targetUsers = $audienceService->getTargetedUsers($targets);
-            
-            // Tải thêm thông tin Hạng thành viên (tier) để Mail template sử dụng (tránh N+1 query)
             $targetUsers->load('tier');
 
             $eventTypeKey = 'holiday_' . $event->id;
 
+            // ĐƯA TRUY VẤN RA NGOÀI VÒNG LẶP USER:
+            // 1. Kiểm tra sự kiện 1 lần duy nhất cho mỗi event
+            $eventStillSendable = HolidayEvent::whereKey($event->id)
+                ->where('status', 'active')
+                ->where('event_date', $todayStr)
+                ->exists();
+
+            if (!$eventStillSendable) {
+                continue; // Bỏ qua sự kiện này nếu đã bị tắt
+            }
+
+            // 2. Pre-fetch toàn bộ ID của user đã được gửi email thành công trong năm nay
+            $sentUserIds = [];
+            if ($preventDuplicateSends) {
+                $sentUserIds = EmailLog::where('event_type', $eventTypeKey)
+                    ->where('status', 'success')
+                    ->whereYear('sent_at', $today->year)
+                    ->pluck('user_id')
+                    ->toArray();
+            }
+
             foreach ($targetUsers as $user) {
-                $eventStillSendable = HolidayEvent::whereKey($event->id)
-                    ->where('status', 'active')
-                    ->where('event_date', $todayStr)
-                    ->exists();
-
-                if (!$eventStillSendable) {
-                    break;
-                }
-
-                if ($preventDuplicateSends) {
-                    $alreadySent = EmailLog::where('user_id', $user->id)
-                        ->where('event_type', $eventTypeKey)
-                        ->where('status', 'success')
-                        ->whereYear('sent_at', $today->year)
-                        ->exists();
-
-                    if ($alreadySent) {
-                        continue;
-                    }
+                // Kiểm tra trùng lặp bằng array PHP trên RAM, thay vì gọi DB
+                if ($preventDuplicateSends && in_array($user->id, $sentUserIds, true)) {
+                    continue;
                 }
 
                 try {
@@ -193,8 +177,107 @@ class EmailCampaignService
         return [
             'success' => true,
             'sent_count' => $totalSentCount,
-            'message' => "Hoan tat! Da gui thanh cong {$totalSentCount} email su kien ngay le.",
+            'message' => "Hoàn tất! Đã gửi thành công {$totalSentCount} email sự kiện ngày lễ.",
         ];
+    }
+
+    // ================= HELPER METHODS =================
+
+    /**
+     * Tạo hoặc lấy Voucher sinh nhật dựa trên cấu hình của Admin
+     */
+  /**
+     * Tạo hoặc lấy Voucher sinh nhật dựa trên cấu hình của Admin
+     */
+    private function createBirthdayCoupon(User $user, Carbon $today): ?Coupon
+    {
+        $setting = EmailCampaignSetting::current();
+        $tiers = $setting->birthday_tiers ?? [];
+        
+        // 1. Xác định hạng hiện tại của User (Trả về: 'regular', 'silver', 'gold', 'diamond')
+        $userTierName = $this->getUserTierName($user);
+        
+        // 2. SỬA TẠI ĐÂY: Tìm cấu hình quà tặng tương ứng dựa trên thuộc tính ID phân hạng ổn định
+        $matchedTierConfig = collect($tiers)->first(function ($t) use ($userTierName) {
+            return ($t['id'] ?? '') === $userTierName;
+        });
+
+        // Nếu hạng này không được Admin cấu hình mã, trả về null
+        if (!$matchedTierConfig || empty($matchedTierConfig['voucherCode'])) {
+            return null; 
+        }
+
+        // 3. Lấy ra mã Coupon mà Admin đã tạo sẵn trong bảng coupons
+        $couponCode = $matchedTierConfig['voucherCode'];
+        $existingCoupon = Coupon::where('code', $couponCode)->first();
+
+        if ($existingCoupon) {
+            return $existingCoupon;
+        }
+
+        // 4. Fallback: Tự động tạo lại dựa trên Config nếu thất lạc data bảng coupons
+       $rawDiscount = trim($matchedTierConfig['discount']);
+        $lowerDiscount = mb_strtolower($rawDiscount, 'UTF-8');
+        
+        $isFreeship = str_contains($lowerDiscount, 'miễn phí') || str_contains($lowerDiscount, 'freeship');
+        $isPercentage = str_contains($rawDiscount, '%');
+        $numericValue = (float) preg_replace('/[^0-9.]/', '', $rawDiscount);
+
+        if ($numericValue <= 0 && !$isFreeship) return null;
+
+        return Coupon::create([
+            'type' => $isFreeship ? 'freeship' : ($isPercentage ? 'percentage' : 'fixed'),
+            'name' => 'Quà tặng sinh nhật hạng: ' . $matchedTierConfig['name'],
+            'code' => $couponCode,
+            'min_spend' => 0,
+            'value' => $isFreeship ? 0 : $numericValue,
+            'usage_count' => 0,
+            'status' => 'active',
+        ]);
+    }
+
+    /**
+     * Phân loại nhanh tên hạng của User để match với cấu hình
+     */
+    private function getUserTierName(User $user): string
+    {
+        if (!$user->tier_id) return 'regular';
+        
+        $tier = $user->relationLoaded('tier') ? $user->tier : MembershipTier::find($user->tier_id);
+        if (!$tier) return 'regular';
+
+        $tierName = Str::lower(Str::ascii($tier->name ?? ''));
+        
+        if (Str::contains($tierName, ['kim cuong', 'diamond'])) return 'diamond';
+        if (Str::contains($tierName, ['vang', 'gold'])) return 'gold';
+        if (Str::contains($tierName, ['bac', 'silver'])) return 'silver';
+        
+        return 'regular';
+    }
+
+    private function isSilverTierOrAbove(User $user): bool
+    {
+        if (!$user->tier_id) {
+            return false;
+        }
+
+        $userTier = $user->relationLoaded('tier') ? $user->tier : MembershipTier::find($user->tier_id);
+        if (!$userTier) {
+            return false;
+        }
+
+        $silverTier = MembershipTier::orderBy('min_spent', 'asc')
+            ->get()
+            ->first(function ($tier) {
+                $tierName = Str::lower(Str::ascii($tier->name ?? ''));
+                return Str::contains($tierName, ['silver', 'bac']);
+            });
+
+        if (!$silverTier) {
+            return false;
+        }
+
+        return (float) $userTier->min_spent >= (float) $silverTier->min_spent;
     }
 
     private function normalizeTargetAudience($targetAudience): array
@@ -239,75 +322,6 @@ class EmailCampaignService
         if (!$code) {
             return $this->shopUrl();
         }
-
         return $this->shopUrl() . '?coupon=' . urlencode($code);
-    }
-
-    private function createBirthdayCoupon(User $user, Carbon $today): Coupon
-    {
-        return Coupon::create([
-            'user_id' => $user->id,
-            'type' => 'birthday',
-            'name' => 'Voucher Sinh Nhat ' . $today->year,
-            'code' => $this->generateBirthdayCouponCode($user, $today),
-            'min_spend' => 0,
-            'value' => $this->birthdayDiscountPercent($user),
-            'usage_limit' => 1,
-            'usage_count' => 0,
-            'usage_limit_per_user' => 1,
-            'expires_at' => $today->copy()->addDays(7)->endOfDay(),
-            'is_used' => 0,
-            'status' => 'active',
-        ]);
-    }
-
-    private function generateBirthdayCouponCode(User $user, Carbon $today): string
-    {
-        do {
-            $code = 'BDAY' . $today->format('y') . strtoupper(Str::random(4)) . $user->id;
-        } while (Coupon::withTrashed()->where('code', $code)->exists());
-
-        return $code;
-    }
-
-    private function birthdayDiscountPercent(User $user): int
-    {
-        $tier = $user->relationLoaded('tier') ? $user->tier : MembershipTier::find($user->tier_id);
-        $tierName = Str::lower(Str::ascii($tier->name ?? ''));
-
-        if (Str::contains($tierName, ['kim cuong', 'diamond'])) {
-            return 15;
-        }
-
-        if (Str::contains($tierName, ['vang', 'gold'])) {
-            return 10;
-        }
-
-        return 5;
-    }
-
-    private function isSilverTierOrAbove(User $user): bool
-    {
-        if (!$user->tier_id) {
-            return false;
-        }
-
-        $userTier = $user->relationLoaded('tier') ? $user->tier : MembershipTier::find($user->tier_id);
-        if (!$userTier) {
-            return false;
-        }
-
-        $silverTier = MembershipTier::orderBy('min_spent', 'asc')
-            ->get()
-            ->first(function ($tier) {
-                $tierName = Str::lower(Str::ascii($tier->name ?? ''));
-                return Str::contains($tierName, ['silver', 'bac']);
-            });
-
-        if (!$silverTier) {
-            return false;
-        }
-
-        return (float) $userTier->min_spent >= (float) $silverTier->min_spent;
     }
 }

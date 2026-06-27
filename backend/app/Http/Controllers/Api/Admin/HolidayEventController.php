@@ -7,6 +7,9 @@ use App\Models\Coupon;
 use App\Models\EmailLog;
 use App\Models\HolidayEvent;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
+
 
 class HolidayEventController extends Controller
 {
@@ -16,10 +19,12 @@ class HolidayEventController extends Controller
         return response()->json(['success' => true, 'data' => $events]);
     }
 
-    public function store(Request $request)
+  public function store(Request $request)
     {
+        // 1. Gộp ngày tháng
         $this->mergeEventDate($request);
 
+        // 2. Validation (Nếu lỗi, Laravel tự động ngắt và trả về status 422)
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'event_date' => ['required', 'string', 'max:5', 'regex:/^\d{2}\/\d{2}$/'],
@@ -29,20 +34,28 @@ class HolidayEventController extends Controller
             'voucher_code' => 'nullable|string',
             'discount' => 'nullable|string|max:50',
             'status' => 'required|in:active,inactive',
+            'expires_at' => 'nullable|string',
         ]);
 
+        // 3. Tách dữ liệu không thuộc bảng HolidayEvent
         $discount = $validated['discount'] ?? null;
-        
-        // Bắt buộc XÓA discount khỏi $validated để không gây lỗi SQL bảng holiday_events
-        unset($validated['discount']); 
+        $expiresAt = $validated['expires_at'] ?? null; 
+        unset($validated['discount'], $validated['expires_at']); 
 
+        // 4. Lưu vào Database
         $event = HolidayEvent::create($validated);
 
-        $this->syncVoucherDiscount($validated, $discount);
+        // 5. Đồng bộ Voucher
+        $this->syncVoucherDiscount([
+            'voucher_code' => $request->input('voucher_code'),
+            'name' => $validated['name'],
+            'event_date' => $validated['event_date'] // Bổ sung event_date để hàm sync tính được hạn sử dụng
+        ], $discount, $expiresAt);
 
+        // 6. Trả về thành công
         return response()->json([
             'success' => true,
-            'message' => 'Them su kien thanh cong',
+            'message' => 'Thêm sự kiện thành công',
             'data' => $event,
         ]);
     }
@@ -81,14 +94,17 @@ class HolidayEventController extends Controller
             'voucher_code' => 'nullable|string',
             'discount' => 'nullable|string|max:50',
             'status' => 'required|in:active,inactive',
+            'expires_at' => 'nullable|string', // THÊM VALIDATION
         ]);
 
         $discount = $validated['discount'] ?? null;
-        unset($validated['discount']);
+        $expiresAt = $validated['expires_at'] ?? null;
+        
+        unset($validated['discount'], $validated['expires_at']);
 
         $event->update($validated);
 
-        $this->syncVoucherDiscount($validated, $discount);
+        $this->syncVoucherDiscount($validated, $discount, $expiresAt);
 
         return response()->json(['success' => true, 'message' => 'Cap nhat thanh cong']);
     }
@@ -125,46 +141,61 @@ class HolidayEventController extends Controller
         ]);
     }
 
-    private function syncVoucherDiscount(array $eventData, ?string $discount): void
+  private function syncVoucherDiscount(array $eventData, ?string $discount): void
     {
-        if (empty($eventData['voucher_code']) || !$discount) {
+        if (empty($eventData['voucher_code']) || empty($discount)) {
             return;
         }
 
         $discountData = $this->parseDiscount($discount);
-        if (!$discountData) {
-            return;
-        }
+        if (!$discountData) return;
 
         $coupon = Coupon::firstOrNew(['code' => $eventData['voucher_code']]);
-        if (!$coupon->exists) {
-            $coupon->name = 'Qua tang le: ' . $eventData['name'];
-            $coupon->min_spend = 0;
-            $coupon->usage_count = 0;
-            $coupon->status = 'active';
-        }
-
+        
+        $coupon->name = 'Qua tang le: ' . $eventData['name'];
         $coupon->type = $discountData['type'];
         $coupon->value = $discountData['value'];
+        $coupon->min_spend = 0;
+        $coupon->usage_count = 0;
+        $coupon->status = 'active';
+
+        // CHÌA KHÓA FIX 500: Cột is_used không có giá trị mặc định trong DB
+        // Bắt buộc phải khởi tạo giá trị false (0) khi tạo mã mới.
+        if (!$coupon->exists) {
+            $coupon->is_used = false; 
+        }
+        
+        // TÍNH TOÁN HẠN SỬ DỤNG (+3 NGÀY) CHUẨN XÁC TẠI BACKEND
+        if (!empty($eventData['event_date'])) {
+            $currentYear = now()->year;
+            try {
+                $eventDateObj = Carbon::createFromFormat('d/m/Y', $eventData['event_date'] . '/' . $currentYear);
+                $coupon->expires_at = $eventDateObj->addDays(3)->endOfDay(); 
+            } catch (\Exception $e) {
+                $coupon->expires_at = null;
+            }
+        } else {
+            $coupon->expires_at = null; 
+        }
+        
         $coupon->save();
     }
+   private function parseDiscount(string $discount): ?array
+{
+    $rawDiscount = trim($discount);
+    $normalizedDiscount = $this->normalizeNumericString($rawDiscount);
+    $numericValue = (float) $normalizedDiscount;
 
-    private function parseDiscount(string $discount): ?array
-    {
-        $rawDiscount = trim($discount);
-        $normalizedDiscount = $this->normalizeNumericString($rawDiscount);
+    if ($numericValue <= 0) return null;
 
-        $numericValue = (float) $normalizedDiscount;
-        if ($numericValue <= 0) {
-            return null;
-        }
-
-        return [
-            'type' => str_contains($rawDiscount, '%') ? 'percentage' : 'fixed',
-            'value' => $numericValue,
-        ];
-    }
-
+    // Logic: Nếu không có % hoặc không có 'đ' thì mặc định là phần trăm
+    $isFixed = Str::contains(Str::lower($rawDiscount), 'đ') || Str::contains(Str::lower($rawDiscount), 'vnd');
+    
+    return [
+        'type' => $isFixed ? 'fixed' : 'percentage',
+        'value' => $numericValue,
+    ];
+}
     private function normalizeNumericString(string $input): string
     {
         $value = preg_replace('/[^0-9.,]/', '', $input);

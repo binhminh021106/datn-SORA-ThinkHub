@@ -395,7 +395,7 @@ const emailLogs = ref([]);
 
 const birthdaySettings = ref({
   enabled: true,
-  subject: 'Chúc mừng sinh nhật [Tên_Khách_Hàng]',
+  subject: '',
   content: 'Xin chào [Tên_Khách_Hàng],\n\nNhân dịp sinh nhật, SORA ThinkHub xin gửi đến bạn lời chúc một tuổi mới thật nhiều niềm vui, hạnh phúc và luôn tỏa sáng theo cách riêng của mình.\n\nCảm ơn bạn đã tin tưởng đồng hành cùng chúng tôi. SORA xin dành tặng bạn một ưu đãi đặc biệt để ngày sinh nhật thêm trọn vẹn và ý nghĩa.',
   tiers: [
     { id: 'regular', name: 'Khách Thường', voucherCode: 'BDAYREG', discount: 'Miễn phí Ship' },
@@ -429,6 +429,11 @@ const fetchBirthdaySettings = async () => {
       birthdaySettings.value.enabled = !!res.data.data.is_auto_birthday;
       birthdaySettings.value.subject = res.data.data.birthday_subject || '';
       birthdaySettings.value.content = res.data.data.birthday_content || '';
+   
+
+   if (res.data.data.tiers && res.data.data.tiers.length > 0) {
+        birthdaySettings.value.tiers = res.data.data.tiers;
+      }
     }
   } catch (err) { console.error('Loi fetch birthday setting:', err); }
 };
@@ -537,15 +542,24 @@ function insertToken(type, token) { if (type === 'birthday') { birthdaySettings.
 async function saveBirthdaySettings() {
   try {
     const res = await apiClient.post('/admin/email-campaign/settings', {
-      is_auto_birthday: birthdaySettings.value.enabled, birthday_subject: birthdaySettings.value.subject, birthday_content: birthdaySettings.value.content,
+      is_auto_birthday: birthdaySettings.value.enabled, 
+      birthday_subject: birthdaySettings.value.subject, 
+      birthday_content: birthdaySettings.value.content,
+      tiers: birthdaySettings.value.tiers // THÊM DÒNG NÀY ĐỂ GỬI LÊN BACKEND
     });
     if (res.data?.success) {
-      birthdaySettings.value.enabled = !!res.data.data.is_auto_birthday;
-      birthdaySettings.value.subject = res.data.data.birthday_subject || '';
-      birthdaySettings.value.content = res.data.data.birthday_content || '';
-      showToast(res.data.message || 'Da luu cau hinh sinh nhat');
-    } else { showToast(res.data?.message || 'Luu cau hinh that bai', 'error'); }
-  } catch (err) { showToast('Luu cau hinh that bai', 'error'); }
+      // Cập nhật lại state an toàn
+      birthdaySettings.value.enabled = res.data.data.is_auto_birthday;
+      birthdaySettings.value.subject = res.data.data.birthday_subject;
+      birthdaySettings.value.content = res.data.data.birthday_content;
+      if (res.data.data.tiers) {
+        birthdaySettings.value.tiers = res.data.data.tiers;
+      }
+      showToast(res.data.message || 'Đã lưu cấu hình sinh nhật');
+    } else { 
+      showToast(res.data?.message || 'Lưu cấu hình thất bại', 'error'); 
+    }
+  } catch (err) { showToast('Lưu cấu hình thất bại', 'error'); }
 }
 
 function replaceTokens(text, customer, voucherCode) { return text.replaceAll('[Tên_Khách_Hàng]', customer.name).replaceAll('[Voucher_Code]', voucherCode || ''); }
