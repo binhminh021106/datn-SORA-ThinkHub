@@ -299,7 +299,6 @@
       </div>
     </div>
 
-    <QuickAddModal />
     <CompareModal :shop-slug="shopSlug" @update-list="compareList = $event" />
 
     <!-- MODAL QUICK ADD -->
@@ -403,7 +402,6 @@ import { ref, shallowRef, onMounted, onUnmounted, reactive, computed, watch } fr
 import { useRoute, useRouter } from 'vue-router';
 import { useQuery, keepPreviousData } from '@tanstack/vue-query';
 import ProductCard from '@/components/ui/ProductCard.vue';
-import QuickAddModal from '@/components/ui/QuickAddModal.vue';
 import CompareModal from '@/components/ui/CompareModal.vue';
 import SoraSkeleton from '@/components/ui/SoraSkeleton.vue';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';

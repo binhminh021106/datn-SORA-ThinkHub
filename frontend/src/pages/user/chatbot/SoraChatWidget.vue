@@ -222,7 +222,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick, computed, watch, defineProps, defineEmits } from 'vue';
 import clientApiClient from '@/utils/clientApiClient';
-import { getToken } from '@/composables/useUtilities';
+import { getUserToken } from '@/composables/useUtilities';
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -380,7 +380,7 @@ const fetchHistory = async () => {
     return;
   }
   // Không gọi API nếu không có token
-  const token = getToken();
+  const token = getUserToken();
   if (!token) {
     isLoggedIn.value = false;
     messages.value = [{ id: 'sys1', type: 'admin', message_type: 'text', text: 'Kính chào quý khách! Vui lòng Đăng Nhập ở góc trên cùng bên phải để chuyên viên có thể hỗ trợ trực tiếp.', time: 'Ngay bây giờ' }];
@@ -436,7 +436,7 @@ const toggleChat = () => {
   isOpen.value = !isOpen.value;
   if (isOpen.value && messages.value.length === 0) {
     // Chỉ fetch nếu đã đăng nhập
-    if (checkAuth() && getToken()) {
+    if (checkAuth() && getUserToken()) {
       fetchHistory();
     } else {
       messages.value = [{ id: 'sys1', type: 'admin', message_type: 'text', text: 'Kính chào quý khách! Vui lòng Đăng Nhập ở góc trên cùng bên phải để chuyên viên có thể hỗ trợ trực tiếp.', time: 'Ngay bây giờ' }];

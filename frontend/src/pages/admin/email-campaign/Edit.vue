@@ -376,18 +376,6 @@ function normalizeTargetAudience(value) {
 }
 
 function buildPayload() {
-  let expiresAtFormatted = null
-  if (holidayForm.hasVoucher && holidayForm.day && holidayForm.month) {
-    const yyyy = new Date().getFullYear()
-    const d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
-    d.setDate(d.getDate() + 3) 
-    
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    expiresAtFormatted = `${y}-${m}-${day} 23:59:59` 
-  }
-
   return {
     name: holidayForm.name,
     day: holidayForm.day,
@@ -407,23 +395,8 @@ function insertToken(token) {
 }
 
 function replaceTokens(text) {
-
-  const userJson = localStorage.getItem('user') || '{}'
-  let adminName = 'Admin SORA' 
-
-  try {
-    const userData = JSON.parse(userJson)
-
-    if (userData && userData.name) {
-      adminName = userData.name
-    }
-  } catch (error) {
-    
-  }
-
-
   return text
-    .replaceAll('[Tên_Khách_Hàng]', adminName)
+    .replaceAll('[Tên_Khách_Hàng]', 'Nguyễn Văn A')
     .replaceAll('[Voucher_Code]', holidayForm.voucherCode || '')
 }
 

@@ -36,7 +36,16 @@ window.Echo = new Echo({
     authorizer: (channel, options) => {
         return {
             authorize: (socketId, callback) => {
-                const token = getAdminToken() || getUserToken();
+                let token = null;
+                const adminChannels = ['admin-notifications', 'admin-orders', 'App.Models.Admin'];
+                const isAdminChannel = adminChannels.some(prefix => channel.name.includes(prefix));
+                
+                if (isAdminChannel) {
+                    token = getAdminToken();
+                } else {
+                    token = getUserToken();
+                }
+
                 if (!token) {
                     callback(true, { message: 'Missing auth token' });
                     return;

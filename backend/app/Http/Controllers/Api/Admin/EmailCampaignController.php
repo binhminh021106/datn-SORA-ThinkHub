@@ -81,7 +81,7 @@ class EmailCampaignController extends Controller
                 'is_auto_birthday' => (bool) $setting->is_auto_birthday,
                 'birthday_subject' => $setting->birthday_subject,
                 'birthday_content' => $setting->birthday_content,
-                'tiers'            => $setting->birthday_tiers, // Trả data thật về Vue
+                'tiers'            => $setting->birthday_tiers ?? [], // Trả data thật về Vue
             ],
         ]);
     }
@@ -93,16 +93,23 @@ class EmailCampaignController extends Controller
             'birthday_subject' => 'required|string|max:255',
             'birthday_content' => 'nullable|string',
             'tiers' => 'required|array',
+            'tiers.*.id' => 'required|string',
+            'tiers.*.name' => 'required|string',
+            'tiers.*.voucherCode' => 'required|string',
+            'tiers.*.discount' => 'required|string',
         ]);
 
         $setting = EmailCampaignSetting::current();
-        $setting->update([
-            'is_auto_birthday' => (bool) ($validated['is_auto_birthday'] ?? false),
-            'birthday_subject' => $validated['birthday_subject'],
-            'birthday_content' => $validated['birthday_content'] ?? '',
-            'birthday_tiers'   => $validated['tiers'],
-        ]);
-$this->syncBirthdayVouchers($validated['tiers']);
+        
+        \Illuminate\Support\Facades\DB::transaction(function () use ($setting, $validated) {
+            $setting->update([
+                'is_auto_birthday' => (bool) ($validated['is_auto_birthday'] ?? false),
+                'birthday_subject' => $validated['birthday_subject'],
+                'birthday_content' => $validated['birthday_content'] ?? '',
+                'birthday_tiers'   => $validated['tiers'],
+            ]);
+            $this->syncBirthdayVouchers($validated['tiers']);
+        });
 
         return response()->json([
             'success' => true,
@@ -129,12 +136,13 @@ private function syncBirthdayVouchers(array $tiers): void
       
             if ($numericValue <= 0 && !$isFreeship) continue;
 
-       
-            $coupon = Coupon::query()->firstOrNew(['code' => $tier['voucherCode']]);
+            $couponName = 'Quà tặng sinh nhật hạng: ' . $tier['name'];
+            $coupon = Coupon::query()->firstOrNew([
+                'code' => $tier['voucherCode']
+            ]);
             
-            $coupon->name = 'Quà tặng sinh nhật hạng: ' . $tier['name'];
-
-           
+            $coupon->name = $couponName;
+            
             if ($isFreeship) {
                 $coupon->type = 'freeship';
                 $coupon->value = 0;
@@ -146,7 +154,6 @@ private function syncBirthdayVouchers(array $tiers): void
             $coupon->min_spend = 0;
             $coupon->status = 'active';
 
-          
             if (!$coupon->exists) {
                 $coupon->usage_count = 0;
                 $coupon->is_used = false;
