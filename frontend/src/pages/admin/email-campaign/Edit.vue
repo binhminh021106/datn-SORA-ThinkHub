@@ -398,7 +398,7 @@ function buildPayload() {
     voucher_code: holidayForm.hasVoucher ? holidayForm.voucherCode : null,
     discount: holidayForm.hasVoucher ? holidayForm.discount : null,
     status: holidayForm.status,
-    expires_at: expiresAtFormatted // Đồng bộ chính xác
+    
   }
 }
 

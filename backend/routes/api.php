@@ -67,21 +67,25 @@ use App\Http\Controllers\Api\Admin\EmailCampaignController;
 
 Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     
-    // CRUD Quản lý ngày lễ
-    Route::apiResource('holiday-events', HolidayEventController::class);
+    // THÊM: Bọc middleware check.module để kiểm tra quyền phân hệ
+    Route::middleware(['check.module:admin_coupons'])->group(function () {
+        
+        // CRUD Quản lý ngày lễ
+        Route::apiResource('holiday-events', HolidayEventController::class);
 
-    // Xử lý gửi & Lịch sử
-    Route::prefix('email-campaign')->group(function () {
-        Route::get('/settings', [EmailCampaignController::class, 'settings']);
-        Route::post('/settings', [EmailCampaignController::class, 'updateSettings']);
-        Route::post('/trigger-birthday', [EmailCampaignController::class, 'triggerBirthday']);
-        Route::post('/trigger-holiday', [EmailCampaignController::class, 'triggerHoliday']);
-        Route::get('/recent-logs', [EmailCampaignController::class, 'recentLogs']);
-        Route::delete('/recent-logs', [EmailCampaignController::class, 'clearLogs']);
+        // Xử lý gửi & Lịch sử
+        Route::prefix('email-campaign')->group(function () {
+            Route::get('/settings', [EmailCampaignController::class, 'settings']);
+            Route::post('/settings', [EmailCampaignController::class, 'updateSettings']);
+            Route::post('/trigger-birthday', [EmailCampaignController::class, 'triggerBirthday']);
+            Route::post('/trigger-holiday', [EmailCampaignController::class, 'triggerHoliday']);
+            Route::get('/recent-logs', [EmailCampaignController::class, 'recentLogs']);
+            Route::delete('/recent-logs', [EmailCampaignController::class, 'clearLogs']);
+        });
+        
     });
     
 });
-
 
 
 Route::prefix('news')->group(function () {

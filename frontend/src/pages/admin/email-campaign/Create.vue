@@ -103,8 +103,7 @@
                         <i class="bi bi-ticket-perforated text-brand me-1"></i> [Voucher_Code]
                       </button>
                     </div>
-                    <textarea v-model="holidayForm.content" class="form-control border-0 rounded-0 bg-light small" rows="12" style="resize: none; font-size: 0.85rem;" required></textarea>
-                  </div>
+<textarea v-model="holidayForm.content" class="form-control border-0 rounded-0 bg-light small" rows="12" style="resize: none; font-size: 0.85rem;"></textarea>              </div>
                 </div>
 
                 <div class="d-flex align-items-center justify-content-between bg-light border rounded-3 p-3 mb-3">
@@ -293,19 +292,37 @@ const holidaySubject = computed(() => {
 })
 
 const saveHoliday = async () => {
+  console.log("1. vào saveHoliday");
+
   if (!holidayForm.name || !holidayForm.day || !holidayForm.month || !holidayForm.content) {
+    console.log("Thiếu dữ liệu bắt buộc");
     toast.warning('Vui lòng nhập đầy đủ các trường thông tin bắt buộc (*).')
     return
   }
+console.log("hasVoucher:", holidayForm.hasVoucher)
+console.log("voucherCode:", holidayForm.voucherCode)
+console.log("discount:", holidayForm.discount)
+
   if (holidayForm.hasVoucher && (!holidayForm.voucherCode || !holidayForm.discount)) {
+    console.log("Thiếu voucher");
     toast.warning('Vui lòng nhập đầy đủ Mã quà tặng và Mức ưu đãi.')
     return
   }
 
   isSubmitting.value = true
+
   try {
-    const response = await apiClient.post('/admin/holiday-events', buildPayload())
-    
+    console.log("2. chuẩn bị gửi API");
+    console.log(buildPayload());
+
+    const response = await apiClient.post(
+      '/admin/holiday-events',
+      buildPayload()
+    )
+
+    console.log("3. đã nhận response");
+    console.log(response);
+
     if (response.data && response.data.success) {
       toast.success('Thêm mới sự kiện thành công!')
       router.push({ path: '/admin/email-campaigns' })
@@ -313,6 +330,13 @@ const saveHoliday = async () => {
       toast.error(response.data.message || 'Lỗi khi thêm mới sự kiện.')
     }
   } catch (error) {
+    console.log("4. lỗi");
+    console.log(error);
+
+    if (error.response) {
+      console.log(error.response.data);
+    }
+
     if (error.response && error.response.status === 422) {
       toast.error('Dữ liệu không hợp lệ, vui lòng kiểm tra lại form.')
     } else {
@@ -347,7 +371,7 @@ function buildPayload() {
     voucher_code: holidayForm.hasVoucher ? holidayForm.voucherCode : null,
     discount: holidayForm.hasVoucher ? holidayForm.discount : null, 
     status: holidayForm.status,
-    expires_at: expiresAtFormatted // Đồng bộ chính xác
+  
   }
 }
 

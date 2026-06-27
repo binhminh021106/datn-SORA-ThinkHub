@@ -12,7 +12,7 @@ use Illuminate\Queue\SerializesModels;
 use App\Models\User;
 use App\Models\Coupon;
 
-class BirthdayVoucherMail extends Mailable
+class BirthdayVoucherMail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 

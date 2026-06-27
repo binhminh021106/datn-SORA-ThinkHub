@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\EmailCampaignSetting;
 use App\Models\EmailLog;
+use App\Models\Coupon;
 use App\Services\EmailCampaignService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -43,7 +44,7 @@ class EmailCampaignController extends Controller
         }
     }
 
-    public function clearLogs(Request $request)
+  public function clearLogs(Request $request)
     {
         try {
             $query = EmailLog::query();
@@ -54,31 +55,18 @@ class EmailCampaignController extends Controller
                 $query->where('event_type', 'like', 'holiday_%');
             }
 
-            $logs = $query->get();
-            $birthdayVoucherCodes = $logs
-                ->where('event_type', 'birthday')
-                ->pluck('voucher_code')
-                ->filter()
-                ->values();
-
-            if ($birthdayVoucherCodes->isNotEmpty()) {
-                \App\Models\Coupon::whereIn('code', $birthdayVoucherCodes)
-                    ->where('type', 'birthday')
-                    ->where('is_used', 0)
-                    ->forceDelete();
-            }
-
-            $deleted = $logs->each->delete()->count();
+            // CHỈ CẦN GỌI DELETE TRỰC TIẾP TRÊN QUERY LOGS
+            $deleted = $query->delete();
 
             return response()->json([
                 'success' => true,
                 'deleted_count' => $deleted,
-                'message' => 'Da xoa lich su gui email.',
+                'message' => 'Đã xóa lịch sử gửi email thành công.',
             ]);
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Loi khi xoa lich su: ' . $e->getMessage(),
+                'message' => 'Lỗi khi xóa lịch sử: ' . $e->getMessage(),
             ]);
         }
     }
@@ -87,9 +75,14 @@ class EmailCampaignController extends Controller
     {
         $setting = EmailCampaignSetting::current();
 
-        return response()->json([
+       return response()->json([
             'success' => true,
-            'data' => $this->formatSetting($setting),
+            'data' => [
+                'is_auto_birthday' => (bool) $setting->is_auto_birthday,
+                'birthday_subject' => $setting->birthday_subject,
+                'birthday_content' => $setting->birthday_content,
+                'tiers'            => $setting->birthday_tiers, // Trả data thật về Vue
+            ],
         ]);
     }
 
@@ -99,6 +92,7 @@ class EmailCampaignController extends Controller
             'is_auto_birthday' => 'sometimes|boolean',
             'birthday_subject' => 'required|string|max:255',
             'birthday_content' => 'nullable|string',
+            'tiers' => 'required|array',
         ]);
 
         $setting = EmailCampaignSetting::current();
@@ -106,19 +100,62 @@ class EmailCampaignController extends Controller
             'is_auto_birthday' => (bool) ($validated['is_auto_birthday'] ?? false),
             'birthday_subject' => $validated['birthday_subject'],
             'birthday_content' => $validated['birthday_content'] ?? '',
+            'birthday_tiers'   => $validated['tiers'],
         ]);
+$this->syncBirthdayVouchers($validated['tiers']);
 
         return response()->json([
             'success' => true,
-            'message' => 'Da luu cau hinh sinh nhat.',
-            'data' => $this->formatSetting($setting->refresh()),
+            'message' => 'Đã lưu cấu hình sinh nhật.',
+            
+            'data' => $this->settings()->getData()->data,
         ]);
     }
+private function syncBirthdayVouchers(array $tiers): void
+    {
+        foreach ($tiers as $tier) {
+            if (empty($tier['voucherCode']) || empty($tier['discount'])) {
+                continue;
+            }
 
-    public function triggerBirthday()
+            $rawDiscount = trim($tier['discount']);
+            $lowerDiscount = mb_strtolower($rawDiscount, 'UTF-8');
+            
+            // Nhận diện Freeship
+            $isFreeship = str_contains($lowerDiscount, 'miễn phí') || str_contains($lowerDiscount, 'freeship');
+            $isPercentage = str_contains($rawDiscount, '%');
+            $numericValue = (float) preg_replace('/[^0-9.]/', '', $rawDiscount);
+
+            // Bỏ qua nếu giá trị <= 0 VÀ KHÔNG PHẢI là freeship
+            if ($numericValue <= 0 && !$isFreeship) continue;
+
+            $coupon = Coupon::firstOrNew(['code' => $tier['voucherCode']]);
+            $coupon->name = 'Quà tặng sinh nhật hạng: ' . $tier['name'];
+            
+            // Xử lý gán type
+            if ($isFreeship) {
+                $coupon->type = 'freeship';
+                $coupon->value = 0;
+            } else {
+                $coupon->type = $isPercentage ? 'percentage' : 'fixed';
+                $coupon->value = $numericValue;
+            }
+            
+            $coupon->min_spend = 0; 
+            $coupon->usage_count = 0;
+            $coupon->status = 'active';
+            $coupon->save();
+        }
+    }
+
+public function triggerBirthday()
     {
         try {
-            return response()->json($this->emailCampaignService->sendBirthdayCampaign());
+            // Truyền tham số để bỏ qua check AutoSetting nhưng BẬT check chống trùng lặp
+            return response()->json($this->emailCampaignService->sendBirthdayCampaign(
+                respectAutoSetting: false, 
+                preventDuplicateSends: true
+            ));
         } catch (\Throwable $e) {
             Log::error('triggerBirthday failed: ' . $e->getMessage());
 
@@ -132,7 +169,8 @@ class EmailCampaignController extends Controller
     public function triggerHoliday()
     {
         try {
-            return response()->json($this->emailCampaignService->sendHolidayCampaign());
+            // Bật cờ preventDuplicateSends thành true khi trigger bằng tay
+            return response()->json($this->emailCampaignService->sendHolidayCampaign(preventDuplicateSends: true));
         } catch (\Throwable $e) {
             Log::error('triggerHoliday failed: ' . $e->getMessage());
 
@@ -143,6 +181,7 @@ class EmailCampaignController extends Controller
         }
     }
 
+ 
     private function formatSetting(EmailCampaignSetting $setting): array
     {
         return [
