@@ -398,7 +398,7 @@ function buildPayload() {
     voucher_code: holidayForm.hasVoucher ? holidayForm.voucherCode : null,
     discount: holidayForm.hasVoucher ? holidayForm.discount : null,
     status: holidayForm.status,
-    expires_at: expiresAtFormatted // Đồng bộ chính xác
+    
   }
 }
 
@@ -407,8 +407,23 @@ function insertToken(token) {
 }
 
 function replaceTokens(text) {
+
+  const userJson = localStorage.getItem('user') || '{}'
+  let adminName = 'Admin SORA' 
+
+  try {
+    const userData = JSON.parse(userJson)
+
+    if (userData && userData.name) {
+      adminName = userData.name
+    }
+  } catch (error) {
+    
+  }
+
+
   return text
-    .replaceAll('[Tên_Khách_Hàng]', 'Le Thi My Duyen')
+    .replaceAll('[Tên_Khách_Hàng]', adminName)
     .replaceAll('[Voucher_Code]', holidayForm.voucherCode || '')
 }
 

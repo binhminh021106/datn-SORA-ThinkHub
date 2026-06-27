@@ -10,4 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('sora:crawl-gold')->everyFiveMinutes();
 
-Schedule::command('email-campaign:auto-send')->dailyAt('11:48');
+Schedule::command('email-campaign:auto-send')->dailyAt('09:37');

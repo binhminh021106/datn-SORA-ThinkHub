@@ -103,8 +103,7 @@
                         <i class="bi bi-ticket-perforated text-brand me-1"></i> [Voucher_Code]
                       </button>
                     </div>
-                    <textarea v-model="holidayForm.content" class="form-control border-0 rounded-0 bg-light small" rows="12" style="resize: none; font-size: 0.85rem;" required></textarea>
-                  </div>
+<textarea v-model="holidayForm.content" class="form-control border-0 rounded-0 bg-light small" rows="12" style="resize: none; font-size: 0.85rem;"></textarea>              </div>
                 </div>
 
                 <div class="d-flex align-items-center justify-content-between bg-light border rounded-3 p-3 mb-3">
@@ -297,15 +296,20 @@ const saveHoliday = async () => {
     toast.warning('Vui lòng nhập đầy đủ các trường thông tin bắt buộc (*).')
     return
   }
+
   if (holidayForm.hasVoucher && (!holidayForm.voucherCode || !holidayForm.discount)) {
     toast.warning('Vui lòng nhập đầy đủ Mã quà tặng và Mức ưu đãi.')
     return
   }
 
   isSubmitting.value = true
+
   try {
-    const response = await apiClient.post('/admin/holiday-events', buildPayload())
-    
+    const response = await apiClient.post(
+      '/admin/holiday-events',
+      buildPayload()
+    )
+
     if (response.data && response.data.success) {
       toast.success('Thêm mới sự kiện thành công!')
       router.push({ path: '/admin/email-campaigns' })
@@ -322,7 +326,6 @@ const saveHoliday = async () => {
     isSubmitting.value = false
   }
 }
-
 function buildPayload() {
   let expiresAtFormatted = null
   
@@ -347,7 +350,7 @@ function buildPayload() {
     voucher_code: holidayForm.hasVoucher ? holidayForm.voucherCode : null,
     discount: holidayForm.hasVoucher ? holidayForm.discount : null, 
     status: holidayForm.status,
-    expires_at: expiresAtFormatted // Đồng bộ chính xác
+  
   }
 }
 
