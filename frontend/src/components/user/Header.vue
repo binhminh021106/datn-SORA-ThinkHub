@@ -21,7 +21,8 @@
 
         <div href="/" class="logo-wrapper d-flex justify-content-center" style="flex: 1;">
           <router-link :to="{ name: 'home' }">
-            <img src="../../assets/images/logo1.png" alt="SORA Logo" class="logo-img" @error="handleLogoError">
+            <img v-if="!logoLoadFailed" src="../../assets/images/logo1.png" alt="SORA Logo" class="logo-img" @error="handleLogoError">
+            <h2 v-else class="font-oswald fw-bold text-dark m-0 tracking-wide text-sora-primary">S O R A</h2>
           </router-link>
         </div>
 
@@ -202,7 +203,8 @@
         <div class="mobile-backdrop" @click="toggleMobileMenu"></div>
         <div class="mobile-sidebar bg-white d-flex flex-column">
           <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light">
-            <img src="../../assets/images/logo1.png" alt="SORA Logo" style="height: 35px; object-fit: contain;" @error="handleLogoError">
+            <img v-if="!logoLoadFailed" src="../../assets/images/logo1.png" alt="SORA Logo" style="height: 35px; object-fit: contain;" @error="handleLogoError">
+            <h4 v-else class="font-oswald fw-bold text-dark m-0 tracking-wide text-sora-primary">S O R A</h4>
             <button class="btn border-0 text-dark fs-4 p-0 shadow-none hover-primary transition-color"
               @click="toggleMobileMenu">
               <i class="bi bi-x-lg"></i>
@@ -243,7 +245,7 @@
                 class="btn btn-outline-brand w-100 fw-bold rounded-pill font-oswald tracking-wide py-2">ĐĂNG KÝ</button>
             </div>
             <div v-else>
-              <div @click="toggleMobileMenu(); safeNavigate('profile')" class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom border-light-subtle" style="cursor: pointer;">
+              <a role="button" tabindex="0" @click="toggleMobileMenu(); safeNavigate('profile')" @keydown.enter.space.prevent="toggleMobileMenu(); safeNavigate('profile')" class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom border-light-subtle text-decoration-none" style="cursor: pointer;">
                 <div
                   class="bg-primary-custom text-white rounded-circle d-flex align-items-center justify-content-center fw-bold border shadow-sm"
                   style="width: 45px; height: 45px; flex-shrink: 0;">
@@ -254,7 +256,7 @@
                   <div class="text-muted small text-truncate">{{ user.email }}</div>
                 </div>
                 <i class="bi bi-chevron-right text-muted fs-5"></i>
-              </div>
+              </a>
               <button @click="toggleMobileMenu(); handleLogout()"
                 class="btn btn-light w-100 border text-center text-danger fw-bold py-2"><i
                   class="bi bi-box-arrow-right me-2"></i>Đăng xuất</button>
@@ -288,6 +290,7 @@ const sysConfig = ref({ phone: '12345678910', email: 'SORA@GMAIL.COM', facebook:
 const user = ref(null);
 const isUserMenuOpen = ref(false);
 const userMenuContainer = ref(null);
+const logoLoadFailed = ref(false);
 
 const categories = ref([]);
 const hoveredCategory = ref(null);
@@ -386,7 +389,9 @@ const getImage = (path) => {
   return getStorageUrl(cleaned);
 };
 const handleImageError = (e) => { e.target.src = soraPlaceholder; };
-const handleLogoError = (e) => { e.target.outerHTML = '<h2 class="font-oswald fw-bold text-dark m-0 tracking-wide">S O R A</h2>'; };
+const handleLogoError = (e) => {
+  logoLoadFailed.value = true;
+};
 const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
 const highlightText = (text) => {
   if (!searchQuery.value) return text;

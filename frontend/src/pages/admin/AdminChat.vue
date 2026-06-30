@@ -713,6 +713,9 @@ const deleteConversation = async () => {
   }
 };
 
+// Khai báo biến lưu tham chiếu hàm callback reconnect để remove
+let onReconnect = null;
+
 // ===== WEBSOCKET =====
 onMounted(() => {
   fetchContacts();
@@ -733,8 +736,11 @@ onMounted(() => {
           if (isAdminMessage(msg)) {
             const tempIdx = messages.value.findIndex(m => String(m.id).startsWith('temp_') && m.content === msg.content);
             if (tempIdx !== -1) {
+              if (!msg.reply_to && messages.value[tempIdx].reply_to) {
+                msg.reply_to = messages.value[tempIdx].reply_to;
+              }
               renderedIds.value.delete(messages.value[tempIdx].id);
-              messages.value[tempIdx] = msg;
+              messages.value.splice(tempIdx, 1, msg);
               renderedIds.value.add(msg.id);
               return;
             }
@@ -752,14 +758,15 @@ onMounted(() => {
       
     // Khắc phục lỗi chat lâu bị đơ (mất kết nối ngầm WebSocket)
     if (window.Echo.connector.pusher) {
-      window.Echo.connector.pusher.connection.bind('connected', () => {
+      onReconnect = () => {
         // Khi mạng có lại, tải lại chat để tránh sót tin nhắn
         if (activeUserId.value && activeUser.value) {
           selectUser(activeUser.value);
         } else {
           fetchContacts();
         }
-      });
+      };
+      window.Echo.connector.pusher.connection.bind('connected', onReconnect);
     }
   }
 });
@@ -767,6 +774,9 @@ onMounted(() => {
 onUnmounted(() => {
   if (window.Echo) {
     window.Echo.leave(ADMIN_CHAT_CHANNEL);
+    if (window.Echo.connector.pusher && onReconnect) {
+      window.Echo.connector.pusher.connection.unbind('connected', onReconnect);
+    }
   }
 });
 </script>

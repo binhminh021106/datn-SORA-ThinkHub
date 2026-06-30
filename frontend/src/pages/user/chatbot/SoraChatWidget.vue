@@ -608,6 +608,7 @@ onMounted(() => {
             text: 'Đoạn chat đã được hệ thống dọn dẹp. Mình có thể giúp gì cho bạn?', 
             time: 'Vừa xong' 
           }];
+          replyTo.value = null; // Xóa trạng thái đang trả lời nếu có
         });
     }
 

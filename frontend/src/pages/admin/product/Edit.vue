@@ -1071,10 +1071,14 @@ const handleAdminCollision = (e) => {
 onMounted(() => {
     fetchData();
     window.addEventListener('admin-product-updated', handleAdminCollision);
+    window.addEventListener('admin-product-deleted', handleAdminCollision);
+    window.addEventListener('admin-reconnected', fetchData);
 });
 
 onBeforeUnmount(() => {
     window.removeEventListener('admin-product-updated', handleAdminCollision);
+    window.removeEventListener('admin-product-deleted', handleAdminCollision);
+    window.removeEventListener('admin-reconnected', fetchData);
     if (createAttrModalObj) createAttrModalObj.hide();
     if (createValueModalObj) createValueModalObj.hide();
     if (manageAttrModalObj) manageAttrModalObj.hide();

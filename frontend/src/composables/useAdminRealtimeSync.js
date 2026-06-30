@@ -25,6 +25,8 @@ export function useAdminRealtimeSync() {
     console.log('[Admin Realtime] Reconnected to WebSocket! Invalidating all active queries...');
     // Khi mạng có lại, invalidate toàn bộ active queries để đảm bảo dữ liệu không bị hụt
     queryClient.invalidateQueries({ type: 'active' });
+    // Phát event cho các component không dùng Vue Query
+    window.dispatchEvent(new CustomEvent('admin-reconnected'));
   };
 
   let retryCount = 0;
