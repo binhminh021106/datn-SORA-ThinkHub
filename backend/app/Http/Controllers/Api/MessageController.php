@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Message;
 use App\Models\User;
 use App\Events\MessageSent;
+use App\Events\ConversationDeleted;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
@@ -220,6 +221,9 @@ class MessageController extends Controller
         })->orWhere(function($q) use ($adminId, $userId) {
             $q->where('sender_id', $userId)->where('receiver_id', $adminId);
         })->delete();
+
+        // Báo cho client dọn dẹp giao diện real-time
+        broadcast(new ConversationDeleted($userId));
 
         return response()->json([
             'status'  => true,

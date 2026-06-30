@@ -5,35 +5,48 @@ import { refetchCartCount } from '../stores/cartStore';
 export function useRealtimeSync() {
   const queryClient = useQueryClient();
   let channel = null;
+  let connectionListener = null;
+
+  const handleReconnect = () => {
+    console.log('[Client Realtime] Reconnected to WebSocket! Invalidating all active queries...');
+    queryClient.invalidateQueries({ type: 'active' });
+  };
 
   const handleSyncEvent = (payload) => {
-    // 1. Gạch bỏ (invalidate) các cache liên quan đến hiển thị sản phẩm và giỏ hàng
-    // Điều này sẽ buộc các component đang hiển thị tự động fetch lại API mới
-    queryClient.invalidateQueries({ queryKey: ['shopProducts'] });
-    queryClient.invalidateQueries({ queryKey: ['shopCategories'] });
-    queryClient.invalidateQueries({ queryKey: ['product-detail'] });
-    queryClient.invalidateQueries({ queryKey: ['client-combos'] });
-    queryClient.invalidateQueries({ queryKey: ['combo-detail'] });
-    queryClient.invalidateQueries({ queryKey: ['homeData'] });
+    // THUNDERING HERD MITIGATION (Chống DDOS ngầm)
+    // Nếu có 1000 user online, khi Admin sửa 1 SP, cả 1000 user sẽ gọi API cùng 1 mili-giây.
+    // Việc thêm Jitter (độ trễ ngẫu nhiên 0-2500ms) giúp tản lực tải cho Server.
+    const jitter = Math.floor(Math.random() * 2500); 
     
-    // Invalidate cho News
-    queryClient.invalidateQueries({ queryKey: ['newsList'] });
-    queryClient.invalidateQueries({ queryKey: ['popularNews'] });
-    queryClient.invalidateQueries({ queryKey: ['postDetail'] });
-    queryClient.invalidateQueries({ queryKey: ['relatedNews'] });
+    setTimeout(() => {
+        // 1. Gạch bỏ (invalidate) các cache liên quan
+        queryClient.invalidateQueries({ queryKey: ['shopProducts'] });
+        queryClient.invalidateQueries({ queryKey: ['shopCategories'] });
+        queryClient.invalidateQueries({ queryKey: ['product-detail'] });
+        queryClient.invalidateQueries({ queryKey: ['userProductDetail'] });
+        queryClient.invalidateQueries({ queryKey: ['client-combos'] });
+        queryClient.invalidateQueries({ queryKey: ['combo-detail'] });
+        queryClient.invalidateQueries({ queryKey: ['homeData'] });
+        
+        // Invalidate cho News
+        queryClient.invalidateQueries({ queryKey: ['newsList'] });
+        queryClient.invalidateQueries({ queryKey: ['popularNews'] });
+        queryClient.invalidateQueries({ queryKey: ['postDetail'] });
+        queryClient.invalidateQueries({ queryKey: ['relatedNews'] });
 
-    // Phát custom event cho các component không dùng TanStack Query (như trang Combo cũ)
-    window.dispatchEvent(new CustomEvent('realtime-refresh-data'));
-    
-    // Đặc biệt quan trọng: Invalidate giỏ hàng để loại bỏ/hiển thị hết hàng
-    queryClient.invalidateQueries({ queryKey: ['cart-details'] });
+        // Phát custom event
+        window.dispatchEvent(new CustomEvent('realtime-refresh-data'));
+        
+        // Invalidate giỏ hàng
+        queryClient.invalidateQueries({ queryKey: ['cart-details'] });
 
-    // 2. Cập nhật lại số lượng bong bóng trên header và kích hoạt trang Giỏ hàng tải lại
-    refetchCartCount().then(() => {
-        window.dispatchEvent(new CustomEvent('update-cart-count', {
-            detail: { source: 'realtime-sync' }
-        }));
-    });
+        // 2. Cập nhật lại bong bóng
+        refetchCartCount().then(() => {
+            window.dispatchEvent(new CustomEvent('update-cart-count', {
+                detail: { source: 'realtime-sync' }
+            }));
+        });
+    }, jitter);
   };
 
   let retryCount = 0;
@@ -54,6 +67,12 @@ export function useRealtimeSync() {
       channel.listen('.NewsUpdated', (payload) => {
         handleSyncEvent(payload);
       });
+
+      // Lắng nghe sự kiện kết nối lại (khi bị đứt mạng ngầm)
+      if (window.Echo.connector.pusher) {
+        connectionListener = () => handleReconnect();
+        window.Echo.connector.pusher.connection.bind('connected', connectionListener);
+      }
     } else if (retryCount < 20) {
       retryCount++;
       retryTimer = setTimeout(initEcho, 500);
@@ -70,6 +89,10 @@ export function useRealtimeSync() {
       channel.stopListening('.ProductUpdated');
       channel.stopListening('.ComboUpdated');
       channel.stopListening('.NewsUpdated');
+    }
+    
+    if (window.Echo && window.Echo.connector.pusher && connectionListener) {
+      window.Echo.connector.pusher.connection.unbind('connected', connectionListener);
     }
   });
 }

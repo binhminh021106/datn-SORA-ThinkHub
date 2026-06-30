@@ -202,7 +202,7 @@
         <div class="mobile-backdrop" @click="toggleMobileMenu"></div>
         <div class="mobile-sidebar bg-white d-flex flex-column">
           <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light">
-            <h4 class="font-oswald fw-bold text-dark m-0 tracking-wide text-sora-primary">S O R A</h4>
+            <img src="../../assets/images/logo1.png" alt="SORA Logo" style="height: 35px; object-fit: contain;" @error="handleLogoError">
             <button class="btn border-0 text-dark fs-4 p-0 shadow-none hover-primary transition-color"
               @click="toggleMobileMenu">
               <i class="bi bi-x-lg"></i>
@@ -228,6 +228,8 @@
                   vàng</a></li>
               <li><a href="#" @click.prevent="toggleMobileMenu(); safeNavigate('services')"
                   class="mobile-nav-link fw-bold"><i class="bi bi-tools me-3 fs-5 text-muted"></i> Dịch vụ</a></li>
+              <li><a href="#" @click.prevent="toggleMobileMenu(); safeNavigate('news')"
+                  class="mobile-nav-link fw-bold"><i class="bi bi-newspaper me-3 fs-5 text-muted"></i> Tin tức</a></li>
               <li><a href="#" @click.prevent="toggleMobileMenu(); safeNavigate('contact')"
                   class="mobile-nav-link fw-bold"><i class="bi bi-telephone me-3 fs-5 text-muted"></i> Liên hệ</a></li>
             </ul>
@@ -241,23 +243,18 @@
                 class="btn btn-outline-brand w-100 fw-bold rounded-pill font-oswald tracking-wide py-2">ĐĂNG KÝ</button>
             </div>
             <div v-else>
-              <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom border-light-subtle">
+              <div @click="toggleMobileMenu(); safeNavigate('profile')" class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom border-light-subtle" style="cursor: pointer;">
                 <div
                   class="bg-primary-custom text-white rounded-circle d-flex align-items-center justify-content-center fw-bold border shadow-sm"
-                  style="width: 45px; height: 45px;">
+                  style="width: 45px; height: 45px; flex-shrink: 0;">
                   {{ user.fullName?.charAt(0).toUpperCase() || 'U' }}
                 </div>
-                <div class="overflow-hidden">
+                <div class="overflow-hidden flex-grow-1">
                   <div class="fw-bold text-dark text-truncate">{{ user.fullName }}</div>
                   <div class="text-muted small text-truncate">{{ user.email }}</div>
                 </div>
+                <i class="bi bi-chevron-right text-muted fs-5"></i>
               </div>
-              <button @click="toggleMobileMenu(); safeNavigate('profile')"
-                class="btn btn-light w-100 mb-2 border text-start fw-medium py-2"><i
-                  class="bi bi-person-circle me-2 text-primary-custom"></i>Tài khoản của tôi</button>
-              <button @click="toggleMobileMenu(); safeNavigate('order')"
-                class="btn btn-light w-100 mb-3 border text-start fw-medium py-2"><i
-                  class="bi bi-box-seam me-2 text-primary-custom"></i>Đơn hàng đã mua</button>
               <button @click="toggleMobileMenu(); handleLogout()"
                 class="btn btn-light w-100 border text-center text-danger fw-bold py-2"><i
                   class="bi bi-box-arrow-right me-2"></i>Đăng xuất</button>

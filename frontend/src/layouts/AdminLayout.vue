@@ -3,23 +3,45 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 import Sidebar from '../components/admin/Sidebar.vue';
 import Header from '../components/admin/Header.vue';
 import Footer from '../components/admin/Footer.vue';
+import { useAdminRealtimeSync } from '../composables/useAdminRealtimeSync';
+
+import Swal from 'sweetalert2';
+
+// Khởi tạo Real-time Sync cho Admin CPanel
+useAdminRealtimeSync();
 
 // Biến lưu trữ trạng thái thu/mở của Sidebar
 const isSidebarCollapsed = ref(false);
 
+const handleNewOrderAlert = (e) => {
+    const payload = e.detail;
+    if (payload && payload.orderCode) {
+        // Có thể thay đổi nhạc chuông nếu muốn: const audio = new Audio('/sounds/bell.mp3'); audio.play();
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'info',
+            title: `Đơn hàng mới: #${payload.orderCode}`,
+            text: `Tổng tiền: ${new Intl.NumberFormat('vi-VN').format(payload.totalAmount)}đ`,
+            showConfirmButton: false,
+            timer: 5000,
+            timerProgressBar: true,
+            background: '#e0f7fa',
+            color: '#006064',
+            iconColor: '#0097a7',
+            customClass: {
+                popup: 'shadow-lg rounded-3 border-start border-4 border-info'
+            }
+        });
+    }
+};
+
 onMounted(() => {
-  if (window.Echo) {
-    const adminChannel = window.Echo.private('admin');
-    adminChannel.listen('.AdminRefresh', (data) => {
-      window.dispatchEvent(new CustomEvent('admin-refresh', { detail: data }));
-    });
-  }
+    window.addEventListener('admin-new-order', handleNewOrderAlert);
 });
 
 onBeforeUnmount(() => {
-  if (window.Echo) {
-    window.Echo.leave('admin');
-  }
+    window.removeEventListener('admin-new-order', handleNewOrderAlert);
 });
 </script>
 

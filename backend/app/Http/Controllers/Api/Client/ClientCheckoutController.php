@@ -179,6 +179,8 @@ class ClientCheckoutController extends Controller
                 $subTotal = 0;
                 $totalCommissionAmount = 0;
                 $orderItemsData = [];
+                $updatedProductIds = [];
+                $updatedComboIds = [];
 
                 foreach ($cart->items as $item) {
                     if ($item->product_variant_id) {
@@ -189,6 +191,7 @@ class ClientCheckoutController extends Controller
 
                         $variant->stock_quantity -= $item->quantity;
                         $variant->save();
+                        $updatedProductIds[] = $variant->product_id;
 
                         $itemTotal = $item->subtotal;
                         $subTotal += $itemTotal;
@@ -222,6 +225,7 @@ class ClientCheckoutController extends Controller
                             }
                             $combo->usage_limit -= $item->quantity;
                             $combo->save();
+                            $updatedComboIds[] = $combo->id;
                         }
 
                         if (is_array($item->combo_selections)) {
@@ -234,6 +238,7 @@ class ClientCheckoutController extends Controller
                                     }
                                     $variant->stock_quantity -= $item->quantity;
                                     $variant->save();
+                                    $updatedProductIds[] = $variant->product_id;
                                 }
                             }
                         }
@@ -248,6 +253,7 @@ class ClientCheckoutController extends Controller
                                 }
                                 $variant->stock_quantity -= $totalQtyNeeded;
                                 $variant->save();
+                                $updatedProductIds[] = $variant->product_id;
                             }
                         }
 
@@ -406,9 +412,23 @@ class ClientCheckoutController extends Controller
                     ]);
                 }
 
-                \Illuminate\Support\Facades\DB::afterCommit(function () use ($order) {
+                \Illuminate\Support\Facades\DB::afterCommit(function () use ($order, $updatedProductIds, $updatedComboIds) {
                     try {
                         broadcast(new NewOrderReceived($order->order_code, (float) $order->total_amount));
+                        
+                        $uniqueProductIds = array_unique($updatedProductIds);
+                        foreach ($uniqueProductIds as $pid) {
+                            if ($pid) {
+                                broadcast(new \App\Events\ProductUpdated($pid, ['action' => 'stock_updated']));
+                            }
+                        }
+                        
+                        $uniqueComboIds = array_unique($updatedComboIds);
+                        foreach ($uniqueComboIds as $cid) {
+                            if ($cid) {
+                                broadcast(new \App\Events\ComboUpdated($cid, ['action' => 'stock_updated']));
+                            }
+                        }
                         
                         // Gửi thông báo cho Admin
                         $adminsToNotify = \App\Models\Admin::where('status', 'active')->get();
