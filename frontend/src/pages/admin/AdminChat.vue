@@ -142,10 +142,8 @@
                     :class="isAdminMessage(msg) ? 'quote-block-sent' : 'quote-block-received'"
                     @click.stop="scrollToMessage(msg.reply_to.id)"
                   >
-                    <span class="quote-block-label">
-                      <i class="bi bi-reply-fill"></i> Trả lời: {{ msg.reply_to.sender_id === 1 ? 'Chính mình' : 'Khách hàng' }}
-                    </span>
                     <div class="reply-preview-text" style="max-width: 200px;">
+                      <i class="bi bi-reply-fill me-1 opacity-75"></i>
                       <i v-if="msg.reply_to.message_type === 'image'" class="bi bi-image"></i>
                       <i v-else-if="msg.reply_to.message_type === 'file'" class="bi bi-file-earmark"></i>
                       {{ msg.reply_to.content || 'Đã gửi một tệp' }}
@@ -225,10 +223,8 @@
             <!-- Reply Preview -->
             <div v-if="replyTo" class="reply-preview-bar">
               <div class="reply-preview-content">
-                <span class="reply-preview-label">
-                  Đang trả lời: {{ replyTo.sender_id === 1 ? 'Chính mình' : 'Khách hàng' }}
-                </span>
-                <p class="reply-preview-text">
+                <p class="reply-preview-text mb-0">
+                  <i class="bi bi-reply-fill me-1 text-primary"></i>
                   <i v-if="replyTo.message_type === 'image'" class="bi bi-image"></i>
                   <i v-else-if="replyTo.message_type === 'file'" class="bi bi-file-earmark"></i>
                   {{ replyTo.content || 'Đã gửi một tệp' }}
@@ -613,8 +609,12 @@ const sendMessage = async () => {
         } else {
           const idx = messages.value.findIndex(m => m.id === tempId);
           if (idx !== -1) {
+            // Giữ lại phần reply_to từ tin nhắn tạm (nếu API lỡ không trả về kịp do cache/relation load xịt)
+            if (!realMsg.reply_to && messages.value[idx].reply_to) {
+              realMsg.reply_to = messages.value[idx].reply_to;
+            }
             renderedIds.value.delete(tempId);
-            messages.value[idx] = realMsg;
+            messages.value.splice(idx, 1, realMsg); // Dùng splice để ép Vue render lại chắc chắn 100%
             renderedIds.value.add(realMsg.id);
           }
         }
@@ -664,8 +664,12 @@ const sendMessage = async () => {
         } else {
           const idx = messages.value.findIndex(m => m.id === tempId);
           if (idx !== -1) {
+            // Cứu cánh: Giữ lại reply_to từ tin nhắn tạm nếu API gửi về thiếu
+            if (!realMsg.reply_to && messages.value[idx].reply_to) {
+              realMsg.reply_to = messages.value[idx].reply_to;
+            }
             renderedIds.value.delete(tempId);
-            messages.value[idx] = realMsg;
+            messages.value.splice(idx, 1, realMsg); // Ép Vue thay thế và render lại
             renderedIds.value.add(realMsg.id);
           }
         }
@@ -709,6 +713,9 @@ const deleteConversation = async () => {
   }
 };
 
+// Khai báo biến lưu tham chiếu hàm callback reconnect để remove
+let onReconnect = null;
+
 // ===== WEBSOCKET =====
 onMounted(() => {
   fetchContacts();
@@ -729,8 +736,11 @@ onMounted(() => {
           if (isAdminMessage(msg)) {
             const tempIdx = messages.value.findIndex(m => String(m.id).startsWith('temp_') && m.content === msg.content);
             if (tempIdx !== -1) {
+              if (!msg.reply_to && messages.value[tempIdx].reply_to) {
+                msg.reply_to = messages.value[tempIdx].reply_to;
+              }
               renderedIds.value.delete(messages.value[tempIdx].id);
-              messages.value[tempIdx] = msg;
+              messages.value.splice(tempIdx, 1, msg);
               renderedIds.value.add(msg.id);
               return;
             }
@@ -745,12 +755,28 @@ onMounted(() => {
           moveContactToTop(msg.sender_id);
         }
       });
+      
+    // Khắc phục lỗi chat lâu bị đơ (mất kết nối ngầm WebSocket)
+    if (window.Echo.connector.pusher) {
+      onReconnect = () => {
+        // Khi mạng có lại, tải lại chat để tránh sót tin nhắn
+        if (activeUserId.value && activeUser.value) {
+          selectUser(activeUser.value);
+        } else {
+          fetchContacts();
+        }
+      };
+      window.Echo.connector.pusher.connection.bind('connected', onReconnect);
+    }
   }
 });
 
 onUnmounted(() => {
   if (window.Echo) {
     window.Echo.leave(ADMIN_CHAT_CHANNEL);
+    if (window.Echo.connector.pusher && onReconnect) {
+      window.Echo.connector.pusher.connection.unbind('connected', onReconnect);
+    }
   }
 });
 </script>

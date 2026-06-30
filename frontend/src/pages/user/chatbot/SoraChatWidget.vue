@@ -587,11 +587,30 @@ onMounted(() => {
               file_url: msg.file_url || null,
               file_name: msg.file_name || null,
               file_size: msg.file_size || null,
-              time: formatTimeFromTs(msg.created_at)
+              time: formatTimeFromTs(msg.created_at),
+              reply_to: msg.reply_to_message ? {
+                id: msg.reply_to_message.id,
+                type: Number(msg.reply_to_message.sender_id) === 1 ? 'admin' : 'user',
+                message_type: msg.reply_to_message.message_type || 'text',
+                text: msg.reply_to_message.content
+              } : null
             });
             scrollToBottom();
             if (!isOpen.value) toggleChat();
           }
+        })
+        .listen('.ConversationDeleted', () => {
+          // Xóa toàn bộ tin nhắn khỏi UI khi Admin ấn xóa
+          messages.value = [{ 
+            id: 'sys2', 
+            type: 'admin',
+            message_type: 'text',
+            text: 'Đoạn chat đã được hệ thống dọn dẹp. Mình có thể giúp gì cho bạn?', 
+            time: 'Vừa xong' 
+          }];
+          clearReply();
+          inputText.value = '';
+          removeSelectedFile();
         });
     }
 

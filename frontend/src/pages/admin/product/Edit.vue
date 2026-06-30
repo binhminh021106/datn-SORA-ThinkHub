@@ -1051,9 +1051,34 @@ const fetchData = async () => {
     }
 };
 
-onMounted(() => fetchData());
+const handleAdminCollision = (e) => {
+    const data = e.detail || {};
+    // Kiểm tra đúng sản phẩm đang mở
+    if (data.productId == productId) {
+        Swal.fire({
+            title: 'Cảnh báo xung đột!',
+            text: 'Dữ liệu của sản phẩm này vừa bị thay đổi hoặc xóa bởi một quản trị viên khác. Để tránh ghi đè sai sót, vui lòng tải lại trang.',
+            icon: 'warning',
+            allowOutsideClick: false,
+            confirmButtonText: 'Tải lại trang ngay',
+            confirmButtonColor: '#dc3545'
+        }).then(() => {
+            window.location.reload();
+        });
+    }
+};
+
+onMounted(() => {
+    fetchData();
+    window.addEventListener('admin-product-updated', handleAdminCollision);
+    window.addEventListener('admin-product-deleted', handleAdminCollision);
+    window.addEventListener('admin-reconnected', fetchData);
+});
 
 onBeforeUnmount(() => {
+    window.removeEventListener('admin-product-updated', handleAdminCollision);
+    window.removeEventListener('admin-product-deleted', handleAdminCollision);
+    window.removeEventListener('admin-reconnected', fetchData);
     if (createAttrModalObj) createAttrModalObj.hide();
     if (createValueModalObj) createValueModalObj.hide();
     if (manageAttrModalObj) manageAttrModalObj.hide();

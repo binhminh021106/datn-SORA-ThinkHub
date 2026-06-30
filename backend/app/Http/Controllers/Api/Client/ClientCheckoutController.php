@@ -179,6 +179,8 @@ class ClientCheckoutController extends Controller
                 $subTotal = 0;
                 $totalCommissionAmount = 0;
                 $orderItemsData = [];
+                $updatedProductIds = [];
+                $updatedComboIds = [];
 
                 foreach ($cart->items as $item) {
                     if ($item->product_variant_id) {
@@ -189,6 +191,7 @@ class ClientCheckoutController extends Controller
 
                         $variant->stock_quantity -= $item->quantity;
                         $variant->save();
+                        $updatedProductIds[] = $variant->product_id;
 
                         $itemTotal = $item->subtotal;
                         $subTotal += $itemTotal;
@@ -222,6 +225,7 @@ class ClientCheckoutController extends Controller
                             }
                             $combo->usage_limit -= $item->quantity;
                             $combo->save();
+                            $updatedComboIds[] = $combo->id;
                         }
 
                         if (is_array($item->combo_selections)) {
@@ -234,6 +238,7 @@ class ClientCheckoutController extends Controller
                                     }
                                     $variant->stock_quantity -= $item->quantity;
                                     $variant->save();
+                                    $updatedProductIds[] = $variant->product_id;
                                 }
                             }
                         }
@@ -248,6 +253,7 @@ class ClientCheckoutController extends Controller
                                 }
                                 $variant->stock_quantity -= $totalQtyNeeded;
                                 $variant->save();
+                                $updatedProductIds[] = $variant->product_id;
                             }
                         }
 
@@ -406,9 +412,11 @@ class ClientCheckoutController extends Controller
                     ]);
                 }
 
-                \Illuminate\Support\Facades\DB::afterCommit(function () use ($order) {
+                \Illuminate\Support\Facades\DB::afterCommit(function () use ($order, $updatedProductIds, $updatedComboIds) {
                     try {
                         broadcast(new NewOrderReceived($order->order_code, (float) $order->total_amount));
+                        
+                        $this->broadcastStockUpdates($updatedProductIds, $updatedComboIds);
                         
                         // Gửi thông báo cho Admin
                         $adminsToNotify = \App\Models\Admin::where('status', 'active')->get();
@@ -1119,10 +1127,18 @@ class ClientCheckoutController extends Controller
                 ->where('status', 'pending')
                 ->delete();
 
+            $updatedProductIds = [];
+            $updatedComboIds = [];
+
             foreach ($order->items as $item) {
                 if ($item->product_variant_id) {
-                    ProductVariant::where('id', $item->product_variant_id)->increment('stock_quantity', $item->quantity);
+                    $variant = ProductVariant::find($item->product_variant_id);
+                    if ($variant) {
+                        $variant->increment('stock_quantity', $item->quantity);
+                        $updatedProductIds[] = $variant->product_id;
+                    }
                 } elseif ($item->combo_id) {
+                    $updatedComboIds[] = $item->combo_id;
                     Combo::where('id', $item->combo_id)
                         ->whereNotNull('usage_limit')
                         ->increment('usage_limit', $item->quantity);
@@ -1131,7 +1147,11 @@ class ClientCheckoutController extends Controller
                         foreach ($item->combo_selections as $selection) {
                             $vId = $selection['selected_variant_id'] ?? null;
                             if ($vId) {
-                                ProductVariant::where('id', $vId)->increment('stock_quantity', $item->quantity);
+                                $variant = ProductVariant::find($vId);
+                                if ($variant) {
+                                    $variant->increment('stock_quantity', $item->quantity);
+                                    $updatedProductIds[] = $variant->product_id;
+                                }
                             }
                         }
                     }
@@ -1140,12 +1160,35 @@ class ClientCheckoutController extends Controller
                     if ($combo) {
                         foreach ($combo->items as $cItem) {
                             if ($cItem->product_variant_id) {
-                                $totalQtyToRestore = $item->quantity * $cItem->quantity;
-                                ProductVariant::where('id', $cItem->product_variant_id)->increment('stock_quantity', $totalQtyToRestore);
+                                $variant = ProductVariant::find($cItem->product_variant_id);
+                                if ($variant) {
+                                    $totalQtyToRestore = $item->quantity * $cItem->quantity;
+                                    $variant->increment('stock_quantity', $totalQtyToRestore);
+                                    $updatedProductIds[] = $variant->product_id;
+                                }
                             }
                         }
                     }
                 }
+            }
+            
+            $this->broadcastStockUpdates($updatedProductIds, $updatedComboIds);
+        }
+    }
+
+    private function broadcastStockUpdates(array $updatedProductIds, array $updatedComboIds): void
+    {
+        $uniqueProductIds = array_unique($updatedProductIds);
+        foreach ($uniqueProductIds as $pid) {
+            if ($pid) {
+                broadcast(new \App\Events\ProductUpdated($pid, ['action' => 'stock_updated']));
+            }
+        }
+        
+        $uniqueComboIds = array_unique($updatedComboIds);
+        foreach ($uniqueComboIds as $cid) {
+            if ($cid) {
+                broadcast(new \App\Events\ComboUpdated($cid, ['action' => 'stock_updated']));
             }
         }
     }

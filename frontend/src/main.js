@@ -37,7 +37,7 @@ window.Echo = new Echo({
         return {
             authorize: (socketId, callback) => {
                 let token = null;
-                const adminChannels = ['admin-notifications', 'admin-orders', 'App.Models.Admin'];
+                const adminChannels = ['admin-notifications', 'admin-orders', 'admin.chat', 'App.Models.Admin'];
                 const isAdminChannel = adminChannels.some(prefix => channel.name.includes(prefix));
                 
                 if (isAdminChannel) {

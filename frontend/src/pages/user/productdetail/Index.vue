@@ -153,7 +153,7 @@
             <div class="stock-progress-wrapper mb-4">
               <template v-if="isAllAttributesSelected && currentVariant">
                 <div v-if="currentStock > 0 && currentStock < 10" class="stock-alert critical" style="background: #fff0f2; border: 1px solid #f8d7da; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
-                  <p class="stock-text" style="color: #721c24; margin: 0; font-size: 14px;">Only <strong>{{ currentStock }}</strong> item(s) left in stock! (Chỉ còn {{ currentStock }} sản phẩm)</p>
+                  <p class="stock-text" style="color: #721c24; margin: 0; font-size: 14px;">Chỉ còn <strong>{{ currentStock }}</strong> sản phẩm</p>
                   <div class="progress-bar-bg" style="height: 6px; background: #f8d7da; border-radius: 3px; margin-top: 8px;">
                     <div class="progress-bar-fill red-fill" :style="{ width: stockProgressWidth + '%', height: '100%', background: '#dc3545', borderRadius: '3px' }"></div>
                   </div>
@@ -169,7 +169,7 @@
                 <div v-else class="stock-status-luxury" style="font-size: 14px; color: #28a745; font-weight: 500;">
                   <span :class="currentStock > 0 ? 'in-stock' : 'out-of-stock'">
                     <i class="bi" :class="currentStock > 0 ? 'bi-box-seam-fill' : 'bi-box-seam'"></i> 
-                    {{ currentStock > 0 ? `Còn ${currentStock} sản phẩm` : 'Pre-Order (Đặt trước / Hết hàng)' }}
+                    {{ currentStock > 0 ? `Còn ${currentStock} sản phẩm` : 'Đặt trước (Hết hàng)' }}
                   </span>
                 </div>
               </template>
@@ -620,10 +620,11 @@ const isCompletelyOutOfStock = computed(() => {
   }
 
   if (product.value.variants && product.value.variants.length > 0) {
-    const totalStock = product.value.variants.reduce((sum, v) => sum + Number(v.stock_quantity || 0), 0);
+    const totalStock = product.value.variants.reduce((sum, v) => sum + Number(v.stock_quantity ?? v.stock ?? 0), 0);
     return totalStock <= 0;
   }
-  return product.value.stock_quantity !== undefined && product.value.stock_quantity !== null && Number(product.value.stock_quantity) <= 0;
+  const mainStock = product.value.stock_quantity ?? product.value.stock;
+  return mainStock !== undefined && mainStock !== null && Number(mainStock) <= 0;
 });
 
 const isCurrentSelectionOutOfStock = computed(() => {
@@ -1081,7 +1082,7 @@ const { data: productData, isLoading: isProductQueryLoading, isFetching: isProdu
   queryKey: ['userProductDetail', shopSlug, currentProductSlug],
   queryFn: fetchProductData,
   enabled: computed(() => !!currentProductSlug.value),
-  staleTime: 5 * 60 * 1000,
+  staleTime: 0, // Cập nhật lại liên tục (không cache cứng 5 phút) để tránh lỗi kẹt dữ liệu tồn kho
 });
 
 watch(productData, (newData) => {

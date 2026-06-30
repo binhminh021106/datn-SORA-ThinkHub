@@ -2,7 +2,7 @@
   <div class="stock-progress-wrapper mb-4">
     <template v-if="isAllAttributesSelected && currentVariant">
       <div v-if="currentStock > 0 && currentStock < 10" class="stock-alert critical">
-        <p class="stock-text">Only <strong>{{ currentStock }}</strong> item(s) left in stock! (Chỉ còn {{ currentStock }} sản phẩm)</p>
+        <p class="stock-text">Chỉ còn <strong>{{ currentStock }}</strong> sản phẩm</p>
         <div class="progress-bar-bg">
           <div class="progress-bar-fill red-fill" :style="{ width: stockProgressWidth + '%' }"></div>
         </div>
@@ -18,7 +18,7 @@
       <div v-else class="stock-status-luxury">
         <span :class="currentStock > 0 ? 'in-stock' : 'out-of-stock'">
           <i class="bi" :class="currentStock > 0 ? 'bi-box-seam-fill' : 'bi-box-seam'"></i> 
-          {{ currentStock > 0 ? `Còn ${currentStock} sản phẩm` : 'Pre-Order (Đặt trước / Hết hàng)' }}
+          {{ currentStock > 0 ? `Còn ${currentStock} sản phẩm` : 'Đặt trước (Hết hàng)' }}
         </span>
       </div>
     </template>
