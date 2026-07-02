@@ -200,7 +200,7 @@
                   :style="isCurrentSelectionOutOfStock ? 'background-color: #2a1810; color: #e7ce7d; border-color: #2a1810; cursor: not-allowed; opacity: 0.85;' : ''"
                 >
                   <i v-if="isCurrentSelectionOutOfStock" class="bi bi-x-circle me-2 fs-5"></i>
-                  {{ isCompletelyOutOfStock ? 'ĐÃ BÁN HẾT' : (isCurrentSelectionOutOfStock ? 'PHIÊN BẢN HẾT HÀNG' : 'THÊM VÀO GIỎ') }}
+                  {{ isCompletelyOutOfStock ? 'ĐÃ BÁN HẾT' : (isCurrentSelectionOutOfStock ? 'HẾT HÀNG' : 'THÊM VÀO GIỎ') }}
                 </button>
                 <button class="btn-consult">TƯ VẤN NGAY</button>
               </div>
@@ -1183,6 +1183,7 @@ const addToCart = async () => {
     if (response.data.success) {
       Toast.fire({ icon: 'success', title: 'Thêm vào giỏ thành công' });
       if (response.data.session_id) localStorage.setItem('cart_session_id', response.data.session_id);
+      
       window.dispatchEvent(new CustomEvent('update-cart-count'));
     }
   } catch (error) {

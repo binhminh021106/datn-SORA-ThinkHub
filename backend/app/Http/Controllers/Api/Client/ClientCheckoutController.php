@@ -35,7 +35,7 @@ class ClientCheckoutController extends Controller
         $tierDiscountInfo = null;
 
         $user = auth('sanctum')->user();
-        if ($user) {
+        if ($user && $user instanceof \App\Models\User) {
             $addresses = UserAddress::where('user_id', $user->id)->get();
             $userData = [
                 'id'    => $user->id,
@@ -110,7 +110,7 @@ class ClientCheckoutController extends Controller
         }
 
         $user = auth('sanctum')->user();
-        if (!$user) {
+        if (!$user || !($user instanceof \App\Models\User)) {
             return response()->json(['success' => false, 'message' => 'Bạn cần đăng nhập để thực hiện thanh toán.'], 401);
         }
 
@@ -1234,7 +1234,7 @@ class ClientCheckoutController extends Controller
     private function resolveCart(Request $request)
     {
         $user = auth('sanctum')->user();
-        if ($user) return Cart::with(['items.variant', 'items.combo'])->where('user_id', $user->id)->first();
+        if ($user && $user instanceof \App\Models\User) return Cart::with(['items.variant', 'items.combo'])->where('user_id', $user->id)->first();
 
         $sessionId = $request->header('X-Cart-Session-Id');
         if ($sessionId) return Cart::with(['items.variant', 'items.combo'])->where('session_id', $sessionId)->first();

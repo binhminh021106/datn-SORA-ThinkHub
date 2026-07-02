@@ -29,13 +29,8 @@ class ClientOrderController extends Controller
     public function index(Request $request)
     {
         $user = auth('sanctum')->user();
-        
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Vui lòng đăng nhập để xem lịch sử đơn hàng',
-                'data' => []
-            ], 401);
+        if (!$user || !($user instanceof \App\Models\User)) {
+            return response()->json(['success' => false, 'message' => 'Bạn cần đăng nhập để xem đơn hàng.'], 401);
         }
 
         $validated = $request->validate([
@@ -56,6 +51,7 @@ class ClientOrderController extends Controller
     public function store(UserStoreOrderRequest $request)
     {
         $user = auth('sanctum')->user();
+        $user = ($user instanceof \App\Models\User) ? $user : null;
         $sessionId = $request->header('X-Cart-Session-Id');
 
         $cartQuery = Cart::with(['items.variant', 'items.combo']);
@@ -256,6 +252,7 @@ class ClientOrderController extends Controller
     public function show(string $order_code)
     {
         $user = auth('sanctum')->user();
+        $user = ($user instanceof \App\Models\User) ? $user : null;
         
         // Đã thêm 'reviews' vào để load kèm trạng thái đánh giá
         $order = Order::with(['items', 'histories', 'reviews'])->where('order_code', $order_code)->first();
@@ -278,6 +275,7 @@ class ClientOrderController extends Controller
     public function update(UserUpdateOrderRequest $request, string $order_code)
     {
         $user = auth('sanctum')->user();
+        $user = ($user instanceof \App\Models\User) ? $user : null;
         $order = Order::with('items')->where('order_code', $order_code)->first();
 
         if (!$order) {
@@ -340,6 +338,7 @@ class ClientOrderController extends Controller
         // Bao bọc toàn bộ code bằng try-catch để bắt mọi lỗi PHP/SQL
         try {
             $user = auth('sanctum')->user();
+            $user = ($user instanceof \App\Models\User) ? $user : null;
             $order = Order::with('items')->where('order_code', $order_code)->first();
 
             if (!$order) {
@@ -512,6 +511,7 @@ class ClientOrderController extends Controller
     public function getReview(string $order_code)
     {
         $user = auth('sanctum')->user();
+        $user = ($user instanceof \App\Models\User) ? $user : null;
         $order = Order::where('order_code', $order_code)->first();
 
         if (!$order) {
@@ -537,6 +537,7 @@ class ClientOrderController extends Controller
     public function reorder(Request $request, string $order_code)
     {
         $user = auth('sanctum')->user();
+        $user = ($user instanceof \App\Models\User) ? $user : null;
         
         // Lấy đơn hàng cùng chi tiết sản phẩm
         $order = Order::with('items')->where('order_code', $order_code)->first();
@@ -680,6 +681,7 @@ class ClientOrderController extends Controller
     public function invoice(string $order_code)
     {
         $user = auth('sanctum')->user();
+        $user = ($user instanceof \App\Models\User) ? $user : null;
         
         $order = Order::with(['items'])
                     ->where('order_code', $order_code)
@@ -708,6 +710,7 @@ class ClientOrderController extends Controller
     public function requestReturn(Request $request, string $order_code)
     {
         $user = auth('sanctum')->user();
+        $user = ($user instanceof \App\Models\User) ? $user : null;
         $order = Order::with('items')->where('order_code', $order_code)->first();
 
         if (!$order) {

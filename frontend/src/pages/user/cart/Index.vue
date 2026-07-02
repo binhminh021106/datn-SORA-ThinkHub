@@ -62,6 +62,9 @@
                 <img :src="getImageUrl(getItemImage(item))" 
                      @error="handleImageError"
                      class="w-100 h-100 object-fit-cover bg-white">
+                <div v-if="!item.combo_id && (item.variant?.stock_quantity ?? item.variant?.stock ?? 1) <= 0" class="position-absolute w-100 h-100 d-flex align-items-center justify-content-center pointer-events-none" style="background-color: rgba(255, 255, 255, 0.6); top: 0; left: 0; z-index: 5;">
+                    <span class="badge bg-danger rounded-0 shadow-sm px-2 py-1" style="font-size: 0.75rem;">HẾT HÀNG</span>
+                </div>
               </div>
               
               <div class="flex-grow-1">
@@ -86,6 +89,7 @@
                 
                 <div v-if="item.combo_id && item.combo?.status !== 'active'" class="text-danger small fw-bold mt-2"><i class="bi bi-exclamation-triangle"></i> Gói ưu đãi này đã kết thúc. Vui lòng xóa khỏi giỏ.</div>
                 <div v-else-if="!item.combo_id && item.variant?.product?.status !== 'published'" class="text-danger small fw-bold mt-2"><i class="bi bi-exclamation-triangle"></i> Sản phẩm đã ngừng kinh doanh. Vui lòng xóa.</div>
+                <div v-else-if="!item.combo_id && (item.variant?.stock_quantity ?? item.variant?.stock ?? 1) <= 0" class="text-danger small fw-bold mt-2"><i class="bi bi-exclamation-triangle"></i> Sản phẩm đã hết hàng. Vui lòng xóa.</div>
                 <div v-else-if="!item.combo_id && item.quantity > (item.variant?.stock_quantity || 0)" class="text-danger small fw-bold mt-2"><i class="bi bi-exclamation-triangle"></i> Chỉ còn {{ item.variant?.stock_quantity || 0 }} sản phẩm trong kho.</div>
                 
                 <div class="d-flex d-md-none justify-content-between align-items-center mt-3">
@@ -110,7 +114,7 @@
                 </button>
                 <div class="qty-input">{{ item.quantity }}</div>
                 <button @click="updateQuantity(item, 1)" 
-                        :disabled="(!item.combo_id && item.quantity >= (item.variant?.stock_quantity || 0)) || item.isUpdating"
+                        :disabled="(!item.combo_id && ((item.variant?.stock_quantity ?? item.variant?.stock ?? 0) <= 0 || item.quantity >= (item.variant?.stock_quantity || 0))) || item.isUpdating"
                         class="qty-btn plus">
                   <i class="bi bi-plus"></i>
                 </button>
