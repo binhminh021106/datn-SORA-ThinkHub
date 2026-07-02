@@ -262,27 +262,16 @@ class ClientCartController extends Controller
         });
     }
 
-    public function applyBirthdayCoupon(Request $request)
+public function applyBirthdayCoupon(Request $request)
     {
         $code = $request->input('code');
         if (!$code) {
             return response()->json(['success' => false, 'message' => 'Không tìm thấy mã voucher.']);
         }
 
-        $user = auth('sanctum')->user();
-        if (!$user) {
-            return response()->json(['success' => false, 'message' => 'Bạn cần đăng nhập để sử dụng voucher sinh nhật.']);
-        }
-
-        if (!$this->isSilverTierOrAbove($user)) {
-            return response()->json(['success' => false, 'message' => 'Voucher chỉ dành cho thành viên hạng Bạc trở lên.']);
-        }
-
+        // 1. Tìm kiếm coupon đang hoạt động và còn hạn sử dụng
         $coupon = Coupon::where('code', $code)
-            ->where('type', 'birthday')
             ->where('status', 'active')
-            ->where('user_id', $user->id)
-            ->where('is_used', 0)
             ->where(function ($q) {
                 $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
             })
@@ -295,13 +284,32 @@ class ClientCartController extends Controller
             return response()->json(['success' => false, 'message' => 'Mã voucher không hợp lệ hoặc đã hết hạn.']);
         }
 
+        // 2. Nếu là mã quà tặng sinh nhật, tiến hành kiểm tra tài khoản sở hữu độc quyền
+        $isBirthdayCoupon = str_contains(mb_strtolower($coupon->name, 'UTF-8'), 'sinh nhật');
+
+        if ($isBirthdayCoupon) {
+            $user = auth('sanctum')->user();
+            if (!$user) {
+                return response()->json(['success' => false, 'message' => 'Bạn cần đăng nhập để sử dụng voucher sinh nhật.']);
+            }
+
+            // Tách chuỗi mã để lấy ID người nhận (VD: SORA-15-2026 lấy ID là 15)
+            $parts = explode('-', $code);
+            if (count($parts) >= 2) {
+                $targetUserId = $parts[count($parts) - 2];
+                if ($user->id != $targetUserId) {
+                    return response()->json(['success' => false, 'message' => 'Mã voucher sinh nhật này không thuộc về tài khoản của bạn.']);
+                }
+            }
+        }
+
+        // 3. Trả về phản hồi thành công kèm lời nhắn chuẩn hóa
         return response()->json([
             'success' => true,
-            'message' => 'Áp dụng mã sinh nhật thành công!',
+            'message' => 'Áp dụng mã ưu đãi thành công!',
             'coupon' => $coupon->code
         ]);
     }
-
     private function isSilverTierOrAbove($user): bool
     {
         if (!$user || !$user->tier_id) {

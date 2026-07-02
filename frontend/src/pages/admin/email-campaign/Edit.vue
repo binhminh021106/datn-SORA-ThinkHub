@@ -30,8 +30,7 @@
                 
                 <div class="mb-3">
                   <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Tên sự kiện / ngày lễ</label>
-                  <input v-model.trim="holidayForm.name" type="text" class="form-control form-control-sm bg-light border-0" placeholder="Ví dụ: Quốc tế Phụ nữ 8/3" required>
-                </div>
+<input v-model.trim="holidayForm.name" type="text" class="form-control form-control-sm bg-light border-0" placeholder="Ví dụ: Quốc tế Phụ nữ 8/3">                </div>
                 
                 <div class="mb-4">
                   <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Ngày diễn ra (Hàng năm)</label>
@@ -210,7 +209,7 @@
 </template>
 
 <script setup>
-import { computed, ref, reactive, onMounted } from 'vue'
+import { computed, ref, reactive, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import apiClient from '@/utils/apiClient'
 import { useToast } from 'vue-toastification'
@@ -235,6 +234,24 @@ const holidayForm = reactive({
   voucherCode: '',
   discount: '',
   status: 'active'
+})
+// Theo dõi sự thay đổi của mảng đối tượng nhận
+watch(() => [...holidayForm.target], (newVal, oldVal) => {
+  // Tìm ra giá trị vừa được tick thêm vào
+  const added = newVal.filter(x => !oldVal.includes(x))
+
+  // Trường hợp 1: Nếu người dùng vừa tick chọn "Tất cả"
+  if (added.includes('all')) {
+    holidayForm.target = ['all']
+  } 
+  // Trường hợp 2: "Tất cả" đang được chọn, nhưng người dùng tick thêm cái khác
+  else if (newVal.includes('all') && newVal.length > 1) {
+    holidayForm.target = holidayForm.target.filter(item => item !== 'all')
+  }
+  // Trường hợp phụ: Nếu người dùng bỏ tick tất cả các ô, tự động đưa về "Tất cả"
+  else if (newVal.length === 0) {
+    holidayForm.target = ['all']
+  }
 })
 
 // Tính ngày cấp chuẩn từ form
@@ -376,6 +393,19 @@ function normalizeTargetAudience(value) {
 }
 
 function buildPayload() {
+  let expiresAtFormatted = null
+  
+  if (holidayForm.hasVoucher && holidayForm.day && holidayForm.month) {
+    const yyyy = new Date().getFullYear()
+    const d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
+    d.setDate(d.getDate() + 3) // Cộng đúng 3 ngày
+    
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    expiresAtFormatted = `${y}-${m}-${day} 23:59:59` 
+  }
+
   return {
     name: holidayForm.name,
     day: holidayForm.day,
@@ -386,10 +416,9 @@ function buildPayload() {
     voucher_code: holidayForm.hasVoucher ? holidayForm.voucherCode : null,
     discount: holidayForm.hasVoucher ? holidayForm.discount : null,
     status: holidayForm.status,
-    
+    expires_at: expiresAtFormatted
   }
 }
-
 function insertToken(token) {
   holidayForm.content = `${holidayForm.content}${holidayForm.content ? ' ' : ''}${token}`
 }

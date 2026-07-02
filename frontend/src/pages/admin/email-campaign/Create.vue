@@ -204,7 +204,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch  } from 'vue'
 import { useRouter } from 'vue-router'
 import apiClient from '@/utils/apiClient'
 import { useToast } from 'vue-toastification'
@@ -224,9 +224,27 @@ const holidayForm = reactive({
   hasVoucher: false,
   voucherCode: '',
   discount: '',
-  status: 'active'
+  status: 'active',
+  
 })
+// Theo dõi sự thay đổi của mảng đối tượng nhận
+watch(() => [...holidayForm.target], (newVal, oldVal) => {
+  // Tìm ra giá trị vừa được tick thêm vào
+  const added = newVal.filter(x => !oldVal.includes(x))
 
+  // Trường hợp 1: Nếu người dùng vừa tick chọn "Tất cả"
+  if (added.includes('all')) {
+    holidayForm.target = ['all']
+  } 
+  // Trường hợp 2: "Tất cả" đang được chọn, nhưng người dùng tick thêm cái khác
+  else if (newVal.includes('all') && newVal.length > 1) {
+    holidayForm.target = holidayForm.target.filter(item => item !== 'all')
+  }
+  // Trường hợp phụ: Nếu người dùng bỏ tick tất cả các ô, tự động đưa về "Tất cả"
+  else if (newVal.length === 0) {
+    holidayForm.target = ['all']
+  }
+}) 
 const popularHolidays = [
   { name: 'Lễ Tình nhân (Valentine)', day: 14, month: 2 },
   { name: 'Quốc tế Phụ nữ', day: 8, month: 3 },
@@ -345,15 +363,14 @@ function buildPayload() {
     day: holidayForm.day,
     month: holidayForm.month,
     target_audience: holidayForm.target.length > 0 ? holidayForm.target.join(',') : 'all',
-    email_subject: holidaySubject.value,
+    email_subject: holidayForm.subject,
     email_content: holidayForm.content,
     voucher_code: holidayForm.hasVoucher ? holidayForm.voucherCode : null,
-    discount: holidayForm.hasVoucher ? holidayForm.discount : null, 
+    discount: holidayForm.hasVoucher ? holidayForm.discount : null,
     status: holidayForm.status,
-  
+    expires_at: expiresAtFormatted
   }
 }
-
 function insertToken(token) {
   holidayForm.content = `${holidayForm.content}${holidayForm.content ? ' ' : ''}${token}`
 }

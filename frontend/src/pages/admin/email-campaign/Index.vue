@@ -48,29 +48,29 @@
             </div>
             <div class="card-body p-3 d-grid gap-2">
               <button
-                class="action-button birthday"
-                :class="{ 'is-running': sendingCampaign === 'birthday' }"
-                :disabled="!!sendingCampaign"
-                @click="runBirthdayCampaign"
-              >
+               class="action-button birthday"
+  :class="{ 'is-running': isSendingBirthday }"
+  :disabled="isSendingBirthday"
+  @click="runBirthdayCampaign"
+>
                 <i class="bi bi-cake2"></i>
                 <span>
                   <strong>Kiểm tra & Gửi Sinh Nhật</strong>
                   <small>Quét khách có sinh nhật hôm nay</small>
                 </span>
               </button>
-              <button
-                class="action-button holiday"
-                :class="{ 'is-running': sendingCampaign === 'holiday' }"
-                :disabled="!!sendingCampaign"
-                @click="runHolidayCampaign"
-              >
-                <i class="bi bi-calendar2-heart"></i>
-                <span>
-                  <strong>Kiểm tra & Gửi Sự Kiện</strong>
-                  <small>Quét sự kiện đang bật hôm nay</small>
-                </span>
-              </button>
+           <button
+  class="action-button holiday"
+  :class="{ 'is-running': isSendingHoliday }"
+  :disabled="isSendingHoliday"
+  @click="runHolidayCampaign"
+>
+  <i class="bi bi-calendar2-heart"></i>
+  <span>
+    <strong>Kiểm tra & Gửi Sự Kiện</strong>
+    <small>Quét sự kiện đang bật hôm nay</small>
+  </span>
+</button>
               <div class="today-box mt-2">
                 <i class="bi bi-clock-history text-brand fs-4"></i>
                 <div>
@@ -379,7 +379,8 @@ watch(activeTab, (newVal) => {
   sessionStorage.setItem('activeCampaignTab', allowedTabs.has(newVal) ? newVal : 'dashboard');
 });
 
-const sendingCampaign = ref(null);
+const isSendingBirthday = ref(false);
+const isSendingHoliday = ref(false);
 const holidaySearch = ref('');
 
 const today = new Date();
@@ -466,36 +467,36 @@ const previewBirthdayContent = computed(() => replaceTokens(birthdaySettings.val
 
 const expireBirthdayDateDisplay = computed(() => {
   const d = new Date()
-  d.setDate(d.getDate() + 3)
+  d.setDate(d.getDate() + 1)
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
 })
 
 async function runBirthdayCampaign() {
-  if (sendingCampaign.value) return;
+  if (isSendingBirthday.value) return; // Sửa dòng này
   if (!birthdaySettings.value.enabled) {
     Swal.fire('Đã tắt tính năng', 'Email sinh nhật đang tắt nên hệ thống bỏ qua.', 'info');
     return;
   }
-  sendingCampaign.value = 'birthday';
+  isSendingBirthday.value = true; // Sửa dòng này
   try {
     const response = await apiClient.post('/admin/email-campaign/trigger-birthday');
     if (response.data?.success) {
       Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: response.data.message || `Đã kiểm tra và gửi email sinh nhật.`, showConfirmButton: false, timer: 3000 });
       await fetchRecentLogs();
     } else { showToast(response.data.message || 'Lỗi khi gửi email sinh nhật.', 'error'); }
-  } catch (error) { showToast('Lỗi máy chủ! Không thể gửi email.', 'error'); } finally { sendingCampaign.value = null; }
+  } catch (error) { showToast('Lỗi máy chủ! Không thể gửi email.', 'error'); } finally { isSendingBirthday.value = false; } // Sửa dòng này
 }
 
 async function runHolidayCampaign() {
-  if (sendingCampaign.value) return;
-  sendingCampaign.value = 'holiday';
+  if (isSendingHoliday.value) return; // Sửa dòng này
+  isSendingHoliday.value = true; // Sửa dòng này
   try {
     const response = await apiClient.post('/admin/email-campaign/trigger-holiday');
     if (response.data?.success) {
       Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: response.data.message || `Đã kiểm tra và gửi email sự kiện.`, showConfirmButton: false, timer: 3000 });
       await fetchRecentLogs();
     } else { showToast(response.data.message || 'Lỗi khi gửi email sự kiện.', 'error'); }
-  } catch (error) { showToast('Lỗi máy chủ! Không thể gửi email sự kiện.', 'error'); } finally { sendingCampaign.value = null; }
+  } catch (error) { showToast('Lỗi máy chủ! Không thể gửi email sự kiện.', 'error'); } finally { isSendingHoliday.value = false; } // Sửa dòng này
 }
 
 async function toggleHolidayStatus(event) {

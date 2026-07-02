@@ -45,12 +45,13 @@ class HolidayEventController extends Controller
         // 4. Lưu vào Database
         $event = HolidayEvent::create($validated);
 
-        // 5. Đồng bộ Voucher
-        $this->syncVoucherDiscount([
-            'voucher_code' => $request->input('voucher_code'),
-            'name' => $validated['name'],
-            'event_date' => $validated['event_date'] // Bổ sung event_date để hàm sync tính được hạn sử dụng
-        ], $discount, $expiresAt);
+      
+     $this->syncVoucherDiscount([
+    'voucher_code' => $request->input('voucher_code'),
+    'name' => $validated['name'],
+    'event_date' => $validated['event_date']
+], $discount, $expiresAt);
+
 
         // 6. Trả về thành công
         return response()->json([
@@ -102,9 +103,9 @@ class HolidayEventController extends Controller
         
         unset($validated['discount'], $validated['expires_at']);
 
-        $event->update($validated);
+       $event->update($validated);
 
-        $this->syncVoucherDiscount($validated, $discount, $expiresAt);
+      $this->syncVoucherDiscount($validated, $discount, $expiresAt);
 
         return response()->json(['success' => true, 'message' => 'Cap nhat thanh cong']);
     }
@@ -184,7 +185,7 @@ class HolidayEventController extends Controller
         
         $coupon->save();
     }
-   private function parseDiscount(string $discount): ?array
+private function parseDiscount(string $discount): ?array
 {
     $rawDiscount = trim($discount);
     $normalizedDiscount = $this->normalizeNumericString($rawDiscount);
@@ -196,8 +197,10 @@ class HolidayEventController extends Controller
     $isFixed = Str::contains($lower, 'đ') || Str::contains($lower, 'vnd');
     $isPercentage = Str::contains($lower, '%');
 
+    // Thêm đoạn tự động suy luận định dạng này:
     if (!$isFixed && !$isPercentage) {
-        return null;
+        $isPercentage = $numericValue <= 100; // <= 100 tự hiểu là %, > 100 tự hiểu là VNĐ
+        $isFixed = !$isPercentage;
     }
 
     if ($isPercentage && $numericValue > 100) {

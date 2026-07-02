@@ -510,15 +510,22 @@ const handleBirthdayCouponFromUrl = async () => {
       ensureCartSession: true,
       ignoreAuthRedirect: true
     });
+    
     if (data.success) {
-      localStorage.setItem('birthday_coupon_code', data.coupon || code);
-      Toast.fire({ icon: 'success', title: data.message || 'Đã lưu voucher sinh nhật vào giỏ hàng.' });
+      // Lưu lại mã vào bộ nhớ tạm của trình duyệt
+      localStorage.setItem('applied_coupon_code', data.coupon || code);
+      
+      // BẮT SỰ KIỆN VÀ HIỂN THỊ TOAST THÔNG BÁO XANH THÀNH CÔNG
+      Toast.fire({ 
+        icon: 'success', 
+        title: data.message || 'Áp dụng mã voucher thành công!' 
+      });
     } else {
-      localStorage.removeItem('birthday_coupon_code');
+      localStorage.removeItem('applied_coupon_code');
       soraAlert.fire({
         icon: 'error',
         title: 'Không thể áp dụng voucher',
-        text: data.message || 'Voucher chi danh cho thanh vien hang Bac tro len.'
+        text: data.message || 'Mã không hợp lệ.'
       });
     }
   } catch (error) {
@@ -532,7 +539,6 @@ const handleBirthdayCouponFromUrl = async () => {
     router.replace({ query }).catch(() => { });
   }
 };
-
 const formatPrice = (price) => {
   if (!price || isNaN(price)) return 'Liên Hệ';
   return new Intl.NumberFormat('vi-VN').format(price) + ' đ';
