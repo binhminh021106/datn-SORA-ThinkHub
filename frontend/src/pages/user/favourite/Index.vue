@@ -135,7 +135,7 @@ const isLoggedIn = ref(false);
 
 const soraAlert = createSoraAlert({
   customClass: { confirmButton: 'px-4 py-2 mx-2 rounded shadow-sm fw-bold font-oswald tracking-widest text-uppercase' },
-  didOpen: (modal) => { if (modal.parentElement) modal.parentElement.style.zIndex = '10005'; }
+  didOpen: (modal) => { if (modal.parentElement) modal.parentElement.style.zIndex = '10000005'; }
 });
 
 // auth helper: use getUserToken() from composables

@@ -191,6 +191,7 @@ import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
 import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
 import { useWishlist } from '@/composables/useWishlist.js';
 import Toast from '@/utils/toastConfig';
+import soraAlert from '@/utils/soraAlertConfig';
 import clientApiClient from '@/utils/clientApiClient';
 
 import { Swiper, SwiperSlide } from 'swiper/vue';
@@ -248,14 +249,14 @@ const closeCart = () => {
 const handleCardAction = (event) => {
   const btn = event.target.closest('button');
   if (btn) {
-    if (btn.classList.contains('luxury-btn-solid') || btn.classList.contains('compare-btn') || btn.classList.contains('wishlist-btn')) {
+    if (btn.classList.contains('compare-btn')) {
       closeCart(); 
     }
   }
 };
 
 const handleToggleWishlist = (product) => {
-  toggleFavourite(product, Toast, Swal, router);
+  toggleFavourite(product, Toast, soraAlert, router);
 };
 
 const goToCart = () => {
@@ -308,7 +309,18 @@ const fetchFeaturedProducts = async () => {
   try {
     const res = await clientApiClient.get('/client/home-data', { ignoreAuthRedirect: true });
     if (res.data.success && res.data.data.products) {
-      featuredProducts.value = res.data.data.products;
+      const allProducts = res.data.data.products;
+      featuredProducts.value = allProducts.filter(p => {
+        let stock = 0;
+        if (p.total_stock !== undefined && p.total_stock !== null) {
+          stock = Number(p.total_stock);
+        } else if (p.variants && p.variants.length > 0) {
+          stock = p.variants.reduce((sum, v) => sum + Number(v.stock_quantity || 0), 0);
+        } else if (p.stock_quantity !== undefined && p.stock_quantity !== null) {
+          stock = Number(p.stock_quantity);
+        }
+        return stock > 0;
+      });
     }
   } catch (error) {
     console.error('Lỗi khi tải sản phẩm nổi bật', error);

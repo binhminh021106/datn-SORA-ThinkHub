@@ -126,18 +126,18 @@
           <div class="editorial-products-grid d-none d-md-grid">
             <ProductCard v-for="product in topSellingProducts" :key="'ts-' + product.id" :product="product"
               :is-in-wishlist="isInWishlist(product.id)" :show-wishlist="true" :show-add-to-cart="true"
-              :show-compare="true" :hover-add-to-cart="true" shop-slug="sora" />
+              :show-compare="true" :hover-add-to-cart="true" shop-slug="sora" @toggle-wishlist="toggleWishlist" />
           </div>
           <div class="d-block d-md-none">
             <div class="editorial-products-row-mobile mb-3">
               <ProductCard v-for="product in topSellingProducts.slice(0, Math.ceil(topSellingProducts.length / 2))" :key="'ts-m1-' + product.id" :product="product"
                 :is-in-wishlist="isInWishlist(product.id)" :show-wishlist="true" :show-add-to-cart="true"
-                :show-compare="false" :hover-add-to-cart="true" shop-slug="sora" />
+                :show-compare="false" :hover-add-to-cart="true" shop-slug="sora" @toggle-wishlist="toggleWishlist" />
             </div>
             <div class="editorial-products-row-mobile">
               <ProductCard v-for="product in topSellingProducts.slice(Math.ceil(topSellingProducts.length / 2))" :key="'ts-m2-' + product.id" :product="product"
                 :is-in-wishlist="isInWishlist(product.id)" :show-wishlist="true" :show-add-to-cart="true"
-                :show-compare="false" :hover-add-to-cart="true" shop-slug="sora" />
+                :show-compare="false" :hover-add-to-cart="true" shop-slug="sora" @toggle-wishlist="toggleWishlist" />
             </div>
           </div>
 
@@ -170,18 +170,18 @@
           <div class="editorial-products-grid d-none d-md-grid">
             <ProductCard v-for="product in featuredProducts" :key="product.id" :product="product"
               :is-in-wishlist="isInWishlist(product.id)" :show-wishlist="true" :show-add-to-cart="true"
-              :show-compare="true" :hover-add-to-cart="true" shop-slug="sora" />
+              :show-compare="true" :hover-add-to-cart="true" shop-slug="sora" @toggle-wishlist="toggleWishlist" />
           </div>
           <div class="d-block d-md-none">
             <div class="editorial-products-row-mobile mb-3">
               <ProductCard v-for="product in featuredProducts.slice(0, Math.ceil(featuredProducts.length / 2))" :key="'fp-m1-' + product.id" :product="product"
                 :is-in-wishlist="isInWishlist(product.id)" :show-wishlist="true" :show-add-to-cart="true"
-                :show-compare="false" :hover-add-to-cart="true" shop-slug="sora" />
+                :show-compare="false" :hover-add-to-cart="true" shop-slug="sora" @toggle-wishlist="toggleWishlist" />
             </div>
             <div class="editorial-products-row-mobile">
               <ProductCard v-for="product in featuredProducts.slice(Math.ceil(featuredProducts.length / 2))" :key="'fp-m2-' + product.id" :product="product"
                 :is-in-wishlist="isInWishlist(product.id)" :show-wishlist="true" :show-add-to-cart="true"
-                :show-compare="false" :hover-add-to-cart="true" shop-slug="sora" />
+                :show-compare="false" :hover-add-to-cart="true" shop-slug="sora" @toggle-wishlist="toggleWishlist" />
             </div>
           </div>
 

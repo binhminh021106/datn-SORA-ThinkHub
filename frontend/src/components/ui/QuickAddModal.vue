@@ -1,5 +1,5 @@
 <template>
-  <div class="modal fade" id="soraGlobalQuickAddModal" tabindex="-1" aria-hidden="true" ref="modalElement">
+  <div class="modal fade" id="soraGlobalQuickAddModal" tabindex="-1" aria-hidden="true" ref="modalElement" style="z-index: 10000000 !important;">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content rounded-0 border-0 shadow-lg">
         <div class="modal-header bg-sora-primary text-white rounded-0 border-0 p-4">

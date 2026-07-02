@@ -418,7 +418,7 @@ const shopSlug = computed(() => route.params.shop_slug || 'aurora-jewelry');
 
 const soraAlert = createSoraAlert({
   customClass: { confirmButton: 'px-4 py-2 mx-2 rounded shadow-sm fw-bold font-oswald tracking-widest text-uppercase' },
-  didOpen: (modal) => { if (modal.parentElement) modal.parentElement.style.zIndex = '10005'; }
+  didOpen: (modal) => { if (modal.parentElement) modal.parentElement.style.zIndex = '10000005'; }
 });
 
 const { fetchFavorites, isFavourited, toggleFavourite } = useWishlist();
