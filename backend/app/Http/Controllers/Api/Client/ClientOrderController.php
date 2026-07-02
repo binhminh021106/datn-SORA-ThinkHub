@@ -29,13 +29,8 @@ class ClientOrderController extends Controller
     public function index(Request $request)
     {
         $user = auth('sanctum')->user();
-        
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Vui lòng đăng nhập để xem lịch sử đơn hàng',
-                'data' => []
-            ], 401);
+        if (!$user || !($user instanceof \App\Models\User)) {
+            return response()->json(['success' => false, 'message' => 'Bạn cần đăng nhập để xem đơn hàng.'], 401);
         }
 
         $validated = $request->validate([
@@ -56,6 +51,7 @@ class ClientOrderController extends Controller
     public function store(UserStoreOrderRequest $request)
     {
         $user = auth('sanctum')->user();
+        $user = ($user instanceof \App\Models\User) ? $user : null;
         $sessionId = $request->header('X-Cart-Session-Id');
 
         $cartQuery = Cart::with(['items.variant', 'items.combo']);

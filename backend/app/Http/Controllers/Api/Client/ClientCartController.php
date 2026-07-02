@@ -201,7 +201,7 @@ class ClientCartController extends Controller
         $sessionId = $request->header('X-Cart-Session-Id');
         $user = auth('sanctum')->user();
 
-        if (!$sessionId || !$user) {
+        if (!$sessionId || !$user || !($user instanceof \App\Models\User)) {
             return response()->json(['success' => false, 'message' => 'Dữ liệu không hợp lệ.'], 400);
         }
 
@@ -331,7 +331,7 @@ class ClientCartController extends Controller
     {
         $user = auth('sanctum')->user();
 
-        if ($user) {
+        if ($user && $user instanceof \App\Models\User) {
             return $createIfNotFound 
                 ? Cart::firstOrCreate(['user_id' => $user->id]) 
                 : Cart::where('user_id', $user->id)->first();

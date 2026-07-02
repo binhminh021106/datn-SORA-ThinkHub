@@ -110,7 +110,7 @@ class ClientCheckoutController extends Controller
         }
 
         $user = auth('sanctum')->user();
-        if (!$user) {
+        if (!$user || !($user instanceof \App\Models\User)) {
             return response()->json(['success' => false, 'message' => 'Bạn cần đăng nhập để thực hiện thanh toán.'], 401);
         }
 
