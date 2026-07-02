@@ -931,13 +931,6 @@ const confirmQuickAdd = async () => {
       localStorage.setItem('cart_session_id', res.data.session_id);
     }
     
-    // Trừ tồn kho local ngay lập tức để cập nhật UI
-    if (selectedVar.stock_quantity !== undefined) {
-      selectedVar.stock_quantity -= 1;
-    } else if (selectedVar.stock !== undefined) {
-      selectedVar.stock -= 1;
-    }
-    
     window.dispatchEvent(new CustomEvent('update-cart-count'));
 
     quickAddModalInstance.hide();
@@ -1190,17 +1183,6 @@ const addToCart = async () => {
     if (response.data.success) {
       Toast.fire({ icon: 'success', title: 'Thêm vào giỏ thành công' });
       if (response.data.session_id) localStorage.setItem('cart_session_id', response.data.session_id);
-      
-      // Trừ tồn kho local để cập nhật UI ngay lập tức
-      const addedQty = selectedQuantity.value;
-      if (currentVariant.value.stock_quantity !== undefined) {
-        currentVariant.value.stock_quantity -= addedQty;
-      } else if (currentVariant.value.stock !== undefined) {
-        currentVariant.value.stock -= addedQty;
-      }
-      
-      // Khôi phục số lượng đang chọn về 1
-      selectedQuantity.value = 1;
       
       window.dispatchEvent(new CustomEvent('update-cart-count'));
     }

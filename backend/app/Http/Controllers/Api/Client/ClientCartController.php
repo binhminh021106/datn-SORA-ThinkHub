@@ -270,7 +270,7 @@ class ClientCartController extends Controller
         }
 
         $user = auth('sanctum')->user();
-        if (!$user) {
+        if (!$user || !($user instanceof \App\Models\User)) {
             return response()->json(['success' => false, 'message' => 'Bạn cần đăng nhập để sử dụng voucher sinh nhật.']);
         }
 

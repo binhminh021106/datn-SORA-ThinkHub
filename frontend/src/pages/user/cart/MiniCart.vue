@@ -90,7 +90,7 @@
                 :key="item.id" 
                 class="d-flex gap-3 position-relative cart-item"
               >
-                <div class="bg-light cursor-pointer border border-light-subtle rounded-1" style="width: 85px; height: 105px; flex-shrink: 0;" @click="goToProduct(item.variant?.product?.slug || item.combo?.slug, !!item.combo_id)">
+                <div class="bg-light cursor-pointer border border-light-subtle rounded-1 position-relative" style="width: 85px; height: 105px; flex-shrink: 0;" @click="goToProduct(item.variant?.product?.slug || item.combo?.slug, !!item.combo_id)">
                   <img 
                     loading="lazy"
                     :src="getImage(item.variant?.image_url || item.combo?.thumbnail_image)" 
@@ -98,6 +98,9 @@
                     class="w-100 h-100 object-fit-cover transition-transform hover-scale p-1 rounded-1"
                     @error="handleImageError"
                   >
+                  <div v-if="!item.combo_id && (item.variant?.stock_quantity ?? item.variant?.stock ?? 1) <= 0" class="position-absolute w-100 h-100 d-flex align-items-center justify-content-center pointer-events-none" style="background-color: rgba(255, 255, 255, 0.6); top: 0; left: 0; z-index: 1;">
+                      <span class="badge bg-danger rounded-0 shadow-sm" style="font-size: 0.65rem;">HẾT HÀNG</span>
+                  </div>
                 </div>
 
                 <div class="d-flex flex-column justify-content-between flex-grow-1 overflow-hidden py-1">
@@ -141,6 +144,7 @@
                       <button 
                         @click="updateQuantity(item, item.quantity + 1)" 
                         class="btn btn-sm border-0 px-2 py-0 text-muted"
+                        :disabled="!item.combo_id && (item.variant?.stock_quantity ?? item.variant?.stock ?? 1) <= 0"
                       >+</button>
                     </div>
                   </div>
