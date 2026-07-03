@@ -32,7 +32,8 @@ class ClientFavouriteController extends Controller
             ->with(['product' => function($query) {
                 $query->select('id', 'name', 'slug', 'base_price', 'promotional_price', 'thumbnail_image', 'review_count', 'rating_avg', 'status')
                     ->withCount('reviews')
-                    ->withAvg('reviews', 'rating');
+                    ->withAvg('reviews', 'rating')
+                    ->with('variants:id,product_id,stock_quantity,price,promotional_price,sku,image_url');
             }])
             ->where('user_id', $user->id)
             ->latest()

@@ -17,7 +17,7 @@ const updateToastOffset = (toast) => {
   if (!container) return;
 
   const headerBottom = getVisibleHeaderBottom();
-  container.style.zIndex = '10005';
+  container.style.zIndex = '10000005';
   container.style.marginTop = headerBottom > 0 ? `${Math.ceil(headerBottom + TOAST_HEADER_GAP)}px` : '';
 };
 
