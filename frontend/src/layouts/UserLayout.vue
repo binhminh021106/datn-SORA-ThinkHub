@@ -38,7 +38,12 @@ const handleScroll = () => {
   isVisible.value = window.scrollY > 300;
 };
 
+let animationFrameId = null;
+
 const scrollToTop = () => {
+  if (animationFrameId) {
+    window.cancelAnimationFrame(animationFrameId);
+  }
   const scrollDuration = 600;
   const start = window.scrollY;
   const startTime = performance.now();
@@ -53,11 +58,13 @@ const scrollToTop = () => {
     window.scrollTo(0, start * (1 - ease));
     
     if (timeElapsed < scrollDuration) {
-      window.requestAnimationFrame(animateScroll);
+      animationFrameId = window.requestAnimationFrame(animateScroll);
+    } else {
+      animationFrameId = null;
     }
   };
   
-  window.requestAnimationFrame(animateScroll);
+  animationFrameId = window.requestAnimationFrame(animateScroll);
 };
 
 onMounted(() => {

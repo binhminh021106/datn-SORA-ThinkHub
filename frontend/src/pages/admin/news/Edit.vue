@@ -311,6 +311,22 @@ const { mutate: mutateUpdate, isPending: isSaving } = useMutation({
     }
 });
 
+const sanitizeHTML = (html) => {
+    if (!html) return '';
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const scripts = doc.querySelectorAll('script, iframe, object, embed');
+    scripts.forEach(s => s.remove());
+    const elements = doc.querySelectorAll('*');
+    elements.forEach(el => {
+        Array.from(el.attributes).forEach(attr => {
+            if (attr.name.startsWith('on') || attr.value.trim().toLowerCase().startsWith('javascript:')) {
+                el.removeAttribute(attr.name);
+            }
+        });
+    });
+    return doc.body.innerHTML;
+};
+
 const handleSave = () => {
     if (!formData.title || !formData.excerpt || !formData.content || formData.content === '<p><br></p>') {
         return Swal.fire('Cảnh báo', 'Vui lòng nhập đủ Tiêu đề, Mô tả ngắn và Nội dung.', 'warning');
@@ -319,6 +335,8 @@ const handleSave = () => {
     if (!formData.author_name) {
         return Swal.fire('Cảnh báo', 'Vui lòng nhập tên tác giả.', 'warning');
     }
+
+    formData.content = sanitizeHTML(formData.content);
 
     const submitData = new FormData();
     

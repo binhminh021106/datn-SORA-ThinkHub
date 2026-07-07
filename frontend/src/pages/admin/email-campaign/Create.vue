@@ -334,8 +334,16 @@ function buildPayload() {
   let expiresAtFormatted = null
   
   if (holidayForm.hasVoucher && holidayForm.day && holidayForm.month) {
-    const yyyy = new Date().getFullYear()
-    const d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
+    let yyyy = new Date().getFullYear()
+    let d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    if (d < today) {
+      yyyy++
+      d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
+    }
+
     d.setDate(d.getDate() + 3) // Cộng đúng 3 ngày
     
     const y = d.getFullYear()
