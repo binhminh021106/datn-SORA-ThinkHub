@@ -32,7 +32,18 @@ class HolidayEventController extends Controller
             'email_subject' => 'required|string',
             'email_content' => 'required|string',
             'voucher_code' => 'nullable|string',
-            'discount' => 'nullable|string|max:50',
+            'discount' => [
+    'nullable', 
+    
+    'max:50',
+    function ($attribute, $value, $fail) {
+        $val = trim($value);
+        // Cho phép số thuần túy (mặc định sẽ là %) HOẶC chuỗi có chứa đ, vnd, %
+        if (!is_numeric($val) && !preg_match('/(%|đ|vnd)$/iu', $val)) {
+            $fail('Mức ưu đãi vui lòng nhập số (hệ thống tự hiểu là %) hoặc đ/vnd.');
+        }
+    }
+],
             'status' => 'required|in:active,inactive',
             'expires_at' => 'nullable|string',
         ]);
@@ -92,7 +103,19 @@ class HolidayEventController extends Controller
             'email_subject' => 'required|string',
             'email_content' => 'required|string',
             'voucher_code' => 'nullable|string',
-            'discount' => 'nullable|string|max:50',
+         
+'discount' => [
+    'nullable', 
+    'string', 
+    'max:50',
+    function ($attribute, $value, $fail) {
+        $val = trim($value);
+        // Cho phép số thuần túy (mặc định sẽ là %) HOẶC chuỗi có chứa đ, vnd, %
+        if (!is_numeric($val) && !preg_match('/(%|đ|vnd)$/iu', $val)) {
+            $fail('Mức ưu đãi vui lòng nhập số (hệ thống tự hiểu là %) hoặc đ/vnd.');
+        }
+    }
+],
             'status' => 'required|in:active,inactive',
             'expires_at' => 'nullable|string', // THÊM VALIDATION
         ]);
@@ -184,7 +207,8 @@ class HolidayEventController extends Controller
         
         $coupon->save();
     }
-   private function parseDiscount(string $discount): ?array
+// Thay thế toàn bộ hàm parseDiscount bằng đoạn này:
+private function parseDiscount(string $discount): ?array
 {
     $rawDiscount = trim($discount);
     $normalizedDiscount = $this->normalizeNumericString($rawDiscount);
@@ -194,18 +218,17 @@ class HolidayEventController extends Controller
 
     $lower = Str::lower($rawDiscount);
     $isFixed = Str::contains($lower, 'đ') || Str::contains($lower, 'vnd');
-    $isPercentage = Str::contains($lower, '%');
 
-    if (!$isFixed && !$isPercentage) {
-        return null;
-    }
+    // Nếu không có chữ 'đ' hay 'vnd', mặc định hệ thống sẽ coi nó là '%'
+    $type = $isFixed ? 'fixed' : 'percentage';
 
-    if ($isPercentage && $numericValue > 100) {
-        return null;
+    // Bắt lỗi nếu là phần trăm mà nhập lớn hơn 100
+    if ($type === 'percentage' && $numericValue > 100) {
+        return null; 
     }
     
     return [
-        'type' => $isFixed ? 'fixed' : 'percentage',
+        'type' => $type,
         'value' => $numericValue,
     ];
 }

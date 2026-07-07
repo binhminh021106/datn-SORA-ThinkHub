@@ -122,8 +122,9 @@
                     <input v-model.trim="holidayForm.voucherCode" type="text" class="form-control form-control-sm text-uppercase fw-bold border-brand-focus" placeholder="VD: SORA0803">
                   </div>
                   <div class="col-sm-6">
-                    <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Mức ưu đãi</label>
-                    <input v-model.trim="holidayForm.discount" type="text" class="form-control form-control-sm border-brand-focus" placeholder="VD: 5%">
+                    <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Mức ưu đãi (%)</label>
+<input v-model.number="holidayForm.discount" type="number" min="1" max="100" class="form-control form-control-sm border-brand-focus" placeholder="VD: 5">
+    <span class="input-group-text bg-light border-0 text-muted fw-bold">%</span>                    
                   </div>
                 </div>
 
@@ -175,8 +176,9 @@
                         </tr>
                         <tr>
                           <td class="text-muted border-0 py-1">Mức ưu đãi:</td>
-                          <td class="text-dark fw-bold border-0 py-1 text-end">{{ holidayForm.discount || '...' }}</td>
-                        </tr>
+<td class="text-dark fw-bold border-0 py-1 text-end">
+    {{ holidayForm.discount ? holidayForm.discount + '%' : '...' }}
+  </td>                        </tr>
                         <tr>
                           <td class="text-muted border-0 py-1">Áp dụng:</td>
                           <td class="text-dark border-0 py-1 text-end">Tất cả bộ sưu tập</td>
@@ -345,12 +347,11 @@ function buildPayload() {
     day: holidayForm.day,
     month: holidayForm.month,
     target_audience: holidayForm.target.length > 0 ? holidayForm.target.join(',') : 'all',
-    email_subject: holidaySubject.value,
+   email_subject: holidaySubject.value,
     email_content: holidayForm.content,
     voucher_code: holidayForm.hasVoucher ? holidayForm.voucherCode : null,
-    discount: holidayForm.hasVoucher ? holidayForm.discount : null, 
-    status: holidayForm.status,
-  
+discount: holidayForm.hasVoucher ? String(holidayForm.discount) : null,    status: holidayForm.status,
+    expires_at: expiresAtFormatted
   }
 }
 

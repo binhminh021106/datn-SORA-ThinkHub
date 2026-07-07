@@ -295,6 +295,40 @@ class ClientCartController extends Controller
             return response()->json(['success' => false, 'message' => 'Mã voucher không hợp lệ hoặc đã hết hạn.']);
         }
 
+<<<<<<< Updated upstream
+=======
+        // 2. Nếu là mã quà tặng sinh nhật, tiến hành kiểm tra tài khoản sở hữu độc quyền
+   // 2. Nếu là mã quà tặng sinh nhật, tiến hành kiểm tra tài khoản sở hữu độc quyền
+        $isBirthdayCoupon = str_contains(mb_strtolower($coupon->name, 'UTF-8'), 'sinh nhật');
+
+        if ($isBirthdayCoupon) {
+            $user = auth('sanctum')->user();
+            if (!$user) {
+                return response()->json(['success' => false, 'message' => 'Bạn cần đăng nhập để sử dụng voucher sinh nhật.']);
+            }
+
+            // Ưu tiên kiểm tra qua user_id lưu trong database, nếu không có thì fallback qua chuỗi code
+            if (isset($coupon->user_id)) {
+                if ($user->id != $coupon->user_id) {
+                    return response()->json(['success' => false, 'message' => 'Mã voucher sinh nhật này không thuộc về tài khoản của bạn.']);
+                }
+            } else {
+                // Tách chuỗi mã để lấy ID người nhận (VD: SORA-15-2026 lấy ID là 15)
+                $parts = explode('-', $code);
+                if (count($parts) >= 2) {
+                    $targetUserId = $parts[count($parts) - 2];
+                    if ($user->id != $targetUserId) {
+                        return response()->json(['success' => false, 'message' => 'Mã voucher sinh nhật này không thuộc về tài khoản của bạn.']);
+                    }
+                } else {
+                    // Từ chối dứt khoát nếu không thể bóc tách ID người dùng từ mã
+                    return response()->json(['success' => false, 'message' => 'Định dạng mã voucher sinh nhật không hợp lệ hoặc không thể xác minh chủ sở hữu.']);
+                }
+            }
+        }
+
+        // 3. Trả về phản hồi thành công kèm lời nhắn chuẩn hóa
+>>>>>>> Stashed changes
         return response()->json([
             'success' => true,
             'message' => 'Áp dụng mã sinh nhật thành công!',
