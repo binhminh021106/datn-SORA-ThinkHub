@@ -39,10 +39,25 @@ const handleScroll = () => {
 };
 
 const scrollToTop = () => {
-  window.scrollTo({
-    top: 0,
-    behavior: 'smooth'
-  });
+  const scrollDuration = 600;
+  const start = window.scrollY;
+  const startTime = performance.now();
+  
+  const animateScroll = (currentTime) => {
+    const timeElapsed = currentTime - startTime;
+    const progress = Math.min(timeElapsed / scrollDuration, 1);
+    
+    // Easing (easeOutCubic)
+    const ease = 1 - Math.pow(1 - progress, 3);
+    
+    window.scrollTo(0, start * (1 - ease));
+    
+    if (timeElapsed < scrollDuration) {
+      window.requestAnimationFrame(animateScroll);
+    }
+  };
+  
+  window.requestAnimationFrame(animateScroll);
 };
 
 onMounted(() => {

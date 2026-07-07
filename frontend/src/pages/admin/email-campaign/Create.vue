@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="email-campaign-create pb-5">
     <div class="container-fluid py-4">
       <div class="d-flex align-items-center gap-3 mb-4">
@@ -123,8 +123,10 @@
                   </div>
                   <div class="col-sm-6">
                     <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Mức ưu đãi (%)</label>
-<input v-model.number="holidayForm.discount" type="number" min="1" max="100" class="form-control form-control-sm border-brand-focus" placeholder="VD: 5">
-    <span class="input-group-text bg-light border-0 text-muted fw-bold">%</span>                    
+                    <div class="input-group input-group-sm">
+                      <input v-model.number="holidayForm.discount" type="number" min="1" max="100" class="form-control form-control-sm border-brand-focus" placeholder="VD: 5">
+                      <span class="input-group-text bg-light border-0 text-muted fw-bold">%</span>                    
+                    </div>
                   </div>
                 </div>
 

@@ -59,9 +59,16 @@
 
                                 <!-- Trình soạn thảo Word (Quill Editor) -->
                                 <div class="mb-3">
-                                    <label class="form-label fw-semibold text-dark required">Nội dung chi tiết</label>
-                                    <div class="editor-container shadow-sm rounded-4">
-                                        <QuillEditor theme="snow" toolbar="full" v-model:content="formData.content" contentType="html" placeholder="Bắt đầu soạn thảo nội dung..." />
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label fw-semibold text-dark required mb-0">Nội dung chi tiết</label>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" @click="isHtmlMode = !isHtmlMode">
+                                            <i class="bi bi-code-slash me-1"></i>
+                                            {{ isHtmlMode ? 'Chuyển sang Trực quan (Visual)' : 'Chuyển sang HTML (Code)' }}
+                                        </button>
+                                    </div>
+                                    <div class="editor-container shadow-sm rounded-4 position-relative">
+                                        <QuillEditor v-if="!isHtmlMode" theme="snow" toolbar="full" v-model:content="formData.content" contentType="html" placeholder="Bắt đầu soạn thảo nội dung..." />
+                                        <textarea v-else class="form-control font-monospace p-3" rows="15" v-model="formData.content" placeholder="<h1>Tiêu đề</h1><p>Nội dung HTML...</p>" style="min-height: 400px; background-color: #2d2d2d; color: #f8f8f2; border: none;"></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -184,10 +191,11 @@ const isLoading = ref(false);
 const fileInput = ref(null);
 const selectedFile = ref(null);
 const previewImage = ref(null);
+const isHtmlMode = ref(false);
 
 const formData = reactive({
     title: '', excerpt: '', content: '', slug: '',
-    status: 'published', author_name: '', category: '', meta_title: '', meta_description: ''
+    status: 'pending', author_name: '', category: '', meta_title: '', meta_description: ''
 });
 
 // Lấy thông tin user hiện tại để gán sẵn tên tác giả
