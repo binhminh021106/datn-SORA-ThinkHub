@@ -510,9 +510,16 @@ const handleBirthdayCouponFromUrl = async () => {
       ensureCartSession: true,
       ignoreAuthRedirect: true
     });
-    if (data.success) {
+    
+ if (data.success) {
+      // Lưu lại mã vào bộ nhớ tạm của trình duyệt
       localStorage.setItem('birthday_coupon_code', data.coupon || code);
-      Toast.fire({ icon: 'success', title: data.message || 'Đã lưu voucher sinh nhật vào giỏ hàng.' });
+      
+      // BẮT SỰ KIỆN VÀ HIỂN THỊ TOAST THÔNG BÁO XANH THÀNH CÔNG
+      Toast.fire({ 
+        icon: 'success', 
+        title: data.message || 'Áp dụng mã voucher thành công!' 
+      });
     } else {
       localStorage.removeItem('birthday_coupon_code');
       soraAlert.fire({

@@ -115,16 +115,19 @@
                   </div>
                 </div>
 
-                <div class="row g-3 mb-4" v-if="holidayForm.hasVoucher">
-                  <div class="col-sm-6">
-                    <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Mã quà tặng</label>
-                    <input v-model.trim="holidayForm.voucherCode" type="text" class="form-control form-control-sm text-uppercase fw-bold border-brand-focus" placeholder="VD: SORA0803">
-                  </div>
-                  <div class="col-sm-6">
-                    <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Mức ưu đãi</label>
-                    <input v-model.trim="holidayForm.discount" type="text" class="form-control form-control-sm border-brand-focus" placeholder="VD: 5%">
-                  </div>
-                </div>
+               <div class="row g-3 mb-4" v-if="holidayForm.hasVoucher">
+  <div class="col-sm-6">
+    <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Mã quà tặng</label>
+    <input v-model.trim="holidayForm.voucherCode" type="text" class="form-control form-control-sm text-uppercase fw-bold border-brand-focus" placeholder="VD: SORA0803">
+  </div>
+  <div class="col-sm-6">
+    <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Mức ưu đãi (%)</label>
+    <div class="input-group input-group-sm">
+      <input v-model.number="holidayForm.discount" type="number" min="1" max="100" class="form-control form-control-sm border-brand-focus" placeholder="VD: 5">
+      <span class="input-group-text bg-light border-0 text-muted fw-bold">%</span>
+    </div>
+  </div>
+</div>
 
                 <div class="mt-4 border-top pt-4">
                   <button class="btn btn-sm btn-brand text-white fw-bold px-4 py-2 w-100 shadow-sm" type="submit" :disabled="isSubmitting">
@@ -178,8 +181,9 @@
                         </tr>
                         <tr>
                           <td class="text-muted border-0 py-1">Mức ưu đãi:</td>
-                          <td class="text-dark fw-bold border-0 py-1 text-end">{{ holidayForm.discount || '...' }}</td>
-                        </tr>
+<td class="text-dark fw-bold border-0 py-1 text-end">
+    {{ holidayForm.discount ? holidayForm.discount + '%' : '...' }}
+  </td>                        </tr>
                         <tr>
                           <td class="text-muted border-0 py-1">Áp dụng:</td>
                           <td class="text-dark border-0 py-1 text-end">Tất cả bộ sưu tập</td>
@@ -305,7 +309,12 @@ const fetchEventDetail = async () => {
       holidayForm.content = data.email_content
       holidayForm.hasVoucher = !!data.voucher_code
       holidayForm.voucherCode = data.voucher_code || ''
-      holidayForm.discount = data.discount || ''
+      if (data.discount) {
+  holidayForm.discount = data.discount.replace('%', '').trim();
+} else {
+  holidayForm.discount = '';
+}
+      
       holidayForm.status = data.status || 'active'
     } else {
       toast.error('Không tìm thấy thông tin sự kiện.')
@@ -376,6 +385,30 @@ function normalizeTargetAudience(value) {
 }
 
 function buildPayload() {
+<<<<<<< Updated upstream
+=======
+  let expiresAtFormatted = null
+  
+if (holidayForm.hasVoucher && holidayForm.day && holidayForm.month) {
+    let yyyy = new Date().getFullYear()
+    let d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    if (d < today) {
+      yyyy++
+      d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
+    }
+
+    d.setDate(d.getDate() + 3)
+    
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    expiresAtFormatted = `${y}-${m}-${day} 23:59:59` 
+  }
+
+>>>>>>> Stashed changes
   return {
     name: holidayForm.name,
     day: holidayForm.day,

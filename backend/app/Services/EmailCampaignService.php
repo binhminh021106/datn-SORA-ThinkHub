@@ -233,49 +233,60 @@ class EmailCampaignService
             'value' => $isFreeship ? 0 : $numericValue,
             'usage_count' => 0,
             'status' => 'active',
+            'expires_at' => $today->copy()->addHours(24), // THIẾT LẬP HẠN DÙNG TRONG ĐÚNG 24 GIỜ
+            'user_id' => $user->id, // Gắn chủ sở hữu trực tiếp
+            'usage_limit' => 1, // Tổng số lần sử dụng tối đa
+            'usage_limit_per_user' => 1, // Giới hạn cho mỗi user
         ]);
     }
 
     /**
      * Phân loại nhanh tên hạng của User để match với cấu hình
      */
-    private function getUserTierName(User $user): string
+  /**
+     * Phân loại hạng linh hoạt dựa trên Min Spent thay vì so khớp chuỗi Text.
+     */
+private function getUserTierName(User $user): string
     {
         if (!$user->tier_id) return 'regular';
         
-        $tier = $user->relationLoaded('tier') ? $user->tier : MembershipTier::find($user->tier_id);
-        if (!$tier) return 'regular';
+        $userTier = $user->relationLoaded('tier') ? $user->tier : MembershipTier::find($user->tier_id);
+        if (!$userTier) return 'regular';
 
-        $tierName = Str::lower(Str::ascii($tier->name ?? ''));
+        // Lấy danh sách hạng sắp xếp theo mức chi tiêu từ thấp đến cao
+        $allTiers = MembershipTier::orderBy('min_spent', 'asc')->get();
+        if ($allTiers->isEmpty()) return 'regular';
+
+        // Tìm vị trí hạng của user trong danh sách
+        $tierIndex = $allTiers->search(function ($tier) use ($userTier) {
+            return $tier->id === $userTier->id;
+        });
+
+        if ($tierIndex === false) return 'regular';
+
+        $totalTiers = $allTiers->count();
         
-        if (Str::contains($tierName, ['kim cuong', 'diamond'])) return 'diamond';
-        if (Str::contains($tierName, ['vang', 'gold'])) return 'gold';
-        if (Str::contains($tierName, ['bac', 'silver'])) return 'silver';
-        
-        return 'regular';
+        // Đảm bảo hạng thấp nhất (index 0) luôn là regular
+        if ($tierIndex === 0) return 'regular';
+
+        // Quy chuẩn ánh xạ động (Top 1 là Diamond, Top 2 là Gold, còn lại là Silver)
+        if ($tierIndex == $totalTiers - 1) return 'diamond';
+        if ($tierIndex == $totalTiers - 2) return 'gold';
+        return 'silver';
     }
 
-    private function isSilverTierOrAbove(User $user): bool
+ private function isSilverTierOrAbove(User $user): bool
     {
         if (!$user->tier_id) {
             return false;
         }
 
         $userTier = $user->relationLoaded('tier') ? $user->tier : MembershipTier::find($user->tier_id);
-        if (!$userTier) {
-            return false;
-        }
+        if (!$userTier) return false;
 
-        $silverTier = MembershipTier::orderBy('min_spent', 'asc')
-            ->get()
-            ->first(function ($tier) {
-                $tierName = Str::lower(Str::ascii($tier->name ?? ''));
-                return Str::contains($tierName, ['silver', 'bac']);
-            });
-
-        if (!$silverTier) {
-            return false;
-        }
+        // Bỏ qua hạng cơ bản nhất (index 0), lấy mốc cấu hình của hạng kế tiếp (Silver)
+        $silverTier = MembershipTier::orderBy('min_spent', 'asc')->skip(1)->first();
+        if (!$silverTier) return false; // Nếu không có hạng thứ 2, không ai đạt hạng Silver
 
         return (float) $userTier->min_spent >= (float) $silverTier->min_spent;
     }
