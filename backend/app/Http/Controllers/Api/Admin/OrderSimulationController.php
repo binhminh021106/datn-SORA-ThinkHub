@@ -55,7 +55,7 @@ class OrderSimulationController extends Controller
             }
         }
 
-        // =========================================================================
+        // =====================================================================
         // QUAN TRỌNG: ĐÃ XÓA HÀM rand(-10, 10)
         // Việc cộng trừ ngẫu nhiên sẽ đẩy tọa độ ra giữa khu vực không có đường bộ.
         // Dẫn đến API OSRM (định vị đường bộ) ở Frontend tìm đường thất bại, 

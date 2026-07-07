@@ -64,9 +64,16 @@
 
                                 <!-- Trình soạn thảo Quill Editor -->
                                 <div class="mb-3">
-                                    <label class="form-label fw-semibold text-dark required">Nội dung chi tiết</label>
-                                    <div class="editor-container shadow-sm rounded-4">
-                                        <QuillEditor theme="snow" toolbar="full" v-model:content="formData.content" contentType="html" placeholder="Bắt đầu soạn thảo nội dung..." />
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label fw-semibold text-dark required mb-0">Nội dung chi tiết</label>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" @click="isHtmlMode = !isHtmlMode">
+                                            <i class="bi bi-code-slash me-1"></i>
+                                            {{ isHtmlMode ? 'Chuyển sang Trực quan (Visual)' : 'Chuyển sang HTML (Code)' }}
+                                        </button>
+                                    </div>
+                                    <div class="editor-container shadow-sm rounded-4 position-relative">
+                                        <QuillEditor v-if="!isHtmlMode" theme="snow" toolbar="full" v-model:content="formData.content" contentType="html" placeholder="Bắt đầu soạn thảo nội dung..." />
+                                        <textarea v-else class="form-control font-monospace p-3" rows="15" v-model="formData.content" placeholder="<h1>Tiêu đề</h1><p>Nội dung HTML...</p>" style="min-height: 400px; background-color: #2d2d2d; color: #f8f8f2; border: none;"></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -191,6 +198,7 @@ const isFirstLoad = ref(true);
 const fileInput = ref(null);
 const selectedFile = ref(null);
 const isRemoveImage = ref(false);
+const isHtmlMode = ref(false);
 const previewImage = ref(defaultImage);
 const hasPreviewImage = computed(() => previewImage.value && previewImage.value !== defaultImage);
 
@@ -303,6 +311,22 @@ const { mutate: mutateUpdate, isPending: isSaving } = useMutation({
     }
 });
 
+const sanitizeHTML = (html) => {
+    if (!html) return '';
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const scripts = doc.querySelectorAll('script, iframe, object, embed');
+    scripts.forEach(s => s.remove());
+    const elements = doc.querySelectorAll('*');
+    elements.forEach(el => {
+        Array.from(el.attributes).forEach(attr => {
+            if (attr.name.startsWith('on') || attr.value.trim().toLowerCase().startsWith('javascript:')) {
+                el.removeAttribute(attr.name);
+            }
+        });
+    });
+    return doc.body.innerHTML;
+};
+
 const handleSave = () => {
     if (!formData.title || !formData.excerpt || !formData.content || formData.content === '<p><br></p>') {
         return Swal.fire('Cảnh báo', 'Vui lòng nhập đủ Tiêu đề, Mô tả ngắn và Nội dung.', 'warning');
@@ -311,6 +335,8 @@ const handleSave = () => {
     if (!formData.author_name) {
         return Swal.fire('Cảnh báo', 'Vui lòng nhập tên tác giả.', 'warning');
     }
+
+    formData.content = sanitizeHTML(formData.content);
 
     const submitData = new FormData();
     

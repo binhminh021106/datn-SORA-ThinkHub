@@ -58,7 +58,9 @@ const checkAuthentication = async () => {
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_level');
     currentUser.value = null;
-    router.push('/admin/login');
+    if (route.path.startsWith('/admin') && !route.path.includes('/admin/login')) {
+      router.push('/admin/login');
+    }
   } finally {
     isCheckingAuth.value = false;
   }

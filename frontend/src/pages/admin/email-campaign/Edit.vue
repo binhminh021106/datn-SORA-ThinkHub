@@ -407,7 +407,7 @@ function normalizeTargetAudience(value) {
 function buildPayload() {
   let expiresAtFormatted = null
   
-if (holidayForm.hasVoucher && holidayForm.day && holidayForm.month) {
+  if (holidayForm.hasVoucher && holidayForm.day && holidayForm.month) {
     let yyyy = new Date().getFullYear()
     let d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
 
@@ -434,7 +434,7 @@ if (holidayForm.hasVoucher && holidayForm.day && holidayForm.month) {
     email_subject: holidayForm.subject,
     email_content: holidayForm.content,
     voucher_code: holidayForm.hasVoucher ? holidayForm.voucherCode : null,
-    discount: holidayForm.hasVoucher ? holidayForm.discount : null,
+    discount: holidayForm.hasVoucher ? String(holidayForm.discount) : null,
     status: holidayForm.status,
     expires_at: expiresAtFormatted
   }
