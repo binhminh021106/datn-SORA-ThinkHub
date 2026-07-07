@@ -295,10 +295,7 @@ class ClientCartController extends Controller
             return response()->json(['success' => false, 'message' => 'Mã voucher không hợp lệ hoặc đã hết hạn.']);
         }
 
-<<<<<<< Updated upstream
-=======
         // 2. Nếu là mã quà tặng sinh nhật, tiến hành kiểm tra tài khoản sở hữu độc quyền
-   // 2. Nếu là mã quà tặng sinh nhật, tiến hành kiểm tra tài khoản sở hữu độc quyền
         $isBirthdayCoupon = str_contains(mb_strtolower($coupon->name, 'UTF-8'), 'sinh nhật');
 
         if ($isBirthdayCoupon) {
@@ -328,7 +325,6 @@ class ClientCartController extends Controller
         }
 
         // 3. Trả về phản hồi thành công kèm lời nhắn chuẩn hóa
->>>>>>> Stashed changes
         return response()->json([
             'success' => true,
             'message' => 'Áp dụng mã sinh nhật thành công!',

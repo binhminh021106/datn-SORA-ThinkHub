@@ -47,6 +47,22 @@ const formatDate = (dateString) => {
     });
 };
 
+const sanitizeHTML = (html) => {
+    if (!html) return '';
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const scripts = doc.querySelectorAll('script, iframe, object, embed');
+    scripts.forEach(s => s.remove());
+    const elements = doc.querySelectorAll('*');
+    elements.forEach(el => {
+        Array.from(el.attributes).forEach(attr => {
+            if (attr.name.startsWith('on') || attr.value.trim().toLowerCase().startsWith('javascript:')) {
+                el.removeAttribute(attr.name);
+            }
+        });
+    });
+    return doc.body.innerHTML;
+};
+
 const updateSeoTags = (postData) => {
     if (!postData) return;
     const title = postData.meta_title || postData.title;
@@ -164,7 +180,7 @@ const post = computed(() => {
         view_count: data.views || 0,
         thumbnail: getFullImage(data.image_url),
         sapo: data.excerpt || '',
-        content: data.content || '',
+        content: sanitizeHTML(data.content || ''),
         meta_title: data.meta_title,
         meta_description: data.meta_description,
         meta_keywords: data.meta_keywords,

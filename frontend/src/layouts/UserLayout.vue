@@ -38,11 +38,33 @@ const handleScroll = () => {
   isVisible.value = window.scrollY > 300;
 };
 
+let animationFrameId = null;
+
 const scrollToTop = () => {
-  window.scrollTo({
-    top: 0,
-    behavior: 'smooth'
-  });
+  if (animationFrameId) {
+    window.cancelAnimationFrame(animationFrameId);
+  }
+  const scrollDuration = 600;
+  const start = window.scrollY;
+  const startTime = performance.now();
+  
+  const animateScroll = (currentTime) => {
+    const timeElapsed = currentTime - startTime;
+    const progress = Math.min(timeElapsed / scrollDuration, 1);
+    
+    // Easing (easeOutCubic)
+    const ease = 1 - Math.pow(1 - progress, 3);
+    
+    window.scrollTo(0, start * (1 - ease));
+    
+    if (timeElapsed < scrollDuration) {
+      animationFrameId = window.requestAnimationFrame(animateScroll);
+    } else {
+      animationFrameId = null;
+    }
+  };
+  
+  animationFrameId = window.requestAnimationFrame(animateScroll);
 };
 
 onMounted(() => {

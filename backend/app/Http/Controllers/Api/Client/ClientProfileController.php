@@ -101,9 +101,9 @@ class ClientProfileController extends Controller
         ]);
     }
 
-    // ==========================================
+    
     // PHẦN 2: QUẢN LÝ SỔ ĐỊA CHỈ
-    // ==========================================
+    
 
     public function getAddresses()
     {
