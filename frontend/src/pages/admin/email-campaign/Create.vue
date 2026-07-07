@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="email-campaign-create pb-5">
     <div class="container-fluid py-4">
       <div class="d-flex align-items-center gap-3 mb-4">
@@ -98,6 +98,9 @@
                     <div class="editor-toolbar bg-white border-bottom px-2 py-1 d-flex gap-1">
                       <button type="button" class="btn btn-sm btn-light border-0 py-0 px-2" title="Đậm"><i class="bi bi-type-bold"></i></button>
                       <button type="button" class="btn btn-sm btn-light border-0 py-0 px-2" title="Nghiêng"><i class="bi bi-type-italic"></i></button>
+                      <button type="button" class="btn btn-sm btn-light border fw-semibold text-dark py-0 px-2" style="font-size: 0.75rem;" title="Chèn tên khách" @click="insertToken('[Tên_Khách_Hàng]')">
+  <i class="bi bi-person-badge text-brand me-1"></i> [Tên]
+</button>
                       <div class="vr mx-1"></div>
                       <button type="button" class="btn btn-sm btn-light border fw-semibold text-dark py-0 px-2" style="font-size: 0.75rem;" title="Chèn mã voucher" @click="insertToken('[Voucher_Code]')">
                         <i class="bi bi-ticket-perforated text-brand me-1"></i> [Voucher_Code]
@@ -121,11 +124,11 @@
                     <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Mã quà tặng</label>
                     <input v-model.trim="holidayForm.voucherCode" type="text" class="form-control form-control-sm text-uppercase fw-bold border-brand-focus" placeholder="VD: SORA0803">
                   </div>
-                  <div class="col-sm-6">
+               <div class="col-sm-6">
                     <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Mức ưu đãi (%)</label>
                     <div class="input-group input-group-sm">
                       <input v-model.number="holidayForm.discount" type="number" min="1" max="100" class="form-control form-control-sm border-brand-focus" placeholder="VD: 5">
-                      <span class="input-group-text bg-light border-0 text-muted fw-bold">%</span>                    
+                      <span class="input-group-text bg-light border-0 text-muted fw-bold">%</span>
                     </div>
                   </div>
                 </div>
@@ -258,9 +261,17 @@ const currentDateDisplay = computed(() => {
 
 const expireDateDisplay = computed(() => {
   if (!holidayForm.day || !holidayForm.month) return '...'
-  const yyyy = new Date().getFullYear()
-  const d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
-  d.setDate(d.getDate() + 3) 
+  let yyyy = new Date().getFullYear()
+  let d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  if (d < today) {
+    yyyy++
+    d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
+  }
+
+  d.setDate(d.getDate() + 3)
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
 })
 
@@ -333,24 +344,24 @@ const saveHoliday = async () => {
 function buildPayload() {
   let expiresAtFormatted = null
   
-  if (holidayForm.hasVoucher && holidayForm.day && holidayForm.month) {
-    let yyyy = new Date().getFullYear()
-    let d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
+ if (holidayForm.hasVoucher && holidayForm.day && holidayForm.month) {
+  let yyyy = new Date().getFullYear()
+  let d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    if (d < today) {
-      yyyy++
-      d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
-    }
-
-    d.setDate(d.getDate() + 3) // Cộng đúng 3 ngày
-    
-    const y = d.getFullYear()
-    const m = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    expiresAtFormatted = `${y}-${m}-${day} 23:59:59` 
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  if (d < today) {
+    yyyy++
+    d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
   }
+
+  d.setDate(d.getDate() + 3)
+
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  expiresAtFormatted = `${y}-${m}-${day} 23:59:59` 
+}
 
   return {
     name: holidayForm.name,
@@ -370,7 +381,10 @@ function insertToken(token) {
 }
 
 function replaceTokens(text) {
-  return text.replaceAll('[Voucher_Code]', holidayForm.voucherCode || '')
+  return text
+   
+    .replaceAll('[Tên_Khách_Hàng]', '<b>[Tên Khách Hàng Mẫu]</b>')
+    .replaceAll('[Voucher_Code]', holidayForm.voucherCode || '')
 }
 </script>
 
