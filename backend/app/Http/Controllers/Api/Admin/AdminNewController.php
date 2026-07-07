@@ -58,6 +58,14 @@ class AdminNewController extends Controller
                 $validated['image_url'] = '/storage/' . $path;
             }
 
+            // Backend sanitization (Allowlist)
+            $allowableTags = '<p><br><b><i><strong><em><ul><ol><li><a><img><span><div><h1><h2><h3><h4><h5><h6><blockquote><hr><u><s><sub><sup><table><thead><tbody><tr><th><td>';
+            $validated['content'] = strip_tags($validated['content'], $allowableTags);
+            // Loại bỏ các script injection thô sơ (onEvent, javascript:)
+            $validated['content'] = preg_replace('/on[a-z]+="[^"]*"/i', '', $validated['content']);
+            $validated['content'] = preg_replace('/on[a-z]+=\'[^\']*\'/i', '', $validated['content']);
+            $validated['content'] = preg_replace('/href="javascript:[^"]*"/i', 'href="#"', $validated['content']);
+
             $news = News::create($validated);
             event(new NewsUpdated($news->id, ['action' => 'created']));
 
@@ -126,6 +134,14 @@ class AdminNewController extends Controller
                 $path = $request->file('image')->store('news', 'public');
                 $validated['image_url'] = '/storage/' . $path;
             }
+
+            // Backend sanitization (Allowlist)
+            $allowableTags = '<p><br><b><i><strong><em><ul><ol><li><a><img><span><div><h1><h2><h3><h4><h5><h6><blockquote><hr><u><s><sub><sup><table><thead><tbody><tr><th><td>';
+            $validated['content'] = strip_tags($validated['content'], $allowableTags);
+            // Loại bỏ các script injection thô sơ (onEvent, javascript:)
+            $validated['content'] = preg_replace('/on[a-z]+="[^"]*"/i', '', $validated['content']);
+            $validated['content'] = preg_replace('/on[a-z]+=\'[^\']*\'/i', '', $validated['content']);
+            $validated['content'] = preg_replace('/href="javascript:[^"]*"/i', 'href="#"', $validated['content']);
 
             $news->update($validated);
             event(new NewsUpdated($news->id, ['action' => 'updated']));
