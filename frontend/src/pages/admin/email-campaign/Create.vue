@@ -99,14 +99,15 @@
                       <button type="button" class="btn btn-sm btn-light border-0 py-0 px-2" title="Đậm"><i class="bi bi-type-bold"></i></button>
                       <button type="button" class="btn btn-sm btn-light border-0 py-0 px-2" title="Nghiêng"><i class="bi bi-type-italic"></i></button>
                       <button type="button" class="btn btn-sm btn-light border fw-semibold text-dark py-0 px-2" style="font-size: 0.75rem;" title="Chèn tên khách" @click="insertToken('[Tên_Khách_Hàng]')">
-  <i class="bi bi-person-badge text-brand me-1"></i> [Tên]
-</button>
+                        <i class="bi bi-person-badge text-brand me-1"></i> [Tên]
+                      </button>
                       <div class="vr mx-1"></div>
                       <button type="button" class="btn btn-sm btn-light border fw-semibold text-dark py-0 px-2" style="font-size: 0.75rem;" title="Chèn mã voucher" @click="insertToken('[Voucher_Code]')">
                         <i class="bi bi-ticket-perforated text-brand me-1"></i> [Voucher_Code]
                       </button>
                     </div>
-<textarea v-model="holidayForm.content" class="form-control border-0 rounded-0 bg-light small" rows="12" style="resize: none; font-size: 0.85rem;"></textarea>              </div>
+                    <textarea v-model="holidayForm.content" class="form-control border-0 rounded-0 bg-light small" rows="12" style="resize: none; font-size: 0.85rem;"></textarea>              
+                  </div>
                 </div>
 
                 <div class="d-flex align-items-center justify-content-between bg-light border rounded-3 p-3 mb-3">
@@ -181,9 +182,10 @@
                         </tr>
                         <tr>
                           <td class="text-muted border-0 py-1">Mức ưu đãi:</td>
-<td class="text-dark fw-bold border-0 py-1 text-end">
-    {{ holidayForm.discount ? holidayForm.discount + '%' : '...' }}
-  </td>                        </tr>
+                          <td class="text-dark fw-bold border-0 py-1 text-end">
+                              {{ holidayForm.discount ? holidayForm.discount + '%' : '...' }}
+                          </td>
+                        </tr>
                         <tr>
                           <td class="text-muted border-0 py-1">Áp dụng:</td>
                           <td class="text-dark border-0 py-1 text-end">Tất cả bộ sưu tập</td>
@@ -211,7 +213,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import apiClient from '@/utils/apiClient'
 import { useToast } from 'vue-toastification'
@@ -232,6 +234,18 @@ const holidayForm = reactive({
   voucherCode: '',
   discount: '',
   status: 'active'
+})
+
+// Đồng bộ checkbox mục tiêu y hệt Edit.vue
+watch(() => [...holidayForm.target], (newVal, oldVal) => {
+  const added = newVal.filter(x => !oldVal.includes(x))
+  if (added.includes('all')) {
+    holidayForm.target = ['all']
+  } else if (newVal.includes('all') && newVal.length > 1) {
+    holidayForm.target = holidayForm.target.filter(item => item !== 'all')
+  } else if (newVal.length === 0) {
+    holidayForm.target = ['all']
+  }
 })
 
 const popularHolidays = [
@@ -264,14 +278,18 @@ const expireDateDisplay = computed(() => {
   let yyyy = new Date().getFullYear()
   let d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
 
+  // Cộng trước 3 ngày rồi mới kiểm tra xem đã qua chưa
+  d.setDate(d.getDate() + 3)
+
   const today = new Date()
   today.setHours(0, 0, 0, 0)
+  
   if (d < today) {
     yyyy++
     d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
+    d.setDate(d.getDate() + 3)
   }
 
-  d.setDate(d.getDate() + 3)
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
 })
 
@@ -341,37 +359,42 @@ const saveHoliday = async () => {
     isSubmitting.value = false
   }
 }
+
 function buildPayload() {
   let expiresAtFormatted = null
   
- if (holidayForm.hasVoucher && holidayForm.day && holidayForm.month) {
-  let yyyy = new Date().getFullYear()
-  let d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
+  if (holidayForm.hasVoucher && holidayForm.day && holidayForm.month) {
+    let yyyy = new Date().getFullYear()
+    let d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  if (d < today) {
-    yyyy++
-    d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
+    // Sửa logic Year Rollover y như expireDateDisplay
+    d.setDate(d.getDate() + 3)
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    if (d < today) {
+      yyyy++
+      d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
+      d.setDate(d.getDate() + 3)
+    }
+
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    expiresAtFormatted = `${y}-${m}-${day} 23:59:59` 
   }
-
-  d.setDate(d.getDate() + 3)
-
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  expiresAtFormatted = `${y}-${m}-${day} 23:59:59` 
-}
 
   return {
     name: holidayForm.name,
     day: holidayForm.day,
     month: holidayForm.month,
     target_audience: holidayForm.target.length > 0 ? holidayForm.target.join(',') : 'all',
-   email_subject: holidaySubject.value,
+    email_subject: holidaySubject.value,
     email_content: holidayForm.content,
     voucher_code: holidayForm.hasVoucher ? holidayForm.voucherCode : null,
-discount: holidayForm.hasVoucher ? String(holidayForm.discount) : null,    status: holidayForm.status,
+    discount: holidayForm.hasVoucher ? String(holidayForm.discount) : null,    
+    status: holidayForm.status,
     expires_at: expiresAtFormatted
   }
 }
@@ -382,8 +405,8 @@ function insertToken(token) {
 
 function replaceTokens(text) {
   return text
-   
-    .replaceAll('[Tên_Khách_Hàng]', '<b>[Tên Khách Hàng Mẫu]</b>')
+    // Thay đổi này để đồng bộ hóa với file Edit.vue
+    .replaceAll('[Tên_Khách_Hàng]', 'Nguyễn Văn A')
     .replaceAll('[Voucher_Code]', holidayForm.voucherCode || '')
 }
 </script>

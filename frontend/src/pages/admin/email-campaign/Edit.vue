@@ -30,7 +30,8 @@
                 
                 <div class="mb-3">
                   <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Tên sự kiện / ngày lễ</label>
-<input v-model.trim="holidayForm.name" type="text" class="form-control form-control-sm bg-light border-0" placeholder="Ví dụ: Quốc tế Phụ nữ 8/3">                </div>
+                  <input v-model.trim="holidayForm.name" type="text" class="form-control form-control-sm bg-light border-0" placeholder="Ví dụ: Quốc tế Phụ nữ 8/3">
+                </div>
                 
                 <div class="mb-4">
                   <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Ngày diễn ra (Hàng năm)</label>
@@ -107,10 +108,6 @@
                 <div class="d-flex align-items-center justify-content-between bg-light border rounded-3 p-3 mb-3">
                   <div>
                     <div class="fw-bold text-dark" style="font-size: 0.9rem;">Kèm quà tặng</div>
-                    <small class="text-muted" style="font-size: 0.75rem;">
-                      
-                      
-                    </small>
                   </div>
                   <div class="form-check form-switch m-0 fs-5">
                     <input v-model="holidayForm.hasVoucher" class="form-check-input cursor-pointer border-brand-focus" type="checkbox" role="switch">
@@ -118,18 +115,18 @@
                 </div>
 
                <div class="row g-3 mb-4" v-if="holidayForm.hasVoucher">
-  <div class="col-sm-6">
-    <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Mã quà tặng</label>
-    <input v-model.trim="holidayForm.voucherCode" type="text" class="form-control form-control-sm text-uppercase fw-bold border-brand-focus" placeholder="VD: SORA0803">
-  </div>
-  <div class="col-sm-6">
-    <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Mức ưu đãi (%)</label>
-    <div class="input-group input-group-sm">
-      <input v-model.number="holidayForm.discount" type="number" min="1" max="100" class="form-control form-control-sm border-brand-focus" placeholder="VD: 5">
-      <span class="input-group-text bg-light border-0 text-muted fw-bold">%</span>
-    </div>
-  </div>
-</div>
+                <div class="col-sm-6">
+                  <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Mã quà tặng</label>
+                  <input v-model.trim="holidayForm.voucherCode" type="text" class="form-control form-control-sm text-uppercase fw-bold border-brand-focus" placeholder="VD: SORA0803">
+                </div>
+                <div class="col-sm-6">
+                  <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Mức ưu đãi (%)</label>
+                  <div class="input-group input-group-sm">
+                    <input v-model.number="holidayForm.discount" type="number" min="1" max="100" class="form-control form-control-sm border-brand-focus" placeholder="VD: 5">
+                    <span class="input-group-text bg-light border-0 text-muted fw-bold">%</span>
+                  </div>
+                </div>
+              </div>
 
                 <div class="mt-4 border-top pt-4">
                   <button class="btn btn-sm btn-brand text-white fw-bold px-4 py-2 w-100 shadow-sm" type="submit" :disabled="isSubmitting">
@@ -183,9 +180,10 @@
                         </tr>
                         <tr>
                           <td class="text-muted border-0 py-1">Mức ưu đãi:</td>
-<td class="text-dark fw-bold border-0 py-1 text-end">
-    {{ holidayForm.discount ? holidayForm.discount + '%' : '...' }}
-  </td>                        </tr>
+                          <td class="text-dark fw-bold border-0 py-1 text-end">
+                              {{ holidayForm.discount ? holidayForm.discount + '%' : '...' }}
+                          </td>
+                        </tr>
                         <tr>
                           <td class="text-muted border-0 py-1">Áp dụng:</td>
                           <td class="text-dark border-0 py-1 text-end">Tất cả bộ sưu tập</td>
@@ -330,10 +328,10 @@ const fetchEventDetail = async () => {
       holidayForm.hasVoucher = !!data.voucher_code
       holidayForm.voucherCode = data.voucher_code || ''
       if (data.discount) {
-  holidayForm.discount = data.discount.replace('%', '').trim();
-} else {
-  holidayForm.discount = '';
-}
+        holidayForm.discount = data.discount.replace('%', '').trim();
+      } else {
+        holidayForm.discount = '';
+      }
       
       holidayForm.status = data.status || 'active'
     } else {
