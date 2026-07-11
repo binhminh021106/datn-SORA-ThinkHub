@@ -105,7 +105,12 @@ const fetchOrderStatus = async (orderCode) => {
   if (!orderCode) return null;
 
   const headers = await getCheckoutHeaders();
-  const res = await fetch(`${API_BASE_URL}/client/orders/${orderCode}`, { headers });
+  const res = await fetch(`${API_BASE_URL}/client/orders/${orderCode}?t=${Date.now()}`, { 
+    headers: {
+      ...headers,
+      'Cache-Control': 'no-cache, no-store, must-revalidate'
+    }
+  });
   const json = await res.json();
 
   if (!res.ok || !json.success) {
@@ -117,13 +122,17 @@ const fetchOrderStatus = async (orderCode) => {
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const fetchOrderStatusWithRetry = async (orderCode, attempts = 3) => {
+const fetchOrderStatusWithRetry = async (orderCode, attempts = 5) => {
   let latestOrder = null;
 
   for (let attempt = 0; attempt < attempts; attempt += 1) {
-    latestOrder = await fetchOrderStatus(orderCode);
-    if (latestOrder?.payment_status === "paid") return latestOrder;
-    if (attempt < attempts - 1) await wait(1500);
+    try {
+      latestOrder = await fetchOrderStatus(orderCode);
+      if (latestOrder?.payment_status === "paid") return latestOrder;
+    } catch (e) {
+      console.log(`Fetch order status attempt ${attempt + 1} failed:`, e.message);
+    }
+    if (attempt < attempts - 1) await wait(2000);
   }
 
   return latestOrder;
@@ -896,6 +905,11 @@ export default function CheckoutScreen({ route }) {
     const returnUrl = ExpoLinking.createURL("order-history");
     const gatewayName = method === "vnpay" ? "VNPay" : "MoMo";
 
+    if (Platform.OS === "web") {
+      window.location.href = paymentUrl;
+      return;
+    }
+
     try {
       const browserResult = await WebBrowser.openAuthSessionAsync(paymentUrl, returnUrl);
       if (browserResult.type === "cancel" || browserResult.type === "dismiss") {
@@ -909,6 +923,30 @@ export default function CheckoutScreen({ route }) {
           "time-outline"
         );
         return;
+      }
+
+      if (browserResult.type === "success" && browserResult.url) {
+        const { queryParams } = ExpoLinking.parse(browserResult.url);
+        if (queryParams?.payment === "success") {
+          setCreatedOrder(order);
+          queryClient.invalidateQueries({ queryKey: ["cart"] });
+          queryClient.invalidateQueries({ queryKey: ["checkout", "init"] });
+          queryClient.invalidateQueries({ queryKey: ["orders"] });
+          queryClient.invalidateQueries({ queryKey: ["saved-coupons"] });
+          setIsSuccessModalVisible(true);
+          return;
+        } else if (queryParams?.payment === "failed" || queryParams?.payment === "cancelled") {
+          showCustomAlert(
+            "Thanh toán thất bại",
+            `Giao dịch ${gatewayName} đã bị huỷ hoặc thất bại. Vui lòng thanh toán lại trong lịch sử đơn hàng.`,
+            [
+              { text: "Ở lại", style: "cancel" },
+              { text: "Lịch sử đơn", onPress: () => navigation.navigate("OrderHistory") },
+            ],
+            "close-circle-outline"
+          );
+          return;
+        }
       }
     } catch (error) {
       console.log(`Error opening ${gatewayName} payment URL`, error);

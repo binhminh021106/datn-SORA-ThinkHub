@@ -56,7 +56,7 @@ const fetchWithTimeout = async (url, options = {}, timeoutMs = HOME_FETCH_TIMEOU
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const getStorageUrl = (path) => {
   if (!path) return '';
-  const origin = API_BASE_URL.replace('/api', '');
+  const origin = API_BASE_URL.replace(/\/api$/, '');
   let formattedPath = path;
   if (path.startsWith('http')) {
     formattedPath = path
@@ -1377,7 +1377,7 @@ export default function HomeScreen({ navigation }) {
 
           {isHomeInitialLoading ? HOME_NEWS_SKELETON_ITEMS.map((item) => (
             <NewsCardSkeleton key={item} />
-          )) : (newsList.length > 0 ? newsList : NEWS).map((article) => {
+          )) : (newsList.length > 0 ? newsList : []).map((article) => {
             const isDbNews = !!article.image_url;
             const imgUrl = isDbNews ? getStorageUrl(article.image_url) : article.image;
             const tag = isDbNews ? (article.category || 'CẨM NANG') : article.tag;

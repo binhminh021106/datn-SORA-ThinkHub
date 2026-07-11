@@ -5,7 +5,7 @@ import { showCustomAlert } from '../components/CustomAlert';
 
 const getStorageUrl = (path) => {
   if (!path) return '';
-  const origin = API_BASE_URL.replace('/api', '');
+  const origin = API_BASE_URL.replace(/\/api$/, '');
   if (path.startsWith('http')) {
     return path
       .replace('http://127.0.0.1:8000', origin)

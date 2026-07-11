@@ -350,7 +350,7 @@ const sw = StyleSheet.create({
 const getStorageUrl = (path) => {
   if (!path) return '';
   if (path.startsWith('http')) return path;
-  return `${API_BASE_URL.replace('/api', '')}/storage/${path}`;
+  return `${API_BASE_URL.replace(/\/api$/, '')}/storage/${path}`;
 };
 
 // Helper to format currency

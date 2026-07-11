@@ -88,14 +88,14 @@ const TRACKING_STEP_DETAILS = [
 
 const getPaymentMethodLabel = (m) => ({ cod: 'COD', momo: 'Ví MoMo', bank: 'Chuyển khoản', vnpay: 'VNPay' }[m] || m || 'N/A');
 const getPaymentStatusLabel = (ps) => ps === 'paid' ? { label: 'Đã thanh toán', color: '#22c55e' } : { label: 'Chờ thanh toán', color: '#f59e0b' };
-const isPendingMomoPayment = (order) => (
-  order?.payment_method === 'momo'
+const isPendingOnlinePayment = (order) => (
+  (order?.payment_method === 'momo' || order?.payment_method === 'vnpay')
   && order?.status === 'pending'
   && order?.payment_status === 'unpaid'
 );
 const getItemImage = (path) => {
   if (!path) return 'https://images.unsplash.com/photo-1605100804763-247f67b854d4?q=80&w=300';
-  return path.startsWith('http') ? path : `${API_BASE_URL.replace('/api','')}/storage/${path}`;
+  return path.startsWith('http') ? path : `${API_BASE_URL.replace(/\/api$/, '')}/storage/${path}`;
 };
 
 const parseJsonSafely = async (response) => {
@@ -595,7 +595,7 @@ const DraggableDetailSheet = ({
   if (!visible) return null;
 
   const alreadyReviewed = order && reviewedOrders[order.order_code];
-  const canRetryPayment = isPendingMomoPayment(order);
+  const canRetryPayment = isPendingOnlinePayment(order);
   const isRetryingPayment = retryingPaymentCode === order?.order_code;
 
   return (
@@ -747,8 +747,8 @@ const DraggableDetailSheet = ({
                     <Ionicons name="time-outline" size={18} color="#9f273b" />
                   </View>
                   <View style={ds.paymentReminderCopy}>
-                    <Text style={ds.paymentReminderTitle}>Đơn hàng đang chờ thanh toán MoMo</Text>
-                    <Text style={ds.paymentReminderText}>Bạn có thể mở lại cổng MoMo để hoàn tất thanh toán đơn hàng này.</Text>
+                    <Text style={ds.paymentReminderTitle}>Đơn hàng đang chờ thanh toán {getPaymentMethodLabel(order.payment_method)}</Text>
+                    <Text style={ds.paymentReminderText}>Bạn có thể mở lại cổng {getPaymentMethodLabel(order.payment_method)} để hoàn tất thanh toán đơn hàng này.</Text>
                   </View>
                   <TouchableOpacity
                     style={[ds.retryPayBtn, isRetryingPayment && ds.retryPayBtnDisabled]}
@@ -867,7 +867,7 @@ const ds = StyleSheet.create({
   paymentReminderCopy: { flex: 1 },
   paymentReminderTitle: { fontFamily: 'Oswald_600SemiBold', fontSize: 12, color: '#9f273b' },
   paymentReminderText: { marginTop: 2, fontFamily: 'Oswald_400Regular', fontSize: 10.5, lineHeight: 15, color: '#7f6065' },
-  retryPayBtn: { minWidth: 88, height: 34, paddingHorizontal: 10, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#9f273b' },
+  retryPayBtn: { width: 90, height: 34, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: '#9f273b' },
   retryPayBtnDisabled: { opacity: 0.72 },
   retryPayBtnText: { fontFamily: 'Oswald_600SemiBold', fontSize: 10.5, color: '#fff', letterSpacing: 0.7 },
 
@@ -1169,7 +1169,7 @@ export default function OrderHistoryScreen() {
   // ── Reorder ──────────────────────────────────────────────────────────────
   const handleReorder = (code) => Alert.alert('Mua lại','Thêm toàn bộ sản phẩm vào giỏ hàng?',[{text:'Huỷ',style:'cancel'},{text:'MUA LẠI',onPress:async()=>{try{const token=await AsyncStorage.getItem('auth_token');const res=await fetch(`${API_BASE_URL}/client/orders/${code}/reorder`,{method:'POST',headers:{Authorization:`Bearer ${token}`,Accept:'application/json'}});const d=await res.json();if(res.ok&&d.success)Alert.alert('Thành công','Đã thêm vào giỏ!',[{text:'Xem giỏ',onPress:()=>navigation.navigate('Cart')},{text:'OK'}]);else Alert.alert('Thất bại',d.message||'Không thể mua lại.');}catch(_){Alert.alert('Lỗi','Không thể kết nối.');}}}]);
 
-  const handleRetryMomoPayment = async (order) => {
+  const handleRetryOnlinePayment = async (order) => {
     if (!order?.order_code || retryingPaymentCode) return;
 
     setRetryingPaymentCode(order.order_code);
@@ -1181,7 +1181,7 @@ export default function OrderHistoryScreen() {
       }
 
       const returnUrl = ExpoLinking.createURL('order-history');
-      const res = await fetch(`${API_BASE_URL}/client/checkout/orders/${order.order_code}/momo-retry`, {
+      const res = await fetch(`${API_BASE_URL}/client/checkout/orders/${order.order_code}/${order.payment_method}-retry`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -1196,16 +1196,39 @@ export default function OrderHistoryScreen() {
       const data = await parseJsonSafely(res);
 
       if (!res.ok || !data.success || !data.payment_url) {
-        Alert.alert('Không thể thanh toán lại', getFirstValidationError(data) || 'Đơn hàng này chưa thể mở lại cổng MoMo.');
+        Alert.alert('Không thể thanh toán lại', getFirstValidationError(data) || `Đơn hàng này chưa thể mở lại cổng ${getPaymentMethodLabel(order.payment_method)}.`);
+        return;
+      }
+
+      if (Platform.OS === 'web') {
+        window.location.href = data.payment_url;
         return;
       }
 
       const browserResult = await WebBrowser.openAuthSessionAsync(data.payment_url, returnUrl);
+
+      if (browserResult.type === 'success' && browserResult.url) {
+        const { queryParams } = ExpoLinking.parse(browserResult.url);
+        if (queryParams?.payment === 'success') {
+          Alert.alert('Thanh toán thành công', `${getPaymentMethodLabel(order.payment_method)} đã xác nhận thanh toán cho đơn hàng này.`);
+          await Promise.all([
+            refetchOrders(),
+            detailOrderCode === order.order_code ? refetchDetailOrder() : Promise.resolve(),
+          ]);
+          queryClient.invalidateQueries({ queryKey: ['orders'] });
+          queryClient.invalidateQueries({ queryKey: ['order-detail'] });
+          return;
+        } else if (queryParams?.payment === 'failed' || queryParams?.payment === 'cancelled') {
+          Alert.alert('Thanh toán thất bại', `Giao dịch ${getPaymentMethodLabel(order.payment_method)} đã bị huỷ hoặc thất bại.`);
+          return;
+        }
+      }
+
       let latestOrder = null;
       try {
         latestOrder = await fetchOrderDetailQuery(order.order_code);
       } catch (refreshError) {
-        console.log('Refresh MoMo order status failed:', refreshError);
+        console.log('Refresh payment status failed:', refreshError);
       }
       await Promise.all([
         refetchOrders(),
@@ -1215,18 +1238,18 @@ export default function OrderHistoryScreen() {
       queryClient.invalidateQueries({ queryKey: ['order-detail'] });
 
       if (latestOrder?.payment_status === 'paid') {
-        Alert.alert('Thanh toán thành công', 'MoMo đã xác nhận thanh toán cho đơn hàng này.');
+        Alert.alert('Thanh toán thành công', `${getPaymentMethodLabel(order.payment_method)} đã xác nhận thanh toán cho đơn hàng này.`);
       } else if (browserResult.type === 'cancel' || browserResult.type === 'dismiss') {
         Alert.alert(
-          'Thanh toán MoMo',
+          `Thanh toán ${getPaymentMethodLabel(order.payment_method)}`,
           'Bạn đã đóng cổng thanh toán. Nếu chưa hoàn tất thanh toán, đơn hàng vẫn sẽ ở trạng thái chờ thanh toán.'
         );
       } else {
-        Alert.alert('Đơn hàng đang chờ thanh toán', 'Nếu MoMo chưa đồng bộ kịp, bạn có thể mở lịch sử đơn hàng để kiểm tra lại sau.');
+        Alert.alert('Đơn hàng đang chờ thanh toán', `Nếu ${getPaymentMethodLabel(order.payment_method)} chưa đồng bộ kịp, bạn có thể mở lịch sử đơn hàng để kiểm tra lại sau.`);
       }
     } catch (error) {
-      console.log('Retry MoMo payment failed:', error);
-      Alert.alert('Lỗi thanh toán', 'Không thể mở lại cổng thanh toán MoMo. Vui lòng thử lại.');
+      console.log('Retry online payment failed:', error);
+      Alert.alert('Lỗi thanh toán', `Không thể mở lại cổng thanh toán ${getPaymentMethodLabel(order.payment_method)}. Vui lòng thử lại.`);
     } finally {
       setRetryingPaymentCode(null);
     }
@@ -1273,7 +1296,7 @@ export default function OrderHistoryScreen() {
         ) : filtered.map(order => {
           const st = getStatusConfig(order.status);
           const alreadyReviewed = reviewedOrders[order.order_code];
-          const pendingMomoPayment = isPendingMomoPayment(order);
+          const pendingOnlinePayment = isPendingOnlinePayment(order);
           return (
             <TouchableOpacity key={order.id} style={s.card} onPress={() => openDetail(order.order_code)} activeOpacity={0.93}>
               <View style={s.cardHead}>
@@ -1304,10 +1327,10 @@ export default function OrderHistoryScreen() {
                   </View>
                 ))}
                 {(order.items?.length||0) > 2 && <Text style={s.moreItems}>+{order.items.length-2} sản phẩm khác</Text>}
-                {pendingMomoPayment && (
+                {pendingOnlinePayment && (
                   <View style={s.cardPaymentReminder}>
                     <Ionicons name="time-outline" size={13} color="#9f273b" />
-                    <Text style={s.cardPaymentReminderText}>Đơn MoMo đang chờ thanh toán</Text>
+                    <Text style={s.cardPaymentReminderText}>Đơn {getPaymentMethodLabel(order.payment_method)} đang chờ thanh toán</Text>
                   </View>
                 )}
               </View>
@@ -1323,10 +1346,10 @@ export default function OrderHistoryScreen() {
                       <Text style={s.chipRedTxt}>HỦY ĐƠN</Text>
                     </TouchableOpacity>
                   )}
-                  {pendingMomoPayment && (
+                  {pendingOnlinePayment && (
                     <TouchableOpacity
                       style={[s.chip, s.chipPay, retryingPaymentCode === order.order_code && s.chipDisabled]}
-                      onPress={(e) => { e.stopPropagation?.(); handleRetryMomoPayment(order); }}
+                      onPress={(e) => { e.stopPropagation?.(); handleRetryOnlinePayment(order); }}
                       disabled={retryingPaymentCode === order.order_code}
                       activeOpacity={0.8}
                     >
@@ -1374,7 +1397,7 @@ export default function OrderHistoryScreen() {
         onOpenReview={openReview}
         onOpenReturn={openReturn}
         onOpenCancel={openCancel}
-        onRetryPayment={handleRetryMomoPayment}
+        onRetryPayment={handleRetryOnlinePayment}
         retryingPaymentCode={retryingPaymentCode}
         onReorder={handleReorder}
       />
@@ -1555,7 +1578,7 @@ const s = StyleSheet.create({
   chip: { flexDirection:'row', alignItems:'center', paddingHorizontal:10, paddingVertical:5, borderRadius:20, gap:3 },
   chipRed:     { borderWidth:1, borderColor:'#e8b7be', backgroundColor:'#fff4f4' },
   chipRedTxt:  { fontFamily:'Oswald_600SemiBold', fontSize:10, color:'#9f273b' },
-  chipPay:     { minWidth: 82, justifyContent: 'center', backgroundColor:'#9f273b' },
+  chipPay:     { width: 84, height: 26, justifyContent: 'center', alignItems: 'center', backgroundColor:'#9f273b', paddingHorizontal: 0, paddingVertical: 0 },
   chipPayTxt:  { fontFamily:'Oswald_600SemiBold', fontSize:10, color:'#fff' },
   chipDisabled: { opacity: 0.72 },
   chipPurple:    { borderWidth:1, borderColor:'#d8b4fe', backgroundColor:'#faf5ff' },
