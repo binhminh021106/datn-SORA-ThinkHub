@@ -16,7 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { API_BASE_URL } from '../../config/api';
 import { PRICE_FONT_FAMILY, PRICE_FONT_WEIGHT } from '../../styles/typography';
 
-const { height: SCREEN_H } = Dimensions.get('window');
+import { useWindowDimensions } from 'react-native';
+
 const GOLD_PRICE_TIMEOUT_MS = 10000;
 
 const fetchWithTimeout = async (url, options = {}, timeoutMs = GOLD_PRICE_TIMEOUT_MS) => {
@@ -34,11 +35,12 @@ const fetchWithTimeout = async (url, options = {}, timeoutMs = GOLD_PRICE_TIMEOU
 };
 
 export default function GoldPriceModal({ visible, onClose }) {
+  const { height: SCREEN_H } = useWindowDimensions();
   const [prices, setPrices] = useState([]);
   const [lastUpdated, setLastUpdated] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const translateY = useRef(new Animated.Value(SCREEN_H)).current;
+  const translateY = useRef(new Animated.Value(Dimensions.get('window').height)).current;
 
   const fetchGoldPrices = async () => {
     setLoading(true);

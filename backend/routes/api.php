@@ -208,6 +208,7 @@ Route::prefix('client')->group(function () {
     Route::controller(ClientOrderController::class)->prefix('orders')->group(function () {
         Route::get('/', 'index');
         Route::post('/', 'store');
+        Route::get('/{order_code}/status', 'status');
         Route::get('/{order_code}', 'show');
         Route::put('/{order_code}', 'update');
         Route::post('/{order_code}/review', 'review');

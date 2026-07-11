@@ -83,13 +83,13 @@ class ClientHomeController extends Controller
 
                 // 5. Lấy Combos
                 $yesterday = Carbon::now()->subDay();
-                $combosList = Combo::with(['items.product' => function($q) {
-                        $q->select('id', 'name', 'thumbnail_image', 'base_price', 'promotional_price');
-                    }])
+                $combosList = Combo::with(['items.product' => function ($q) {
+                    $q->select('id', 'name', 'thumbnail_image', 'base_price', 'promotional_price');
+                }])
                     ->where('status', 'active')
-                    ->where(function($q) use ($yesterday) {
+                    ->where(function ($q) use ($yesterday) {
                         $q->whereNull('end_date')
-                          ->orWhere('end_date', '>=', $yesterday);
+                            ->orWhere('end_date', '>=', $yesterday);
                     })
                     ->orderBy('id', 'desc')
                     ->take(5)
@@ -147,7 +147,7 @@ class ClientHomeController extends Controller
                         ->orderBy('created_at', 'desc')
                         ->get(['image_path'])->toArray();
                 } catch (\Exception $e) {
-                    $result['galleries'] = []; 
+                    $result['galleries'] = [];
                 }
 
                 // 8. Lấy tin tức
@@ -167,7 +167,6 @@ class ClientHomeController extends Controller
                 'success' => true,
                 'data' => $data
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,

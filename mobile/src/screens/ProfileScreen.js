@@ -26,7 +26,7 @@ const formatCurrency = (v) =>
 
 const getStorageUrl = (path) => {
   if (!path) return '';
-  const origin = API_BASE_URL.replace('/api', '');
+  const origin = API_BASE_URL.replace(/\/api$/, '');
   let formattedPath = path;
   if (path.startsWith('http')) {
     formattedPath = path
