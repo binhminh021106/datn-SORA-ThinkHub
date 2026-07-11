@@ -174,8 +174,12 @@ const fetchOrderDetailQuery = async (orderCode) => {
   const token = await AsyncStorage.getItem('auth_token');
   if (!token) throw new Error('Phien dang nhap da het han.');
 
-  const res = await fetch(`${API_BASE_URL}/client/orders/${orderCode}`, {
-    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+  const res = await fetch(`${API_BASE_URL}/client/orders/${orderCode}?t=${Date.now()}`, {
+    headers: { 
+      Authorization: `Bearer ${token}`, 
+      Accept: 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate'
+    },
   });
   const data = await res.json();
   if (!res.ok || !data.success) {
@@ -1207,17 +1211,11 @@ export default function OrderHistoryScreen() {
 
       const browserResult = await WebBrowser.openAuthSessionAsync(data.payment_url, returnUrl);
 
+      let isSuccessUrl = false;
       if (browserResult.type === 'success' && browserResult.url) {
         const { queryParams } = ExpoLinking.parse(browserResult.url);
         if (queryParams?.payment === 'success') {
-          Alert.alert('Thanh toán thành công', `${getPaymentMethodLabel(order.payment_method)} đã xác nhận thanh toán cho đơn hàng này.`);
-          await Promise.all([
-            refetchOrders(),
-            detailOrderCode === order.order_code ? refetchDetailOrder() : Promise.resolve(),
-          ]);
-          queryClient.invalidateQueries({ queryKey: ['orders'] });
-          queryClient.invalidateQueries({ queryKey: ['order-detail'] });
-          return;
+          isSuccessUrl = true;
         } else if (queryParams?.payment === 'failed' || queryParams?.payment === 'cancelled') {
           Alert.alert('Thanh toán thất bại', `Giao dịch ${getPaymentMethodLabel(order.payment_method)} đã bị huỷ hoặc thất bại.`);
           return;
@@ -1226,7 +1224,13 @@ export default function OrderHistoryScreen() {
 
       let latestOrder = null;
       try {
-        latestOrder = await fetchOrderDetailQuery(order.order_code);
+        for (let i = 0; i < 6; i++) {
+          latestOrder = await fetchOrderDetailQuery(order.order_code);
+          if (latestOrder?.payment_status === 'paid' || !isSuccessUrl) {
+            break;
+          }
+          await new Promise(r => setTimeout(r, 2000));
+        }
       } catch (refreshError) {
         console.log('Refresh payment status failed:', refreshError);
       }
@@ -1244,6 +1248,8 @@ export default function OrderHistoryScreen() {
           `Thanh toán ${getPaymentMethodLabel(order.payment_method)}`,
           'Bạn đã đóng cổng thanh toán. Nếu chưa hoàn tất thanh toán, đơn hàng vẫn sẽ ở trạng thái chờ thanh toán.'
         );
+      } else if (isSuccessUrl) {
+        Alert.alert('Đang chờ xác nhận', `Giao dịch ${getPaymentMethodLabel(order.payment_method)} đã hoàn tất nhưng hệ thống đang xử lý. Vui lòng kiểm tra lại sau ít phút.`);
       } else {
         Alert.alert('Đơn hàng đang chờ thanh toán', `Nếu ${getPaymentMethodLabel(order.payment_method)} chưa đồng bộ kịp, bạn có thể mở lịch sử đơn hàng để kiểm tra lại sau.`);
       }

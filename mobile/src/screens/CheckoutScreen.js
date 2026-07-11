@@ -105,7 +105,7 @@ const fetchOrderStatus = async (orderCode) => {
   if (!orderCode) return null;
 
   const headers = await getCheckoutHeaders();
-  const res = await fetch(`${API_BASE_URL}/client/orders/${orderCode}?t=${Date.now()}`, { 
+  const res = await fetch(`${API_BASE_URL}/client/orders/${orderCode}/status?t=${Date.now()}`, { 
     headers: {
       ...headers,
       'Cache-Control': 'no-cache, no-store, must-revalidate'
@@ -122,7 +122,7 @@ const fetchOrderStatus = async (orderCode) => {
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const fetchOrderStatusWithRetry = async (orderCode, attempts = 5) => {
+const fetchOrderStatusWithRetry = async (orderCode, attempts = 10) => {
   let latestOrder = null;
 
   for (let attempt = 0; attempt < attempts; attempt += 1) {
@@ -132,7 +132,7 @@ const fetchOrderStatusWithRetry = async (orderCode, attempts = 5) => {
     } catch (e) {
       console.log(`Fetch order status attempt ${attempt + 1} failed:`, e.message);
     }
-    if (attempt < attempts - 1) await wait(2000);
+    if (attempt < attempts - 1) await wait(1000);
   }
 
   return latestOrder;
@@ -910,6 +910,8 @@ export default function CheckoutScreen({ route }) {
       return;
     }
 
+    let isSuccessUrl = false;
+
     try {
       const browserResult = await WebBrowser.openAuthSessionAsync(paymentUrl, returnUrl);
       if (browserResult.type === "cancel" || browserResult.type === "dismiss") {
@@ -928,13 +930,7 @@ export default function CheckoutScreen({ route }) {
       if (browserResult.type === "success" && browserResult.url) {
         const { queryParams } = ExpoLinking.parse(browserResult.url);
         if (queryParams?.payment === "success") {
-          setCreatedOrder(order);
-          queryClient.invalidateQueries({ queryKey: ["cart"] });
-          queryClient.invalidateQueries({ queryKey: ["checkout", "init"] });
-          queryClient.invalidateQueries({ queryKey: ["orders"] });
-          queryClient.invalidateQueries({ queryKey: ["saved-coupons"] });
-          setIsSuccessModalVisible(true);
-          return;
+          isSuccessUrl = true; // Chờ backend xác nhận thay vì báo thành công ngay
         } else if (queryParams?.payment === "failed" || queryParams?.payment === "cancelled") {
           showCustomAlert(
             "Thanh toán thất bại",
@@ -981,6 +977,19 @@ export default function CheckoutScreen({ route }) {
           return;
         }
 
+        if (isSuccessUrl) {
+          showCustomAlert(
+            "Đang chờ xác nhận",
+            `Giao dịch ${gatewayName} đã hoàn tất nhưng hệ thống đang xử lý. Vui lòng kiểm tra lại trong lịch sử đơn hàng sau ít phút.`,
+            [
+              { text: "Ở lại", style: "cancel" },
+              { text: "Lịch sử đơn", onPress: () => navigation.navigate("OrderHistory") },
+            ],
+            "time-outline"
+          );
+          return;
+        }
+
         showCustomAlert(
           "Đơn hàng đang chờ thanh toán",
           `${gatewayName} chưa xác nhận thanh toán cho đơn hàng này. Bạn có thể vào lịch sử đơn hàng để kiểm tra lại sau.`,
@@ -1002,7 +1011,7 @@ export default function CheckoutScreen({ route }) {
           "warning-outline"
         );
       }
-    }, 2500);
+    }, 500);
   }
   const handleCloseSuccess = () => {
     setIsSuccessModalVisible(false);
