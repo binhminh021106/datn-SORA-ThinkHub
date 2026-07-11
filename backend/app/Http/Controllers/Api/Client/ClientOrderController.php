@@ -247,6 +247,22 @@ class ClientOrderController extends Controller
     }
 
     /**
+     * Polling trạng thái đơn hàng (nhẹ, không chứa PII, không yêu cầu auth khắt khe)
+     */
+    public function status(string $order_code)
+    {
+        $order = Order::select('order_code', 'payment_status', 'status')
+                    ->where('order_code', $order_code)
+                    ->first();
+
+        if (!$order) {
+            return response()->json(['success' => false, 'message' => 'Không tìm thấy đơn hàng'], 404);
+        }
+
+        return response()->json(['success' => true, 'data' => $order]);
+    }
+
+    /**
      * Xem chi tiết đơn hàng (Dành cho User đã login)
      */
     public function show(string $order_code)
@@ -262,7 +278,7 @@ class ClientOrderController extends Controller
         }
 
         // Bảo mật: Nếu có User_id, phải check xem đúng chính chủ không
-        if ($order->user_id && (!$user || $user->id !== $order->user_id)) {
+        if ($order->user_id && (!$user || (int)$user->id !== (int)$order->user_id)) {
             return response()->json(['success' => false, 'message' => 'Bạn không có quyền xem đơn hàng này'], 403);
         }
 
@@ -286,7 +302,7 @@ class ClientOrderController extends Controller
             return response()->json(['success' => false, 'message' => 'Chỉ có thể hủy đơn khi đang ở trạng thái Chờ xác nhận'], 400);
         }
 
-        if ($order->user_id && (!$user || $user->id !== $order->user_id)) {
+        if ($order->user_id && (!$user || (int)$user->id !== (int)$order->user_id)) {
             return response()->json(['success' => false, 'message' => 'Bạn không có quyền hủy đơn hàng này'], 403);
         }
 
@@ -349,7 +365,7 @@ class ClientOrderController extends Controller
                 return response()->json(['success' => false, 'message' => 'Bạn chỉ có thể đánh giá khi đơn hàng đã giao thành công'], 400);
             }
 
-            if ($order->user_id && (!$user || $user->id !== $order->user_id)) {
+            if ($order->user_id && (!$user || (int)$user->id !== (int)$order->user_id)) {
                 return response()->json(['success' => false, 'message' => 'Bạn không có quyền đánh giá đơn hàng này'], 403);
             }
 
@@ -518,7 +534,7 @@ class ClientOrderController extends Controller
             return response()->json(['success' => false, 'message' => 'Không tìm thấy đơn hàng'], 404);
         }
 
-        if ($order->user_id && (!$user || $user->id !== $order->user_id)) {
+        if ($order->user_id && (!$user || (int)$user->id !== (int)$order->user_id)) {
             return response()->json(['success' => false, 'message' => 'Bạn không có quyền xem đánh giá này'], 403);
         }
 
@@ -688,7 +704,7 @@ class ClientOrderController extends Controller
                     ->firstOrFail();
 
         // Bảo mật: chỉ chủ đơn hàng mới được xuất
-        if ($order->user_id && (!$user || $order->user_id !== $user->id)) {
+        if ($order->user_id && (!$user || (int)$order->user_id !== (int)$user->id)) {
             abort(403, 'Bạn không có quyền xuất hóa đơn này.');
         }
 
@@ -721,7 +737,7 @@ class ClientOrderController extends Controller
             return response()->json(['success' => false, 'message' => 'Chỉ có thể yêu cầu hoàn hàng khi đơn đã giao thành công'], 400);
         }
 
-        if ($order->user_id && (!$user || $user->id !== $order->user_id)) {
+        if ($order->user_id && (!$user || (int)$user->id !== (int)$order->user_id)) {
             return response()->json(['success' => false, 'message' => 'Bạn không có quyền thực hiện'], 403);
         }
 

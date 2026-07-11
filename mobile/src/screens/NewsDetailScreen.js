@@ -25,7 +25,7 @@ const PAGE_MAX_WIDTH = 680;
 
 const getStorageUrl = (path) => {
   if (!path) return '';
-  const origin = API_BASE_URL.replace('/api', '');
+  const origin = API_BASE_URL.replace(/\/api$/, '');
   if (path.startsWith('http')) {
     return path
       .replace('http://127.0.0.1:8000', origin)
@@ -58,7 +58,7 @@ const getArticleContent = (article) => (
 );
 
 const normalizeArticleContent = (content) => {
-  const origin = API_BASE_URL.replace('/api', '');
+  const origin = API_BASE_URL.replace(/\/api$/, '');
   return String(content || '<p>Nội dung bài viết đang được cập nhật.</p>')
     .replace(/src=(["'])\/storage\//gi, `src=$1${origin}/storage/`)
     .replace(/src=(["'])storage\//gi, `src=$1${origin}/storage/`);
@@ -262,7 +262,7 @@ export default function NewsDetailScreen({ navigation, route }) {
                     </View>
                   ) : (
                     <NativeWebView
-                      source={{ html, baseUrl: API_BASE_URL.replace('/api', '') }}
+                      source={{ html, baseUrl: API_BASE_URL.replace(/\/api$/, '') }}
                       style={[styles.webView, { height: contentHeight }]}
                       originWhitelist={['*']}
                       scrollEnabled={false}

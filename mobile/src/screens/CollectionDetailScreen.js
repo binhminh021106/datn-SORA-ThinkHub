@@ -97,7 +97,7 @@ const formatCurrency = (value) =>
 const getStorageUrl = (path) => {
   if (!path) return FALLBACK_IMAGE;
   if (path.startsWith('http')) {
-    const origin = API_BASE_URL.replace('/api', '');
+    const origin = API_BASE_URL.replace(/\/api$/, '');
     return path
       .replace('http://127.0.0.1:8000', origin)
       .replace('http://localhost:8000', origin)
@@ -105,7 +105,7 @@ const getStorageUrl = (path) => {
       .replace('https://localhost:8000', origin);
   }
 
-  const origin = API_BASE_URL.replace('/api', '');
+  const origin = API_BASE_URL.replace(/\/api$/, '');
   if (path.startsWith('/storage/')) return `${origin}${path}`;
   if (path.startsWith('storage/')) return `${origin}/${path}`;
   return `${origin}/storage/${path.startsWith('/') ? path.slice(1) : path}`;

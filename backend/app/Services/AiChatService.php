@@ -16,7 +16,7 @@ class AiChatService
         }
 
         return match (config('services.ai.provider')) {
-            'freemodel', 'openai_compatible' => $this->replyWithOpenAiCompatible($message),
+            'freemodel', 'openai_compatible', 'openrouter' => $this->replyWithOpenAiCompatible($message),
             default => throw new RuntimeException('Unsupported AI provider.'),
         };
     }
@@ -30,7 +30,7 @@ class AiChatService
         }
 
         return match (config('services.ai.provider')) {
-            'freemodel', 'openai_compatible' => $this->analyzeWithOpenAiCompatible($message),
+            'freemodel', 'openai_compatible', 'openrouter' => $this->analyzeWithOpenAiCompatible($message),
             default => throw new RuntimeException('Unsupported AI provider.'),
         };
     }
