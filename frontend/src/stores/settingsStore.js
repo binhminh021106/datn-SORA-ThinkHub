@@ -58,11 +58,17 @@ export const useSettingsStore = defineStore('settings', () => {
     const listenToRealtimeUpdates = () => {
         if (window.Echo) {
             window.Echo.channel('settings')
+                .stopListening('SettingUpdated') // Prevent duplicates
                 .listen('SettingUpdated', (e) => {
                     console.log('Settings updated from server via Reverb', e);
                     fetchSettings();
                 });
+                
+            return () => {
+                window.Echo.channel('settings').stopListening('SettingUpdated');
+            };
         }
+        return () => {};
     };
 
     return {

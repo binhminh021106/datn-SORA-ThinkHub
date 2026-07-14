@@ -1,7 +1,7 @@
 <template>
   <div class="settings-page">
     <!-- Lần tải đầu tiên và dữ liệu hoàn toàn trống trong cache -->
-    <div v-if="(isLoadingGallery || settingsStore.isLoading) && isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
+    <div v-if="(isLoadingGallery || settingsStore.isLoading) && !isInitialized" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
       <h1 class="logo-shimmer mb-3">ThinkHub</h1>
       <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải cấu hình...</p>
     </div>
@@ -141,7 +141,7 @@
           </div>
         </div>
         <div class="card-footer bg-white p-3 text-end">
-            <button @click="saveLogoSettings" type="button" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm" :disabled="isSavingHeader">
+            <button @click="saveLogoSettings" type="button" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm" :disabled="isSavingHeader || !isInitialized">
                <span v-if="isSavingHeader" class="spinner-border spinner-border-sm me-2"></span>
                <i v-else class="bi bi-save me-2"></i> LƯU CẤU HÌNH LOGO
             </button>
@@ -236,7 +236,7 @@
            </div>
         </div>
         <div class="card-footer bg-white p-3 text-end">
-            <button @click="saveFooterSettings" type="button" class="btn btn-info text-white rounded-pill px-4 py-2 fw-bold shadow-sm" :disabled="isSavingFooter">
+            <button @click="saveFooterSettings" type="button" class="btn btn-info text-white rounded-pill px-4 py-2 fw-bold shadow-sm" :disabled="isSavingFooter || !isInitialized">
                <span v-if="isSavingFooter" class="spinner-border spinner-border-sm me-2"></span>
                <i v-else class="bi bi-save me-2"></i> LƯU CẤU HÌNH FOOTER
             </button>
@@ -304,7 +304,7 @@ const queryClient = useQueryClient();
 const BACKEND_URL = import.meta.env.VITE_API_BASE_URL;
 
 // --- GLOBAL STATE ---
-const isFirstLoad = ref(true);
+const isInitialized = ref(false);
 
 const getHeaders = () => {
   const token = localStorage.getItem('admin_token') || sessionStorage.getItem('adminToken') || localStorage.getItem('auth_token');
@@ -325,8 +325,15 @@ const { data: galleryData, isLoading: isLoadingGallery, isFetching: isFetchingGa
 
 // --- HEADER & LOGO GALLERY STATE ---
 const galleryImages = ref([]);
-const activeLogoUrl = ref('');
+const headerLogoUrl = ref('');
+const footerLogoUrl = ref('');
 const logoApplyTarget = ref('header'); // 'both', 'header', 'footer'
+
+const activeLogoUrl = computed(() => {
+    if (logoApplyTarget.value === 'both') return headerLogoUrl.value;
+    if (logoApplyTarget.value === 'header') return headerLogoUrl.value;
+    return footerLogoUrl.value;
+});
 const isUploadingCrop = ref(false);
 const isUploadingRaw = ref(false);
 const isSavingHeader = ref(false);
@@ -342,9 +349,8 @@ let cropperModalInstance = null;
 const currentRatio = ref(NaN);
 
 const liveHeaderData = computed(() => {
-    const isApplyingToHeader = logoApplyTarget.value === 'both' || logoApplyTarget.value === 'header';
     return {
-        site_logo: isApplyingToHeader ? activeLogoUrl.value : (settingsStore.settings.site_logo || defaultLogo)
+        site_logo: headerLogoUrl.value || defaultLogo
     };
 });
 
@@ -358,10 +364,9 @@ const footerSocials = ref([]);
 const isSavingFooter = ref(false);
 
 const liveFooterData = computed(() => {
-    const isApplyingToFooter = logoApplyTarget.value === 'both' || logoApplyTarget.value === 'footer';
     return {
         site_logo: settingsStore.settings.site_logo,
-        logo_footer: isApplyingToFooter ? activeLogoUrl.value : settingsStore.settings.logo_footer,
+        logo_footer: footerLogoUrl.value || headerLogoUrl.value || settingsStore.settings.site_logo,
         footer_brand_desc: footerBrandDesc.value,
         footer_copyright: footerCopyright.value,
         footer_address: footerAddress.value,
@@ -374,7 +379,9 @@ const liveFooterData = computed(() => {
 watch(galleryData, (newVal) => {
   if (newVal) {
     galleryImages.value = newVal;
-    isFirstLoad.value = false;
+    if (settingsStore.settings) {
+        isInitialized.value = true;
+    }
   }
 }, { immediate: true });
 
@@ -384,7 +391,9 @@ onMounted(async () => {
     const s = settingsStore.settings;
 
     // Load active logo (prefer footer logo if it exists, otherwise header logo)
-    activeLogoUrl.value = s.logo_footer || s.site_logo || defaultLogo;
+    headerLogoUrl.value = s.site_logo || defaultLogo;
+    footerLogoUrl.value = s.logo_footer || s.site_logo || defaultLogo;
+    isInitialized.value = true;
 
     // Load Footer Form
     footerBrandDesc.value = s.footer_brand_desc;
@@ -444,7 +453,14 @@ onMounted(async () => {
 
 // --- METHODS: LOGO GALLERY & HEADER ---
 const selectLogo = (url) => {
-    activeLogoUrl.value = url;
+    if (logoApplyTarget.value === 'both') {
+       headerLogoUrl.value = url;
+       footerLogoUrl.value = url;
+    } else if (logoApplyTarget.value === 'header') {
+       headerLogoUrl.value = url;
+    } else {
+       footerLogoUrl.value = url;
+    }
 };
 
 const deleteGalleryImage = async (url) => {
@@ -466,10 +482,12 @@ const deleteGalleryImage = async (url) => {
                 data: { url: url }
             });
             if(res.data.status === 'success') {
-                galleryImages.value = galleryImages.value.filter(img => img !== url);
-                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa logo!', showConfirmButton: false, timer: 2000 });
-                if (activeLogoUrl.value === url) {
-                    activeLogoUrl.value = defaultLogo;
+                queryClient.invalidateQueries({ queryKey: ['admin-gallery-logos'] });
+                if (headerLogoUrl.value === url) {
+                    headerLogoUrl.value = defaultLogo;
+                }
+                if (footerLogoUrl.value === url) {
+                    footerLogoUrl.value = defaultLogo;
                 }
             }
         } catch(e) {
@@ -555,9 +573,8 @@ const uploadRawImage = async () => {
     try {
         const res = await axios.post(`${BACKEND_URL}/admin/settings/logos/upload`, { image: rawImageBase64.value }, { headers: getHeaders() });
         if(res.data.status === 'success') {
-            queryClient.invalidateQueries(['admin-gallery-logos']);
-            galleryImages.value.unshift(res.data.url);
-            activeLogoUrl.value = res.data.url;
+            queryClient.invalidateQueries({ queryKey: ['admin-gallery-logos'] });
+            selectLogo(res.data.url);
             cancelImageSelection();
             Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Tải ảnh gốc lên Thư viện thành công!', showConfirmButton: false, timer: 2000 });
         }
@@ -570,19 +587,19 @@ const uploadRawImage = async () => {
 
 const saveCropAndUpload = async () => {
     if (!cropperInstance) return;
-    const base64 = cropperInstance.getCroppedCanvas({
-        maxWidth: 1024,
-        maxHeight: 1024
-    }).toDataURL('image/png');
     
     isUploadingCrop.value = true;
 
     try {
+        const base64 = cropperInstance.getCroppedCanvas({
+            maxWidth: 1024,
+            maxHeight: 1024
+        }).toDataURL('image/png');
+
         const res = await axios.post(`${BACKEND_URL}/admin/settings/logos/upload`, { image: base64 }, { headers: getHeaders() });
         if(res.data.status === 'success') {
-            queryClient.invalidateQueries(['admin-gallery-logos']);
-            galleryImages.value.unshift(res.data.url);
-            activeLogoUrl.value = res.data.url;
+            queryClient.invalidateQueries({ queryKey: ['admin-gallery-logos'] });
+            selectLogo(res.data.url);
             
             cancelCropModal();
             cancelImageSelection();
@@ -599,15 +616,11 @@ const saveCropAndUpload = async () => {
 const saveLogoSettings = async () => {
     isSavingHeader.value = true;
     try {
-        const value = activeLogoUrl.value === defaultLogo ? '' : activeLogoUrl.value;
         const settingsToUpdate = [];
         
-        if (logoApplyTarget.value === 'both' || logoApplyTarget.value === 'header') {
-            settingsToUpdate.push({ key: 'logo_header', value: value, type: 'image' });
-        }
-        if (logoApplyTarget.value === 'both' || logoApplyTarget.value === 'footer') {
-            settingsToUpdate.push({ key: 'logo_footer', value: value, type: 'image' });
-        }
+        settingsToUpdate.push({ key: 'logo_header', value: headerLogoUrl.value === defaultLogo ? '' : headerLogoUrl.value, type: 'image' });
+        settingsToUpdate.push({ key: 'logo_footer', value: footerLogoUrl.value === defaultLogo ? '' : footerLogoUrl.value, type: 'image' });
+        settingsToUpdate.push({ key: 'site_logo', value: headerLogoUrl.value === defaultLogo ? '' : headerLogoUrl.value, type: 'image' });
 
         const payload = { settings: settingsToUpdate };
         const res = await axios.post(`${BACKEND_URL}/admin/settings`, payload, { headers: getHeaders() });

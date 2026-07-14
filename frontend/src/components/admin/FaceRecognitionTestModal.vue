@@ -546,8 +546,9 @@ const validateFaceAction = (landmarks, actionType) => {
     
     // Check if mouth is open
     const innerMouthHeight = getDistance(pts[62], pts[66]);
+    const openMouthRatio = innerMouthHeight / eyeWidth;
     
-    return smileRatio > 0.85 || innerMouthHeight > 8;
+    return smileRatio > 0.85 || openMouthRatio > 0.15;
   }
   
   return true;

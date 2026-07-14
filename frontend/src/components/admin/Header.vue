@@ -726,6 +726,7 @@ const fetchLatestAttendanceState = async () => {
 const handleAttendanceOption = async (method) => {
   if (isCheckingStatus.value) return;
   isAttendanceMenuActive.value = false;
+  isCheckingStatus.value = true;
 
   try {
     const state = await fetchLatestAttendanceState();
@@ -763,7 +764,7 @@ const handleAttendanceOption = async (method) => {
     console.error('Lỗi check status:', error);
     method === 'qr' ? openQrModal() : openFaceAttendanceModal();
   } finally {
-    // Không làm gì thêm, việc mở modal diễn ra tức thì
+    isCheckingStatus.value = false;
   }
 };
 </script>

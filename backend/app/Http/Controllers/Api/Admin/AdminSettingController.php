@@ -17,15 +17,12 @@ class AdminSettingController extends Controller
      */
     public function index()
     {
-        $settings = Setting::all()->pluck('value', 'key');
-        
-        // Decode JSON values automatically for response
-        $settings = $settings->map(function ($value, $key) {
-            $settingModel = Setting::where('key', $key)->first();
-            if ($settingModel && $settingModel->type === 'json') {
-                return json_decode($value, true);
+        $settings = Setting::all()->mapWithKeys(function ($setting) {
+            $value = $setting->value;
+            if ($setting->type === 'json') {
+                $value = json_decode($value, true);
             }
-            return $value;
+            return [$setting->key => $value];
         });
 
         return response()->json([
@@ -81,16 +78,15 @@ class AdminSettingController extends Controller
         }
 
         $files = Storage::disk('public')->files($directory);
-        $urls = array_map(function($file) {
-            return env('APP_URL') . '/storage/' . $file;
-        }, $files);
 
         // Sort by modified time descending (newest first)
-        usort($urls, function($a, $b) {
-            $pathA = str_replace(env('APP_URL') . '/storage/', '', $a);
-            $pathB = str_replace(env('APP_URL') . '/storage/', '', $b);
-            return Storage::disk('public')->lastModified($pathB) - Storage::disk('public')->lastModified($pathA);
+        usort($files, function($a, $b) {
+            return Storage::disk('public')->lastModified($b) - Storage::disk('public')->lastModified($a);
         });
+
+        $urls = array_map(function($file) {
+            return url('storage/' . $file);
+        }, $files);
 
         return response()->json([
             'status' => 'success',

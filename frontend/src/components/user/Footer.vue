@@ -4,7 +4,7 @@
     <div class="pre-footer py-4" style="background-color: var(--secondary);">
       <div class="container">
         <div class="row g-4 text-center">
-          <div class="col-6 col-md-3" v-for="(item, index) in (s.footer_trust_items || defaultTrustItems)" :key="'trust-'+index">
+          <div class="col-6 col-md-3" v-for="(item, index) in (s.footer_trust_items?.length ? s.footer_trust_items : defaultTrustItems)" :key="'trust-'+index">
             <div class="trust-item">
               <i :class="item.icon" class="fs-2 mb-2 d-block text-primary-custom"></i>
               <h6 class="fw-bold font-oswald text-uppercase mb-1 text-primary-custom tracking-wide">{{ item.title }}</h6>
