@@ -1,6 +1,10 @@
 <template>
-  <header class="site-header bg-white sticky-top"
-    :class="[isScrolled ? 'header-scrolled' : '', isHidden ? 'header-hidden' : '']">
+  <header class="site-header bg-white"
+    :class="[
+      props.previewData ? 'position-relative' : 'sticky-top', 
+      !props.previewData && isScrolled ? 'header-scrolled' : '', 
+      !props.previewData && isHidden ? 'header-hidden' : ''
+    ]">
     <div class="container position-relative">
 
       <div class="header-tier-top d-flex justify-content-between align-items-center pt-3 pb-2 transition-all">
@@ -21,7 +25,7 @@
 
         <div href="/" class="logo-wrapper d-flex justify-content-center" style="flex: 1;">
           <router-link :to="{ name: 'home' }">
-            <img v-if="!logoLoadFailed" src="../../assets/images/logo1.png" alt="SORA Logo" class="logo-img" @error="handleLogoError">
+            <img v-if="!logoLoadFailed" :src="s.site_logo || defaultLogoUrl" alt="SORA Logo" class="logo-img" @error="handleLogoError">
             <h2 v-else class="font-oswald fw-bold text-dark m-0 tracking-wide text-sora-primary">S O R A</h2>
           </router-link>
         </div>
@@ -203,7 +207,7 @@
         <div class="mobile-backdrop" @click="toggleMobileMenu"></div>
         <div class="mobile-sidebar bg-white d-flex flex-column">
           <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light">
-            <img v-if="!logoLoadFailed" src="../../assets/images/logo1.png" alt="SORA Logo" style="height: 35px; object-fit: contain;" @error="handleLogoError">
+            <img v-if="!logoLoadFailed" :src="s.site_logo || defaultLogoUrl" alt="SORA Logo" style="height: 35px; object-fit: contain;" @error="handleLogoError">
             <h4 v-else class="font-oswald fw-bold text-dark m-0 tracking-wide text-sora-primary">S O R A</h4>
             <button class="btn border-0 text-dark fs-4 p-0 shadow-none hover-primary transition-color"
               @click="toggleMobileMenu">
@@ -272,7 +276,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 import Swal from 'sweetalert2';
@@ -281,6 +285,18 @@ import MegaMenu from '@/components/user/MegaMenu.vue';
 import MiniCart from '@/pages/user/cart/MiniCart.vue';
 import { cartItemCount } from '@/stores/cartStore';
 import { API_BASE_URL, getStorageUrl } from '@/utils/env';
+import { useSettingsStore } from '@/stores/settingsStore';
+import defaultLogoUrl from '@/assets/images/logo1.png';
+
+const props = defineProps({
+  previewData: {
+    type: Object,
+    default: null
+  }
+});
+
+const settingsStore = useSettingsStore();
+const s = computed(() => props.previewData || settingsStore.settings);
 
 const route = useRoute();
 const router = useRouter();
@@ -336,6 +352,7 @@ const isHidden = ref(false);
 let lastScrollY = 0;
 
 const handleScroll = () => {
+  if (props.previewData) return; // Không xử lý cuộn khi ở chế độ Preview
   const currentScrollY = window.scrollY;
 
   if (currentScrollY > 100) {
@@ -534,6 +551,9 @@ watch(
 
 onMounted(() => {
   fetchHeaderData();
+  if (!props.previewData) {
+    settingsStore.fetchSettings();
+  }
   const userData = localStorage.getItem('userData');
   if (userData) {
     user.value = JSON.parse(userData);
@@ -541,13 +561,17 @@ onMounted(() => {
   fetchUserProfile();
 
   document.addEventListener('click', handleClickOutside);
-  window.addEventListener('scroll', handleScroll, { passive: true });
+  if (!props.previewData) {
+    window.addEventListener('scroll', handleScroll, { passive: true });
+  }
   window.addEventListener('update-cart-count', handleCartUpdateEvent);
 });
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
-  window.removeEventListener('scroll', handleScroll);
+  if (!props.previewData) {
+    window.removeEventListener('scroll', handleScroll);
+  }
   window.removeEventListener('update-cart-count', handleCartUpdateEvent);
   if (megaMenuTimer) clearTimeout(megaMenuTimer);
   document.body.style.overflow = '';

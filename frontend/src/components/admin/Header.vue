@@ -5,7 +5,7 @@
     <div class="container-fluid admin-header-container">
       
       <!-- ĐỒNG HỒ DIGITAL (Bên trái) - Đã thay bằng FLIP CLOCK -->
-      <div class="header-clock d-none d-lg-flex align-items-center" v-if="isLoggedIn">
+      <div class="header-clock d-none d-xl-flex align-items-center" v-if="isLoggedIn">
         <div class="flip-clock-container d-flex align-items-center px-3 py-1 rounded shadow-sm transition-all" 
              :class="isDarkMode ? 'bg-black border border-secondary' : 'bg-dark border'">
           
@@ -46,15 +46,14 @@
         <li class="nav-item me-2 d-flex align-items-center" v-if="isLoggedIn && isSuperAdmin">
           <button class="btn station-qr-btn rounded-3 btn-sm fw-bold px-3 d-flex align-items-center" title="QR điểm danh" @click="openStation">
             <i class="bi bi-display me-2 fs-6"></i>
-            QR điểm danh
+            QR
           </button>
         </li>
 
         <!-- NÚT CHAT HỖ TRỢ với badge thông báo -->
         <li class="nav-item me-2 d-flex align-items-center" v-if="isLoggedIn">
           <router-link :to="{ name: 'admin-chat' }" class="btn btn-chat-notify rounded-3 btn-sm fw-bold px-3 d-flex align-items-center position-relative" @click="unreadChatCount = 0">
-            <i class="bi bi-chat-dots-fill me-2 fs-6"></i>
-            Chat
+            <i class="bi bi-chat-dots-fill "></i>
             <span v-if="unreadChatCount > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
               {{ unreadChatCount > 9 ? '9+' : unreadChatCount }}
             </span>
@@ -727,7 +726,6 @@ const fetchLatestAttendanceState = async () => {
 const handleAttendanceOption = async (method) => {
   if (isCheckingStatus.value) return;
   isAttendanceMenuActive.value = false;
-  isCheckingStatus.value = true;
 
   try {
     const state = await fetchLatestAttendanceState();
@@ -765,7 +763,7 @@ const handleAttendanceOption = async (method) => {
     console.error('Lỗi check status:', error);
     method === 'qr' ? openQrModal() : openFaceAttendanceModal();
   } finally {
-    isCheckingStatus.value = false;
+    // Không làm gì thêm, việc mở modal diễn ra tức thì
   }
 };
 </script>
@@ -954,6 +952,15 @@ const handleAttendanceOption = async (method) => {
   border-color: #009981;
 }
 
+.attendance-main-btn:hover,
+.attendance-main-btn:focus,
+.attendance-main-btn:active {
+  background-color: #00856f !important;
+  border-color: #00856f !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
 .attendance-menu-container {
   z-index: 1002;
 }
@@ -962,7 +969,7 @@ const handleAttendanceOption = async (method) => {
   position: absolute;
   top: 100%;
   right: 0;
-  width: 190px;
+  width: 100%;
   border-radius: 12px;
   overflow: hidden;
 }
@@ -979,7 +986,7 @@ const handleAttendanceOption = async (method) => {
   border-color: #009981;
 }
 
-@media (max-width: 1399.98px) {
+@media (max-width: 991.98px) {
   .admin-header-container {
     justify-content: flex-end;
   }

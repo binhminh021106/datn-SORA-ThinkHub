@@ -4,32 +4,11 @@
     <div class="pre-footer py-4" style="background-color: var(--secondary);">
       <div class="container">
         <div class="row g-4 text-center">
-          <div class="col-6 col-md-3">
+          <div class="col-6 col-md-3" v-for="(item, index) in (s.footer_trust_items || defaultTrustItems)" :key="'trust-'+index">
             <div class="trust-item">
-              <i class="bi bi-truck fs-2 mb-2 d-block text-primary-custom"></i>
-              <h6 class="fw-bold font-oswald text-uppercase mb-1 text-primary-custom tracking-wide">Giao hàng miễn phí</h6>
-              <p class="text-primary-custom opacity-75 small mb-0">Cho đơn hàng từ 1.000.000đ</p>
-            </div>
-          </div>
-          <div class="col-6 col-md-3">
-            <div class="trust-item">
-              <i class="bi bi-shield-check fs-2 mb-2 d-block text-primary-custom"></i>
-              <h6 class="fw-bold font-oswald text-uppercase mb-1 text-primary-custom tracking-wide">Bảo hành trọn đời</h6>
-              <p class="text-primary-custom opacity-75 small mb-0">Làm sáng & đánh bóng miễn phí</p>
-            </div>
-          </div>
-          <div class="col-6 col-md-3">
-            <div class="trust-item">
-              <i class="bi bi-arrow-repeat fs-2 mb-2 d-block text-primary-custom"></i>
-              <h6 class="fw-bold font-oswald text-uppercase mb-1 text-primary-custom tracking-wide">Đổi trả dễ dàng</h6>
-              <p class="text-primary-custom opacity-75 small mb-0">Trong vòng 7 ngày đầu tiên</p>
-            </div>
-          </div>
-          <div class="col-6 col-md-3">
-            <div class="trust-item">
-              <i class="bi bi-headset fs-2 mb-2 d-block text-primary-custom"></i>
-              <h6 class="fw-bold font-oswald text-uppercase mb-1 text-primary-custom tracking-wide">Hỗ trợ 24/7</h6>
-              <p class="text-primary-custom opacity-75 small mb-0">Hotline: 1234.567.8910</p>
+              <i :class="item.icon" class="fs-2 mb-2 d-block text-primary-custom"></i>
+              <h6 class="fw-bold font-oswald text-uppercase mb-1 text-primary-custom tracking-wide">{{ item.title }}</h6>
+              <p class="text-primary-custom opacity-75 small mb-0">{{ item.subtitle }}</p>
             </div>
           </div>
         </div>
@@ -40,18 +19,25 @@
       <div class="container py-3">
         <div class="row g-5">
           
-          <div class="col-lg-3 col-md-6 text-start mb-4 mb-md-0">
-            <a href="#" @click.prevent="safeNavigate('home')" class="d-inline-block mb-4">
-              <img src="../../assets/images/logo1.png" alt="SORA Logo" class="footer-logo filter-white" @error="handleLogoError">
-            </a>
+          <div class="col-lg-3 col-md-6 mb-4 mb-lg-0 footer-brand text-center text-md-start">
+            <router-link :to="{ name: 'home' }" class="d-inline-block mb-4">
+              <img :src="s.logo_footer || settingsStore.defaultLogo" alt="SORA Logo" class="footer-logo filter-white" @error="handleLogoError">
+            </router-link>
             <p class="text-light opacity-75 small mb-4 pe-md-3" style="line-height: 1.8;">
-              SORA mang đến những thiết kế trang sức tinh tế, tôn vinh vẻ đẹp đích thực và phong cách cá nhân của bạn. Mỗi chế tác là một tác phẩm nghệ thuật.
+              {{ s.footer_brand_desc || 'SORA mang đến những thiết kế trang sức tinh tế, tôn vinh vẻ đẹp đích thực và phong cách cá nhân của bạn. Mỗi chế tác là một tác phẩm nghệ thuật.' }}
             </p>
             <div class="social-links d-flex gap-3 justify-content-start mb-4 mb-md-0">
-              <a href="#" class="social-btn"><i class="bi bi-facebook"></i></a>
-              <a href="#" class="social-btn"><i class="bi bi-instagram"></i></a>
-              <a href="#" class="social-btn"><i class="bi bi-twitter-x"></i></a>
-              <a href="#" class="social-btn"><i class="bi bi-youtube"></i></a>
+              <template v-if="s.footer_socials && s.footer_socials.length">
+                <a :href="social.url" target="_blank" rel="noopener noreferrer" class="social-btn" v-for="(social, index) in s.footer_socials" :key="index" :title="social.title" v-show="social.url">
+                  <i :class="social.icon"></i>
+                </a>
+              </template>
+              <template v-else>
+                <a href="#" target="_blank" rel="noopener noreferrer" class="social-btn"><i class="bi bi-facebook"></i></a>
+                <a href="#" target="_blank" rel="noopener noreferrer" class="social-btn"><i class="bi bi-instagram"></i></a>
+                <a href="#" target="_blank" rel="noopener noreferrer" class="social-btn"><i class="bi bi-twitter-x"></i></a>
+                <a href="#" target="_blank" rel="noopener noreferrer" class="social-btn"><i class="bi bi-youtube"></i></a>
+              </template>
             </div>
           </div>
 
@@ -93,8 +79,8 @@
             </form>
             
             <div class="contact-info mt-4">
-              <p class="text-white small mb-2 fw-medium"><i class="bi bi-geo-alt text-secondary-custom me-2 fs-6"></i> 123 Đường Ngọc Hồi, Hà Nội</p>
-              <p class="text-white small mb-0 fw-medium"><i class="bi bi-envelope text-secondary-custom me-2 fs-6"></i> SORA@GMAIL.COM</p>
+              <p class="text-white small mb-2 fw-medium"><i class="bi bi-geo-alt text-secondary-custom me-2 fs-6"></i> {{ s.footer_address || '123 Đường Ngọc Hồi, Hà Nội' }}</p>
+              <p class="text-white small mb-0 fw-medium"><i class="bi bi-envelope text-secondary-custom me-2 fs-6"></i> {{ s.footer_email || 'SORA@GMAIL.COM' }}</p>
             </div>
           </div>
 
@@ -107,7 +93,7 @@
         <div class="row align-items-center">
           <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
             <p class="small text-light opacity-75 mb-0 font-oswald tracking-wide" style="font-size: 0.85rem;">
-              &copy; {{ new Date().getFullYear() }} <strong class="text-white">SORA JEWELRY</strong>. ALL RIGHTS RESERVED.
+              {{ s.footer_copyright || `© ${new Date().getFullYear()} SORA JEWELRY. ALL RIGHTS RESERVED.` }}
             </p>
           </div>
           <div class="col-md-6 text-center text-md-end">
@@ -126,13 +112,33 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
+import { useSettingsStore } from '@/stores/settingsStore';
+
+const props = defineProps({
+  previewData: {
+    type: Object,
+    default: null
+  }
+});
+
+const settingsStore = useSettingsStore();
+
+// Use previewData if provided (for live preview in admin), else use global settings
+const s = computed(() => props.previewData || settingsStore.settings);
 
 const router = useRouter();
 const email = ref('');
 const isSubscribing = ref(false);
+
+const defaultTrustItems = [
+    { icon: 'bi-truck', title: 'GIAO HÀNG MIỄN PHÍ', subtitle: 'Cho đơn hàng từ 1.000.000đ' },
+    { icon: 'bi-shield-check', title: 'BẢO HÀNH TRỌN ĐỜI', subtitle: 'Làm sáng & đánh bóng miễn phí' },
+    { icon: 'bi-arrow-repeat', title: 'ĐỔI TRẢ DỄ DÀNG', subtitle: 'Trong vòng 7 ngày đầu tiên' },
+    { icon: 'bi-headset', title: 'HỖ TRỢ 24/7', subtitle: 'Hotline: 1234.567.8910' }
+];
 
 const safeNavigate = (routeName, options = {}) => {
     if (router.hasRoute(routeName)) {

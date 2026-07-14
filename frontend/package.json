@@ -20,6 +20,7 @@
     "axios": "^1.15.0",
     "bootstrap": "^5.3.8",
     "chart.js": "^4.5.1",
+    "cropperjs": "^1.6.1",
     "face-api.js": "^0.22.2",
     "html5-qrcode": "^2.3.8",
     "laravel-echo": "^2.3.4",

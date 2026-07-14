@@ -20,25 +20,53 @@
                   <!-- Cột trái: Tìm kiếm và danh sách -->
                   <div class="col-12 col-md-6 d-flex flex-column h-100">
                     <label class="form-label fw-bold text-dark mb-2">Chọn nhân sự để quản lý</label>
-                    <input type="text" class="form-control form-control-lg rounded-3 mb-3" v-model="searchQuery" placeholder="Tìm kiếm tên hoặc email..." />
+                    <input type="text" class="form-control form-control-lg rounded-3 mb-3" v-model="searchQuery" placeholder="Tìm kiếm tên hoặc email..." :disabled="isFetchingInitialData" />
                     
                     <div class="admin-list border rounded-3 bg-white overflow-auto shadow-sm flex-grow-1" style="max-height: 350px;">
-                      <div v-for="admin in filteredAdmins" :key="admin.id" class="p-3 border-bottom list-item-hover" style="cursor: pointer; transition: all 0.2s;" @click="selectAdmin(admin.id)" :class="{'bg-brand-soft': selectedAdminId === admin.id}">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                          <div class="fw-bold" :class="selectedAdminId === admin.id ? 'text-brand' : 'text-dark'">{{ admin.fullname || 'Chưa có tên' }}</div>
-                          <span class="badge" :class="admin.face_profile?.requires_reset ? 'bg-warning text-dark' : (admin.face_profile ? 'bg-success' : 'bg-secondary')">{{ faceProfileStatus(admin.face_profile) }}</span>
+                      <!-- Skeleton Loading -->
+                      <template v-if="isFetchingInitialData">
+                        <div v-for="i in 4" :key="'skel-left-'+i" class="p-3 border-bottom d-flex align-items-center gap-3">
+                           <SoraSkeleton circle width="40px" height="40px" class="flex-shrink-0" />
+                           <div class="flex-grow-1">
+                              <SoraSkeleton width="60%" height="16px" class="mb-2" />
+                              <SoraSkeleton width="40%" height="12px" />
+                           </div>
+                           <SoraSkeleton width="50px" height="20px" radius="4px" />
                         </div>
-                        <div class="small text-muted"><i class="bi bi-envelope me-1"></i>{{ admin.email }}</div>
-                      </div>
-                      <div v-if="filteredAdmins.length === 0" class="p-4 text-center text-muted">
-                        Không tìm thấy nhân sự nào
-                      </div>
+                      </template>
+                      
+                      <template v-else>
+                        <div v-for="admin in filteredAdmins" :key="admin.id" class="p-3 border-bottom list-item-hover" style="cursor: pointer; transition: all 0.2s;" @click="selectAdmin(admin.id)" :class="{'bg-brand-soft': selectedAdminId === admin.id}">
+                          <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div class="fw-bold" :class="selectedAdminId === admin.id ? 'text-brand' : 'text-dark'">{{ admin.fullname || 'Chưa có tên' }}</div>
+                            <span class="badge" :class="admin.face_profile?.requires_reset ? 'bg-warning text-dark' : (admin.face_profile ? 'bg-success' : 'bg-secondary')">{{ faceProfileStatus(admin.face_profile) }}</span>
+                          </div>
+                          <div class="small text-muted"><i class="bi bi-envelope me-1"></i>{{ admin.email }}</div>
+                        </div>
+                        <div v-if="filteredAdmins.length === 0" class="p-4 text-center text-muted">
+                          Không tìm thấy nhân sự nào
+                        </div>
+                      </template>
                     </div>
                   </div>
 
                   <!-- Cột phải: Hồ sơ và thao tác -->
                   <div class="col-12 col-md-6 d-flex flex-column justify-content-center">
-                    <div class="card border-0 shadow-sm rounded-4 h-100" v-if="selectedAdminId">
+                    <!-- Skeleton Loading -->
+                    <div class="card border-0 shadow-sm rounded-4 h-100" v-if="isFetchingInitialData">
+                      <div class="card-body p-4 text-center d-flex flex-column justify-content-center align-items-center">
+                        <SoraSkeleton circle width="72px" height="72px" class="mb-3" />
+                        <SoraSkeleton width="120px" height="24px" class="mb-2" radius="4px" />
+                        <SoraSkeleton width="150px" height="16px" class="mb-4" radius="4px" />
+                        <div class="w-100 px-3 d-flex flex-column gap-3">
+                           <SoraSkeleton width="100%" height="48px" radius="50rem" />
+                           <SoraSkeleton width="100%" height="40px" radius="50rem" />
+                           <SoraSkeleton width="100%" height="38px" radius="50rem" class="mt-2" />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="card border-0 shadow-sm rounded-4 h-100" v-else-if="selectedAdminId">
                       <div class="card-body p-4 text-center d-flex flex-column justify-content-center">
                         <div class="avatar bg-brand-soft text-brand rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width:72px; height:72px; font-size:28px;">
                           <i class="bi bi-person-bounding-box"></i>
@@ -90,9 +118,9 @@
 
             <div class="face-id-ring-container position-relative">
               <!-- SVG Dashed Ring -->
-              <svg class="face-id-svg" viewBox="0 0 100 100">
-                <circle class="ring-bg" cx="50" cy="50" r="48"></circle>
-                <circle class="ring-progress" :class="{'is-success': resultType === 'success', 'is-warning': resultType === 'warning', 'is-danger': !!errorMessage}" cx="50" cy="50" r="48" :style="{ strokeDashoffset: ringDashoffset }"></circle>
+              <svg class="face-id-svg" viewBox="0 0 100 136">
+                <ellipse class="ring-bg" cx="50" cy="68" rx="66" ry="48" transform="rotate(-90 50 68)"></ellipse>
+                <ellipse class="ring-progress" :class="{'is-success': resultType === 'success', 'is-warning': resultType === 'warning', 'is-danger': !!errorMessage}" cx="50" cy="68" rx="66" ry="48" transform="rotate(-90 50 68)" :style="{ strokeDashoffset: ringDashoffset }"></ellipse>
               </svg>
 
               <!-- Camera Video Cutout -->
@@ -134,6 +162,7 @@
 import { computed, nextTick, onUnmounted, ref } from 'vue';
 import apiClient from '@/utils/apiClient';
 import Swal from 'sweetalert2';
+import SoraSkeleton from '@/components/ui/SoraSkeleton.vue';
 
 const MODEL_URL = '/face-api-models';
 const MODEL_NAME = 'face-api.js';
@@ -141,6 +170,7 @@ const MODEL_VERSION = '0.22.2';
 const THRESHOLD = 0.48;
 
 const isVisible = ref(false);
+const isFetchingInitialData = ref(false);
 const isLoadingModels = ref(false);
 const isProcessing = ref(false);
 const isCameraActive = ref(false);
@@ -187,7 +217,7 @@ const scanningSubtitle = computed(() => {
   return 'Đưa khuôn mặt vào giữa vòng tròn';
 });
 const ringDashoffset = computed(() => {
-  const c = 2 * Math.PI * 48; // circumference ~301.59
+  const c = 360.4; // circumference of ellipse rx=48, ry=66
   return c * (1 - scanProgress.value);
 });
 const messageColorClass = computed(() => {
@@ -248,6 +278,22 @@ const onSearchInput = () => {
   isDropdownOpen.value = true;
 };
 
+const openModal = async (mode = 'manage') => {
+  modalMode.value = mode;
+  uiState.value = 'setup';
+  stopAutoScan();
+  isVisible.value = true;
+  clearMessages();
+  await nextTick();
+  if (isManageMode.value) {
+    if (admins.value.length === 0) {
+      isFetchingInitialData.value = true;
+    }
+    await fetchAdmins();
+    isFetchingInitialData.value = false;
+  }
+};
+
 const emit = defineEmits(['attendance-success']);
 const isManageMode = computed(() => modalMode.value === 'manage');
 const isAttendanceMode = computed(() => modalMode.value === 'attendance');
@@ -292,17 +338,6 @@ const helperText = computed(() => (
     : 'Mỗi tài khoản chỉ lưu một định danh. Muốn thay đổi cần xóa định danh cũ.'
 ));
 
-const openModal = async (mode = 'manage') => {
-  modalMode.value = mode;
-  uiState.value = 'setup';
-  stopAutoScan();
-  isVisible.value = true;
-  clearMessages();
-  await nextTick();
-  if (isManageMode.value) {
-    await fetchAdmins();
-  }
-};
 
 const closeModal = () => {
   stopScanningMode();
@@ -390,7 +425,11 @@ const startCamera = async () => {
     }
 
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+      video: { 
+        facingMode: 'user',
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      },
       audio: false,
     });
 
@@ -462,10 +501,63 @@ const stopAutoScan = () => {
   isAutoScanEnabled.value = false;
 };
 
-const getDescriptor = async (timeout = 8000) => {
+const getDistance = (point1, point2) => {
+  return Math.sqrt(Math.pow(point1.x - point2.x, 2) + Math.pow(point1.y - point2.y, 2));
+};
+
+const validateFaceAction = (landmarks, actionType) => {
+  if (!landmarks || !landmarks.positions || landmarks.positions.length < 68) return false;
+  const pts = landmarks.positions;
+  
+  if (actionType === 'straight') {
+    const distLeft = getDistance(pts[0], pts[30]);
+    const distRight = getDistance(pts[16], pts[30]);
+    const ratio = distLeft / distRight;
+    return ratio >= 0.65 && ratio <= 1.5;
+  }
+  
+  if (actionType === 'left') {
+    const distLeft = getDistance(pts[0], pts[30]);
+    const distRight = getDistance(pts[16], pts[30]);
+    const ratio = distLeft / distRight;
+    // Quay trái (thực tế) -> mũi lệch sang phải trên ảnh (chưa lật) -> ratio lớn
+    return ratio > 1.45;
+  }
+  
+  if (actionType === 'right') {
+    const distLeft = getDistance(pts[0], pts[30]);
+    const distRight = getDistance(pts[16], pts[30]);
+    const ratio = distLeft / distRight;
+    // Quay phải (thực tế) -> mũi lệch sang trái trên ảnh -> ratio nhỏ
+    return ratio < 0.65;
+  }
+  
+  if (actionType === 'up') {
+    const distNoseBridge = getDistance(pts[27], pts[30]);
+    const distNoseChin = getDistance(pts[30], pts[8]);
+    const pitchRatio = distNoseBridge / distNoseChin;
+    return pitchRatio < 0.55;
+  }
+  
+  if (actionType === 'smile') {
+    const mouthWidth = getDistance(pts[48], pts[54]);
+    const eyeWidth = getDistance(pts[36], pts[45]);
+    const smileRatio = mouthWidth / eyeWidth;
+    
+    // Check if mouth is open
+    const innerMouthHeight = getDistance(pts[62], pts[66]);
+    
+    return smileRatio > 0.85 || innerMouthHeight > 8;
+  }
+  
+  return true;
+};
+
+const getDescriptor = async (timeout = 8000, actionType = 'none') => {
   const faceapi = await loadModels();
   const startTime = Date.now();
   let detection = null;
+  let foundFaceButInvalid = false;
 
   while (Date.now() - startTime < timeout) {
     if (!videoRef.value || !isCameraActive.value) {
@@ -479,17 +571,25 @@ const getDescriptor = async (timeout = 8000) => {
         .withFaceDescriptor();
 
       if (detection) {
-        break;
+        if (actionType === 'none' || validateFaceAction(detection.landmarks, actionType)) {
+          break;
+        } else {
+          foundFaceButInvalid = true;
+          detection = null;
+        }
       }
     } catch (err) {
       // Ignore inner errors and retry
     }
     
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 150));
   }
 
   if (!detection) {
-    throw new Error('Không tìm thấy khuôn mặt rõ trong khung hình.');
+    if (foundFaceButInvalid) {
+       throw new Error('INVALID_ACTION');
+    }
+    throw new Error('NO_FACE');
   }
 
   return Array.from(detection.descriptor);
@@ -505,43 +605,48 @@ const registerFace = async () => {
   await runFaceAction(async () => {
     const descriptors = [];
     const maxSamples = 5 - (profile.value?.sample_count || 0);
-    const maxRetries = 3;
+    const actionMapping = ['straight', 'left', 'right', 'up', 'smile'];
 
     isRegistering.value = true;
     for (let i = 1; i <= maxSamples; i++) {
       currentRegStep.value = (profile.value?.sample_count || 0) + i - 1;
+      const currentActionType = actionMapping[currentRegStep.value] || 'none';
       
       // Delay for user to adjust their face
       resultType.value = 'info';
-      resultMessage.value = `Chuẩn bị lấy mẫu ${i}/${maxSamples}...`;
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      resultMessage.value = `Sẵn sàng lấy mẫu ${i}/${maxSamples}...`;
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
-      resultMessage.value = `Đang lấy mẫu: ${registrationSteps[currentRegStep.value]}`;
-      
-      let success = false;
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      let descriptor = null;
+      while (isRegistering.value && activeScanSession === currentSession) {
+        resultType.value = 'info';
+        resultMessage.value = `ĐANG CHỜ: ${registrationSteps[currentRegStep.value]}`;
+        
         try {
-          const descriptor = await getDescriptor();
-          if (activeScanSession !== currentSession) return;
-          descriptors.push(descriptor);
-          success = true;
-          // Play a small success feedback if possible, or just delay
-          resultType.value = 'success';
-          resultMessage.value = `✓ Đã lấy mẫu ${i}`;
-          scanProgress.value = i / maxSamples;
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          break;
+          descriptor = await getDescriptor(3000, currentActionType);
+          break; // Success!
         } catch (err) {
-          console.warn(`Lấy mẫu ${i} thất bại (lần ${attempt}/${maxRetries}):`, err);
-          if (attempt < maxRetries) {
+          if (err.message === 'INVALID_ACTION') {
+            resultType.value = 'warning';
+            resultMessage.value = `Chưa đúng tư thế: ${registrationSteps[currentRegStep.value]}`;
             await new Promise(resolve => setTimeout(resolve, 800));
+          } else if (err.message === 'NO_FACE') {
+            resultType.value = 'danger';
+            resultMessage.value = 'Không tìm thấy khuôn mặt rõ trong khung hình.';
+            await new Promise(resolve => setTimeout(resolve, 800));
+          } else {
+            throw err;
           }
         }
       }
       
-      if (!success) {
-        throw new Error(`Không thể lấy mẫu ${i} sau ${maxRetries} lần thử. Vui lòng đảm bảo mặt ở trong khung elip và đủ sáng.`);
-      }
+      if (activeScanSession !== currentSession || !isRegistering.value) return;
+      
+      descriptors.push(descriptor);
+      resultType.value = 'success';
+      resultMessage.value = `✓ Đã lấy mẫu ${i}`;
+      scanProgress.value = i / maxSamples;
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
     isRegistering.value = false;
 
@@ -867,11 +972,12 @@ onUnmounted(() => {
 }
 
 .face-id-ring-container {
-  width: min(85vw, 400px);
-  aspect-ratio: 1/1;
+  width: min(75vw, 320px);
+  aspect-ratio: 100 / 136;
   display: flex;
   align-items: center;
   justify-content: center;
+  margin: 0 auto;
 }
 
 .face-id-svg {
@@ -879,12 +985,11 @@ onUnmounted(() => {
   inset: 0;
   width: 100%;
   height: 100%;
-  transform: rotate(-90deg);
   z-index: 2;
   pointer-events: none;
 }
 
-.face-id-svg circle {
+.face-id-svg ellipse {
   fill: none;
   stroke-width: 3;
 }
@@ -895,7 +1000,7 @@ onUnmounted(() => {
 
 .ring-progress {
   stroke: #009981; /* primary color */
-  stroke-dasharray: 301.59; /* 2 * PI * 48 */
+  stroke-dasharray: 360.4; 
   transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.3s ease;
 }
 
@@ -905,10 +1010,10 @@ onUnmounted(() => {
 
 .face-id-camera-wrapper {
   position: absolute;
-  top: 8px;
-  left: 8px;
-  right: 8px;
-  bottom: 8px;
+  width: 96%;
+  height: 97.058%;
+  top: 1.471%;
+  left: 2%;
   border-radius: 50%;
   overflow: hidden;
   background: #111;
