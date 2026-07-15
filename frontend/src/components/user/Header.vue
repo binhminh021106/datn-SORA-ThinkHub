@@ -578,6 +578,10 @@ onUnmounted(() => {
 });
 </script>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&display=swap');
+
+
+
 :root {
   --primary: #9f273b;
   --secondary: #e7ce7d;
@@ -586,6 +590,7 @@ onUnmounted(() => {
 </style>
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&display=swap');
+
 
 
 .text-primary-custom {

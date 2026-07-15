@@ -582,6 +582,7 @@ onMounted(fetchOrders);
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&display=swap');
 
+
 .font-oswald {
   font-family: 'Oswald', sans-serif !important;
 }

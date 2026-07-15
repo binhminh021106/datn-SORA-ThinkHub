@@ -770,9 +770,10 @@ const handleAttendanceOption = async (method) => {
 </script>
 
 <style scoped>
-/* --- FIX CSS DÀNH CHO MINI FLIP CLOCK TỶ LỆ CHUẨN --- */
 @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&display=swap');
 
+
+/* --- FIX CSS DÀNH CHO MINI FLIP CLOCK TỶ LỆ CHUẨN --- */
 .flip-clock-container {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

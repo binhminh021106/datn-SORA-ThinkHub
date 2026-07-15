@@ -16,18 +16,13 @@ class CrawlDojiGoldPrice extends Command
 
     public function handle()
     {
-        $this->info('Bắt đầu đột nhập DOJI...');
+        $this->info('Bắt đầu lấy dữ liệu từ Chợ Giá...');
 
         try {
-            // Đóng giả làm trình duyệt người dùng thật
-            /** @var \Illuminate\Http\Client\Response $response */
-            $response = Http::withHeaders([
-                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-            ])->timeout(15)->get('https://giavang.doji.vn/');
+            $response = Http::timeout(15)->get('https://chogia.vn/gia-vang/');
 
             if (!$response->successful()) {
-                $this->error('Đột nhập thất bại. Mã lỗi: ' . $response->status());
+                $this->error('Kết nối thất bại. Mã lỗi: ' . $response->status());
                 return;
             }
 
@@ -37,36 +32,36 @@ class CrawlDojiGoldPrice extends Command
             @$dom->loadHTML(mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8'));
             $xpath = new DOMXPath($dom);
 
-            $rows = $xpath->query('//table//tbody//tr');
+            // Tìm bảng giá vàng
+            $rows = $xpath->query('//table[contains(@class, "tbl_style_embed")]/tbody/tr');
             
             $goldPrices = [];
-
-            $cleanAndFormatPrice = function($rawPrice) {
-                $rawPrice = trim($rawPrice);
-                if (empty($rawPrice) || $rawPrice === '-') return $rawPrice;
-
-                $pureNumber = str_replace([',', '.'], '', $rawPrice);
-                
-                if (is_numeric($pureNumber)) {
-                    return number_format($pureNumber);
-                }
-                
-                return $rawPrice;
-            };
 
             foreach ($rows as $row) {
                 $cols = $xpath->query('td', $row);
                 if ($cols->length >= 3) {
-                    $name = trim($cols->item(0)->textContent);
+                    $name = trim(strip_tags($cols->item(0)->textContent));
                     
-                    $buy = $cleanAndFormatPrice($cols->item(1)->textContent);
-                    $sell = $cleanAndFormatPrice($cols->item(2)->textContent);
+                    // Lấy giá trị chuỗi (vd: "144.500")
+                    $buyRaw = trim($cols->item(1)->textContent);
+                    $sellRaw = trim($cols->item(2)->textContent);
 
-                    if ($name && $buy && $sell && !empty($name)) {
+                    // Lọc bỏ các dấu chấm, phẩy
+                    $buyClean = floatval(str_replace(['.', ','], '', $buyRaw));
+                    $sellClean = floatval(str_replace(['.', ','], '', $sellRaw));
+
+                    // Giá trên Chợ Giá là Nghìn VNĐ / Lượng (vd: 144500)
+                    // Hoặc có thể là Triệu VNĐ (144.500) - str_replace sẽ biến nó thành 144500
+                    // Frontend hiển thị Nghìn VNĐ / Chỉ
+                    // Công thức quy đổi: 144500 / 10 = 14450 (14,450 Nghìn VNĐ / Chỉ)
+                    $buyPrice = $buyClean / 10;
+                    $sellPrice = $sellClean / 10;
+
+                    if ($name && $buyPrice > 0 && $sellPrice > 0) {
                         $goldPrices[] = [
                             'name' => $name,
-                            'buy' => $buy,
-                            'sell' => $sell,
+                            'buy' => number_format($buyPrice, 0, '.', ','),
+                            'sell' => number_format($sellPrice, 0, '.', ','),
                         ];
                     }
                 }
@@ -76,7 +71,7 @@ class CrawlDojiGoldPrice extends Command
                 Cache::put('sora_gold_prices', $goldPrices, 300);
                 Cache::put('sora_gold_last_updated', now()->format('H:i d/m/Y'), 300);
 
-                $this->info('Thành công! Đã lấy được ' . count($goldPrices) . ' mã vàng.');
+                $this->info('Thành công! Đã lấy được ' . count($goldPrices) . ' mã vàng từ Chợ Giá.');
             } else {
                 $this->warn('Không tìm thấy dữ liệu giá vàng!');
             }

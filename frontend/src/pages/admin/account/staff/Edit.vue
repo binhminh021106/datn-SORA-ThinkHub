@@ -1,33 +1,39 @@
 <template>
   <div class="staff-edit-wrapper">
-    
+
     <div class="container-fluid py-4" v-if="isLoaded">
       <!-- Header & Badge Cấp độ trang -->
       <div class="row mb-4 align-items-center">
         <div class="col-md-8 d-flex align-items-center">
-          <router-link :to="{ name: 'admin-staff-index' }" class="btn btn-light shadow-sm me-3 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+          <router-link :to="{ name: 'admin-staff-index' }"
+            class="btn btn-light shadow-sm me-3 rounded-circle d-flex align-items-center justify-content-center"
+            style="width: 40px; height: 40px;">
             <i class="bi bi-arrow-left fw-bold"></i>
           </router-link>
           <div>
             <h3 class="fw-bold text-dark mb-0">
-              Hồ sơ Nhân Sự 
-              <span v-if="isCurrentUser" class="badge bg-primary align-middle ms-2" style="font-size: 0.75rem;">(Bạn)</span>
+              Hồ sơ Nhân Sự
+              <span v-if="isCurrentUser" class="badge bg-primary align-middle ms-2"
+                style="font-size: 0.75rem;">(Bạn)</span>
             </h3>
             <p class="text-muted mb-0 small">Cập nhật thông tin nhân viên #{{ route.params.id }}</p>
           </div>
         </div>
-        
+
         <div class="col-md-4 text-md-end mt-3 mt-md-0">
-          <div class="border rounded px-3 py-1 bg-white shadow-sm text-muted small d-inline-block" v-if="currentPageLevel">
+          <div class="border rounded px-3 py-1 bg-white shadow-sm text-muted small d-inline-block"
+            v-if="currentPageLevel">
             <i class="bi bi-shield-check text-success me-1"></i>
-            Trang yêu cầu: <span class="badge" :class="getLevelColor(currentPageLevel)">Cấp {{ currentPageLevel }}</span>
+            Trang yêu cầu: <span class="badge" :class="getLevelColor(currentPageLevel)">Cấp {{ currentPageLevel
+              }}</span>
           </div>
         </div>
       </div>
 
       <div class="alert alert-info border-0 shadow-sm mb-4" v-if="isCurrentUser">
-        <i class="bi bi-info-circle-fill me-2"></i> 
-        <strong>Lưu ý:</strong> Bạn đang sửa tài khoản của chính mình. Bạn không thể tự thay đổi <strong>Chức vụ</strong> và <strong>Trạng thái</strong> của bản thân.
+        <i class="bi bi-info-circle-fill me-2"></i>
+        <strong>Lưu ý:</strong> Bạn đang sửa tài khoản của chính mình. Bạn không thể tự thay đổi <strong>Chức
+          vụ</strong> và <strong>Trạng thái</strong> của bản thân.
       </div>
 
       <form @submit.prevent="updateStaff">
@@ -38,37 +44,39 @@
               <label class="form-label fw-bold mb-3 text-dark">Ảnh đại diện</label>
               <div class="position-relative d-inline-block mx-auto mb-3" style="width: 140px; height: 140px;">
                 <!-- Sử dụng SoraImage thay cho img thường để xử lý lỗi ảnh mượt mà -->
-                <SoraImage 
-                  :src="previewAvatar" 
-                  :placeholder="defaultAvatar"
-                  imgClass="rounded-circle shadow-sm border border-3 border-white object-fit-cover" 
-                  style="width: 140px; height: 140px;"
-                  alt="Avatar"
-                />
-                <label for="avatarUpload" class="position-absolute bottom-0 end-0 bg-brand rounded-circle shadow-sm p-2 text-white cursor-pointer" style="line-height: 1;" title="Đổi ảnh đại diện">
+                <SoraImage :src="previewAvatar" :placeholder="defaultAvatar"
+                  imgClass="rounded-circle shadow-sm border border-3 border-white object-fit-cover"
+                  style="width: 140px; height: 140px;" alt="Avatar" />
+                <label for="avatarUpload"
+                  class="position-absolute bottom-0 end-0 bg-brand rounded-circle shadow-sm p-2 text-white cursor-pointer"
+                  style="line-height: 1;" title="Đổi ảnh đại diện">
                   <i class="bi bi-camera-fill fs-6"></i>
                 </label>
-                <input type="file" id="avatarUpload" class="d-none" accept="image/png, image/jpeg" @change="handleAvatarChange">
+                <input type="file" id="avatarUpload" class="d-none" accept="image/png, image/jpeg"
+                  @change="handleAvatarChange">
               </div>
-              
+
               <h5 class="fw-bold text-dark mb-1">{{ form.fullname || 'Nhân viên' }}</h5>
-              <span class="badge mb-3 px-3 py-2 rounded-pill text-white" :class="form.status === 'active' ? 'bg-success' : 'bg-danger'">
+              <span class="badge mb-3 px-3 py-2 rounded-pill text-white"
+                :class="form.status === 'active' ? 'bg-success' : 'bg-danger'">
                 <i class="bi me-1" :class="form.status === 'active' ? 'bi-check-circle' : 'bi-lock-fill'"></i>
-                {{ form.status === 'active' ? 'Đang hoạt động' : 'Đã bị khóa' }}
+                {{ form.status === 'active' ? 'Hoạt động' : 'Đã bị khóa' }}
               </span>
 
               <div class="mb-3" v-if="previewAvatar && previewAvatar !== defaultAvatar && !selectedFile">
-                <button type="button" @click="removeAvatar" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold w-100 shadow-sm">
+                <button type="button" @click="removeAvatar"
+                  class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold w-100 shadow-sm">
                   <i class="bi bi-trash me-1"></i> Xóa ảnh hiện tại
                 </button>
               </div>
-              
+
               <hr class="text-muted opacity-25 my-3">
 
               <div class="text-start">
                 <label class="form-label fw-bold text-muted small text-uppercase mb-2">Cập nhật Trạng thái</label>
                 <!-- Nút chọn trạng thái được thu nhỏ và thêm nền tương phản -->
-                <select class="form-select fw-bold shadow-sm" v-model="form.status" required :disabled="isCurrentUser" :class="form.status === 'active' ? 'text-success border-success bg-success bg-opacity-10' : 'text-danger border-danger bg-danger bg-opacity-10'">
+                <select class="form-select fw-bold shadow-sm" v-model="form.status" required :disabled="isCurrentUser"
+                  :class="form.status === 'active' ? 'text-success border-success bg-success bg-opacity-10' : 'text-danger border-danger bg-danger bg-opacity-10'">
                   <option value="active" class="text-success fw-bold">Hoạt động (Active)</option>
                   <option value="locked" class="text-danger fw-bold">Khóa (Locked)</option>
                 </select>
@@ -80,66 +88,79 @@
           <div class="col-md-8 col-lg-9">
             <div class="card border-0 shadow-sm rounded-4">
               <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
-                <h5 class="fw-bold text-dark mb-0"><i class="bi bi-person-lines-fill text-brand me-2"></i> Thông tin cá nhân</h5>
+                <h5 class="fw-bold text-dark mb-0"><i class="bi bi-person-lines-fill text-brand me-2"></i> Thông tin cá
+                  nhân</h5>
               </div>
               <div class="card-body p-4 pt-3">
                 <div class="row">
                   <div class="col-md-6 mb-4">
                     <label class="form-label fw-bold text-dark">Họ và tên <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control bg-white border-secondary-subtle shadow-none" v-model="form.fullname" required>
+                    <input type="text" class="form-control bg-white border-secondary-subtle shadow-none"
+                      v-model="form.fullname" required>
                   </div>
                   <div class="col-md-6 mb-4">
                     <label class="form-label fw-bold text-dark">Số điện thoại</label>
-                    <input type="text" class="form-control bg-white border-secondary-subtle shadow-none" v-model="form.phone">
+                    <input type="text" class="form-control bg-white border-secondary-subtle shadow-none"
+                      v-model="form.phone">
                   </div>
-                  
+
                   <div class="col-md-6 mb-4">
-                    <label class="form-label fw-bold text-muted">Email đăng nhập <span class="text-danger">*</span></label>
+                    <label class="form-label fw-bold text-muted">Email đăng nhập <span
+                        class="text-danger">*</span></label>
                     <div class="input-group shadow-sm">
-                      <span class="input-group-text bg-light text-muted border-secondary-subtle"><i class="bi bi-envelope"></i></span>
-                      <input type="email" class="form-control bg-light text-muted cursor-not-allowed border-secondary-subtle shadow-none" v-model="form.email" required readonly disabled>
+                      <span class="input-group-text bg-light text-muted border-secondary-subtle"><i
+                          class="bi bi-envelope"></i></span>
+                      <input type="email"
+                        class="form-control bg-light text-muted cursor-not-allowed border-secondary-subtle shadow-none"
+                        v-model="form.email" required readonly disabled>
                     </div>
-                    <small class="text-danger mt-1 d-block" style="font-size: 0.75rem;">Không được phép thay đổi email.</small>
+                    <small class="text-danger mt-1 d-block" style="font-size: 0.75rem;">Không được phép thay đổi
+                      email.</small>
                   </div>
-                  
+
                   <div class="col-md-6 mb-4">
-                    <label class="form-label fw-bold text-dark">Đổi mật khẩu <span class="text-muted fw-normal small">(Tùy chọn)</span></label>
+                    <label class="form-label fw-bold text-dark">Đổi mật khẩu <span
+                        class="text-muted fw-normal small">(Tùy chọn)</span></label>
                     <div class="input-group shadow-sm">
-                      <span class="input-group-text bg-white text-muted border-secondary-subtle"><i class="bi bi-key"></i></span>
-                      <input type="text" class="form-control bg-white border-secondary-subtle shadow-none" v-model="form.password" placeholder="Bỏ trống nếu không đổi">
+                      <span class="input-group-text bg-white text-muted border-secondary-subtle"><i
+                          class="bi bi-key"></i></span>
+                      <input type="text" class="form-control bg-white border-secondary-subtle shadow-none"
+                        v-model="form.password" placeholder="Bỏ trống nếu không đổi">
                     </div>
                   </div>
 
                   <!-- ================= DROPDOWN ĐỊA CHỈ XỊN XÒ ================= -->
                   <div class="col-12 mb-2 mt-2">
-                    <label class="form-label fw-bold text-dark border-bottom pb-2 w-100"><i class="bi bi-geo-alt-fill text-brand me-1"></i> Địa chỉ thường trú</label>
+                    <label class="form-label fw-bold text-dark border-bottom pb-2 w-100"><i
+                        class="bi bi-geo-alt-fill text-brand me-1"></i> Địa chỉ thường trú</label>
                   </div>
-                  
+
                   <div class="col-12 mb-3">
-                    <VietnamAddressPicker
-                      v-model:province="selectedCityName"
-                      v-model:district="selectedDistrictName"
+                    <VietnamAddressPicker v-model:province="selectedCityName" v-model:district="selectedDistrictName"
                       v-model:ward="selectedWardName"
                       input-class="bg-white border-secondary-subtle shadow-none fw-medium"
-                      label-class="fw-semibold text-dark small"
-                    />
+                      label-class="fw-semibold text-dark small" />
                   </div>
                   <div class="col-md-12 mb-4">
                     <label class="form-label fw-semibold text-dark small">Địa chỉ cụ thể (Số nhà, đường)</label>
-                    <input type="text" class="form-control bg-white border-secondary-subtle shadow-none" v-model="specificAddress" placeholder="VD: Số 12, Đường ABCD">
+                    <input type="text" class="form-control bg-white border-secondary-subtle shadow-none"
+                      v-model="specificAddress" placeholder="VD: Số 12, Đường ABCD">
                   </div>
                   <!-- ================= KẾT THÚC ĐỊA CHỈ ================= -->
 
                   <div class="col-12 mb-4 mt-2">
-                    <label class="form-label fw-bold text-dark">Cấp quyền Chức vụ (Role) <span class="text-danger">*</span></label>
-                    <select class="form-select form-select-lg bg-light border-secondary-subtle fw-bold text-dark" v-model="form.role_id" required :disabled="isCurrentUser || route.params.id == 1">
+                    <label class="form-label fw-bold text-dark">Cấp quyền Chức vụ (Role) <span
+                        class="text-danger">*</span></label>
+                    <select class="form-select form-select-lg bg-light border-secondary-subtle fw-bold text-dark"
+                      v-model="form.role_id" required :disabled="isCurrentUser || route.params.id == 1">
                       <option v-for="r in roles" :key="r.id" :value="r.id">Cấp {{ r.level }}: {{ r.label }}</option>
                     </select>
                   </div>
                 </div>
 
                 <div class="text-end border-top pt-4 mt-2">
-                  <router-link :to="{ name: 'admin-staff-index' }" class="btn btn-light me-2 px-4 fw-bold shadow-sm">Hủy bỏ</router-link>
+                  <router-link :to="{ name: 'admin-staff-index' }" class="btn btn-light me-2 px-4 fw-bold shadow-sm">Hủy
+                    bỏ</router-link>
                   <button type="submit" class="btn btn-brand px-5 fw-bold text-white shadow-sm" :disabled="isSaving">
                     <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span> LƯU THAY ĐỔI
                   </button>
@@ -150,7 +171,7 @@
         </div>
       </form>
     </div>
-    
+
     <!-- HIỆU ỨNG LOGO SHIMMER (MÀN HÌNH CHỜ) -->
     <div v-else class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
       <h1 class="logo-shimmer mb-3">ThinkHub</h1>
@@ -158,7 +179,7 @@
         Đang tải dữ liệu...
       </p>
     </div>
-    
+
   </div>
 </template>
 
@@ -208,22 +229,22 @@ const getHeaders = () => ({
 });
 
 const getLevelColor = (level) => {
-  if(!level) return 'bg-secondary';
+  if (!level) return 'bg-secondary';
   const l = parseInt(level);
   switch (l) {
-    case 1: return 'bg-danger text-white border-danger shadow-sm';         
-    case 2: return 'bg-warning text-dark border-warning';                  
-    case 3: return 'bg-info text-dark border-info';                        
-    case 4: return 'bg-primary bg-opacity-10 text-primary border-primary'; 
-    case 5: return 'bg-success bg-opacity-10 text-success border-success'; 
-    default: return 'bg-light text-secondary border-secondary'; 
+    case 1: return 'bg-danger text-white border-danger shadow-sm';
+    case 2: return 'bg-warning text-dark border-warning';
+    case 3: return 'bg-info text-dark border-info';
+    case 4: return 'bg-primary bg-opacity-10 text-primary border-primary';
+    case 5: return 'bg-success bg-opacity-10 text-success border-success';
+    default: return 'bg-light text-secondary border-secondary';
   }
 };
 
 const parseAddressToDropdowns = async (fullAddress) => {
   if (!fullAddress) return;
   const parts = fullAddress.split(',').map(p => p.trim()).filter(Boolean);
-  
+
   if (parts.length >= 4) {
     selectedCityName.value = parts[parts.length - 1] || '';
     selectedDistrictName.value = parts[parts.length - 2] || '';
@@ -235,7 +256,7 @@ const parseAddressToDropdowns = async (fullAddress) => {
     selectedWardName.value = parts[1] || '';
     specificAddress.value = parts[0] || '';
   } else {
-    specificAddress.value = fullAddress; 
+    specificAddress.value = fullAddress;
   }
 };
 
@@ -294,19 +315,19 @@ const isLoaded = computed(() => !isStaffLoading.value);
 // Đồng bộ hóa thông tin nhân viên từ TanStack Query vào Form an toàn sau khi load xong các danh mục tỉnh thành
 watch(rawStaffData, async (newVal) => {
   if (newVal) {
-    form.value = { 
-      fullname: newVal.fullname, 
-      email: newVal.email, 
-      phone: newVal.phone, 
-      address: newVal.address || '', 
-      role_id: newVal.role_id, 
-      status: newVal.status, 
-      password: '' 
+    form.value = {
+      fullname: newVal.fullname,
+      email: newVal.email,
+      phone: newVal.phone,
+      address: newVal.address || '',
+      role_id: newVal.role_id,
+      status: newVal.status,
+      password: ''
     };
-    
+
     // Đồng bộ preview avatar của SoraImage
     previewAvatar.value = newVal.avatar_url ? getFullImage(newVal.avatar_url) : defaultAvatar;
-    
+
     await parseAddressToDropdowns(newVal.address);
   }
 }, { immediate: true });
@@ -345,20 +366,20 @@ const updateStaffMutation = useMutation({
   },
   onSuccess: (data) => {
     Swal.fire({ icon: 'success', title: 'Thành công', text: data.message, timer: 1500, showConfirmButton: false });
-    
+
     // Nếu cập nhật chính tài khoản của bạn, tự động cập nhật cả LocalStorage và cache Header
-    if(isCurrentUser.value) {
+    if (isCurrentUser.value) {
       const updatedAdmin = { ...currentAdmin, fullname: form.value.fullname, phone: form.value.phone };
       if (data.data && data.data.avatar_url) updatedAdmin.avatar_url = data.data.avatar_url;
       localStorage.setItem('admin_info', JSON.stringify(updatedAdmin));
-      
+
       // Đồng bộ làm tươi profile ở Header ngay lập tức
       queryClient.invalidateQueries({ queryKey: ['adminProfile'] });
     }
 
     // Làm tươi danh sách nhân viên ở trang index
     queryClient.invalidateQueries({ queryKey: ['adminStaffs'] });
-    
+
     router.push({ name: 'admin-staff-index' });
   },
   onError: (err) => {
@@ -394,10 +415,10 @@ const updateStaff = async () => {
   form.value.address = finalAddress.replace(/(^, )|(,$)/g, '').trim();
 
   const formData = new FormData();
-  formData.append('_method', 'PUT'); 
-  
+  formData.append('_method', 'PUT');
+
   Object.keys(form.value).forEach(key => {
-    if (key === 'password' && !form.value.password) return; 
+    if (key === 'password' && !form.value.password) return;
     if (key === 'status' && isCurrentUser.value) return formData.append('status', form.value.status);
     if (key === 'role_id' && isCurrentUser.value) return formData.append('role_id', form.value.role_id);
     if (key === 'email') return formData.append('email', form.value.email);
@@ -427,15 +448,46 @@ const updateStaff = async () => {
 }
 
 @keyframes shine {
-  to { background-position: 200% center; }
+  to {
+    background-position: 200% center;
+  }
 }
 
-.bg-brand { background-color: #009981 !important; }
-.text-brand { color: #009981 !important; }
-.btn-brand { background-color: #009981; transition: 0.2s; border: none; }
-.btn-brand:hover { background-color: #007a67; }
-.form-control:focus, .form-select:focus { border-color: #009981; box-shadow: 0 0 0 0.25rem rgba(0, 153, 129, 0.25); }
-.cursor-not-allowed { cursor: not-allowed; opacity: 0.7; }
-.cursor-pointer { cursor: pointer; transition: transform 0.2s; }
-.cursor-pointer:hover { transform: scale(1.1); }
+.bg-brand {
+  background-color: #009981 !important;
+}
+
+.text-brand {
+  color: #009981 !important;
+}
+
+.btn-brand {
+  background-color: #009981;
+  transition: 0.2s;
+  border: none;
+}
+
+.btn-brand:hover {
+  background-color: #007a67;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #009981;
+  box-shadow: 0 0 0 0.25rem rgba(0, 153, 129, 0.25);
+}
+
+.cursor-not-allowed {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.cursor-pointer:hover {
+  transform: scale(1.1);
+}
 </style>

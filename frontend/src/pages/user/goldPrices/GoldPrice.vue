@@ -135,6 +135,9 @@ onMounted(() => {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Manrope:wght@300;400;500;600;700&display=swap');
+
+
 .storefront-wrapper {
   --sora-primary: #9f273b;
   --sora-secondary: #e7ce7d;
@@ -151,8 +154,6 @@ onMounted(() => {
   --color-sora-cream: #FCFBF8; 
   --shadow-sora: 0 10px 40px rgba(0, 0, 0, 0.08);
 }
-
-@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Manrope:wght@300;400;500;600;700&display=swap');
 
 .font-luxury { font-family: 'Manrope', sans-serif; }
 .font-serif { font-family: 'Josefin Sans', sans-serif; }

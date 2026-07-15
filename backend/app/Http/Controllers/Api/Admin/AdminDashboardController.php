@@ -69,7 +69,7 @@ class AdminDashboardController extends Controller
             $customersGrowth = $this->calculatePercentageChange($customersThisMonth, $customersLastMonth);
 
             // 3. ĐƠN HÀNG GẦN ĐÂY
-            $recentOrders = Order::with('user:id,fullName')->orderBy('created_at', 'desc')->take(5)->get()->map(function($order) {
+            $recentOrders = Order::with('user:id,fullName')->orderBy('created_at', 'desc')->take(8)->get()->map(function($order) {
                 return [
                     'id' => $order->id,
                     'code' => $order->order_code ?? 'ORD-' . str_pad($order->id, 4, '0', STR_PAD_LEFT), 

@@ -67,9 +67,8 @@
           <div class="input-group input-group-sm" style="width: 110px;">
             <button class="btn btn-outline-secondary border-light-subtle bg-light text-dark fw-bold px-2"
               @click="lowStockThreshold = Math.max(0, lowStockThreshold - 1)">-</button>
-            <input type="text" class="form-control text-center fw-bold text-danger border-light-subtle px-1"
-              v-model.number="lowStockThreshold"
-              @input="lowStockThreshold = Math.max(0, parseInt(lowStockThreshold) || 0)">
+            <input type="number" class="form-control text-center fw-bold text-danger border-light-subtle px-1"
+              v-model.number="lowStockThreshold" min="0">
             <button class="btn btn-outline-secondary border-light-subtle bg-light text-dark fw-bold px-2"
               @click="lowStockThreshold++">+</button>
           </div>
@@ -334,7 +333,7 @@ const queryClient = useQueryClient();
 
 const activeTab = ref('all_variants');
 const searchQuery = ref('');
-const lowStockThreshold = ref(10);
+const lowStockThreshold = ref(parseInt(localStorage.getItem('admin_low_stock_threshold')) || 10);
 const filters = ref({ product_status: 'all' });
 
 const currentPage = ref(1);
@@ -519,7 +518,8 @@ const counts = computed(() => {
   const variants = allVariantsData.value || [];
   const combos = allCombosData.value || [];
   
-  const lowStockCount = variants.filter(v => v.stock_quantity <= lowStockThreshold.value).length;
+  const threshold = parseInt(lowStockThreshold.value) || 0;
+  const lowStockCount = variants.filter(v => v.stock_quantity <= threshold).length;
   let activeC = 0; 
   let expC = 0;
   
@@ -552,9 +552,10 @@ const tableTitle = computed(() => {
 // Lọc mượt mà danh sách biến thể trong Memory
 const filteredVariants = computed(() => {
   let result = allVariantsData.value || [];
+  const threshold = parseInt(lowStockThreshold.value) || 0;
 
   if (activeTab.value === 'low_stock') {
-    result = result.filter(v => v.stock_quantity <= lowStockThreshold.value);
+    result = result.filter(v => v.stock_quantity <= threshold);
   }
 
   if (filters.value.product_status !== 'all') {
@@ -626,8 +627,16 @@ const visiblePages = computed(() => {
 });
 
 // Theo dõi tab và ô tìm kiếm để reset trang phân trang
-watch([activeTab, searchQuery, () => filters.value.product_status], () => {
+watch([activeTab, searchQuery, () => filters.value.product_status, lowStockThreshold], () => {
   currentPage.value = 1;
+});
+
+// Lưu cài đặt cảnh báo mức tồn kho vào bộ nhớ trình duyệt
+watch(lowStockThreshold, (newVal) => {
+  const val = parseInt(newVal);
+  if (!isNaN(val)) {
+    localStorage.setItem('admin_low_stock_threshold', val);
+  }
 });
 
 // ============================================================================

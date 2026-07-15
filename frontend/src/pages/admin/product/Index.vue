@@ -141,7 +141,7 @@
                   <th class="py-3 px-4 text-secondary border-0" style="width: 28%;">Sản phẩm (Bản gốc)</th>
                   <th class="py-3 px-4 text-secondary border-0" style="width: 17%;">Phân loại</th>
                   <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 15%;">Số Biến thể</th>
-                  <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 20%;">Trạng thái</th>
+                  <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 20%;">Trạng thái <span class="d-none d-xl-inline">(Sửa nhanh)</span></th>
                   <th class="py-3 px-4 text-secondary text-center border-0" style="width: 20%;">Thao tác</th>
                 </tr>
               </thead>
@@ -216,38 +216,21 @@
                     <span v-if="product.deleted_at"
                       class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary"><i
                         class="bi bi-trash3-fill"></i> Đã xóa</span>
-                    <div v-else class="d-flex align-items-center justify-content-center gap-1 flex-nowrap w-100">
-                      <select
-                        class="form-select form-select-sm border shadow-sm fw-semibold cursor-pointer flex-shrink-0"
-                        style="width: 120px; font-size: 0.8rem; border-color: #ced4da !important;"
-                        :class="getStatusSelectClass(localStatuses[product.id] || product.status)"
-                        :value="localStatuses[product.id] || product.status"
-                        @change="(e) => checkStatusChange(product, e.target.value)"
-                        :disabled="updatingStatuses[product.id]">
+                    <div v-else class="w-100">
+                      <!-- SỬA TRẠNG THÁI NHANH BẰNG COMPONENT -->
+                      <StatusConfirmSelect
+                        :modelValue="localStatuses[product.id] || product.status"
+                        @update:modelValue="val => checkStatusChange(product, val)"
+                        :originalValue="product.status"
+                        :selectClass="getStatusSelectClass(localStatuses[product.id] || product.status)"
+                        :isUpdating="updatingStatuses[product.id]"
+                        @confirm="saveProductStatus(product)"
+                        @cancel="cancelStatusChange(product)"
+                      >
                         <option value="published">Đang bán</option>
                         <option value="draft">Bản nháp</option>
                         <option value="hidden">Đang ẩn</option>
-                      </select>
-
-                      <div class="d-flex align-items-center justify-content-start"
-                        style="min-width: 55px; height: 28px; flex-shrink: 0 !important;">
-                        <div v-if="updatingStatuses[product.id]" class="spinner-border text-brand ms-1"
-                          style="width: 1.25rem; height: 1.25rem; border-width: 0.15em; flex-shrink: 0 !important;"
-                          role="status"></div>
-
-                        <template v-else-if="statusChanged[product.id]">
-                          <button @click="saveProductStatus(product)"
-                            class="btn btn-sm btn-success rounded-circle shadow-sm d-flex align-items-center justify-content-center ms-1"
-                            style="width: 24px; height: 24px; padding: 0; flex-shrink: 0 !important;" title="Lưu">
-                            <i class="bi bi-check-lg fw-bold" style="font-size: 0.7rem;"></i>
-                          </button>
-                          <button @click="cancelStatusChange(product)"
-                            class="btn btn-sm btn-light rounded-circle shadow-sm text-danger border d-flex align-items-center justify-content-center ms-1"
-                            style="width: 24px; height: 24px; padding: 0; flex-shrink: 0 !important;" title="Hủy">
-                            <i class="bi bi-x-lg fw-bold" style="font-size: 0.7rem;"></i>
-                          </button>
-                        </template>
-                      </div>
+                      </StatusConfirmSelect>
                     </div>
                   </td>
 
@@ -410,6 +393,7 @@ import { useQuery } from '@tanstack/vue-query';
 import adminApiClient from '@/utils/adminApiClient';
 
 import SoraImage from '@/components/ui/SoraImage.vue';
+import StatusConfirmSelect from '@/components/admin/StatusConfirmSelect.vue';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 import ImportProductModal from './ImportProductModal.vue';
 

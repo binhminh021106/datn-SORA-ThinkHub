@@ -20,7 +20,7 @@
       </div>
 
       <div class="card border-0 shadow-sm rounded-4 mb-4">
-        <div class="card-body p-4 p-md-5">
+        <div class="card-body ">
           <form @submit.prevent="updateTier">
             <div class="row g-4">
               <div class="col-lg-8">

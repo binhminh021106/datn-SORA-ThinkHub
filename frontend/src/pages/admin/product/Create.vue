@@ -17,7 +17,7 @@
             </div>
 
             <div class="card border-0 shadow-sm rounded-4 mb-4">
-                <div class="card-header bg-white pt-4 pb-0 border-bottom-0">
+                <div class="card-header bg-white border-bottom-0">
                     <ul class="nav nav-underline custom-scrollbar-x flex-nowrap">
                         <li class="nav-item">
                             <a class="nav-link py-3 px-4 fw-bold custom-tab"
@@ -35,7 +35,7 @@
                     </ul>
                 </div>
 
-                <div class="card-body p-4 p-md-5">
+                <div class="card-body">
                     <form @submit.prevent="submitProduct" id="productForm">
 
                         <div v-show="currentStep === 1" class="row g-4">

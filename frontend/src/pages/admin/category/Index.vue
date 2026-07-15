@@ -94,7 +94,7 @@
                   <th class="py-3 px-4 text-secondary border-0" style="width: 25%;">Danh mục</th>
                   <th class="py-3 px-4 text-secondary border-0" style="width: 15%;">Cấp độ</th>
                   <th class="py-3 px-4 text-secondary border-0" style="width: 20%;">Thuộc tính (Schema)</th>
-                  <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 20%;">Trạng thái</th>
+                  <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 20%;">Trạng thái <span class="d-none d-xl-inline">(Sửa nhanh)</span></th>
                   <th class="py-3 px-4 text-secondary text-center border-0" style="width: 20%;" v-if="!isReorderMode">Thao tác</th>
                 </tr>
               </thead>
@@ -185,29 +185,20 @@
                   <!-- Cột Trạng thái (Inline Edit) -->
                   <td class="px-4 text-center">
                     <span v-if="cat.deleted_at" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary"><i class="bi bi-trash3-fill"></i> Đã xóa</span>
-                    <div v-else class="d-flex align-items-center justify-content-center gap-1">
-                      <select class="form-select form-select-sm border shadow-sm fw-semibold flex-shrink-0" 
-                              style="width: 110px; font-size: 0.8rem;"
-                              :class="getStatusSelectClass(cat.localStatus || cat.status)"
-                              v-model="cat.localStatus"
-                              @change="checkStatusChange(cat)"
-                              :disabled="cat.isUpdatingStatus || isReorderMode">
+                    <div v-else class="w-100">
+                      <!-- SỬA TRẠNG THÁI NHANH BẰNG COMPONENT -->
+                      <StatusConfirmSelect
+                        v-model="cat.localStatus"
+                        :originalValue="cat.status"
+                        :selectClass="getStatusSelectClass(cat.localStatus || cat.status)"
+                        :isUpdating="cat.isUpdatingStatus"
+                        :disabled="isReorderMode"
+                        @confirm="saveCategoryStatus(cat)"
+                        @cancel="cancelStatusChange(cat)"
+                      >
                         <option value="active">Hiển thị</option>
                         <option value="hidden">Đang ẩn</option>
-                      </select>
-                      
-                      <!-- Khung cố định chống nhảy dòng -->
-                      <div class="d-flex align-items-center justify-content-start flex-shrink-0" style="min-width: 55px; height: 28px;">
-                        <div v-if="cat.isUpdatingStatus" class="spinner-border text-brand ms-1" style="width: 1.1rem; height: 1.1rem; border-width: 0.15em;" role="status"></div>
-                        <template v-else-if="cat.isStatusChanged">
-                          <button @click="saveCategoryStatus(cat)" class="btn btn-sm btn-success rounded-circle shadow-sm d-flex align-items-center justify-content-center ms-1" style="width: 24px; height: 24px; padding: 0;" title="Lưu">
-                            <i class="bi bi-check-lg fw-bold" style="font-size: 0.7rem;"></i>
-                          </button>
-                          <button @click="cancelStatusChange(cat)" class="btn btn-sm btn-light rounded-circle shadow-sm text-danger border d-flex align-items-center justify-content-center ms-1" style="width: 24px; height: 24px; padding: 0;" title="Hủy">
-                            <i class="bi bi-x-lg fw-bold" style="font-size: 0.7rem;"></i>
-                          </button>
-                        </template>
-                      </div>
+                      </StatusConfirmSelect>
                     </div>
                   </td>
 
@@ -308,6 +299,7 @@ import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 import { getFullImage } from '@/composables/useUtilities';
 
 import defaultImage from '../../../assets/images/defaults/placeholder.png'; 
+import StatusConfirmSelect from '@/components/admin/StatusConfirmSelect.vue';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 const route = useRoute();

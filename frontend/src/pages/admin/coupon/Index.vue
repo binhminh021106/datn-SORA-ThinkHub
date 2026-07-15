@@ -81,7 +81,7 @@
                   <th class="py-3 px-4 text-secondary border-0" style="width: 15%;">Mức Giảm</th>
                   <th class="py-3 px-4 text-secondary border-0" style="width: 17%;">Lượt dùng</th>
                   <th class="py-3 px-4 text-secondary border-0" style="width: 15%;">Hạn sử dụng</th>
-                  <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 15%;">Trạng thái</th>
+                  <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 15%;">Trạng thái <span class="d-none d-xl-inline">(Sửa nhanh)</span></th>
                   <th class="py-3 px-4 text-secondary text-center border-0" style="width: 15%;">Thao tác</th>
                 </tr>
               </thead>
@@ -142,15 +142,19 @@
                   <!-- Cột Trạng thái sử dụng Optimistic Cache Update thay vì Inline Save -->
                   <td class="px-4 text-center">
                     <span v-if="coupon.deleted_at" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary"><i class="bi bi-trash3-fill"></i> Đã xóa</span>
-                    <select v-else class="form-select form-select-sm border shadow-sm fw-semibold mx-auto" 
-                            style="width: 120px; font-size: 0.8rem;"
-                            :class="getStatusSelectClass(coupon.status)"
-                            :value="coupon.status"
-                            @change="(e) => onStatusChange(coupon, e.target.value)"
-                            :disabled="isMutating">
-                      <option value="active">Hoạt động</option>
-                      <option value="inactive">Tạm dừng</option>
-                    </select>
+                    <div v-else class="w-100">
+                      <StatusConfirmSelect
+                        v-model="coupon.localStatus"
+                        :originalValue="coupon.status"
+                        :selectClass="getStatusSelectClass(coupon.localStatus || coupon.status)"
+                        :isUpdating="coupon.isUpdatingStatus"
+                        @confirm="saveCouponStatus(coupon)"
+                        @cancel="cancelStatusChange(coupon)"
+                      >
+                        <option value="active">Hoạt động</option>
+                        <option value="inactive">Tạm dừng</option>
+                      </StatusConfirmSelect>
+                    </div>
                   </td>
 
                   <!-- Thao tác -->
@@ -209,7 +213,7 @@
               </div>
               <h5 class="fw-bold mb-1">{{ selectedCoupon.name }}</h5>
               <span class="badge px-3 py-2 rounded-pill mt-2" :class="selectedCoupon.status === 'active' ? 'bg-success text-white' : 'bg-warning text-dark'">
-                {{ selectedCoupon.status === 'active' ? 'Đang hoạt động' : 'Đang tạm dừng' }}
+                {{ selectedCoupon.status === 'active' ? 'Hoạt động' : 'Đang tạm dừng' }}
               </span>
             </div>
 
@@ -253,6 +257,7 @@ import { useRoute } from 'vue-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
+import StatusConfirmSelect from '@/components/admin/StatusConfirmSelect.vue';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 const queryClient = useQueryClient();
@@ -333,14 +338,30 @@ const openQuickView = (coupon) => {
 };
 
 const countByTab = (tab) => {
-  const data = rawCoupons.value || [];
+  const data = localCoupons.value;
   if (tab === 'deleted') return data.filter(c => c.deleted_at).length;
   if (tab === 'all') return data.filter(c => !c.deleted_at).length;
   return data.filter(c => !c.deleted_at && c.status === tab).length;
 };
 
+const localCoupons = ref([]);
+import { watch } from 'vue';
+watch(rawCoupons, (newList) => {
+  if (newList && Array.isArray(newList)) {
+    localCoupons.value = newList.map(c => {
+      const existing = localCoupons.value.find(lc => lc.id === c.id);
+      return {
+        ...c,
+        localStatus: existing ? existing.localStatus : c.status,
+        isStatusChanged: existing ? existing.isStatusChanged : false,
+        isUpdatingStatus: existing ? existing.isUpdatingStatus : false
+      };
+    });
+  }
+}, { immediate: true });
+
 const processedCoupons = computed(() => {
-  let result = rawCoupons.value || [];
+  let result = localCoupons.value;
   if (activeTab.value === 'deleted') { result = result.filter(c => c.deleted_at); } 
   else {
     result = result.filter(c => !c.deleted_at);
@@ -362,29 +383,31 @@ const displayCoupons = computed(() => {
 // --- MUTATIONS ---
 const statusMutation = useMutation({
   mutationFn: async ({ id, status }) => {
-    const fd = new FormData(); fd.append('_method', 'PUT'); fd.append('status', status);
+    const fd = new FormData(); fd.append('_method', 'PATCH'); fd.append('status', status);
     const res = await fetch(`${API_URL}/admin/coupons/${id}`, { method: 'POST', headers: getHeaders(), body: fd });
     if (!res.ok) throw new Error('Cập nhật thất bại');
   },
-  onMutate: async ({ id, status }) => {
-    isMutating.value = true;
-    await queryClient.cancelQueries(['admin', 'coupons']);
-    const prev = queryClient.getQueryData(['admin', 'coupons']);
-    if (prev) queryClient.setQueryData(['admin', 'coupons'], old => old.map(c => c.id === id ? { ...c, status } : c));
-    return { prev };
-  },
-  onSuccess: () => {
+  onSuccess: (data, variables) => {
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã lưu trạng thái', showConfirmButton: false, timer: 1000 });
+    const c = localCoupons.value.find(c => c.id === variables.id);
+    if(c) c.isStatusChanged = false;
+    queryClient.setQueryData(['admin', 'coupons'], old => old.map(co => co.id === variables.id ? { ...co, status: variables.status } : co));
   },
-  onError: (err, variables, ctx) => {
-    if (ctx?.prev) queryClient.setQueryData(['admin', 'coupons'], ctx.prev);
+  onError: (err, variables) => {
+    const c = localCoupons.value.find(co => co.id === variables.id);
+    if(c) cancelStatusChange(c);
     Swal.fire('Lỗi', err.message, 'error');
-  },
-  onSettled: () => { isMutating.value = false; queryClient.invalidateQueries(['admin', 'coupons']); }
+  }
 });
 
-const onStatusChange = (coupon, newStatus) => {
-  statusMutation.mutate({ id: coupon.id, status: newStatus });
+const checkStatusChange = (coupon) => { coupon.isStatusChanged = (coupon.localStatus !== coupon.status); };
+const cancelStatusChange = (coupon) => { coupon.localStatus = coupon.status; coupon.isStatusChanged = false; };
+
+const saveCouponStatus = (coupon) => {
+  coupon.isUpdatingStatus = true;
+  statusMutation.mutate({ id: coupon.id, status: coupon.localStatus }, {
+    onSettled: () => { coupon.isUpdatingStatus = false; }
+  });
 };
 
 const deleteMutation = useMutation({

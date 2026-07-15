@@ -17,7 +17,7 @@
       </div>
 
       <div class="card border-0 shadow-sm rounded-4 max-w-800 mx-auto">
-        <div class="card-body p-4 p-md-5">
+        <div class="card-body">
           <form @submit.prevent="submitForm">
             
             <div class="row g-4">

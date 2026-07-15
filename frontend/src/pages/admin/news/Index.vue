@@ -7,6 +7,7 @@ import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { getFullImage } from '@/composables/useUtilities';
 import defaultImage from '@/assets/images/defaults/placeholder.png';
+import StatusConfirmSelect from '@/components/admin/StatusConfirmSelect.vue';
 
 // ==========================================
 // 1. CONFIGURATION & SETUP
@@ -108,12 +109,19 @@ const { data: newsData, isLoading, isFetching, isError, error, refetch } = useQu
     keepPreviousData: true
 });
 
-const news = ref([]);
-
 // Đồng bộ local state khi cache query được cập nhật
+const localNews = ref([]);
 watch(newsData, (newVal) => {
     if (newVal) {
-        news.value = newVal;
+        localNews.value = newVal.map(n => {
+            const existing = localNews.value.find(ln => ln.id === n.id);
+            return {
+                ...n,
+                localStatus: existing ? existing.localStatus : n.status,
+                isStatusChanged: existing ? existing.isStatusChanged : false,
+                isUpdatingStatus: existing ? existing.isUpdatingStatus : false
+            };
+        });
     }
 }, { immediate: true });
 
@@ -130,35 +138,41 @@ const newsLoadError = computed(() => (
 ));
 
 // Mutation cập nhật nhanh trạng thái
-const updatingStatuses = ref({});
-
 const toggleStatusMutation = useMutation({
     mutationFn: async ({ id, status }) => {
         return axios.patch(`${apiUrl}/admin/news/${id}`, { status }, { headers: getHeaders() });
     },
-    onMutate: ({ id }) => {
-        updatingStatuses.value[id] = true;
-    },
-    onSettled: (data, error, variables) => {
-        updatingStatuses.value[variables.id] = false;
-    },
     onSuccess: (data, variables) => {
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
         
-        // Cập nhật local cache ngay lập tức để giao diện không bị delay
+        const item = localNews.value.find(n => n.id === variables.id);
+        if(item) item.isStatusChanged = false;
+        
         queryClient.setQueryData(['admin-news-all'], (oldData) => {
             if (!oldData) return oldData;
-            return oldData.map(item => 
-                item.id === variables.id ? { ...item, status: variables.status } : item
-            );
+            return oldData.map(i => i.id === variables.id ? { ...i, status: variables.status } : i);
         });
-        
-        queryClient.invalidateQueries({ queryKey: ['admin-news-all'] });
     },
-    onError: () => {
+    onError: (err, variables) => {
+        const item = localNews.value.find(n => n.id === variables.id);
+        if(item) cancelStatusChange(item);
         Swal.fire('Lỗi', 'Không thể cập nhật trạng thái.', 'error');
     }
 });
+
+const checkStatusChange = (item) => { item.isStatusChanged = (item.localStatus !== item.status); };
+const cancelStatusChange = (item) => { item.localStatus = item.status; item.isStatusChanged = false; };
+
+const saveNewsStatus = (item) => {
+    if (!hasRole(['admin'])) {
+        cancelStatusChange(item);
+        return Swal.fire('Quyền hạn', 'Bạn không có quyền duyệt bài viết này.', 'warning');
+    }
+    item.isUpdatingStatus = true;
+    toggleStatusMutation.mutate({ id: item.id, status: item.localStatus }, {
+        onSettled: () => { item.isUpdatingStatus = false; }
+    });
+};
 
 // Mutation xóa mềm bài viết
 const deleteMutation = useMutation({
@@ -192,7 +206,7 @@ const restoreMutation = useMutation({
 // 4. COMPUTED & WATCHERS
 // ==========================================
 const statusCounts = computed(() => {
-    const list = news.value || [];
+    const list = localNews.value || [];
     return {
         all: list.filter(i => !i.deleted_at).length,
         pending: list.filter(i => i.status === 'pending' && !i.deleted_at).length,
@@ -203,7 +217,7 @@ const statusCounts = computed(() => {
 });
 
 const processedNews = computed(() => {
-    let result = [...(news.value || [])];
+    let result = [...(localNews.value || [])];
 
     // Lọc theo Tab Xóa hoặc Tab Thường
     if (currentTab.value === 'deleted') {
@@ -268,9 +282,9 @@ const handleImageError = (event) => {
 
 const getStatusInfo = (status) => {
     const map = {
-        'published': { text: 'Xuất bản', class: 'bg-success bg-opacity-10 text-success border border-success', icon: 'bi-check-circle-fill' },
-        'pending': { text: 'Đợi duyệt', class: 'bg-warning bg-opacity-10 text-warning border border-warning', icon: 'bi-hourglass-split' },
-        'draft': { text: 'Đã ẩn', class: 'bg-secondary bg-opacity-10 text-secondary border border-secondary', icon: 'bi-eye-slash-fill' }
+        'published': { text: 'Xuất bản', class: 'text-success border-success bg-success bg-opacity-10', icon: 'bi-check-circle-fill' },
+        'pending': { text: 'Đợi duyệt', class: 'text-warning border-warning bg-warning bg-opacity-10', icon: 'bi-hourglass-split' },
+        'draft': { text: 'Đã ẩn', class: 'text-secondary border-secondary bg-secondary bg-opacity-10', icon: 'bi-eye-slash-fill' }
     };
     return map[status] || { text: 'Không rõ', class: 'bg-light text-dark', icon: 'bi-question-circle' };
 };
@@ -290,32 +304,7 @@ const viewOnFrontend = (slug) => {
     else Swal.fire('Lỗi', 'Bài viết chưa có đường dẫn.', 'error');
 };
 
-async function handleToggleStatus(newsItem) {
-    if (!requireLogin()) return;
-    
-    if (!hasRole(['admin'])) {
-        return Swal.fire('Quyền hạn', 'Bạn không có quyền duyệt bài viết này.', 'warning');
-    }
-
-    const newStatus = (newsItem.status === 'published') ? 'draft' : 'published';
-    const actionName = newStatus === 'published' ? 'XUẤT BẢN' : 'ẨN BÀI VIẾT';
-    
-    const result = await Swal.fire({ 
-        title: 'Thay đổi trạng thái?', 
-        text: `Bạn có muốn ${actionName} bài viết này?`, 
-        icon: 'question', 
-        showCancelButton: true, 
-        confirmButtonColor: '#009981',
-        confirmButtonText: 'Đồng ý', 
-        cancelButtonText: 'Hủy' 
-    });
-
-    if (result.isConfirmed) {
-        // Tránh double click khi đang xử lý
-        if (updatingStatuses.value[newsItem.id]) return;
-        toggleStatusMutation.mutate({ id: newsItem.id, status: newStatus });
-    }
-}
+// handleToggleStatus method removed as it's replaced by StatusConfirmSelect
 
 async function handleDelete(newsItem) {
     if (!requireLogin()) return;
@@ -483,7 +472,7 @@ useAdminRefreshListener((payload) => {
                                     <th class="py-3 px-4 text-secondary border-0" style="width: 30%;">Thông tin bài viết</th>
                                     <th class="py-3 px-4 text-secondary border-0" style="width: 15%;">Tác giả</th>
                                     <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 10%;">Lượt xem</th>
-                                    <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 15%;">Trạng thái</th>
+                                    <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 15%;">Trạng thái <span class="d-none d-xl-inline">(Sửa nhanh)</span></th>
                                     <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 12%;">Ngày tạo</th>
                                     <th class="py-3 px-4 text-secondary text-end border-0" style="width: 18%;">Thao tác</th>
                                 </tr>
@@ -565,9 +554,21 @@ useAdminRefreshListener((payload) => {
                                         <span v-if="item.deleted_at" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary px-3 py-2 rounded-pill fw-medium">
                                             <i class="bi bi-trash3-fill me-1"></i> Đã xóa
                                         </span>
-                                        <span v-else class="badge px-3 py-2 rounded-pill fw-medium" :class="getStatusInfo(item.status).class">
-                                            <i class="bi me-1" :class="getStatusInfo(item.status).icon"></i>{{ getStatusInfo(item.status).text }}
-                                        </span>
+                                        <div v-else class="w-100">
+                                            <StatusConfirmSelect
+                                                v-model="item.localStatus"
+                                                :originalValue="item.status"
+                                                :selectClass="getStatusInfo(item.localStatus || item.status).class"
+                                                :isUpdating="item.isUpdatingStatus"
+                                                :disabled="!hasRole(['admin'])"
+                                                @confirm="saveNewsStatus(item)"
+                                                @cancel="cancelStatusChange(item)"
+                                            >
+                                                <option value="published">Xuất bản</option>
+                                                <option value="pending">Đợi duyệt</option>
+                                                <option value="draft">Đã ẩn</option>
+                                            </StatusConfirmSelect>
+                                        </div>
                                     </td>
 
                                     <td class="px-4 text-center small text-secondary fw-medium">
@@ -577,11 +578,6 @@ useAdminRefreshListener((payload) => {
                                     <td class="px-4 text-end">
                                         <div class="d-flex justify-content-end align-items-center gap-2">
                                             <template v-if="!item.deleted_at">
-                                                <div class="form-check form-switch m-0 d-flex align-items-center me-1" v-if="hasRole(['admin'])" title="Đổi trạng thái xuất bản/ẩn" style="min-width: 40px; justify-content: center;">
-                                                    <div v-if="updatingStatuses[item.id]" class="spinner-border spinner-border-sm text-brand" role="status" style="width: 1.25rem; height: 1.25rem; border-width: 0.15em;"></div>
-                                                    <input v-else class="form-check-input custom-switch" type="checkbox" role="switch" :checked="item.status === 'published'" @click.prevent="handleToggleStatus(item)" :disabled="updatingStatuses[item.id]">
-                                                </div>
-                                                
                                                 <button class="btn btn-sm btn-light text-info shadow-sm border" @click="viewOnFrontend(item.slug)" title="Xem bài viết">
                                                     <i class="bi bi-eye"></i>
                                                 </button>

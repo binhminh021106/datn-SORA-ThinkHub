@@ -68,7 +68,7 @@
                   <th class="py-3 px-4 text-secondary border-0" style="width: 24%;">Khách hàng</th>
                   <th class="py-3 px-4 text-secondary border-0" style="width: 20%;">Thông tin liên hệ</th>
                   <th class="py-3 px-4 text-secondary border-0" style="width: 26%;">Địa chỉ mặc định</th>
-                  <th class="py-3 px-2 text-secondary border-0 text-center" style="width: 16%;">Trạng thái</th>
+                  <th class="py-3 px-2 text-secondary border-0 text-center" style="width: 16%;">Trạng thái <span class="d-none d-xl-inline">(Sửa nhanh)</span></th>
                   <th class="py-3 px-4 text-secondary text-center border-0" style="width: 14%;">Thao tác</th>
                 </tr>
               </thead>
@@ -135,28 +135,18 @@
                       <span v-if="user.deleted_at" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary" title="Đã chuyển vào thùng rác">
                         <i class="bi bi-trash3-fill"></i> Đã xóa
                       </span>
-                      <div v-else class="d-flex align-items-center justify-content-center gap-1 flex-nowrap w-100">
-                        <select class="form-select form-select-sm border shadow-sm fw-semibold flex-shrink-0" 
-                                style="width: 110px; font-size: 0.8rem; border-color: #ced4da !important;"
-                                :class="getStatusSelectClass(user.localStatus || user.status)"
-                                v-model="user.localStatus"
-                                @change="checkStatusChange(user)"
-                                :disabled="isUpdatingStatusId === user.id">
+                      <div v-else class="w-100">
+                        <StatusConfirmSelect
+                          v-model="user.localStatus"
+                          :originalValue="user.status"
+                          :selectClass="getStatusSelectClass(user.localStatus || user.status)"
+                          :isUpdating="isUpdatingStatusId === user.id"
+                          @confirm="saveUserStatus(user)"
+                          @cancel="cancelStatusChange(user)"
+                        >
                           <option value="active">Hoạt động</option>
                           <option value="locked">Bị Khóa</option>
-                        </select>
-                        
-                        <div class="d-flex align-items-center justify-content-start flex-shrink-0" style="min-width: 55px; height: 28px;">
-                          <div v-if="isUpdatingStatusId === user.id" class="spinner-border text-brand ms-1" style="width: 1.25rem; height: 1.25rem; border-width: 0.15em;" role="status"></div>
-                          <template v-else-if="user.isStatusChanged">
-                            <button @click="saveUserStatus(user)" class="btn btn-sm btn-success rounded-circle shadow-sm d-flex align-items-center justify-content-center ms-1" style="width: 24px; height: 24px; padding: 0;" title="Lưu">
-                              <i class="bi bi-check-lg fw-bold" style="font-size: 0.7rem;"></i>
-                            </button>
-                            <button @click="cancelStatusChange(user)" class="btn btn-sm btn-light rounded-circle shadow-sm text-danger border d-flex align-items-center justify-content-center ms-1" style="width: 24px; height: 24px; padding: 0;" title="Hủy">
-                              <i class="bi bi-x-lg fw-bold" style="font-size: 0.7rem;"></i>
-                            </button>
-                          </template>
-                        </div>
+                        </StatusConfirmSelect>
                       </div>
                     </td>
   
@@ -299,6 +289,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { getFullImage } from '@/composables/useUtilities';
 
 import SoraImage from '@/components/ui/SoraImage.vue';
+import StatusConfirmSelect from '@/components/admin/StatusConfirmSelect.vue';
 import placeholderImg from '@/assets/images/defaults/placeholder.png';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;

@@ -70,7 +70,7 @@
                   <th class="py-3 px-4 text-secondary border-0" style="width: 15%;">Hình ảnh</th>
                   <th class="py-3 px-4 text-secondary border-0" style="width: 35%;">Tiêu đề</th>
                   <th class="py-3 px-4 text-secondary border-0" style="width: 20%;">Ngày tải lên</th>
-                  <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 15%;">Trạng thái</th>
+                  <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 15%;">Trạng thái <span class="d-none d-xl-inline">(Sửa nhanh)</span></th>
                   <th class="py-3 px-4 text-secondary text-center border-0" style="width: 15%;">Thao tác</th>
                 </tr>
               </thead>
@@ -107,15 +107,19 @@
                   </td>
 
                   <td class="px-4 text-center">
-                    <select class="form-select form-select-sm border shadow-sm fw-semibold mx-auto cursor-pointer" 
-                            style="width: 110px; font-size: 0.8rem;"
-                            :class="getStatusSelectClass(item.mappedStatus)"
-                            :value="item.mappedStatus"
-                            @change="(e) => onStatusChange(item, e.target.value)"
-                            :disabled="isMutating">
-                      <option value="active">Hiển thị</option>
-                      <option value="inactive">Đã ẩn</option>
-                    </select>
+                    <div class="w-100">
+                      <StatusConfirmSelect
+                        v-model="item.localStatus"
+                        :originalValue="item.mappedStatus"
+                        :selectClass="getStatusSelectClass(item.localStatus || item.mappedStatus)"
+                        :isUpdating="item.isUpdatingStatus"
+                        @confirm="saveGalleryStatus(item)"
+                        @cancel="cancelStatusChange(item)"
+                      >
+                        <option value="active">Hiển thị</option>
+                        <option value="inactive">Đã ẩn</option>
+                      </StatusConfirmSelect>
+                    </div>
                   </td>
 
                   <td class="px-4 text-center">
@@ -201,6 +205,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
 import axios from 'axios'; 
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
+import StatusConfirmSelect from '@/components/admin/StatusConfirmSelect.vue';
 
 defineOptions({ name: 'GalleryIndex' });
 
@@ -249,8 +254,18 @@ const { data: rawGalleries, isFetching, refetch } = useQuery({
 });
 
 // Tắt Shimmer khi dữ liệu về lần đầu
+const localGalleries = ref([]);
 watch(rawGalleries, (newData) => {
-  if (newData) {
+  if (newData && Array.isArray(newData)) {
+    localGalleries.value = newData.map(g => {
+      const existing = localGalleries.value.find(lg => lg.id === g.id);
+      return {
+        ...g,
+        localStatus: existing ? existing.localStatus : g.mappedStatus,
+        isStatusChanged: existing ? existing.isStatusChanged : false,
+        isUpdatingStatus: existing ? existing.isUpdatingStatus : false
+      };
+    });
     isFirstLoad.value = false;
   }
 }, { immediate: true });
@@ -312,7 +327,7 @@ const countByTab = (tab) => {
 };
 
 const processedGalleries = computed(() => {
-  let result = rawGalleries.value || [];
+  let result = localGalleries.value || [];
   if (activeTab.value !== 'all') {
     result = result.filter(g => g.mappedStatus === activeTab.value);
   }
@@ -336,24 +351,27 @@ const statusMutation = useMutation({
     const fd = new FormData(); fd.append('_method', 'PUT'); fd.append('is_active', is_active);
     await axios.post(`${API_URL}/admin/galleries/${id}`, fd, { headers: getHeaders() });
   },
-  onMutate: async ({ id, status }) => {
-    isMutating.value = true;
-    await queryClient.cancelQueries(['admin', 'galleries']);
-    const prev = queryClient.getQueryData(['admin', 'galleries']);
-    if (prev) {
-        queryClient.setQueryData(['admin', 'galleries'], old => old.map(g => g.id === id ? { ...g, is_active: status === 'active' ? 1 : 0 } : g));
-    }
-    return { prev };
+  onSuccess: (data, variables) => {
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã lưu trạng thái', showConfirmButton: false, timer: 1000 });
+    const g = localGalleries.value.find(g => g.id === variables.id);
+    if(g) g.isStatusChanged = false;
+    queryClient.setQueryData(['admin', 'galleries'], old => old.map(go => go.id === variables.id ? { ...go, is_active: variables.status === 'active' ? 1 : 0 } : go));
   },
-  onError: (err, variables, ctx) => {
-    if (ctx?.prev) queryClient.setQueryData(['admin', 'galleries'], ctx.prev);
+  onError: (err, variables) => {
+    const g = localGalleries.value.find(go => go.id === variables.id);
+    if(g) cancelStatusChange(g);
     Swal.fire('Lỗi', err.response?.data?.message || err.message, 'error');
-  },
-  onSettled: () => { isMutating.value = false; queryClient.invalidateQueries(['admin', 'galleries']); }
+  }
 });
 
-const onStatusChange = (item, newStatus) => {
-  statusMutation.mutate({ id: item.id, status: newStatus });
+const checkStatusChange = (item) => { item.isStatusChanged = (item.localStatus !== item.mappedStatus); };
+const cancelStatusChange = (item) => { item.localStatus = item.mappedStatus; item.isStatusChanged = false; };
+
+const saveGalleryStatus = (item) => {
+  item.isUpdatingStatus = true;
+  statusMutation.mutate({ id: item.id, status: item.localStatus }, {
+    onSettled: () => { item.isUpdatingStatus = false; }
+  });
 };
 
 const deleteMutation = useMutation({

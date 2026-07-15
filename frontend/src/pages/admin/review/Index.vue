@@ -83,7 +83,7 @@
                   <th class="py-3 px-4 text-secondary border-0" style="width: 25%;">Khách hàng & Đánh giá</th>
                   <th class="py-3 px-4 text-secondary border-0" style="width: 20%;">Mục đánh giá</th>
                   <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 15%;">Số sao</th>
-                  <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 20%;">Trạng thái</th>
+                  <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 20%;">Trạng thái <span class="d-none d-xl-inline">(Sửa nhanh)</span></th>
                   <th class="py-3 px-4 text-secondary text-center border-0" style="width: 20%;">Thao tác</th>
                 </tr>
               </thead>
@@ -165,35 +165,25 @@
                   </td>
 
                   <td class="px-4">
-                    <div class="d-flex flex-column align-items-start" style="width: max-content; margin: 0 auto;">
-                      <div class="d-flex align-items-center gap-1 flex-nowrap w-100">
-                        <select class="form-select form-select-sm border shadow-sm fw-semibold cursor-pointer flex-shrink-0" 
-                                style="width: 120px; font-size: 0.8rem; border-color: #ced4da !important;"
-                                :class="getStatusSelectClass(review.localStatus || review.status)"
-                                v-model="review.localStatus"
-                                @change="checkStatusChange(review)"
-                                :disabled="review.isUpdatingStatus">
-                          <option value="pending" :hidden="!canTransitionTo(review.status, 'pending')">Chờ duyệt</option>
-                          <option value="approved" :hidden="!canTransitionTo(review.status, 'approved')">Đã duyệt</option>
-                          <option value="hidden" :hidden="!canTransitionTo(review.status, 'hidden')">Đã ẩn</option>
-                        </select>
+                    <div class="w-100" style="max-width: 150px; margin: 0 auto;">
+                      <StatusConfirmSelect
+                        v-model="review.localStatus"
+                        :originalValue="review.status"
+                        :selectClass="getStatusSelectClass(review.localStatus || review.status)"
+                        :isUpdating="review.isUpdatingStatus"
+                        @confirm="saveReviewStatus(review)"
+                        @cancel="cancelStatusChange(review)"
+                      >
+                        <option value="pending" :hidden="!canTransitionTo(review.status, 'pending')">Chờ duyệt</option>
+                        <option value="approved" :hidden="!canTransitionTo(review.status, 'approved')">Đã duyệt</option>
+                        <option value="hidden" :hidden="!canTransitionTo(review.status, 'hidden')">Đã ẩn</option>
                         
-                        <!-- Khung cố định chống nhảy -->
-                        <div class="d-flex align-items-center justify-content-start" style="min-width: 55px; height: 28px; flex-shrink: 0 !important;">
-                          <div v-if="review.isUpdatingStatus" class="spinner-border text-brand ms-1" style="width: 1.25rem; height: 1.25rem; border-width: 0.15em; flex-shrink: 0 !important;" role="status"></div>
-                          <template v-else-if="review.isStatusChanged">
-                            <button @click="saveReviewStatus(review)" class="btn btn-sm btn-success rounded-circle shadow-sm d-flex align-items-center justify-content-center ms-1" style="width: 24px; height: 24px; padding: 0; flex-shrink: 0 !important;" title="Lưu">
-                              <i class="bi bi-check-lg fw-bold" style="font-size: 0.7rem;"></i>
-                            </button>
-                            <button @click="cancelStatusChange(review)" class="btn btn-sm btn-light rounded-circle shadow-sm text-danger border d-flex align-items-center justify-content-center ms-1" style="width: 24px; height: 24px; padding: 0; flex-shrink: 0 !important;" title="Hủy">
-                              <i class="bi bi-x-lg fw-bold" style="font-size: 0.7rem;"></i>
-                            </button>
-                          </template>
-                        </div>
-                      </div>
-                      <div v-if="review.admin_reply" class="mt-1 ms-1 text-success small fw-bold d-flex align-items-center">
-                          <i class="bi bi-check-circle-fill me-1"></i> Đã phản hồi
-                      </div>
+                        <template #display>
+                          <div v-if="review.admin_reply" class="mt-2 text-success small fw-bold d-flex justify-content-center align-items-center w-100">
+                              <i class="bi bi-check-circle-fill me-1"></i> Đã phản hồi
+                          </div>
+                        </template>
+                      </StatusConfirmSelect>
                     </div>
                   </td>
 
@@ -432,6 +422,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 
 // Tích hợp Component Ảnh với Fallback Mặc định
 import SoraImage from '@/components/ui/SoraImage.vue';
+import StatusConfirmSelect from '@/components/admin/StatusConfirmSelect.vue';
 import defaultPlaceholder from '../../../assets/images/defaults/placeholder.png';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;

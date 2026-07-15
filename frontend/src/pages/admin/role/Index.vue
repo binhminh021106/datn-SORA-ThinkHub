@@ -41,7 +41,7 @@
           <div class="d-flex align-items-center justify-content-between gap-2">
             <h6 class="fw-bold mb-0 text-dark text-nowrap"><i class="bi bi-list-ul me-2"></i>Danh sách Roles</h6>
             <select class="form-select form-select-sm ms-2 border-0 bg-light fw-semibold text-secondary" v-model="roleFilterStatus" style="width: 140px; box-shadow: none;" @change="currentPageRoles = 1">
-              <option value="active">Đang hoạt động</option>
+              <option value="active">Hoạt động</option>
               <option value="deleted">Đã xóa</option>
             </select>
           </div>
