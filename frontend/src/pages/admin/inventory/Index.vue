@@ -68,7 +68,7 @@
             <button class="btn btn-outline-secondary border-light-subtle bg-light text-dark fw-bold px-2"
               @click="lowStockThreshold = Math.max(0, lowStockThreshold - 1)">-</button>
             <input type="number" class="form-control text-center fw-bold text-danger border-light-subtle px-1"
-              v-model.number="lowStockThreshold" min="0" @change="if(lowStockThreshold < 0 || lowStockThreshold === '') lowStockThreshold = 0">
+              v-model.number="lowStockThreshold" min="0" @change="lowStockThreshold = (lowStockThreshold < 0 || lowStockThreshold === '') ? 0 : lowStockThreshold">
             <button class="btn btn-outline-secondary border-light-subtle bg-light text-dark fw-bold px-2"
               @click="lowStockThreshold++">+</button>
           </div>
