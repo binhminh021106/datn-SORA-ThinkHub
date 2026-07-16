@@ -111,12 +111,12 @@
           <div v-if="uiState === 'scanning'" class="face-id-scanner w-100 h-100 d-flex flex-column align-items-center justify-content-center position-relative">
             <button type="button" class="btn-close-scanner btn-close btn-close-white position-absolute top-0 end-0 m-4 z-3" aria-label="Close" @click="stopScanningMode"></button>
             
-            <div class="scanner-header text-center mb-5 z-2 position-relative" style="margin-top: -5vh;">
-              <h3 class="text-white fw-bold mb-1">{{ scanningTitle }}</h3>
+            <div class="scanner-header text-center mb-4 z-2 position-relative">
+              <h4 class="text-white fw-bold mb-1">{{ scanningTitle }}</h4>
               <p class="text-white-50 fs-6 mb-0">{{ scanningSubtitle }}</p>
             </div>
 
-            <div class="face-id-ring-container position-relative">
+            <div class="face-id-ring-container position-relative" :class="{'zoom-closer': isRegistering && currentRegStep === 4}">
               <!-- SVG Dashed Ring -->
               <svg class="face-id-svg" viewBox="0 0 100 136">
                 <ellipse class="ring-bg" cx="50" cy="68" rx="66" ry="48" transform="rotate(-90 50 68)"></ellipse>
@@ -136,7 +136,7 @@
 
             <div class="scanner-footer text-center mt-5 z-2 position-relative" style="min-height: 100px;">
               <Transition name="fade" mode="out-in">
-                <div :key="resultMessage || errorMessage" class="fw-bold fs-5 px-4" :class="messageColorClass">
+                <div :key="resultMessage || errorMessage" class="fw-bold fs-6 px-3 lh-sm" :class="messageColorClass">
                   {{ errorMessage || resultMessage || 'Đang chuẩn bị camera...' }}
                 </div>
               </Transition>
@@ -197,7 +197,7 @@ const registrationSteps = [
   "Hơi quay mặt sang TRÁI",
   "Hơi quay mặt sang PHẢI",
   "Hơi ngước mặt lên trên",
-  "Nhìn thẳng và mỉm cười tự nhiên"
+  "Đưa khuôn mặt lại gần camera hơn"
 ];
 const currentRegStep = ref(0);
 const isRegistering = ref(false);
@@ -536,19 +536,18 @@ const validateFaceAction = (landmarks, actionType) => {
     const distNoseBridge = getDistance(pts[27], pts[30]);
     const distNoseChin = getDistance(pts[30], pts[8]);
     const pitchRatio = distNoseBridge / distNoseChin;
-    return pitchRatio < 0.55;
+    return pitchRatio < 0.45;
   }
   
-  if (actionType === 'smile') {
-    const mouthWidth = getDistance(pts[48], pts[54]);
-    const eyeWidth = getDistance(pts[36], pts[45]);
-    const smileRatio = mouthWidth / eyeWidth;
+  if (actionType === 'closer') {
+    const faceWidth = getDistance(pts[0], pts[16]);
     
-    // Check if mouth is open
-    const innerMouthHeight = getDistance(pts[62], pts[66]);
-    const openMouthRatio = innerMouthHeight / eyeWidth;
-    
-    return smileRatio > 0.85 || openMouthRatio > 0.15;
+    if (videoRef.value && videoRef.value.videoWidth) {
+      // Yêu cầu khuôn mặt to hơn (chiếm khoảng >25% chiều rộng video)
+      const ratio = faceWidth / videoRef.value.videoWidth;
+      return ratio > 0.25;
+    }
+    return faceWidth > 220; // Fallback
   }
   
   return true;
@@ -606,7 +605,7 @@ const registerFace = async () => {
   await runFaceAction(async () => {
     const descriptors = [];
     const maxSamples = 5 - (profile.value?.sample_count || 0);
-    const actionMapping = ['straight', 'left', 'right', 'up', 'smile'];
+    const actionMapping = ['straight', 'left', 'right', 'up', 'closer'];
 
     isRegistering.value = true;
     for (let i = 1; i <= maxSamples; i++) {
@@ -979,6 +978,11 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   margin: 0 auto;
+  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.face-id-ring-container.zoom-closer {
+  transform: scale(1.18);
 }
 
 .face-id-svg {
