@@ -261,7 +261,7 @@ watch(rawGalleries, (newData) => {
       const existing = localGalleries.value.find(lg => lg.id === g.id);
       return {
         ...g,
-        localStatus: (existing && existing.isStatusChanged) ? existing.localStatus : g.mappedStatus,
+        localStatus: (existing && existing.localStatus !== existing.mappedStatus) ? existing.localStatus : g.mappedStatus,
         isStatusChanged: existing ? existing.isStatusChanged : false,
         isUpdatingStatus: existing ? existing.isUpdatingStatus : false
       };

@@ -352,8 +352,8 @@ watch(rawCoupons, (newList) => {
       const existing = localCoupons.value.find(lc => lc.id === c.id);
       return {
         ...c,
-        localStatus: existing ? existing.localStatus : c.status,
-        isStatusChanged: existing ? existing.isStatusChanged : false,
+        localStatus: (existing && existing.localStatus !== c.status) ? existing.localStatus : c.status,
+        isStatusChanged: (existing && existing.localStatus !== c.status),
         isUpdatingStatus: existing ? existing.isUpdatingStatus : false
       };
     });

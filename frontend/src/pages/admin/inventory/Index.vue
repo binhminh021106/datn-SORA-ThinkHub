@@ -68,7 +68,7 @@
             <button class="btn btn-outline-secondary border-light-subtle bg-light text-dark fw-bold px-2"
               @click="lowStockThreshold = Math.max(0, lowStockThreshold - 1)">-</button>
             <input type="number" class="form-control text-center fw-bold text-danger border-light-subtle px-1"
-              v-model.number="lowStockThreshold" min="0">
+              v-model.number="lowStockThreshold" min="0" @change="if(lowStockThreshold < 0 || lowStockThreshold === '') lowStockThreshold = 0">
             <button class="btn btn-outline-secondary border-light-subtle bg-light text-dark fw-bold px-2"
               @click="lowStockThreshold++">+</button>
           </div>
@@ -642,7 +642,11 @@ watch(lowStockThreshold, (newVal) => {
   if (newVal === null || newVal === undefined || newVal === '') return;
   const val = parseInt(newVal);
   if (!isNaN(val)) {
-    localStorage.setItem('admin_low_stock_threshold', Math.max(0, val));
+    if (val < 0) {
+      lowStockThreshold.value = 0;
+    } else {
+      localStorage.setItem('admin_low_stock_threshold', val);
+    }
   }
 });
 

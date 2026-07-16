@@ -642,6 +642,10 @@ const saveOrderStatus = async (order) => {
     id: order.id,
     type: 'status',
     payload: { status: order.localStatus, payment_status: order.payment_status, note: noteText }
+  }, {
+    onSettled: () => {
+      order.isUpdatingStatus = false;
+    }
   });
 };
 
@@ -663,6 +667,10 @@ const savePaymentStatus = async (order) => {
     id: order.id,
     type: 'payment',
     payload: { status: order.status, payment_status: order.localPaymentStatus, note: `Kế toán cập nhật thanh toán: ${formatPaymentStatus(order.localPaymentStatus)}` }
+  }, {
+    onSettled: () => {
+      order.isUpdatingPayment = false;
+    }
   });
 };
 
