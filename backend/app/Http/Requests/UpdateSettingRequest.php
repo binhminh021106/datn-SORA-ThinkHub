@@ -25,7 +25,7 @@ class UpdateSettingRequest extends FormRequest
         return [
             'settings' => 'required|array',
             'settings.*.key' => 'required|string',
-            'settings.*.value' => 'nullable',
+            'settings.*.value' => 'present|nullable',
             'settings.*.type' => 'nullable|string|in:string,json,image',
         ];
     }
@@ -47,8 +47,15 @@ class UpdateSettingRequest extends FormRequest
                         foreach ($value as $socialIndex => $social) {
                             $url = $social['url'] ?? '';
                             if (!empty($url)) {
-                                $scheme = parse_url($url, PHP_URL_SCHEME);
-                                if (!in_array(strtolower((string)$scheme), ['http', 'https'])) {
+                                $isValid = false;
+                                if (is_string($url)) {
+                                    $scheme = parse_url($url, PHP_URL_SCHEME);
+                                    $host = parse_url($url, PHP_URL_HOST);
+                                    if (filter_var($url, FILTER_VALIDATE_URL) !== false && !empty($host) && in_array(strtolower((string)$scheme), ['http', 'https'])) {
+                                        $isValid = true;
+                                    }
+                                }
+                                if (!$isValid) {
                                     $validator->errors()->add(
                                         "settings.{$index}.value.{$socialIndex}.url",
                                         'The social URL must be a valid http or https URL.'

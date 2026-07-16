@@ -370,7 +370,10 @@ const cancelStatusChange = (item) => { item.localStatus = item.mappedStatus; ite
 const saveGalleryStatus = (item) => {
   item.isUpdatingStatus = true;
   statusMutation.mutate({ id: item.id, status: item.localStatus }, {
-    onSettled: () => { item.isUpdatingStatus = false; }
+    onSettled: () => { 
+      const current = localGalleries.value.find(g => g.id === item.id);
+      if (current) current.isUpdatingStatus = false; 
+    }
   });
 };
 
@@ -380,7 +383,7 @@ const deleteMutation = useMutation({
   },
   onMutate: async (id) => {
     isMutating.value = true;
-    await queryClient.cancelQueries(['admin', 'galleries']);
+    await queryClient.cancelQueries({ queryKey: ['admin', 'galleries'] });
     const prev = queryClient.getQueryData(['admin', 'galleries']);
     if (prev) queryClient.setQueryData(['admin', 'galleries'], old => old.filter(g => g.id !== id));
     return { prev };
@@ -392,7 +395,7 @@ const deleteMutation = useMutation({
     if (ctx?.prev) queryClient.setQueryData(['admin', 'galleries'], ctx.prev); 
     Swal.fire('Lỗi', err.response?.data?.message || err.message, 'error');
   },
-  onSettled: () => { isMutating.value = false; queryClient.invalidateQueries(['admin', 'galleries']); }
+  onSettled: () => { isMutating.value = false; queryClient.invalidateQueries({ queryKey: ['admin', 'galleries'] }); }
 });
 
 const confirmDelete = (id, title) => {
@@ -405,7 +408,7 @@ const confirmDelete = (id, title) => {
 
 useAdminRefreshListener((payload) => {
   if (payload.module === 'galleries') {
-    queryClient.invalidateQueries(['admin', 'galleries']);
+    queryClient.invalidateQueries({ queryKey: ['admin', 'galleries'] });
     Swal.fire({ toast: true, position: 'bottom-end', icon: 'info', title: 'Kho ảnh đã được cập nhật', showConfirmButton: false, timer: 2000 });
   }
 });

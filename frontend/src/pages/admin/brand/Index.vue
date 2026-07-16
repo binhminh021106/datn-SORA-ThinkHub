@@ -419,7 +419,7 @@ const syncLocalBrands = () => {
     const existing = localBrands.value.find(lb => lb.id === b.id);
     return {
       ...b,
-      localStatus: existing ? existing.localStatus : b.status,
+      localStatus: (existing && existing.isStatusChanged) ? existing.localStatus : b.status,
       isStatusChanged: existing ? existing.isStatusChanged : false
     };
   });
