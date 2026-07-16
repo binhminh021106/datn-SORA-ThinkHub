@@ -20,10 +20,11 @@
             <p class="text-muted small fw-semibold mb-3">
               Hướng Camera về phía <span class="text-brand fw-bold">Màn hình Máy Chủ (Lễ tân)</span> hoặc tải ảnh lên để điểm danh.
             </p>
-
             <!-- Khung Camera -->
             <div class="scanner-container mx-auto position-relative rounded-4 overflow-hidden bg-dark mb-3">
               <div id="reader"></div>
+              <!-- Ngăn chặn click để html5-qrcode không tự động pause -->
+              <div class="position-absolute top-0 start-0 w-100 h-100" style="z-index: 5;" @click.stop.prevent></div>
               <div class="qr-scan-frame" aria-hidden="true">
                 <span class="qr-scan-corner corner-top-left"></span>
                 <span class="qr-scan-corner corner-top-right"></span>
@@ -69,6 +70,7 @@ const isScanning = ref(false);
 const isProcessing = ref(false);
 const isVisible = ref(false);
 const html5QrCode = ref(null);
+let autoResumeInterval = null;
 
 let audioContext = null;
 
@@ -169,19 +171,33 @@ const startScanner = async () => {
     if (!html5QrCode.value) {
       html5QrCode.value = new Html5Qrcode("reader");
     }
+    
     await html5QrCode.value.start(
       { facingMode: "environment" },
-      { fps: 10, qrbox: { width: 200, height: 200 } },
+      { fps: 20, disableFlip: false, aspectRatio: 1.0 },
       onScanSuccess,
       () => {} 
     );
     isScanning.value = true;
+
+    // Tự động resume nếu bị tạm dừng (ví dụ khi Phone Link mở popup làm mất focus)
+    autoResumeInterval = setInterval(() => {
+      if (html5QrCode.value && html5QrCode.value.getState() === 3) {
+        html5QrCode.value.resume();
+      }
+    }, 1000);
+
   } catch (err) {
     console.warn("Không thể bật Camera. Vui lòng cấp quyền hoặc dùng tính năng Upload/Paste ảnh.", err);
   }
 };
 
 const stopScanner = async () => {
+  if (autoResumeInterval) {
+    clearInterval(autoResumeInterval);
+    autoResumeInterval = null;
+  }
+
   if (html5QrCode.value) {
     if (html5QrCode.value.isScanning) {
       await html5QrCode.value.stop().catch(e => console.warn(e));
@@ -254,7 +270,7 @@ const closeModal = () => {
   onModalHidden();
 };
 
-const openModal = () => {
+const openModal = async () => {
   isVisible.value = true;
   if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
   window.addEventListener('paste', handlePaste);
@@ -277,7 +293,6 @@ onUnmounted(() => {
 
 :deep(video) {
   object-fit: cover !important;
-  transform: scaleX(-1) !important; /* Lật gương camera để dễ nhìn */
   width: 100% !important;
   height: 100% !important;
 }
@@ -329,16 +344,14 @@ onUnmounted(() => {
   height: 100%;
   position: absolute;
   inset: 0;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
-#reader > * {
-  width: 100% !important;
-  height: 100% !important;
-  display: block !important;
-}
-
-:deep(#reader #qr-shaded-region) {
+/* Ẩn UI "Scanner paused" của thư viện nếu nó kịp hiện ra */
+:deep(#reader > div:nth-child(n+2)) {
   display: none !important;
 }
 
@@ -348,7 +361,6 @@ onUnmounted(() => {
   aspect-ratio: 1 / 1;
   min-height: 0;
   position: relative;
-  box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
 }
 
 .qr-scan-frame {
@@ -411,16 +423,6 @@ onUnmounted(() => {
 .qr-upload-panel .form-control:focus {
   border-color: #009981;
   box-shadow: 0 0 0 0.2rem rgba(0, 153, 129, 0.12);
-}
-
-#reader video,
-#reader canvas,
-#reader .html5-qrcode-video,
-#reader .html5-qrcode-canvas,
-#reader .html5-qrcode-root {
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important;
 }
 
 @media (max-width: 575.98px) {

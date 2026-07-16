@@ -22,7 +22,7 @@
         </div>
       </div>
 
-      <div class="row g-3 mb-4" v-if="isSummaryLoading">
+      <div class="row g-2 mb-2" v-if="isSummaryLoading">
         <div class="col-xl-3 col-md-6" v-for="i in 4" :key="'kpi-skel-' + i">
           <div class="card border-0 shadow-sm rounded-4 h-100">
             <div class="card-body p-3 d-flex align-items-center gap-3">
@@ -36,7 +36,7 @@
         </div>
       </div>
 
-      <div class="row g-3 mb-4" v-else>
+      <div class="row g-2 mb-2" v-else>
         <div class="col-xl-3 col-md-6" v-for="kpi in kpiSummaries" :key="kpi.title">
           <div class="card border-0 shadow-sm rounded-4 h-100">
             <div class="card-body p-3 d-flex align-items-center gap-3">
@@ -252,7 +252,7 @@
             </div>
           </div>
 
-          <div class="row g-3 mb-4" v-if="isDailyLoading">
+          <div class="row g-2 mb-2" v-if="isDailyLoading">
             <div class="col-6 col-lg-3" v-for="i in 4" :key="'detail-skel-' + i">
               <div class="card border-0 shadow-sm rounded-4 bg-light-subtle">
                 <div class="card-body p-3 d-flex align-items-center gap-3">
@@ -266,7 +266,7 @@
             </div>
           </div>
 
-          <div class="row g-3 mb-4" v-else>
+          <div class="row g-2 mb-2" v-else>
             <div class="col-6 col-lg-3">
               <div class="card border-0 shadow-sm rounded-4 cursor-pointer filter-metric-card"
                 :class="statusFilter === 'all' ? 'active-metric-filter' : 'bg-light-subtle'"

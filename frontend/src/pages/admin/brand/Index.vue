@@ -10,7 +10,7 @@
     </div>
 
     <div class="container-fluid py-4" v-else>
-      <div class="row mb-4 align-items-center">
+      <div class="row mb-3 align-items-center">
         <div class="col-md-6">
           <h3 class="fw-bold text-dark mb-0">Thương hiệu (Brands)</h3>
         </div>
@@ -66,7 +66,7 @@
 
       <div class="card border-0 shadow-sm rounded-4 mb-4" :class="{ 'border-warning border-2': isReorderMode }">
         <div
-          class="card-header bg-white border-bottom-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+          class="card-header bg-white border-bottom-0 pt-2 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
           <h6 class="fw-bold mb-0 text-dark">
             <i class="bi" :class="isReorderMode ? 'bi-arrows-move text-warning' : 'bi-list-ul'"></i>
             {{ isReorderMode ? 'Kéo thả dòng để thay đổi thứ tự ưu tiên' : 'Danh sách Thương hiệu' }}

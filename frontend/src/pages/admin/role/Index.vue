@@ -2,7 +2,7 @@
   <div class="role-index-wrapper ">
     
     <div class="container-fluid py-4" v-if="!isPageLoading">
-      <div class="row mb-4 align-items-center">
+      <div class="row mb-3 align-items-center">
         <div class="col-md-6">
           <h3 class="fw-bold text-dark mb-0">Quản lý Phân Quyền & Cấp Độ</h3>
         </div>
@@ -14,7 +14,7 @@
         </div>
       </div>
 
-      <div class="mb-4">
+      <div class="mb-2">
         <ul class="nav nav-underline border-bottom mb-2 pb-1" style="flex-wrap: wrap !important; gap: 8px;">
           <li class="nav-item">
             <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab"

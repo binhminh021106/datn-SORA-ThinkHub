@@ -1,40 +1,59 @@
 <template>
   <!-- Thêm class động để tự động đổi màu nền Header khi bật Dark Mode -->
   <nav class="app-header navbar navbar-expand shadow-sm px-3 py-2 border-bottom transition-all"
-       :class="isDarkMode ? 'bg-dark border-secondary' : 'bg-white'">
+    :class="isDarkMode ? 'bg-dark border-secondary' : 'bg-white'">
     <div class="container-fluid admin-header-container">
-      
+
       <!-- ĐỒNG HỒ DIGITAL (Bên trái) - Đã thay bằng FLIP CLOCK -->
       <div class="header-clock d-none d-xl-flex align-items-center" v-if="isLoggedIn">
-        <div class="flip-clock-container d-flex align-items-center px-3 py-1 rounded shadow-sm transition-all" 
-             :class="isDarkMode ? 'bg-black border border-secondary' : 'bg-dark border'">
-          
+        <div class="flip-clock-container d-flex align-items-center px-3 py-1 rounded shadow-sm transition-all"
+          :class="isDarkMode ? 'bg-black border border-secondary' : 'bg-dark border'">
+
           <div class="flip-clock-mini">
             <!-- GIỜ -->
             <div class="flip-card-mini" ref="hoursRef">
-                <div class="half top static"><div class="num">00</div></div>
-                <div class="half bottom static"><div class="num">00</div></div>
+              <div class="half top static">
+                <div class="num">00</div>
+              </div>
+              <div class="half bottom static">
+                <div class="num">00</div>
+              </div>
             </div>
-            
-            <div class="separator-mini"><div class="dot"></div><div class="dot"></div></div>
+
+            <div class="separator-mini">
+              <div class="dot"></div>
+              <div class="dot"></div>
+            </div>
 
             <!-- PHÚT -->
             <div class="flip-card-mini" ref="minutesRef">
-                <div class="half top static"><div class="num">00</div></div>
-                <div class="half bottom static"><div class="num">00</div></div>
+              <div class="half top static">
+                <div class="num">00</div>
+              </div>
+              <div class="half bottom static">
+                <div class="num">00</div>
+              </div>
             </div>
 
-            <div class="separator-mini"><div class="dot"></div><div class="dot"></div></div>
+            <div class="separator-mini">
+              <div class="dot"></div>
+              <div class="dot"></div>
+            </div>
 
             <!-- GIÂY -->
             <div class="flip-card-mini" ref="secondsRef">
-                <div class="half top static"><div class="num">00</div></div>
-                <div class="half bottom static"><div class="num">00</div></div>
+              <div class="half top static">
+                <div class="num">00</div>
+              </div>
+              <div class="half bottom static">
+                <div class="num">00</div>
+              </div>
             </div>
           </div>
-          
+
           <!-- AM/PM Indicator (Đã ép nằm xuống đáy và cách xa thẻ giây một chút) -->
-          <span class="ms-2 fw-bold align-self-end" style="color: #4ade80; font-size: 0.85rem; font-family: 'Oswald', sans-serif; letter-spacing: 1px; text-shadow: 0 1px 3px rgba(74, 222, 128, 0.4); line-height: 1; margin-bottom: 4px;">
+          <span class="ms-2 fw-bold align-self-end"
+            style="color: #4ade80; font-size: 0.85rem; font-family: 'Oswald', sans-serif; letter-spacing: 1px; text-shadow: 0 1px 3px rgba(74, 222, 128, 0.4); line-height: 1; margin-bottom: 4px;">
             {{ currentTime.ampm }}
           </span>
 
@@ -44,7 +63,8 @@
       <ul class="navbar-nav header-actions ms-auto mb-2 mb-lg-0">
         <!-- NÚT MỞ TRẠM QUÉT (Chỉ dành cho Super Admin) -->
         <li class="nav-item me-2 d-flex align-items-center" v-if="isLoggedIn && isSuperAdmin">
-          <button class="btn station-qr-btn rounded-3 btn-sm fw-bold px-3 d-flex align-items-center" title="QR điểm danh" @click="openStation">
+          <button class="btn station-qr-btn rounded-3 btn-sm fw-bold px-3 d-flex align-items-center"
+            title="QR điểm danh" @click="openStation">
             <i class="bi bi-display me-2 fs-6"></i>
             QR
           </button>
@@ -52,17 +72,24 @@
 
         <!-- NÚT CHAT HỖ TRỢ với badge thông báo -->
         <li class="nav-item me-2 d-flex align-items-center" v-if="isLoggedIn">
-          <router-link :to="{ name: 'admin-chat' }" class="btn btn-chat-notify rounded-3 btn-sm fw-bold px-3 d-flex align-items-center position-relative" @click="unreadChatCount = 0">
+          <router-link :to="{ name: 'admin-chat' }"
+            class="btn btn-chat-notify rounded-3 btn-sm fw-bold px-3 d-flex align-items-center position-relative"
+            @click="unreadChatCount = 0">
             <i class="bi bi-chat-dots-fill "></i>
-            <span v-if="unreadChatCount > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
+            <span v-if="unreadChatCount > 0"
+              class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+              style="font-size: 0.65rem;">
               {{ unreadChatCount > 9 ? '9+' : unreadChatCount }}
             </span>
           </router-link>
         </li>
 
         <!-- Nút chấm công -->
-        <li class="nav-item attendance-menu-container position-relative d-flex align-items-center" v-if="showAttendanceButton" ref="attendanceMenuContainer">
-          <button class="btn btn-brand attendance-main-btn rounded-3 btn-sm fw-bold px-3 d-flex align-items-center text-white shadow-sm" @click="toggleAttendanceMenu" :disabled="isCheckingStatus">
+        <li class="nav-item attendance-menu-container position-relative d-flex align-items-center"
+          v-if="showAttendanceButton" ref="attendanceMenuContainer">
+          <button
+            class="btn btn-brand attendance-main-btn rounded-3 btn-sm fw-bold px-3 d-flex align-items-center text-white shadow-sm"
+            @click="toggleAttendanceMenu" :disabled="isCheckingStatus">
             <span v-if="isCheckingStatus" class="spinner-border spinner-border-sm me-2"></span>
             <template v-else>
               <i v-if="attendanceState === 'working'" class="bi bi-box-arrow-right me-2 fs-5"></i>
@@ -74,12 +101,15 @@
             </template>
           </button>
 
-          <div class="attendance-menu dropdown-menu dropdown-menu-end shadow border-0 mt-2" :class="{ show: isAttendanceMenuActive }">
-            <button class="dropdown-item d-flex align-items-center gap-2 py-2" type="button" @click="handleAttendanceOption('qr')">
+          <div class="attendance-menu dropdown-menu dropdown-menu-end shadow border-0 mt-2"
+            :class="{ show: isAttendanceMenuActive }">
+            <button class="dropdown-item d-flex align-items-center gap-2 py-2" type="button"
+              @click="handleAttendanceOption('qr')">
               <i class="bi bi-qr-code-scan text-brand"></i>
               <span>QR</span>
             </button>
-            <button class="dropdown-item d-flex align-items-center gap-2 py-2" type="button" @click="handleAttendanceOption('face')">
+            <button class="dropdown-item d-flex align-items-center gap-2 py-2" type="button"
+              @click="handleAttendanceOption('face')">
               <i class="bi bi-person-bounding-box text-brand"></i>
               <span>FACE ID</span>
             </button>
@@ -88,7 +118,8 @@
 
         <!-- NÚT TOGGLE DARK MODE -->
         <li class="nav-item me-2 d-flex align-items-center" v-if="isLoggedIn && isSuperAdmin">
-          <button class="btn face-manage-btn rounded-3 btn-sm fw-bold px-3 d-flex align-items-center" title="Quản lý khuôn mặt" @click="openFaceRecognitionTest">
+          <button class="btn face-manage-btn rounded-3 btn-sm fw-bold px-3 d-flex align-items-center"
+            title="Quản lý khuôn mặt" @click="openFaceRecognitionTest">
             <i class="bi bi-person-bounding-box me-2 fs-6"></i>
             Quản lý khuôn mặt
           </button>
@@ -101,10 +132,11 @@
           <button @click="toggleNotiMenu"
             class="btn rounded-circle shadow-sm d-flex align-items-center justify-content-center p-0 theme-toggle-btn position-relative"
             :class="isDarkMode ? 'btn-secondary border-secondary' : 'btn-light border-light'"
-            style="width: 36px; height: 36px; transition: all 0.3s;"
-            title="Thông báo hệ thống">
+            style="width: 36px; height: 36px; transition: all 0.3s;" title="Thông báo hệ thống">
             <i class="bi bi-bell-fill" :class="isDarkMode ? 'text-light' : 'text-brand'"></i>
-            <span v-if="unreadCount > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-white dark:border-dark" style="font-size: 0.65rem; padding: 0.35em 0.5em;">
+            <span v-if="unreadCount > 0"
+              class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-white dark:border-dark"
+              style="font-size: 0.65rem; padding: 0.35em 0.5em;">
               {{ unreadCount > 99 ? '99+' : unreadCount }}
             </span>
           </button>
@@ -112,101 +144,108 @@
           <div class="dropdown-menu dropdown-menu-end shadow-lg border mt-2 transition-all p-0 overflow-hidden"
             :class="[{ 'show': isNotiMenuActive }, isDarkMode ? 'bg-dark border-secondary' : 'bg-white border-0']"
             style="width: 350px; right: -10px !important;">
-            <div class="p-3 border-bottom d-flex justify-content-between align-items-center" :class="isDarkMode ? 'border-secondary' : ''">
-               <h6 class="m-0 fw-bold font-sans-vn" :class="isDarkMode ? 'text-white' : 'text-dark'">Thông báo mới</h6>
-               <a href="#" v-if="unreadCount > 0" @click.prevent="markAllAsRead" class="small fw-semibold text-decoration-none text-brand transition-all hover-opacity">Đánh dấu đọc hết</a>
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center"
+              :class="isDarkMode ? 'border-secondary' : ''">
+              <h6 class="m-0 fw-bold font-sans-vn" :class="isDarkMode ? 'text-white' : 'text-dark'">Thông báo mới</h6>
+              <a href="#" v-if="unreadCount > 0" @click.prevent="markAllAsRead"
+                class="small fw-semibold text-decoration-none text-brand transition-all hover-opacity">Đánh dấu đọc
+                hết</a>
             </div>
-            
+
             <div class="custom-scrollbar-y" style="max-height: 400px; overflow-y: auto;">
-               <div v-if="isLoadingNoti" class="text-center p-4">
-                  <div class="spinner-border spinner-border-sm text-brand" role="status"></div>
-               </div>
-               <div v-else-if="notifications.length === 0" class="text-center p-5 text-muted small font-sans-vn">
-                  <i class="bi bi-bell-slash fs-2 d-block mb-2 opacity-50"></i>
-                  Bạn đã xem hết thông báo.
-               </div>
-               <div v-else>
-                  <a href="#" v-for="noti in notifications" :key="noti.id" 
-                     @click.prevent="handleNotiClick(noti)"
-                     class="dropdown-item p-3 border-bottom d-flex align-items-start gap-3 transition-all text-wrap"
-                     :class="[
-                        isDarkMode ? 'border-secondary hover-dark text-light' : 'text-dark hover-light',
-                        !noti.read_at ? (isDarkMode ? 'bg-secondary bg-opacity-25' : 'bg-brand-soft') : ''
-                     ]">
-                     <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 mt-1 shadow-sm position-relative"
-                          :class="getIconClass(noti.data?.alert_type || noti.data?.type)" style="width: 38px; height: 38px;">
-                        <i class="bi text-white fs-6" :class="getIconName(noti.data?.alert_type || noti.data?.type)"></i>
-                        <span v-if="!noti.read_at" class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-white rounded-circle" style="width: 10px; height: 10px;"></span>
-                     </div>
-                     <div class="font-sans-vn">
-                        <h6 class="fw-bold mb-1 line-clamp-2" style="font-size: 0.9rem;" :class="!noti.read_at ? (isDarkMode ? 'text-white' : 'text-dark') : 'text-muted'">
-                           {{ noti.data?.title }}
-                        </h6>
-                        <p class="small mb-1 opacity-75 line-clamp-2" style="font-size: 0.8rem; line-height: 1.4;">{{ noti.data?.message }}</p>
-                        <small class="text-muted font-monospace" style="font-size: 0.7rem;"><i class="bi bi-clock me-1"></i>{{ formatTime(noti.created_at) }}</small>
-                     </div>
-                  </a>
-               </div>
+              <div v-if="isLoadingNoti" class="text-center p-4">
+                <div class="spinner-border spinner-border-sm text-brand" role="status"></div>
+              </div>
+              <div v-else-if="notifications.length === 0" class="text-center p-5 text-muted small font-sans-vn">
+                <i class="bi bi-bell-slash fs-2 d-block mb-2 opacity-50"></i>
+                Bạn đã xem hết thông báo.
+              </div>
+              <div v-else>
+                <a href="#" v-for="noti in notifications" :key="noti.id" @click.prevent="handleNotiClick(noti)"
+                  class="dropdown-item p-3 border-bottom d-flex align-items-start gap-3 transition-all text-wrap"
+                  :class="[
+                    isDarkMode ? 'border-secondary hover-dark text-light' : 'text-dark hover-light',
+                    !noti.read_at ? (isDarkMode ? 'bg-secondary bg-opacity-25' : 'bg-brand-soft') : ''
+                  ]">
+                  <div
+                    class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 mt-1 shadow-sm position-relative"
+                    :class="getIconClass(noti.data?.alert_type || noti.data?.type)" style="width: 38px; height: 38px;">
+                    <i class="bi text-white fs-6" :class="getIconName(noti.data?.alert_type || noti.data?.type)"></i>
+                    <span v-if="!noti.read_at"
+                      class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-white rounded-circle"
+                      style="width: 10px; height: 10px;"></span>
+                  </div>
+                  <div class="font-sans-vn">
+                    <h6 class="fw-bold mb-1 line-clamp-2" style="font-size: 0.9rem;"
+                      :class="!noti.read_at ? (isDarkMode ? 'text-white' : 'text-dark') : 'text-muted'">
+                      {{ noti.data?.title }}
+                    </h6>
+                    <p class="small mb-1 opacity-75 line-clamp-2" style="font-size: 0.8rem; line-height: 1.4;">{{
+                      noti.data?.message }}</p>
+                    <small class="text-muted font-monospace" style="font-size: 0.7rem;"><i
+                        class="bi bi-clock me-1"></i>{{
+                          formatTime(noti.created_at) }}</small>
+                  </div>
+                </a>
+              </div>
             </div>
           </div>
         </li>
 
         <li class="nav-item me-3" v-if="isLoggedIn">
-          <button @click="toggleTheme" 
-                  class="btn rounded-circle shadow-sm d-flex align-items-center justify-content-center p-0 theme-toggle-btn"
-                  :class="isDarkMode ? 'btn-secondary border-secondary' : 'btn-light border-light'"
-                  style="width: 36px; height: 36px; transition: all 0.3s;"
-                  :title="isDarkMode ? 'Chuyển sang nền sáng' : 'Chuyển sang nền tối'">
-            <i class="bi" :class="isDarkMode ? 'bi-moon-stars-fill text-light fs-6' : 'bi-sun-fill text-warning fs-5'"></i>
+          <button @click="toggleTheme"
+            class="btn rounded-circle shadow-sm d-flex align-items-center justify-content-center p-0 theme-toggle-btn"
+            :class="isDarkMode ? 'btn-secondary border-secondary' : 'btn-light border-light'"
+            style="width: 36px; height: 36px; transition: all 0.3s;"
+            :title="isDarkMode ? 'Chuyển sang nền sáng' : 'Chuyển sang nền tối'">
+            <i class="bi"
+              :class="isDarkMode ? 'bi-moon-stars-fill text-light fs-6' : 'bi-sun-fill text-warning fs-5'"></i>
           </button>
         </li>
 
         <!-- Trường hợp 1: Đã đăng nhập - Hiển thị Menu User -->
         <li v-if="isLoggedIn" class="nav-item dropdown user-menu-container" ref="userMenuContainer">
-          <a href="#" @click.prevent="toggleUserMenu" class="nav-link d-flex align-items-center dropdown-toggle text-decoration-none"
-             :class="isDarkMode ? 'text-light' : 'text-dark'">
-            <SoraImage 
-              :src="adminUser.avatar" 
-              :placeholder="defaultAvatar"
-              imgClass="user-image rounded-circle shadow-sm me-2" 
-              :width="36" :height="36"
-              alt="User Image" 
-            />
-            <span class="d-none d-md-inline fw-semibold text-truncate" style="max-width: 150px;">{{ adminUser.name }}</span>
+          <a href="#" @click.prevent="toggleUserMenu"
+            class="nav-link d-flex align-items-center dropdown-toggle text-decoration-none"
+            :class="isDarkMode ? 'text-light' : 'text-dark'">
+            <SoraImage :src="adminUser.avatar" :placeholder="defaultAvatar"
+              imgClass="user-image rounded-circle shadow-sm me-2" :width="36" :height="36" alt="User Image" />
+            <span class="d-none d-md-inline fw-semibold text-truncate" style="max-width: 150px;">{{ adminUser.name
+              }}</span>
           </a>
-          
-          <ul class="dropdown-menu dropdown-menu-end shadow border mt-2 transition-all" 
-              :class="[{ 'show': isUserMenuActive }, isDarkMode ? 'bg-dark border-secondary' : 'bg-white border-0']">
+
+          <ul class="dropdown-menu dropdown-menu-end shadow border mt-2 transition-all"
+            :class="[{ 'show': isUserMenuActive }, isDarkMode ? 'bg-dark border-secondary' : 'bg-white border-0']">
             <li class="user-header-modern text-white text-center p-3 rounded-top">
               <div class="d-flex justify-content-center mb-2">
-                <SoraImage 
-                  :src="adminUser.avatar" 
-                  :placeholder="defaultAvatar"
-                  imgClass="rounded-circle shadow" 
-                  :width="60" :height="60"
-                  alt="User Image" 
-                />
+                <SoraImage :src="adminUser.avatar" :placeholder="defaultAvatar" imgClass="rounded-circle shadow"
+                  :width="60" :height="60" alt="User Image" />
               </div>
               <p class="mb-0 fw-bold">{{ adminUser.name }}</p>
               <small class="text-light opacity-75">{{ adminUser.roleName }}</small>
             </li>
-            
+
             <li class="mt-2">
-              <router-link :to="{ name: 'admin-profile' }" class="dropdown-item py-2" :class="isDarkMode ? 'text-light hover-dark' : ''" @click="isUserMenuActive = false">
+              <router-link :to="{ name: 'admin-profile' }" class="dropdown-item py-2"
+                :class="isDarkMode ? 'text-light hover-dark' : ''" @click="isUserMenuActive = false">
                 <i class="bi bi-person me-2"></i> Hồ sơ cá nhân
               </router-link>
             </li>
-            
+
             <!-- LINK ĐẾN LỊCH SỬ CHẤM CÔNG -->
             <li>
-              <router-link :to="{ name: 'admin-attendance-history' }" class="dropdown-item py-2" :class="isDarkMode ? 'text-light hover-dark' : ''" @click="isUserMenuActive = false">
+              <router-link :to="{ name: 'admin-attendance-history' }" class="dropdown-item py-2"
+                :class="isDarkMode ? 'text-light hover-dark' : ''" @click="isUserMenuActive = false">
                 <i class="bi bi-calendar2-check me-2"></i> Lịch sử chấm công
               </router-link>
             </li>
 
-            <li><hr class="dropdown-divider" :class="isDarkMode ? 'border-secondary' : ''"></li>
             <li>
-              <a href="#" @click.prevent="handleLogout" class="dropdown-item py-2 fw-bold" :class="isDarkMode ? 'text-danger hover-dark' : 'text-danger'">
+              <hr class="dropdown-divider" :class="isDarkMode ? 'border-secondary' : ''">
+            </li>
+            <li>
+              <a href="#" @click.prevent="handleLogout" class="dropdown-item py-2 fw-bold"
+                :class="isDarkMode ? 'text-danger hover-dark' : 'text-danger'">
                 <i class="bi bi-box-arrow-right me-2"></i> Đăng xuất
               </a>
             </li>
@@ -221,7 +260,7 @@
         </li>
       </ul>
     </div>
-    
+
     <QrGeneratorModal ref="qrModalRef" @success="fetchAttendanceState" />
     <FaceRecognitionTestModal ref="faceRecognitionModalRef" @attendance-success="fetchAttendanceState" />
   </nav>
@@ -281,7 +320,7 @@ const triggerFlip = (card, newValue) => {
   if (!card) return;
   const topStatic = card.querySelector('.top.static .num');
   const bottomStatic = card.querySelector('.bottom.static .num');
-  
+
   if (!topStatic || !bottomStatic) return;
   const currentValue = topStatic.innerText;
   if (currentValue === newValue) return;
@@ -305,8 +344,8 @@ const triggerFlip = (card, newValue) => {
   setTimeout(() => {
     if (flapTop.parentNode) flapTop.remove();
     if (flapBottom.parentNode) flapBottom.remove();
-    bottomStatic.innerText = newValue; 
-  }, 650); 
+    bottomStatic.innerText = newValue;
+  }, 650);
 };
 
 const updateTime = () => {
@@ -314,25 +353,25 @@ const updateTime = () => {
   let hours = now.getHours();
   const ampm = hours >= 12 ? 'PM' : 'AM';
   hours = hours % 12;
-  hours = hours ? hours : 12; 
-  
+  hours = hours ? hours : 12;
+
   const strHours = String(hours).padStart(2, '0');
   const strMinutes = String(now.getMinutes()).padStart(2, '0');
   const strSeconds = String(now.getSeconds()).padStart(2, '0');
-  
+
   currentTime.value.ampm = ampm;
 
   if (hoursRef.value && minutesRef.value && secondsRef.value) {
     if (isFirstRun) {
       hoursRef.value.querySelector('.top.static .num').innerText = strHours;
       hoursRef.value.querySelector('.bottom.static .num').innerText = strHours;
-      
+
       minutesRef.value.querySelector('.top.static .num').innerText = strMinutes;
       minutesRef.value.querySelector('.bottom.static .num').innerText = strMinutes;
-      
+
       secondsRef.value.querySelector('.top.static .num').innerText = strSeconds;
       secondsRef.value.querySelector('.bottom.static .num').innerText = strSeconds;
-      
+
       isFirstRun = false;
     } else {
       triggerFlip(hoursRef.value, strHours);
@@ -393,7 +432,7 @@ const fetchAttendanceState = async () => {
 const fetchAdminProfile = async () => {
   const token = getAdminToken();
   if (!token) throw new Error('Không tìm thấy token xác thực');
-  
+
   const response = await adminApiClient.get('/profile');
   return response.data?.data ?? response.data;
 };
@@ -404,20 +443,20 @@ const { data: adminProfileData } = useQuery({
   enabled: isLoggedIn,
   staleTime: 5 * 60 * 1000,
   initialData: () => {
-      const savedInfo = localStorage.getItem('admin_info') || sessionStorage.getItem('admin_info');
-      if (!savedInfo) return undefined;
-      try {
-        return JSON.parse(savedInfo);
-      } catch {
-        return undefined;
-      }
+    const savedInfo = localStorage.getItem('admin_info') || sessionStorage.getItem('admin_info');
+    if (!savedInfo) return undefined;
+    try {
+      return JSON.parse(savedInfo);
+    } catch {
+      return undefined;
+    }
   }
 });
 
 const adminUser = computed(() => {
   const data = adminProfileData.value;
   const roleId = localStorage.getItem('admin_role');
-  
+
   if (data) {
     return {
       name: data.fullname || data.name || 'Quản trị viên',
@@ -425,7 +464,7 @@ const adminUser = computed(() => {
       avatar: data.avatar_url ? getFullImage(data.avatar_url) : defaultAvatar
     };
   }
-  
+
   return {
     name: 'Guest',
     roleName: 'Chưa xác định',
@@ -510,7 +549,7 @@ const handleNotiClick = (noti) => {
 const formatTime = (dateString) => {
   if (!dateString) return '';
   const d = new Date(dateString);
-  return `${d.toLocaleDateString('vi-VN')} lúc ${d.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}`;
+  return `${d.toLocaleDateString('vi-VN')} lúc ${d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
 };
 
 const getIconClass = (type) => {
@@ -537,7 +576,7 @@ const toggleAttendanceMenu = async () => {
 
 const handleLogout = () => {
   isUserMenuActive.value = false;
-  
+
   Swal.fire({
     title: 'Xác nhận đăng xuất?',
     text: "Bạn sẽ phải đăng nhập lại để tiếp tục quản trị!",
@@ -573,7 +612,7 @@ const closeUserMenu = (event) => {
   if (attendanceMenuContainer.value && !attendanceMenuContainer.value.contains(event.target)) {
     isAttendanceMenuActive.value = false;
   }
-  
+
   if (notiMenuContainer.value && !notiMenuContainer.value.contains(event.target)) {
     isNotiMenuActive.value = false;
   }
@@ -587,10 +626,10 @@ let adminAlertChannelName = null;
 onMounted(() => {
   initTheme();
   document.addEventListener('click', closeUserMenu);
-  
+
   updateTime();
   timeInterval = setInterval(updateTime, 1000);
-  
+
   fetchAttendanceState();
 
   if (isLoggedIn.value) {
@@ -616,33 +655,33 @@ onMounted(() => {
           }, 4000);
         }
       });
-      
+
     // Lắng nghe thông báo AdminAlert
     const adminData = adminProfileData.value || JSON.parse(localStorage.getItem('admin_info') || '{}');
     if (adminData && adminData.id) {
       adminAlertChannelName = `App.Models.Admin.${adminData.id}`;
       window.Echo.private(adminAlertChannelName)
         .listen('.AdminAlert', (e) => { // Tên event ngắn gọn có dấu chấm
-           // Chèn thông báo lên đầu danh sách
-           notifications.value.unshift({
-             id: e.id,
-             data: e,
-             read_at: null,
-             created_at: new Date().toISOString()
-           });
-           unreadCount.value++;
+          // Chèn thông báo lên đầu danh sách
+          notifications.value.unshift({
+            id: e.id,
+            data: e,
+            read_at: null,
+            created_at: new Date().toISOString()
+          });
+          unreadCount.value++;
 
-           // Bắn Toast SweetAlert thông báo nhanh
-           Swal.fire({
-             toast: true,
-             position: 'bottom-end',
-             icon: (e.alert_type || e.type) === 'danger' ? 'error' : ((e.alert_type || e.type) === 'warning' ? 'warning' : 'info'),
-             title: e.title,
-             text: e.message,
-             showConfirmButton: false,
-             timer: 5000,
-             timerProgressBar: true
-           });
+          // Bắn Toast SweetAlert thông báo nhanh
+          Swal.fire({
+            toast: true,
+            position: 'bottom-end',
+            icon: (e.alert_type || e.type) === 'danger' ? 'error' : ((e.alert_type || e.type) === 'warning' ? 'warning' : 'info'),
+            title: e.title,
+            text: e.message,
+            showConfirmButton: false,
+            timer: 5000,
+            timerProgressBar: true
+          });
         });
     }
   }
@@ -652,7 +691,7 @@ onUnmounted(() => {
   document.removeEventListener('click', closeUserMenu);
   if (timeInterval) clearInterval(timeInterval);
   if (chatEchoChannel) window.Echo?.leave('admin.chat');
-  
+
   if (window.Echo && adminAlertChannelName) {
     window.Echo.leave(adminAlertChannelName);
     adminAlertChannelName = null;
@@ -784,21 +823,23 @@ const handleAttendanceOption = async (method) => {
   gap: 4px;
   align-items: center;
   font-family: 'Oswald', sans-serif;
-  box-sizing: border-box; 
+  box-sizing: border-box;
 }
 
 /* FIX: Mở rộng chiều ngang (width) để chữ không bị lẹm */
 .flip-card-mini {
   position: relative;
-  width: 38px;      /* Cân đối lại chiều ngang, rộng hơn cũ 6px */
-  height: 42px;     
-  background: #111; 
+  width: 38px;
+  /* Cân đối lại chiều ngang, rộng hơn cũ 6px */
+  height: 42px;
+  background: #111;
   border-radius: 6px;
-  font-size: 32px;  /* Giảm cỡ chữ 1 tẹo cho cân đối với width mới */
+  font-size: 32px;
+  /* Giảm cỡ chữ 1 tẹo cho cân đối với width mới */
   font-weight: 700;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
   perspective: 500px;
-  color: #4ade80;   
+  color: #4ade80;
 }
 
 /* NỬA TRÊN VÀ DƯỚI */
@@ -808,7 +849,7 @@ const handleAttendanceOption = async (method) => {
   width: 100%;
   height: 50%;
   overflow: hidden;
-  background: #1e1e24; 
+  background: #1e1e24;
   transform: translateZ(0);
   will-change: transform;
 }
@@ -831,13 +872,23 @@ const handleAttendanceOption = async (method) => {
 
 /* Đường cắt chia đôi */
 :deep(.half.top::after) {
-  content: ''; position: absolute; bottom: 0; left: 0; right: 0;
-  height: 1px; background: rgba(0, 0, 0, 0.4);
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.4);
 }
 
 :deep(.half.bottom::after) {
-  content: ''; position: absolute; top: 0; left: 0; right: 0;
-  height: 1px; background: rgba(255, 255, 255, 0.05);
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 /* FIX: Căn chỉnh chữ bên trong */
@@ -845,37 +896,61 @@ const handleAttendanceOption = async (method) => {
   position: absolute;
   left: 0;
   width: 100%;
-  height: 42px !important;     
-  line-height: 42px !important; 
+  height: 42px !important;
+  line-height: 42px !important;
   text-align: center;
   text-shadow: 0 1px 4px rgba(74, 222, 128, 0.3);
-  margin: 0; padding: 0;
+  margin: 0;
+  padding: 0;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0px;
   backface-visibility: hidden;
   /* Thêm padding nhẹ nếu cần, nhưng mở width thường là đủ */
 }
 
-:deep(.half.top .num) { top: 0; }
-:deep(.half.bottom .num) { bottom: 0; }
-:deep(.flap) { z-index: 10; }
+:deep(.half.top .num) {
+  top: 0;
+}
+
+:deep(.half.bottom .num) {
+  bottom: 0;
+}
+
+:deep(.flap) {
+  z-index: 10;
+}
 
 :deep(.flap.top) {
   animation: flipTopMini 0.3s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
 }
+
 :deep(.flap.bottom) {
   transform: rotateX(90deg);
   animation: flipBottomMini 0.3s cubic-bezier(0.4, 0.0, 0.2, 1) 0.3s forwards;
 }
 
 @keyframes flipTopMini {
-  0% { transform: rotateX(0deg); filter: brightness(1); }
-  100% { transform: rotateX(-90deg); filter: brightness(0.3); }
+  0% {
+    transform: rotateX(0deg);
+    filter: brightness(1);
+  }
+
+  100% {
+    transform: rotateX(-90deg);
+    filter: brightness(0.3);
+  }
 }
 
 @keyframes flipBottomMini {
-  0% { transform: rotateX(90deg); filter: brightness(0.3); }
-  100% { transform: rotateX(0deg); filter: brightness(1); }
+  0% {
+    transform: rotateX(90deg);
+    filter: brightness(0.3);
+  }
+
+  100% {
+    transform: rotateX(0deg);
+    filter: brightness(1);
+  }
 }
 
 /* Dấu : phân cách */
@@ -886,10 +961,11 @@ const handleAttendanceOption = async (method) => {
   gap: 6px;
   padding: 0 1px;
 }
+
 .separator-mini .dot {
   width: 5px;
   height: 5px;
-  background: #4ade80; 
+  background: #4ade80;
   border-radius: 50%;
   box-shadow: 0 0 5px rgba(74, 222, 128, 0.6);
 }
@@ -1098,8 +1174,8 @@ const handleAttendanceOption = async (method) => {
   border-radius: 12px;
   animation: slideInUp 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
   transform-origin: top right;
-  right: 0 !important; 
-  display: none; 
+  right: 0 !important;
+  display: none;
 }
 
 .dropdown-menu.show {
@@ -1108,7 +1184,7 @@ const handleAttendanceOption = async (method) => {
 
 .user-header-modern {
   background: linear-gradient(135deg, #009981 0%, #007a67 100%);
-  margin-top: -8px; 
+  margin-top: -8px;
 }
 
 .dropdown-item {
@@ -1128,8 +1204,15 @@ const handleAttendanceOption = async (method) => {
 }
 
 @keyframes slideInUp {
-  from { opacity: 0; transform: translateY(10px) scale(0.95); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .bg-brand-soft {
@@ -1143,6 +1226,7 @@ const handleAttendanceOption = async (method) => {
   background: #fff;
   transition: all 0.2s;
 }
+
 .btn-chat-notify:hover {
   background: #1e3a5f;
   color: #fff;
@@ -1166,6 +1250,7 @@ const handleAttendanceOption = async (method) => {
   max-width: 280px;
   pointer-events: none;
 }
+
 :global(.admin-chat-toast.show) {
   opacity: 1;
   transform: translateY(0);

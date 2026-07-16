@@ -21,7 +21,7 @@
     </div>
 
     <!-- Nội dung Dashboard -->
-    <div v-else class="dashboard-wrapper min-vh-100 p-3 p-xl-4">
+    <div v-else class="dashboard-wrapper min-vh-100 p-1">
 
       <!-- Nút xuất báo cáo fixed -->
       <button @click="exportToExcel" :disabled="isExporting"
@@ -34,7 +34,7 @@
       </button>
 
       <!-- Hàng 1: Các thẻ thống kê tổng quan (Compact) -->
-      <div class="row row-cols-1 row-cols-md-3 row-cols-xl-5 g-3 g-xl-4 mb-4">
+      <div class="row row-cols-1 row-cols-md-3 row-cols-xl-5 g-3 g-xl-2 mb-3">
 
         <!-- Tổng doanh thu -->
         <div class="col">
@@ -150,7 +150,9 @@
                 </div>
               </div>
               <div class="d-flex align-items-center mt-auto font-size-xs fw-medium text-muted gap-2 text-truncate">
-                <span class="text-primary"><i class="bi bi-calendar2-check"></i> {{ staffStats.current_shift || 'Đang cập nhật...' }}</span>
+                <span class="text-primary">
+                  <i class="bi bi-calendar2-check"></i> {{ staffStats.current_shift || 'Đang cập nhật...' }}
+                </span>
               </div>
             </div>
           </div>
@@ -159,7 +161,7 @@
       </div>
 
       <!-- Hàng 2: Biểu đồ Doanh thu & Phương thức -->
-      <div class="row g-3 g-xl-4 mb-4">
+      <div class="row g-3 g-xl-3 mb-3">
         <div class="col-12 col-xl-8">
           <div class="card custom-card border-0 shadow-sm rounded-4 h-100">
             <div
@@ -251,7 +253,7 @@
       </div>
 
       <!-- Hàng 3: Giao dịch & Tương tác -->
-      <div class="row g-3 g-xl-4 mb-4">
+      <div class="row g-3 g-xl-3 mb-3">
         <div class="col-12 col-xl-7">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4">
             <div
@@ -327,8 +329,7 @@
                     class="avatar-circle bg-light-soft text-dark fw-bolder border border-light shadow-sm flex-shrink-0 d-flex align-items-center justify-content-center"
                     style="width: 40px; height: 40px; border-radius: 50%; overflow: hidden;">
                     <img v-if="review.user_avatar && !reviewAvatarErrors[review.id]" :src="review.user_avatar"
-                      @error="reviewAvatarErrors[review.id] = true"
-                      class="w-100 h-100 object-fit-cover" />
+                      @error="reviewAvatarErrors[review.id] = true" class="w-100 h-100 object-fit-cover" />
                     <span v-else>{{ review.user_name?.charAt(0).toUpperCase() || 'K' }}</span>
                   </div>
                   <div class="flex-grow-1 min-w-0">
@@ -338,7 +339,8 @@
                     </div>
                     <div class="text-warning mb-1 font-size-xs">
                       <i v-for="n in review.rating" :key="'star-' + n" class="bi bi-star-fill me-1"></i>
-                      <i v-for="n in (5 - review.rating)" :key="'empty-' + n" class="bi bi-star text-secondary me-1"></i>
+                      <i v-for="n in (5 - review.rating)" :key="'empty-' + n"
+                        class="bi bi-star text-secondary me-1"></i>
                     </div>
                     <p class="text-secondary font-size-sm mb-0"
                       style="display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -353,7 +355,7 @@
       </div>
 
       <!-- Hàng 4: Sản phẩm & Chiến dịch -->
-      <div class="row g-3 g-xl-4 mb-4">
+      <div class="row g-3 g-xl-3 mb-3">
         <!-- Top Bán Chạy -->
         <div class="col-12 col-xl-4">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4 border-top border-brand border-3">
@@ -536,7 +538,7 @@
                       <td class="py-3">
                         <span class="fw-bolder" style="color: #8b5cf6;">{{ coupon.value_display }}</span>
                         <div class="text-muted font-size-xs mt-1"><span class="badge bg-light text-dark border">{{
-                            coupon.type }}</span></div>
+                          coupon.type }}</span></div>
                       </td>
                       <td class="py-3">
                         <div class="d-flex justify-content-between align-items-center mb-1">

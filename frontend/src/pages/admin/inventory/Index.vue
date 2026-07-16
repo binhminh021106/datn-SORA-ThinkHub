@@ -9,7 +9,7 @@
     </div>
 
     <div class="container-fluid py-4" v-else>
-      <div class="row mb-4 align-items-center">
+      <div class="row mb-3 align-items-center">
         <div class="col-md-6">
           <h3 class="fw-bold text-dark mb-0">Quản lý Kho (Inventory)</h3>
         </div>
@@ -89,7 +89,7 @@
 
       <!-- BẢNG DỮ LIỆU -->
       <div class="card border-0 shadow-sm rounded-4 mb-4">
-        <div class="card-header bg-white border-bottom-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="card-header bg-white border-bottom-0 pt-2 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
           <h6 class="fw-bold mb-0 text-dark d-flex align-items-center">
             <i class="bi bi-layers-fill me-2"></i>{{ tableTitle }}
             <div v-if="isSilentLoading" class="spinner-border spinner-border-sm text-brand ms-2" role="status"></div>

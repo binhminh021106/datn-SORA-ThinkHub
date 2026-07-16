@@ -9,7 +9,7 @@
 
     <div class="container-fluid py-4" v-else>
       <!-- Header -->
-      <div class="row mb-4 align-items-center">
+      <div class="row mb-3 align-items-center">
         <div class="col-md-6">
           <h3 class="fw-bold text-dark mb-0">Danh Mục Sản Phẩm</h3>
         </div>
@@ -52,7 +52,7 @@
 
       <!-- Bảng Dữ liệu -->
       <div class="card border-0 shadow-sm rounded-4 mb-4" :class="{'border-warning border-2': isReorderMode}">
-        <div class="card-header bg-white border-bottom-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div class="card-header bg-white border-bottom-0 pt-2 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
           <div class="d-flex align-items-center gap-2">
             <h6 class="fw-bold mb-0 text-dark">
               <i class="bi" :class="isReorderMode ? 'bi-arrows-move text-warning' : 'bi-list-ul'"></i> 
