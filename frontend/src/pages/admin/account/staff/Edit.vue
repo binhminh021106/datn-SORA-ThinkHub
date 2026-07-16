@@ -370,7 +370,11 @@ const updateStaffMutation = useMutation({
     // Nếu cập nhật chính tài khoản của bạn, tự động cập nhật cả LocalStorage và cache Header
     if (isCurrentUser.value) {
       const updatedAdmin = { ...currentAdmin, fullname: form.value.fullname, phone: form.value.phone };
-      if (data.data && data.data.avatar_url) updatedAdmin.avatar_url = data.data.avatar_url;
+      if (isRemoveAvatar.value || (data.data && !data.data.avatar_url)) {
+        updatedAdmin.avatar_url = null;
+      } else if (data.data && data.data.avatar_url) {
+        updatedAdmin.avatar_url = data.data.avatar_url;
+      }
       localStorage.setItem('admin_info', JSON.stringify(updatedAdmin));
 
       // Đồng bộ làm tươi profile ở Header ngay lập tức

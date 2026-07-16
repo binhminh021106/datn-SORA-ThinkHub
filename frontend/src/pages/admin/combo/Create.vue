@@ -180,7 +180,7 @@
 
           <!-- CỘT PHẢI: Bảng Tính Toán & Ảnh -->
           <div class="col-lg-4">
-            <div class="sticky-top custom-scrollbar px-1 pb-3" style="top: 15px; max-height: calc(100vh - 30px); overflow-y: auto;">
+            <div class="sticky-top custom-scrollbar px-1 pb-3 sticky-desktop-only">
             <div class="card border-0 shadow-sm rounded-4 mb-4 text-center p-4">
               <h6 class="fw-bold mb-3 text-start"><i class="bi bi-image me-2"></i>Ảnh Đại Diện <span class="text-danger">*</span></h6>
               <div class="mb-3 position-relative border rounded-4 overflow-hidden bg-white mx-auto shadow-sm" style="width: 100%; height: 200px;">
@@ -660,6 +660,16 @@ watch(isPageLoading, (loading) => {
 </script>
 
 <style scoped>
+.bg-light-brand { background-color: rgba(0,153,129,0.05); }
+
+@media (min-width: 992px) {
+  .sticky-desktop-only {
+    top: 15px;
+    max-height: calc(100vh - 30px);
+    overflow-y: auto;
+  }
+}
+
 .bg-brand { background-color: #009981 !important; }
 .text-brand { color: #009981 !important; }
 .border-brand { border-color: #009981 !important; }

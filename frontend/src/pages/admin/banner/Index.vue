@@ -204,7 +204,7 @@ watch(rawBanners, (newList) => {
       const existing = localBanners.value.find(lb => lb.id === b.id);
       return {
         ...b,
-        localStatus: existing ? existing.localStatus : b.status,
+        localStatus: (existing && existing.isStatusChanged) ? existing.localStatus : b.status,
         isStatusChanged: existing ? existing.isStatusChanged : false,
         isUpdatingStatus: existing ? existing.isUpdatingStatus : false
       };
@@ -230,9 +230,7 @@ const statusMutation = useMutation({
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã lưu trạng thái', showConfirmButton: false, timer: 1000 });
     const b = localBanners.value.find(b => b.id === variables.id);
     if(b) b.isStatusChanged = false;
-    queryClient.setQueryData(['admin', 'banners'], old => 
-      Array.isArray(old) ? old.filter(Boolean).map(bo => bo.id === variables.id ? { ...bo, status: variables.status, sort_order: variables.status === 'active' ? 999 : null } : bo) : []
-    );
+    queryClient.invalidateQueries({ queryKey: ['admin', 'banners'] });
   },
   onError: (err, variables) => {
     const b = localBanners.value.find(bo => bo.id === variables.id);

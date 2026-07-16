@@ -289,7 +289,7 @@
                         </div>
                       </td>
                       <td class="py-3 text-secondary font-size-xs fw-medium whitespace-nowrap">{{
-                        order.date.replace(/\/\d{4}\s/, '-') }}</td>
+                        order.date?.replace(/\/\d{4}\s/, '-') || '' }}</td>
                       <td class="py-3 fw-bold text-dark font-size-sm text-end whitespace-nowrap">{{
                         formatCompactCurrency(order.total) }}</td>
                       <td class="pe-4 py-3 text-center">
@@ -326,8 +326,8 @@
                   <div
                     class="avatar-circle bg-light-soft text-dark fw-bolder border border-light shadow-sm flex-shrink-0 d-flex align-items-center justify-content-center"
                     style="width: 40px; height: 40px; border-radius: 50%; overflow: hidden;">
-                    <img v-if="review.user_avatar" :src="review.user_avatar"
-                      @error="(e) => e.target.outerHTML = `<span>${review.user_name?.charAt(0).toUpperCase() || 'K'}</span>`"
+                    <img v-if="review.user_avatar && !reviewAvatarErrors[review.id]" :src="review.user_avatar"
+                      @error="reviewAvatarErrors[review.id] = true"
                       class="w-100 h-100 object-fit-cover" />
                     <span v-else>{{ review.user_name?.charAt(0).toUpperCase() || 'K' }}</span>
                   </div>
@@ -766,6 +766,7 @@ const getHeaders = () => {
 };
 
 const isExporting = ref(false);
+const reviewAvatarErrors = ref({});
 const isUpdatingCoupon = ref(null);
 let chartInstance = null;
 let paymentChartInstance = null;

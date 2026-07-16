@@ -192,7 +192,7 @@
                           v-model="brand.localStatus"
                           :originalValue="brand.status"
                           :selectClass="getStatusSelectClass(brand.localStatus || brand.status)"
-                          :isUpdating="isUpdatingStatusId === brand.id"
+                          :isUpdating="isUpdatingStatusIds.includes(brand.id)"
                           :disabled="isReorderMode"
                           @confirm="saveBrandStatus(brand)"
                           @cancel="cancelStatusChange(brand)"
@@ -316,7 +316,7 @@ const queryClient = useQueryClient();
 const searchQuery = ref('');
 const activeTab = ref('all');
 const currentPageLevel = ref(null);
-const isUpdatingStatusId = ref(null);
+const isUpdatingStatusIds = ref([]);
 const isTableLoading = ref(false);
 
 const currentPage = ref(1);
@@ -568,7 +568,7 @@ const updateStatusMutation = useMutation({
     const response = await axios.post(`${API_URL}/admin/brands/${id}`, formData, { headers: getHeaders() });
     return response.data;
   },
-  onMutate: ({ id }) => { isUpdatingStatusId.value = id; },
+  onMutate: ({ id }) => { isUpdatingStatusIds.value.push(id); },
   onSuccess: (data, variables) => {
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
     const brand = localBrands.value.find(b => b.id === variables.id);
@@ -587,7 +587,9 @@ const updateStatusMutation = useMutation({
     if (brand) cancelStatusChange(brand);
     handleAxiosError(error, 'Không thể cập nhật trạng thái');
   },
-  onSettled: () => { isUpdatingStatusId.value = null; }
+  onSettled: (data, err, variables) => { 
+    isUpdatingStatusIds.value = isUpdatingStatusIds.value.filter(i => i !== variables?.id); 
+  }
 });
 
 const saveBrandStatus = (brand) => {

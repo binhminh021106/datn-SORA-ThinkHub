@@ -48,7 +48,7 @@ class UpdateSettingRequest extends FormRequest
                             $url = $social['url'] ?? '';
                             if (!empty($url)) {
                                 $scheme = parse_url($url, PHP_URL_SCHEME);
-                                if (!in_array(strtolower($scheme), ['http', 'https'])) {
+                                if (!in_array(strtolower((string)$scheme), ['http', 'https'])) {
                                     $validator->errors()->add(
                                         "settings.{$index}.value.{$socialIndex}.url",
                                         'The social URL must be a valid http or https URL.'

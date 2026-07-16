@@ -117,7 +117,7 @@ watch(newsData, (newVal) => {
             const existing = localNews.value.find(ln => ln.id === n.id);
             return {
                 ...n,
-                localStatus: existing ? existing.localStatus : n.status,
+                localStatus: (existing && existing.isStatusChanged) ? existing.localStatus : n.status,
                 isStatusChanged: existing ? existing.isStatusChanged : false,
                 isUpdatingStatus: existing ? existing.isUpdatingStatus : false
             };

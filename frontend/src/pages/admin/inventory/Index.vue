@@ -333,7 +333,13 @@ const queryClient = useQueryClient();
 
 const activeTab = ref('all_variants');
 const searchQuery = ref('');
-const lowStockThreshold = ref(parseInt(localStorage.getItem('admin_low_stock_threshold')) || 10);
+const getInitialLowStockThreshold = () => {
+  const val = localStorage.getItem('admin_low_stock_threshold');
+  if (val === null || val === undefined || val === '') return 10;
+  const parsed = parseInt(val);
+  return isNaN(parsed) ? 10 : Math.max(0, parsed);
+};
+const lowStockThreshold = ref(getInitialLowStockThreshold());
 const filters = ref({ product_status: 'all' });
 
 const currentPage = ref(1);
@@ -633,9 +639,10 @@ watch([activeTab, searchQuery, () => filters.value.product_status, lowStockThres
 
 // Lưu cài đặt cảnh báo mức tồn kho vào bộ nhớ trình duyệt
 watch(lowStockThreshold, (newVal) => {
+  if (newVal === null || newVal === undefined || newVal === '') return;
   const val = parseInt(newVal);
   if (!isNaN(val)) {
-    localStorage.setItem('admin_low_stock_threshold', val);
+    localStorage.setItem('admin_low_stock_threshold', Math.max(0, val));
   }
 });
 
