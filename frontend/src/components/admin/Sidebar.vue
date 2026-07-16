@@ -215,6 +215,7 @@ const menuItems = ref([
       { name: 'Hộp thư liên hệ', path: '/admin/contacts', moduleCode: 'admin_contacts' }
     ]
   },
+  { name: 'Cấu hình', path: '/admin/settings', icon: 'bi-gear-fill', moduleCode: 'admin_settings' },
 ]);
 
 const menuState = reactive({

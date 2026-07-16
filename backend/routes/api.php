@@ -67,6 +67,16 @@ use App\Http\Controllers\Api\Admin\EmailCampaignController;
 
 Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     
+    // SETTINGS API
+    Route::middleware(['check.module:admin_settings'])->group(function () {
+        Route::get('/settings/logos', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'getLogos']);
+        Route::post('/settings/logos/upload', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'uploadLogo']);
+        Route::post('/settings/logos/base64', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'getLogoBase64']);
+        Route::delete('/settings/logos', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'deleteLogo']);
+        Route::get('/settings', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'index']);
+        Route::post('/settings', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'update']);
+    });
+    
     // THÊM: Bọc middleware check.module để kiểm tra quyền phân hệ
     Route::middleware(['check.module:admin_coupons'])->group(function () {
         
@@ -118,6 +128,7 @@ Route::prefix('mobile')->group(function () {
 
 // CLIENT API ROUTES
 Route::prefix('client')->group(function () {
+    Route::get('/settings', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'index']);
     // BỔ SUNG: AUTH & FORGOT PASSWORD (Client)
     Route::prefix('forgot-password')->group(function () {
         Route::post('/send-otp', [\App\Http\Controllers\Api\Auth\UserForgotPasswordController::class, 'sendOtp']);

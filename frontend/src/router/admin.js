@@ -350,6 +350,13 @@ const admin = [
         meta: { moduleCode: 'admin_news' },
       },
 
+      // ROUTE SETTINGS
+      {
+        path: 'settings',
+        name: 'admin-settings',
+        component: () => import('../pages/admin/setting/Index.vue'),
+        meta: { moduleCode: 'admin_settings', title: 'Cấu hình Website' },
+      },
       // ROUTE QUẢN LÝ AFFILIATE (AFFILIATES)
       {
         path: 'affiliates',

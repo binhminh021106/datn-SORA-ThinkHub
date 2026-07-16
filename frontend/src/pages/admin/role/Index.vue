@@ -2,7 +2,7 @@
   <div class="role-index-wrapper ">
     
     <div class="container-fluid py-4" v-if="!isPageLoading">
-      <div class="row mb-4 align-items-center">
+      <div class="row mb-3 align-items-center">
         <div class="col-md-6">
           <h3 class="fw-bold text-dark mb-0">Quản lý Phân Quyền & Cấp Độ</h3>
         </div>
@@ -14,7 +14,7 @@
         </div>
       </div>
 
-      <div class="mb-4">
+      <div class="mb-2">
         <ul class="nav nav-underline border-bottom mb-2 pb-1" style="flex-wrap: wrap !important; gap: 8px;">
           <li class="nav-item">
             <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab"
@@ -41,7 +41,7 @@
           <div class="d-flex align-items-center justify-content-between gap-2">
             <h6 class="fw-bold mb-0 text-dark text-nowrap"><i class="bi bi-list-ul me-2"></i>Danh sách Roles</h6>
             <select class="form-select form-select-sm ms-2 border-0 bg-light fw-semibold text-secondary" v-model="roleFilterStatus" style="width: 140px; box-shadow: none;" @change="currentPageRoles = 1">
-              <option value="active">Đang hoạt động</option>
+              <option value="active">Hoạt động</option>
               <option value="deleted">Đã xóa</option>
             </select>
           </div>

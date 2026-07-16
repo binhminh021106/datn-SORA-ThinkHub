@@ -2,7 +2,7 @@
   <div class="staff-index-wrapper ">
     
     <div class="container-fluid py-4" v-if="!isLoading">
-      <div class="row mb-4 align-items-center">
+      <div class="row mb-3 align-items-center">
         <div class="col-md-6">
           <h3 class="fw-bold text-dark mb-0">Quản lý Nhân sự (Nội bộ)</h3>
         </div>
@@ -15,7 +15,7 @@
       </div>
 
       <!-- TABS PHÂN LOẠI -->
-      <div class="mb-4">
+      <div class="mb-2">
         <ul class="nav nav-underline border-bottom mb-2 pb-1" style="flex-wrap: wrap !important; gap: 8px;">
           <li class="nav-item" v-for="tab in allTabs" :key="tab.id" :class="{'ms-auto': tab.isEnd}">
             <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab"
@@ -33,7 +33,7 @@
       </div>
 
       <div class="card border-0 shadow-sm rounded-4 mb-4">
-        <div class="card-header bg-white border-bottom-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div class="card-header bg-white border-bottom-0 pt-2 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
           <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-list-ul me-2"></i>Danh sách hiển thị</h6>
           <div class="search-box position-relative" style="width: 280px; max-width: 100%;">
             <input type="text" class="form-control rounded-pill pe-5 shadow-sm bg-light border-0 py-2" 
@@ -87,7 +87,7 @@
                       Không có dữ liệu trong danh sách này.
                     </td>
                   </tr>
-                  <tr v-else v-for="staff in paginatedStaff" :key="staff.id" :class="{'bg-light opacity-75': staff.deleted_at, 'bg-light': staff.id === currentUserId && !staff.deleted_at}">
+                  <tr v-else v-for="staff in paginatedStaff" :key="staff.id" :class="{'bg-light opacity-75': staff.deleted_at, 'current-user-row': staff.id === currentUserId && !staff.deleted_at}">
                     
                     <td class="px-4 py-3">
                       <div class="d-flex align-items-center">
@@ -130,30 +130,19 @@
                       <span v-if="staff.deleted_at" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary" title="Đã chuyển vào thùng rác">
                         <i class="bi bi-trash3-fill"></i> Đã xóa
                       </span>
-                      <div v-else class="d-flex align-items-center justify-content-center gap-1 flex-nowrap w-100">
-                        <!-- Khóa không cho sửa tài khoản Gốc (1) hoặc Tự khóa chính mình -->
-                        <select class="form-select form-select-sm border shadow-sm fw-semibold flex-shrink-0" 
-                                style="width: 120px; font-size: 0.8rem; border-color: #ced4da !important;"
-                                :class="getStatusSelectClass(staff.localStatus ?? staff.status)"
-                                v-model="staff.localStatus"
-                                @change="checkStatusChange(staff)"
-                                :disabled="isUpdatingStatusId === staff.id || staff.id === 1 || staff.id === currentUserId">
+                      <div v-else class="w-100">
+                        <StatusConfirmSelect
+                          v-model="staff.localStatus"
+                          :originalValue="staff.status"
+                          :selectClass="(staff.id === 1 || staff.id === currentUserId) ? 'bg-secondary bg-opacity-10 text-secondary border-secondary' : getStatusSelectClass(staff.localStatus ?? staff.status)"
+                          :isUpdating="isUpdatingStatusId === staff.id"
+                          :disabled="isUpdatingStatusId === staff.id || staff.id === 1 || staff.id === currentUserId"
+                          @confirm="saveStaffStatus(staff)"
+                          @cancel="cancelStatusChange(staff)"
+                        >
                           <option value="active">Hoạt động</option>
                           <option value="locked">Bị Khóa</option>
-                        </select>
-                        
-                        <!-- Khung cố định chống nhảy -->
-                        <div class="d-flex align-items-center justify-content-start flex-shrink-0" style="min-width: 55px; height: 28px;">
-                          <div v-if="isUpdatingStatusId === staff.id" class="spinner-border text-brand ms-1" style="width: 1.25rem; height: 1.25rem; border-width: 0.15em;" role="status"></div>
-                          <template v-else-if="staff.isStatusChanged">
-                            <button @click="saveStaffStatus(staff)" class="btn btn-sm btn-success rounded-circle shadow-sm d-flex align-items-center justify-content-center ms-1" style="width: 24px; height: 24px; padding: 0;" title="Lưu">
-                              <i class="bi bi-check-lg fw-bold" style="font-size: 0.7rem;"></i>
-                            </button>
-                            <button @click="cancelStatusChange(staff)" class="btn btn-sm btn-light rounded-circle shadow-sm text-danger border d-flex align-items-center justify-content-center ms-1" style="width: 24px; height: 24px; padding: 0;" title="Hủy">
-                              <i class="bi bi-x-lg fw-bold" style="font-size: 0.7rem;"></i>
-                            </button>
-                          </template>
-                        </div>
+                        </StatusConfirmSelect>
                       </div>
                     </td>
                     
@@ -166,8 +155,12 @@
                         <router-link :to="{ name: 'admin-staff-edit', params: { id: staff.id } }" class="btn btn-sm btn-light text-primary me-2 shadow-sm border" title="Chỉnh sửa">
                           <i class="bi bi-pencil-square"></i>
                         </router-link>
-                        <button class="btn btn-sm btn-light text-danger shadow-sm border" @click="confirmDelete(staff.id, staff.fullname)" :disabled="staff.id === 1 || staff.id === currentUserId" title="Đưa vào thùng rác">
-                          <i class="bi bi-trash"></i>
+                        <button class="btn btn-sm btn-light shadow-sm border" 
+                                :class="(staff.id === 1 || staff.id === currentUserId) ? 'text-secondary' : 'text-danger'" 
+                                @click="confirmDelete(staff.id, staff.fullname)" 
+                                :disabled="staff.id === 1 || staff.id === currentUserId" 
+                                :title="(staff.id === 1 || staff.id === currentUserId) ? 'Không thể thao tác trên tài khoản này' : 'Đưa vào thùng rác'">
+                          <i class="bi" :class="(staff.id === 1 || staff.id === currentUserId) ? 'bi-slash-circle' : 'bi-trash'"></i>
                         </button>
                       </template>
                       <template v-else>
@@ -289,6 +282,7 @@ import { getFullImage } from '@/composables/useUtilities';
 
 // Tái sử dụng linh hoạt SoraImage và defaultAvatar thống nhất hệ thống
 import SoraImage from '@/components/ui/SoraImage.vue';
+import StatusConfirmSelect from '@/components/admin/StatusConfirmSelect.vue';
 import defaultAvatar from '@/assets/images/defaults/avatar1.png';
 
 const route = useRoute();
@@ -702,6 +696,12 @@ const paginatedStaff = computed(() => {
 </script>
 
 <style scoped>
+.current-user-row > td {
+  background-color: rgba(0, 153, 129, 0.08) !important;
+}
+[data-bs-theme="dark"] .current-user-row > td {
+  background-color: rgba(0, 153, 129, 0.15) !important;
+}
 .logo-shimmer {
   font-size: 3.5rem;
   font-weight: 900;

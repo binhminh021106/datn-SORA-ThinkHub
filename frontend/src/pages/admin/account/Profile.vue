@@ -32,7 +32,7 @@
                     <span class="badge mt-1" :class="adminData.status === 'active' ? 'bg-success' : 'bg-danger'">
                         <i class="bi me-1"
                             :class="adminData.status === 'active' ? 'bi-check-circle' : 'bi-lock-fill'"></i>
-                        {{ adminData.status === 'active' ? 'Đang hoạt động' : 'Bị khóa' }}
+                        {{ adminData.status === 'active' ? 'Hoạt động' : 'Bị khóa' }}
                     </span>
 
                     <div class="mt-4">
@@ -115,12 +115,9 @@
                                         <div class="card border border-light-subtle shadow-none bg-light p-3 rounded-3">
                                             <div class="row g-3">
                                                 <div class="col-12">
-                                                    <VietnamAddressPicker
-                                                        v-model:province="addressSelector.province"
+                                                    <VietnamAddressPicker v-model:province="addressSelector.province"
                                                         v-model:district="addressSelector.district"
-                                                        v-model:ward="addressSelector.ward"
-                                                        input-class="bg-white"
-                                                    />
+                                                        v-model:ward="addressSelector.ward" input-class="bg-white" />
                                                 </div>
                                                 <div class="col-12">
                                                     <input type="text" class="form-control"

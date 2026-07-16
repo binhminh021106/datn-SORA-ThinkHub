@@ -9,7 +9,7 @@
 
     <!-- 2. NỘI DUNG CHÍNH (Đã có Cache) -->
     <div class="container-fluid py-4" v-else>
-      <div class="row mb-4 align-items-center">
+      <div class="row mb-3 align-items-center">
         <div class="col-md-6">
           <h3 class="fw-bold text-dark mb-0">Banner Quảng Cáo</h3>
         </div>
@@ -21,7 +21,7 @@
       </div>
 
       <div class="card border-0 shadow-sm rounded-4 mb-4" :class="{'border-warning border-2': isReorderMode}">
-        <div class="card-header bg-white border-bottom-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="card-header bg-white border-bottom-0 pt-2 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
           <h6 class="fw-bold mb-0 text-dark">
             <i class="bi" :class="isReorderMode ? 'bi-arrows-move text-warning' : 'bi-images'"></i> 
             {{ isReorderMode ? 'Kéo thả dòng để thay đổi thứ tự ưu tiên' : 'Danh sách Banner' }}
@@ -54,7 +54,7 @@
                   <th class="py-3 px-4 text-secondary border-0" style="width: 25%;">Hiển thị (PC & Mobile)</th>
                   <th class="py-3 px-4 text-secondary border-0" style="width: 25%;">Thông tin Chiến dịch</th>
                   <th class="py-3 px-4 text-secondary border-0" style="width: 20%;">Thời gian chạy</th>
-                  <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 15%;">Trạng thái</th>
+                  <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 15%;">Trạng thái <span class="d-none d-xl-inline">(Sửa nhanh)</span></th>
                   <th class="py-3 px-4 text-secondary text-center border-0" style="width: 15%" v-if="!isReorderMode">Thao tác</th>
                 </tr>
               </thead>
@@ -120,13 +120,20 @@
 
                   <td class="px-4 text-center">
                     <span v-if="banner.deleted_at" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary"><i class="bi bi-trash3-fill"></i> Đã xóa</span>
-                    <select v-else class="form-select form-select-sm border shadow-sm fw-semibold mx-auto" 
-                            style="width: 120px; font-size: 0.8rem;"
-                            :class="banner.status === 'active' ? 'text-success border-success bg-success bg-opacity-10' : 'text-warning border-warning bg-warning bg-opacity-10'"
-                            :value="banner.status" @change="(e) => onStatusChange(banner, e.target.value)" :disabled="isReorderMode || isMutating">
-                      <option value="active">Đang hiển thị</option>
-                      <option value="hidden">Đang ẩn</option>
-                    </select>
+                    <div v-else class="w-100">
+                      <StatusConfirmSelect
+                        v-model="banner.localStatus"
+                        :originalValue="banner.status"
+                        :selectClass="(banner.localStatus || banner.status) === 'active' ? 'text-success border-success bg-success bg-opacity-10' : 'text-warning border-warning bg-warning bg-opacity-10'"
+                        :isUpdating="banner.isUpdatingStatus"
+                        :disabled="isReorderMode"
+                        @confirm="saveBannerStatus(banner)"
+                        @cancel="cancelStatusChange(banner)"
+                      >
+                        <option value="active">Hiển thị</option>
+                        <option value="hidden">Đang ẩn</option>
+                      </StatusConfirmSelect>
+                    </div>
                   </td>
 
                   <td class="px-4 text-center" v-if="!isReorderMode">
@@ -154,6 +161,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 import { getFullImage } from '@/composables/useUtilities';
+import StatusConfirmSelect from '@/components/admin/StatusConfirmSelect.vue';
 
 const queryClient = useQueryClient();
 const API_URL = import.meta.env.VITE_API_BASE_URL;
@@ -189,10 +197,25 @@ const { data: rawBanners, isLoading, isFetching, refetch } = useQuery({
   gcTime: 10 * 60 * 1000,
 });
 
+const localBanners = ref([]);
+watch(rawBanners, (newList) => {
+  if (newList && Array.isArray(newList)) {
+    localBanners.value = newList.map(b => {
+      const existing = localBanners.value.find(lb => lb.id === b.id);
+      return {
+        ...b,
+        localStatus: (existing && existing.isStatusChanged) ? existing.localStatus : b.status,
+        isStatusChanged: existing ? existing.isStatusChanged : false,
+        isUpdatingStatus: existing ? existing.isUpdatingStatus : false
+      };
+    });
+  }
+}, { immediate: true });
+
 // Sync data thô ra view, tách riêng logic Reorder
 const displayBanners = computed(() => {
   if (isReorderMode.value) return reorderList.value.filter(Boolean);
-  return Array.isArray(rawBanners.value) ? rawBanners.value.filter(Boolean) : [];
+  return localBanners.value.filter(Boolean);
 });
 
 // --- MUTATIONS: CẬP NHẬT TRẠNG THÁI (OPTIMISTIC UPDATE) ---
@@ -203,28 +226,27 @@ const statusMutation = useMutation({
     if (!res.ok) throw new Error('Error updating status');
     return await res.json();
   },
-  onMutate: async ({ id, status }) => {
-    isMutating.value = true;
-    await queryClient.cancelQueries({ queryKey: ['admin', 'banners'] });
-    const previousBanners = queryClient.getQueryData(['admin', 'banners']);
-    // Cập nhật Cache tức thời
-    if (Array.isArray(previousBanners)) {
-      queryClient.setQueryData(['admin', 'banners'], old => 
-        Array.isArray(old) ? old.filter(Boolean).map(b => b.id === id ? { ...b, status: status, sort_order: status === 'active' ? 999 : null } : b) : []
-      );
-    }
-    return { previousBanners };
+  onSuccess: (data, variables) => {
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã lưu trạng thái', showConfirmButton: false, timer: 1000 });
+    const b = localBanners.value.find(b => b.id === variables.id);
+    if(b) b.isStatusChanged = false;
+    queryClient.invalidateQueries({ queryKey: ['admin', 'banners'] });
   },
-  onError: (err, variables, context) => {
-    if (context?.previousBanners) queryClient.setQueryData(['admin', 'banners'], context.previousBanners);
+  onError: (err, variables) => {
+    const b = localBanners.value.find(bo => bo.id === variables.id);
+    if(b) cancelStatusChange(b);
     Swal.fire('Lỗi', 'Không thể cập nhật trạng thái', 'error');
-  },
-  onSettled: () => { isMutating.value = false; queryClient.invalidateQueries({ queryKey: ['admin', 'banners'] }); }
+  }
 });
 
-const onStatusChange = (banner, newStatus) => {
-  statusMutation.mutate({ id: banner.id, title: banner.title, status: newStatus });
-  Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã lưu trạng thái', showConfirmButton: false, timer: 1000 });
+const checkStatusChange = (banner) => { banner.isStatusChanged = (banner.localStatus !== banner.status); };
+const cancelStatusChange = (banner) => { banner.localStatus = banner.status; banner.isStatusChanged = false; };
+
+const saveBannerStatus = (banner) => {
+  banner.isUpdatingStatus = true;
+  statusMutation.mutate({ id: banner.id, title: banner.title, status: banner.localStatus }, {
+    onSettled: () => { banner.isUpdatingStatus = false; }
+  });
 };
 
 // --- MUTATIONS: XÓA ---
@@ -282,8 +304,8 @@ const handleRestore = (id) => restoreMutation.mutate(id);
 // --- KÉO THẢ (REORDER) ---
 const toggleReorderMode = () => {
   isReorderMode.value = !isReorderMode.value;
-  if (isReorderMode.value && Array.isArray(rawBanners.value)) {
-    reorderList.value = JSON.parse(JSON.stringify(rawBanners.value.filter(b => !b.deleted_at && b.status === 'active')));
+  if (isReorderMode.value && Array.isArray(localBanners.value)) {
+    reorderList.value = JSON.parse(JSON.stringify(localBanners.value.filter(b => !b.deleted_at && b.status === 'active')));
   }
 };
 const onDragStart = (idx, e) => { draggedIndex.value = idx; e.dataTransfer.effectAllowed = 'move'; };

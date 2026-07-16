@@ -158,7 +158,7 @@
                       <th class="px-3 py-2 small text-secondary">Ngày diễn ra</th>
                       <th class="px-3 py-2 small text-secondary">Đối tượng</th>
                       <th class="px-3 py-2 small text-secondary">Voucher</th>
-                      <th class="px-3 py-2 text-center small text-secondary">Trạng thái</th>
+                      <th class="px-3 py-2 text-center small text-secondary">Trạng thái <span class="d-none d-xl-inline">(Sửa nhanh)</span></th>
                       <th class="px-3 py-2 text-center small text-secondary">Thao tác</th>
                     </tr>
                   </thead>
@@ -181,8 +181,18 @@
                         <span v-else class="text-muted" style="font-size: 0.75rem;">Không kèm</span>
                       </td>
                       <td class="px-3 py-2 text-center">
-                        <div class="form-check form-switch d-inline-flex m-0">
-                          <input class="form-check-input cursor-pointer" type="checkbox" :checked="event.status === 'active'" @change="toggleHolidayStatus(event)">
+                        <div class="w-100 mx-auto" style="max-width: 130px;">
+                          <StatusConfirmSelect
+                            v-model="event.localStatus"
+                            :originalValue="event.status"
+                            :selectClass="(event.localStatus || event.status) === 'active' ? 'text-success border-success bg-success bg-opacity-10' : 'text-warning border-warning bg-warning bg-opacity-10'"
+                            :isUpdating="event.isUpdatingStatus"
+                            @confirm="saveHolidayStatus(event)"
+                            @cancel="cancelStatusChange(event)"
+                          >
+                            <option value="active">Hoạt động</option>
+                            <option value="inactive">Tạm dừng</option>
+                          </StatusConfirmSelect>
                         </div>
                       </td>
                       <td class="px-3 py-2 text-center">
@@ -364,6 +374,7 @@ import { computed, ref, onMounted, watch } from 'vue'; // THÊM IMPORT watch
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import apiClient from '@/utils/apiClient';
+import StatusConfirmSelect from '@/components/admin/StatusConfirmSelect.vue';
 
 const router = useRouter();
 
@@ -418,7 +429,14 @@ const fetchRecentLogs = async () => {
 const fetchHolidayEvents = async () => {
   try {
     const res = await apiClient.get('/admin/holiday-events');
-    if (res.data?.success) holidays.value = res.data.data;
+    if (res.data?.success) {
+      holidays.value = res.data.data.map(h => ({
+        ...h,
+        localStatus: h.status,
+        isStatusChanged: false,
+        isUpdatingStatus: false
+      }));
+    }
   } catch (err) { console.error('Lỗi fetch holiday:', err); }
 };
 
@@ -498,12 +516,27 @@ async function runHolidayCampaign() {
   } catch (error) { showToast('Lỗi máy chủ! Không thể gửi email sự kiện.', 'error'); } finally { sendingCampaign.value = null; }
 }
 
-async function toggleHolidayStatus(event) {
-  const newStatus = event.status === 'active' ? 'inactive' : 'active';
+async function saveHolidayStatus(event) {
+  event.isUpdatingStatus = true;
   try {
-    const res = await apiClient.put(`/admin/holiday-events/${event.id}`, { ...event, status: newStatus });
-    if (res.data?.success) { event.status = newStatus; showToast(newStatus === 'active' ? 'Đã bật sự kiện' : 'Đã tắt sự kiện'); }
-  } catch (err) { showToast('Có lỗi xảy ra khi đổi trạng thái', 'error'); }
+    const res = await apiClient.put(`/admin/holiday-events/${event.id}`, { ...event, status: event.localStatus });
+    if (res.data?.success) { 
+      event.status = event.localStatus; 
+      showToast(event.localStatus === 'active' ? 'Đã bật sự kiện' : 'Đã tắt sự kiện'); 
+    } else {
+      cancelStatusChange(event);
+      showToast('Có lỗi xảy ra', 'error');
+    }
+  } catch (err) { 
+    cancelStatusChange(event);
+    showToast('Có lỗi xảy ra khi đổi trạng thái', 'error'); 
+  } finally {
+    event.isUpdatingStatus = false;
+  }
+}
+
+function cancelStatusChange(event) {
+  event.localStatus = event.status;
 }
 
 async function deleteHoliday(event) {

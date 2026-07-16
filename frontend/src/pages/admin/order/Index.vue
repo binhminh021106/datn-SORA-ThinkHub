@@ -194,83 +194,48 @@
                     </td>
 
                     <td data-label="Thanh toán" class="px-3">
-                      <div class="d-flex flex-column align-items-end align-items-md-center w-100"
-                        style="max-width: 150px; margin: 0 auto;">
-                        <select
-                          class="form-select form-select-sm border shadow-sm fw-bold cursor-pointer text-dark bg-white w-100"
-                          style="font-size: 0.75rem; border-color: #ced4da !important;"
-                          :class="getPaymentSelectClass(order.localPaymentStatus || order.payment_status)"
-                          v-model="order.localPaymentStatus" @change="checkPaymentStatusChange(order)"
-                          :disabled="order.isUpdatingPayment || ['delivered', 'cancelled', 'returned'].includes(order.status) || order.payment_status === 'refunded'">
+                      <div class="w-100">
+                        <StatusConfirmSelect
+                          v-model="order.localPaymentStatus"
+                          :originalValue="order.payment_status"
+                          :selectClass="getPaymentSelectClass(order.localPaymentStatus || order.payment_status)"
+                          :isUpdating="order.isUpdatingPayment"
+                          :disabled="order.isUpdatingPayment || ['delivered', 'cancelled', 'returned'].includes(order.status) || order.payment_status === 'refunded'"
+                          @confirm="savePaymentStatus(order)"
+                          @cancel="cancelPaymentStatusChange(order)"
+                        >
                           <option value="unpaid" v-if="canPaymentTransitionTo(order.payment_status, 'unpaid')">Chưa TT</option>
                           <option value="paid" v-if="canPaymentTransitionTo(order.payment_status, 'paid')">Đã TT</option>
                           <option value="refunded" v-if="canPaymentTransitionTo(order.payment_status, 'refunded')">Đã hoàn tiền</option>
                           <option value="failed" v-if="canPaymentTransitionTo(order.payment_status, 'failed')">Thất bại</option>
-                        </select>
-
-                        <div class="d-flex align-items-start justify-content-center w-100" style="min-height: 38px;">
-                          <div v-if="order.isUpdatingPayment" class="mt-2 text-center w-100">
-                            <div class="spinner-border text-brand"
-                              style="width: 1.1rem; height: 1.1rem; border-width: 0.15em;" role="status"></div>
-                          </div>
-
-                          <div v-else-if="order.isPaymentStatusChanged" class="mt-2 w-100 d-flex gap-1 animate-fade-in">
-                            <button @click="savePaymentStatus(order)"
-                              class="btn btn-sm btn-brand text-white flex-grow-1 shadow-sm d-flex align-items-center justify-content-center action-btn-hover"
-                              style="padding: 0.35rem; font-size: 0.75rem;" title="Xác nhận">
-                              <i class="bi bi-send-check-fill me-1"></i> Xác nhận
-                            </button>
-                            <button @click="cancelPaymentStatusChange(order)"
-                              class="btn btn-sm btn-light border shadow-sm d-flex align-items-center justify-content-center action-btn-hover"
-                              style="padding: 0.35rem 0.5rem;" title="Hủy">
-                              <i class="bi bi-x-lg text-danger" style="font-size: 0.75rem;"></i>
-                            </button>
-                          </div>
-
-                          <div class="small fw-semibold text-muted text-uppercase mt-2 text-nowrap"
-                            style="font-size: 0.65rem;" v-else>
-                            <i class="bi bi-wallet2 me-1"></i> {{ order.payment_method }}
-                          </div>
-                        </div>
+                          
+                          <template #display>
+                            <div class="small fw-semibold text-muted text-uppercase text-nowrap w-100 text-center" style="font-size: 0.65rem;">
+                              <i class="bi bi-wallet2 me-1"></i> {{ order.payment_method }}
+                            </div>
+                          </template>
+                        </StatusConfirmSelect>
                       </div>
                     </td>
 
                     <td data-label="Trạng thái" class="px-3">
-                      <div class="d-flex flex-column align-items-end align-items-md-center w-100"
-                        style="max-width: 150px; margin: 0 auto;">
-                        <select
-                          class="form-select form-select-sm border shadow-sm fw-bold cursor-pointer text-dark bg-white w-100"
-                          style="font-size: 0.75rem; border-color: #ced4da !important;"
-                          :class="getOrderStatusClass(order.localStatus || order.status)" v-model="order.localStatus"
-                          @change="checkStatusChange(order)"
-                          :disabled="order.isUpdatingStatus || ['delivered', 'cancelled', 'returned'].includes(order.status)">
+                      <div class="w-100">
+                        <StatusConfirmSelect
+                          v-model="order.localStatus"
+                          :originalValue="order.status"
+                          :selectClass="getOrderStatusClass(order.localStatus || order.status)"
+                          :isUpdating="order.isUpdatingStatus"
+                          :disabled="order.isUpdatingStatus || ['delivered', 'cancelled', 'returned'].includes(order.status)"
+                          @confirm="saveOrderStatus(order)"
+                          @cancel="cancelStatusChange(order)"
+                        >
                           <option value="pending" v-if="canTransitionTo(order.status, 'pending')">Chờ duyệt</option>
                           <option value="confirmed" v-if="canTransitionTo(order.status, 'confirmed')">Đã xác nhận</option>
                           <option value="processing" v-if="canTransitionTo(order.status, 'processing')">Đang chuẩn bị</option>
                           <option value="shipping" v-if="canTransitionTo(order.status, 'shipping')">Đang giao</option>
                           <option value="delivered" v-if="canTransitionTo(order.status, 'delivered')">Đã giao</option>
                           <option value="cancelled" v-if="canTransitionTo(order.status, 'cancelled')">Hủy đơn</option>
-                        </select>
-
-                        <div class="d-flex align-items-start justify-content-center w-100" style="min-height: 38px;">
-                          <div v-if="order.isUpdatingStatus" class="mt-2 text-center w-100">
-                            <div class="spinner-border text-brand"
-                              style="width: 1.1rem; height: 1.1rem; border-width: 0.15em;" role="status"></div>
-                          </div>
-
-                          <div v-else-if="order.isStatusChanged" class="mt-2 w-100 d-flex gap-1 animate-fade-in">
-                            <button @click="saveOrderStatus(order)"
-                              class="btn btn-sm btn-brand text-white flex-grow-1 shadow-sm d-flex align-items-center justify-content-center action-btn-hover"
-                              style="padding: 0.35rem; font-size: 0.75rem;" title="Xác nhận">
-                              <i class="bi bi-send-check-fill me-1"></i> Xác nhận
-                            </button>
-                            <button @click="cancelStatusChange(order)"
-                              class="btn btn-sm btn-light border shadow-sm d-flex align-items-center justify-content-center action-btn-hover"
-                              style="padding: 0.35rem 0.5rem;" title="Hủy">
-                              <i class="bi bi-x-lg text-danger" style="font-size: 0.75rem;"></i>
-                            </button>
-                          </div>
-                        </div>
+                        </StatusConfirmSelect>
                       </div>
                     </td>
 
@@ -342,6 +307,7 @@ import Swal from 'sweetalert2';
 import axios from 'axios';
 import OrderQuickViewModal from './OrderQuickViewModal.vue';
 import TrackingMapModal from '@/components/admin/TrackingMapModal.vue';
+import StatusConfirmSelect from '@/components/admin/StatusConfirmSelect.vue';
 
 let adminChannel = null;
 const API_URL = import.meta.env.VITE_API_BASE_URL;
@@ -676,6 +642,10 @@ const saveOrderStatus = async (order) => {
     id: order.id,
     type: 'status',
     payload: { status: order.localStatus, payment_status: order.payment_status, note: noteText }
+  }, {
+    onSettled: () => {
+      order.isUpdatingStatus = false;
+    }
   });
 };
 
@@ -697,6 +667,10 @@ const savePaymentStatus = async (order) => {
     id: order.id,
     type: 'payment',
     payload: { status: order.status, payment_status: order.localPaymentStatus, note: `Kế toán cập nhật thanh toán: ${formatPaymentStatus(order.localPaymentStatus)}` }
+  }, {
+    onSettled: () => {
+      order.isUpdatingPayment = false;
+    }
   });
 };
 

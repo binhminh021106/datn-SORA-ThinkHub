@@ -585,6 +585,7 @@ const handleDownloadInvoice = async () => {
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Josefin+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap');
 
+
 .text-primary-custom,
 .text-sora-primary {
     color: #9f273b !important;
@@ -1228,6 +1229,9 @@ const handleDownloadInvoice = async () => {
 </style>
 
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Josefin+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap');
+
+
 .swal2-container {
     z-index: 9999 !important;
 }

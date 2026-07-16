@@ -10,6 +10,11 @@ import Swal from 'sweetalert2';
 // Khởi tạo Real-time Sync cho Admin CPanel
 useAdminRealtimeSync();
 
+import { useSettingsStore } from '@/stores/settingsStore';
+const settingsStore = useSettingsStore();
+settingsStore.fetchSettings();
+settingsStore.listenToRealtimeUpdates();
+
 // Biến lưu trữ trạng thái thu/mở của Sidebar
 const isSidebarCollapsed = ref(false);
 

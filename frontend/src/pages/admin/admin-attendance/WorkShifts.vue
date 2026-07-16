@@ -25,7 +25,7 @@
       </div>
 
       <!-- Main Navigation Tabs -->
-      <div class="mb-4 d-flex">
+      <div class="mb-3 d-flex">
         <div class="nav-segment-wrapper p-1 bg-light rounded-pill border d-inline-flex shadow-sm">
           <button 
             class="btn rounded-pill px-4 py-2 fw-bold d-flex align-items-center transition-all border-0" 
@@ -50,7 +50,7 @@
       <div v-if="mainTab === 'shifts'">
         
         <!-- Sub-tabs -->
-        <div class="mb-4">
+        <div class="mb-2">
           <ul class="nav nav-underline border-bottom mb-2 flex-nowrap overflow-hidden pb-1">
             <li class="nav-item">
               <a class="nav-link py-2 px-3 d-flex align-items-center custom-sub-tab" href="#" 
@@ -100,7 +100,7 @@
         </div>
 
         <!-- Shift Grid -->
-        <div v-else class="row g-4">
+        <div v-else class="row g-3">
           <div v-for="shift in shifts" :key="shift.id" class="col-12 col-md-6 col-xl-4">
             <div class="card shift-card h-100 shadow-sm border-0 transition-hover d-flex flex-column" :class="{'border border-danger border-opacity-25': shiftSubTab === 'deleted'}">
               <div class="card-body p-4 position-relative flex-grow-1">
@@ -183,7 +183,7 @@
       <div v-if="mainTab === 'assignments'">
         
         <!-- Sub-tabs for Assignments -->
-        <div class="mb-4">
+        <div class="mb-3">
           <ul class="nav nav-underline border-bottom mb-2 flex-nowrap overflow-hidden pb-1">
             <li class="nav-item">
               <a class="nav-link py-2 px-3 d-flex align-items-center custom-sub-tab" href="#" 

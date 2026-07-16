@@ -194,7 +194,7 @@
 
           <!-- CỘT PHẢI: QUẢN LÝ ITEMS & BẢNG TÍNH LỢI NHUẬN -->
           <div class="col-lg-4">
-            
+            <div class="sticky-top custom-scrollbar px-1 pb-3" style="top: 15px; max-height: calc(100vh - 30px); overflow-y: auto;">
             <div class="card border-0 shadow-sm rounded-4 mb-4 text-center p-4">
               <h6 class="fw-bold mb-3 text-start"><i class="bi bi-image me-2"></i>Ảnh Đại Diện Combo <span class="text-danger">*</span></h6>
               <div class="mb-3 position-relative border rounded-4 overflow-hidden bg-white shadow-sm mx-auto" style="width: 100%; height: 200px;">
@@ -215,8 +215,8 @@
             </div>
 
             <!-- SMART CALCULATOR BOX -->
-            <div class="card border-brand border-2 shadow-sm rounded-4 mb-4">
-              <div class="card-header bg-brand text-white border-0 py-3 rounded-top-3">
+            <div class="card border-brand border-2 shadow-sm rounded-4 mb-4 overflow-hidden">
+              <div class="card-header bg-brand text-white border-0 py-3">
                 <h6 class="fw-bold mb-0"><i class="bi bi-calculator-fill me-2"></i>Bảng tính Lợi nhuận</h6>
               </div>
               <div class="card-body p-4 bg-light">
@@ -295,7 +295,8 @@
                 </div>
               </div>
             </div>
-
+            
+            </div>
           </div>
         </div>
 

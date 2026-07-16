@@ -353,6 +353,7 @@ watch(currentSlug, () => {
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Oswald:wght@400;500;600;700&display=swap');
 
+
 /* MÀU SẮC THƯƠNG HIỆU SORA */
 .bg-light-custom { background-color: #faf9f8 !important; }
 .bg-main { background-color: #9f273b !important; }

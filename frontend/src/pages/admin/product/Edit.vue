@@ -35,7 +35,7 @@
                     </ul>
                 </div>
 
-                <div class="card-body p-4 p-md-5">
+                <div class="card-body">
                     <form @submit.prevent="submitProduct" id="productForm">
 
                         <div v-show="currentStep === 1" class="row g-4">

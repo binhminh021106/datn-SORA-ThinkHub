@@ -107,4 +107,9 @@ return [
         'module_code' => 'admin_affiliates',
         'default_level' => 2
     ],
+    [
+        'module_name' => 'Quản lý Cài đặt & Cấu hình',
+        'module_code' => 'admin_settings',
+        'default_level' => 2
+    ],
 ];

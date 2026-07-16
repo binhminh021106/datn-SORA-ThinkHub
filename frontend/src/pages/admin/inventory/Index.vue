@@ -9,7 +9,7 @@
     </div>
 
     <div class="container-fluid py-4" v-else>
-      <div class="row mb-4 align-items-center">
+      <div class="row mb-3 align-items-center">
         <div class="col-md-6">
           <h3 class="fw-bold text-dark mb-0">Quản lý Kho (Inventory)</h3>
         </div>
@@ -67,9 +67,8 @@
           <div class="input-group input-group-sm" style="width: 110px;">
             <button class="btn btn-outline-secondary border-light-subtle bg-light text-dark fw-bold px-2"
               @click="lowStockThreshold = Math.max(0, lowStockThreshold - 1)">-</button>
-            <input type="text" class="form-control text-center fw-bold text-danger border-light-subtle px-1"
-              v-model.number="lowStockThreshold"
-              @input="lowStockThreshold = Math.max(0, parseInt(lowStockThreshold) || 0)">
+            <input type="number" class="form-control text-center fw-bold text-danger border-light-subtle px-1"
+              v-model.number="lowStockThreshold" min="0" @change="lowStockThreshold = (lowStockThreshold < 0 || lowStockThreshold === '') ? 0 : lowStockThreshold">
             <button class="btn btn-outline-secondary border-light-subtle bg-light text-dark fw-bold px-2"
               @click="lowStockThreshold++">+</button>
           </div>
@@ -90,7 +89,7 @@
 
       <!-- BẢNG DỮ LIỆU -->
       <div class="card border-0 shadow-sm rounded-4 mb-4">
-        <div class="card-header bg-white border-bottom-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="card-header bg-white border-bottom-0 pt-2 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
           <h6 class="fw-bold mb-0 text-dark d-flex align-items-center">
             <i class="bi bi-layers-fill me-2"></i>{{ tableTitle }}
             <div v-if="isSilentLoading" class="spinner-border spinner-border-sm text-brand ms-2" role="status"></div>
@@ -334,7 +333,13 @@ const queryClient = useQueryClient();
 
 const activeTab = ref('all_variants');
 const searchQuery = ref('');
-const lowStockThreshold = ref(10);
+const getInitialLowStockThreshold = () => {
+  const val = localStorage.getItem('admin_low_stock_threshold');
+  if (val === null || val === undefined || val === '') return 10;
+  const parsed = parseInt(val);
+  return isNaN(parsed) ? 10 : Math.max(0, parsed);
+};
+const lowStockThreshold = ref(getInitialLowStockThreshold());
 const filters = ref({ product_status: 'all' });
 
 const currentPage = ref(1);
@@ -519,7 +524,8 @@ const counts = computed(() => {
   const variants = allVariantsData.value || [];
   const combos = allCombosData.value || [];
   
-  const lowStockCount = variants.filter(v => v.stock_quantity <= lowStockThreshold.value).length;
+  const threshold = parseInt(lowStockThreshold.value) || 0;
+  const lowStockCount = variants.filter(v => v.stock_quantity <= threshold).length;
   let activeC = 0; 
   let expC = 0;
   
@@ -552,9 +558,10 @@ const tableTitle = computed(() => {
 // Lọc mượt mà danh sách biến thể trong Memory
 const filteredVariants = computed(() => {
   let result = allVariantsData.value || [];
+  const threshold = parseInt(lowStockThreshold.value) || 0;
 
   if (activeTab.value === 'low_stock') {
-    result = result.filter(v => v.stock_quantity <= lowStockThreshold.value);
+    result = result.filter(v => v.stock_quantity <= threshold);
   }
 
   if (filters.value.product_status !== 'all') {
@@ -626,8 +633,21 @@ const visiblePages = computed(() => {
 });
 
 // Theo dõi tab và ô tìm kiếm để reset trang phân trang
-watch([activeTab, searchQuery, () => filters.value.product_status], () => {
+watch([activeTab, searchQuery, () => filters.value.product_status, lowStockThreshold], () => {
   currentPage.value = 1;
+});
+
+// Lưu cài đặt cảnh báo mức tồn kho vào bộ nhớ trình duyệt
+watch(lowStockThreshold, (newVal) => {
+  if (newVal === null || newVal === undefined || newVal === '') return;
+  const val = parseInt(newVal);
+  if (!isNaN(val)) {
+    if (val < 0) {
+      lowStockThreshold.value = 0;
+    } else {
+      localStorage.setItem('admin_low_stock_threshold', val);
+    }
+  }
 });
 
 // ============================================================================
