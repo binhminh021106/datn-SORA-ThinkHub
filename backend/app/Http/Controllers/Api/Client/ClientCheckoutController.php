@@ -336,7 +336,7 @@ class ClientCheckoutController extends Controller
                 }
 
                 $shippingFee = $request->shipping_fee !== null ? (float)$request->shipping_fee : 0;
-                $totalAmount = max($subTotal - $discountAmount - $tierDiscountAmount + $shippingFee, 0);
+                $totalAmount = max($subTotal - $discountAmount - $tierDiscountAmount, 0) + $shippingFee;
 
                 // CÂN BẰNG TỈ LỆ HOA HỒNG THEO SỐ TIỀN THỰC TẾ
                 $actualCommission = 0;

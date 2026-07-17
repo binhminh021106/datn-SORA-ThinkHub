@@ -50,10 +50,16 @@ class CartItem extends Model
             $total = 0;
             // 1. Tính giá các món khách hàng tự chọn (combo_selections)
             if (is_array($this->combo_selections) && count($this->combo_selections) > 0) {
-                $variantIds = array_column($this->combo_selections, 'selected_variant_id');
-                $variants = \App\Models\ProductVariant::whereIn('id', $variantIds)->get();
-                foreach ($variants as $v) {
-                    $total += $v->promotional_price ?: $v->price;
+                foreach ($this->combo_selections as $selection) {
+                    if (isset($selection['price'])) {
+                        $total += $selection['price'];
+                    } else {
+                        // Dự phòng cho dữ liệu cũ chưa được lưu price
+                        $v = \App\Models\ProductVariant::find($selection['selected_variant_id']);
+                        if ($v) {
+                            $total += $v->promotional_price ?: $v->price;
+                        }
+                    }
                 }
             }
 

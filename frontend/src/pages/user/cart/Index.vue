@@ -211,7 +211,7 @@ const handleCartSync = (event) => {
   if (event.detail && event.detail.source === 'cart_page') {
     return;
   }
-  fetchCart(false); // Cập nhật ngầm không nháy màn hình
+  fetchCart(true); // Cập nhật ngầm (isBackground = true) không nháy màn hình
 };
 
 

@@ -98,11 +98,20 @@ class ClientCartController extends Controller
                 $variantIds = array_column($request->combo_selections, 'selected_variant_id');
                 $variantsInCombo = ProductVariant::whereIn('id', $variantIds)->lockForUpdate()->get();
 
+                // Lưu luôn giá variant vào combo_selections để tránh N+1 query ở accessor
+                $comboSelections = $request->combo_selections;
+                foreach ($comboSelections as &$selection) {
+                    $v = $variantsInCombo->firstWhere('id', $selection['selected_variant_id']);
+                    if ($v) {
+                        $selection['price'] = $v->promotional_price ?: $v->price;
+                    }
+                }
+
                 $existingItem = CartItem::where('cart_id', $cart->id)
                     ->where('combo_id', $request->combo_id)
                     ->get()
-                    ->first(function ($item) use ($request) {
-                        return $item->combo_selections == $request->combo_selections;
+                    ->first(function ($item) use ($comboSelections) {
+                        return $item->combo_selections == $comboSelections;
                     });
 
                 $newQuantity = $existingItem ? $existingItem->quantity + $request->quantity : $request->quantity;
@@ -120,7 +129,7 @@ class ClientCartController extends Controller
                     $cartItem = CartItem::create([
                         'cart_id'          => $cart->id,
                         'combo_id'         => $request->combo_id,
-                        'combo_selections' => $request->combo_selections,
+                        'combo_selections' => $comboSelections,
                         'quantity'         => $request->quantity
                     ]);
                 }
