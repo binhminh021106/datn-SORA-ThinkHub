@@ -48,14 +48,26 @@ class CartItem extends Model
     {
         if ($this->combo_id && $this->combo) {
             $total = 0;
+            // 1. Tính giá các món khách hàng tự chọn (combo_selections)
             if (is_array($this->combo_selections) && count($this->combo_selections) > 0) {
                 $variantIds = array_column($this->combo_selections, 'selected_variant_id');
-                $variants = ProductVariant::whereIn('id', $variantIds)->get();
+                $variants = \App\Models\ProductVariant::whereIn('id', $variantIds)->get();
                 foreach ($variants as $v) {
-                    $total += $v->price;
+                    $total += $v->promotional_price ?: $v->price;
                 }
             }
 
+            // 2. Tính giá các món cố định trong Combo (do Admin thiết lập)
+            if ($this->combo->items) {
+                foreach ($this->combo->items as $cItem) {
+                    if ($cItem->product_variant_id && $cItem->variant) {
+                        $vPrice = $cItem->variant->promotional_price ?: $cItem->variant->price;
+                        $total += $vPrice * $cItem->quantity;
+                    }
+                }
+            }
+
+            // 3. Trừ đi chiết khấu của Combo
             $discount = $this->combo->discount_value;
             if ($this->combo->discount_type === 'percentage') {
                 $total = $total - ($total * ($discount / 100));

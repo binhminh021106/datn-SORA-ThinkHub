@@ -189,7 +189,7 @@ const handleSocialLogin = (platform) => {
   justify-content: center;
   align-items: center;
   background-color: #fcf9f5;
-  padding: 40px 20px;
+  padding: 10px 20px;
   font-family: 'Helvetica Neue', Arial, sans-serif;
 }
 
@@ -259,7 +259,7 @@ const handleSocialLogin = (platform) => {
 /* Phần code CSS còn lại của Form (Cột phải) giữ nguyên 100% */
 .auth-box {
   flex: 1;
-  padding: 40px 60px;
+  padding:20px 40px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -268,7 +268,7 @@ const handleSocialLogin = (platform) => {
 }
 
 .auth-header {
-  margin-bottom: 25px;
+  margin-bottom: 15px;
 }
 
 .auth-title {
@@ -286,7 +286,7 @@ const handleSocialLogin = (platform) => {
 }
 
 .form-group {
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 .form-group label {
@@ -375,7 +375,7 @@ const handleSocialLogin = (platform) => {
   display: flex;
   align-items: center;
   text-align: center;
-  margin: 20px 0;
+  margin: 12px 0;
   color: #999;
   font-size: 13px;
 }

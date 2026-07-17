@@ -33,7 +33,7 @@ class ClientCartController extends Controller
         $cart->load([
             'items.variant.product', 
             'items.variant.attributeValues.attribute', 
-            'items.combo'
+            'items.combo.items.variant'
         ]);
 
         return response()->json([

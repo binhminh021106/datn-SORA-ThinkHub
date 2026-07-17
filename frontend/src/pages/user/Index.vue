@@ -327,7 +327,6 @@
     
     <!-- Modals -->
     <CompareModal shop-slug="sora" />
-    <QuickAddModal />
   </div>
 </template>
 

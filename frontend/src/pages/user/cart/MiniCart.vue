@@ -184,7 +184,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import ProductCard from '@/components/ui/ProductCard.vue';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
@@ -347,7 +347,7 @@ const updateQuantity = (item, newQuantity) => {
       if (res.data.success) {
         await fetchCart(false); 
         window.dispatchEvent(new CustomEvent('update-cart-count', {
-          detail: { cart_count: summary.value.total_items }
+          detail: { cart_count: summary.value.total_items, source: 'minicart' }
         }));
       }
     } catch (error) {
@@ -374,7 +374,7 @@ const removeItem = async (id) => {
       cartItems.value = cartItems.value.filter(item => item.id !== id);
       await fetchCart(false); 
       window.dispatchEvent(new CustomEvent('update-cart-count', {
-        detail: { cart_count: summary.value.total_items }
+        detail: { cart_count: summary.value.total_items, source: 'minicart' }
       }));
     }
   } catch (error) {
@@ -383,6 +383,21 @@ const removeItem = async (id) => {
     updatingItemId.value = null;
   }
 };
+
+const handleCartSync = (e) => {
+  if (isOpen.value) {
+    if (e.detail && e.detail.source === 'minicart') return;
+    fetchCart(false);
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('update-cart-count', handleCartSync);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('update-cart-count', handleCartSync);
+});
 
 defineExpose({ openCart, fetchCart });
 </script>

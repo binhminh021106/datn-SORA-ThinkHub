@@ -202,44 +202,18 @@ const soraAlert = createSoraAlert({
 const notifyCartUpdate = () => {
   const count = cartItems.value.reduce((t, i) => t + i.quantity, 0);
   window.dispatchEvent(new CustomEvent('update-cart-count', {
-    detail: { cart_count: count, source: 'internal' } // Thêm nguồn 'internal'
+    detail: { cart_count: count, source: 'cart_page' }
   }));
 };
 
 const handleCartSync = (event) => {
-  // Bỏ qua nếu sự kiện xuất phát từ chính trang Giỏ hàng (nội bộ)
-  // để tránh việc gọi lại API fetchCart 2 lần liên tiếp
-  if (event.detail && event.detail.source === 'internal') {
+  // Bỏ qua nếu sự kiện xuất phát từ chính trang Giỏ hàng
+  if (event.detail && event.detail.source === 'cart_page') {
     return;
   }
-  fetchCart(true);
+  fetchCart(false); // Cập nhật ngầm không nháy màn hình
 };
-const checkAndMergeCart = async () => {
-  const token = getUserToken();
-  const sessionId = localStorage.getItem('cart_session_id');
-  
-  // Chỉ merge khi ĐÃ LOGIN mà vẫn còn session cart (tức là có giỏ guest)
-  if (!token || !sessionId) return;
 
-  try {
-    const response = await clientApiClient.post('/client/cart/merge', {}, { 
-      ensureCartSession: true,
-      ignoreAuthRedirect: true 
-    });
-
-    if (response.data.success) {
-      if (response.data.clear_session) {
-        localStorage.removeItem('cart_session_id');
-      }
-      Toast.fire({
-        icon: 'success',
-        title: 'Giỏ hàng đã được đồng bộ vào tài khoản của bạn'
-      });
-    }
-  } catch (error) {
-    console.error('Merge cart error:', error);
-  }
-};
 
 const getItemName = (item) => {
   if (item.combo_id && item.combo) return item.combo.name;
@@ -460,8 +434,7 @@ const clearCart = async () => {
 };
 
 onMounted(async () => {
-  await checkAndMergeCart();   // ← Merge trước (nếu có)
-  await fetchCart();           // ← Sau đó load giỏ hàng
+  await fetchCart();           // ← Load giỏ hàng
   window.addEventListener('update-cart-count', handleCartSync);
 });
 

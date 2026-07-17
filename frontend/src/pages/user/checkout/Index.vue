@@ -662,6 +662,8 @@ const getLatLongFromAddress = async (fullAddress) => {
 
     let parts = fullAddress.split(',').map(p => p.trim());
     const delay = ms => new Promise(res => setTimeout(res, ms));
+    let retryCount = 0;
+    const maxRetries = 2;
 
     while (parts.length >= 2) {
         const queryAddress = parts.join(', ');
@@ -683,6 +685,8 @@ const getLatLongFromAddress = async (fullAddress) => {
             if (!response.ok) {
                 console.warn('❌ Nominatim error:', response.status);
                 if (response.status === 429) {
+                    if (retryCount >= maxRetries) return null;
+                    retryCount++;
                     await delay(2000); // Chờ 2s nếu bị rate limit
                     continue;
                 }
@@ -701,6 +705,7 @@ const getLatLongFromAddress = async (fullAddress) => {
                 return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
             } else {
                 parts.shift(); // Xóa phần tử nhỏ nhất (ví dụ xã/phường) để tìm rộng hơn
+                retryCount = 0; // Reset retry count cho truy vấn mới
                 await delay(1100); // Rate limit policy của Nominatim là 1 req/sec
             }
         } catch (e) {
@@ -727,6 +732,7 @@ const shippingFee = ref(0);
 const shippingNote = ref('Đang tính phí vận chuyển...');
 
 let shippingTimeout = null;
+let currentShippingRequestId = 0;
 
 watch(
     [
@@ -736,7 +742,6 @@ watch(
         selectedProvinceName,
         selectedDistrictName,
         selectedWardName,
-        specificAddress,
         useNewAddress,
         () => form.value.customer_address
     ],
@@ -744,9 +749,11 @@ watch(
         if (shippingTimeout) clearTimeout(shippingTimeout);
 
         shippingTimeout = setTimeout(async () => {
+            const requestId = ++currentShippingRequestId;
             shippingNote.value = 'Đang tính phí vận chuyển...';
 
             if ((useNewAddress.value || addresses.value.length === 0) && isFreeShippingProvince()) {
+                if (requestId !== currentShippingRequestId) return;
                 shippingFee.value = 0;
                 shippingNote.value = 'Miễn phí (nội tỉnh Đắk Lắk)';
                 return;
@@ -768,12 +775,16 @@ watch(
             const fullAddress = addressParts.filter(Boolean).join(', ') + ', Việt Nam';
 
             if (!fullAddress || fullAddress.length < 15) {
+                if (requestId !== currentShippingRequestId) return;
                 shippingFee.value = 35000;
                 shippingNote.value = 'Chưa có địa chỉ đầy đủ';
                 return;
             }
 
             const coords = await getLatLongFromAddress(fullAddress);
+            
+            if (requestId !== currentShippingRequestId) return;
+
             if (coords) {
                 const distance = haversineDistance(SHOP_LAT, SHOP_LNG, coords.lat, coords.lng);
                 shippingFee.value = calculateShippingFee(distance);
