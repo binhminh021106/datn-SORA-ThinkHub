@@ -22,17 +22,28 @@ window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
 const REVERB_FORCE_TLS = REVERB_SCHEME === 'https';
 
+const broadcasterType = import.meta.env.VITE_BROADCASTER || 'reverb';
+
 // Cấu hình bắt sóng Real-time
-window.Echo = new Echo({
-    broadcaster: import.meta.env.VITE_BROADCASTER || 'reverb',
-    key: REVERB_APP_KEY,
+let echoConfig = {
+    broadcaster: broadcasterType,
+    key: import.meta.env.VITE_PUSHER_APP_KEY || REVERB_APP_KEY,
     cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER || 'ap1',
-    wsHost: REVERB_HOST,
-    wsPort: REVERB_PORT,
-    wssPort: REVERB_PORT,
     forceTLS: REVERB_FORCE_TLS,
-    enabledTransports: REVERB_FORCE_TLS ? ['wss'] : ['ws'],
     disableStats: true,
+};
+
+// Nếu dùng Reverb (tự host) thì mới truyền wsHost, wsPort
+// Nếu dùng Pusher thật thì TUYỆT ĐỐI KHÔNG truyền wsHost để nó tự trỏ về server của Pusher
+if (broadcasterType === 'reverb') {
+    echoConfig.wsHost = REVERB_HOST;
+    echoConfig.wsPort = REVERB_PORT;
+    echoConfig.wssPort = REVERB_PORT;
+    echoConfig.enabledTransports = REVERB_FORCE_TLS ? ['wss'] : ['ws'];
+}
+
+window.Echo = new Echo({
+    ...echoConfig,
     authorizer: (channel, options) => {
         return {
             authorize: (socketId, callback) => {

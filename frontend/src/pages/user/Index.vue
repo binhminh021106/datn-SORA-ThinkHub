@@ -324,6 +324,10 @@
       </template>
 
     </div>
+    
+    <!-- Modals -->
+    <CompareModal shop-slug="sora" />
+    <QuickAddModal />
   </div>
 </template>
 
@@ -336,6 +340,8 @@ import NewsPostCard from '@/components/ui/NewsPostCard.vue';
 import ComboCarousel from '@/components/ui/ComboCarousel.vue';
 import SoraHomeIntroLoader from '@/components/ui/SoraHomeIntroLoader.vue';
 import SoraHomeSkeleton from '@/components/ui/SoraHomeSkeleton.vue';
+import CompareModal from '@/components/ui/CompareModal.vue';
+import QuickAddModal from '@/components/ui/QuickAddModal.vue';
 import { getStorageUrl } from '@/utils/env';
 import clientApiClient from '@/utils/clientApiClient';
 import { getUserToken } from '@/composables/useUtilities';

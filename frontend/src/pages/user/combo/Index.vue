@@ -83,19 +83,19 @@
                       class="d-flex justify-content-center justify-content-md-start gap-2">
                       <div class="time-box">
                         <span class="num font-oswald">{{ combo.timerData.d }}</span>
-                        <span class="label">Days</span>
+                        <span class="label">Ngày</span>
                       </div>
                       <div class="time-box">
                         <span class="num font-oswald">{{ combo.timerData.h }}</span>
-                        <span class="label">Hr</span>
+                        <span class="label">Giờ</span>
                       </div>
                       <div class="time-box">
                         <span class="num font-oswald">{{ combo.timerData.m }}</span>
-                        <span class="label">Mins</span>
+                        <span class="label">Phút</span>
                       </div>
                       <div class="time-box">
                         <span class="num font-oswald">{{ combo.timerData.s }}</span>
-                        <span class="label">Sec</span>
+                        <span class="label">Giây</span>
                       </div>
                     </div>
                   </div>
