@@ -275,7 +275,7 @@
       v-on:cancel-order="confirmCancel" v-on:open-review="openReview" v-on:reorder="handleReorder" />
 
     <ReviewModal :is-open="isReviewModalOpen" :order="selectedOrderForReview" v-on:close="closeReviewModal"
-      v-on:review-success="fetchOrders(pagination.current_page)" />
+      v-on:review-success="refreshOrders" />
 
     <ViewReviewModal :is-open="isViewReviewModalOpen" :order="selectedOrderForViewReview" v-on:close="closeViewReviewModal" />
   </div>
@@ -427,6 +427,8 @@ const { data: ordersQueryData, isLoading: isQueryLoading, isFetching: isQueryFet
   placeholderData: keepPreviousData,
   staleTime: 5 * 60 * 1000,
 });
+
+const refreshOrders = () => queryClient.invalidateQueries({ queryKey: ['client_orders'] });
 
 const orders = computed(() => ordersQueryData.value?.data || []);
 const orderCounts = computed(() => ordersQueryData.value?.counts || {});
@@ -615,7 +617,8 @@ const confirmReturnProposal = async (orderCode, isAccepted) => {
                 is_accepted: isAccepted
             });
             Swal.fire('Thành công', res.data.message || 'Cập nhật thành công', 'success');
-            fetchOrders(activeTab.value);
+            isModalOpen.value = false;
+            await refreshOrders();
         }
     } catch (err) {
         Swal.fire('Lỗi', err.response?.data?.message || 'Không thể cập nhật yêu cầu', 'error');
