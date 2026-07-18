@@ -601,9 +601,9 @@ const form = ref({
 });
 
 const submitButtonText = computed(() => {
-    if (form.value.payment_method === 'momo') return 'THANH TOAN QUA MOMO';
-    if (form.value.payment_method === 'vnpay') return 'THANH TOAN QUA VNPAY';
-    return 'HOAN TAT DAT HANG';
+    if (form.value.payment_method === 'momo') return 'THANH TOÁN QUA MOMO';
+    if (form.value.payment_method === 'vnpay') return 'THANH TOÁN QUA VNPAY';
+    return 'ĐẶT HÀNG NGAY';
 });
 
 const soraAlert = createSoraAlert({
@@ -660,7 +660,10 @@ const haversineDistance = (lat1, lon1, lat2, lon2) => {
 const getLatLongFromAddress = async (fullAddress) => {
     if (!fullAddress || fullAddress.length < 10) return null;
 
-    const parts = fullAddress.split(',').map(p => p.trim());
+    let parts = fullAddress.split(',').map(p => p.trim());
+    const delay = ms => new Promise(res => setTimeout(res, ms));
+    let retryCount = 0;
+    const maxRetries = 2;
 
     while (parts.length >= 2) {
         const queryAddress = parts.join(', ');
@@ -671,16 +674,39 @@ const getLatLongFromAddress = async (fullAddress) => {
                 format: 'json',
                 limit: 1,
                 countrycodes: 'vn',
-                addressdetails: 1
+                addressdetails: 1,
+                email: 'sora-thinkhub@example.com'
             });
 
-            const response = await fetch(url);
-            const data = await response.json();
+            const response = await fetch(url, {
+                headers: { 'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7' }
+            });
+
+            if (!response.ok) {
+                console.warn('❌ Nominatim error:', response.status);
+                if (response.status === 429) {
+                    if (retryCount >= maxRetries) return null;
+                    retryCount++;
+                    await delay(2000); // Chờ 2s nếu bị rate limit
+                    continue;
+                }
+                return null;
+            }
+
+            const text = await response.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (err) {
+                return null; // Không phải JSON
+            }
 
             if (data?.length > 0) {
                 return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
             } else {
-                parts.shift();
+                parts.shift(); // Xóa phần tử nhỏ nhất (ví dụ xã/phường) để tìm rộng hơn
+                retryCount = 0; // Reset retry count cho truy vấn mới
+                await delay(1100); // Rate limit policy của Nominatim là 1 req/sec
             }
         } catch (e) {
             console.error('❌ Nominatim lỗi:', e.message);
@@ -706,6 +732,7 @@ const shippingFee = ref(0);
 const shippingNote = ref('Đang tính phí vận chuyển...');
 
 let shippingTimeout = null;
+let currentShippingRequestId = 0;
 
 watch(
     [
@@ -715,7 +742,6 @@ watch(
         selectedProvinceName,
         selectedDistrictName,
         selectedWardName,
-        specificAddress,
         useNewAddress,
         () => form.value.customer_address
     ],
@@ -723,9 +749,11 @@ watch(
         if (shippingTimeout) clearTimeout(shippingTimeout);
 
         shippingTimeout = setTimeout(async () => {
+            const requestId = ++currentShippingRequestId;
             shippingNote.value = 'Đang tính phí vận chuyển...';
 
             if ((useNewAddress.value || addresses.value.length === 0) && isFreeShippingProvince()) {
+                if (requestId !== currentShippingRequestId) return;
                 shippingFee.value = 0;
                 shippingNote.value = 'Miễn phí (nội tỉnh Đắk Lắk)';
                 return;
@@ -733,20 +761,30 @@ watch(
 
             let addressParts = [];
             if (useNewAddress.value || addresses.value.length === 0) {
-                addressParts = getNewAddressParts();
+                // Tối ưu: Bỏ qua số nhà/tên đường vì bản đồ hiếm khi chính xác tới mức này, dễ gây lỗi API
+                addressParts = [
+                    selectedWardName.value,
+                    selectedDistrictName.value,
+                    selectedProvinceName.value,
+                ].filter(Boolean);
             } else {
-                addressParts = [form.value.customer_address];
+                const parts = form.value.customer_address.split(',').map(p => p.trim());
+                addressParts = parts.length > 3 ? parts.slice(-3) : parts; // Lấy 3 cấp: Xã, Huyện, Tỉnh
             }
 
             const fullAddress = addressParts.filter(Boolean).join(', ') + ', Việt Nam';
 
             if (!fullAddress || fullAddress.length < 15) {
+                if (requestId !== currentShippingRequestId) return;
                 shippingFee.value = 35000;
                 shippingNote.value = 'Chưa có địa chỉ đầy đủ';
                 return;
             }
 
             const coords = await getLatLongFromAddress(fullAddress);
+            
+            if (requestId !== currentShippingRequestId) return;
+
             if (coords) {
                 const distance = haversineDistance(SHOP_LAT, SHOP_LNG, coords.lat, coords.lng);
                 shippingFee.value = calculateShippingFee(distance);

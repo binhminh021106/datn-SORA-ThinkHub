@@ -826,6 +826,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   animation: fadeIn 0.2s ease;
+  pointer-events: auto;
 }
 
 @keyframes fadeIn {

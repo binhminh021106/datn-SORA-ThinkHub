@@ -1,5 +1,5 @@
 <template>
-  <div class="vh-100 d-flex align-items-center justify-content-center bg-light-custom font-luxury">
+  <div class="d-flex align-items-center justify-content-center bg-light-custom font-luxury" style="min-height: 70vh; padding: 4rem 0;">
     <div class="text-center bg-white p-5 shadow-sm border border-light-subtle rounded border-top border-success border-4" style="max-width: 600px; width: 90%;">
       
       <div class="mb-4">

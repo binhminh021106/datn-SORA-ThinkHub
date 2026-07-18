@@ -114,16 +114,15 @@
             </div>
 
             <template v-else>
-              <!-- Date separator -->
-              <div class="date-separator">
-                <span>Hôm nay</span>
-              </div>
+              <template v-for="(msg, index) in messages" :key="msg.id || index">
+                <!-- Date separator -->
+                <div v-if="shouldShowDateSeparator(index)" class="date-separator">
+                  <span>{{ getDateSeparatorLabel(msg.created_at) }}</span>
+                </div>
 
-              <div
-                v-for="(msg, index) in messages"
-                :key="msg.id || index"
-                :id="'msg-' + msg.id"
-                class="message-row"
+                <div
+                  :id="'msg-' + msg.id"
+                  class="message-row"
                 :class="isAdminMessage(msg) ? 'message-sent' : 'message-received'"
                 @mouseenter="hoveredMsgId = msg.id"
                 @mouseleave="hoveredMsgId = null"
@@ -191,6 +190,7 @@
                   </div>
                 </div>
               </div>
+              </template>
 
               <!-- Typing indicator -->
               <div v-if="isSending" class="message-row message-sent">
@@ -410,6 +410,31 @@ const filteredContacts = computed(() => {
 });
 
 // ===== HELPERS =====
+const getDateSeparatorLabel = (timestamp) => {
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const dateString = date.toDateString();
+  if (dateString === today.toDateString()) {
+    return 'Hôm nay';
+  } else if (dateString === yesterday.toDateString()) {
+    return 'Hôm qua';
+  } else {
+    return date.toLocaleDateString('vi-VN');
+  }
+};
+
+const shouldShowDateSeparator = (index) => {
+  if (index === 0) return true;
+  if (!messages.value[index] || !messages.value[index - 1]) return false;
+  const currentMsgDate = new Date(messages.value[index].created_at).toDateString();
+  const prevMsgDate = new Date(messages.value[index - 1].created_at).toDateString();
+  return currentMsgDate !== prevMsgDate;
+};
+
 const formatTime = (timestamp) => {
   if (!timestamp) return '';
   return new Date(timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
@@ -537,19 +562,22 @@ const selectUser = async (user) => {
   try {
     const res = await axios.get(`${API_URL}/admin/messages?partner_id=${user.id}`, axiosConfig());
     if (res.data.status) {
-      messages.value = res.data.data.map(m => {
+      // Sắp xếp tin nhắn cũ nhất lên đầu (asc) bằng ID để tránh lỗi parse Date
+      const sortedMessages = res.data.data.sort((a, b) => Number(a.id) - Number(b.id));
+      messages.value = sortedMessages.map(m => {
         if (m.reply_to_message) {
           m.reply_to = m.reply_to_message;
         }
         return m;
       });
       messages.value.forEach(m => renderedIds.value.add(m.id));
-      scrollToBottom();
     }
   } catch (err) {
     console.error('Lỗi lấy tin nhắn:', err);
   } finally {
     isLoadingMessages.value = false;
+    // Đảm bảo DOM đã render tin nhắn (thoát khỏi v-if="isLoadingMessages") trước khi cuộn
+    scrollToBottom();
   }
 };
 

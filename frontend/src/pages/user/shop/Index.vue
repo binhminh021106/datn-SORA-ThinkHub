@@ -16,7 +16,7 @@
       <div class="container-fluid px-3 py-1 py-md-2 position-relative z-index-2">
         <div class="d-flex flex-column align-items-center text-center mb-2">
           <h2 class="text-white fw-bold mb-1 font-serif"
-            style="font-size: clamp(1.4rem, 2.5vw, 1.8rem); letter-spacing: 0.02em;">Lựa chọn lý tưởng</h2>
+          style="font-size: clamp(1.4rem, 2.5vw, 1.8rem); letter-spacing: 0.02em;">LỰA CHỌN LÝ TƯỞNG</h2>
           <div class="d-flex align-items-center justify-content-center mb-3">
             <svg width="120" height="15" viewBox="0 0 150 20" xmlns="http://www.w3.org/2000/svg" style="opacity: 0.8;">
               <path d="M10 10h40m50 0h40M65 10c0-3 4-5 10-5s10 2 10 5-4 5-10 5-10-2-10-5z" stroke="white"

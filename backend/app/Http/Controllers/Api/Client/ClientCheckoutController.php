@@ -28,7 +28,7 @@ class ClientCheckoutController extends Controller
     public function initData(Request $request)
     {
         $cart = $this->resolveCart($request);
-        $cartItems = $cart ? $cart->items->load(['variant.product', 'combo']) : [];
+        $cartItems = $cart ? $cart->items->load(['variant.product', 'combo.items.variant']) : [];
 
         $addresses = [];
         $userData = null;
@@ -335,8 +335,8 @@ class ClientCheckoutController extends Controller
                     }
                 }
 
-                $shippingFee = $subTotal > 500000 ? 0 : 30000;
-                $totalAmount = max($subTotal - $discountAmount - $tierDiscountAmount + $shippingFee, 0);
+                $shippingFee = $request->shipping_fee !== null ? (float)$request->shipping_fee : 0;
+                $totalAmount = max($subTotal - $discountAmount - $tierDiscountAmount, 0) + $shippingFee;
 
                 // CÂN BẰNG TỈ LỆ HOA HỒNG THEO SỐ TIỀN THỰC TẾ
                 $actualCommission = 0;
