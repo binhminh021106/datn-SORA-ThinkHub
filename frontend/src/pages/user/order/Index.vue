@@ -1,9 +1,9 @@
 <template>
   <div>
       <!-- Hiển thị bộ lọc và tab nếu đã từng có đơn hàng hoặc đang tải -->
-      <div v-if="hasEverHadOrders || isQueryLoading" class="mb-4">
+      <div class="mb-4">
         <!-- Vẫn hiển thị bộ lọc nếu đã từng có đơn hàng, ngay cả khi đang loading skeleton bên dưới -->
-        <div v-show="hasEverHadOrders" class="bg-white p-2 p-md-3 shadow-sm border border-light-subtle d-flex flex-column gap-3 mb-3">
+        <div v-show="hasEverHadOrders || isQueryLoading" class="bg-white p-2 p-md-3 shadow-sm border border-light-subtle d-flex flex-column gap-3 mb-3">
           <div class="order-tabs d-flex gap-3 overflow-auto pb-3 pt-2 text-nowrap hide-scrollbar" style="scrollbar-width: none;">
             <button v-for="tab in statusTabs" :key="tab.value" v-on:click="filterStatus = tab.value"
               class="btn rounded-pill fw-semibold text-uppercase position-relative transition-all"
@@ -71,6 +71,16 @@
               <SoraSkeleton width="150px" height="30px" />
               <SoraSkeleton width="200px" height="38px" class="mt-2" />
             </div>
+          </div>
+        </div>
+
+        <div v-else-if="!hasEverHadOrders" class="text-center py-5 bg-white shadow-sm border-top border-4 border-danger-custom mt-3">
+          <div class="py-5">
+            <i class="bi bi-bag-x text-muted opacity-25 d-block mb-3" style="font-size: 5rem;"></i>
+            <h3 class="fs-4 text-dark mb-3 font-serif">Bạn chưa có đơn hàng nào</h3>
+            <p class="text-secondary mb-4">Những kiệt tác trang sức SORA đang chờ bạn khám phá.</p>
+            <button v-on:click="router.push('/shop')"
+              class="editorial-btn border-0 px-5 py-3 mt-2">Bắt đầu mua sắm</button>
           </div>
         </div>
 
@@ -244,16 +254,6 @@
                   class="page-link" href="javascript:void(0)" v-on:click="changePage(pagination.last_page)">»</a></li>
             </ul>
           </nav>
-        </div>
-      </div>
-
-      <div v-else class="text-center py-5 bg-white shadow-sm border-top border-4 border-danger-custom">
-        <div class="py-5">
-          <i class="bi bi-bag-x text-muted opacity-25 d-block mb-3" style="font-size: 5rem;"></i>
-          <h3 class="fs-4 text-dark mb-3 font-serif">Bạn chưa có đơn hàng nào</h3>
-          <p class="text-secondary mb-4">Những kiệt tác trang sức SORA đang chờ bạn khám phá.</p>
-          <button v-on:click="router.push('/shop')"
-            class="editorial-btn border-0 px-5 py-3 mt-2">Bắt đầu mua sắm</button>
         </div>
       </div>
 

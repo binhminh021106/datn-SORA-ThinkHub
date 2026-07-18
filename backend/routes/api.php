@@ -225,8 +225,11 @@ Route::prefix('client')->group(function () {
         Route::post('/{order_code}/review', 'review');
         Route::get('/{order_code}/review', 'getReview');
         Route::post('/{order_code}/reorder', 'reorder');
-        Route::post('/{order_code}/return', 'requestReturn');
-        Route::post('/{order_code}/return/confirm', 'confirmRefundProposal');
+        
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::post('/{order_code}/return', 'requestReturn');
+            Route::post('/{order_code}/return/confirm', 'confirmRefundProposal');
+        });
     });
 
     Route::controller(ClientComboController::class)->prefix('combos')->group(function () {

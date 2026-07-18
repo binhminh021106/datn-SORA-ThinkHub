@@ -30,7 +30,7 @@
                                 <i class="bi bi-clock-history me-2"></i> Tiến Trình
                             </h6>
 
-                            <div v-if="!['cancelled', 'returned', 'return_requested'].includes(order?.status)"
+                            <div v-if="!['cancelled', 'returned', 'return_requested', 'return_negotiating', 'return_retrieving'].includes(order?.status)"
                                 class="order-stepper-horizontal d-none d-md-flex mt-2 mb-3">
                                 <div v-for="(step, index) in orderSteps" :key="index" class="stepper-step"
                                     :class="{ 'completed': isStepCompleted(order?.status, step.value), 'active': order?.status === step.value }">
@@ -45,7 +45,7 @@
                                 </div>
                             </div>
 
-                            <ul v-if="!['cancelled', 'returned', 'return_requested'].includes(order?.status)"
+                            <ul v-if="!['cancelled', 'returned', 'return_requested', 'return_negotiating', 'return_retrieving'].includes(order?.status)"
                                 class="timeline-vertical d-md-none mt-3">
                                 <li v-for="(h, idx) in order?.histories" :key="h.id" :class="{ 'latest': idx === 0 }">
                                     <div class="timeline-dot"></div>
@@ -270,7 +270,7 @@
                             </h6>
                             
                             <div class="mb-3 text-muted small">
-                                <span class="fw-bold text-dark">Lý do hoàn trả:</span> {{ order?.return_reason || (order?.status_history?.find(h => h.new_status === 'return_requested')?.note) || 'Đã gửi yêu cầu' }}
+                                <span class="fw-bold text-dark">Lý do hoàn trả:</span> {{ order?.return_reason || (order?.histories?.find(h => h.new_status === 'return_requested')?.note) || 'Đã gửi yêu cầu' }}
                             </div>
 
                             <div v-if="order?.refund_bank_name" class="mb-3 p-3 bg-light rounded border border-light-subtle small">

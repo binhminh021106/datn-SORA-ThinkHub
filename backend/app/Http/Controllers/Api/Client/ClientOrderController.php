@@ -806,8 +806,8 @@ class ClientOrderController extends Controller
             return response()->json(['success' => false, 'message' => 'Chỉ có thể yêu cầu hoàn hàng khi đơn đã giao thành công'], 400);
         }
 
-        if ($order->user_id && (!$user || (int)$user->id !== (int)$order->user_id)) {
-            return response()->json(['success' => false, 'message' => 'Bạn không có quyền thực hiện'], 403);
+        if (!$order->user_id || !$user || (int)$user->id !== (int)$order->user_id) {
+            return response()->json(['success' => false, 'message' => 'Bạn không có quyền thực hiện hoặc đơn hàng không hợp lệ'], 403);
         }
 
         $request->validate([
@@ -857,8 +857,8 @@ class ClientOrderController extends Controller
             return response()->json(['success' => false, 'message' => 'Không tìm thấy đơn hàng'], 404);
         }
 
-        if ($order->user_id && (!$user || (int)$user->id !== (int)$order->user_id)) {
-            return response()->json(['success' => false, 'message' => 'Bạn không có quyền thực hiện'], 403);
+        if (!$order->user_id || !$user || (int)$user->id !== (int)$order->user_id) {
+            return response()->json(['success' => false, 'message' => 'Bạn không có quyền thực hiện hoặc đơn hàng không hợp lệ'], 403);
         }
 
         if ($order->status !== 'return_negotiating') {
@@ -871,11 +871,16 @@ class ClientOrderController extends Controller
 
         try {
             return DB::transaction(function () use ($order, $request, $user) {
+                $lockedOrder = Order::where('id', $order->id)->lockForUpdate()->first();
+                if (!$lockedOrder || $lockedOrder->status !== 'return_negotiating') {
+                    return response()->json(['success' => false, 'message' => 'Đơn hàng không ở trạng thái chờ xác nhận thỏa thuận'], 400);
+                }
+
                 if ($request->is_accepted) {
-                    $order->update(['status' => 'return_retrieving']);
+                    $lockedOrder->update(['status' => 'return_retrieving']);
                     
-                    OrderStatusHistory::create([
-                        'order_id'        => $order->id,
+                    OrderStatusHistory::query()->create([
+                        'order_id'        => $lockedOrder->id,
                         'old_status'      => 'return_negotiating',
                         'new_status'      => 'return_retrieving',
                         'note'            => 'Khách hàng ĐÃ ĐỒNG Ý với mức hoàn tiền đề xuất. Đang chờ thu hồi hàng.',
@@ -889,10 +894,10 @@ class ClientOrderController extends Controller
                     ]);
                 } else {
                     // Khách không đồng ý, đưa về trạng thái delivered hoặc hủy yêu cầu hoàn trả
-                    $order->update(['status' => 'delivered']);
+                    $lockedOrder->update(['status' => 'delivered']);
 
-                    OrderStatusHistory::create([
-                        'order_id'        => $order->id,
+                    OrderStatusHistory::query()->create([
+                        'order_id'        => $lockedOrder->id,
                         'old_status'      => 'return_negotiating',
                         'new_status'      => 'delivered',
                         'note'            => 'Khách hàng TỪ CHỐI mức hoàn tiền đề xuất. Hủy yêu cầu hoàn trả.',

@@ -66,6 +66,9 @@ class AdminOrderController extends Controller
                 $q->whereIn('status', ['returned', 'return_requested', 'return_negotiating', 'return_retrieving'])
                     ->orWhere(function ($sub) {
                         $sub->where('status', 'cancelled')->whereIn('payment_status', ['paid', 'refunded']);
+                    })
+                    ->orWhere(function ($sub) {
+                        $sub->where('status', 'delivered')->whereNotNull('refund_amount')->where('refund_amount', 0);
                     });
             });
 
@@ -75,7 +78,8 @@ class AdminOrderController extends Controller
                 DB::raw('SUM(CASE WHEN status = "return_requested" THEN 1 ELSE 0 END) as total_pending'),
                 DB::raw('SUM(CASE WHEN status IN ("return_negotiating", "return_retrieving") THEN 1 ELSE 0 END) as total_proposing'),
                 DB::raw('SUM(CASE WHEN payment_status = "refunded" THEN 1 ELSE 0 END) as total_refunded'),
-                DB::raw('SUM(CASE WHEN status = "delivered" AND refund_amount = 0 THEN 1 ELSE 0 END) as total_rejected')
+                DB::raw('SUM(CASE WHEN status = "delivered" AND refund_amount = 0 THEN 1 ELSE 0 END) as total_rejected'),
+                DB::raw('SUM(CASE WHEN status = "cancelled" AND payment_status IN ("paid", "refunded") THEN 1 ELSE 0 END) as total_cancelled')
             )->first();
 
             $counts = [
@@ -84,6 +88,7 @@ class AdminOrderController extends Controller
                 'proposing' => (int) ($returnStats->total_proposing ?? 0),
                 'refunded'  => (int) ($returnStats->total_refunded ?? 0),
                 'rejected'  => (int) ($returnStats->total_rejected ?? 0),
+                'cancelled' => (int) ($returnStats->total_cancelled ?? 0),
             ];
 
             // Lọc theo tab Hoàn trả
@@ -97,6 +102,8 @@ class AdminOrderController extends Controller
                     $baseQuery->where('payment_status', 'refunded');
                 } elseif ($tab === 'rejected') {
                     $baseQuery->where('status', 'delivered')->whereNotNull('refund_amount')->where('refund_amount', 0);
+                } elseif ($tab === 'cancelled') {
+                    $baseQuery->where('status', 'cancelled')->whereIn('payment_status', ['paid', 'refunded']);
                 }
             }
         }
@@ -363,7 +370,7 @@ class AdminOrderController extends Controller
                     $oldStatus = $order->status;
                 }
 
-                OrderStatusHistory::create([
+                OrderStatusHistory::query()->create([
                     'order_id' => $order->id,
                     'old_status' => $oldStatus,
                     'new_status' => $order->status,
@@ -371,6 +378,10 @@ class AdminOrderController extends Controller
                     'changed_by' => Auth::id(), 'changed_by_type' => 'admin'
                 ]);
             } else {
+                if ($order->status === 'cancelled') {
+                    throw new \Exception('Đơn hàng đã hủy không thể đề xuất hay từ chối hoàn trả. Hãy chọn Hoàn Tiền Trực Tiếp.');
+                }
+                
                 if ($order->customer_email) {
                     try {
                         Mail::to($order->customer_email)->send(new OrderRefundDealMail($order, $request->action));
@@ -390,7 +401,7 @@ class AdminOrderController extends Controller
                     $refundStatusChanged = true;
                 }
 
-                OrderStatusHistory::create([
+                OrderStatusHistory::query()->create([
                     'order_id' => $order->id, 
                     'old_status' => $oldStatus, 
                     'new_status' => $order->status,

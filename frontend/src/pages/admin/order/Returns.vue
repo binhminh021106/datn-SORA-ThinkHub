@@ -140,12 +140,18 @@
                           <i class="bi bi-eye-fill"></i>
                       </button>
                       
-                      <button v-if="['pending', 'proposing', 'rejected', 'cancelled'].includes(getReturnStatusUi(order).statusCode)" 
+                      <button v-if="['pending', 'proposing', 'rejected'].includes(getReturnStatusUi(order).statusCode)" 
                               class="btn btn-sm shadow-sm fw-bold flex-grow-1 action-btn-hover"
                               :class="getReturnStatusUi(order).statusCode === 'rejected' ? 'btn-outline-danger' : (getReturnStatusUi(order).statusCode === 'pending' ? 'btn-primary' : 'btn-info text-white')" 
                               @click="processRefund(order)">
                           <i class="bi" :class="getReturnStatusUi(order).statusCode === 'rejected' ? 'bi-arrow-counterclockwise' : (getReturnStatusUi(order).statusCode === 'pending' ? 'bi-shield-exclamation' : 'bi-envelope-paper')"></i> 
                           {{ getReturnStatusUi(order).statusCode === 'rejected' ? 'Thương lượng lại' : 'Xử lý / Cập nhật' }}
+                      </button>
+
+                      <button v-else-if="getReturnStatusUi(order).statusCode === 'cancelled'"
+                              class="btn btn-sm btn-dark shadow-sm fw-bold flex-grow-1 action-btn-hover"
+                              @click="processRefund(order)">
+                          <i class="bi bi-cash-stack"></i> Hoàn Tiền Trực Tiếp
                       </button>
                       
                       <div v-else-if="getReturnStatusUi(order).statusCode === 'refunded'" class="text-success small fw-bold flex-grow-1 d-flex align-items-center justify-content-center border rounded bg-success bg-opacity-10">
@@ -282,7 +288,7 @@
                                   <div class="d-flex justify-content-between mt-3 pt-2 border-top border-danger border-opacity-25 align-items-center"><span class="fw-bold text-dark tracking-wide">SỐ TIỀN GỐC CỦA ĐƠN:</span> <strong class="fs-5 text-danger font-oswald">{{ formatCurrency(selectedOrder.total_amount) }}</strong></div>
                                   
                                   <div class="mt-3 pt-3 border-top border-danger border-opacity-25" v-if="selectedOrder.refund_amount !== null">
-                                    <div v-if="selectedOrder.refund_amount < selectedOrder.total_amount" class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-light-subtle">
+                                    <div v-if="selectedOrder.refund_amount !== null && Number(selectedOrder.refund_amount) < Number(selectedOrder.total_amount)" class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-light-subtle">
                                         <span class="fw-bold text-danger text-uppercase tracking-wide" style="font-size: 0.8rem;">
                                             <i class="bi bi-dash-circle me-1"></i> Khấu trừ hoàn trả
                                             <span v-if="Number.isInteger((selectedOrder.total_amount - selectedOrder.refund_amount) / selectedOrder.total_amount * 100)" class="badge bg-danger bg-opacity-10 text-danger ms-1 border border-danger border-opacity-25">
@@ -542,6 +548,13 @@ const processRefund = async (order) => {
       return;
   }
 
+  const escapeHtml = (unsafe) => {
+      if (unsafe == null) return '';
+      return String(unsafe).replace(/[&<"'>]/g, (m) => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+      })[m]);
+  };
+
   const defaultRefundValue = (fullOrder.refund_amount !== null && fullOrder.refund_amount > 0) 
       ? Math.round(fullOrder.refund_amount) 
       : Math.round(fullOrder.total_amount);
@@ -578,8 +591,8 @@ const processRefund = async (order) => {
         <div class="col-lg-5 border-end-lg pe-lg-3 mb-4 mb-lg-0">
           <div class="bg-light p-3 rounded border mb-3">
               <div class="text-muted small fw-bold text-uppercase mb-1">Khách hàng</div>
-              <div class="fw-bold text-dark fs-6">${fullOrder.customer_name}</div>
-              <div class="text-muted small text-truncate mb-2">${fullOrder.customer_email || 'Không có Email'}</div>
+              <div class="fw-bold text-dark fs-6">${escapeHtml(fullOrder.customer_name)}</div>
+              <div class="text-muted small text-truncate mb-2">${escapeHtml(fullOrder.customer_email) || 'Không có Email'}</div>
               <div class="small text-muted border-top pt-2"><i class="bi bi-calendar-check me-1"></i>Ngày mua: <strong class="text-dark">${formatDateTime(fullOrder.created_at)}</strong></div>
           </div>
           <div class="bg-danger bg-opacity-10 border border-danger-subtle p-3 rounded text-center mb-3">
@@ -589,9 +602,9 @@ const processRefund = async (order) => {
           ${usageHtml}
           <div class="bg-light border p-3 rounded mb-3">
               <div class="text-muted small fw-bold text-uppercase mb-2"><i class="bi bi-bank2 me-1"></i>Ngân hàng nhận tiền</div>
-              <div class="small mb-1">Ngân hàng: <strong class="text-dark">${fullOrder.refund_bank_name || '---'}</strong></div>
-              <div class="small mb-1">Số TK: <strong class="text-dark">${fullOrder.refund_account_number || '---'}</strong></div>
-              <div class="small">Chủ TK: <strong class="text-dark text-uppercase">${fullOrder.refund_account_name || '---'}</strong></div>
+              <div class="small mb-1">Ngân hàng: <strong class="text-dark">${escapeHtml(fullOrder.refund_bank_name) || '---'}</strong></div>
+              <div class="small mb-1">Số TK: <strong class="text-dark">${escapeHtml(fullOrder.refund_account_number) || '---'}</strong></div>
+              <div class="small">Chủ TK: <strong class="text-dark text-uppercase">${escapeHtml(fullOrder.refund_account_name) || '---'}</strong></div>
           </div>
           <div class="alert alert-warning small border-warning py-2 mb-0">
               <i class="bi bi-info-circle-fill me-1"></i> <strong>Lưu ý:</strong> Khách hàng sẽ phải thao tác xác nhận đồng ý trên Web/App trước khi chuyển khoản.
@@ -632,21 +645,21 @@ const processRefund = async (order) => {
               
               <div class="list-group shadow-sm">
                   <label class="list-group-item list-group-item-action d-flex align-items-center cursor-pointer p-3">
-                    <input class="form-check-input me-3 mt-0 fs-5" type="radio" name="refund_action" value="propose" ${['pending', 'proposing'].includes(currentStatus) ? 'checked' : ''} ${order.status === 'return_retrieving' ? 'disabled' : ''}>
+                    <input class="form-check-input me-3 mt-0 fs-5" type="radio" name="refund_action" value="propose" ${['pending', 'proposing'].includes(currentStatus) && order.status !== 'cancelled' ? 'checked' : ''} ${order.status === 'return_retrieving' || order.status === 'cancelled' ? 'disabled' : ''}>
                     <div>
                         <div class="fw-bold text-dark"><i class="bi bi-envelope-paper text-primary me-2"></i>Đề xuất Giá & Chờ Khách Xác Nhận</div>
                         <div class="text-muted small" style="font-size: 0.75rem;">Gửi mức hoàn tiền để khách hàng "Đồng ý/Từ chối" trên hệ thống.</div>
                     </div>
                   </label>
                   <label class="list-group-item list-group-item-action d-flex align-items-center cursor-pointer p-3">
-                    <input class="form-check-input me-3 mt-0 fs-5" type="radio" name="refund_action" value="refunded" ${currentStatus === 'refunded' ? 'checked' : ''} ${order.status !== 'return_retrieving' && currentStatus !== 'refunded' ? 'disabled' : ''}>
+                    <input class="form-check-input me-3 mt-0 fs-5" type="radio" name="refund_action" value="refunded" ${currentStatus === 'refunded' || order.status === 'cancelled' ? 'checked' : ''} ${order.status !== 'return_retrieving' && currentStatus !== 'refunded' && order.status !== 'cancelled' ? 'disabled' : ''}>
                     <div>
                         <div class="fw-bold text-dark"><i class="bi bi-check-circle text-success me-2"></i>Đã Thu Hồi & Chuyển Khoản</div>
-                        <div class="text-muted small" style="font-size: 0.75rem;">(Chỉ khả dụng khi khách đã chốt thỏa thuận) Xác nhận hoàn tiền.</div>
+                        <div class="text-muted small" style="font-size: 0.75rem;">(Khả dụng khi khách đã chốt thỏa thuận hoặc hủy trực tiếp) Xác nhận hoàn tiền.</div>
                     </div>
                   </label>
                   <label class="list-group-item list-group-item-action d-flex align-items-center cursor-pointer p-3 bg-danger bg-opacity-10 border-danger border-opacity-25">
-                    <input class="form-check-input me-3 mt-0 fs-5" type="radio" name="refund_action" value="reject" ${currentStatus === 'rejected' ? 'checked' : ''} ${order.status === 'return_retrieving' ? 'disabled' : ''}>
+                    <input class="form-check-input me-3 mt-0 fs-5" type="radio" name="refund_action" value="reject" ${currentStatus === 'rejected' ? 'checked' : ''} ${order.status === 'return_retrieving' || order.status === 'cancelled' ? 'disabled' : ''}>
                     <div>
                         <div class="fw-bold text-danger"><i class="bi bi-x-circle text-danger me-2"></i>Từ chối hoàn tiền</div>
                         <div class="text-muted small" style="font-size: 0.75rem;">Đóng băng quy trình và khôi phục đơn hàng.</div>
