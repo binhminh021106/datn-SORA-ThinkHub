@@ -6,9 +6,9 @@
         <div v-show="hasEverHadOrders || isQueryLoading" class="bg-white p-2 p-md-3 shadow-sm border border-light-subtle d-flex flex-column gap-3 mb-3">
           <div class="order-tabs d-flex gap-3 overflow-auto pb-3 pt-2 text-nowrap hide-scrollbar" style="scrollbar-width: none;">
             <button v-for="tab in statusTabs" :key="tab.value" v-on:click="filterStatus = tab.value"
-              class="btn rounded-pill fw-semibold text-uppercase position-relative transition-all"
+              class="btn tab-filter-btn rounded-pill fw-semibold text-uppercase position-relative transition-all"
               style="font-size: 0.75rem; padding: 0.35rem 1rem;"
-              :class="filterStatus === tab.value ? 'bg-sora-primary text-white shadow-sm' : 'bg-white text-secondary border border-light-subtle'">
+              :class="filterStatus === tab.value ? 'active shadow-sm' : 'bg-white text-secondary border border-light-subtle'">
               <span>{{ tab.label }}</span>
               <span v-if="orderCounts && orderCounts[tab.value]"
                 class="position-absolute top-0 start-100 translate-middle badge rounded-pill border border-white"
@@ -942,7 +942,17 @@ const exportInvoice = async (order) => {
   padding: 0 0 10px 0;
   color: #6c757d;
   border-bottom: 2px solid transparent;
-  transition: all 0.3s;
+}
+
+.tab-filter-btn.active {
+  background-color: var(--sora-primary) !important;
+  color: #ffffff !important;
+  border-color: var(--sora-primary) !important;
+}
+.tab-filter-btn:not(.active):hover {
+  background-color: #fcfcfc !important;
+  color: var(--sora-primary) !important;
+  border-color: var(--sora-primary) !important;
 }
 
 .tab-btn:hover {

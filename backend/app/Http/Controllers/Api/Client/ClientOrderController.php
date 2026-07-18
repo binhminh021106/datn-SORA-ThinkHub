@@ -57,6 +57,15 @@ class ClientOrderController extends Controller
                           $q3->where('status', 'delivered')->whereNotNull('refund_amount')->where('refund_amount', 0);
                       });
                 });
+            } elseif ($validated['status'] === 'delivered') {
+                $query->where('status', 'delivered')
+                      ->where(function ($q) {
+                          $q->whereNull('refund_amount')
+                            ->orWhere('refund_amount', '!=', 0);
+                      });
+            } elseif ($validated['status'] === 'cancelled') {
+                $query->where('status', 'cancelled')
+                      ->whereNotIn('payment_status', ['paid', 'refunded']);
             } else {
                 $query->where('status', $validated['status']);
             }
@@ -104,7 +113,15 @@ class ClientOrderController extends Controller
             ->where('status', 'cancelled')
             ->whereIn('payment_status', ['paid', 'refunded'])
             ->count();
-        $returnedCount += $cancelledRefundCount;
+            
+        $rejectedReturnCount = \Illuminate\Support\Facades\DB::table('orders')
+            ->where('user_id', $user->id)
+            ->where('status', 'delivered')
+            ->whereNotNull('refund_amount')
+            ->where('refund_amount', 0)
+            ->count();
+            
+        $returnedCount += $cancelledRefundCount + $rejectedReturnCount;
 
         $response = $orders->toArray();
         $response['counts'] = [
@@ -112,8 +129,8 @@ class ClientOrderController extends Controller
             'pending' => $countsQuery['pending'] ?? 0,
             'confirmed' => $countsQuery['confirmed'] ?? 0,
             'shipping' => $countsQuery['shipping'] ?? 0,
-            'delivered' => $countsQuery['delivered'] ?? 0,
-            'cancelled' => $countsQuery['cancelled'] ?? 0,
+            'delivered' => max((($countsQuery['delivered'] ?? 0) - $rejectedReturnCount), 0),
+            'cancelled' => max((($countsQuery['cancelled'] ?? 0) - $cancelledRefundCount), 0),
             'returned' => $returnedCount,
         ];
 
