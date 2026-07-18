@@ -104,14 +104,14 @@
                 <span class="text-muted small"><i class="bi bi-calendar-event me-1"></i> <span
                     v-text="formatDate(order.created_at)"></span></span>
               </div>
-              <span :class="['status-badge px-3 py-1 rounded-pill small fw-bold', getStatusClass(order.status)]">
-                <i :class="getStatusIcon(order.status)" class="me-1"></i> <span
-                  v-text="translateStatus(order.status)"></span>
+              <span :class="['status-badge px-3 py-1 rounded-pill small fw-bold', getStatusClass(order)]">
+                <i :class="getStatusIcon(order)" class="me-1"></i> <span
+                  v-text="translateStatus(order)"></span>
               </span>
             </div>
 
             <div class="card-body p-2">
-              <div v-if="!['cancelled', 'returned', 'return_requested', 'return_negotiating', 'return_retrieving'].includes(order.status)"
+              <div v-if="!['cancelled', 'returned', 'return_requested', 'return_negotiating', 'return_retrieving'].includes(order.status) && !(order.status === 'delivered' && order.refund_amount !== null && Number(order.refund_amount) === 0)"
                 class="order-stepper-horizontal d-none d-md-flex mb-3 mt-1">
                 <div v-for="(step, index) in orderSteps" :key="index" class="stepper-step"
                   :class="{ 'completed': isStepCompleted(order.status, step.value), 'active': order.status === step.value }">
@@ -146,11 +146,24 @@
                         <span>Khấu trừ: <strong class="text-danger">-{{ formatPrice(order.total_amount - order.refund_amount) }}</strong> <span v-if="order.total_amount > 0">({{ Math.round((order.total_amount - order.refund_amount) / order.total_amount * 100) }}%)</span></span>
                     </div>
                     <div v-if="order.refund_note" class="small text-muted fst-italic mb-3">
-                        <i class="bi bi-chat-left-text me-1"></i> Lời nhắn: {{ order.refund_note }}
+                        <i class="bi bi-chat-left-text me-1"></i> Lời nhắn: {{ order.refund_note.replace('USER: ', '').replace('ADMIN: ', '') }}
                     </div>
                     <div class="d-flex gap-2">
-                        <button @click="handleConfirmRefund(order, true)" class="btn btn-sm btn-success fw-bold w-100"><i class="bi bi-check2-circle me-1"></i>Đồng ý đề xuất</button>
+                        <button class="btn btn-sm btn-outline-danger w-50 fw-bold" @click.stop="confirmReturnProposal(order.order_code, false)">Không đồng ý</button>
+                        <button class="btn btn-sm btn-luxury-success w-50 fw-bold" @click.stop="confirmReturnProposal(order.order_code, true)">Đồng ý mức hoàn</button>
                     </div>
+                </div>
+              </div>
+              <div v-else-if="order.status === 'delivered' && order.refund_amount !== null && Number(order.refund_amount) === 0"
+                class="alert bg-light border border-light-subtle rounded-0 mb-3 py-2 px-3">
+                <div class="d-flex align-items-center mb-1">
+                    <i class="bi bi-exclamation-circle-fill text-danger me-2 fs-5"></i>
+                    <div class="text-dark fw-bold small">
+                        {{ order.refund_note && order.refund_note.startsWith('ADMIN') ? 'SORA từ chối yêu cầu hoàn trả' : 'Bạn đã từ chối thỏa thuận hoàn trả' }}
+                    </div>
+                </div>
+                <div v-if="order.refund_note" class="text-muted small ms-4 fst-italic">
+                    Lý do: {{ order.refund_note.replace('USER: ', '').replace('ADMIN: ', '').replace('USER:', '').replace('ADMIN:', '') }}
                 </div>
               </div>
 
@@ -348,26 +361,47 @@ const formatDate = (d) => d ? new Date(d).toLocaleDateString('vi-VN', { year: 'n
 const getImageUrl = (p) => getStorageUrl(p, defaultPlaceholder);
 const handleImageError = (e) => { e.target.src = defaultPlaceholder; };
 
-const getStatusClass = (s) => ({
-  pending: 'bg-warning-custom text-dark', confirmed: 'bg-info-custom text-white', processing: 'bg-primary text-white',
-  shipping: 'bg-primary text-white', delivered: 'bg-success text-white', cancelled: 'bg-light text-secondary border',
-  return_requested: 'bg-warning-custom text-dark', return_negotiating: 'bg-info-custom text-white', return_retrieving: 'bg-primary text-white',
-  returned: 'bg-success text-white'
-}[s] || 'bg-secondary text-white');
+const getStatusClass = (order) => {
+  if (order.status === 'delivered' && order.refund_amount !== null && Number(order.refund_amount) === 0) {
+    if (order.refund_note && order.refund_note.startsWith('USER:')) return 'bg-secondary text-white';
+    return 'bg-danger text-white';
+  }
+  const s = order.status;
+  return {
+    pending: 'bg-warning-custom text-dark', confirmed: 'bg-info-custom text-white', processing: 'bg-primary text-white',
+    shipping: 'bg-primary text-white', delivered: 'bg-success text-white', cancelled: 'bg-light text-secondary border',
+    return_requested: 'bg-warning-custom text-dark', return_negotiating: 'bg-info-custom text-white', return_retrieving: 'bg-primary text-white',
+    returned: 'bg-success text-white'
+  }[s] || 'bg-secondary text-white';
+};
 
-const getStatusIcon = (s) => ({
-  pending: 'bi-hourglass-split', confirmed: 'bi-check2-circle', shipping: 'bi-truck',
-  delivered: 'bi-box-seam', cancelled: 'bi-x-circle',
-  return_requested: 'bi-inbox-fill', return_negotiating: 'bi-envelope-paper-fill', return_retrieving: 'bi-truck',
-  returned: 'bi-check-circle-fill'
-}[s] || 'bi-info-circle');
+const getStatusIcon = (order) => {
+  if (order.status === 'delivered' && order.refund_amount !== null && Number(order.refund_amount) === 0) {
+    if (order.refund_note && order.refund_note.startsWith('USER:')) return 'bi-person-x-fill';
+    return 'bi-x-circle-fill';
+  }
+  const s = order.status;
+  return {
+    pending: 'bi-hourglass-split', confirmed: 'bi-check2-circle', shipping: 'bi-truck',
+    delivered: 'bi-box-seam', cancelled: 'bi-x-circle',
+    return_requested: 'bi-inbox-fill', return_negotiating: 'bi-envelope-paper-fill', return_retrieving: 'bi-truck',
+    returned: 'bi-check-circle-fill'
+  }[s] || 'bi-info-circle';
+};
 
-const translateStatus = (s) => ({
-  pending: 'Chờ xác nhận', confirmed: 'Đã xác nhận', processing: 'Đang xử lý',
-  shipping: 'Đang giao hàng', delivered: 'Hoàn tất', cancelled: 'Đã hủy',
-  return_requested: 'Yêu cầu trả hàng', return_negotiating: 'Chờ thỏa thuận giá', return_retrieving: 'Đang thu hồi hàng',
-  returned: 'Đã hoàn tiền'
-}[s] || s);
+const translateStatus = (order) => {
+  if (order.status === 'delivered' && order.refund_amount !== null && Number(order.refund_amount) === 0) {
+    if (order.refund_note && order.refund_note.startsWith('USER:')) return 'Khách hàng từ chối thỏa thuận';
+    return 'SORA từ chối hoàn trả';
+  }
+  const s = order.status;
+  return {
+    pending: 'Chờ xác nhận', confirmed: 'Đã xác nhận', processing: 'Đang xử lý',
+    shipping: 'Đang giao hàng', delivered: 'Hoàn tất', cancelled: 'Đã hủy',
+    return_requested: 'Yêu cầu trả hàng', return_negotiating: 'Chờ thỏa thuận giá', return_retrieving: 'Đang thu hồi hàng',
+    returned: 'Đã hoàn tiền'
+  }[s] || s;
+};
 
 const hasActiveFilters = computed(() => filterStatus.value !== 'all' || filterDate.value !== 'all' || sortBy.value !== 'newest' || searchQuery.value !== '');
 const resetFilters = () => { filterStatus.value = 'all'; filterDate.value = 'all'; sortBy.value = 'newest'; searchQuery.value = ''; };
@@ -562,6 +596,31 @@ const escapeHtml = (v = '') =>
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
+
+const confirmReturnProposal = async (orderCode, isAccepted) => {
+    try {
+        const result = await Swal.fire({
+            title: isAccepted ? 'Xác nhận đồng ý' : 'Từ chối thỏa thuận?',
+            text: isAccepted ? 'Bạn đồng ý với mức hoàn tiền cửa hàng đề xuất? Chúng tôi sẽ bắt đầu thu hồi hàng.' : 'Nếu từ chối, yêu cầu hoàn trả sẽ bị hủy và đơn hàng sẽ trở về trạng thái Đã nhận hàng.',
+            icon: isAccepted ? 'question' : 'warning',
+            showCancelButton: true,
+            confirmButtonText: isAccepted ? 'Đồng ý' : 'Từ chối yêu cầu',
+            cancelButtonText: 'Đóng',
+            confirmButtonColor: isAccepted ? '#198754' : '#dc3545',
+        });
+        
+        if (result.isConfirmed) {
+            Swal.fire({ title: 'Đang xử lý...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            const res = await clientApiClient.post(`/client/orders/${orderCode}/return/confirm`, {
+                is_accepted: isAccepted
+            });
+            Swal.fire('Thành công', res.data.message || 'Cập nhật thành công', 'success');
+            fetchOrders(activeTab.value);
+        }
+    } catch (err) {
+        Swal.fire('Lỗi', err.response?.data?.message || 'Không thể cập nhật yêu cầu', 'error');
+    }
+};
 
 const confirmCancel = async (order) => {
   const safeOrderCode = escapeHtml(order?.order_code ?? '');

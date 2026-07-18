@@ -52,6 +52,9 @@ class ClientOrderController extends Controller
                     $q->whereIn('status', ['returned', 'return_requested', 'return_negotiating', 'return_retrieving'])
                       ->orWhere(function($q2) {
                           $q2->where('status', 'cancelled')->whereIn('payment_status', ['paid', 'refunded']);
+                      })
+                      ->orWhere(function($q3) {
+                          $q3->where('status', 'delivered')->whereNotNull('refund_amount')->where('refund_amount', 0);
                       });
                 });
             } else {
@@ -825,7 +828,9 @@ class ClientOrderController extends Controller
                     'status' => 'return_requested',
                     'refund_bank_name' => $request->refund_bank_name,
                     'refund_account_number' => $request->refund_account_number,
-                    'refund_account_name' => mb_strtoupper($request->refund_account_name, 'UTF-8')
+                    'refund_account_name' => mb_strtoupper($request->refund_account_name, 'UTF-8'),
+                    'refund_amount' => null,
+                    'refund_note' => null
                 ]);
 
                 // Lưu lịch sử
@@ -894,7 +899,11 @@ class ClientOrderController extends Controller
                     ]);
                 } else {
                     // Khách không đồng ý, đưa về trạng thái delivered hoặc hủy yêu cầu hoàn trả
-                    $lockedOrder->update(['status' => 'delivered']);
+                    $lockedOrder->update([
+                        'status' => 'delivered',
+                        'refund_amount' => 0,
+                        'refund_note' => 'USER: Khách hàng không chấp thuận mức hoàn tiền đề xuất'
+                    ]);
 
                     OrderStatusHistory::query()->create([
                         'order_id'        => $lockedOrder->id,

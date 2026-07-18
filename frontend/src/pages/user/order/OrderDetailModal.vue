@@ -30,7 +30,7 @@
                                 <i class="bi bi-clock-history me-2"></i> Tiến Trình
                             </h6>
 
-                            <div v-if="!['cancelled', 'returned', 'return_requested', 'return_negotiating', 'return_retrieving'].includes(order?.status)"
+                            <div v-if="!['cancelled', 'returned', 'return_requested', 'return_negotiating', 'return_retrieving'].includes(order?.status) && !(order?.status === 'delivered' && order?.refund_amount !== null && Number(order?.refund_amount) === 0)"
                                 class="order-stepper-horizontal d-none d-md-flex mt-2 mb-3">
                                 <div v-for="(step, index) in orderSteps" :key="index" class="stepper-step"
                                     :class="{ 'completed': isStepCompleted(order?.status, step.value), 'active': order?.status === step.value }">
@@ -45,7 +45,7 @@
                                 </div>
                             </div>
 
-                            <ul v-if="!['cancelled', 'returned', 'return_requested', 'return_negotiating', 'return_retrieving'].includes(order?.status)"
+                            <ul v-if="!['cancelled', 'returned', 'return_requested', 'return_negotiating', 'return_retrieving'].includes(order?.status) && !(order?.status === 'delivered' && order?.refund_amount !== null && Number(order?.refund_amount) === 0)"
                                 class="timeline-vertical d-md-none mt-3">
                                 <li v-for="(h, idx) in order?.histories" :key="h.id" :class="{ 'latest': idx === 0 }">
                                     <div class="timeline-dot"></div>
@@ -290,12 +290,19 @@
                                     <span v-if="order.total_amount > 0">({{ Math.round((order.total_amount - order.refund_amount) / order.total_amount * 100) }}%)</span>
                                 </div>
                                 <div v-if="order?.refund_note" class="small text-muted mt-2 fst-italic">
-                                    <i class="bi bi-chat-left-text me-1"></i> Lời nhắn: {{ order?.refund_note }}
+                                    <i class="bi bi-chat-left-text me-1"></i> Lời nhắn: {{ order?.refund_note.replace('USER: ', '').replace('ADMIN: ', '') }}
                                 </div>
                                 
                                 <div class="d-flex flex-column gap-2 mt-3">
                                     <button @click="handleConfirmRefund(true)" class="btn btn-sm btn-success fw-bold w-100"><i class="bi bi-check2-circle me-1"></i>Đồng ý đề xuất</button>
                                     <button @click="handleConfirmRefund(false)" class="btn btn-sm btn-light border fw-bold text-danger w-100">Từ chối</button>
+                                </div>
+                            </div>
+                            
+                            <div v-if="order?.status === 'delivered' && order?.refund_amount !== null && Number(order?.refund_amount) === 0" class="alert alert-danger border-danger-subtle mb-0 p-3 shadow-sm bg-white">
+                                <div class="fw-bold mb-2 text-danger"><i class="bi bi-x-circle-fill me-2"></i> Yêu cầu hoàn trả đã khép lại</div>
+                                <div v-if="order?.refund_note" class="small text-muted fst-italic">
+                                    <i class="bi bi-chat-left-text me-1"></i> Lý do: {{ order?.refund_note.replace('USER: ', '').replace('ADMIN: ', '').replace('USER:', '').replace('ADMIN:', '') }}
                                 </div>
                             </div>
 

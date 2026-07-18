@@ -33,7 +33,9 @@ class Order extends Model
         'status',
         'refund_bank_name',
         'refund_account_number',
-        'refund_account_name'
+        'refund_account_name',
+        'refund_amount',
+        'refund_note'
     ];
 
     protected function casts(): array

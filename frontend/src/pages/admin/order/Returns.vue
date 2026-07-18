@@ -422,6 +422,9 @@ const getReturnStatusUi = (order) => {
         return { text: 'Đã Hoàn Tiền', class: 'bg-success text-white border-success', icon: 'bi-check-circle-fill', statusCode: 'refunded' };
     }
     if (order.refund_amount !== null && parseFloat(order.refund_amount) === 0) {
+        if (order.refund_note && order.refund_note.startsWith('USER:')) {
+            return { text: 'Khách Không Chấp Thuận', class: 'bg-secondary text-white border-secondary', icon: 'bi-person-x-fill', statusCode: 'rejected' };
+        }
         return { text: 'Đã Từ Chối', class: 'bg-danger text-white border-danger', icon: 'bi-x-circle-fill', statusCode: 'rejected' };
     }
     return { text: 'Chờ Xử Lý', class: 'bg-warning text-dark border-warning', icon: 'bi-inbox-fill', statusCode: 'pending' };
@@ -559,7 +562,7 @@ const processRefund = async (order) => {
       ? Math.round(fullOrder.refund_amount) 
       : Math.round(fullOrder.total_amount);
       
-  const defaultNoteValue = fullOrder.refund_note || '';
+  const defaultNoteValue = (fullOrder.refund_note || '').replace('USER: ', '').replace('ADMIN: ', '').replace('USER:', '').replace('ADMIN:', '');
 
   const getHistoryDate = (o, s) => {
       if (!o || !o.histories) return null;

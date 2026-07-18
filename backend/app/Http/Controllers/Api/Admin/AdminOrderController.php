@@ -351,7 +351,11 @@ class AdminOrderController extends Controller
             $refundStatusChanged = false;
 
             $order->refund_amount = $request->action === 'reject' ? 0 : $request->refund_amount;
-            $order->refund_note = $request->refund_note;
+            if ($request->action === 'reject') {
+                $order->refund_note = 'ADMIN: ' . ($request->refund_note ?: 'SORA từ chối hoàn trả');
+            } else {
+                $order->refund_note = $request->refund_note;
+            }
 
             if ($request->action === 'refunded') {
                 $order->payment_status = 'refunded';
