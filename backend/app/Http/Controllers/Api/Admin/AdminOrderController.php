@@ -77,7 +77,7 @@ class AdminOrderController extends Controller
                 DB::raw('COUNT(*) as total_all'),
                 DB::raw('SUM(CASE WHEN status = "return_requested" THEN 1 ELSE 0 END) as total_pending'),
                 DB::raw('SUM(CASE WHEN status IN ("return_negotiating", "return_retrieving") THEN 1 ELSE 0 END) as total_proposing'),
-                DB::raw('SUM(CASE WHEN payment_status = "refunded" THEN 1 ELSE 0 END) as total_refunded'),
+                DB::raw('SUM(CASE WHEN status = "returned" THEN 1 ELSE 0 END) as total_refunded'),
                 DB::raw('SUM(CASE WHEN status = "delivered" AND refund_amount = 0 THEN 1 ELSE 0 END) as total_rejected'),
                 DB::raw('SUM(CASE WHEN status = "cancelled" AND payment_status IN ("paid", "refunded") THEN 1 ELSE 0 END) as total_cancelled')
             )->first();
@@ -99,7 +99,7 @@ class AdminOrderController extends Controller
                 } elseif ($tab === 'proposing') {
                     $baseQuery->whereIn('status', ['return_negotiating', 'return_retrieving']);
                 } elseif ($tab === 'refunded') {
-                    $baseQuery->where('payment_status', 'refunded');
+                    $baseQuery->where('status', 'returned');
                 } elseif ($tab === 'rejected') {
                     $baseQuery->where('status', 'delivered')->whereNotNull('refund_amount')->where('refund_amount', 0);
                 } elseif ($tab === 'cancelled') {
@@ -116,7 +116,11 @@ class AdminOrderController extends Controller
                 ->toArray();
 
             $counts = [
-                'all'        => array_sum($rawCounts) - ($rawCounts['returned'] ?? 0) - ($rawCounts['return_requested'] ?? 0),
+                'all'        => array_sum($rawCounts) 
+                                - ($rawCounts['returned'] ?? 0) 
+                                - ($rawCounts['return_requested'] ?? 0)
+                                - ($rawCounts['return_negotiating'] ?? 0)
+                                - ($rawCounts['return_retrieving'] ?? 0),
                 'pending'    => $rawCounts['pending'] ?? 0,
                 'confirmed'  => $rawCounts['confirmed'] ?? 0,
                 'processing' => $rawCounts['processing'] ?? 0,
@@ -129,7 +133,7 @@ class AdminOrderController extends Controller
             if ($request->filled('status') && $request->status !== 'all') {
                 $baseQuery->where('status', $request->status);
             } else {
-                $baseQuery->whereNotIn('status', ['returned', 'return_requested']);
+                $baseQuery->whereNotIn('status', ['returned', 'return_requested', 'return_negotiating', 'return_retrieving']);
             }
         }
 

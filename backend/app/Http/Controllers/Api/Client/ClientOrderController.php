@@ -840,6 +840,14 @@ class ClientOrderController extends Controller
 
         try {
             return DB::transaction(function () use ($order, $request, $user) {
+                $imagePaths = null;
+                if ($request->hasFile('images')) {
+                    $imagePaths = [];
+                    foreach ($request->file('images') as $image) {
+                        $imagePaths[] = $image->store('returns', 'public');
+                    }
+                }
+
                 // Cập nhật trạng thái đơn hàng và thông tin ngân hàng thụ hưởng
                 $order->update([
                     'status' => 'return_requested',
@@ -847,7 +855,8 @@ class ClientOrderController extends Controller
                     'refund_account_number' => $request->refund_account_number,
                     'refund_account_name' => mb_strtoupper($request->refund_account_name, 'UTF-8'),
                     'refund_amount' => null,
-                    'refund_note' => null
+                    'refund_note' => null,
+                    'return_images' => $imagePaths ? json_encode($imagePaths) : null
                 ]);
 
                 // Lưu lịch sử
