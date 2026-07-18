@@ -1,24 +1,32 @@
 <template>
   <div>
-      <SoraListSkeleton v-if="isLoading" :rows="4" image-size="72px" card />
-
-      <div v-else-if="orders.length > 0 || hasActiveFilters" class="mb-5">
-        <div class="bg-white p-3 p-md-4 shadow-sm border border-light-subtle d-flex flex-column gap-4">
-          <div class="order-tabs d-flex gap-4 overflow-auto pb-2 border-bottom text-nowrap">
+      <!-- Hiển thị bộ lọc và tab nếu đã từng có đơn hàng hoặc đang tải -->
+      <div v-if="hasEverHadOrders || isQueryLoading" class="mb-4">
+        <!-- Vẫn hiển thị bộ lọc nếu đã từng có đơn hàng, ngay cả khi đang loading skeleton bên dưới -->
+        <div v-show="hasEverHadOrders" class="bg-white p-2 p-md-3 shadow-sm border border-light-subtle d-flex flex-column gap-3 mb-3">
+          <div class="order-tabs d-flex gap-3 overflow-auto pb-3 pt-2 text-nowrap hide-scrollbar" style="scrollbar-width: none;">
             <button v-for="tab in statusTabs" :key="tab.value" v-on:click="filterStatus = tab.value"
-              class="tab-btn fw-bold text-uppercase small" :class="{ 'active': filterStatus === tab.value }">
-              <span v-text="tab.label"></span>
+              class="btn rounded-pill fw-semibold text-uppercase position-relative transition-all"
+              style="font-size: 0.75rem; padding: 0.35rem 1rem;"
+              :class="filterStatus === tab.value ? 'bg-sora-primary text-white shadow-sm' : 'bg-white text-secondary border border-light-subtle'">
+              <span>{{ tab.label }}</span>
+              <span v-if="orderCounts && orderCounts[tab.value]"
+                class="position-absolute top-0 start-100 translate-middle badge rounded-pill border border-white"
+                :class="filterStatus === tab.value ? 'bg-dark text-white' : 'bg-secondary text-white'"
+                style="font-size: 0.6rem; padding: 0.2rem 0.4rem;">
+                {{ orderCounts[tab.value] }}
+              </span>
             </button>
           </div>
 
-          <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
+          <div class="d-flex flex-column flex-lg-row justify-content-between gap-2 align-items-lg-center">
             <div class="input-group" style="max-width: 350px;">
               <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
               <input type="text" class="form-control border-start-0 bg-light shadow-none"
                 placeholder="Tìm mã đơn hàng (VD: ORD-...)" v-model="searchQuery">
             </div>
 
-            <div class="d-flex flex-wrap gap-3">
+            <div class="d-flex flex-wrap gap-2">
               <select class="form-select shadow-none bg-light text-secondary fw-medium border-light-subtle"
                 style="width: auto;" v-model="filterDate">
                 <option value="all">Thời gian: Tất cả</option>
@@ -37,7 +45,36 @@
           </div>
         </div>
 
-        <div v-if="displayOrders.length === 0" class="text-center py-5 my-4 bg-white border border-light-subtle">
+        <!-- Hiệu ứng loading Skeleton cho riêng phần danh sách đơn hàng -->
+        <div v-if="showSkeleton" class="d-flex flex-column gap-4">
+          <div v-for="i in 3" :key="i" class="card border border-light-subtle shadow-sm rounded-0 p-3">
+            <!-- Header Skeleton -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <div class="d-flex gap-2 w-50">
+                <SoraSkeleton width="30%" height="24px" radius="4px" />
+                <SoraSkeleton width="20%" height="24px" radius="4px" />
+              </div>
+              <SoraSkeleton width="15%" height="28px" radius="50px" />
+            </div>
+            <!-- Body Skeleton -->
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <SoraSkeleton width="60px" height="60px" radius="4px" class="flex-shrink-0" />
+              <div class="flex-grow-1">
+                <SoraSkeleton width="50%" height="20px" class="mb-2" />
+                <SoraSkeleton width="25%" height="16px" />
+              </div>
+            </div>
+            <hr class="mt-0 mb-3 border-light-subtle">
+            <!-- Footer Skeleton -->
+            <div class="d-flex flex-column align-items-end gap-2">
+              <SoraSkeleton width="120px" height="14px" />
+              <SoraSkeleton width="150px" height="30px" />
+              <SoraSkeleton width="200px" height="38px" class="mt-2" />
+            </div>
+          </div>
+        </div>
+
+        <div v-else-if="displayOrders.length === 0" class="text-center py-5 my-4 bg-white border border-light-subtle">
           <i class="bi bi-search fs-1 text-muted opacity-50 mb-3 d-block"></i>
           <p class="fs-5 text-secondary font-serif fst-italic">Không tìm thấy đơn hàng nào phù hợp.</p>
           <button v-on:click="resetFilters" class="btn btn-link text-primary-custom text-decoration-none fw-bold">✕ Xóa
@@ -45,7 +82,7 @@
         </div>
 
         <div v-else class="order-list">
-          <div class="card border border-light-subtle shadow-sm rounded-0 mb-5 order-card-luxury hover-lift"
+          <div class="card border border-light-subtle shadow-sm rounded-0 mb-3 order-card-luxury hover-lift"
             v-for="order in displayOrders" :key="order.id">
 
             <div
@@ -63,8 +100,8 @@
               </span>
             </div>
 
-            <div class="card-body p-3">
-              <div v-if="!['cancelled', 'returned'].includes(order.status)"
+            <div class="card-body p-2">
+              <div v-if="!['cancelled', 'returned', 'return_requested', 'return_negotiating', 'return_retrieving'].includes(order.status)"
                 class="order-stepper-horizontal d-none d-md-flex mb-3 mt-1">
                 <div v-for="(step, index) in orderSteps" :key="index" class="stepper-step"
                   :class="{ 'completed': isStepCompleted(order.status, step.value), 'active': order.status === step.value }">
@@ -82,19 +119,37 @@
                 <div class="text-muted small"><strong>Đơn hàng đã bị hủy.</strong> Quá trình giao dịch đã dừng lại.
                 </div>
               </div>
-              <div v-else-if="order.status === 'returned'"
-                class="alert bg-light border border-light-subtle rounded-0 mb-3 d-flex align-items-center py-2 px-3">
-                <i class="bi bi-arrow-return-left text-secondary me-2 fs-5"></i>
-                <div class="text-muted small"><strong>Đơn hàng hoàn/trả.</strong> Hàng hóa đã được hoàn lại.
+              <div v-else-if="['returned', 'return_requested', 'return_negotiating', 'return_retrieving'].includes(order.status)"
+                class="alert bg-light border border-light-subtle rounded-0 mb-2 py-2 px-2">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-arrow-return-left text-secondary me-2 fs-5"></i>
+                    <div class="text-muted small"><strong>Đơn hàng hoàn/trả.</strong> {{ order.status === 'returned' ? 'Hàng hóa đã được hoàn lại.' : 'Đang trong quá trình xử lý hoàn trả.' }}
+                    </div>
+                </div>
+
+                <div v-if="order.status === 'return_negotiating' && order.refund_amount !== null" class="mt-2 p-2 bg-white border border-warning-subtle rounded shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-dark small fw-bold"><i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>SORA đề xuất mức hoàn tiền:</span>
+                        <strong class="text-danger fs-5 font-oswald">{{ formatPrice(order.refund_amount) }}</strong>
+                    </div>
+                    <div class="small text-muted mb-2 pb-2 border-bottom d-flex justify-content-between">
+                        <span>Khấu trừ: <strong class="text-danger">-{{ formatPrice(order.total_amount - order.refund_amount) }}</strong> <span v-if="order.total_amount > 0">({{ Math.round((order.total_amount - order.refund_amount) / order.total_amount * 100) }}%)</span></span>
+                    </div>
+                    <div v-if="order.refund_note" class="small text-muted fst-italic mb-3">
+                        <i class="bi bi-chat-left-text me-1"></i> Lời nhắn: {{ order.refund_note }}
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button @click="handleConfirmRefund(order, true)" class="btn btn-sm btn-success fw-bold w-100"><i class="bi bi-check2-circle me-1"></i>Đồng ý đề xuất</button>
+                    </div>
                 </div>
               </div>
 
-              <hr class="mt-0 mb-3 border-light-subtle">
+              <hr class="mt-0 mb-2 border-light-subtle">
 
-              <div class="row align-items-center">
-                <div class="col-lg-8 border-end-lg pe-lg-4">
+              <div class="row align-items-center g-2">
+                <div class="col-lg-8 border-end-lg pe-lg-2">
                   <div v-for="item in order.items.slice(0, 2)" :key="item.id"
-                    class="d-flex align-items-center gap-2 mb-2">
+                    class="d-flex align-items-center gap-2 mb-2" style="cursor: pointer;" @click="goToProduct(item)">
                     <div class="img-wrapper border p-1" style="width: 60px; height: 60px; background: #fff;">
                       <img :src="getImageUrl(item.variant_image)" v-on:error="handleImageError"
                         class="w-100 h-100 object-fit-cover">
@@ -117,7 +172,20 @@
 
                 <div class="col-lg-4 text-lg-end mt-3 mt-lg-0 ps-lg-3">
                   <p class="text-muted small mb-1 text-uppercase fw-bold" style="letter-spacing: 1px;">Thành tiền</p>
-                  <h3 class="fw-bold text-primary-custom mb-3 font-oswald" v-text="formatPrice(order.total_amount)"></h3>
+                  
+                  <template v-if="order.status === 'returned' && order.refund_amount !== null">
+                    <div class="mb-1 d-flex justify-content-end align-items-center">
+                        <span class="text-muted small me-2">Tổng ban đầu:</span>
+                        <span class="fw-bold text-muted text-decoration-line-through font-oswald" style="font-size: 0.95rem;" v-text="formatPrice(order.total_amount)"></span>
+                    </div>
+                    <div class="mb-3 d-flex justify-content-end align-items-center">
+                        <span class="text-danger small fw-bold me-2"><i class="bi bi-check-circle-fill me-1"></i>Thực nhận:</span>
+                        <span class="fw-bold text-danger fs-3 font-oswald" v-text="formatPrice(order.refund_amount)"></span>
+                    </div>
+                  </template>
+                  <template v-else>
+                    <h3 class="fw-bold text-primary-custom mb-3 font-oswald" v-text="formatPrice(order.total_amount)"></h3>
+                  </template>
 
                   <div class="d-flex flex-column gap-2">
                     <!-- Chi tiết đơn hàng - Màu trung tính -->
@@ -163,7 +231,7 @@
             </div>
           </div>
 
-          <nav v-if="pagination.last_page > 1" class="mt-5 d-flex justify-content-center">
+          <nav v-if="pagination.last_page > 1" class="mt-4 d-flex justify-content-center">
             <ul class="pagination pagination-custom shadow-sm">
               <li class="page-item" :class="{ disabled: pagination.current_page === 1 }"><a class="page-link"
                   href="javascript:void(0)" v-on:click="changePage(1)">«</a></li>
@@ -201,8 +269,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
 import Toast from '@/utils/toastConfig';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
@@ -210,14 +279,14 @@ import OrderDetailModal from './OrderDetailModal.vue';
 import ReviewModal from './ReviewModal.vue';
 import ViewReviewModal from './ViewReviewModal.vue';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
-import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
+import SoraSkeleton from '@/components/ui/SoraSkeleton.vue';
 import { getStorageUrl } from '@/utils/env';
 import clientApiClient from '@/utils/clientApiClient';
 
 const router = useRouter();
-const isLoading = ref(true);
-const orders = ref([]);
-const pagination = ref({ current_page: 1, last_page: 1 });
+const queryClient = useQueryClient();
+
+const currentPage = ref(1);
 
 const isModalOpen = ref(false);
 const selectedOrder = ref(null);
@@ -230,13 +299,29 @@ const filterDate = ref('all');
 const sortBy = ref('newest');
 const searchQuery = ref('');
 
+// Tạo debounce cho search
+const debouncedSearch = ref('');
+let searchTimeout = null;
+watch(searchQuery, (newVal) => {
+    if (searchTimeout) clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        debouncedSearch.value = newVal;
+        currentPage.value = 1;
+    }, 400); 
+});
+
+watch([filterStatus, filterDate, sortBy], () => {
+    currentPage.value = 1;
+});
+
 const statusTabs = [
   { label: 'Tất cả', value: 'all' },
   { label: 'Chờ xác nhận', value: 'pending' },
   { label: 'Đã xác nhận', value: 'confirmed' },
   { label: 'Đang giao', value: 'shipping' },
   { label: 'Hoàn tất', value: 'delivered' },
-  { label: 'Đã hủy', value: 'cancelled' }
+  { label: 'Đã hủy', value: 'cancelled' },
+  { label: 'Trả hàng / Hoàn tiền', value: 'returned' }
 ];
 
 const orderSteps = [
@@ -265,55 +350,60 @@ const handleImageError = (e) => { e.target.src = defaultPlaceholder; };
 
 const getStatusClass = (s) => ({
   pending: 'bg-warning-custom text-dark', confirmed: 'bg-info-custom text-white', processing: 'bg-primary text-white',
-  shipping: 'bg-primary text-white', delivered: 'bg-success text-white', cancelled: 'bg-light text-secondary border'
+  shipping: 'bg-primary text-white', delivered: 'bg-success text-white', cancelled: 'bg-light text-secondary border',
+  return_requested: 'bg-warning-custom text-dark', return_negotiating: 'bg-info-custom text-white', return_retrieving: 'bg-primary text-white',
+  returned: 'bg-success text-white'
 }[s] || 'bg-secondary text-white');
 
 const getStatusIcon = (s) => ({
   pending: 'bi-hourglass-split', confirmed: 'bi-check2-circle', shipping: 'bi-truck',
-  delivered: 'bi-box-seam', cancelled: 'bi-x-circle'
+  delivered: 'bi-box-seam', cancelled: 'bi-x-circle',
+  return_requested: 'bi-inbox-fill', return_negotiating: 'bi-envelope-paper-fill', return_retrieving: 'bi-truck',
+  returned: 'bi-check-circle-fill'
 }[s] || 'bi-info-circle');
 
 const translateStatus = (s) => ({
   pending: 'Chờ xác nhận', confirmed: 'Đã xác nhận', processing: 'Đang xử lý',
-  shipping: 'Đang giao hàng', delivered: 'Hoàn tất', cancelled: 'Đã hủy'
+  shipping: 'Đang giao hàng', delivered: 'Hoàn tất', cancelled: 'Đã hủy',
+  return_requested: 'Yêu cầu trả hàng', return_negotiating: 'Chờ thỏa thuận giá', return_retrieving: 'Đang thu hồi hàng',
+  returned: 'Đã hoàn tiền'
 }[s] || s);
-
-const displayOrders = computed(() => {
-  let result = [...orders.value];
-  if (filterStatus.value !== 'all') result = result.filter(o => o.status === filterStatus.value);
-  if (searchQuery.value) result = result.filter(o => o.order_code.toLowerCase().includes(searchQuery.value.toLowerCase().trim()));
-  if (filterDate.value !== 'all') {
-    const now = new Date();
-    result = result.filter(o => {
-      const orderDate = new Date(o.created_at);
-      if (filterDate.value === '30days') return (now - orderDate) / (1000 * 60 * 60 * 24) <= 30;
-      if (filterDate.value === '6months') return (now - orderDate) / (1000 * 60 * 60 * 24) <= 180;
-      if (filterDate.value === 'this_year') return orderDate.getFullYear() === now.getFullYear();
-      return true;
-    });
-  }
-  result.sort((a, b) => {
-    if (sortBy.value === 'newest') return new Date(b.created_at) - new Date(a.created_at);
-    if (sortBy.value === 'oldest') return new Date(a.created_at) - new Date(b.created_at);
-    if (sortBy.value === 'price_desc') return b.total_amount - a.total_amount;
-    if (sortBy.value === 'price_asc') return a.total_amount - b.total_amount;
-    return 0;
-  });
-  return result;
-});
 
 const hasActiveFilters = computed(() => filterStatus.value !== 'all' || filterDate.value !== 'all' || sortBy.value !== 'newest' || searchQuery.value !== '');
 const resetFilters = () => { filterStatus.value = 'all'; filterDate.value = 'all'; sortBy.value = 'newest'; searchQuery.value = ''; };
 
-const fetchOrders = async (page = 1) => {
-  isLoading.value = true;
-  try {
-    const res = await clientApiClient.get('/client/orders', { params: { page, per_page: 5 } });
-    orders.value = res.data.data || [];
-    pagination.value = { current_page: res.data.current_page, last_page: res.data.last_page };
-  } catch (err) { Toast.fire({ icon: 'error', title: 'Lỗi tải danh sách đơn hàng' }); }
-  finally { isLoading.value = false; }
+const fetchOrdersApi = async ({ queryKey }) => {
+  const [_key, page, status, search, date, sort] = queryKey;
+  const res = await clientApiClient.get('/client/orders', { 
+      params: { 
+          page, 
+          per_page: 5,
+          status,
+          search,
+          date,
+          sort
+      } 
+  });
+  return res.data;
 };
+
+const { data: ordersQueryData, isLoading: isQueryLoading, isFetching: isQueryFetching, isPlaceholderData } = useQuery({
+  queryKey: computed(() => ['client_orders', currentPage.value, filterStatus.value, debouncedSearch.value, filterDate.value, sortBy.value]),
+  queryFn: fetchOrdersApi,
+  placeholderData: keepPreviousData,
+  staleTime: 5 * 60 * 1000,
+});
+
+const orders = computed(() => ordersQueryData.value?.data || []);
+const orderCounts = computed(() => ordersQueryData.value?.counts || {});
+const hasEverHadOrders = computed(() => orders.value.length > 0 || hasActiveFilters.value || (orderCounts.value && orderCounts.value.all > 0));
+const showSkeleton = computed(() => isQueryLoading.value || (isQueryFetching.value && isPlaceholderData.value));
+const pagination = computed(() => ({
+  current_page: ordersQueryData.value?.current_page || 1,
+  last_page: ordersQueryData.value?.last_page || 1
+}));
+
+const displayOrders = computed(() => orders.value);
 
 const openDetails = async (order) => {
   try {
@@ -355,7 +445,20 @@ const closeViewReviewModal = () => {
   document.body.style.overflow = 'auto';
 };
 
-const changePage = (p) => { if (p !== pagination.value.current_page) fetchOrders(p); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+const changePage = (p) => { 
+  if (p !== currentPage.value) {
+    currentPage.value = p;
+    window.scrollTo({ top: 0, behavior: 'smooth' }); 
+  }
+};
+
+const goToProduct = (item) => {
+  if (item.combo_id && item.combo) {
+    router.push({ name: 'client-combo-detail', params: { slug: item.combo.slug } }).catch(()=>{});
+  } else if (item.product && item.product.slug) {
+    router.push({ name: 'productDetail', params: { shop_slug: 'aurora-jewelry', slug: item.product.slug } }).catch(()=>{});
+  }
+};
 
 const handleReorder = async (order) => {
   if (isModalOpen.value) closeModal();
@@ -540,12 +643,39 @@ const confirmCancel = async (order) => {
         await clientApiClient.put(`/client/orders/${order.order_code}`, { action: 'cancel', cancel_reason: result.value });
         soraAlert.fire({ icon: 'success', title: 'Thành công', text: 'Đơn hàng đã được hủy.' });
         if (isModalOpen.value) closeModal();
-        fetchOrders(pagination.value.current_page);
+        queryClient.invalidateQueries(['client_orders']);
       } catch (err) {
         soraAlert.fire({ icon: 'error', title: 'Lỗi', text: err.response?.data?.message || 'Không thể hủy đơn' });
       }
     }
   });
+};
+
+const handleConfirmRefund = async (order, isAccepted) => {
+    try {
+        const textStr = isAccepted ? 'đồng ý với mức hoàn tiền được đề xuất' : 'từ chối mức hoàn tiền (yêu cầu hoàn trả sẽ bị hủy)';
+        const result = await soraAlert.fire({
+            title: 'Xác nhận',
+            text: `Bạn có chắc chắn muốn ${textStr}?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Xác nhận',
+            cancelButtonText: 'Đóng',
+            customClass: { confirmButton: 'btn btn-primary px-4 me-2', cancelButton: 'btn btn-secondary px-4' },
+            buttonsStyling: false
+        });
+        
+        if (result.isConfirmed) {
+            Swal.fire({ title: 'Đang xử lý...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            const res = await clientApiClient.post(`/client/orders/${order.order_code}/return/confirm`, {
+                is_accepted: isAccepted
+            });
+            Swal.fire('Thành công', res.data.message || 'Cập nhật thành công', 'success');
+            queryClient.invalidateQueries(['client_orders']);
+        }
+    } catch (err) {
+        Swal.fire('Lỗi', err.response?.data?.message || 'Không thể cập nhật yêu cầu', 'error');
+    }
 };
 
 const exportInvoice = async (order) => {
@@ -576,7 +706,7 @@ const exportInvoice = async (order) => {
     });
   }
 };
-onMounted(fetchOrders);
+
 </script>
 
 <style scoped>

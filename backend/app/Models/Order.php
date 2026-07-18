@@ -30,7 +30,10 @@ class Order extends Model
         'coupon_code',
         'payment_method',
         'payment_status',
-        'status'
+        'status',
+        'refund_bank_name',
+        'refund_account_number',
+        'refund_account_name'
     ];
 
     protected function casts(): array

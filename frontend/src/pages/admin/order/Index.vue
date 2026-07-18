@@ -193,28 +193,14 @@
                       <div class="small text-muted mt-1">{{ order.items_count || 0 }} Món</div>
                     </td>
 
-                    <td data-label="Thanh toán" class="px-3">
-                      <div class="w-100">
-                        <StatusConfirmSelect
-                          v-model="order.localPaymentStatus"
-                          :originalValue="order.payment_status"
-                          :selectClass="getPaymentSelectClass(order.localPaymentStatus || order.payment_status)"
-                          :isUpdating="order.isUpdatingPayment"
-                          :disabled="order.isUpdatingPayment || ['delivered', 'cancelled', 'returned'].includes(order.status) || order.payment_status === 'refunded'"
-                          @confirm="savePaymentStatus(order)"
-                          @cancel="cancelPaymentStatusChange(order)"
-                        >
-                          <option value="unpaid" v-if="canPaymentTransitionTo(order.payment_status, 'unpaid')">Chưa TT</option>
-                          <option value="paid" v-if="canPaymentTransitionTo(order.payment_status, 'paid')">Đã TT</option>
-                          <option value="refunded" v-if="canPaymentTransitionTo(order.payment_status, 'refunded')">Đã hoàn tiền</option>
-                          <option value="failed" v-if="canPaymentTransitionTo(order.payment_status, 'failed')">Thất bại</option>
-                          
-                          <template #display>
-                            <div class="small fw-semibold text-muted text-uppercase text-nowrap w-100 text-center" style="font-size: 0.65rem;">
-                              <i class="bi bi-wallet2 me-1"></i> {{ order.payment_method }}
-                            </div>
-                          </template>
-                        </StatusConfirmSelect>
+                    <td data-label="Thanh toán" class="px-3 text-center">
+                      <div class="w-100 d-flex flex-column align-items-center">
+                        <span class="badge w-100 py-2 fs-6 mb-1" :class="getPaymentSelectClass(order.payment_status)">
+                          {{ formatPaymentStatus(order.payment_status) }}
+                        </span>
+                        <div class="small fw-semibold text-muted text-uppercase text-nowrap mt-1" style="font-size: 0.7rem;">
+                          <i class="bi bi-wallet2 me-1"></i> {{ order.payment_method }}
+                        </div>
                       </div>
                     </td>
 
@@ -560,8 +546,24 @@ const cancelPaymentStatusChange = (order) => { order.localPaymentStatus = order.
 
 const saveOrderStatus = async (order) => {
   if (order.localStatus === 'delivered' && order.payment_status !== 'paid') {
-    Swal.fire({ title: 'Khoan đã! Chưa thu tiền', text: 'Để đảm bảo doanh thu, vui lòng cập nhật trạng thái Thanh toán thành "Đã TT" trước khi xác nhận Giao hàng Hoàn tất.', icon: 'warning', confirmButtonColor: '#009981' });
-    cancelStatusChange(order); return;
+    if (order.payment_method?.toUpperCase() === 'COD') {
+      const { isConfirmed } = await Swal.fire({
+        title: 'Xác nhận thu tiền?',
+        text: 'Bạn có chắc chắn xác nhận hoàn thành đơn hàng và ĐÃ THU TIỀN thanh toán không?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#009981',
+        cancelButtonText: 'Hủy bỏ',
+        confirmButtonText: 'Có, đã giao & thu tiền!'
+      });
+      if (!isConfirmed) {
+        cancelStatusChange(order);
+        return;
+      }
+    } else {
+      Swal.fire({ title: 'Khoan đã! Chưa thu tiền', text: 'Đơn hàng Online này chưa được thanh toán.', icon: 'warning', confirmButtonColor: '#009981' });
+      cancelStatusChange(order); return;
+    }
   }
 
   const isRequireNote = order.localStatus === 'cancelled';
@@ -641,7 +643,11 @@ const saveOrderStatus = async (order) => {
   updateOrderMutation.mutate({
     id: order.id,
     type: 'status',
-    payload: { status: order.localStatus, payment_status: order.payment_status, note: noteText }
+    payload: { 
+      status: order.localStatus, 
+      payment_status: (order.localStatus === 'delivered' && order.payment_method?.toUpperCase() === 'COD') ? 'paid' : order.payment_status, 
+      note: noteText 
+    }
   }, {
     onSettled: () => {
       order.isUpdatingStatus = false;

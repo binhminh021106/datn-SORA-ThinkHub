@@ -46,6 +46,12 @@
               <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'refunded'}">{{ statusCounts['refunded'] || 0 }}</span>
             </a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab text-secondary" href="#" :class="{ 'active-tab': activeTab === 'cancelled' }" @click.prevent="switchTab('cancelled')">
+              <i class="bi bi-x-octagon-fill me-2"></i> Đơn hủy
+              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'cancelled'}">{{ statusCounts['cancelled'] || 0 }}</span>
+            </a>
+          </li>
           <li class="nav-item ms-auto">
             <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab text-danger" href="#" :class="{ 'active-tab': activeTab === 'rejected' }" @click.prevent="switchTab('rejected')">
               <i class="bi bi-x-circle-fill me-2"></i> Đã từ chối
@@ -134,7 +140,7 @@
                           <i class="bi bi-eye-fill"></i>
                       </button>
                       
-                      <button v-if="['pending', 'proposing', 'rejected'].includes(getReturnStatusUi(order).statusCode)" 
+                      <button v-if="['pending', 'proposing', 'rejected', 'cancelled'].includes(getReturnStatusUi(order).statusCode)" 
                               class="btn btn-sm shadow-sm fw-bold flex-grow-1 action-btn-hover"
                               :class="getReturnStatusUi(order).statusCode === 'rejected' ? 'btn-outline-danger' : (getReturnStatusUi(order).statusCode === 'pending' ? 'btn-primary' : 'btn-info text-white')" 
                               @click="processRefund(order)">
@@ -184,6 +190,23 @@
                       <h6 class="fw-bold text-muted text-uppercase mb-3"><i class="bi bi-person-badge me-2"></i>Người yêu cầu</h6>
                       <div class="mb-2"><span class="text-muted">Họ tên:</span> <strong class="text-dark float-end">{{ selectedOrder.customer_name }}</strong></div>
                       <div class="mb-2"><span class="text-muted">Điện thoại:</span> <strong class="text-dark float-end">{{ selectedOrder.customer_phone }}</strong></div>
+                      <div class="mb-2"><span class="text-muted">Ngày mua:</span> <strong class="text-dark float-end">{{ formatDateTime(selectedOrder.created_at) }}</strong></div>
+                      
+                      <template v-if="selectedOrder.histories && selectedOrder.histories.find(h => h.new_status === 'delivered') && selectedOrder.histories.find(h => h.new_status === 'return_requested')">
+                          <div class="mb-2">
+                              <span class="text-muted">Giao thành công:</span> 
+                              <strong class="text-dark float-end">{{ formatDateTime(selectedOrder.histories.find(h => h.new_status === 'delivered').created_at) }}</strong>
+                          </div>
+                          <div class="mb-2">
+                              <span class="text-muted">Yêu cầu hoàn:</span> 
+                              <strong class="text-dark float-end">{{ formatDateTime(selectedOrder.histories.find(h => h.new_status === 'return_requested').created_at) }}</strong>
+                          </div>
+                          <div class="mb-3 text-danger small fw-bold">
+                              <i class="bi bi-clock-history me-1"></i> Đã nhận hàng: 
+                              {{ Math.max(0, Math.floor((new Date(selectedOrder.histories.find(h => h.new_status === 'return_requested').created_at).getTime() - new Date(selectedOrder.histories.find(h => h.new_status === 'delivered').created_at).getTime()) / (1000 * 60 * 60 * 24))) }} ngày
+                          </div>
+                      </template>
+                      
                       <div class="mb-3">
                           <span class="text-muted d-block mb-1">Địa chỉ nhận hàng:</span> 
                           <div class="p-2 bg-light border rounded small">{{ selectedOrder.customer_address }}</div>
@@ -259,6 +282,15 @@
                                   <div class="d-flex justify-content-between mt-3 pt-2 border-top border-danger border-opacity-25 align-items-center"><span class="fw-bold text-dark tracking-wide">SỐ TIỀN GỐC CỦA ĐƠN:</span> <strong class="fs-5 text-danger font-oswald">{{ formatCurrency(selectedOrder.total_amount) }}</strong></div>
                                   
                                   <div class="mt-3 pt-3 border-top border-danger border-opacity-25" v-if="selectedOrder.refund_amount !== null">
+                                    <div v-if="selectedOrder.refund_amount < selectedOrder.total_amount" class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-light-subtle">
+                                        <span class="fw-bold text-danger text-uppercase tracking-wide" style="font-size: 0.8rem;">
+                                            <i class="bi bi-dash-circle me-1"></i> Khấu trừ hoàn trả
+                                            <span v-if="Number.isInteger((selectedOrder.total_amount - selectedOrder.refund_amount) / selectedOrder.total_amount * 100)" class="badge bg-danger bg-opacity-10 text-danger ms-1 border border-danger border-opacity-25">
+                                                {{ ((selectedOrder.total_amount - selectedOrder.refund_amount) / selectedOrder.total_amount * 100) }}%
+                                            </span>
+                                        </span> 
+                                        <strong class="text-danger">- {{ formatCurrency(selectedOrder.total_amount - selectedOrder.refund_amount) }}</strong>
+                                    </div>
                                     <div class="d-flex justify-content-between align-items-center mb-1">
                                         <span class="fw-bold text-primary text-uppercase tracking-wide" style="font-size: 0.8rem;">SỐ TIỀN HOÀN THỰC TẾ:</span> 
                                         <strong class="fs-4 text-primary font-serif">{{ formatCurrency(selectedOrder.refund_amount) }}</strong>
@@ -340,8 +372,8 @@ const quickRefundNotes = {
         'SORA xin phép trừ 150.000đ phí hộp và vận chuyển.'
     ],
     refunded: [
-        'Đã hoàn tiền thành công vào số tài khoản quý khách cung cấp.',
-        'Kế toán đã duyệt chi. Vui lòng kiểm tra biến động số dư.',
+        'Đã hoàn tiền {amount} thành công vào số tài khoản quý khách cung cấp.',
+        'Kế toán đã duyệt chi {amount}. Vui lòng kiểm tra biến động số dư.',
     ],
     reject: [
         'Sản phẩm không đáp ứng điều kiện hoàn trả (đã qua sử dụng).',
@@ -368,17 +400,23 @@ const parseCombo = (combo) => {
 };
 
 const getReturnStatusUi = (order) => {
+    if (order.status === 'cancelled') {
+        return { text: 'Đã Hủy (Cần Hoàn)', class: 'bg-secondary text-white border-secondary', icon: 'bi-x-octagon-fill', statusCode: 'cancelled' };
+    }
     if (order.status === 'return_requested') {
         return { text: 'Chờ Xử Lý', class: 'bg-warning text-dark border-warning', icon: 'bi-inbox-fill', statusCode: 'pending' };
     }
-    if (order.payment_status === 'refunded') {
+    if (order.status === 'return_negotiating') {
+        return { text: 'Chờ Khách Chốt', class: 'bg-info text-white border-info', icon: 'bi-hourglass-split', statusCode: 'proposing' };
+    }
+    if (order.status === 'return_retrieving') {
+        return { text: 'Đang Thu Hồi', class: 'bg-primary text-white border-primary', icon: 'bi-truck', statusCode: 'proposing' };
+    }
+    if (order.payment_status === 'refunded' || order.status === 'returned') {
         return { text: 'Đã Hoàn Tiền', class: 'bg-success text-white border-success', icon: 'bi-check-circle-fill', statusCode: 'refunded' };
     }
     if (order.refund_amount !== null && parseFloat(order.refund_amount) === 0) {
         return { text: 'Đã Từ Chối', class: 'bg-danger text-white border-danger', icon: 'bi-x-circle-fill', statusCode: 'rejected' };
-    }
-    if (order.refund_amount !== null && parseFloat(order.refund_amount) > 0) {
-        return { text: 'Thương Lượng', class: 'bg-info text-white border-info', icon: 'bi-envelope-paper-fill', statusCode: 'proposing' };
     }
     return { text: 'Chờ Xử Lý', class: 'bg-warning text-dark border-warning', icon: 'bi-inbox-fill', statusCode: 'pending' };
 };
@@ -415,7 +453,7 @@ const localOrders = computed(() => {
     return queryData.value?.data?.data || queryData.value?.data || [];
 });
 
-const statusCounts = computed(() => queryData.value?.counts || { all: 0, pending: 0, proposing: 0, refunded: 0, rejected: 0 });
+const statusCounts = computed(() => queryData.value?.counts || { all: 0, pending: 0, proposing: 0, refunded: 0, rejected: 0, cancelled: 0 });
 
 const pagination = computed(() => {
   const result = queryData.value?.data;
@@ -488,11 +526,50 @@ const processRefundMutation = useMutation({
 const processRefund = async (order) => {
   const currentStatus = getReturnStatusUi(order).statusCode;
   
-  const defaultRefundValue = (order.refund_amount !== null && order.refund_amount > 0) 
-      ? Math.round(order.refund_amount) 
-      : Math.round(order.total_amount);
+  Swal.fire({
+      title: 'Đang tải dữ liệu...',
+      allowOutsideClick: false,
+      didOpen: () => { Swal.showLoading(); }
+  });
+  
+  let fullOrder;
+  try {
+      const res = await axios.get(`${API_URL}/admin/orders/${order.id}`, { headers: getHeaders() });
+      fullOrder = res.data.data;
+      Swal.close();
+  } catch (e) {
+      Swal.fire('Lỗi', 'Không thể lấy thông tin chi tiết đơn hàng.', 'error');
+      return;
+  }
+
+  const defaultRefundValue = (fullOrder.refund_amount !== null && fullOrder.refund_amount > 0) 
+      ? Math.round(fullOrder.refund_amount) 
+      : Math.round(fullOrder.total_amount);
       
-  const defaultNoteValue = order.refund_note || '';
+  const defaultNoteValue = fullOrder.refund_note || '';
+
+  const getHistoryDate = (o, s) => {
+      if (!o || !o.histories) return null;
+      const h = o.histories.find(x => x.new_status === s);
+      return h ? h.created_at : null;
+  };
+  const deliveredDate = getHistoryDate(fullOrder, 'delivered');
+  const returnReqDate = getHistoryDate(fullOrder, 'return_requested') || fullOrder.updated_at;
+  
+  let usageDays = 0;
+  if (deliveredDate && returnReqDate) {
+      const diffTime = new Date(returnReqDate).getTime() - new Date(deliveredDate).getTime();
+      usageDays = diffTime > 0 ? Math.floor(diffTime / (1000 * 60 * 60 * 24)) : 0;
+  }
+
+  const usageHtml = deliveredDate 
+        ? `<div class="bg-warning bg-opacity-10 border border-warning-subtle p-3 rounded mb-3">
+             <div class="text-warning-emphasis small fw-bold text-uppercase mb-2"><i class="bi bi-calendar-range me-1"></i>Thời gian sử dụng</div>
+             <div class="small mb-1">Giao thành công: <strong class="text-dark">${formatDateTime(deliveredDate)}</strong></div>
+             <div class="small mb-1">Yêu cầu hoàn: <strong class="text-dark">${formatDateTime(returnReqDate)}</strong></div>
+             <div class="small text-danger fw-bold mt-2"><i class="bi bi-clock-history me-1"></i>Đã nhận hàng: ${usageDays} ngày</div>
+           </div>`
+        : '';
 
   const { value: formValues, isDismissed } = await Swal.fire({
     title: 'Thẩm Định & Xử Lý Hoàn Tiền',
@@ -501,15 +578,23 @@ const processRefund = async (order) => {
         <div class="col-lg-5 border-end-lg pe-lg-3 mb-4 mb-lg-0">
           <div class="bg-light p-3 rounded border mb-3">
               <div class="text-muted small fw-bold text-uppercase mb-1">Khách hàng</div>
-              <div class="fw-bold text-dark fs-6">${order.customer_name}</div>
-              <div class="text-muted small text-truncate">${order.customer_email || 'Không có Email'}</div>
+              <div class="fw-bold text-dark fs-6">${fullOrder.customer_name}</div>
+              <div class="text-muted small text-truncate mb-2">${fullOrder.customer_email || 'Không có Email'}</div>
+              <div class="small text-muted border-top pt-2"><i class="bi bi-calendar-check me-1"></i>Ngày mua: <strong class="text-dark">${formatDateTime(fullOrder.created_at)}</strong></div>
           </div>
           <div class="bg-danger bg-opacity-10 border border-danger-subtle p-3 rounded text-center mb-3">
               <div class="text-danger small fw-bold text-uppercase mb-1">Giá trị đơn gốc</div>
-              <div class="fw-bold text-danger fs-4 font-serif">${formatCurrency(order.total_amount)}</div>
+              <div class="fw-bold text-danger fs-4 font-serif">${formatCurrency(fullOrder.total_amount)}</div>
+          </div>
+          ${usageHtml}
+          <div class="bg-light border p-3 rounded mb-3">
+              <div class="text-muted small fw-bold text-uppercase mb-2"><i class="bi bi-bank2 me-1"></i>Ngân hàng nhận tiền</div>
+              <div class="small mb-1">Ngân hàng: <strong class="text-dark">${fullOrder.refund_bank_name || '---'}</strong></div>
+              <div class="small mb-1">Số TK: <strong class="text-dark">${fullOrder.refund_account_number || '---'}</strong></div>
+              <div class="small">Chủ TK: <strong class="text-dark text-uppercase">${fullOrder.refund_account_name || '---'}</strong></div>
           </div>
           <div class="alert alert-warning small border-warning py-2 mb-0">
-              <i class="bi bi-info-circle-fill me-1"></i> <strong>Lưu ý:</strong> Mọi khoản khấu trừ sẽ được thông báo tự động cho khách qua Email.
+              <i class="bi bi-info-circle-fill me-1"></i> <strong>Lưu ý:</strong> Khách hàng sẽ phải thao tác xác nhận đồng ý trên Web/App trước khi chuyển khoản.
           </div>
         </div>
         
@@ -518,20 +603,20 @@ const processRefund = async (order) => {
               <label class="form-label fw-bold small text-muted text-uppercase tracking-wide"><i class="bi bi-calculator text-brand me-1"></i> 1. Mức bồi hoàn</label>
               
               <div class="d-flex flex-wrap gap-2 mb-3">
-                  <input type="radio" class="btn-check" name="refund_type" id="rt_full" value="full" checked>
+                  <input type="radio" class="btn-check" name="refund_type" id="rt_full" value="full" checked ${['return_retrieving', 'returned'].includes(order.status) || order.payment_status === 'refunded' ? 'disabled' : ''}>
                   <label class="btn btn-outline-secondary btn-sm fw-bold px-3" for="rt_full">Hoàn 100%</label>
 
-                  <input type="radio" class="btn-check" name="refund_type" id="rt_percent" value="percent">
+                  <input type="radio" class="btn-check" name="refund_type" id="rt_percent" value="percent" ${['return_retrieving', 'returned'].includes(order.status) || order.payment_status === 'refunded' ? 'disabled' : ''}>
                   <label class="btn btn-outline-secondary btn-sm fw-bold px-3" for="rt_percent">Trừ % Phí</label>
 
-                  <input type="radio" class="btn-check" name="refund_type" id="rt_fixed" value="fixed">
+                  <input type="radio" class="btn-check" name="refund_type" id="rt_fixed" value="fixed" ${['return_retrieving', 'returned'].includes(order.status) || order.payment_status === 'refunded' ? 'disabled' : ''}>
                   <label class="btn btn-outline-secondary btn-sm fw-bold px-3" for="rt_fixed">Trừ Tiền Mặt</label>
               </div>
 
               <div id="deduction_input_wrap" style="display: none;" class="mb-3">
                   <div class="input-group shadow-sm">
                       <span class="input-group-text bg-light fw-bold" id="deduction_label">%</span>
-                      <input type="number" id="deduction_value" class="form-control border-start-0 ps-0 fw-bold text-brand" placeholder="Nhập mức khấu trừ..." min="0">
+                      <input type="text" id="deduction_value" class="form-control border-start-0 ps-0 fw-bold text-brand" placeholder="Nhập mức khấu trừ..." ${['return_retrieving', 'returned'].includes(order.status) || order.payment_status === 'refunded' ? 'disabled' : ''}>
                   </div>
               </div>
 
@@ -547,24 +632,24 @@ const processRefund = async (order) => {
               
               <div class="list-group shadow-sm">
                   <label class="list-group-item list-group-item-action d-flex align-items-center cursor-pointer p-3">
-                    <input class="form-check-input me-3 mt-0 fs-5" type="radio" name="refund_action" value="propose" ${['pending', 'proposing'].includes(currentStatus) ? 'checked' : ''}>
+                    <input class="form-check-input me-3 mt-0 fs-5" type="radio" name="refund_action" value="propose" ${['pending', 'proposing'].includes(currentStatus) ? 'checked' : ''} ${order.status === 'return_retrieving' ? 'disabled' : ''}>
                     <div>
-                        <div class="fw-bold text-dark"><i class="bi bi-envelope-paper text-primary me-2"></i>Gửi Email Thỏa Thuận Giá</div>
-                        <div class="text-muted small" style="font-size: 0.75rem;">Báo cho khách số tiền sẽ hoàn để chờ phản hồi.</div>
+                        <div class="fw-bold text-dark"><i class="bi bi-envelope-paper text-primary me-2"></i>Đề xuất Giá & Chờ Khách Xác Nhận</div>
+                        <div class="text-muted small" style="font-size: 0.75rem;">Gửi mức hoàn tiền để khách hàng "Đồng ý/Từ chối" trên hệ thống.</div>
                     </div>
                   </label>
                   <label class="list-group-item list-group-item-action d-flex align-items-center cursor-pointer p-3">
-                    <input class="form-check-input me-3 mt-0 fs-5" type="radio" name="refund_action" value="refunded" ${currentStatus === 'refunded' ? 'checked' : ''}>
+                    <input class="form-check-input me-3 mt-0 fs-5" type="radio" name="refund_action" value="refunded" ${currentStatus === 'refunded' ? 'checked' : ''} ${order.status !== 'return_retrieving' && currentStatus !== 'refunded' ? 'disabled' : ''}>
                     <div>
-                        <div class="fw-bold text-dark"><i class="bi bi-check-circle text-success me-2"></i>Đã Chuyển Khoản Trả Khách</div>
-                        <div class="text-muted small" style="font-size: 0.75rem;">Xác nhận Kế toán đã chuyển khoản thành công.</div>
+                        <div class="fw-bold text-dark"><i class="bi bi-check-circle text-success me-2"></i>Đã Thu Hồi & Chuyển Khoản</div>
+                        <div class="text-muted small" style="font-size: 0.75rem;">(Chỉ khả dụng khi khách đã chốt thỏa thuận) Xác nhận hoàn tiền.</div>
                     </div>
                   </label>
                   <label class="list-group-item list-group-item-action d-flex align-items-center cursor-pointer p-3 bg-danger bg-opacity-10 border-danger border-opacity-25">
-                    <input class="form-check-input me-3 mt-0 fs-5" type="radio" name="refund_action" value="reject" ${currentStatus === 'rejected' ? 'checked' : ''}>
+                    <input class="form-check-input me-3 mt-0 fs-5" type="radio" name="refund_action" value="reject" ${currentStatus === 'rejected' ? 'checked' : ''} ${order.status === 'return_retrieving' ? 'disabled' : ''}>
                     <div>
                         <div class="fw-bold text-danger"><i class="bi bi-x-circle text-danger me-2"></i>Từ chối hoàn tiền</div>
-                        <div class="text-muted small" style="font-size: 0.75rem;">Gửi Email từ chối & đóng băng quy trình hoàn trả.</div>
+                        <div class="text-muted small" style="font-size: 0.75rem;">Đóng băng quy trình và khôi phục đơn hàng.</div>
                     </div>
                   </label>
               </div>
@@ -599,8 +684,24 @@ const processRefund = async (order) => {
       const actionRadios = document.querySelectorAll('input[name="refund_action"]');
       const container = document.getElementById('quick-notes-container');
       
-      const origAmt = parseFloat(order.total_amount);
+      const origAmt = parseFloat(fullOrder.total_amount);
       const fmt = (v) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(v || 0);
+
+      const getCalculatedAmount = () => {
+          const type = document.querySelector('input[name="refund_type"]:checked').value;
+          let finalAmt = origAmt;
+          let rawVal = input.value;
+          if (typeof rawVal === 'string') rawVal = rawVal.replace(/\./g, '');
+          let val = parseFloat(rawVal) || 0;
+          if (type === 'percent') {
+              if (val > 100) val = 100;
+              finalAmt = origAmt - (origAmt * val / 100);
+          } else if (type === 'fixed') {
+              if (val > origAmt) val = origAmt;
+              finalAmt = origAmt - val;
+          }
+          return finalAmt;
+      };
 
       const renderChips = (action) => {
           const notesList = quickRefundNotes[action] || [];
@@ -608,15 +709,17 @@ const processRefund = async (order) => {
               container.innerHTML = '';
               return;
           }
+          const formattedAmt = fmt(getCalculatedAmount());
           let html = '';
           notesList.forEach(n => {
-              html += `<span class="badge bg-light text-dark border border-secondary-subtle shadow-sm quick-note-chip" style="font-size: 0.75rem; padding: 6px 10px; transition: all 0.2s; cursor: pointer;">${n}</span>`;
+              const text = n.replace('{amount}', formattedAmt);
+              html += `<span class="badge bg-light text-dark border border-secondary-subtle shadow-sm quick-note-chip" style="font-size: 0.75rem; padding: 6px 10px; transition: all 0.2s; cursor: pointer;" data-text="${text}">${text}</span>`;
           });
           container.innerHTML = html;
           
           container.querySelectorAll('.quick-note-chip').forEach(chip => {
               chip.addEventListener('click', () => {
-                  note.value = chip.innerText;
+                  note.value = chip.getAttribute('data-text');
                   chip.style.backgroundColor = '#009981';
                   chip.style.color = '#fff';
                   chip.style.transform = 'translateY(-2px)';
@@ -629,14 +732,14 @@ const processRefund = async (order) => {
           });
       };
 
-      const currentAction = document.querySelector('input[name="refund_action"]:checked').value;
-      renderChips(currentAction);
+      const currentAction = document.querySelector('input[name="refund_action"]:checked');
+      if (currentAction) renderChips(currentAction.value);
 
-      if (order.refund_amount !== null && order.refund_amount < origAmt && order.refund_amount > 0) {
+      if (fullOrder.refund_amount !== null && fullOrder.refund_amount < origAmt && fullOrder.refund_amount > 0) {
           document.getElementById('rt_fixed').checked = true;
           wrap.style.display = 'block';
           label.innerText = 'VNĐ';
-          input.value = origAmt - order.refund_amount;
+          input.value = new Intl.NumberFormat('vi-VN').format(origAmt - fullOrder.refund_amount);
       } else {
           document.getElementById('rt_full').checked = true;
           wrap.style.display = 'none';
@@ -646,16 +749,29 @@ const processRefund = async (order) => {
       const calc = () => {
         const type = document.querySelector('input[name="refund_type"]:checked').value;
         let finalAmt = origAmt;
-        const val = parseFloat(input.value) || 0;
+        let rawVal = input.value;
+        if (typeof rawVal === 'string') rawVal = rawVal.replace(/\./g, '');
+        let val = parseFloat(rawVal) || 0;
 
         if (type === 'percent') {
+          if (val > 100) {
+              val = 100;
+              input.value = 100;
+          }
           finalAmt = Math.max(0, origAmt - (origAmt * val / 100));
         } else if (type === 'fixed') {
+          if (val > origAmt) {
+              val = origAmt;
+              input.value = new Intl.NumberFormat('vi-VN').format(origAmt);
+          }
           finalAmt = Math.max(0, origAmt - val);
         }
         
         display.innerText = fmt(finalAmt);
         hiddenAmt.value = finalAmt;
+        
+        const currentAction = document.querySelector('input[name="refund_action"]:checked');
+        if (currentAction) renderChips(currentAction.value);
       };
 
       typeRadios.forEach(r => r.addEventListener('change', (e) => {
@@ -665,11 +781,28 @@ const processRefund = async (order) => {
          } else {
              wrap.style.display = 'block';
              label.innerText = e.target.value === 'percent' ? '%' : 'VNĐ';
+             let raw = input.value.replace(/\D/g, '');
+             if (e.target.value === 'fixed' && raw) {
+                 input.value = new Intl.NumberFormat('vi-VN').format(raw);
+             } else {
+                 input.value = raw;
+             }
          }
          calc();
       }));
 
-      input.addEventListener('input', calc);
+      input.addEventListener('input', (e) => {
+         const type = document.querySelector('input[name="refund_type"]:checked').value;
+         if (type === 'fixed') {
+             let raw = e.target.value.replace(/\D/g, '');
+             if (raw) {
+                 e.target.value = new Intl.NumberFormat('vi-VN').format(raw);
+             } else {
+                 e.target.value = '';
+             }
+         }
+         calc();
+      });
 
       actionRadios.forEach(r => r.addEventListener('change', (e) => {
          renderChips(e.target.value); 
@@ -677,7 +810,11 @@ const processRefund = async (order) => {
          if (e.target.value === 'reject') {
              display.innerText = fmt(0);
              hiddenAmt.value = 0;
+             note.value = 'Rất tiếc, sản phẩm của quý khách không đủ điều kiện hoàn trả theo quy định của SORA.';
          } else {
+             if (note.value === 'Rất tiếc, sản phẩm của quý khách không đủ điều kiện hoàn trả theo quy định của SORA.') {
+                 note.value = '';
+             }
              calc();
          }
       }));

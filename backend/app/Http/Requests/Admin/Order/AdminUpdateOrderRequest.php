@@ -15,7 +15,7 @@ class AdminUpdateOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => 'required|string|in:pending,confirmed,processing,shipping,delivered,cancelled,returned,return_requested',
+            'status' => 'required|string|in:pending,confirmed,processing,shipping,delivered,cancelled,returned,return_requested,return_negotiating,return_retrieving',
             'payment_status' => 'required|string|in:unpaid,paid,refunded',
             'note'           => 'nullable|string|max:1000',
         ];
@@ -60,7 +60,9 @@ class AdminUpdateOrderRequest extends FormRequest
 
             // 5. Phải thanh toán xong mới được phép xác nhận Hoàn tất giao hàng
             if ($newStatus === 'delivered' && $oldPayment !== 'paid' && $newPayment !== 'paid') {
-                $validator->errors()->add('status', 'Phải thanh toán xong mới được chuyển trạng thái Hoàn tất.');
+                if (strtoupper($order->payment_method) !== 'COD') {
+                    $validator->errors()->add('status', 'Phải thanh toán xong mới được chuyển trạng thái Hoàn tất.');
+                }
             }
 
             // 6. Cấm hoàn tiền nếu đơn hàng không bị Hủy hoặc Hoàn trả

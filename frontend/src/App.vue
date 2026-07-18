@@ -100,6 +100,16 @@ useRealtimeSync();
   --sora-accent: #cc1e2e;
 }
 
+.text-sora-primary {
+  color: var(--sora-primary) !important;
+}
+.bg-sora-primary {
+  background-color: var(--sora-primary) !important;
+}
+.border-sora-primary {
+  border-color: var(--sora-primary) !important;
+}
+
 body {
   margin: 0;
   padding: 0;

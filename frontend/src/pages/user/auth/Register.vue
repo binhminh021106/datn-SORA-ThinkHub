@@ -35,10 +35,10 @@
           <div class="form-group">
             <label>Mật khẩu</label>
             <div class="password-input-wrapper">
-              <input v-model="form.password" :type="showPassword ? 'text' : 'password'" placeholder="Tạo mật khẩu (ít nhất 6 ký tự)" required />
+              <input v-model="form.password" :type="showPassword ? 'text' : 'password'"
+                placeholder="Tạo mật khẩu (ít nhất 6 ký tự)" required />
               <button type="button" class="password-toggle" @click="showPassword = !showPassword"
-                :aria-label="showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
-                :aria-pressed="showPassword">
+                :aria-label="showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'" :aria-pressed="showPassword">
                 <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
               </button>
             </div>
@@ -47,7 +47,8 @@
           <div class="form-group">
             <label>Xác nhận mật khẩu</label>
             <div class="password-input-wrapper">
-              <input v-model="form.password_confirmation" :type="showConfirmPassword ? 'text' : 'password'" placeholder="Nhập lại mật khẩu" required />
+              <input v-model="form.password_confirmation" :type="showConfirmPassword ? 'text' : 'password'"
+                placeholder="Nhập lại mật khẩu" required />
               <button type="button" class="password-toggle" @click="showConfirmPassword = !showConfirmPassword"
                 :aria-label="showConfirmPassword ? 'Ẩn mật khẩu xác nhận' : 'Hiện mật khẩu xác nhận'"
                 :aria-pressed="showConfirmPassword">
@@ -149,16 +150,16 @@ const handleRegister = async () => {
     // Đồng bộ giỏ hàng Guest vào tài khoản
     const sessionId = localStorage.getItem('cart_session_id');
     if (sessionId) {
-        try {
-            await clientApiClient.post('/client/cart/merge', {}, {
-                ensureCartSession: true,
-                ignoreAuthRedirect: true
-            });
-            localStorage.removeItem('cart_session_id');
-            window.dispatchEvent(new CustomEvent('update-cart-count'));
-        } catch (e) {
-            console.error('Merge cart error:', e);
-        }
+      try {
+        await clientApiClient.post('/client/cart/merge', {}, {
+          ensureCartSession: true,
+          ignoreAuthRedirect: true
+        });
+        localStorage.removeItem('cart_session_id');
+        window.dispatchEvent(new CustomEvent('update-cart-count'));
+      } catch (e) {
+        console.error('Merge cart error:', e);
+      }
     }
 
     setTimeout(() => {
@@ -189,7 +190,7 @@ const handleSocialLogin = (platform) => {
   justify-content: center;
   align-items: center;
   background-color: #fcf9f5;
-  padding: 10px 20px;
+  padding: 40px 20px;
   font-family: 'Helvetica Neue', Arial, sans-serif;
 }
 
@@ -240,9 +241,7 @@ const handleSocialLogin = (platform) => {
   max-width: 180px;
   height: auto;
   margin-bottom: 25px;
-  filter: drop-shadow(0 0 1.5px #e7ce7d) 
-          drop-shadow(0 0 1.5px rgba(231, 206, 125, 0.01)) 
-          drop-shadow(0 4px 6px rgba(0, 0, 0, 0.01));
+  filter: drop-shadow(0 0 1.5px #e7ce7d) drop-shadow(0 0 1.5px rgba(231, 206, 125, 0.01)) drop-shadow(0 4px 6px rgba(0, 0, 0, 0.01));
 }
 
 /* Điều chỉnh lại slogan một chút */
@@ -259,7 +258,7 @@ const handleSocialLogin = (platform) => {
 /* Phần code CSS còn lại của Form (Cột phải) giữ nguyên 100% */
 .auth-box {
   flex: 1;
-  padding:20px 40px;
+  padding: 40px 60px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -268,7 +267,7 @@ const handleSocialLogin = (platform) => {
 }
 
 .auth-header {
-  margin-bottom: 15px;
+  margin-bottom: 25px;
 }
 
 .auth-title {
@@ -286,7 +285,7 @@ const handleSocialLogin = (platform) => {
 }
 
 .form-group {
-  margin-bottom: 10px;
+  margin-bottom: 16px;
 }
 
 .form-group label {
@@ -375,7 +374,7 @@ const handleSocialLogin = (platform) => {
   display: flex;
   align-items: center;
   text-align: center;
-  margin: 12px 0;
+  margin: 20px 0;
   color: #999;
   font-size: 13px;
 }

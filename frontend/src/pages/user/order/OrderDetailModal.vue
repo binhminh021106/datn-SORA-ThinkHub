@@ -1,8 +1,9 @@
 <template>
     <div v-if="isOpen" class="custom-modal-backdrop" @click.self="$emit('close')">
         <!-- ĐÃ FIX: Bỏ Fullscreen, dùng Modal Box bo góc hiện đại nằm giữa màn hình -->
+        <!-- ĐÃ FIX: Bỏ Fullscreen, dùng Modal Box bo góc hiện đại nằm giữa màn hình, mở rộng width thành 1200px để chứa 3 cột -->
         <div class="custom-modal-content shadow-lg border-0 rounded-4 slide-up d-flex flex-column"
-            style="width: 1000px; max-width: 95vw; max-height: 90vh;">
+            style="width: 1200px; max-width: 95vw; max-height: 90vh;">
 
             <!-- HEADER MÀU ĐỎ SORA QUEN THUỘC -->
             <div
@@ -17,15 +18,15 @@
             </div>
 
             <!-- KHU VỰC NỘI DUNG TỰ CUỘN -->
-            <div class="modal-body p-4 bg-light flex-grow-1 overflow-auto custom-scrollbar-y">
-                <div class="row g-4">
+            <div class="modal-body p-2 bg-light flex-grow-1 overflow-auto custom-scrollbar-y">
+                <div class="row g-1">
 
                     <!-- CỘT TRÁI: TIẾN TRÌNH & SẢN PHẨM -->
-                    <div class="col-lg-7">
+                    <div :class="['return_requested', 'return_negotiating', 'return_retrieving', 'returned'].includes(order?.status) ? 'col-lg-5' : 'col-lg-7'">
                         <!-- Tiến trình -->
-                        <div class="bg-white p-4 shadow-sm border border-light-subtle mb-4 rounded-3">
+                        <div class="bg-white p-3 shadow-sm border border-light-subtle mb-1 rounded-3">
                             <h6
-                                class="fw-bold mb-4 font-serif text-sora-primary text-uppercase tracking-wider border-bottom pb-2">
+                                class="fw-bold mb-1 font-serif text-sora-primary text-uppercase tracking-wider border-bottom pb-2">
                                 <i class="bi bi-clock-history me-2"></i> Tiến Trình
                             </h6>
 
@@ -73,7 +74,7 @@
                         </div>
 
                         <!-- Sản phẩm -->
-                        <div class="bg-white p-4 shadow-sm border border-light-subtle rounded-3">
+                        <div class="bg-white p-3 shadow-sm border border-light-subtle rounded-3">
                             <h6
                                 class="fw-bold mb-3 font-serif text-sora-primary text-uppercase tracking-wider border-bottom pb-2">
                                 <i class="bi bi-bag-check me-2"></i> Chi tiết Mua Sắm
@@ -85,8 +86,8 @@
                                         <template v-for="item in order?.items" :key="item.id">
 
                                             <!-- Sản phẩm lẻ -->
-                                            <tr v-if="!item.combo_id" class="border-bottom border-light-subtle">
-                                                <td class="ps-0 py-3" style="width: 70%;">
+                                            <tr v-if="!item.combo_id" class="border-bottom border-light-subtle" style="cursor: pointer;" @click="goToProduct(item)">
+                                                <td class="ps-0 py-1" style="width: 70%;">
                                                     <div class="d-flex align-items-center gap-3">
                                                         <div class="product-img-wrap flex-shrink-0"
                                                             style="width: 60px; height: 60px;">
@@ -122,7 +123,7 @@
                                             </tr>
 
                                             <!-- Sản phẩm Combo -->
-                                            <tr v-else class="border-bottom border-light-subtle bg-light rounded">
+                                            <tr v-else class="border-bottom border-light-subtle bg-light rounded" style="cursor: pointer;" @click="goToProduct(item)">
                                                 <td colspan="3"
                                                     class="p-3 border-start border-end border-light-subtle rounded">
                                                     <div
@@ -186,14 +187,14 @@
                         </div>
                     </div>
 
-                    <!-- CỘT PHẢI: GIAO HÀNG & TỔNG TIỀN -->
-                    <div class="col-lg-5">
-                        <div class="d-flex flex-column h-100 gap-4">
+                    <!-- CỘT GIỮA: GIAO HÀNG & TỔNG TIỀN -->
+                    <div :class="['return_requested', 'return_negotiating', 'return_retrieving', 'returned'].includes(order?.status) ? 'col-lg-4' : 'col-lg-5'">
+                        <div class="d-flex flex-column h-100 gap-1">
 
                             <!-- Thông tin Khách hàng -->
-                            <div class="bg-white p-4 shadow-sm border border-light-subtle rounded-3">
+                            <div class="bg-white p-3 shadow-sm border border-light-subtle rounded-3">
                                 <h6
-                                    class="fw-bold mb-3 font-serif text-sora-primary text-uppercase tracking-wider border-bottom pb-2">
+                                    class="fw-bold mb-1 font-serif text-sora-primary text-uppercase tracking-wider border-bottom pb-2">
                                     <i class="bi bi-person-lines-fill me-2"></i> Giao Hàng Tới
                                 </h6>
                                 <div class="mb-3">
@@ -202,7 +203,7 @@
                                         order?.customer_phone
                                         }}</span>
                                 </div>
-                                <div class="mb-3">
+                                <div class="mb-1">
                                     <span class="text-dark small lh-base d-block"><i
                                             class="bi bi-geo-alt-fill text-muted me-1"></i> {{
                                         order?.customer_address }}</span>
@@ -214,7 +215,7 @@
                             </div>
 
                             <!-- Thanh toán và Tổng tiền -->
-                            <div class="bg-white p-4 shadow-sm border border-light-subtle rounded-3 flex-grow-1">
+                            <div class="bg-white p-3 shadow-sm border border-light-subtle rounded-3 flex-grow-1">
                                 <h6
                                     class="fw-bold mb-3 font-serif text-sora-primary text-uppercase tracking-wider border-bottom pb-2">
                                     <i class="bi bi-receipt me-2"></i> Hóa Đơn
@@ -257,6 +258,55 @@
                                     <h4 class="fw-bold text-sora-primary mb-0 font-oswald">{{
                                         formatPrice(order?.total_amount) }}</h4>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                        
+                    <!-- CỘT PHẢI: TIẾN TRÌNH HOÀN TRẢ (Chỉ hiện khi đang xử lý hoàn trả) -->
+                    <div v-if="['return_requested', 'return_negotiating', 'return_retrieving', 'returned'].includes(order?.status)" class="col-lg-3">
+                        <div class="bg-white p-4 shadow-sm border border-warning-subtle rounded-3 h-100">
+                            <h6 class="fw-bold mb-3 font-serif text-warning text-uppercase tracking-wider border-bottom pb-2">
+                                <i class="bi bi-arrow-return-left me-2"></i> Tiến Trình Hoàn Trả
+                            </h6>
+                            
+                            <div class="mb-3 text-muted small">
+                                <span class="fw-bold text-dark">Lý do hoàn trả:</span> {{ order?.return_reason || (order?.status_history?.find(h => h.new_status === 'return_requested')?.note) || 'Đã gửi yêu cầu' }}
+                            </div>
+
+                            <div v-if="order?.refund_bank_name" class="mb-3 p-3 bg-light rounded border border-light-subtle small">
+                                <div class="fw-bold text-dark mb-1"><i class="bi bi-bank2 me-1"></i> Ngân hàng nhận tiền:</div>
+                                <div>Ngân hàng: <strong>{{ order?.refund_bank_name }}</strong></div>
+                                <div>Số tài khoản: <strong>{{ order?.refund_account_number }}</strong></div>
+                                <div>Chủ tài khoản: <strong class="text-uppercase">{{ order?.refund_account_name }}</strong></div>
+                            </div>
+
+                            <div v-if="order?.status === 'return_negotiating' && order?.refund_amount !== null" class="alert alert-warning border-warning-subtle p-3 mb-0 shadow-sm">
+                                <div class="fw-bold mb-2"><i class="bi bi-exclamation-triangle-fill me-2"></i> Đề xuất mức hoàn tiền:</div>
+                                <div class="d-flex justify-content-between align-items-center mb-1 bg-white p-2 rounded">
+                                    <strong class="text-danger fs-5 font-oswald w-100 text-center">{{ formatPrice(order?.refund_amount) }}</strong>
+                                </div>
+                                <div class="small text-muted mt-2 d-flex justify-content-between">
+                                    <span>Khấu trừ: <strong>-{{ formatPrice(order.total_amount - order.refund_amount) }}</strong></span>
+                                    <span v-if="order.total_amount > 0">({{ Math.round((order.total_amount - order.refund_amount) / order.total_amount * 100) }}%)</span>
+                                </div>
+                                <div v-if="order?.refund_note" class="small text-muted mt-2 fst-italic">
+                                    <i class="bi bi-chat-left-text me-1"></i> Lời nhắn: {{ order?.refund_note }}
+                                </div>
+                                
+                                <div class="d-flex flex-column gap-2 mt-3">
+                                    <button @click="handleConfirmRefund(true)" class="btn btn-sm btn-success fw-bold w-100"><i class="bi bi-check2-circle me-1"></i>Đồng ý đề xuất</button>
+                                    <button @click="handleConfirmRefund(false)" class="btn btn-sm btn-light border fw-bold text-danger w-100">Từ chối</button>
+                                </div>
+                            </div>
+
+                            <div v-if="order?.status === 'return_retrieving'" class="alert alert-info border-info-subtle mb-0 p-3 shadow-sm">
+                                <div class="fw-bold mb-2"><i class="bi bi-truck me-2"></i> Đang tiến hành thu hồi</div>
+                                <div class="small">Bạn đã đồng ý với mức hoàn tiền <strong class="text-danger">{{ formatPrice(order?.refund_amount) }}</strong>. Chuyên viên SORA sẽ sớm liên hệ để thu hồi sản phẩm.</div>
+                            </div>
+
+                            <div v-if="order?.status === 'returned'" class="alert alert-success border-success-subtle mb-0 p-3 shadow-sm">
+                                <div class="fw-bold mb-2"><i class="bi bi-check-circle-fill me-2"></i> Đã hoàn tiền thành công</div>
+                                <div class="small">Số tiền <strong class="text-success">{{ formatPrice(order?.refund_amount) }}</strong> đã được chuyển khoản vào tài khoản của bạn.</div>
                             </div>
                         </div>
                     </div>
@@ -389,6 +439,15 @@ const getImageUrl = (path) => {
 
 const handleImageError = (e) => { e.target.src = defaultPlaceholder; };
 
+const goToProduct = (item) => {
+    emit('close');
+    if (item.combo_id && item.combo) {
+        router.push({ name: 'client-combo-detail', params: { slug: item.combo.slug } }).catch(()=>{});
+    } else if (item.product && item.product.slug) {
+        router.push({ name: 'productDetail', params: { shop_slug: 'aurora-jewelry', slug: item.product.slug } }).catch(()=>{});
+    }
+};
+
 const translateStatus = (status) => {
     const map = {
         pending: 'Chờ xác nhận',
@@ -466,6 +525,15 @@ const handleReturn = async () => {
             <div id="other_reason_container" style="display: none; padding-left: 2.2rem; margin-top: 10px;">
                 <textarea id="swal-return-note" class="form-control shadow-sm rounded-3 p-3" rows="3" placeholder="Nhập chi tiết lý do hoàn trả của bạn vào đây..." style="font-size: 0.9rem;"></textarea>
             </div>
+            
+            <hr class="my-3 border-light-subtle">
+            <h6 class="fw-bold text-dark text-start px-2"><i class="bi bi-bank2 me-2"></i>Thông tin Ngân hàng Nhận Tiền</h6>
+            <div class="px-2 mt-2">
+                <input id="swal-bank-name" class="form-control mb-2 shadow-sm" placeholder="Tên Ngân hàng (VD: Vietcombank)" style="font-size: 0.9rem;">
+                <input id="swal-bank-acc" class="form-control mb-2 shadow-sm" placeholder="Số Tài Khoản" style="font-size: 0.9rem;">
+                <input id="swal-bank-owner" class="form-control shadow-sm text-uppercase" placeholder="Tên Chủ Tài Khoản" style="font-size: 0.9rem;">
+                <small class="text-danger mt-1 d-block text-start fst-italic" style="font-size: 0.75rem;">* Hệ thống sẽ tự động đối soát và chuyển tiền qua STK này nếu yêu cầu được duyệt.</small>
+            </div>
         </div>
     `;
 
@@ -517,7 +585,17 @@ const handleReturn = async () => {
                 }
                 reason = val.trim();
             }
-            return reason;
+
+            const bankName = document.getElementById('swal-bank-name').value.trim();
+            const bankAcc = document.getElementById('swal-bank-acc').value.trim();
+            const bankOwner = document.getElementById('swal-bank-owner').value.trim();
+
+            if (!bankName || !bankAcc || !bankOwner) {
+                Swal.showValidationMessage('Vui lòng nhập đầy đủ Thông tin Ngân hàng để nhận tiền!');
+                return false;
+            }
+
+            return { reason, bankName, bankAcc, bankOwner };
         }
     });
 
@@ -527,7 +605,10 @@ const handleReturn = async () => {
 
     try {
         await clientApiClient.post(`/client/orders/${props.order.order_code}/return`, {
-            return_reason: noteText
+            return_reason: noteText.reason,
+            refund_bank_name: noteText.bankName,
+            refund_account_number: noteText.bankAcc,
+            refund_account_name: noteText.bankOwner
         });
 
         soraAlert.fire({
@@ -578,6 +659,32 @@ const handleDownloadInvoice = async () => {
         Swal.close();
     } catch (e) {
         soraAlert.fire({ icon: 'error', title: 'Lỗi', text: 'Chưa thể xuất hóa đơn lúc này.' });
+    }
+};
+
+const handleConfirmRefund = async (isAccepted) => {
+    try {
+        const result = await Swal.fire({
+            title: isAccepted ? 'Xác nhận đồng ý' : 'Từ chối thỏa thuận?',
+            text: isAccepted ? 'Bạn đồng ý với mức hoàn tiền cửa hàng đề xuất? Chúng tôi sẽ bắt đầu thu hồi hàng.' : 'Nếu từ chối, yêu cầu hoàn trả sẽ bị hủy và đơn hàng sẽ trở về trạng thái Đã nhận hàng.',
+            icon: isAccepted ? 'question' : 'warning',
+            showCancelButton: true,
+            confirmButtonText: isAccepted ? 'Đồng ý' : 'Từ chối yêu cầu',
+            cancelButtonText: 'Đóng',
+            confirmButtonColor: isAccepted ? '#198754' : '#dc3545',
+        });
+        
+        if (result.isConfirmed) {
+            Swal.fire({ title: 'Đang xử lý...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            const res = await clientApiClient.post(`/client/orders/${props.order.order_code}/return/confirm`, {
+                is_accepted: isAccepted
+            });
+            Swal.fire('Thành công', res.data.message || 'Cập nhật thành công', 'success');
+            emit('refresh');
+            emit('close');
+        }
+    } catch (err) {
+        Swal.fire('Lỗi', err.response?.data?.message || 'Không thể cập nhật yêu cầu', 'error');
     }
 };
 </script>

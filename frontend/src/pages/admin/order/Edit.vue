@@ -180,25 +180,13 @@
               <h6 class="fw-bold text-dark text-uppercase tracking-wide mb-4 d-flex align-items-center"><i class="bi bi-toggles me-2 text-brand fs-4"></i>Xử Lý Đơn Hàng</h6>
               
               <!-- Cập nhật Thanh toán -->
-              <div class="mb-4 bg-light p-3 rounded border border-light-subtle shadow-sm">
-                <label class="form-label fw-bold text-dark small text-uppercase mb-2">Tình trạng Thu tiền</label>
-                <div class="d-flex gap-2">
-                  <select v-model="localPaymentStatus" class="form-select fw-bold border-brand-subtle shadow-sm bg-white" :disabled="isUpdatingPayment">
-                      <option value="unpaid" v-if="canPaymentTransitionTo('unpaid')">Chưa thanh toán</option>
-                      <option value="paid" v-if="canPaymentTransitionTo('paid')">Đã thanh toán (Đã thu)</option>
-                      <option value="refunded" v-if="canPaymentTransitionTo('refunded')">Đã hoàn tiền</option>
-                      <option value="failed" v-if="canPaymentTransitionTo('failed')">Thanh toán thất bại</option>
-                  </select>
-                  <button class="btn btn-brand fw-bold flex-shrink-0 shadow-sm px-3 d-flex align-items-center justify-content-center" 
-                          @click="submitPaymentUpdate" 
-                          :disabled="localPaymentStatus === order?.payment_status || isUpdatingPayment" 
-                          title="Lưu thanh toán">
-                    <span v-if="isUpdatingPayment" class="spinner-border spinner-border-sm"></span>
-                    <i v-else class="bi bi-floppy2-fill"></i>
-                  </button>
-                </div>
-                <div class="mt-2 small text-muted fst-italic">
-                  Đang chọn phương thức: <span class="fw-bold text-brand text-uppercase">{{ order?.payment_method }}</span>
+              <div class="mb-4 bg-light p-3 rounded border border-light-subtle shadow-sm text-center">
+                <label class="form-label fw-bold text-dark small text-uppercase mb-3 d-block text-start">Tình trạng Thu tiền</label>
+                <span class="badge px-4 py-2 fs-6 mb-2 w-100" :class="getPaymentSelectClass(order?.payment_status)">
+                  {{ formatPaymentStatus(order?.payment_status) }}
+                </span>
+                <div class="mt-2 small fw-bold text-muted text-uppercase text-start">
+                  <i class="bi bi-wallet2 me-1"></i> Phương thức: <span class="text-brand">{{ order?.payment_method }}</span>
                 </div>
               </div>
 
@@ -367,6 +355,20 @@ const parseCombo = (combo) => { try { return typeof combo === 'object' ? combo :
 const formatOrderStatus = (status) => ({ 'pending': 'Chờ duyệt', 'confirmed': 'Đã xác nhận', 'processing': 'Đang chuẩn bị', 'shipping': 'Đang giao', 'delivered': 'Đã giao', 'cancelled': 'Đã hủy', 'returned': 'Hoàn trả' }[status] || status);
 const getOrderStatusBadge = (status) => ({ 'pending': 'bg-warning text-dark border-warning', 'confirmed': 'bg-info text-dark border-info', 'processing': 'bg-primary text-white border-primary', 'shipping': 'bg-primary text-white border-primary', 'delivered': 'bg-success text-white border-success', 'cancelled': 'bg-danger text-white border-danger', 'returned': 'bg-secondary text-white border-secondary' }[status] || 'bg-light text-dark');
 
+const formatPaymentStatus = (status) => ({
+  'unpaid': 'Chưa thanh toán',
+  'paid': 'Đã thanh toán',
+  'refunded': 'Đã hoàn tiền',
+  'failed': 'Thất bại'
+}[status] || status);
+
+const getPaymentSelectClass = (status) => ({
+  'unpaid': 'text-warning border-warning bg-warning bg-opacity-10',
+  'paid': 'text-success border-success bg-success bg-opacity-10',
+  'refunded': 'text-info border-info bg-info bg-opacity-10',
+  'failed': 'text-danger border-danger bg-danger bg-opacity-10'
+}[status] || 'bg-light text-secondary');
+
 const allowedTransitions = {
     'pending': ['pending', 'confirmed', 'cancelled'],
     'confirmed': ['confirmed', 'processing', 'cancelled'],
@@ -417,10 +419,27 @@ const handleStatusChange = () => {
 
 const submitStatusUpdate = async () => {
     if (localStatus.value === 'delivered' && order.value.payment_status !== 'paid') {
-        Swal.fire({ title: 'Khoan đã! Chưa thu tiền', text: 'Để đảm bảo doanh thu, vui lòng cập nhật trạng thái Thanh toán thành "Đã TT" trước khi giao hàng.', icon: 'warning', confirmButtonColor: '#009981' });
-        localStatus.value = order.value.status;
-        handleStatusChange();
-        return;
+        if (order.value.payment_method?.toUpperCase() === 'COD') {
+            const { isConfirmed } = await Swal.fire({
+                title: 'Xác nhận thu tiền?',
+                text: 'Bạn có chắc chắn xác nhận hoàn thành đơn hàng và ĐÃ THU TIỀN thanh toán không?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#009981',
+                cancelButtonText: 'Hủy bỏ',
+                confirmButtonText: 'Có, đã giao & thu tiền!'
+            });
+            if (!isConfirmed) {
+                localStatus.value = order.value.status;
+                handleStatusChange();
+                return;
+            }
+        } else {
+            Swal.fire({ title: 'Khoan đã! Chưa thu tiền', text: 'Đơn hàng Online này chưa được thanh toán.', icon: 'warning', confirmButtonColor: '#009981' });
+            localStatus.value = order.value.status;
+            handleStatusChange();
+            return;
+        }
     }
 
     let finalNote = selectedNoteOption.value;
@@ -436,7 +455,7 @@ const submitStatusUpdate = async () => {
     try {
         await axios.put(`${API_URL}/admin/orders/${orderId}/status`, {
             status: localStatus.value,
-            payment_status: order.value.payment_status,
+            payment_status: (localStatus.value === 'delivered' && order.value.payment_method?.toUpperCase() === 'COD') ? 'paid' : order.value.payment_status,
             note: finalNote || defaultNotesDict[localStatus.value]
         }, { headers: getHeaders() });
         
