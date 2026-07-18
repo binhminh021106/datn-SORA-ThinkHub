@@ -133,10 +133,12 @@ class AdminOrderController extends Controller
             }
         }
 
+        $sortCol = $request->boolean('is_return_page') ? 'updated_at' : 'id';
+
         // [TỐI ƯU ORM 3] Eager Loading Pagination
         $orders = $baseQuery->with(['user:id,fullName,email'])
             ->withCount('items')
-            ->orderBy('id', 'desc')
+            ->orderBy($sortCol, 'desc')
             ->paginate(15);
 
         return response()->json([
