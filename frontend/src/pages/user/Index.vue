@@ -27,9 +27,8 @@
               <div
                 class="w-100 h-100 position-absolute top-0 start-0 d-flex flex-column align-items-center justify-content-center z-index-2">
                 <div class="home-hero-copy text-center">
-                  <span class="section-kicker text-gold">Trang Sức Cao Cấp SORA</span>
+                  <span class="hero-kicker">Trang Sức Cao Cấp SORA</span>
                   <h1 class="font-serif" v-html="formatBannerTitle(banner.title)"></h1>
-                  <p>Những thiết kế trang sức tinh tế, tôn vinh vẻ đẹp riêng trong mọi khoảnh khắc.</p>
                   <a v-if="banner.target_url" :href="banner.target_url" class="editorial-btn text-decoration-none">Khám
                     phá ngay</a>
                   <router-link v-else :to="{ name: 'shop' }" class="editorial-btn text-decoration-none">Khám phá bộ sưu
@@ -55,9 +54,8 @@
           <div
             class="w-100 h-100 position-absolute top-0 start-0 d-flex flex-column align-items-center justify-content-center z-index-2">
             <div class="home-hero-copy text-center">
-              <span class="section-kicker text-gold">Trang Sức Cao Cấp SORA</span>
+              <span class="hero-kicker">Trang Sức Cao Cấp SORA</span>
               <h1 class="font-serif">Tỏa Sáng Cùng<br>Vẻ Đẹp Đích Thực</h1>
-              <p>Những thiết kế trang sức tinh tế, tôn vinh vẻ đẹp riêng trong mọi khoảnh khắc.</p>
               <router-link :to="{ name: 'shop' }" class="editorial-btn text-decoration-none">Khám phá bộ sưu
                 tập</router-link>
             </div>
@@ -104,7 +102,7 @@
             </div>
             <div class="story-copy">
               <span class="section-kicker">Di sản SORA</span>
-              <h2 class="display-4 font-serif text-main fw-bold mb-3" style="font-size: clamp(40px, 5vw, 60px);">Thanh lịch trong từng dấu ấn.</h2>
+              <h2 class="display-4 font-serif text-main fw-bold mb-3" style="font-size: clamp(32px, 8vw, 60px);">Thanh lịch trong từng dấu ấn.</h2>
               <p>SORA gửi gắm vẻ đẹp tinh tế vào từng thiết kế, để mỗi món trang sức trở thành kỷ vật đồng hành cùng
                 phong cách và những khoảnh khắc đáng nhớ.</p>
               <router-link :to="{ name: 'about' }" class="editorial-btn text-decoration-none">Câu chuyện thương
@@ -119,7 +117,7 @@
       <section class="editorial-section top-selling-editorial" style="background-color: #fdfaf7; padding-top: 4rem;" v-if="topSellingProducts.length > 0">
         <div class="container products-container">
           <div class="section-heading text-center mb-5" style="max-width: 1000px;">
-            <span class="section-kicker text-sora-primary fw-bold" style="font-size: 0.9rem; letter-spacing: 3px;"><i class="bi bi-fire me-1"></i> Bestsellers</span>
+            <span class="section-kicker"><i class="bi bi-fire me-1"></i> Bestsellers</span>
             <h2 class="fs-3 font-serif text-main fw-bold text-md-nowrap mb-4">Kiệt Tác Được Khao Khát Nhất</h2>
           </div>
 
@@ -151,7 +149,7 @@
       <section class="editorial-section combos-editorial" v-if="data.combos && data.combos.length > 0">
         <div class="container-fluid px-0 combos-container">
           <div class="section-heading text-center mb-1">
-            <span class="section-kicker text-gold">Ưu Đãi Đặc Quyền</span>
+            <span class="section-kicker">Ưu Đãi Đặc Quyền</span>
             <h2 class="fs-3 font-serif text-main fw-bold text-md-nowrap mb-4">Bộ Sưu Tập Hoàn Hảo</h2>
           </div>
 
@@ -245,7 +243,7 @@
 
         <div class="container position-relative z-index-2">
           <div class="section-heading text-center text-white">
-            <span class="section-kicker text-gold">Đặc Quyền SORA</span>
+            <span class="section-kicker">Đặc Quyền SORA</span>
             <h2 class="fs-3 font-serif fw-bold mb-4 text-capitalize">Sự Chăm Sóc Tận Tâm Cho Mọi Nhu Cầu</h2>
           </div>
           <div class="expertise-grid">
@@ -314,7 +312,7 @@
         <img :src="getImageUrl(bottomCtaImage)" alt="SORA radiance" @error="handleImageError">
         <div class="bottom-cta-overlay"></div>
         <div class="bottom-cta-copy">
-          <span class="section-kicker text-gold">Tuyển chọn từ SORA</span>
+          <span class="section-kicker">Tuyển chọn từ SORA</span>
           <h2 class="display-4 font-serif fw-bold mb-3 text-white" style="font-size: clamp(40px, 5vw, 60px);">Vẻ Đẹp Rạng Ngời<br>Đích Thực</h2>
           <p>Chọn món trang sức dành riêng cho phong cách của bạn.</p>
           <router-link :to="{ name: 'shop' }" class="editorial-btn text-decoration-none">Mua sắm ngay</router-link>
@@ -784,7 +782,7 @@ onUnmounted(() => {
 
 .home-hero {
   position: relative;
-  min-height: 720px;
+  height: 580px;
   background: var(--sora-primary);
   display: grid;
   place-items: center;
@@ -898,17 +896,35 @@ onUnmounted(() => {
 .section-kicker {
   display: block;
   font-family: 'Oswald', sans-serif;
-  font-size: 0.75rem;
-  letter-spacing: 0.16em;
+  font-size: 0.9rem;
+  letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--sora-primary);
   margin-bottom: 0.75rem;
+  font-weight: 700;
+}
+
+.hero-kicker {
+  display: block;
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.9rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+  font-weight: 700;
+  color: white;
+  text-shadow: 1px 2px 4px rgba(0, 0, 0, 0.9), 0 0 12px rgba(0, 0, 0, 0.6);
 }
 
 .home-hero-copy h1 {
-  font-size: clamp(3.4rem, 8vw, 7rem);
-  line-height: 0.95;
+  font-size: 70px;
+  line-height: 1.1;
   margin-bottom: 1.5rem;
+  text-transform: uppercase;
+  color: var(--sora-secondary);
+  font-weight: 700;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  letter-spacing: 2px;
 }
 
 .bottom-cta-copy h2 {
@@ -968,70 +984,93 @@ onUnmounted(() => {
   transform: rotate(45deg) translateY(200%);
 }
 
+@keyframes floatHeroCard {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-15px); }
+}
+
 .hero-side-card {
   position: absolute;
   z-index: 3;
-  width: 170px;
-  padding: 0.7rem;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
+  width: 180px;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(255, 255, 255, 0.05);
+  animation: floatHeroCard 8s ease-in-out infinite;
+  pointer-events: none;
 }
+
 
 .hero-side-card img {
   width: 100%;
-  aspect-ratio: 4 / 5;
+  aspect-ratio: 3 / 4;
   object-fit: cover;
   display: block;
+  border-radius: 12px;
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
 }
 
 .hero-side-card span {
   display: block;
-  margin-top: 0.55rem;
+  margin-top: 1.25rem;
+  margin-bottom: 0.25rem;
   font-family: 'Oswald', sans-serif;
-  font-size: 0.65rem;
-  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--sora-primary);
+  color: #fff;
+  text-align: center;
+  font-weight: 300;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.hero-side-card span::after {
+  content: '';
+  display: block;
+  width: 30px;
+  height: 1px;
+  background: var(--sora-primary);
+  margin: 0.85rem auto 0;
+  transition: width 0.4s ease;
+}
+
+.hero-side-card:hover span::after {
+  width: 80px;
 }
 
 .hero-card-left {
-  left: 14vw;
-  top: 14%;
+  left: 10vw;
+  top: 15%;
+  animation-delay: 0s;
 }
 
 .hero-card-right {
-  right: 14vw;
-  top: 34%;
+  right: 10vw;
+  top: 30%;
+  animation-delay: -4s;
 }
 
 
 
 .home-stats-band {
-  background: #6a1622;
+  background: linear-gradient(90deg, #1c060a 0%, var(--sora-primary) 50%, #1c060a 100%);
   position: relative;
   color: #fff;
-  padding: 1.5rem max(var(--home-gutter), calc((100vw - var(--home-container-width)) / 2 + var(--home-gutter)));
+  padding: 2rem max(var(--home-gutter), calc((100vw - var(--home-container-width)) / 2 + var(--home-gutter)));
   display: flex;
   justify-content: center;
   align-items: center;
+  box-shadow: inset 0 10px 30px rgba(0, 0, 0, 0.4);
 }
 
-.banner-ambient {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle, rgba(231, 206, 125, 0.2), transparent 68%);
-  filter: blur(3px);
-  z-index: 0;
-}
-
-.banner-glow {
-  position: absolute;
-  width: 250px;
-  height: 250px;
-  background: radial-gradient(circle, rgba(200, 40, 60, 0.6), transparent 70%);
-  filter: blur(40px);
-  border-radius: 50%;
-  z-index: 0;
+.banner-ambient, .banner-glow {
+  display: none;
 }
 
 .banner-glow-left {
@@ -2222,6 +2261,14 @@ onUnmounted(() => {
     grid-template-columns: 1fr;
   }
 
+  .story-grid .story-image {
+    order: 2;
+  }
+
+  .story-grid .story-copy {
+    order: 1;
+  }
+
   .craft-row-top {
     flex-direction: column-reverse;
     align-items: stretch;
@@ -2446,7 +2493,7 @@ onUnmounted(() => {
   .story-image,
   .craft-image {
     min-height: auto;
-    height: 330px;
+    height: 250px;
   }
 
   .craft-image,
@@ -2460,11 +2507,11 @@ onUnmounted(() => {
   }
 
   .story-thumb {
-    right: 1rem;
-    bottom: -2.25rem;
-    width: 145px;
-    height: 165px;
-    border-width: 6px;
+    right: 0.75rem;
+    bottom: -1.5rem;
+    width: 110px;
+    height: 125px;
+    border-width: 4px;
   }
 
   .story-watermark {
