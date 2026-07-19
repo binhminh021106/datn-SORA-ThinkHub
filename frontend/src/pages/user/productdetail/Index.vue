@@ -431,9 +431,9 @@
     
     <!-- COMBO CAROUSEL SECTION -->
     <section class="product-combo-carousel-section fade-in mt-5 mb-5" v-if="!isLoading && combos.length > 0">
-      <div class="section-heading text-center mb-2 mt-5">
-        <span class="section-kicker text-gold font-oswald tracking-widest text-uppercase" style="font-size: 0.75rem;">Mua Cùng Nhau</span>
-        <h2 class="font-serif text-sora-primary" style="font-size: clamp(2rem, 4vw, 3rem);">Combo Ưu Đãi</h2>
+      <div class="section-heading text-center mb-4 mt-5">
+        <span class="section-kicker text-gold">Ưu Đãi Đặc Quyền</span>
+        <h2 class="fs-3 font-serif text-main fw-bold text-capitalize mt-2">Bộ Sưu Tập Hoàn Hảo</h2>
       </div>
       <ComboCarousel :combos="combos" />
     </section>

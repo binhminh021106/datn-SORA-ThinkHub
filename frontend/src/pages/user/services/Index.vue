@@ -29,12 +29,12 @@
     <!-- 2. Đoạn giới thiệu -->
     <section class="py-5 bg-white text-center" style="position: relative; z-index: 2;">
       <div class="container py-4">
-        <div class="max-w-2xl mx-auto">
+        <div class="col-lg-10 col-xl-9 mx-auto">
           <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" class="text-main mb-4 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
           </svg>
           <h2 class="h3 font-serif text-dark mb-4">Nghệ Thuật Chăm Sóc Khách Hàng Cao Cấp</h2>
-          <p class="text-secondary fw-light lead" style="line-height: 1.8;">
+          <p class="text-secondary fw-medium lead" style="line-height: 1.8; text-align: justify;">
             Tại SORA, trải nghiệm mua sắm không dừng lại ở khoảnh khắc trao tay. Chúng tôi mang đến hệ sinh thái dịch vụ hậu mãi toàn diện và cá nhân hóa, đảm bảo mỗi tác phẩm trang sức luôn giữ trọn vẻ đẹp nguyên bản và kể tiếp câu chuyện của riêng bạn.
           </p>
         </div>
@@ -42,7 +42,7 @@
     </section>
 
     <!-- 3. Danh sách dịch vụ -->
-    <section class="py-5 bg-light-custom">
+    <section class="py-2 bg-light-custom">
       <div class="container">
         <div class="row g-4">
           
@@ -53,7 +53,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
               </div>
               <h3 class="h5 font-serif text-dark mb-3">Thiết Kế Theo Yêu Cầu</h3>
-              <p class="text-secondary fw-light small mb-0" style="line-height: 1.7;">
+              <p class="text-secondary fw-medium small mb-0" style="line-height: 1.7; text-align: justify;">
                 Biến ý tưởng thành hiện thực. Đội ngũ thiết kế 3D và nghệ nhân SORA sẽ đồng hành cùng bạn phác thảo và chế tác nên món trang sức mang đậm dấu ấn cá nhân (Bespoke Jewelry).
               </p>
             </div>
@@ -66,7 +66,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
               </div>
               <h3 class="h5 font-serif text-dark mb-3">Khắc Tên & Thông Điệp</h3>
-              <p class="text-secondary fw-light small mb-0" style="line-height: 1.7;">
+              <p class="text-secondary fw-medium small mb-0" style="line-height: 1.7; text-align: justify;">
                 Cá nhân hóa tuyệt đối bằng công nghệ khắc laser tinh xảo. Lưu giữ ngày kỷ niệm, tên gọi hoặc một thông điệp bí mật mặt trong chiếc nhẫn hay mặt dây chuyền của bạn.
               </p>
             </div>
@@ -79,7 +79,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
               </div>
               <h3 class="h5 font-serif text-dark mb-3">Làm Sạch & Bảo Dưỡng</h3>
-              <p class="text-secondary fw-light small mb-0" style="line-height: 1.7;">
+              <p class="text-secondary fw-medium small mb-0" style="line-height: 1.7; text-align: justify;">
                 Trang sức SORA được hưởng đặc quyền làm sạch bằng sóng siêu âm miễn phí trọn đời, giúp kim cương và đá quý luôn giữ được độ sáng lấp lánh như ngày đầu.
               </p>
             </div>
@@ -92,7 +92,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
               </div>
               <h3 class="h5 font-serif text-dark mb-3">Sửa Chữa & Đánh Bóng</h3>
-              <p class="text-secondary fw-light small mb-0" style="line-height: 1.7;">
+              <p class="text-secondary fw-medium small mb-0" style="line-height: 1.7; text-align: justify;">
                 Từ việc thay đổi kích cỡ (ni niềng) đến hàn, xi mạ và khôi phục bề mặt kim loại bị xước. Đội ngũ kỹ thuật viên của SORA sẽ phục hồi nguyên trạng tác phẩm của bạn.
               </p>
             </div>
@@ -105,7 +105,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" /></svg>
               </div>
               <h3 class="h5 font-serif text-dark mb-3">Tư Vấn Phong Cách</h3>
-              <p class="text-secondary fw-light small mb-0" style="line-height: 1.7;">
+              <p class="text-secondary fw-medium small mb-0" style="line-height: 1.7; text-align: justify;">
                 Phiên làm việc 1:1 cùng Stylist trang sức của chúng tôi. Tìm kiếm món đồ phù hợp với cung mệnh, làn da, dáng người hay hoàn thiện bộ trang phục dạ hội của bạn.
               </p>
             </div>
@@ -118,7 +118,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
               </div>
               <h3 class="h5 font-serif text-dark mb-3">Nghệ Thuật Gói Quà</h3>
-              <p class="text-secondary fw-light small mb-0" style="line-height: 1.7;">
+              <p class="text-secondary fw-medium small mb-0" style="line-height: 1.7; text-align: justify;">
                 Mỗi sản phẩm SORA được đặt trong hộp nhung bọc lụa cao cấp, kèm ruy băng thắt tay tỉ mỉ và một tấm thiệp viết tay theo yêu cầu, tạo nên món quà hoàn hảo không tì vết.
               </p>
             </div>

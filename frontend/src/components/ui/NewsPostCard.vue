@@ -22,7 +22,7 @@
           {{ post.title }}
         </router-link>
       </h4>
-      <p class="card-excerpt text-muted mb-4 flex-grow-1 fw-light" style="font-size: 0.95rem; line-height: 1.6;">
+      <p class="card-excerpt text-muted mb-4 flex-grow-1 fw-light" style="font-size: 0.95rem; line-height: 1.6; text-align: justify;">
         {{ excerpt }}
       </p>
       <div class="card-footer-custom mt-auto pt-3 border-top border-light">

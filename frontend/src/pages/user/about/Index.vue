@@ -27,29 +27,29 @@
     </section>
 
     <!-- 2. Đoạn giới thiệu ngắn & 3. Câu chuyện thương hiệu -->
-    <section class="py-5 mt-4">
+    <section class="py-4 mt-3">
       <div class="container">
-        <div class="row align-items-center gx-5">
-          <div class="col-md-6 order-2 order-md-1 mt-4 mt-md-0">
+        <div class="row align-items-start gx-5">
+          <div class="col-md-5 order-2 order-md-1 mt-4 mt-md-0">
             <div class="position-relative overflow-hidden img-wrapper rounded-4">
               <img :src="smartImage" alt="SORA Boutique Story" @error="handleImageError"
-                class="img-fluid w-100 object-fit-cover shadow-sm transition-transform custom-img-portrait rounded-4" />
+                class="img-fluid w-100 object-fit-cover shadow-sm transition-transform custom-img-portrait rounded-4" style="max-height: 580px;" />
               <div class="img-border position-absolute rounded-4"></div>
             </div>
           </div>
-          <div class="col-md-6 order-1 order-md-2">
+          <div class="col-md-7 order-1 order-md-2">
             <div class="mb-5">
-              <h2 class="display-6 font-serif text-main mb-3">Khởi Nguồn Khí Chất</h2>
+              <h2 class="display-5 font-serif text-main mb-3 fw-bold">Khởi Nguồn Khí Chất</h2>
               <div class="divider bg-accent mb-4"></div>
-              <p class="lead fw-light text-secondary" style="line-height: 1.8;">
+              <p class="fw-medium text-secondary fs-6" style="line-height: 1.8; text-align: justify;">
                 SORA không chỉ là trang sức, SORA là tuyên ngôn của sự tinh tế. Ra đời với mong muốn mang đến những món
                 phụ kiện vượt qua giá trị vật chất thông thường, chúng tôi chế tác nên những mảnh ghép phản chiếu tâm
                 hồn và cá tính riêng biệt của thế hệ trẻ hiện đại.
               </p>
             </div>
             <div>
-              <h3 class="h4 font-serif text-dark mb-3">Câu Chuyện Của SORA</h3>
-              <p class="fw-light text-secondary" style="line-height: 1.8;">
+              <h3 class="h4 font-serif text-dark mb-3 fw-bold">Câu Chuyện Của SORA</h3>
+              <p class="fw-medium text-secondary" style="line-height: 1.8; text-align: justify;">
                 Lấy cảm hứng từ từ "Sora" (Bầu trời) trong tiếng Nhật – biểu tượng của sự tự do, vô hạn và thuần khiết.
                 Mỗi thiết kế của SORA bắt đầu từ những nét phác thảo đầy đam mê, đi qua đôi bàn tay tài hoa của các nghệ
                 nhân kim hoàn, để trở thành một tác phẩm nghệ thuật thu nhỏ. Chúng tôi tin rằng, trang sức cao cấp không
@@ -62,7 +62,7 @@
     </section>
 
     <!-- 4. Sứ mệnh & 5. Tầm nhìn -->
-    <section class="py-5 bg-white">
+    <section class="py-2 bg-white">
       <div class="container">
         <div class="row g-4">
           <div class="col-md-6">
@@ -72,7 +72,7 @@
                 <h3 class="text-main text-uppercase fw-bold mb-3" style="font-size: 0.85rem; letter-spacing: 0.15em;">Sứ
                   mệnh</h3>
                 <h4 class="h2 font-serif text-dark mb-4">Đánh thức vẻ đẹp tiềm ẩn</h4>
-                <p class="fw-light text-secondary mb-0" style="line-height: 1.8;">
+                <p class="fw-medium text-secondary mb-0" style="line-height: 1.8; text-align: justify;">
                   Trao quyền cho người trẻ tự tin thể hiện bản ngã qua từng món trang sức chế tác tinh xảo. SORA đồng
                   hành cùng bạn trong mọi khoảnh khắc, biến những điều bình dị trở nên phi thường.
                 </p>
@@ -87,7 +87,7 @@
                 <h3 class="text-accent text-uppercase fw-bold mb-3" style="font-size: 0.85rem; letter-spacing: 0.15em;">
                   Tầm nhìn</h3>
                 <h4 class="h2 font-serif text-dark mb-4">Biểu tượng đương đại</h4>
-                <p class="fw-light text-secondary mb-0" style="line-height: 1.8;">
+                <p class="fw-medium text-secondary mb-0" style="line-height: 1.8; text-align: justify;">
                   Trở thành thương hiệu trang sức cao cấp hàng đầu dành cho thế hệ Millennials và Gen Z tại Việt Nam.
                   Định hình lại khái niệm "Luxury" – Hiện đại, Bền vững và Cầm nắm được cảm xúc.
                 </p>
@@ -100,50 +100,51 @@
 
     <!-- 6. Giá trị cốt lõi -->
     <section class="py-5 bg-main text-white mt-5">
-      <div class="container py-4">
-        <div class="text-center mb-5">
-          <h2 class="display-5 font-serif text-accent mb-3">Giá Trị Cốt Lõi</h2>
-          <div class="divider bg-accent mx-auto"></div>
+      <div class="container py-5">
+        <div class="text-center mb-4">
+          <p class="text-uppercase small mb-2 fw-bold" style="letter-spacing: 0.2em; color: rgba(231, 206, 125, 0.7);">Giá trị cốt lõi</p>
+          <h2 class="display-5 font-serif text-accent mb-3 fw-bold">Tinh Hoa Chế Tác</h2>
+          <div class="divider bg-accent mx-auto" style="height: 2px; width: 60px;"></div>
         </div>
 
-        <div class="row g-5 text-center">
-          <div class="col-md-4">
+        <div class="row g-4 text-center mt-0">
+          <div class="col-md-4 px-4">
             <div
-              class="icon-circle border-accent text-accent mx-auto mb-4 d-flex align-items-center justify-content-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24"
+              class="icon-circle border-accent text-accent mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 64px; height: 64px; border-width: 2px !important;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                   d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
               </svg>
             </div>
-            <h4 class="h3 font-serif mb-3">Chế Tác Thủ Công</h4>
-            <p class="fw-light text-white-50 px-3">Mỗi sản phẩm là kết tinh từ hàng chục giờ lao động miệt mài của các
+            <h4 class="h4 font-serif mb-2 text-white fw-bold" style="letter-spacing: 0.05em;">Chế Tác Thủ Công</h4>
+            <p class="fw-medium" style="text-align: justify; color: rgba(255,255,255,0.85); line-height: 1.8;">Mỗi sản phẩm là kết tinh từ hàng chục giờ lao động miệt mài của các
               nghệ nhân giàu kinh nghiệm.</p>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-4 px-4">
             <div
-              class="icon-circle border-accent text-accent mx-auto mb-4 d-flex align-items-center justify-content-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24"
+              class="icon-circle border-accent text-accent mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 64px; height: 64px; border-width: 2px !important;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                   d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
               </svg>
             </div>
-            <h4 class="h3 font-serif mb-3">Thiết Kế Độc Bản</h4>
-            <p class="fw-light text-white-50 px-3">Hướng tới phong cách Minimal tinh tế, không hòa lẫn. Tôn vinh vẻ đẹp
+            <h4 class="h4 font-serif mb-2 text-white fw-bold" style="letter-spacing: 0.05em;">Thiết Kế Độc Bản</h4>
+            <p class="fw-medium" style="text-align: justify; color: rgba(255,255,255,0.85); line-height: 1.8;">Hướng tới phong cách Minimal tinh tế, không hòa lẫn. Tôn vinh vẻ đẹp
               cá nhân của người sở hữu.</p>
           </div>
-          <div class="col-md-4">
+          <div class="col-md-4 px-4">
             <div
-              class="icon-circle border-accent text-accent mx-auto mb-4 d-flex align-items-center justify-content-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24"
+              class="icon-circle border-accent text-accent mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 64px; height: 64px; border-width: 2px !important;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                   d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
               </svg>
             </div>
-            <h4 class="h3 font-serif mb-3">Chất Liệu Bền Vững</h4>
-            <p class="fw-light text-white-50 px-3">Tuyển chọn khắt khe từ Vàng, Bạc cao cấp đến Đá quý thiên nhiên, cam
+            <h4 class="h4 font-serif mb-2 text-white fw-bold" style="letter-spacing: 0.05em;">Chất Liệu Bền Vững</h4>
+            <p class="fw-medium" style="text-align: justify; color: rgba(255,255,255,0.85); line-height: 1.8;">Tuyển chọn khắt khe từ Vàng, Bạc cao cấp đến Đá quý thiên nhiên, cam
               kết nguồn gốc minh bạch.</p>
           </div>
         </div>
@@ -151,7 +152,7 @@
     </section>
 
     <!-- 7. Giới thiệu sản phẩm (Combo Carousel) -->
-    <section class="py-5 my-5 combos-editorial" v-if="combos.length > 0">
+    <section class="pb-5 combos-editorial" v-if="combos.length > 0">
       <div class="container-fluid px-0 combos-container">
         <div class="section-heading text-center mb-2 mt-5">
           <span class="section-kicker text-gold">Tuyệt Tác Từ Vật Liệu Cao Cấp</span>
@@ -164,62 +165,70 @@
     <!-- 8. Cam kết với khách hàng -->
     <section class="py-5" style="background-color: #f4f1ee;">
       <div class="container py-4 text-center">
-        <h2 class="h2 font-serif text-main mb-5">Lời Cam Kết Của Chúng Tôi</h2>
+        <h2 class="display-6 font-serif text-main mb-5 fw-bold">Lời Cam Kết Của Chúng Tôi</h2>
         <div class="row g-4 text-dark">
-          <div class="col-6 col-md-3 d-flex flex-column align-items-center">
-            <span class="text-danger-custom mb-3">
-              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-            </span>
-            <span class="fw-medium text-uppercase small" style="letter-spacing: 0.1em;">Bảo hành trọn đời</span>
+          <div class="col-6 col-md-3">
+            <div class="h-100 p-4 bg-white rounded-4 shadow-sm d-flex flex-column align-items-center justify-content-center">
+              <span class="text-danger-custom mb-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" viewBox="0 0 24 24"
+                  stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </span>
+              <span class="fw-bold text-uppercase small" style="letter-spacing: 0.1em; color: #555;">Bảo hành trọn đời</span>
+            </div>
           </div>
-          <div class="col-6 col-md-3 d-flex flex-column align-items-center">
-            <span class="text-danger-custom mb-3">
-              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                  d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-              </svg>
-            </span>
-            <span class="fw-medium text-uppercase small" style="letter-spacing: 0.1em;">Bao bì sang trọng</span>
+          <div class="col-6 col-md-3">
+            <div class="h-100 p-4 bg-white rounded-4 shadow-sm d-flex flex-column align-items-center justify-content-center">
+              <span class="text-danger-custom mb-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" viewBox="0 0 24 24"
+                  stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                </svg>
+              </span>
+              <span class="fw-bold text-uppercase small" style="letter-spacing: 0.1em; color: #555;">Bao bì sang trọng</span>
+            </div>
           </div>
-          <div class="col-6 col-md-3 d-flex flex-column align-items-center">
-            <span class="text-danger-custom mb-3">
-              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                  d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-              </svg>
-            </span>
-            <span class="fw-medium text-uppercase small" style="letter-spacing: 0.1em;">Làm sạch miễn phí</span>
+          <div class="col-6 col-md-3">
+            <div class="h-100 p-4 bg-white rounded-4 shadow-sm d-flex flex-column align-items-center justify-content-center">
+              <span class="text-danger-custom mb-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" viewBox="0 0 24 24"
+                  stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                </svg>
+              </span>
+              <span class="fw-bold text-uppercase small" style="letter-spacing: 0.1em; color: #555;">Làm sạch miễn phí</span>
+            </div>
           </div>
-          <div class="col-6 col-md-3 d-flex flex-column align-items-center">
-            <span class="text-danger-custom mb-3">
-              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                  d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-              </svg>
-            </span>
-            <span class="fw-medium text-uppercase small" style="letter-spacing: 0.1em;">Thanh toán an toàn</span>
+          <div class="col-6 col-md-3">
+            <div class="h-100 p-4 bg-white rounded-4 shadow-sm d-flex flex-column align-items-center justify-content-center">
+              <span class="text-danger-custom mb-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="none" viewBox="0 0 24 24"
+                  stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
+              </span>
+              <span class="fw-bold text-uppercase small" style="letter-spacing: 0.1em; color: #555;">Thanh toán an toàn</span>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
     <!-- 9. Đoạn kết + Lời kêu gọi hành động (CTA) -->
-    <section class="py-5 my-5 text-center">
-      <div class="container d-flex flex-column align-items-center py-4">
-        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" class="text-accent mb-4" fill="none"
+    <section class="py-5 my-4 text-center">
+      <div class="container d-flex flex-column align-items-center py-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" class="text-accent mb-3" fill="none"
           viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
         </svg>
-        <h2 class="display-5 font-serif text-main mb-4">Sẵn Sàng Tỏa Sáng Cùng SORA?</h2>
-        <p class="lead fw-light text-secondary mb-5" style="max-width: 600px;">
+        <h2 class="display-5 font-serif text-main mb-3 fw-bold">Sẵn Sàng Tỏa Sáng Cùng SORA?</h2>
+        <p class="lead fw-medium text-secondary mb-4" style="max-width: 600px; line-height: 1.6;">
           Hãy để chúng tôi giúp bạn tìm thấy món trang sức thuộc về riêng bạn. Một dấu ấn thời gian, một mảnh ghép hoàn
           hảo cho phong cách thường nhật.
         </p>
@@ -244,9 +253,7 @@ const combos = ref([]);
 const homeDataPayload = ref(null);
 
 const getImageUrl = (path) => {
-  if (!path) return '';
-  if (path.startsWith('http')) return path;
-  return `${import.meta.env.VITE_API_URL}/storage/${path}`;
+  return getStorageUrl(path);
 };
 
 const smartImage = computed(() => {
@@ -571,7 +578,7 @@ onMounted(() => {
 }
 
 .custom-img-portrait {
-  aspect-ratio: 4/5;
+  aspect-ratio: 1/1.1;
 }
 
 /* Đường kẻ ngăn cách (Divider) */

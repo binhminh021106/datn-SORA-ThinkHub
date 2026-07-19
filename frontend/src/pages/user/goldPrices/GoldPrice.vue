@@ -33,7 +33,7 @@
       </div>
     </div>
 
-    <div v-else class="container py-5">
+    <div v-else class="container pt-5">
       <div class="row justify-content-center">
         <div class="col-lg-11 col-xl-10">
           
@@ -44,7 +44,16 @@
                 <i class="bi bi-bank me-3 text-gold fs-4"></i> Niêm Yết Hệ Thống SORA Jewelry
               </h5>
             </div>
-            
+              
+            <div class="card-footer bg-white p-4 rounded-0 border-top-light">
+              <div class="d-flex flex-column align-items-center text-center text-muted lh-lg fs-7-plus">
+                <p class="mb-1"><i class="bi bi-info-circle me-2 text-gold"></i>Đơn vị tính: 1000 VNĐ / Chỉ.</p>
+                <p class="fst-italic opacity-85 mb-0">
+                  <i class="bi bi-shield-lock me-2 text-gold opacity-75"></i>Bảng giá chỉ mang tính chất tham khảo trực tuyến. Vui lòng liên hệ <span class="fw-bold text-primary-luxury">SORA Jewelry</span> để chốt giao dịch.
+                </p>
+              </div>
+            </div>
+
             <!-- Search Bar -->
             <div class="bg-white p-3 px-4 border-bottom-light d-flex align-items-center">
               <i class="bi bi-search text-muted me-3 fs-5"></i>
@@ -81,15 +90,6 @@
                     </tr>
                   </tbody>
                 </table>
-              </div>
-            </div>
-            
-            <div class="card-footer bg-white p-4 rounded-0 border-top-light">
-              <div class="d-flex flex-column align-items-center text-center text-muted lh-lg fs-7-plus">
-                <p class="mb-1"><i class="bi bi-info-circle me-2 text-gold"></i>Đơn vị tính: Nghìn VNĐ / Chỉ.</p>
-                <p class="fst-italic opacity-85 mb-0">
-                  <i class="bi bi-shield-lock me-2 text-gold opacity-75"></i>Bảng giá chỉ mang tính chất tham khảo trực tuyến. Vui lòng liên hệ <span class="fw-bold text-primary-luxury">SORA Jewelry</span> để chốt giao dịch.
-                </p>
               </div>
             </div>
           </div>
