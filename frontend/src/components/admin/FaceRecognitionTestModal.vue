@@ -839,7 +839,7 @@ const runFaceAction = async (action) => {
     
     errorMessage.value = msg;
     
-    if (statusCode === 403 && data?.action === 'blocked') {
+    if (data?.action === 'blocked') {
       stopAutoScan();
       Swal.fire({
         title: 'Từ chối chấm công',

@@ -517,7 +517,7 @@ class AdminFaceRecognitionController extends Controller
                 return [
                     'shift' => null,
                     'error' => true,
-                    'message' => 'Nhân sự đang trong lịch nghỉ phép được duyệt, không ghi nhận chấm công khuôn mặt.',
+                    'message' => "Xin chào {$admin->fullname}, nhân sự đang trong lịch nghỉ phép được duyệt, không ghi nhận chấm công khuôn mặt.",
                 ];
             }
 
@@ -527,12 +527,14 @@ class AdminFaceRecognitionController extends Controller
         }
 
         if (!$workShift) {
+            $noShiftMessage = "Xin chào {$admin->fullname}, hôm nay không có ca làm của '{$admin->fullname} - {$admin->email}' nên hệ thống từ chối chấm công.";
+
             $assignment = AdminShiftAssignment::where('admin_id', $adminId)->active($today)->first();
             if (!$assignment) {
                 return [
                     'shift' => null,
                     'error' => true,
-                    'message' => "Xin chào {$admin->fullname}, hôm nay không có ca làm của '{$admin->fullname} - {$admin->email}' nên hệ thống từ chối chấm công.",
+                    'message' => $noShiftMessage,
                 ];
             }
 
@@ -543,7 +545,7 @@ class AdminFaceRecognitionController extends Controller
                 return [
                     'shift' => null,
                     'error' => true,
-                    'message' => "Xin chào {$admin->fullname}, hôm nay không có ca làm của '{$admin->fullname} - {$admin->email}' nên hệ thống từ chối chấm công.",
+                    'message' => $noShiftMessage,
                 ];
             }
         }
