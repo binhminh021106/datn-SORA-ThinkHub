@@ -32,7 +32,7 @@
                 </div>
             </div>
 
-            <div v-else class="row g-5">
+            <div v-else class="row g-2">
                 <div class="col-lg-7">
                     <div class="bg-white p-4 p-md-5 shadow-sm border border-light-subtle position-sticky" :style="{ top: stickyTop, transition: 'top 0.3s cubic-bezier(0.4, 0, 0.2, 1)', zIndex: 10 }">
                         <h4 class="font-serif fw-bold text-dark mb-4 pb-3 border-bottom d-flex align-items-center">

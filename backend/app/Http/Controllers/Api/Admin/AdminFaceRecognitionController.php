@@ -350,7 +350,7 @@ class AdminFaceRecognitionController extends Controller
                     ], 409);
                 }
 
-                $workShift = $this->resolveWorkShiftForCheckIn($admin->id, $today, $now);
+                $workShift = $this->resolveWorkShiftForCheckIn($admin, $today, $now);
                 if ($workShift['error']) {
                     FaceVerificationLog::create([
                         'admin_id' => $admin->id,
@@ -506,8 +506,9 @@ class AdminFaceRecognitionController extends Controller
         return response()->json(['success' => false, 'message' => 'Không thể lưu dữ liệu lúc này.'], 500);
     }
 
-    private function resolveWorkShiftForCheckIn(int $adminId, string $today, Carbon $now): array
+    private function resolveWorkShiftForCheckIn(Admin $admin, string $today, Carbon $now): array
     {
+        $adminId = $admin->id;
         $workShift = null;
         $exception = ShiftException::where('admin_id', $adminId)->where('date', $today)->first();
 
@@ -531,7 +532,7 @@ class AdminFaceRecognitionController extends Controller
                 return [
                     'shift' => null,
                     'error' => true,
-                    'message' => 'Nhân sự chưa có ca làm hôm nay, không ghi nhận chấm công khuôn mặt.',
+                    'message' => "Xin chào {$admin->fullname}, hôm nay không có ca làm của '{$admin->fullname} - {$admin->email}' nên hệ thống từ chối chấm công.",
                 ];
             }
 
@@ -542,7 +543,7 @@ class AdminFaceRecognitionController extends Controller
                 return [
                     'shift' => null,
                     'error' => true,
-                    'message' => 'Hôm nay không phải ngày làm việc theo lịch của nhân sự, không ghi nhận chấm công khuôn mặt.',
+                    'message' => "Xin chào {$admin->fullname}, hôm nay không có ca làm của '{$admin->fullname} - {$admin->email}' nên hệ thống từ chối chấm công.",
                 ];
             }
         }
