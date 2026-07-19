@@ -1,104 +1,36 @@
 <template>
-  <div class="auth-wrapper">
-    <div class="auth-container callback-container">
-      <div class="auth-box text-center">
-        <h1 class="brand-name-large callback-logo">SORA</h1>
-        
-        <div v-if="!isError" class="loading-state">
-          <div class="spinner"></div>
-          <h2 class="auth-title mt-4">Đang xác thực...</h2>
-          <p class="subtitle">{{ statusMessage }}</p>
-        </div>
-
-        <div v-else class="error-state">
-          <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="15" y1="9" x2="9" y2="15"></line>
-            <line x1="9" y1="9" x2="15" y2="15"></line>
-          </svg>
-          <h2 class="auth-title mt-4 text-error">Đăng nhập thất bại</h2>
-          <p class="subtitle">{{ statusMessage }}</p>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- Route pass-through (không cần render UI) -->
+  <div></div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
-import clientApiClient from '@/utils/clientApiClient';
+import { onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 const route = useRoute();
+const router = useRouter();
 
-const statusMessage = ref('Đang kết nối với hệ thống...');
-const isError = ref(false);
-
-onMounted(async () => {
-  // Lấy params từ URL do Laravel trả về
+onMounted(() => {
   const token = route.query.token;
   const error = route.query.error;
 
-  // 1. Nếu Google trả về lỗi
-  if (error) {
-    handleError('Xác thực Google bị từ chối. Đang quay lại trang đăng nhập...');
-    return;
+  let redirectPath = localStorage.getItem('redirect_after_login') || '/';
+  if (redirectPath.startsWith('/admin')) {
+    redirectPath = '/';
   }
+  localStorage.removeItem('redirect_after_login');
 
-  // 2. Nếu nhận được Token
-  if (token) {
-    try {
-      statusMessage.value = 'Đang đồng bộ dữ liệu tài khoản...';
-      
-      // Lưu token để clientApiClient tự gắn Authorization cho các request sau.
-      localStorage.setItem('auth_token', token);
-
-      // Gọi API lấy thông tin User để lưu vào userData (Đồng bộ với logic của bạn)
-      // Lưu ý: Laravel của bạn cần có route GET /api/user (mặc định đã có trong routes/api.php)
-      const response = await clientApiClient.get('/user');
-      
-      // Lưu thông tin user
-      localStorage.setItem('userData', JSON.stringify(response.data));
-
-      // Đồng bộ giỏ hàng Guest vào tài khoản
-      const sessionId = localStorage.getItem('cart_session_id');
-      if (sessionId) {
-          try {
-              await clientApiClient.post('/client/cart/merge', {}, {
-                  ensureCartSession: true,
-                  ignoreAuthRedirect: true
-              });
-              localStorage.removeItem('cart_session_id');
-              window.dispatchEvent(new CustomEvent('update-cart-count'));
-          } catch (e) {
-              console.error('Merge cart error:', e);
-          }
-      }
-
-      statusMessage.value = 'Đăng nhập thành công! Đang đưa bạn vào cửa hàng...';
-      
-      // Chuyển về trang chủ sau 1 giây
-      setTimeout(() => {
-        window.location.href = '/'; 
-      }, 1000);
-
-    } catch (err) {
-      handleError('Không thể lấy thông tin tài khoản. Vui lòng thử lại.', err);
-      // Xóa token rác nếu gọi API user thất bại
-      localStorage.removeItem('auth_token'); 
-    }
+  if (error) {
+    router.replace({ path: '/login', query: { error: 'google_auth_failed' } });
+  } else if (token) {
+    // Lưu token trực tiếp để bảo mật, chỉ bật cờ đồng bộ cho App.vue
+    localStorage.setItem('auth_token', token);
+    localStorage.setItem('pending_google_sync', 'true');
+    router.replace(redirectPath);
   } else {
-    handleError('Yêu cầu không hợp lệ.');
+    router.replace({ path: '/login' });
   }
 });
-
-const handleError = (msg) => {
-  isError.value = true;
-  statusMessage.value = msg;
-  setTimeout(() => {
-    window.location.href = '/login';
-  }, 2500);
-};
 </script>
 
 <style scoped>
@@ -167,13 +99,11 @@ const handleError = (msg) => {
 }
 
 /* Spinner Animation */
-.spinner {
+.shadcn-spinner {
   width: 50px;
   height: 50px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #9f273b;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+  color: #9f273b; /* Sử dụng màu chủ đề */
+  animation: spin 1s steps(12) infinite;
   margin: 0 auto;
 }
 

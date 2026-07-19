@@ -138,6 +138,15 @@ const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 
-app.use(VueQueryPlugin)
+app.use(VueQueryPlugin, {
+  queryClientConfig: {
+    defaultOptions: {
+      queries: {
+        staleTime: 5 * 60 * 1000, // 5 phút mặc định cho cache
+        refetchOnWindowFocus: false,
+      },
+    },
+  },
+})
 
 app.mount('#app')

@@ -3,8 +3,8 @@
 
     <!-- LỰA CHỌN LÝ TƯỞNG (DANH MỤC TOP) -->
     <section
-      class="ideal-choices-section py-3 border-bottom sora-border-light sora-banner position-relative d-flex flex-column align-items-center justify-content-center overflow-hidden"
-      style="min-height: 380px;">
+      class="ideal-choices-section border-bottom sora-border-light sora-banner position-relative d-flex flex-column align-items-center justify-content-center overflow-hidden"
+      style="height: 340px; padding: 20px 0;">
       <div class="banner-ambient"></div>
       <div class="banner-glow banner-glow-left"></div>
       <div class="banner-glow banner-glow-right"></div>
@@ -13,39 +13,38 @@
       <div class="banner-line-art banner-line-art-left"></div>
       <div class="banner-line-art banner-line-art-right"></div>
 
-      <div class="container-fluid px-3 py-1 py-md-2 position-relative z-index-2">
+      <div class="container-fluid px-3 position-relative z-index-2 w-100 h-100 d-flex flex-column justify-content-center">
         <div class="d-flex flex-column align-items-center text-center mb-2">
-          <h2 class="text-white fw-bold mb-1 font-serif"
-          style="font-size: clamp(1.4rem, 2.5vw, 1.8rem); letter-spacing: 0.02em;">LỰA CHỌN LÝ TƯỞNG</h2>
-          <div class="d-flex align-items-center justify-content-center mb-3">
-            <svg width="120" height="15" viewBox="0 0 150 20" xmlns="http://www.w3.org/2000/svg" style="opacity: 0.8;">
-              <path d="M10 10h40m50 0h40M65 10c0-3 4-5 10-5s10 2 10 5-4 5-10 5-10-2-10-5z" stroke="white"
+          <h2 class="fw-bold mb-1 font-serif text-gold-gradient"
+          style="font-size: clamp(1.8rem, 3.5vw, 2.5rem); letter-spacing: 0.05em; text-transform: uppercase;">Bộ Sưu Tập Trang Sức</h2>
+          <div class="d-flex align-items-center justify-content-center mb-2">
+            <svg width="120" height="15" viewBox="0 0 150 20" xmlns="http://www.w3.org/2000/svg" style="opacity: 0.9;">
+              <path d="M10 10h45m40 0h45M65 10c0-3 4-5 10-5s10 2 10 5-4 5-10 5-10-2-10-5z" stroke="#e7ce7d"
                 stroke-width="1.5" fill="none" />
             </svg>
           </div>
+          <p class="text-white-50 font-sans mx-auto mb-0" style="max-width: 800px; font-size: 0.9rem;">Khám phá những tuyệt tác trang sức tôn vinh đẳng cấp của bạn.</p>
         </div>
 
-        <div v-if="isLoadingCategories" class="mx-auto w-100" style="max-width: 900px;">
-          <div class="row justify-content-center row-cols-2 row-cols-sm-3 row-cols-md-5 g-2 g-md-3 mb-2 pb-2">
+        <div v-if="isLoadingCategories" class="mx-auto w-100 mt-2" style="max-width: 900px;">
+          <div class="row justify-content-center row-cols-2 row-cols-sm-3 row-cols-md-5 g-2 mb-0">
             <div class="col" v-for="item in 5" :key="'cat-skeleton-' + item">
-              <div class="category-circle-item text-center d-flex flex-column align-items-center">
-                <SoraSkeleton width="85px" height="85px" circle class="mx-auto mb-2" />
-                <SoraSkeleton width="70px" height="12px" class="mx-auto" />
+              <div class="premium-category-item">
+                <SoraSkeleton width="80px" height="80px" circle class="mx-auto mb-2" />
+                <SoraSkeleton width="60px" height="12px" class="mx-auto" />
               </div>
             </div>
           </div>
         </div>
 
-        <div v-else class="mx-auto w-100" style="max-width: 900px;">
-          <!-- LƯỚI DANH MỤC (CÓ HIỆU ỨNG TRƯỢT KHI XEM THÊM) -->
+        <div v-else class="mx-auto w-100 mt-2" style="max-width: 900px;">
+          <!-- LƯỚI DANH MỤC -->
           <transition-group name="cat-list" tag="div"
-            class="row justify-content-center row-cols-2 row-cols-sm-3 row-cols-md-5 g-2 g-md-3 mb-2 pb-2">
+            class="row justify-content-center row-cols-2 row-cols-sm-3 row-cols-md-5 g-2 mb-0">
             <div class="col" v-for="cat in visibleCategories" :key="cat.id">
-              <div class="category-circle-item text-center cursor-pointer group d-flex flex-column align-items-center"
+              <div class="premium-category-item"
                 @click="filterByCategory(cat.slug)">
-                <div
-                  class="circle-img-wrapper rounded-circle bg-white shadow-sm d-flex align-items-center justify-content-center mb-2 transition-transform duration-400 group-hover-scale position-relative"
-                  style="width: 85px; height: 85px; padding: 2px;">
+                <div class="premium-circle-img position-relative overflow-hidden">
                   <SoraSkeleton v-show="!categoryImagesLoaded[cat.id]" variant="image" width="100%" height="100%" circle
                     class="position-absolute top-0 start-0" />
                   <img :src="getImageUrl(cat.thumbnail)" loading="lazy" :alt="cat.name"
@@ -53,9 +52,8 @@
                     class="w-100 h-100 object-fit-contain rounded-circle transition-transform duration-500 group-hover-scale-img"
                     :style="{ opacity: categoryImagesLoaded[cat.id] ? 1 : 0, transition: 'opacity 0.4s ease' }">
                 </div>
-                <h3 class="text-white fw-medium mb-0 tracking-wider text-truncate w-100 pb-1"
-                  style="font-size: 0.85rem;">
-                  <span class="category-name position-relative">{{ cat.name }}</span>
+                <h3 class="premium-category-name text-truncate w-100 text-center pb-1">
+                  {{ cat.name }}
                 </h3>
               </div>
             </div>
@@ -1634,5 +1632,61 @@ onMounted(() => {
   color: white;
   font-weight: bold;
   border-radius: 2px;
+}
+
+/* PREMIUM BANNER CSS */
+
+
+.premium-category-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  cursor: pointer;
+  padding: 10px 8px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(231, 206, 125, 0.15);
+  backdrop-filter: blur(8px);
+}
+
+.premium-category-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(231, 206, 125, 0.5);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2), inset 0 0 10px rgba(231, 206, 125, 0.1);
+}
+
+.premium-circle-img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #ffffff;
+  padding: 2px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.15), inset 0 0 5px rgba(0,0,0,0.1);
+  transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+  border: 2px solid transparent;
+}
+
+.premium-category-item:hover .premium-circle-img {
+  border-color: #e7ce7d;
+  transform: scale(1.08);
+  box-shadow: 0 10px 20px rgba(231, 206, 125, 0.3);
+}
+
+.premium-category-name {
+  color: #fff;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  margin-top: 8px;
+  margin-bottom: 0;
+  font-size: 0.8rem;
+  transition: all 0.3s;
+}
+
+.premium-category-item:hover .premium-category-name {
+  color: #e7ce7d;
 }
 </style>

@@ -1,8 +1,8 @@
 <template>
   <div class="modal fade" id="soraGlobalQuickAddModal" tabindex="-1" aria-hidden="true" ref="modalElement" style="z-index: 10000000 !important;">
     <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content rounded-0 border-0 shadow-lg">
-        <div class="modal-header bg-sora-primary text-white rounded-0 border-0 p-4">
+      <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden; background-color: #ffffff !important;">
+        <div class="modal-header bg-sora-primary text-white border-0 p-4" style="border-radius: 12px 12px 0 0;">
           <h5 class="modal-title font-serif fw-bold tracking-wider">Tùy chọn Sản phẩm</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
@@ -37,6 +37,18 @@
              </div>
           </div>
           
+          <div class="mb-4 d-flex align-items-center gap-3">
+             <p class="text-dark font-oswald tracking-wide text-uppercase mb-0 small fw-bold">Số lượng:</p>
+             <div class="d-flex align-items-center border border-light-subtle rounded-3 bg-white overflow-hidden shadow-sm" style="height: 44px;">
+                <button type="button" @click="decreaseQuantity" class="btn btn-light border-0 rounded-0 px-3 h-100 d-flex align-items-center text-secondary hover-bg-light transition-all" style="background: transparent;">-</button>
+                <input type="number" v-model="quantity" @change="validateQuantity" class="form-control border-0 text-center text-dark font-oswald fw-bold p-0 shadow-none hide-arrow" style="width: 50px; background: transparent; font-size: 1.1rem;" min="1">
+                <button type="button" @click="increaseQuantity" class="btn btn-light border-0 rounded-0 px-3 h-100 d-flex align-items-center text-secondary hover-bg-light transition-all" style="background: transparent;">+</button>
+             </div>
+             <div v-if="quickAddSelectedVariant && getVariantStock(quickAddSelectedVariant) > 0" class="small text-muted font-oswald">
+                 Còn {{ getVariantStock(quickAddSelectedVariant) }} sản phẩm
+             </div>
+          </div>
+
           <div class="text-danger small fst-italic mt-2 fw-bold bg-danger bg-opacity-10 p-2 rounded" v-if="quickAddError">
              <i class="bi bi-exclamation-triangle-fill me-1"></i> Vui lòng chọn đầy đủ phân loại.
           </div>
@@ -47,7 +59,7 @@
              <i class="bi bi-slash-circle me-1"></i> Phiên bản này đã hết hàng.
           </div>
 
-          <button @click="confirmQuickAdd" :disabled="isAdding || (quickAddSelectedVariant && getVariantStock(quickAddSelectedVariant) <= 0)" class="editorial-btn w-100 py-3 mt-4 px-4 font-oswald tracking-widest fw-bold text-uppercase d-flex justify-content-center align-items-center" :style="(quickAddSelectedVariant && getVariantStock(quickAddSelectedVariant) <= 0) ? 'background-color: #6c757d !important; border-color: #6c757d !important; cursor: not-allowed; opacity: 0.8;' : ''">
+          <button @click="confirmQuickAdd" :disabled="isAdding || (quickAddSelectedVariant && getVariantStock(quickAddSelectedVariant) <= 0)" class="btn w-100 py-3 mt-4 px-4 font-oswald tracking-widest fw-normal text-white text-uppercase d-flex justify-content-center align-items-center transition-all" :style="(quickAddSelectedVariant && getVariantStock(quickAddSelectedVariant) <= 0) ? 'background-color: #6c757d !important; border-radius: 8px; cursor: not-allowed; opacity: 0.8;' : 'background-color: #9f273b; border-radius: 8px; box-shadow: 0 4px 15px rgba(159,39,59,0.2);'">
              <span v-if="isAdding" class="spinner-border spinner-border-sm me-2"></span>
              <span v-else-if="quickAddSelectedVariant && getVariantStock(quickAddSelectedVariant) <= 0"><i class="bi bi-slash-circle me-2"></i> ĐÃ HẾT HÀNG</span>
              <span v-else><i class="bi bi-bag-plus-fill me-2"></i> Xác nhận thêm</span>
@@ -86,6 +98,7 @@ const quickAddMatrix = ref({});
 const quickAddSelections = ref({});
 const quickAddError = ref(false);
 const isAdding = ref(false);
+const quantity = ref(1);
 let quickAddModalInstance = null;
 let pendingSuccessToast = false;
 
@@ -144,6 +157,44 @@ const getVariantStock = (variant) => {
     return Number(variant.stock_quantity ?? variant.stock ?? 0);
 };
 
+const increaseQuantity = () => {
+    if (quickAddSelectedVariant.value) {
+        const maxStock = getVariantStock(quickAddSelectedVariant.value);
+        if (quantity.value < maxStock) {
+            quantity.value++;
+        } else {
+            Toast.fire({ icon: 'warning', title: `Chỉ còn ${maxStock} sản phẩm trong kho` });
+        }
+    } else {
+        quantity.value++;
+    }
+};
+
+const decreaseQuantity = () => {
+    if (quantity.value > 1) {
+        quantity.value--;
+    }
+};
+
+const validateQuantity = () => {
+    let val = parseInt(quantity.value);
+    if (isNaN(val) || val < 1) {
+        quantity.value = 1;
+        return;
+    }
+    if (quickAddSelectedVariant.value) {
+        const maxStock = getVariantStock(quickAddSelectedVariant.value);
+        if (val > maxStock) {
+            quantity.value = maxStock;
+            Toast.fire({ icon: 'warning', title: `Chỉ còn ${maxStock} sản phẩm trong kho` });
+        } else {
+            quantity.value = val;
+        }
+    } else {
+        quantity.value = val;
+    }
+};
+
 const isQuickAddAllSelected = computed(() => {
     const requiredAttrs = Object.keys(quickAddMatrix.value);
     if (requiredAttrs.length === 0) return true;
@@ -170,7 +221,10 @@ const isOptionAvailable = (attrName, attrValue) => {
 
 // Hàm xử lý chọn biến thể tích hợp Auto-Resolve Conflict (Tự gỡ xung đột)
 const handleSelect = (attrName, val) => {
-    if (isOptionAvailable(attrName, val)) {
+    // Nếu click lại vào option đang chọn -> bỏ chọn
+    if (String(quickAddSelections.value[attrName]) === String(val)) {
+        quickAddSelections.value = { ...quickAddSelections.value, [attrName]: '' };
+    } else if (isOptionAvailable(attrName, val)) {
         quickAddSelections.value = { ...quickAddSelections.value, [attrName]: val };
     } else {
         // Option bị mờ (hết hàng do xung đột) nhưng User vẫn bấm.
@@ -196,6 +250,7 @@ const handleSelect = (attrName, val) => {
         quickAddSelections.value = newSelections;
     }
     quickAddError.value = false;
+    validateQuantity(); // Re-validate quantity when variant changes
 };
 
 const quickAddSelectedVariant = computed(() => {
@@ -228,6 +283,7 @@ const openModal = async (prod) => {
     quickAddError.value = false;
     quickAddSelections.value = {};
     quickAddMatrix.value = {};
+    quantity.value = 1;
 
     quickAddModalInstance.show();
 
@@ -312,7 +368,7 @@ const confirmQuickAdd = async () => {
         if (token) headers['Authorization'] = `Bearer ${token}`;
         if (sessionId) headers['X-Cart-Session-Id'] = sessionId;
 
-        const payload = { product_variant_id: selectedVar.id, quantity: 1 };
+        const payload = { product_variant_id: selectedVar.id, quantity: quantity.value };
         const res = await axios.post(`${API_BASE_URL}/client/cart`, payload, { headers });
 
         if (res.data.session_id) {

@@ -161,9 +161,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
+import { useQueryClient } from '@tanstack/vue-query';
 import { getStorageUrl } from '@/utils/env';
+import Swal from 'sweetalert2';
 import clientApiClient from '@/utils/clientApiClient';
+import { useAuthSync } from '@/composables/useAuthSync.js';
 
 const props = defineProps({
   /** Cho phép truyền thẳng user data từ parent */
@@ -176,6 +179,11 @@ const props = defineProps({
 const emit = defineEmits(['navigate', 'logout']);
 
 const route = useRoute();
+const router = useRouter();
+const queryClient = useQueryClient();
+const { clearAuthSession } = useAuthSync();
+
+const isPreviewMode = computed(() => route.path.startsWith('/admin'));
 
 // ===== USER DATA =====
 const userData = ref({
@@ -316,9 +324,8 @@ const isActive = (path, tab = null) => {
 // ===== LOGOUT =====
 const handleLogout = () => {
   emit('logout');
-  localStorage.clear();
-  sessionStorage.clear();
-  window.location.href = '/login';
+  clearAuthSession(queryClient);
+  router.push({ name: 'login' });
 };
 
 // ===== FETCH PROFILE =====
