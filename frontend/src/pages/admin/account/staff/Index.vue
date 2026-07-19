@@ -42,8 +42,16 @@
           </div>
         </div>
 
-        <div class="card-body p-0 mt-2">
-          <div class="table-responsive">
+        <div class="card-body p-0 mt-2 position-relative">
+          
+          <!-- Ocean Wave Loading Overlay -->
+          <div v-if="isStaffsFetching" class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75" style="z-index: 10;">
+             <div class="ocean-wave" style="position: sticky; top: 50vh; transform: translateY(-50%); margin: 0 auto; width: fit-content;">
+               <span></span><span></span><span></span>
+             </div>
+          </div>
+
+          <div class="table-responsive border-0" style="min-height: 300px;">
             <table class="table table-hover align-middle mb-0" style="table-layout: fixed; width: 100%; min-width: 1000px;">
               <thead class="bg-light">
                 <tr>
@@ -55,32 +63,7 @@
                 </tr>
               </thead>
               <tbody>
-                <!-- HIỆU ỨNG SKELETON KHI CHUYỂN TAB -->
-                <template v-if="isTableLoading">
-                  <tr v-for="i in 5" :key="'skeleton-'+i">
-                    <td class="px-4 py-3">
-                      <div class="d-flex align-items-center">
-                        <div class="placeholder-glow flex-shrink-0 me-3">
-                          <div class="placeholder rounded-circle" style="width: 45px; height: 45px;"></div>
-                        </div>
-                        <div class="overflow-hidden w-100 placeholder-glow">
-                          <span class="placeholder col-6 mb-1 rounded"></span>
-                          <span class="placeholder col-4 d-block rounded"></span>
-                        </div>
-                      </div>
-                    </td>
-                    <td class="px-4 placeholder-glow"><span class="placeholder col-8 rounded py-2"></span></td>
-                    <td class="px-4 placeholder-glow">
-                      <span class="placeholder col-10 mb-1 rounded"></span>
-                      <span class="placeholder col-8 d-block rounded"></span>
-                    </td>
-                    <td class="px-4 text-center placeholder-glow"><span class="placeholder col-6 rounded py-2"></span></td>
-                    <td class="px-4 text-center placeholder-glow"><span class="placeholder col-8 rounded py-2"></span></td>
-                  </tr>
-                </template>
-
                 <!-- DỮ LIỆU THẬT -->
-                <template v-else>
                   <tr v-if="paginatedStaff.length === 0">
                     <td colspan="5" class="text-center py-5 text-muted">
                       <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
@@ -170,7 +153,7 @@
                       </template>
                     </td>
                   </tr>
-                </template>
+
               </tbody>
             </table>
           </div>
@@ -293,7 +276,7 @@ const searchQuery = ref('');
 const activeTab = ref('all');
 const currentPageLevel = ref(null);
 const isUpdatingStatusId = ref(null); // Quản lý spin-loading theo id riêng biệt tránh nhiễu loạn UI
-const isTableLoading = ref(false); // Quản lý trạng thái hiển thị Skeleton Loading
+
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -390,7 +373,7 @@ const getLevelColor = (level) => {
 // ==========================================
 
 // Query lấy danh sách staff
-const { data: staffsResponse, isLoading: isStaffsLoading } = useQuery({
+const { data: staffsResponse, isLoading: isStaffsLoading, isFetching: isStaffsFetching } = useQuery({
   queryKey: ['adminStaffs'],
   queryFn: async () => {
     const response = await axios.get(`${API_URL}/admin/staff`, { headers: getHeaders() });
@@ -496,16 +479,8 @@ const allTabs = computed(() => {
 
 const switchTab = (tabId) => {
   if (activeTab.value === tabId) return;
-
-  // Bật Skeleton table
-  isTableLoading.value = true;
   activeTab.value = tabId;
-  currentPage.value = 1; 
-
-  // Tạo độ trễ nhỏ để trải nghiệm giao diện mượt mà hơn khi chuyển tab
-  setTimeout(() => {
-    isTableLoading.value = false;
-  }, 350);
+  currentPage.value = 1;
 };
 
 const getStatusSelectClass = (status) => {
@@ -758,6 +733,35 @@ const paginatedStaff = computed(() => {
 .btn-outline-brand { color: #009981; border-color: #009981; transition: 0.2s; background: transparent; }
 .btn-outline-brand:hover { background-color: #009981; color: white; }
 
+.custom-scrollbar-y::-webkit-scrollbar-thumb { background: #d1d1d1; border-radius: 10px; }
+.custom-scrollbar-y::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
+/* Hiệu ứng Ocean Wave Loading */
+.ocean-wave {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+.ocean-wave span {
+  width: 14px;
+  height: 14px;
+  background-color: #009981;
+  border-radius: 50%;
+  animation: oceanWave 1.2s ease-in-out infinite;
+}
+.ocean-wave span:nth-child(1) { animation-delay: -0.4s; }
+.ocean-wave span:nth-child(2) { animation-delay: -0.2s; }
+.ocean-wave span:nth-child(3) { animation-delay: 0s; }
+
+@keyframes oceanWave {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); background-color: #4dffdf; }
+}
+
+/* Các tiện ích khác */
+.tracking-widest { letter-spacing: 2px; }
+.border-dashed { border-style: dashed !important; }
 .cursor-pointer { cursor: pointer; }
 .hover-zoom { transition: transform 0.2s ease; }
 .hover-zoom:hover { transform: scale(1.1); box-shadow: 0 4px 10px rgba(0,0,0,0.15) !important; }

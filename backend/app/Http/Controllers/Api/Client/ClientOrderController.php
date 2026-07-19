@@ -35,17 +35,106 @@ class ClientOrderController extends Controller
 
         $validated = $request->validate([
             'per_page' => 'nullable|integer|min:1|max:50',
+            'status' => 'nullable|string',
+            'date' => 'nullable|string',
+            'search' => 'nullable|string',
+            'sort' => 'nullable|string',
         ]);
 
         $perPage = $validated['per_page'] ?? 5;
 
-        // Đã thêm 'reviews' vào để load kèm trạng thái đánh giá
-        $orders = Order::with(['items', 'reviews'])
-            ->where('user_id', $user->id)
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
+        $query = Order::with(['items.product', 'items.combo', 'reviews'])
+            ->where('user_id', $user->id);
 
-        return response()->json($orders);
+        if (!empty($validated['status']) && $validated['status'] !== 'all') {
+            if ($validated['status'] === 'returned') {
+                $query->where(function($q) {
+                    $q->whereIn('status', ['returned', 'return_requested', 'return_negotiating', 'return_retrieving'])
+                      ->orWhere(function($q2) {
+                          $q2->where('status', 'cancelled')->whereIn('payment_status', ['paid', 'refunded']);
+                      })
+                      ->orWhere(function($q3) {
+                          $q3->where('status', 'delivered')->whereNotNull('refund_amount')->where('refund_amount', 0);
+                      });
+                });
+            } elseif ($validated['status'] === 'delivered') {
+                $query->where('status', 'delivered')
+                      ->where(function ($q) {
+                          $q->whereNull('refund_amount')
+                            ->orWhere('refund_amount', '!=', 0);
+                      });
+            } elseif ($validated['status'] === 'cancelled') {
+                $query->where('status', 'cancelled')
+                      ->whereNotIn('payment_status', ['paid', 'refunded']);
+            } else {
+                $query->where('status', $validated['status']);
+            }
+        }
+
+        if (!empty($validated['search'])) {
+            $query->where('order_code', 'like', '%' . trim($validated['search']) . '%');
+        }
+
+        if (!empty($validated['date']) && $validated['date'] !== 'all') {
+            $now = now();
+            if ($validated['date'] === '30days') {
+                $query->where('created_at', '>=', $now->copy()->subDays(30));
+            } elseif ($validated['date'] === '6months') {
+                $query->where('created_at', '>=', $now->copy()->subDays(180));
+            } elseif ($validated['date'] === 'this_year') {
+                $query->whereYear('created_at', $now->year);
+            }
+        }
+
+        $sort = $validated['sort'] ?? 'newest';
+        if ($sort === 'newest') {
+            $query->orderBy('created_at', 'desc');
+        } elseif ($sort === 'oldest') {
+            $query->orderBy('created_at', 'asc');
+        } elseif ($sort === 'price_desc') {
+            $query->orderBy('total_amount', 'desc');
+        } elseif ($sort === 'price_asc') {
+            $query->orderBy('total_amount', 'asc');
+        }
+
+        $orders = $query->paginate($perPage);
+
+        // Lấy thống kê số lượng đơn hàng theo trạng thái
+        $countsQuery = \Illuminate\Support\Facades\DB::table('orders')
+            ->select('status', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
+            ->where('user_id', $user->id)
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->toArray();
+
+        $returnedCount = ($countsQuery['returned'] ?? 0) + ($countsQuery['return_requested'] ?? 0) + ($countsQuery['return_negotiating'] ?? 0) + ($countsQuery['return_retrieving'] ?? 0);
+        $cancelledRefundCount = \Illuminate\Support\Facades\DB::table('orders')
+            ->where('user_id', $user->id)
+            ->where('status', 'cancelled')
+            ->whereIn('payment_status', ['paid', 'refunded'])
+            ->count();
+            
+        $rejectedReturnCount = \Illuminate\Support\Facades\DB::table('orders')
+            ->where('user_id', $user->id)
+            ->where('status', 'delivered')
+            ->whereNotNull('refund_amount')
+            ->where('refund_amount', 0)
+            ->count();
+            
+        $returnedCount += $cancelledRefundCount + $rejectedReturnCount;
+
+        $response = $orders->toArray();
+        $response['counts'] = [
+            'all' => array_sum($countsQuery),
+            'pending' => $countsQuery['pending'] ?? 0,
+            'confirmed' => $countsQuery['confirmed'] ?? 0,
+            'shipping' => $countsQuery['shipping'] ?? 0,
+            'delivered' => max((($countsQuery['delivered'] ?? 0) - $rejectedReturnCount), 0),
+            'cancelled' => max((($countsQuery['cancelled'] ?? 0) - $cancelledRefundCount), 0),
+            'returned' => $returnedCount,
+        ];
+
+        return response()->json($response);
     }
 
     public function store(UserStoreOrderRequest $request)
@@ -271,7 +360,7 @@ class ClientOrderController extends Controller
         $user = ($user instanceof \App\Models\User) ? $user : null;
         
         // Đã thêm 'reviews' vào để load kèm trạng thái đánh giá
-        $order = Order::with(['items', 'histories', 'reviews'])->where('order_code', $order_code)->first();
+        $order = Order::with(['items.product', 'items.combo', 'histories', 'reviews'])->where('order_code', $order_code)->first();
 
         if (!$order) {
             return response()->json(['success' => false, 'message' => 'Không tìm thấy đơn hàng'], 404);
@@ -737,35 +826,38 @@ class ClientOrderController extends Controller
             return response()->json(['success' => false, 'message' => 'Chỉ có thể yêu cầu hoàn hàng khi đơn đã giao thành công'], 400);
         }
 
-        if ($order->user_id && (!$user || (int)$user->id !== (int)$order->user_id)) {
-            return response()->json(['success' => false, 'message' => 'Bạn không có quyền thực hiện'], 403);
+        if (!$order->user_id || !$user || (int)$user->id !== (int)$order->user_id) {
+            return response()->json(['success' => false, 'message' => 'Bạn không có quyền thực hiện hoặc đơn hàng không hợp lệ'], 403);
         }
 
         $request->validate([
             'return_reason' => 'required|string|min:10|max:500',
+            'refund_bank_name' => 'required|string|max:100',
+            'refund_account_number' => 'required|string|max:50',
+            'refund_account_name' => 'required|string|max:100',
             'images.*'      => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
         try {
             return DB::transaction(function () use ($order, $request, $user) {
-                // Cập nhật trạng thái đơn hàng
-                $order->update(['status' => 'return_requested']);
-
-                // Hoàn lại tồn kho (giống hủy đơn)
-                foreach ($order->items as $item) {
-                    if ($item->product_variant_id) {
-                        ProductVariant::where('id', $item->product_variant_id)
-                            ->increment('stock_quantity', $item->quantity);
-                    } elseif ($item->combo_id && is_array($item->combo_selections)) {
-                        foreach ($item->combo_selections as $selection) {
-                            $vId = $selection['selected_variant_id'] ?? null;
-                            if ($vId) {
-                                ProductVariant::where('id', $vId)
-                                    ->increment('stock_quantity', $item->quantity);
-                            }
-                        }
+                $imagePaths = null;
+                if ($request->hasFile('images')) {
+                    $imagePaths = [];
+                    foreach ($request->file('images') as $image) {
+                        $imagePaths[] = $image->store('returns', 'public');
                     }
                 }
+
+                // Cập nhật trạng thái đơn hàng và thông tin ngân hàng thụ hưởng
+                $order->update([
+                    'status' => 'return_requested',
+                    'refund_bank_name' => $request->refund_bank_name,
+                    'refund_account_number' => $request->refund_account_number,
+                    'refund_account_name' => mb_strtoupper($request->refund_account_name, 'UTF-8'),
+                    'refund_amount' => null,
+                    'refund_note' => null,
+                    'return_images' => $imagePaths ? json_encode($imagePaths) : null
+                ]);
 
                 // Lưu lịch sử
                 OrderStatusHistory::create([
@@ -781,6 +873,78 @@ class ClientOrderController extends Controller
                     'success' => true,
                     'message' => 'Yêu cầu hoàn hàng đã được gửi. Chúng tôi sẽ kiểm tra và phản hồi sớm nhất!'
                 ]);
+            });
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function confirmRefundProposal(Request $request, $order_code)
+    {
+        $user = auth('sanctum')->user();
+        $order = Order::where('order_code', $order_code)->first();
+
+        if (!$order) {
+            return response()->json(['success' => false, 'message' => 'Không tìm thấy đơn hàng'], 404);
+        }
+
+        if (!$order->user_id || !$user || (int)$user->id !== (int)$order->user_id) {
+            return response()->json(['success' => false, 'message' => 'Bạn không có quyền thực hiện hoặc đơn hàng không hợp lệ'], 403);
+        }
+
+        if ($order->status !== 'return_negotiating') {
+            return response()->json(['success' => false, 'message' => 'Đơn hàng không ở trạng thái chờ xác nhận thỏa thuận'], 400);
+        }
+
+        $request->validate([
+            'is_accepted' => 'required|boolean',
+        ]);
+
+        try {
+            return DB::transaction(function () use ($order, $request, $user) {
+                $lockedOrder = Order::where('id', $order->id)->lockForUpdate()->first();
+                if (!$lockedOrder || $lockedOrder->status !== 'return_negotiating') {
+                    return response()->json(['success' => false, 'message' => 'Đơn hàng không ở trạng thái chờ xác nhận thỏa thuận'], 400);
+                }
+
+                if ($request->is_accepted) {
+                    $lockedOrder->update(['status' => 'return_retrieving']);
+                    
+                    OrderStatusHistory::query()->create([
+                        'order_id'        => $lockedOrder->id,
+                        'old_status'      => 'return_negotiating',
+                        'new_status'      => 'return_retrieving',
+                        'note'            => 'Khách hàng ĐÃ ĐỒNG Ý với mức hoàn tiền đề xuất. Đang chờ thu hồi hàng.',
+                        'changed_by'      => $user->id ?? null,
+                        'changed_by_type' => $user ? 'user' : 'guest',
+                    ]);
+
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Bạn đã đồng ý thỏa thuận. Chuyên viên của chúng tôi sẽ liên hệ để thu hồi sản phẩm.'
+                    ]);
+                } else {
+                    // Khách không đồng ý, đưa về trạng thái delivered hoặc hủy yêu cầu hoàn trả
+                    $lockedOrder->update([
+                        'status' => 'delivered',
+                        'refund_amount' => 0,
+                        'refund_note' => 'USER: Khách hàng không chấp thuận mức hoàn tiền đề xuất'
+                    ]);
+
+                    OrderStatusHistory::query()->create([
+                        'order_id'        => $lockedOrder->id,
+                        'old_status'      => 'return_negotiating',
+                        'new_status'      => 'delivered',
+                        'note'            => 'Khách hàng TỪ CHỐI mức hoàn tiền đề xuất. Hủy yêu cầu hoàn trả.',
+                        'changed_by'      => $user->id ?? null,
+                        'changed_by_type' => $user ? 'user' : 'guest',
+                    ]);
+
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Bạn đã từ chối thỏa thuận. Yêu cầu hoàn trả đã bị hủy.'
+                    ]);
+                }
             });
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);

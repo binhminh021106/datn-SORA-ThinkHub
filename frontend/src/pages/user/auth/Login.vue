@@ -33,8 +33,7 @@
               <input v-model="form.password" :type="showPassword ? 'text' : 'password'" placeholder="Nhập mật khẩu"
                 required autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" />
               <button type="button" class="password-toggle" @click="showPassword = !showPassword"
-                :aria-label="showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'"
-                :aria-pressed="showPassword">
+                :aria-label="showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'" :aria-pressed="showPassword">
                 <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
               </button>
             </div>
@@ -241,9 +240,7 @@ const handleSocialLogin = (platform) => {
   height: auto;
   margin-bottom: 25px;
   /* Viền stroke vàng cực mỏng, không bị "nhựa", cộng với bóng đổ tối để nổi bật */
-  filter: drop-shadow(0 0 1.5px #e7ce7d) 
-          drop-shadow(0 0 1.5px rgba(231, 206, 125, 0.01)) 
-          drop-shadow(0 4px 6px rgba(0, 0, 0, 0.01));
+  filter: drop-shadow(0 0 1.5px #e7ce7d) drop-shadow(0 0 1.5px rgba(231, 206, 125, 0.01)) drop-shadow(0 4px 6px rgba(0, 0, 0, 0.01));
 }
 
 .brand-slogan {

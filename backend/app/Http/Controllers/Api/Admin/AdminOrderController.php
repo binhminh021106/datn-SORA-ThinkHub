@@ -63,19 +63,23 @@ class AdminOrderController extends Controller
         // Xử lý đếm và lọc trang Hoàn trả (Returns)
         if ($request->boolean('is_return_page')) {
             $baseQuery->where(function ($q) {
-                $q->whereIn('status', ['returned', 'return_requested'])
+                $q->whereIn('status', ['returned', 'return_requested', 'return_negotiating', 'return_retrieving'])
                     ->orWhere(function ($sub) {
                         $sub->where('status', 'cancelled')->whereIn('payment_status', ['paid', 'refunded']);
+                    })
+                    ->orWhere(function ($sub) {
+                        $sub->where('status', 'delivered')->whereNotNull('refund_amount')->where('refund_amount', 0);
                     });
             });
 
             // [TỐI ƯU ORM 1] Thay vì get() toàn bộ, sử dụng Aggregation ở cấp DB để chạy siêu tốc cho Tanstack Query
             $returnStats = (clone $baseQuery)->select(
                 DB::raw('COUNT(*) as total_all'),
-                DB::raw('SUM(CASE WHEN payment_status = "paid" AND refund_amount IS NULL THEN 1 ELSE 0 END) as total_pending'),
-                DB::raw('SUM(CASE WHEN payment_status = "paid" AND refund_amount > 0 THEN 1 ELSE 0 END) as total_proposing'),
-                DB::raw('SUM(CASE WHEN payment_status = "refunded" THEN 1 ELSE 0 END) as total_refunded'),
-                DB::raw('SUM(CASE WHEN payment_status = "paid" AND refund_amount = 0 THEN 1 ELSE 0 END) as total_rejected')
+                DB::raw('SUM(CASE WHEN status = "return_requested" THEN 1 ELSE 0 END) as total_pending'),
+                DB::raw('SUM(CASE WHEN status IN ("return_negotiating", "return_retrieving") THEN 1 ELSE 0 END) as total_proposing'),
+                DB::raw('SUM(CASE WHEN status = "returned" THEN 1 ELSE 0 END) as total_refunded'),
+                DB::raw('SUM(CASE WHEN status = "delivered" AND refund_amount = 0 THEN 1 ELSE 0 END) as total_rejected'),
+                DB::raw('SUM(CASE WHEN status = "cancelled" AND payment_status IN ("paid", "refunded") THEN 1 ELSE 0 END) as total_cancelled')
             )->first();
 
             $counts = [
@@ -84,19 +88,22 @@ class AdminOrderController extends Controller
                 'proposing' => (int) ($returnStats->total_proposing ?? 0),
                 'refunded'  => (int) ($returnStats->total_refunded ?? 0),
                 'rejected'  => (int) ($returnStats->total_rejected ?? 0),
+                'cancelled' => (int) ($returnStats->total_cancelled ?? 0),
             ];
 
             // Lọc theo tab Hoàn trả
             if ($request->filled('return_tab') && $request->return_tab !== 'all') {
                 $tab = $request->return_tab;
                 if ($tab === 'pending') {
-                    $baseQuery->where('payment_status', 'paid')->whereNull('refund_amount');
+                    $baseQuery->where('status', 'return_requested');
                 } elseif ($tab === 'proposing') {
-                    $baseQuery->where('payment_status', 'paid')->whereNotNull('refund_amount')->where('refund_amount', '>', 0);
+                    $baseQuery->whereIn('status', ['return_negotiating', 'return_retrieving']);
                 } elseif ($tab === 'refunded') {
-                    $baseQuery->where('payment_status', 'refunded');
+                    $baseQuery->where('status', 'returned');
                 } elseif ($tab === 'rejected') {
-                    $baseQuery->where('payment_status', 'paid')->whereNotNull('refund_amount')->where('refund_amount', 0);
+                    $baseQuery->where('status', 'delivered')->whereNotNull('refund_amount')->where('refund_amount', 0);
+                } elseif ($tab === 'cancelled') {
+                    $baseQuery->where('status', 'cancelled')->whereIn('payment_status', ['paid', 'refunded']);
                 }
             }
         }
@@ -109,7 +116,11 @@ class AdminOrderController extends Controller
                 ->toArray();
 
             $counts = [
-                'all'        => array_sum($rawCounts) - ($rawCounts['returned'] ?? 0) - ($rawCounts['return_requested'] ?? 0),
+                'all'        => array_sum($rawCounts) 
+                                - ($rawCounts['returned'] ?? 0) 
+                                - ($rawCounts['return_requested'] ?? 0)
+                                - ($rawCounts['return_negotiating'] ?? 0)
+                                - ($rawCounts['return_retrieving'] ?? 0),
                 'pending'    => $rawCounts['pending'] ?? 0,
                 'confirmed'  => $rawCounts['confirmed'] ?? 0,
                 'processing' => $rawCounts['processing'] ?? 0,
@@ -122,14 +133,16 @@ class AdminOrderController extends Controller
             if ($request->filled('status') && $request->status !== 'all') {
                 $baseQuery->where('status', $request->status);
             } else {
-                $baseQuery->whereNotIn('status', ['returned', 'return_requested']);
+                $baseQuery->whereNotIn('status', ['returned', 'return_requested', 'return_negotiating', 'return_retrieving']);
             }
         }
+
+        $sortCol = $request->boolean('is_return_page') ? 'updated_at' : 'id';
 
         // [TỐI ƯU ORM 3] Eager Loading Pagination
         $orders = $baseQuery->with(['user:id,fullName,email'])
             ->withCount('items')
-            ->orderBy('id', 'desc')
+            ->orderBy($sortCol, 'desc')
             ->paginate(15);
 
         return response()->json([
@@ -267,6 +280,11 @@ class AdminOrderController extends Controller
                 $order->status = $newStatus;
                 $hasChanged = true;
 
+                // Tự động hóa thanh toán cho COD khi giao thành công
+                if ($newStatus === 'delivered' && strtoupper($order->payment_method) === 'COD') {
+                    $newPaymentStatus = 'paid';
+                }
+
                 OrderStatusHistory::create([
                     'order_id'        => $order->id,
                     'old_status'      => $oldStatus,
@@ -339,7 +357,11 @@ class AdminOrderController extends Controller
             $refundStatusChanged = false;
 
             $order->refund_amount = $request->action === 'reject' ? 0 : $request->refund_amount;
-            $order->refund_note = $request->refund_note;
+            if ($request->action === 'reject') {
+                $order->refund_note = 'ADMIN: ' . ($request->refund_note ?: 'SORA từ chối hoàn trả');
+            } else {
+                $order->refund_note = $request->refund_note;
+            }
 
             if ($request->action === 'refunded') {
                 $order->payment_status = 'refunded';
@@ -358,7 +380,7 @@ class AdminOrderController extends Controller
                     $oldStatus = $order->status;
                 }
 
-                OrderStatusHistory::create([
+                OrderStatusHistory::query()->create([
                     'order_id' => $order->id,
                     'old_status' => $oldStatus,
                     'new_status' => $order->status,
@@ -366,6 +388,10 @@ class AdminOrderController extends Controller
                     'changed_by' => Auth::id(), 'changed_by_type' => 'admin'
                 ]);
             } else {
+                if ($order->status === 'cancelled') {
+                    throw new \Exception('Đơn hàng đã hủy không thể đề xuất hay từ chối hoàn trả. Hãy chọn Hoàn Tiền Trực Tiếp.');
+                }
+                
                 if ($order->customer_email) {
                     try {
                         Mail::to($order->customer_email)->send(new OrderRefundDealMail($order, $request->action));
@@ -374,9 +400,21 @@ class AdminOrderController extends Controller
                     }
                 }
                 
-                $historyNote = $request->action === 'propose' ? 'Đã gửi Email thỏa thuận số tiền hoàn lại.' : 'Đã gửi Email từ chối hoàn tiền.';
-                OrderStatusHistory::create([
-                    'order_id' => $order->id, 'old_status' => $order->status, 'new_status' => $order->status,
+                $oldStatus = $order->status;
+                if ($request->action === 'propose') {
+                    $order->status = 'return_negotiating';
+                    $historyNote = 'Đã gửi đề xuất số tiền hoàn lại. Đang chờ khách xác nhận.';
+                    $refundStatusChanged = true;
+                } else {
+                    $order->status = 'delivered';
+                    $historyNote = 'Đã gửi Email từ chối hoàn tiền. Yêu cầu hoàn trả bị hủy.';
+                    $refundStatusChanged = true;
+                }
+
+                OrderStatusHistory::query()->create([
+                    'order_id' => $order->id, 
+                    'old_status' => $oldStatus, 
+                    'new_status' => $order->status,
                     'note' => $historyNote,
                     'changed_by' => Auth::id(), 'changed_by_type' => 'admin'
                 ]);
