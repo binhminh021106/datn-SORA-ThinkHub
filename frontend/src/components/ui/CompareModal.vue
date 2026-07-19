@@ -21,7 +21,7 @@
         <div class="compare-inner">
           <div class="compare-left">
             <div class="compare-items">
-              <div v-for="n in 4" :key="n" class="compare-item" :class="{ empty: !compareList[n-1] }">
+              <div v-for="n in 3" :key="n" class="compare-item" :class="{ empty: !compareList[n-1] }">
                 <template v-if="compareList[n-1]">
                   <img class="compare-item-img" :src="compareList[n-1].image" :alt="compareList[n-1].name" @error="handleImageError">
                   <button class="remove-compare" @click="removeFromCompare(compareList[n-1].id)">
@@ -42,7 +42,7 @@
 
             <div class="compare-status-container hidden-mobile">
               <div class="compare-status">
-                <span class="selected-count"><strong>{{ compareList.length }}/4</strong> Đã chọn</span>
+                <span class="selected-count"><strong>{{ compareList.length }}/3</strong> Đã chọn</span>
                 <span class="hint-text" v-if="compareList.length < 2">Chọn ít nhất 2 sản phẩm</span>
               </div>
             </div>
@@ -250,7 +250,7 @@ const toggleCompareItem = (prod) => {
   if (isInCompare(prod.id)) {
     removeFromCompare(prod.id);
   } else {
-    if (compareList.value.length >= 4) return Toast.fire({ icon: 'warning', title: 'Chỉ được so sánh tối đa 4 sản phẩm' });
+    if (compareList.value.length >= 3) return Toast.fire({ icon: 'warning', title: 'Chỉ được so sánh tối đa 3 sản phẩm' });
     const item = {
         id: prod.id,
         name: prod.name,

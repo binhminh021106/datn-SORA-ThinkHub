@@ -275,7 +275,7 @@ watch(currentSlug, () => {
                                 </div>
                             </header>
 
-                            <div v-if="post.sapo" class="article-sapo p-4 bg-light-custom rounded-3 mb-4 fst-italic border-start border-4 border-main fw-medium text-secondary">
+                            <div v-if="post.sapo" class="article-sapo p-4 bg-light-custom rounded-3 mb-4 fst-italic border-start border-4 border-main fw-medium text-secondary" style="text-align: justify;">
                                 {{ post.sapo }}
                             </div>
 
@@ -290,7 +290,7 @@ watch(currentSlug, () => {
                             </div>
                             
                             <!-- NẾU ĐÃ LOAD XONG DATA THẬT -->
-                            <div v-else class="article-body text-dark fade-in" style="line-height: 1.8; font-size: 1.05rem;" v-html="post.content"></div>
+                            <div v-else class="article-body text-dark fade-in" style="line-height: 1.8; font-size: 1.05rem; text-align: justify;" v-html="post.content"></div>
 
                             <!-- Thẻ tác giả -->
                             <div class="author-box d-flex align-items-center bg-light-custom p-4 rounded-4 mt-5 border border-light-subtle">

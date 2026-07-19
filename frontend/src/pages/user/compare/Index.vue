@@ -91,7 +91,7 @@
                 </div>
               </th>
               <!-- Ô thêm sản phẩm (ĐÃ SỬA @CLICK ĐỂ MỞ POPUP) -->
-              <th v-if="products.length < 4" class="add-more-col">
+              <th v-if="products.length < 3" class="add-more-col">
                 <div class="add-more-box" @click="openComparePopup">
                   <div class="plus-icon">+</div>
                   <p>Thêm sản phẩm</p>
@@ -102,6 +102,15 @@
 
           <!-- BODY: CÁC TIÊU CHÍ SO SÁNH (Hover cột hoạt động ở đây) -->
           <tbody>
+            
+            <!-- 0. TƯ VẤN PHONG CÁCH -->
+            <tr>
+              <td class="criteria-name" style="vertical-align: top; padding-top: 20px;">✨ Tư vấn phong cách</td>
+              <td v-for="product in products" :key="'vibe-'+product.id" class="val-cell" style="vertical-align: top; padding-top: 20px;">
+                <div class="fw-bold" style="color: #9f273b; font-size: 14.5px; line-height: 1.6; text-align: justify;">{{ generateStyleVibe(product) }}</div>
+              </td>
+              <td v-if="products.length < 3"></td>
+            </tr>
             
             <!-- 1. MỨC GIÁ VÀ CHÊNH LỆCH -->
             <tr v-show="!showDiffOnly || hasDifference('price')">
@@ -119,23 +128,31 @@
                   <span v-else class="text-muted fst-italic">Bằng giá</span>
                 </div>
               </td>
-              <td v-if="products.length < 4"></td>
+              <td v-if="products.length < 3"></td>
             </tr>
 
-            <!-- 2. TÌNH TRẠNG TỒN KHO -->
-            <tr v-show="!showDiffOnly || hasDifference('stock_quantity')">
-              <td class="criteria-name">Tồn kho</td>
-              <td v-for="(product, index) in products" :key="'stock-'+product.id" class="val-cell" :class="{'highlight-diff': showDiffOnly && hasDifference('stock_quantity')}">
-                <div :class="product.stock_quantity > 0 ? 'text-dark' : 'text-danger'">
-                  {{ product.stock_quantity > 0 ? `Còn hàng (${product.stock_quantity})` : 'Hết hàng' }}
-                </div>
-                
-                <!-- Text chênh lệch số lượng -->
-                <div v-if="index > 0" class="diff-text text-muted mt-1 fst-italic">
-                  {{ getStockDiff(product, products[0]) }}
+            <!-- 2. ĐÁNH GIÁ -->
+            <tr v-show="!showDiffOnly || hasDifference('rating_avg') || hasDifference('rating')">
+              <td class="criteria-name">Đánh giá</td>
+              <td v-for="(product, index) in products" :key="'rating-'+product.id" class="val-cell" :class="{'highlight-diff': showDiffOnly && (hasDifference('rating_avg') || hasDifference('rating'))}">
+                <div class="d-flex justify-content-center align-items-center">
+                  <i class="bi bi-star-fill text-warning me-1"></i>
+                  <span class="fw-bold">{{ Number(product.rating_avg || product.rating || 0).toFixed(1) }}</span>
+                  <span class="text-muted ms-1 small">({{ product.reviews_count || product.reviews?.length || 0 }} đánh giá)</span>
                 </div>
               </td>
-              <td v-if="products.length < 4"></td>
+              <td v-if="products.length < 3"></td>
+            </tr>
+
+            <!-- 2.5. LƯỢT BÁN -->
+            <tr v-show="!showDiffOnly || hasDifference('sold_count')">
+              <td class="criteria-name">Lượt bán</td>
+              <td v-for="(product, index) in products" :key="'sold-'+product.id" class="val-cell" :class="{'highlight-diff': showDiffOnly && hasDifference('sold_count')}">
+                <div class="fw-medium text-dark">
+                  Đã bán {{ product.sold_count || 0 }}
+                </div>
+              </td>
+              <td v-if="products.length < 3"></td>
             </tr>
 
             <!-- 3. THƯƠNG HIỆU -->
@@ -144,7 +161,7 @@
               <td v-for="product in products" :key="'brand-'+product.id" class="val-cell" :class="{'highlight-diff': showDiffOnly && hasDifference('brand_name')}">
                 {{ product.brand_name || 'Không có' }}
               </td>
-              <td v-if="products.length < 4"></td>
+              <td v-if="products.length < 3"></td>
             </tr>
 
             <!-- 4. DANH MỤC -->
@@ -153,7 +170,7 @@
               <td v-for="product in products" :key="'cat-'+product.id" class="val-cell" :class="{'highlight-diff': showDiffOnly && hasDifference('category_name')}">
                 {{ product.category_name || 'Không có' }}
               </td>
-              <td v-if="products.length < 4"></td>
+              <td v-if="products.length < 3"></td>
             </tr>
 
             <!-- 5. CÁC THÔNG SỐ KỸ THUẬT -->
@@ -168,7 +185,7 @@
                 </div>
 
               </td>
-              <td v-if="products.length < 4"></td>
+              <td v-if="products.length < 3"></td>
             </tr>
 
             <!-- 6. MÔ TẢ NGẮN -->
@@ -177,7 +194,7 @@
               <td v-for="product in products" :key="'desc-'+product.id" class="desc-cell val-cell" :class="{'highlight-diff': showDiffOnly && hasDifference('description')}">
                 <div v-html="truncateHtml(product.description, 100)"></div>
               </td>
-              <td v-if="products.length < 4"></td>
+              <td v-if="products.length < 3"></td>
             </tr>
 
           </tbody>
@@ -191,7 +208,7 @@
         <div class="compare-modal">
           
           <div class="compare-modal-header">
-            <h3>Chọn sản phẩm để so sánh ({{ products.length }}/4)</h3>
+            <h3>Chọn sản phẩm để so sánh ({{ products.length }}/3)</h3>
             <div class="header-search-wrap">
               <input 
                 type="text" 
@@ -221,7 +238,7 @@
               <p class="compare-modal-subtitle">Các sản phẩm mới nhất cùng danh mục:</p>
               
               <div v-if="isLoadingCompareSuggestions" class="compare-suggestions-grid">
-                <div v-for="i in 4" :key="i" class="suggestion-card border-0 px-0">
+                <div v-for="i in 3" :key="i" class="suggestion-card border-0 px-0">
                   <SoraSkeleton width="100%" height="auto" style="aspect-ratio: 1/1;" radius="6px" class="mb-3" />
                   <div class="suggestion-info">
                     <SoraSkeleton width="90%" height="14px" class="mb-2" />
@@ -261,7 +278,7 @@
                 <p>Vui lòng đăng nhập để xem danh sách yêu thích.</p>
               </div>
               <div v-else-if="isLoadingFavourites" class="compare-suggestions-grid">
-                <div v-for="i in 4" :key="i" class="suggestion-card border-0 px-0">
+                <div v-for="i in 3" :key="i" class="suggestion-card border-0 px-0">
                   <SoraSkeleton width="100%" height="auto" style="aspect-ratio: 1/1;" radius="6px" class="mb-3" />
                   <div class="suggestion-info">
                     <SoraSkeleton width="90%" height="14px" class="mb-2" />
@@ -500,7 +517,6 @@ const isInCompare = (id) => {
   return products.value.some(p => p.id === id);
 };
 
-// Nút Thêm/Xóa trong Popup
 const toggleCompare = (item) => {
   const stored = JSON.parse(localStorage.getItem(`compare_list_${shopSlug}`) || '[]');
   
@@ -509,8 +525,8 @@ const toggleCompare = (item) => {
     removeProduct(item.id);
   } else {
     // Chưa có => Thêm
-    if (stored.length >= 4) {
-      Toast.fire({ icon: 'warning', title: 'Chỉ được so sánh tối đa 4 sản phẩm' });
+    if (stored.length >= 3) {
+      Toast.fire({ icon: 'warning', title: 'Chỉ được so sánh tối đa 3 sản phẩm' });
       return;
     }
     stored.push({ id: item.id, name: item.name, image: item.thumbnail_image });
@@ -599,12 +615,28 @@ const getPriceDiffColor = (current, base) => {
 
 const getStockDiff = (current, base) => {
   if (!base || current.id === base.id) return null;
-  const sCurrent = current.stock_quantity || 0;
-  const sBase = base.stock_quantity || 0;
+  const sCurrent = parseInt(current.stock_quantity || 0);
+  const sBase = parseInt(base.stock_quantity || 0);
   const diff = sCurrent - sBase;
 
   if (diff === 0) return null;
   return diff > 0 ? `(Nhiều hơn ${diff} sản phẩm)` : `(Ít hơn ${Math.abs(diff)} sản phẩm)`;
+};
+
+const generateStyleVibe = (product) => {
+  if (!product) return '';
+  const name = (product.name || '').toLowerCase();
+  const cat = (product.category_name || '').toLowerCase();
+  const desc = (product.description || '').toLowerCase();
+  const combined = name + ' ' + cat + ' ' + desc;
+  
+  if (combined.includes('ngọc trai')) return 'Thanh lịch & Quý phái. Hoàn hảo cho các buổi tiệc dạ hội, giúp tôn vinh nét đẹp đài các.';
+  if (combined.includes('kim cương') || combined.includes('diamond')) return 'Quyền lực & Đẳng cấp. Điểm nhấn lấp lánh thu hút mọi ánh nhìn, thể hiện sự thành đạt.';
+  if (combined.includes('đồng hồ')) return 'Chuyên nghiệp & Thời thượng. Món phụ kiện khẳng định vị thế, phù hợp mang theo hàng ngày hoặc họp mặt.';
+  if (combined.includes('kim tiền') || combined.includes('tỳ hưu') || combined.includes('phong thủy')) return 'Trẻ trung & Phong thủy. Mang ý nghĩa chiêu tài lộc và may mắn, mang lại bình an cho chủ nhân.';
+  if (combined.includes('cưới') || combined.includes('tình yêu')) return 'Lãng mạn & Vĩnh cửu. Biểu tượng của tình yêu đích thực, ghi dấu những khoảnh khắc đáng nhớ.';
+  
+  return 'Tinh tế & Hiện đại. Lựa chọn tuyệt vời giúp bạn tự tin thể hiện cá tính riêng mỗi ngày.';
 };
 
 const getSpecDiffText = (current, base, specKey) => {
@@ -827,7 +859,13 @@ const truncateHtml = (html, length) => {
 /* Difference Text & Highlights */
 .diff-text { font-size: 12px; font-weight: 600; }
 .attr-diff { color: rgb(159,39,59); font-style: italic;}
-.highlight-diff { background-color: #fdfaf5; transition: background 0.3s; }
+.highlight-diff { 
+  background-color: rgba(255, 193, 7, 0.12) !important; 
+  font-weight: 500;
+  border-left: 2px solid rgba(255, 193, 7, 0.4) !important;
+  border-right: 2px solid rgba(255, 193, 7, 0.4) !important;
+  transition: all 0.3s ease; 
+}
 
 /* Utilities */
 .text-success { color: #28a745 !important; }

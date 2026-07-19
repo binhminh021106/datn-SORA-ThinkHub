@@ -80,7 +80,7 @@
                                         {{ featuredPost.title }}
                                     </router-link>
                                 </h2>
-                                <p class="excerpt fw-light">{{ getExcerpt(featuredPost, 180) }}</p>
+                                <p class="excerpt fw-light" style="text-align: justify;">{{ getExcerpt(featuredPost, 180) }}</p>
 
                                 <div class="post-footer">
                                     <span class="author fw-medium">
