@@ -23,10 +23,10 @@ onMounted(() => {
   if (error) {
     router.replace({ path: '/login', query: { error: 'google_auth_failed' } });
   } else if (token) {
-    // Truyền token về trang đích thông qua query url
-    const url = new URL(window.location.origin + redirectPath);
-    url.searchParams.set('google_token', token);
-    router.replace(url.pathname + url.search);
+    // Lưu token trực tiếp để bảo mật, chỉ bật cờ đồng bộ cho App.vue
+    localStorage.setItem('auth_token', token);
+    localStorage.setItem('pending_google_sync', 'true');
+    router.replace(redirectPath);
   } else {
     router.replace({ path: '/login' });
   }

@@ -102,6 +102,7 @@ import { useQueryClient } from '@tanstack/vue-query';
 import Toast from '@/utils/toastConfig';
 import { API_BASE_URL } from '@/utils/env';
 import clientApiClient from '@/utils/clientApiClient';
+import { useAuthSync } from '@/composables/useAuthSync.js';
 
 const router = useRouter();
 const route = useRoute();
@@ -123,6 +124,7 @@ const form = reactive({
   password: '',
   remember: false
 });
+const { syncAfterLogin } = useAuthSync();
 
 const handleLogin = async () => {
   isLoading.value = true;
@@ -141,29 +143,22 @@ const handleLogin = async () => {
 
     // Đồng bộ giỏ hàng Guest vào tài khoản
     const sessionId = localStorage.getItem('cart_session_id');
-
     if (form.remember) {
       localStorage.setItem('user_remember_email', form.email);
     } else {
       localStorage.removeItem('user_remember_email');
     }
 
-    if (sessionId) {
-      try {
-        await clientApiClient.post('/client/cart/merge', {}, {
-          ensureCartSession: true,
-          ignoreAuthRedirect: true
-        });
-        localStorage.removeItem('cart_session_id');
-        window.dispatchEvent(new CustomEvent('update-cart-count'));
-      } catch (e) {
-        console.error('Merge cart error:', e);
-      }
-    }
+    await syncAfterLogin(queryClient);
 
       setTimeout(() => {
-        // Smart Redirect Logic
-        let redirectPath = route.query.redirect || localStorage.getItem('redirect_after_login') || '/';
+        // Smart Redirect Logic: accept only string relative paths, prevent open redirect
+        let rawRedirect = route.query.redirect;
+        let redirectPath = '/';
+        
+        if (typeof rawRedirect === 'string' && rawRedirect.startsWith('/') && !rawRedirect.startsWith('//') && !rawRedirect.startsWith('/\\')) {
+          redirectPath = rawRedirect;
+        }
         
         // Prevent loop redirect to admin routes if user is not admin
         if (redirectPath.startsWith('/admin')) {
@@ -171,14 +166,6 @@ const handleLogin = async () => {
         }
         
         localStorage.removeItem('redirect_after_login');
-
-        // Khôi phục bộ đệm của user
-        queryClient.invalidateQueries({ queryKey: ['cart'] });
-        queryClient.invalidateQueries({ queryKey: ['wishlist'] });
-        queryClient.invalidateQueries({ queryKey: ['user_profile'] });
-        
-        // Phát sự kiện để Header tự cập nhật
-        window.dispatchEvent(new CustomEvent('auth-status-changed'));
 
         router.push(redirectPath);
       }, 1000);

@@ -164,7 +164,9 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQueryClient } from '@tanstack/vue-query';
 import { getStorageUrl } from '@/utils/env';
+import Swal from 'sweetalert2';
 import clientApiClient from '@/utils/clientApiClient';
+import { useAuthSync } from '@/composables/useAuthSync.js';
 
 const props = defineProps({
   /** Cho phép truyền thẳng user data từ parent */
@@ -179,6 +181,9 @@ const emit = defineEmits(['navigate', 'logout']);
 const route = useRoute();
 const router = useRouter();
 const queryClient = useQueryClient();
+const { clearAuthSession } = useAuthSync();
+
+const isPreviewMode = computed(() => route.path.startsWith('/admin'));
 
 // ===== USER DATA =====
 const userData = ref({
@@ -319,10 +324,7 @@ const isActive = (path, tab = null) => {
 // ===== LOGOUT =====
 const handleLogout = () => {
   emit('logout');
-  localStorage.clear();
-  sessionStorage.clear();
-  queryClient.clear();
-  window.dispatchEvent(new CustomEvent('auth-status-changed'));
+  clearAuthSession(queryClient);
   router.push({ name: 'login' });
 };
 

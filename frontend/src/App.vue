@@ -36,6 +36,7 @@ import apiClient from '@/utils/apiClient';
 import clientApiClient from '@/utils/clientApiClient';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 import { useRealtimeSync } from '@/composables/useRealtimeSync.js';
+import { useAuthSync } from '@/composables/useAuthSync.js';
 
 // Nhúng modal global vào App
 import QuickAddModal from '@/components/ui/QuickAddModal.vue';
@@ -45,6 +46,7 @@ const route = useRoute();
 const queryClient = useQueryClient();
 const isCheckingAuth = ref(true);
 const currentUser = ref(null);
+const { syncAfterLogin } = useAuthSync();
 
 const isGoogleAuthenticating = ref(false);
 const googleAuthStatus = ref('Đang đồng bộ dữ liệu...');
@@ -64,40 +66,23 @@ watch(
 
 // ===== XỬ LÝ GOOGLE AUTH OVERLAY =====
 watch(
-  () => route.query.google_token,
-  async (token) => {
-    if (token) {
+  () => route.fullPath,
+  async () => {
+    const isPendingSync = localStorage.getItem('pending_google_sync');
+    if (isPendingSync === 'true') {
+      localStorage.removeItem('pending_google_sync');
+
       // Bật overlay loading
       isGoogleAuthenticating.value = true;
       googleAuthStatus.value = 'Đang đồng bộ tài khoản...';
 
-      // Xóa token khỏi URL để URL sạch đẹp
-      const currentQuery = { ...route.query };
-      delete currentQuery.google_token;
-      router.replace({ query: currentQuery });
-
       try {
-        localStorage.setItem('auth_token', token);
+        const token = localStorage.getItem('auth_token');
+        if (!token) throw new Error('Token missing');
         const response = await clientApiClient.get('/user');
         localStorage.setItem('userData', JSON.stringify(response.data));
 
-        const sessionId = localStorage.getItem('cart_session_id');
-        if (sessionId) {
-            try {
-                await clientApiClient.post('/client/cart/merge', {}, {
-                    ensureCartSession: true,
-                    ignoreAuthRedirect: true
-                });
-                localStorage.removeItem('cart_session_id');
-                window.dispatchEvent(new CustomEvent('update-cart-count'));
-            } catch (e) {}
-        }
-
-        queryClient.invalidateQueries({ queryKey: ['cart'] });
-        queryClient.invalidateQueries({ queryKey: ['wishlist'] });
-        queryClient.invalidateQueries({ queryKey: ['user_profile'] });
-        
-        window.dispatchEvent(new CustomEvent('auth-status-changed'));
+        await syncAfterLogin(queryClient);
 
         googleAuthStatus.value = 'Thành công!';
         setTimeout(() => {

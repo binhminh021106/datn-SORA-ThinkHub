@@ -1,7 +1,7 @@
 <template>
-  <div class="luxury-related-card bg-white d-flex flex-column group position-relative overflow-hidden border border-light-subtle h-100">
+  <div class="luxury-related-card d-flex flex-column group position-relative overflow-hidden h-100" style="background-color: #ffffff !important; border: 1px solid #eaeaea; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); transition: all 0.35s ease;">
     
-    <div class="position-relative bg-light text-center border-bottom border-light-subtle sora-img-container" :class="{'has-hover-image': showHoverImage && hasHoverImage(product)}">
+    <div class="position-relative bg-white text-center border-bottom sora-img-container" style="border-color: #f8f9fa !important;" :class="{'has-hover-image': showHoverImage && hasHoverImage(product)}">
       
       <!-- Compare Button -->
       <button
@@ -65,16 +65,16 @@
       <div class="theme-bar position-absolute bottom-0 start-0 bg-sora-primary z-index-2"></div>
     </div>
 
-    <div class="position-relative flex-grow-1 bg-white d-flex flex-column">
+    <div class="position-relative flex-grow-1 d-flex flex-column" style="background-color: #ffffff !important;">
       <div class="p-4 text-start d-flex flex-column flex-grow-1 product-card-body">
         <router-link
           :to="{ name: 'productDetail', params: { shop_slug: shopSlug, slug: product.slug } }"
           class="text-decoration-none flex-grow-1 d-flex flex-column justify-content-center"
         >
-          <h6 class="text-dark font-oswald text-uppercase tracking-widest fw-bold mb-2 text-truncate-2 fs-5 lh-base product-name">{{ product.name }}</h6>
+          <h6 class="text-dark font-oswald text-uppercase fw-normal mb-2 text-truncate-2 product-name" style="font-size: 1.05rem; letter-spacing: 1px; line-height: 1.4;">{{ product.name }}</h6>
           
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <p class="font-serif fst-italic text-muted small mb-0">{{ product.category?.name || 'Trang sức SORA' }}</p>
+            <p class="font-oswald text-secondary small fw-light mb-0" style="letter-spacing: 0.8px; font-size: 0.75rem; opacity: 0.7;">{{ product.category?.name || 'TRANG SỨC SORA' }}</p>
             
             <!-- Luxury constraint: Show only one badge (Out of Stock > Scarcity > Sold Count > In Stock) -->
             <span v-if="isOutOfStock" class="small font-oswald text-uppercase tracking-widest text-secondary" style="font-size: 0.7rem; opacity: 0.8;">
@@ -101,12 +101,12 @@
           <div class="d-flex align-items-center justify-content-between">
             <template v-if="priceInfo.isRange">
               <div class="d-flex align-items-baseline gap-2 flex-wrap w-100">
-                <span class="text-sora-primary fw-bold font-oswald fs-5 text-truncate" :title="`${formatCurrency(priceInfo.min)} - ${formatCurrency(priceInfo.max)}`" style="font-size: 1.1rem !important;">{{ formatCompactPrice(priceInfo.min) }} - {{ formatCompactPrice(priceInfo.max) }}</span>
+                <span class="text-main fw-normal font-oswald text-truncate" :title="`${formatCurrency(priceInfo.min)} - ${formatCurrency(priceInfo.max)}`" style="font-size: 1.15rem; letter-spacing: 0.5px;">{{ formatCompactPrice(priceInfo.min) }} - {{ formatCompactPrice(priceInfo.max) }}</span>
               </div>
             </template>
             <template v-else>
               <div class="d-flex align-items-baseline gap-2 flex-wrap">
-                <span class="text-sora-primary fw-bold font-oswald fs-5 product-price">{{ formatCurrency(priceInfo.price) }}</span>
+                <span class="text-main fw-normal font-oswald product-price" style="font-size: 1.15rem; letter-spacing: 0.5px;">{{ formatCurrency(priceInfo.price) }}</span>
                 <span v-if="priceInfo.oldPrice" class="text-muted text-decoration-line-through small fw-light font-oswald product-old-price" style="font-size: 0.85rem;">
                   {{ formatCurrency(priceInfo.oldPrice) }}
                 </span>
@@ -124,7 +124,8 @@
           <button
             type="button"
             @click.stop="isOutOfStock ? null : handleQuickAddClick()"
-            class="btn w-100 rounded-0 py-3 font-oswald tracking-widest text-uppercase fw-bold shadow-none fs-6 d-flex align-items-center justify-content-center btn-add-cart"
+            class="btn w-100 rounded-0 font-oswald tracking-widest text-uppercase fw-light shadow-none d-flex align-items-center justify-content-center btn-add-cart"
+            style="padding: 14px 0; font-size: 0.85rem; border: none;"
             :class="isOutOfStock ? 'luxury-btn-sold-out' : 'luxury-btn-solid'"
             :disabled="isOutOfStock"
             :style="isOutOfStock ? 'cursor: not-allowed;' : ''"
@@ -353,15 +354,17 @@ const hasHoverImage = (product) => {
 
 .luxury-btn-solid {
   background-color: #9f273b;
-  color: white;
-  border: 1px solid #9f273b;
+  color: #ffffff;
+  border-top: none;
   transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 .luxury-btn-solid:hover {
   background-color: #cc1e2e;
-  border-color: #cc1e2e;
-  color: white;
-  box-shadow: 0 8px 20px rgba(204,30,46,0.3);
+  color: #ffffff;
+  box-shadow: 0 -4px 15px rgba(204,30,46,0.15);
+}
+.luxury-btn-solid i {
+  color: #ffffff !important;
 }
 
 .luxury-btn-sold-out {

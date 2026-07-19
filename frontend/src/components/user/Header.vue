@@ -281,6 +281,7 @@ import { useQueryClient } from '@tanstack/vue-query';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import Toast from '@/utils/toastConfig';
+import { useAuthSync } from '@/composables/useAuthSync.js';
 import MegaMenu from '@/components/user/MegaMenu.vue';
 import MiniCart from '@/pages/user/cart/MiniCart.vue';
 import { cartItemCount } from '@/stores/cartStore';
@@ -351,6 +352,7 @@ const closeMegaMenu = () => {
 const isScrolled = ref(false);
 const isHidden = ref(false);
 let lastScrollY = 0;
+const { clearAuthSession } = useAuthSync();
 
 const handleScroll = () => {
   if (props.previewData) return; // Không xử lý cuộn khi ở chế độ Preview
@@ -523,13 +525,10 @@ const handleLogout = () => {
     showCancelButton: true, confirmButtonColor: '#9f273b', cancelButtonColor: '#6c757d', confirmButtonText: 'Đăng xuất'
   }).then((result) => {
     if (result.isConfirmed) {
-      localStorage.removeItem('userData');
-      localStorage.removeItem('auth_token');
+      clearAuthSession(queryClient);
       user.value = null;
       isUserMenuOpen.value = false;
-      queryClient.clear();
       cartItemCount.value = 0;
-      window.dispatchEvent(new CustomEvent('auth-status-changed'));
       safeNavigate('home');
       Toast.fire({ icon: 'success', title: 'Đã đăng xuất' });
     }

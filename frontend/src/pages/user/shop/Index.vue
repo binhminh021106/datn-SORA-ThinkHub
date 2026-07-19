@@ -1635,15 +1635,7 @@ onMounted(() => {
 }
 
 /* PREMIUM BANNER CSS */
-.text-gold-gradient {
-  background: linear-gradient(135deg, #e7ce7d 0%, #f9f0d1 50%, #d4af37 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  text-shadow: 0 2px 10px rgba(231, 206, 125, 0.2);
-  padding: 0.2em 0;
-  line-height: 1.3;
-}
+
 
 .premium-category-item {
   position: relative;
