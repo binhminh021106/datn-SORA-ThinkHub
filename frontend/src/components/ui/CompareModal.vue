@@ -197,7 +197,7 @@ const loadCompareList = () => {
   try {
     const stored = localStorage.getItem(`compare_list_${props.shopSlug}`);
     if (stored) {
-        compareList.value = JSON.parse(stored);
+        compareList.value = JSON.parse(stored).slice(0, 3);
     }
   } catch (e) { compareList.value = []; }
 };

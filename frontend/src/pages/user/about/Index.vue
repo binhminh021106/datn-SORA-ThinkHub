@@ -33,7 +33,7 @@
           <div class="col-md-5 order-2 order-md-1 mt-4 mt-md-0">
             <div class="position-relative overflow-hidden img-wrapper rounded-4">
               <img :src="smartImage" alt="SORA Boutique Story" @error="handleImageError"
-                class="img-fluid w-100 object-fit-cover shadow-sm transition-transform custom-img-portrait rounded-4" style="max-height: 580px; aspect-ratio: 4/5;" />
+                class="img-fluid w-100 object-fit-cover shadow-sm transition-transform custom-img-portrait rounded-4" style="max-height: 580px;" />
               <div class="img-border position-absolute rounded-4"></div>
             </div>
           </div>

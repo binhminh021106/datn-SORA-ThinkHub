@@ -1,15 +1,6 @@
 <template>
   <div class="compare-page-wrapper">
     <div class="container">
-      <!-- Breadcrumb -->
-      <nav aria-label="breadcrumb" class="pt-1 pb-2 mb-2">
-        <ol class="breadcrumb mb-0 font-oswald text-uppercase tracking-wide small" style="font-size: 0.75rem;">
-          <li class="breadcrumb-item"><router-link to="/" class="text-muted text-decoration-none hover-primary">Trang chủ</router-link></li>
-          <li class="breadcrumb-item"><router-link :to="`/shop/${shopSlug}`" class="text-muted text-decoration-none hover-primary">Sản phẩm</router-link></li>
-          <li class="breadcrumb-item active fw-bold" style="color: rgb(159,39,59);" aria-current="page">So sánh sản phẩm</li>
-        </ol>
-      </nav>
-
       <!-- HEADER MỚI: QUAY LẠI VÀ CHỈ BÁO SP GỐC -->
       <div class="compare-header mb-4 pb-3 border-bottom">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
@@ -22,10 +13,10 @@
           </div>
           
           <div class="header-right">
-            <!-- Nút Quay lại sản phẩm -->
+            <!-- Nút Quay lại -->
             <button class="btn-sora-back" @click="goBackToBaseProduct">
               <i class="bi bi-arrow-left me-2"></i>
-              Quay lại sản phẩm
+              Quay lại
             </button>
 
             <!-- Toggle: Chỉ hiển thị điểm khác biệt -->
@@ -365,6 +356,11 @@ const baseProductName = computed(() => {
 
 // Hàm quay lại: Trả về chi tiết spGoc hoặc danh sách chung
 const goBackToBaseProduct = () => {
+  if (window.history.state && window.history.state.back) {
+    router.back();
+    return;
+  }
+  // Fallback nếu người dùng vào thẳng link không có lịch sử
   if (spGoc.value) {
       const baseProd = products.value.find(p => p.id == spGoc.value);
       if (baseProd && baseProd.slug) {
@@ -389,7 +385,7 @@ const loadCompareData = async (isBackgroundRefresh = false) => {
       return;
     }
 
-    const compareList = JSON.parse(stored);
+    const compareList = JSON.parse(stored).slice(0, 3);
     const ids = compareList.map(p => p.id);
 
     if (ids.length === 0) {
@@ -615,8 +611,8 @@ const getPriceDiffColor = (current, base) => {
 
 const getStockDiff = (current, base) => {
   if (!base || current.id === base.id) return null;
-  const sCurrent = parseInt(current.stock_quantity || 0);
-  const sBase = parseInt(base.stock_quantity || 0);
+  const sCurrent = parseInt(current.stock_quantity || 0, 10);
+  const sBase = parseInt(base.stock_quantity || 0, 10);
   const diff = sCurrent - sBase;
 
   if (diff === 0) return null;
