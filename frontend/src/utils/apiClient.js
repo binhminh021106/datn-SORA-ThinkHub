@@ -87,7 +87,8 @@ apiClient.interceptors.response.use(
         const protectedPaths = ['/profile', '/order', '/checkout', '/favourite'];
         const isProtectedPath = protectedPaths.some(p => currentPath.startsWith(p));
         if (isProtectedPath && !currentPath.includes('/login')) {
-          window.location.href = '/login';
+          const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+          window.location.href = `/login?redirect=${returnUrl}`;
         }
       }
     }

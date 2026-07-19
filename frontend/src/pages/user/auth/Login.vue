@@ -13,7 +13,7 @@
       <!-- Cột phải: Form Đăng nhập -->
       <div class="auth-box">
         <div class="auth-header">
-          <h2 class="auth-title font-serif tracking-widest">ĐẶC QUYỀN THÀNH VIÊN</h2>
+          <h2 class="auth-title font-serif tracking-widest">ĐĂNG NHẬP</h2>
           <p class="subtitle">Đăng nhập để tiếp tục hành trình mua sắm đẳng cấp cùng SORA.</p>
         </div>
 
@@ -44,7 +44,7 @@
               <span> Nhớ mật khẩu</span>
             </label>
           </div>
-          <button type="submit" class="btn-primary" :disabled="isLoading">
+          <button type="submit" class="editorial-btn w-100 py-3 fs-6" :disabled="isLoading">
             {{ isLoading ? 'ĐANG XỬ LÝ...' : 'ĐĂNG NHẬP' }}
           </button>
         </form>
@@ -97,11 +97,20 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import { useQueryClient } from '@tanstack/vue-query';
 import Toast from '@/utils/toastConfig';
 import { API_BASE_URL } from '@/utils/env';
 import clientApiClient from '@/utils/clientApiClient';
 
+const router = useRouter();
+const route = useRoute();
+const queryClient = useQueryClient();
+
 const LoginWithGoogle = () => {
+  if (route.query.redirect) {
+    localStorage.setItem('redirect_after_login', route.query.redirect);
+  }
   window.location.href = `${API_BASE_URL}/auth/google/redirect`;
 }
 
@@ -152,10 +161,27 @@ const handleLogin = async () => {
       }
     }
 
-    setTimeout(() => {
-      window.location.href = '/';
-    }, 1000);
+      setTimeout(() => {
+        // Smart Redirect Logic
+        let redirectPath = route.query.redirect || localStorage.getItem('redirect_after_login') || '/';
+        
+        // Prevent loop redirect to admin routes if user is not admin
+        if (redirectPath.startsWith('/admin')) {
+          redirectPath = '/';
+        }
+        
+        localStorage.removeItem('redirect_after_login');
 
+        // Khôi phục bộ đệm của user
+        queryClient.invalidateQueries({ queryKey: ['cart'] });
+        queryClient.invalidateQueries({ queryKey: ['wishlist'] });
+        queryClient.invalidateQueries({ queryKey: ['user_profile'] });
+        
+        // Phát sự kiện để Header tự cập nhật
+        window.dispatchEvent(new CustomEvent('auth-status-changed'));
+
+        router.push(redirectPath);
+      }, 1000);
   } catch (error) {
     if (error.response && error.response.data.errors) {
       errorMessage.value = Object.values(error.response.data.errors).flat().join('\n');
@@ -188,7 +214,7 @@ const handleSocialLogin = (platform) => {
   justify-content: center;
   align-items: center;
   background-color: #fcf9f5;
-  padding: 40px 20px;
+  padding: 20px 20px;
   font-family: 'Helvetica Neue', Arial, sans-serif;
 }
 

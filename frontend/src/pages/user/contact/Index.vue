@@ -1,5 +1,5 @@
 <template>
-  <div class="contact-page font-sans bg-light-custom pb-5">
+  <div class="contact-page font-sans bg-white pb-5">
     
     <!-- Tiêu đề chính (Hero Section) -->
     <section class="sora-banner position-relative d-flex align-items-center justify-content-center overflow-hidden">
@@ -10,12 +10,17 @@
       <div class="banner-line-art banner-line-art-left"></div>
       <div class="banner-line-art banner-line-art-right"></div>
 
-      <div class="position-relative z-index-2 text-center px-3 banner-content">
-        <p class="text-champagne font-oswald tracking-widest mb-3 text-uppercase small">
-          <i class="bi bi-stars me-2"></i>Dịch Vụ Khách Hàng
+      <div class="position-relative z-index-2 text-center px-3 banner-content d-flex flex-column align-items-center">
+        <p class="text-champagne font-oswald tracking-widest mb-2 text-uppercase small">
+          <i class="bi bi-headset me-2"></i>DỊCH VỤ KHÁCH HÀNG
         </p>
-        <h1 class="display-3 fw-bold font-serif mb-3 text-white text-uppercase">Kết Nối Cùng SORA</h1>
-        <p class="banner-subtitle fw-light fs-5 mb-0 font-serif text-white d-none d-md-block">
+        <h1 class="display-3 fw-bold font-serif mb-2 text-gold-gradient text-uppercase">KẾT NỐI CÙNG SORA</h1>
+        <div class="d-flex align-items-center justify-content-center mb-3">
+          <svg width="120" height="15" viewBox="0 0 150 20" xmlns="http://www.w3.org/2000/svg" style="opacity: 0.9;">
+            <path d="M10 10h40m50 0h40M65 10c0-3 4-5 10-5s10 2 10 5-4 5-10 5-10-2-10-5z" stroke="#e7ce7d" stroke-width="1.5" fill="none" />
+          </svg>
+        </div>
+        <p class="banner-subtitle fw-light fs-5 mb-0 font-serif text-white-50 d-none d-md-block" style="max-width: 800px; margin: 0 auto;">
           Sẵn sàng lắng nghe và kiến tạo khoảnh khắc dành riêng cho bạn.
         </p>
       </div>
@@ -23,64 +28,42 @@
 
     <!-- Nội dung chính -->
     <section class="py-5" style="margin-top: -3rem; position: relative; z-index: 2;">
-      <div class="container bg-white shadow-sm p-4 p-md-5">
+      <div class="container bg-white shadow-lg rounded-4 p-4 p-md-5 border border-light">
         
-        <!-- Đoạn mô tả ngắn -->
-        <div class="text-center max-w-2xl mb-5 mx-auto">
-          <h2 class="h3 font-serif text-main mb-3">Trải Nghiệm Chăm Sóc Độc Bản</h2>
-          <p class="text-secondary fw-light" style="line-height: 1.8;">
-            Mỗi yêu cầu, mỗi câu chuyện của bạn đều là mảnh ghép quan trọng giúp SORA vươn tới sự hoàn mỹ. Đừng ngần ngại chia sẻ, đội ngũ chuyên viên của chúng tôi luôn ở đây, sẵn sàng lắng nghe và kiến tạo nên những khoảnh khắc trang sức dành riêng cho bạn.
-          </p>
-        </div>
-
-        <div class="row g-5 mt-2">
+        <div class="row g-5">
           
           <!-- Thông tin liên hệ -->
           <div class="col-lg-5 order-2 order-lg-1 pe-lg-5">
-            <div class="contact-info-wrapper h-100 bg-light p-4 p-md-5 border-start border-accent border-4 d-flex flex-column">
-              <h3 class="h4 font-serif text-dark mb-4">Thông Tin Liên Hệ</h3>
+            <div class="contact-info-wrapper h-100 p-4 p-md-5 rounded-4 d-flex flex-column text-white" style="background: linear-gradient(135deg, #3a0a18, #6d152a); box-shadow: 0 15px 35px rgba(0,0,0,0.15);">
+              <h3 class="h4 font-serif text-gold-gradient mb-4">Thông Tin Liên Hệ</h3>
               
-              <ul class="list-unstyled mb-5 text-secondary fw-light">
+              <ul class="list-unstyled mb-5 text-white-50 fw-light">
                 <li class="d-flex align-items-start mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="text-main me-3 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="text-champagne me-3 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                   <div>
-                    <strong class="d-block text-dark fw-medium mb-1">SORA Flagship Store</strong>
+                    <strong class="d-block text-white fw-medium mb-1">SORA Flagship Store</strong>
                     Khu đô thị cao cấp, Quận 1, TP. Hồ Chí Minh
                   </div>
                 </li>
                 <li class="d-flex align-items-start mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="text-main me-3 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="text-champagne me-3 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
                   <div>
-                    <strong class="d-block text-dark fw-medium mb-1">Hotline CSKH (24/7)</strong>
-                    <a href="tel:0901234567" class="text-secondary text-decoration-none custom-link">090 123 4567</a>
+                    <strong class="d-block text-white fw-medium mb-1">Hotline CSKH (24/7)</strong>
+                    <a href="tel:0901234567" class="text-champagne text-decoration-none custom-link">090 123 4567</a>
                   </div>
                 </li>
                 <li class="d-flex align-items-start">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="text-main me-3 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="text-champagne me-3 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   <div>
-                    <strong class="d-block text-dark fw-medium mb-1">Giờ mở cửa</strong>
+                    <strong class="d-block text-white fw-medium mb-1">Giờ mở cửa</strong>
                     09:00 - 21:00 (Từ Thứ 2 đến Chủ Nhật)
                   </div>
                 </li>
               </ul>
-              
-              <!-- Nút Liên Hệ Trực Tiếp Cố Định Ở Khối Trái -->
-              <!-- <div class="mt-2 mb-4 pt-4 border-top border-accent">
-                <h4 class="h6 font-serif text-dark mb-3 fw-bold">Trợ Giúp Tức Thời</h4>
-                <p class="text-secondary small fw-light mb-3">Kết nối trực tiếp với chuyên viên SORA để nhận tư vấn ngay lập tức.</p>
-                <div class="d-flex gap-2">
-                  <a href="https://zalo.me/0901234567" target="_blank" class="btn btn-zalo flex-grow-1 text-uppercase fw-medium rounded-0 py-2 d-flex justify-content-center align-items-center">
-                    <strong class="me-2" style="font-size: 1.1rem;">Zalo</strong> Chat
-                  </a>
-                  <a href="https://m.me/sorajewelry" target="_blank" class="btn btn-messenger flex-grow-1 text-uppercase fw-medium rounded-0 py-2 d-flex justify-content-center align-items-center">
-                    <i class="fa-brands fa-facebook-messenger me-2 fs-5"></i> Msg
-                  </a>
-                </div>
-              </div> -->
 
               <!-- Đoạn cam kết -->
-              <div class="p-3 bg-white border border-light text-center mt-auto">
-                <p class="mb-0 text-main font-serif fst-italic text-sm">
+              <div class="p-3 rounded-3 mt-auto" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(231,206,125,0.2);">
+                <p class="mb-0 text-champagne font-serif fst-italic text-sm">
                   "Mọi yêu cầu qua Form hệ thống sẽ được Chuyên viên SORA phản hồi tận tâm muộn nhất trong vòng 2 giờ làm việc."
                 </p>
               </div>
@@ -94,34 +77,26 @@
               <form @submit.prevent="submitContactForm">
                 <div class="row g-4">
                   <div class="col-md-6">
-                    <div class="form-floating custom-floating">
-                      <input type="text" class="form-control custom-input" id="fullname" v-model="form.fullname" placeholder="Họ và tên" required>
-                      <label for="fullname" class="text-muted fw-light">Danh xưng / Họ và tên *</label>
-                    </div>
+                    <label class="premium-form-label">Danh xưng / Họ và tên *</label>
+                    <input type="text" class="premium-form-control w-100" id="fullname" v-model="form.fullname" placeholder="Nhập họ và tên của bạn" required>
                   </div>
                   <div class="col-md-6">
-                    <div class="form-floating custom-floating">
-                      <input type="tel" class="form-control custom-input" id="phone" v-model="form.phone" placeholder="Số điện thoại" required>
-                      <label for="phone" class="text-muted fw-light">Số điện thoại liên hệ *</label>
-                    </div>
+                    <label class="premium-form-label">Số điện thoại liên hệ *</label>
+                    <input type="tel" class="premium-form-control w-100" id="phone" v-model="form.phone" placeholder="Nhập số điện thoại" required>
                   </div>
                   <div class="col-12">
-                    <div class="form-floating custom-floating">
-                      <input type="email" class="form-control custom-input" id="email" v-model="form.email" placeholder="name@example.com" required>
-                      <label for="email" class="text-muted fw-light">Địa chỉ Email *</label>
-                    </div>
+                    <label class="premium-form-label">Địa chỉ Email *</label>
+                    <input type="email" class="premium-form-control w-100" id="email" v-model="form.email" placeholder="name@example.com" required>
                   </div>
                   <div class="col-12">
-                    <div class="form-floating custom-floating">
-                      <textarea class="form-control custom-input" id="message" v-model="form.message" placeholder="Nội dung tin nhắn" style="height: 120px" required></textarea>
-                      <label for="message" class="text-muted fw-light">Mong muốn hoặc thắc mắc của bạn...</label>
-                    </div>
+                    <label class="premium-form-label">Mong muốn hoặc thắc mắc của bạn *</label>
+                    <textarea class="premium-form-control w-100" id="message" v-model="form.message" placeholder="Xin vui lòng mô tả chi tiết..." style="height: 140px; resize: none;" required></textarea>
                   </div>
                   <div class="col-12 mt-5 text-end">
                     <!-- Nút Gửi kèm trạng thái Loading -->
                     <button type="submit" class="editorial-btn text-uppercase px-5 py-3 w-100 w-md-auto d-flex align-items-center justify-content-center ms-auto" style="letter-spacing: 0.1em;" :disabled="isSubmitting">
                       <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2" role="status"></span>
-                      Gửi Lời Nhắn
+                      GỬI LỜI NHẮN
                     </button>
                   </div>
                 </div>
@@ -349,7 +324,7 @@ const submitContactForm = async () => {
 }
 
 .sora-banner {
-  min-height: 380px;
+  min-height: 340px;
   background:
     linear-gradient(135deg, rgba(54, 6, 17, 0.98), rgba(114, 20, 38, 0.96) 48%, rgba(74, 9, 24, 0.98)),
     repeating-linear-gradient(120deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 14px);
@@ -589,6 +564,35 @@ const submitContactForm = async () => {
 
 .combos-container {
   max-width: var(--home-container-width, 1400px);
+}
+
+.premium-form-control {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.9rem 1.15rem;
+  background-color: #f8f9fa;
+  transition: all 0.3s ease;
+  font-size: 0.95rem;
+  box-shadow: none;
+}
+
+.premium-form-control:focus {
+  border-color: #d4af37;
+  background-color: #ffffff;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+}
+
+.premium-form-control::placeholder {
+  color: #94a3b8;
+}
+
+.premium-form-label {
+  color: #334155;
+  font-weight: 500;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+  display: block;
 }
 
 .section-heading {

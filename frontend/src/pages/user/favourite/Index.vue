@@ -171,7 +171,7 @@ const toggleFavorite = async (product) => {
   if (!token) {
     soraAlert.fire({ icon: 'warning', title: 'Phiên đăng nhập hết hạn!', text: 'Vui lòng đăng nhập lại.' });
     isLoggedIn.value = false;
-    router.push('/login');
+    router.push({ path: '/login', query: { redirect: router.currentRoute.value.fullPath } });
     return;
   }
 

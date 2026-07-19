@@ -43,7 +43,9 @@ export const useWishlist = () => {
         showCancelButton: true,
         cancelButtonText: 'Đóng'
       }).then((result) => {
-        if (result.isConfirmed) router.push('/login');
+        if (result.isConfirmed) {
+          router.push({ path: '/login', query: { redirect: router.currentRoute.value.fullPath } });
+        }
       });
       return;
     }

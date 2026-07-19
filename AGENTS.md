@@ -22,3 +22,9 @@ Related metadata files:
 This agent is intended for frontend-facing polish work only. It should improve usability, responsiveness, component presentation, modal interactions, mini cart behavior, and CSS consistency without changing backend APIs, database schema, business logic, or unrelated application behavior.
 
 When working in this project, the agent should prefer existing UI patterns, reusable components, Bootstrap utilities, and established SORA/ThinkHub styling before introducing new abstractions or visual systems.
+
+## Strict Security & Destructive Command Rules
+
+- **Git Commands:** The agent MUST NOT automatically run any `git` commands (especially `git push`, `git reset`, `git clean`) without explicit step-by-step confirmation from the user. Committing and pushing must ALWAYS be asked for before execution.
+- **MySQL/Database Commands:** The agent MUST NOT automatically run any destructive database commands (e.g., `DROP`, `DELETE`, `TRUNCATE`, `rm` on database files) under any circumstances.
+- **File Deletion:** The agent MUST NOT run destructive terminal commands like `rm -rf` without explicit user consent. Do not run any command that deletes critical system or database files.

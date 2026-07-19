@@ -10,13 +10,18 @@
       <div class="banner-line-art banner-line-art-left"></div>
       <div class="banner-line-art banner-line-art-right"></div>
 
-      <div class="position-relative z-index-2 text-center px-3 banner-content">
-        <p class="text-champagne font-oswald tracking-widest mb-3 text-uppercase small">
-          <i class="bi bi-stars me-2"></i>Câu chuyện thương hiệu
+      <div class="position-relative z-index-2 text-center px-3 banner-content d-flex flex-column align-items-center">
+        <p class="text-champagne font-oswald tracking-widest mb-2 text-uppercase small">
+          <i class="bi bi-stars me-2"></i>CÂU CHUYỆN THƯƠNG HIỆU
         </p>
-        <h1 class="display-3 fw-bold font-serif mb-3 text-white text-uppercase">VỀ SORA</h1>
-        <p class="banner-subtitle fw-light fs-5 mb-0 font-serif text-white d-none d-md-block">
-          "Tuyệt tác trang sức – Nơi khí chất độc bản được tôn vinh."
+        <h1 class="display-3 fw-bold font-serif mb-2 text-gold-gradient text-uppercase">VỀ SORA BOUTIQUE</h1>
+        <div class="d-flex align-items-center justify-content-center mb-3">
+          <svg width="120" height="15" viewBox="0 0 150 20" xmlns="http://www.w3.org/2000/svg" style="opacity: 0.9;">
+            <path d="M10 10h40m50 0h40M65 10c0-3 4-5 10-5s10 2 10 5-4 5-10 5-10-2-10-5z" stroke="#e7ce7d" stroke-width="1.5" fill="none" />
+          </svg>
+        </div>
+        <p class="banner-subtitle fw-light fs-5 mb-0 font-serif text-white-50 d-none d-md-block" style="max-width: 800px; margin: 0 auto;">
+          Tuyệt tác trang sức – Nơi khí chất độc bản được tôn vinh.
         </p>
       </div>
     </section>
@@ -398,7 +403,7 @@ onMounted(() => {
 }
 
 .sora-banner {
-  min-height: 380px;
+  min-height: 340px;
   background:
     linear-gradient(135deg, rgba(54, 6, 17, 0.98), rgba(114, 20, 38, 0.96) 48%, rgba(74, 9, 24, 0.98)),
     repeating-linear-gradient(120deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 14px);

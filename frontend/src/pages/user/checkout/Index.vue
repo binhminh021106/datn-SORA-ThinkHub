@@ -897,17 +897,17 @@ const fetchInitData = async () => {
         if (error.response && error.response.status === 401) {
             soraAlert.fire({
                 icon: 'info',
-                title: '<span class="font-oswald tracking-wider fs-4 text-dark">YÊU CẦU ĐĂNG NHẬP</span>',
+                title: '<span class="font-oswald tracking-wider fs-4 text-sora-primary">YÊU CẦU ĐĂNG NHẬP</span>',
                 html: '<p class="text-muted font-sans" style="font-size: 0.95rem;">Vui lòng đăng nhập để tiếp tục thanh toán.</p>',
-                confirmButtonText: 'Đăng nhập ngay',
+                confirmButtonText: 'ĐĂNG NHẬP NGAY',
                 allowOutsideClick: false,
                 buttonsStyling: false,
                 customClass: {
-                    popup: 'border-0 shadow-lg',
+                    popup: 'border-0 shadow-lg rounded-4 sora-popup-gradient',
                     confirmButton: 'editorial-btn px-4 py-2'
                 }
             }).then(() => {
-                router.push({ name: 'login' });
+                router.push({ name: 'login', query: { redirect: '/checkout' } });
             });
         }
         else if (error.response && error.response.status === 404) {
@@ -1153,12 +1153,17 @@ onMounted(async () => {
     if (!token) {
         soraAlert.fire({
             icon: 'warning',
-            title: 'Yêu cầu đăng nhập',
-            text: 'Bạn cần đăng nhập để tiến hành thanh toán.',
-            confirmButtonText: 'Đăng nhập ngay',
-            allowOutsideClick: false
+            title: '<span class="font-oswald tracking-wider fs-4 text-sora-primary">YÊU CẦU ĐĂNG NHẬP</span>',
+            html: '<p class="text-muted font-sans" style="font-size: 0.95rem;">Bạn cần đăng nhập để tiến hành thanh toán.</p>',
+            confirmButtonText: 'ĐĂNG NHẬP NGAY',
+            allowOutsideClick: false,
+            buttonsStyling: false,
+            customClass: {
+                popup: 'border-0 shadow-lg rounded-4 sora-popup-gradient',
+                confirmButton: 'editorial-btn px-4 py-2'
+            }
         }).then(() => {
-            router.push({ name: 'login' });
+            router.push({ name: 'login', query: { redirect: '/checkout' } });
         });
         return;
     }

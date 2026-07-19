@@ -74,10 +74,9 @@
                   <div class="p-3 text-center">
                     <p class="small text-muted mb-3">Đăng nhập để theo dõi đơn hàng và ưu đãi</p>
                     <a href="#" @click.prevent="safeNavigate('login')"
-                      class="btn btn-brand w-100 fw-bold rounded-pill text-white mb-2 text-decoration-none">Đăng
-                      Nhập</a>
+                      class="editorial-btn w-100 mb-2 text-decoration-none">Đăng Nhập</a>
                     <div class="small">Chưa có tài khoản? <a href="#" @click.prevent="safeNavigate('register')"
-                        class="text-primary-custom fw-bold text-decoration-none">Đăng ký</a></div>
+                        class="text-sora-primary fw-bold text-decoration-none">Đăng ký</a></div>
                   </div>
                 </template>
               </div>
@@ -278,6 +277,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
+import { useQueryClient } from '@tanstack/vue-query';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import Toast from '@/utils/toastConfig';
@@ -300,6 +300,7 @@ const s = computed(() => props.previewData || settingsStore.settings);
 
 const route = useRoute();
 const router = useRouter();
+const queryClient = useQueryClient();
 const BACKEND_URL = API_BASE_URL;
 
 const sysConfig = ref({ phone: '12345678910', email: 'SORA@GMAIL.COM', facebook: '#', instagram: '#', twitter: '#' });
@@ -391,6 +392,11 @@ const safeNavigate = (routeName, options = {}) => {
   isMegaMenuOpen.value = false;
   isUserMenuOpen.value = false;
   showSearchResults.value = false;
+
+  if (routeName === 'login' && !options.query?.redirect) {
+    options.query = { ...options.query, redirect: route.fullPath };
+  }
+
   if (router.hasRoute(routeName)) {
     router.push({ name: routeName, ...options });
   } else {
@@ -521,6 +527,9 @@ const handleLogout = () => {
       localStorage.removeItem('auth_token');
       user.value = null;
       isUserMenuOpen.value = false;
+      queryClient.clear();
+      cartItemCount.value = 0;
+      window.dispatchEvent(new CustomEvent('auth-status-changed'));
       safeNavigate('home');
       Toast.fire({ icon: 'success', title: 'Đã đăng xuất' });
     }
@@ -538,6 +547,17 @@ const handleCartUpdateEvent = (e) => {
     // Nếu chỉ báo hiệu (không có số) -> Tải lại dữ liệu từ server
     fetchHeaderData();
   }
+};
+
+const handleAuthStatusChanged = () => {
+  const userData = localStorage.getItem('userData');
+  if (userData) {
+    user.value = JSON.parse(userData);
+  } else {
+    user.value = null;
+    cartItemCount.value = 0;
+  }
+  fetchUserProfile();
 };
 
 // Theo dõi chuyển hướng trang (SPA Router) - Tự động tải lại số lượng giỏ hàng khi người dùng chuyển qua lại các trang
@@ -560,6 +580,8 @@ onMounted(() => {
   }
   fetchUserProfile();
 
+  window.addEventListener('auth-status-changed', handleAuthStatusChanged);
+
   document.addEventListener('click', handleClickOutside);
   if (!props.previewData) {
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -573,6 +595,7 @@ onUnmounted(() => {
     window.removeEventListener('scroll', handleScroll);
   }
   window.removeEventListener('update-cart-count', handleCartUpdateEvent);
+  window.removeEventListener('auth-status-changed', handleAuthStatusChanged);
   if (megaMenuTimer) clearTimeout(megaMenuTimer);
   document.body.style.overflow = '';
 });

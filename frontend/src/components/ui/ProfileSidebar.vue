@@ -161,7 +161,8 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
+import { useQueryClient } from '@tanstack/vue-query';
 import { getStorageUrl } from '@/utils/env';
 import clientApiClient from '@/utils/clientApiClient';
 
@@ -176,6 +177,8 @@ const props = defineProps({
 const emit = defineEmits(['navigate', 'logout']);
 
 const route = useRoute();
+const router = useRouter();
+const queryClient = useQueryClient();
 
 // ===== USER DATA =====
 const userData = ref({
@@ -318,7 +321,9 @@ const handleLogout = () => {
   emit('logout');
   localStorage.clear();
   sessionStorage.clear();
-  window.location.href = '/login';
+  queryClient.clear();
+  window.dispatchEvent(new CustomEvent('auth-status-changed'));
+  router.push({ name: 'login' });
 };
 
 // ===== FETCH PROFILE =====

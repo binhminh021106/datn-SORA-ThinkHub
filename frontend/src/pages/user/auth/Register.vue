@@ -57,7 +57,7 @@
             </div>
           </div>
 
-          <button type="submit" class="btn-primary" :disabled="isLoading">
+          <button type="submit" class="editorial-btn w-100 py-3 fs-6" :disabled="isLoading">
             {{ isLoading ? 'ĐANG XỬ LÝ...' : 'ĐĂNG KÝ TÀI KHOẢN' }}
           </button>
         </form>

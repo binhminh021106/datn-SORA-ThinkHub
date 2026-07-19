@@ -96,7 +96,8 @@ clientApiClient.interceptors.response.use(
       const isProtectedPath = PROTECTED_CLIENT_PATHS.some((path) => currentPath.startsWith(path));
 
       if (!error.config?.ignoreAuthRedirect && isProtectedPath && !currentPath.includes('/login')) {
-        window.location.href = '/login';
+        const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.href = `/login?redirect=${returnUrl}`;
       }
     }
 

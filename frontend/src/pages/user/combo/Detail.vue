@@ -527,7 +527,9 @@ const toggleWishlist = async (prod) => {
       confirmButtonText: 'Đăng Nhập Ngay', showCancelButton: true, cancelButtonText: 'Đóng', buttonsStyling: false,
       customClass: { popup: 'border-0 shadow-lg', confirmButton: 'editorial-btn px-4 py-2 ms-2', cancelButton: 'editorial-btn-outline px-4 py-2' }
     }).then((result) => {
-      if (result.isConfirmed) router.push('/login');
+      if (result.isConfirmed) {
+        router.push({ path: '/login', query: { redirect: router.currentRoute.value.fullPath } });
+      }
     });
     return;
   }
