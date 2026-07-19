@@ -680,9 +680,10 @@ onUnmounted(() => {
    CSS SMART STICKY HEADER
 ========================================== */
 .site-header {
+  border-bottom: 1px solid transparent;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 1040;
   background-color: #fff;
-  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s ease;
 }
 
 /* Khi cuộn xuống thì ẩn đi */
@@ -709,20 +710,16 @@ onUnmounted(() => {
   height: 50px;
 }
 
-.header-scrolled .nav-item-link {
-  font-size: 0.9rem;
-}
-
 .logo-img {
   height: 80px;
   width: auto;
   object-fit: contain;
   display: block;
-  transition: height 0.4s ease;
+  transition: height 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .transition-all {
-  transition: all 0.4s ease;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .top-link {
@@ -791,7 +788,7 @@ onUnmounted(() => {
   letter-spacing: 1.5px;
   padding: 5px 0;
   position: relative;
-  transition: font-size 0.4s ease, color 0.2s ease;
+  transition: color 0.2s ease;
 }
 
 .nav-item-link::after {

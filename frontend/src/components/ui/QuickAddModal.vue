@@ -66,7 +66,7 @@
           </button>
         </div>
         
-        <div v-else class="p-4">
+        <div v-else class="p-4" style="min-height: 532px;">
            <div class="d-flex gap-3 mb-4 pb-4 border-bottom border-light-subtle">
              <SoraSkeleton variant="image" width="80px" height="80px" radius="4px" class="flex-shrink-0" />
              <div class="flex-grow-1 d-flex flex-column justify-content-center">
@@ -407,6 +407,7 @@ const confirmQuickAdd = async () => {
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Oswald:wght@400;500;600;700&display=swap');
+
 
 
 .font-serif { font-family: 'Josefin Sans', sans-serif !important; }
