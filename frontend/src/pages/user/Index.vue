@@ -917,7 +917,7 @@ onUnmounted(() => {
 }
 
 .home-hero-copy h1 {
-  font-size: 70px;
+  font-size: clamp(2.4rem, 5vw, 4.4rem);
   line-height: 1.1;
   margin-bottom: 1.5rem;
   text-transform: uppercase;
@@ -1003,7 +1003,6 @@ onUnmounted(() => {
   border-radius: 20px;
   box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(255, 255, 255, 0.05);
   animation: floatHeroCard 8s ease-in-out infinite;
-  pointer-events: none;
 }
 
 
