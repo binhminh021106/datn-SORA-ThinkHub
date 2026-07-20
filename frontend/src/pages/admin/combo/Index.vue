@@ -81,9 +81,9 @@
               <thead class="bg-light">
                 <tr>
                   <th class="py-3 px-4 text-secondary border-0" style="width: 30%;">Thông tin Combo</th>
-                  <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 12%;">Số lượng món</th>
-                  <th class="py-3 px-4 text-secondary border-0" style="width: 18%;">Chiết khấu</th>
-                  <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 20%;">Trạng thái <span class="d-none d-xl-inline">(Sửa nhanh)</span></th>
+                  <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 12%;">Số món</th>
+                  <th class="py-3 px-4 text-secondary border-0" style="width: 18%;">Thời hạn</th>
+                  <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 20%;">Trạng thái</th>
                   <th class="py-3 px-4 text-secondary text-center border-0" style="width: 20%;">Thao tác</th>
                 </tr>
               </thead>
@@ -106,9 +106,16 @@
                       </div>
                       <div class="overflow-hidden">
                         <div class="fw-bold text-dark fs-6 mb-1 text-truncate" :title="combo.name">{{ combo.name }}</div>
-                        <div class="d-flex align-items-center gap-2">
+                        <div class="d-flex flex-wrap align-items-center gap-1 mb-1">
                             <span class="badge bg-light text-secondary border" v-if="combo.theme"><i class="bi bi-bookmark-star me-1"></i>{{ combo.theme }}</span>
                             <span class="badge bg-light text-secondary border"><i class="bi bi-gender-ambiguous me-1"></i>{{ getGenderLabel(combo.target_gender) }}</span>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mt-2">
+                           <span class="badge bg-danger">Giảm: {{ combo.discount_type === 'percentage' ? combo.discount_value + '%' : formatCurrency(combo.discount_value) }}</span>
+                           <span class="badge border" :class="combo.is_discount_stackable ? 'border-success text-success' : 'border-secondary text-secondary'">
+                              <i class="bi" :class="combo.is_discount_stackable ? 'bi-check2-circle' : 'bi-dash-circle'"></i> 
+                              {{ combo.is_discount_stackable ? 'Cộng dồn KM' : 'Không cộng dồn KM' }}
+                           </span>
                         </div>
                       </div>
                     </div>
@@ -121,12 +128,18 @@
                   </td>
                   
                   <td class="px-4">
-                    <div class="fw-bold text-danger mb-1">
-                      Giảm: {{ combo.discount_type === 'percentage' ? combo.discount_value + '%' : formatCurrency(combo.discount_value) }}
+                    <div class="small fw-semibold text-dark mb-2">
+                      {{ combo.start_date ? formatDateShort(combo.start_date) : 'Bất kỳ lúc nào' }} 
+                      <i class="bi bi-arrow-right mx-1 text-muted"></i> 
+                      {{ combo.end_date ? formatDateShort(combo.end_date) : 'Không giới hạn' }}
                     </div>
-                    <div class="small fw-semibold" :class="combo.is_discount_stackable ? 'text-success' : 'text-muted'">
-                      <i class="bi" :class="combo.is_discount_stackable ? 'bi-check2-circle' : 'bi-dash-circle'"></i> 
-                      {{ combo.is_discount_stackable ? 'Cho phép dùng Voucher' : 'Không cộng dồn KM' }}
+                    <div v-if="combo.end_date">
+                      <span v-if="getDaysRemaining(combo.end_date) > 0" class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>Còn {{ getDaysRemaining(combo.end_date) }} ngày</span>
+                      <span v-else-if="getDaysRemaining(combo.end_date) === 0" class="badge bg-danger"><i class="bi bi-exclamation-circle me-1"></i>Hết hạn hôm nay</span>
+                      <span v-else class="badge bg-secondary bg-opacity-75"><i class="bi bi-x-circle me-1"></i>Đã hết hạn</span>
+                    </div>
+                    <div v-else class="badge bg-success bg-opacity-10 text-success border border-success">
+                      <i class="bi bi-infinity me-1"></i>Vô thời hạn
                     </div>
                   </td>
                   
@@ -349,6 +362,22 @@ const formatDateTime = (dateString) => {
     if (!dateString) return '';
     const d = new Date(dateString);
     return `${d.toLocaleDateString('vi-VN')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+};
+
+const formatDateShort = (dateString) => {
+    if (!dateString) return '';
+    const d = new Date(dateString);
+    return d.toLocaleDateString('vi-VN');
+};
+
+const getDaysRemaining = (endDateString) => {
+    if (!endDateString) return null;
+    const end = new Date(endDateString);
+    const now = new Date();
+    end.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+    const diffTime = end - now;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 };
 
 const getGenderLabel = (val) => {
