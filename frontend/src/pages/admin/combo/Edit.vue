@@ -655,8 +655,10 @@ const displayDiscountValue = computed({
   }
 });
 
-watch(() => form.value.discount_type, () => {
-    form.value.discount_value = 0;
+watch(() => form.value.discount_type, (newVal, oldVal) => {
+    if (isFormInitialized.value && oldVal) {
+        form.value.discount_value = 0;
+    }
 });
 
 const finalEstimatedPrice = computed(() => {

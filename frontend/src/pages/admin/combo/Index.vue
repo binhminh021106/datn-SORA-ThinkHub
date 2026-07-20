@@ -111,7 +111,7 @@
                             <span class="badge bg-light text-secondary border"><i class="bi bi-gender-ambiguous me-1"></i>{{ getGenderLabel(combo.target_gender) }}</span>
                         </div>
                         <div class="d-flex flex-wrap gap-2 mt-2">
-                           <span class="badge bg-danger">Giảm: {{ combo.discount_type === 'percentage' ? combo.discount_value + '%' : formatCurrency(combo.discount_value) }}</span>
+                           <span class="badge bg-danger">Giảm: {{ combo.discount_type === 'percentage' ? Number(combo.discount_value) + '%' : formatCurrency(combo.discount_value) }}</span>
                            <span class="badge border" :class="combo.is_discount_stackable ? 'border-success text-success' : 'border-secondary text-secondary'">
                               <i class="bi" :class="combo.is_discount_stackable ? 'bi-check2-circle' : 'bi-dash-circle'"></i> 
                               {{ combo.is_discount_stackable ? 'Cộng dồn KM' : 'Không cộng dồn KM' }}
@@ -134,9 +134,11 @@
                       {{ combo.end_date ? formatDateShort(combo.end_date) : 'Không giới hạn' }}
                     </div>
                     <div v-if="combo.end_date">
-                      <span v-if="getDaysRemaining(combo.end_date) > 0" class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>Còn {{ getDaysRemaining(combo.end_date) }} ngày</span>
-                      <span v-else-if="getDaysRemaining(combo.end_date) === 0" class="badge bg-danger"><i class="bi bi-exclamation-circle me-1"></i>Hết hạn hôm nay</span>
-                      <span v-else class="badge bg-secondary bg-opacity-75"><i class="bi bi-x-circle me-1"></i>Đã hết hạn</span>
+                      <template v-for="days in [getDaysRemaining(combo.end_date)]" :key="days">
+                        <span v-if="days > 0" class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>Còn {{ days }} ngày</span>
+                        <span v-else-if="days === 0" class="badge bg-danger"><i class="bi bi-exclamation-circle me-1"></i>Hết hạn hôm nay</span>
+                        <span v-else class="badge bg-secondary bg-opacity-75"><i class="bi bi-x-circle me-1"></i>Đã hết hạn</span>
+                      </template>
                     </div>
                     <div v-else class="badge bg-success bg-opacity-10 text-success border border-success">
                       <i class="bi bi-infinity me-1"></i>Vô thời hạn
@@ -360,24 +362,24 @@ const formatCurrency = (val) => {
 };
 const formatDateTime = (dateString) => {
     if (!dateString) return '';
-    const d = new Date(dateString);
+    const d = new Date(dateString.replace(' ', 'T'));
     return `${d.toLocaleDateString('vi-VN')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 };
 
 const formatDateShort = (dateString) => {
     if (!dateString) return '';
-    const d = new Date(dateString);
+    const d = new Date(dateString.replace(' ', 'T'));
     return d.toLocaleDateString('vi-VN');
 };
 
 const getDaysRemaining = (endDateString) => {
     if (!endDateString) return null;
-    const end = new Date(endDateString);
+    const end = new Date(endDateString.replace(' ', 'T'));
     const now = new Date();
     end.setHours(0, 0, 0, 0);
     now.setHours(0, 0, 0, 0);
     const diffTime = end - now;
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.round(diffTime / (1000 * 60 * 60 * 24));
 };
 
 const getGenderLabel = (val) => {
