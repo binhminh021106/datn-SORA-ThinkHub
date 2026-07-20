@@ -27,7 +27,7 @@
               <div
                 class="w-100 h-100 position-absolute top-0 start-0 d-flex flex-column align-items-center justify-content-center z-index-2">
                 <div class="home-hero-copy text-center">
-                  <span class="hero-kicker">Trang Sức Cao Cấp SORA</span>
+                  <span class="kicker-base hero-kicker">Trang Sức Cao Cấp SORA</span>
                   <h1 class="font-serif" v-html="formatBannerTitle(banner.title)"></h1>
                   <a v-if="banner.target_url" :href="banner.target_url" class="editorial-btn text-decoration-none">Khám
                     phá ngay</a>
@@ -54,7 +54,7 @@
           <div
             class="w-100 h-100 position-absolute top-0 start-0 d-flex flex-column align-items-center justify-content-center z-index-2">
             <div class="home-hero-copy text-center">
-              <span class="hero-kicker">Trang Sức Cao Cấp SORA</span>
+              <span class="kicker-base hero-kicker">Trang Sức Cao Cấp SORA</span>
               <h1 class="font-serif">Tỏa Sáng Cùng<br>Vẻ Đẹp Đích Thực</h1>
               <router-link :to="{ name: 'shop' }" class="editorial-btn text-decoration-none">Khám phá bộ sưu
                 tập</router-link>
@@ -101,7 +101,7 @@
               </div>
             </div>
             <div class="story-copy">
-              <span class="section-kicker">Di sản SORA</span>
+              <span class="kicker-base section-kicker">Di sản SORA</span>
               <h2 class="display-4 font-serif text-main fw-bold mb-3" style="font-size: clamp(32px, 8vw, 60px);">Thanh lịch trong từng dấu ấn.</h2>
               <p>SORA gửi gắm vẻ đẹp tinh tế vào từng thiết kế, để mỗi món trang sức trở thành kỷ vật đồng hành cùng
                 phong cách và những khoảnh khắc đáng nhớ.</p>
@@ -117,7 +117,7 @@
       <section class="editorial-section top-selling-editorial" style="background-color: #fdfaf7; padding-top: 4rem;" v-if="topSellingProducts.length > 0">
         <div class="container products-container">
           <div class="section-heading text-center mb-5" style="max-width: 1000px;">
-            <span class="section-kicker"><i class="bi bi-fire me-1"></i> Bestsellers</span>
+            <span class="kicker-base section-kicker"><i class="bi bi-fire me-1"></i> Bestsellers</span>
             <h2 class="fs-3 font-serif text-main fw-bold text-md-nowrap mb-4">Kiệt Tác Được Khao Khát Nhất</h2>
           </div>
 
@@ -149,7 +149,7 @@
       <section class="editorial-section combos-editorial" v-if="data.combos && data.combos.length > 0">
         <div class="container-fluid px-0 combos-container">
           <div class="section-heading text-center mb-1">
-            <span class="section-kicker">Ưu Đãi Đặc Quyền</span>
+            <span class="kicker-base section-kicker">Ưu Đãi Đặc Quyền</span>
             <h2 class="fs-3 font-serif text-main fw-bold text-md-nowrap mb-4">Bộ Sưu Tập Hoàn Hảo</h2>
           </div>
 
@@ -161,7 +161,7 @@
       <section class="editorial-section products-editorial" v-if="featuredProducts.length > 0">
         <div class="container products-container">
           <div class="section-heading text-center mb-4">
-            <span class="section-kicker">Bộ Sưu Tập Mới</span>
+            <span class="kicker-base section-kicker">Bộ Sưu Tập Mới</span>
             <h2 class="fs-3 font-serif text-main fw-bold mb-4">Đón Chào Những Thiết Kế Mới Nhất Từ SORA</h2>
           </div>
 
@@ -199,7 +199,7 @@
             <!-- HÀNG 1: Text trái - Ảnh phải -->
             <div class="craft-row-top">
               <div class="craft-copy">
-                <span class="section-kicker">Nghệ thuật chế tác</span>
+                <span class="kicker-base section-kicker">Nghệ thuật chế tác</span>
                 <h2 class="fs-3 font-serif text-main fw-bold mb-3 text-capitalize">Tinh Xảo Từ Chất Liệu Đến Đường Nét.</h2>
                 <div class="craft-line" v-for="(item, index) in craftItems" :key="`craft-${index}`">
                   <i class="bi bi-diamond-fill craft-line-icon" aria-hidden="true"></i>
@@ -243,7 +243,7 @@
 
         <div class="container position-relative z-index-2">
           <div class="section-heading text-center text-white">
-            <span class="section-kicker">Đặc Quyền SORA</span>
+            <span class="kicker-base section-kicker">Đặc Quyền SORA</span>
             <h2 class="fs-3 font-serif fw-bold mb-4 text-capitalize">Sự Chăm Sóc Tận Tâm Cho Mọi Nhu Cầu</h2>
           </div>
           <div class="expertise-grid">
@@ -264,7 +264,7 @@
       <section class="editorial-section gallery-editorial" v-if="galleryDisplayImages.length > 0">
         <div class="container narrow-container">
           <div class="section-heading text-center">
-            <span class="section-kicker">Khoảnh Khắc Khách Hàng</span>
+            <span class="kicker-base section-kicker">Khoảnh Khắc Khách Hàng</span>
             <h2 class="fs-3 font-serif text-main fw-bold mb-4 text-capitalize">Lý Do Khách Hàng Luôn Tin Chọn SORA</h2>
           </div>
 
@@ -296,7 +296,7 @@
         <div class="container news-container">
           <div class="news-heading">
             <div>
-              <span class="section-kicker">Tạp Chí SORA</span>
+              <span class="kicker-base section-kicker">Tạp Chí SORA</span>
               <h2 class="fs-3 font-serif text-main fw-bold mb-4 text-capitalize">Kiến Thức & Cảm Hứng Trang Sức</h2>
             </div>
             <router-link :to="{ name: 'news' }" class="editorial-btn text-decoration-none">Xem tạp chí</router-link>
@@ -312,7 +312,7 @@
         <img :src="getImageUrl(bottomCtaImage)" alt="SORA radiance" @error="handleImageError">
         <div class="bottom-cta-overlay"></div>
         <div class="bottom-cta-copy">
-          <span class="section-kicker">Tuyển chọn từ SORA</span>
+          <span class="kicker-base section-kicker">Tuyển chọn từ SORA</span>
           <h2 class="display-4 font-serif fw-bold mb-3 text-white" style="font-size: clamp(40px, 5vw, 60px);">Vẻ Đẹp Rạng Ngời<br>Đích Thực</h2>
           <p>Chọn món trang sức dành riêng cho phong cách của bạn.</p>
           <router-link :to="{ name: 'shop' }" class="editorial-btn text-decoration-none">Mua sắm ngay</router-link>
@@ -893,31 +893,27 @@ onUnmounted(() => {
   padding: 2rem;
 }
 
-.section-kicker {
+.kicker-base {
   display: block;
   font-family: 'Oswald', sans-serif;
   font-size: 0.9rem;
   letter-spacing: 3px;
   text-transform: uppercase;
-  color: var(--sora-primary);
   margin-bottom: 0.75rem;
   font-weight: 700;
 }
 
+.section-kicker {
+  color: var(--sora-primary);
+}
+
 .hero-kicker {
-  display: block;
-  font-family: 'Oswald', sans-serif;
-  font-size: 0.9rem;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  margin-bottom: 0.75rem;
-  font-weight: 700;
   color: white;
   text-shadow: 1px 2px 4px rgba(0, 0, 0, 0.9), 0 0 12px rgba(0, 0, 0, 0.6);
 }
 
 .home-hero-copy h1 {
-  font-size: 70px;
+  font-size: clamp(2.4rem, 5vw, 4.4rem);
   line-height: 1.1;
   margin-bottom: 1.5rem;
   text-transform: uppercase;
@@ -1040,9 +1036,6 @@ onUnmounted(() => {
   transition: width 0.4s ease;
 }
 
-.hero-side-card:hover span::after {
-  width: 80px;
-}
 
 .hero-card-left {
   left: 10vw;
