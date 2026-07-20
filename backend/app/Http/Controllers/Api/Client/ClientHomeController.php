@@ -20,7 +20,7 @@ class ClientHomeController extends Controller
     public function index()
     {
         try {
-            // LẤY DỮ LIỆU TỪ CACHE (Hoặc truy vấn DB nếu chưa có Cache) - Tối ưu cực mạnh
+            // LẤY DỮ LIỆU TỪ CACHE
             $data = Cache::remember('sora_home_data_v4', 3600, function () {
                 $result = [
                     'banners' => [],
@@ -40,7 +40,7 @@ class ClientHomeController extends Controller
 
                 // 2. Lấy Coupons
                 $result['coupons'] = Coupon::where('status', 'active')
-                    ->whereNull('user_id') // SỬA LỖI Ở ĐÂY: Chỉ lấy các mã chung, không lấy mã sinh nhật cá nhân
+                    ->whereNull('user_id')
                     ->where(function ($q) {
                         $q->whereNull('expires_at')
                             ->orWhere('expires_at', '>=', now());
