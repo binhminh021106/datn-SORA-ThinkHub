@@ -180,7 +180,7 @@
 
           <!-- CỘT PHẢI: Bảng Tính Toán & Ảnh -->
           <div class="col-lg-4">
-            <div class="sticky-top custom-scrollbar px-1 pb-3 sticky-desktop-only">
+            <div class="px-1 pb-3">
             <div class="card border-0 shadow-sm rounded-4 mb-4 text-center p-4">
               <h6 class="fw-bold mb-3 text-start"><i class="bi bi-image me-2"></i>Ảnh Đại Diện <span class="text-danger">*</span></h6>
               <div class="mb-3 position-relative border rounded-4 overflow-hidden bg-white mx-auto shadow-sm" style="width: 100%; height: 200px;">
@@ -212,7 +212,7 @@
                 <div class="mb-4">
                   <label class="form-label fw-bold text-dark small">Mức giảm</label>
                   <div class="input-group shadow-sm">
-                    <input type="number" class="form-control fw-bold text-danger text-end" v-model.number="form.discount_value" min="0" required>
+                    <input type="text" class="form-control fw-bold text-dark text-end fs-5" v-model="displayDiscountValue" required placeholder="0">
                     <span class="input-group-text fw-bold bg-white">{{ form.discount_type === 'percentage' ? '%' : 'VNĐ' }}</span>
                   </div>
                 </div>
@@ -249,15 +249,28 @@
                   <label class="form-label fw-bold text-dark small">Bắt đầu bán từ</label>
                   <div class="input-group shadow-sm">
                     <span class="input-group-text bg-white text-brand border-end-0"><i class="bi bi-calendar-event"></i></span>
-                    <input type="datetime-local" id="start_date" class="form-control fw-semibold border-start-0 ps-0 bg-white cursor-pointer" v-model="form.start_date">
+                    <input type="text" id="start_date" class="form-control fw-semibold border-start-0 ps-0 bg-white cursor-pointer" v-model="form.start_date" placeholder="Chọn ngày bắt đầu">
                   </div>
+                  <div class="d-flex gap-2 mt-2">
+                    <button type="button" class="btn btn-sm btn-outline-brand flex-grow-1" @click="setToday('start')">Hôm nay</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger flex-grow-1" @click="clearDate('start')">Xóa</button>
+                  </div>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label fw-bold text-dark small">Mở bán trong (Số ngày)</label>
+                  <input type="number" class="form-control form-control-sm" v-model.number="comboDurationDays" @input="calcEndDateFromDuration" min="1" placeholder="Ví dụ: 7 (Bỏ trống = Vô thời hạn)">
                 </div>
 
                 <div class="mb-3">
                   <label class="form-label fw-bold text-dark small">Kết thúc vào</label>
                   <div class="input-group shadow-sm">
                     <span class="input-group-text bg-white text-danger border-end-0"><i class="bi bi-calendar-x"></i></span>
-                    <input type="datetime-local" id="end_date" class="form-control fw-semibold border-start-0 ps-0 bg-white cursor-pointer" v-model="form.end_date">
+                    <input type="text" id="end_date" class="form-control fw-semibold border-start-0 ps-0 bg-white cursor-pointer" v-model="form.end_date" placeholder="Để trống = Không bao giờ kết thúc">
+                  </div>
+                  <div class="d-flex gap-2 mt-2">
+                    <button type="button" class="btn btn-sm btn-outline-brand flex-grow-1" @click="setToday('end')">Hôm nay</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger flex-grow-1" @click="clearDate('end')">Xóa</button>
                   </div>
                 </div>
                 <hr class="opacity-25 border-secondary my-3">
@@ -493,11 +506,41 @@ const originalTotal = computed(() => {
         const variant = item.available_variants.find(v => v.id === item.product_variant_id);
         if (variant) { total += parseFloat(variant.price) * item.quantity; return; }
       }
-      const product = eligibleProducts.value.find(p => p.id === item.product_id);
-      if (product) total += parseFloat(product.base_price) * item.quantity;
+      if (item.available_variants && item.available_variants.length > 0) {
+        const maxPrice = Math.max(...item.available_variants.map(v => parseFloat(v.price)));
+        total += maxPrice * item.quantity;
+      } else {
+        const product = eligibleProducts.value.find(p => p.id === item.product_id);
+        if (product) total += parseFloat(product.base_price) * item.quantity;
+      }
     }
   });
   return total;
+});
+
+const displayDiscountValue = computed({
+  get() {
+    if (!form.value.discount_value) return '';
+    if (form.value.discount_type === 'fixed_amount') {
+      return new Intl.NumberFormat('vi-VN').format(form.value.discount_value);
+    }
+    return form.value.discount_value;
+  },
+  set(val) {
+    if (!val) {
+      form.value.discount_value = 0;
+      return;
+    }
+    let numStr = String(val).replace(/[^0-9]/g, '');
+    let num = parseInt(numStr, 10);
+    if (isNaN(num)) num = 0;
+    
+    form.value.discount_value = num;
+  }
+});
+
+watch(() => form.value.discount_type, () => {
+    form.value.discount_value = 0;
 });
 
 const finalEstimatedPrice = computed(() => {
@@ -568,16 +611,102 @@ const loadFlatpickr = () => {
   }
 };
 
+const comboDurationDays = ref(null);
+
+const setToday = (field) => {
+    const now = new Date();
+    const tzoffset = now.getTimezoneOffset() * 60000;
+    const localISOTime = new Date(now.getTime() - tzoffset).toISOString().slice(0,16).replace('T', ' ');
+    if (field === 'start') {
+        form.value.start_date = localISOTime;
+        if (window.fpStart) window.fpStart.setDate(localISOTime);
+        if (window.fpEnd) window.fpEnd.set('minDate', localISOTime);
+        calcEndDateFromDuration();
+    } else {
+        form.value.end_date = localISOTime;
+        if (window.fpEnd) window.fpEnd.setDate(localISOTime);
+        // Recalculate duration if start date exists
+        if (form.value.start_date) {
+            const start = new Date(form.value.start_date.replace(' ', 'T'));
+            const end = new Date(localISOTime.replace(' ', 'T'));
+            const diffTime = end - start;
+            if (diffTime > 0) comboDurationDays.value = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        }
+    }
+};
+
+const clearDate = (field) => {
+    if (field === 'start') {
+        form.value.start_date = '';
+        if (window.fpStart) window.fpStart.clear();
+        if (window.fpEnd) window.fpEnd.set('minDate', "today");
+    } else {
+        form.value.end_date = '';
+        if (window.fpEnd) window.fpEnd.clear();
+        comboDurationDays.value = null;
+    }
+};
+
+const calcEndDateFromDuration = () => {
+    if (comboDurationDays.value && form.value.start_date) {
+        const start = new Date(form.value.start_date.replace(' ', 'T'));
+        start.setDate(start.getDate() + comboDurationDays.value);
+        const tzoffset = start.getTimezoneOffset() * 60000;
+        const endStr = new Date(start.getTime() - tzoffset).toISOString().slice(0,16).replace('T', ' ');
+        form.value.end_date = endStr;
+        if (window.fpEnd) window.fpEnd.setDate(endStr);
+    } else if (!comboDurationDays.value) {
+        form.value.end_date = '';
+        if (window.fpEnd) window.fpEnd.clear();
+    }
+};
+
 const initPickers = () => {
+  if (window.flatpickr && window.flatpickr.l10ns && window.flatpickr.l10ns.default) {
+      window.flatpickr.l10ns.default.months = {
+          shorthand: ['Th.1', 'Th.2', 'Th.3', 'Th.4', 'Th.5', 'Th.6', 'Th.7', 'Th.8', 'Th.9', 'Th.10', 'Th.11', 'Th.12'],
+          longhand: ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'],
+      };
+      window.flatpickr.l10ns.default.weekdays = {
+          shorthand: ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'],
+          longhand: ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'],
+      };
+  }
+
   const config = {
     enableTime: true,
     time_24hr: true,
     dateFormat: "Y-m-d H:i",
     disableMobile: true,
+    allowInput: true,
   };
   try {
-    window.flatpickr("#start_date", { ...config, onChange: (dates, str) => form.value.start_date = str });
-    window.flatpickr("#end_date", { ...config, onChange: (dates, str) => form.value.end_date = str });
+    window.fpStart = window.flatpickr("#start_date", { 
+        ...config, 
+        minDate: "today",
+        onChange: (dates, str) => {
+            form.value.start_date = str;
+            if (window.fpEnd) window.fpEnd.set('minDate', str);
+            calcEndDateFromDuration();
+        } 
+    });
+    window.fpEnd = window.flatpickr("#end_date", { 
+        ...config, 
+        minDate: form.value.start_date || "today",
+        onChange: (dates, str) => {
+            form.value.end_date = str;
+            if (form.value.start_date && str) {
+                const start = new Date(form.value.start_date.replace(' ', 'T'));
+                const end = new Date(str.replace(' ', 'T'));
+                const diffTime = end - start;
+                if (diffTime > 0) {
+                    comboDurationDays.value = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                }
+            } else {
+                comboDurationDays.value = null;
+            }
+        } 
+    });
   } catch (e) {
     console.warn("Flatpickr failed to init, fallback to native datetime-local");
   }
@@ -616,40 +745,64 @@ const createMutation = useMutation({
 
 const submitCombo = () => {
   if (!form.value.name || form.value.name.trim().length < 3) { Swal.fire('Lỗi', 'Tên Combo phải có ít nhất 3 ký tự.', 'warning'); return; }
-  if (form.value.discount_type === 'fixed_amount' && form.value.discount_value < 1000) { Swal.fire('Lỗi', 'Mức giảm giá tiền mặt phải từ 1.000 VNĐ trở lên.', 'warning'); return; }
-  if (form.value.discount_type === 'percentage' && form.value.discount_value < 1) { Swal.fire('Lỗi', 'Mức giảm giá phần trăm phải từ 1% trở lên.', 'warning'); return; }
+  
+  if (form.value.discount_type === 'percentage' && form.value.discount_value > 100) { Swal.fire('Cảnh báo', 'Giảm giá tối đa 100%. Không thể bán lỗ vốn!', 'error'); return; }
+  if (form.value.discount_type === 'fixed_amount' && form.value.discount_value > originalTotal.value) { Swal.fire('Cảnh báo', 'Mức giảm giá không được vượt quá Tổng giá gốc!', 'error'); return; }
+  
+  if (form.value.discount_type === 'fixed_amount' && form.value.discount_value < 1000 && form.value.discount_value > 0) { Swal.fire('Lỗi', 'Mức giảm giá tiền mặt phải từ 1.000 VNĐ trở lên.', 'warning'); return; }
+  if (form.value.discount_type === 'percentage' && form.value.discount_value < 1 && form.value.discount_value > 0) { Swal.fire('Lỗi', 'Mức giảm giá phần trăm phải từ 1% trở lên.', 'warning'); return; }
   if (!thumbnailFile.value) { Swal.fire('Lỗi', 'Vui lòng tải ảnh đại diện', 'error'); return; }
   const hasEmptyProduct = comboItems.value.some(item => !item.product_id);
   if (hasEmptyProduct) { Swal.fire('Lỗi', 'Vui lòng chọn đầy đủ Sản phẩm', 'error'); return; }
-  if (form.value.discount_type === 'percentage' && form.value.discount_value > 100) { Swal.fire('Lỗi', 'Giảm giá tối đa 100%', 'error'); return; }
 
-  const formData = new FormData();
-  formData.append('name', form.value.name);
-  formData.append('slug', form.value.slug);
-  if(form.value.description) formData.append('description', form.value.description);
-  formData.append('target_gender', form.value.target_gender);
-  if(form.value.target_age_group) formData.append('target_age_group', form.value.target_age_group);
-  if(form.value.theme) formData.append('theme', form.value.theme);
-  formData.append('discount_type', form.value.discount_type);
-  formData.append('discount_value', form.value.discount_value);
-  formData.append('is_discount_stackable', form.value.is_discount_stackable ? 1 : 0);
-  
-  if (form.value.usage_limit) formData.append('usage_limit', form.value.usage_limit);
-  
-  if (form.value.start_date) formData.append('start_date', formatToDBDate(form.value.start_date));
-  if (form.value.end_date) formData.append('end_date', formatToDBDate(form.value.end_date));
+  const proceedSubmit = () => {
+    const formData = new FormData();
+    formData.append('name', form.value.name);
+    formData.append('slug', form.value.slug);
+    if(form.value.description) formData.append('description', form.value.description);
+    formData.append('target_gender', form.value.target_gender);
+    if(form.value.target_age_group) formData.append('target_age_group', form.value.target_age_group);
+    if(form.value.theme) formData.append('theme', form.value.theme);
+    formData.append('discount_type', form.value.discount_type);
+    formData.append('discount_value', form.value.discount_value);
+    formData.append('is_discount_stackable', form.value.is_discount_stackable ? 1 : 0);
+    
+    if (form.value.usage_limit) formData.append('usage_limit', form.value.usage_limit);
+    
+    if (form.value.start_date) formData.append('start_date', formatToDBDate(form.value.start_date));
+    if (form.value.end_date) formData.append('end_date', formatToDBDate(form.value.end_date));
 
-  formData.append('status', form.value.isActive ? 'active' : 'hidden');
-  formData.append('thumbnail_image', thumbnailFile.value);
-  
-  const cleanItems = comboItems.value.map(i => ({
-      product_id: i.product_id,
-      product_variant_id: i.product_variant_id,
-      quantity: i.quantity
-  }));
-  formData.append('items_data', JSON.stringify(cleanItems));
+    formData.append('status', form.value.isActive ? 'active' : 'hidden');
+    formData.append('thumbnail_image', thumbnailFile.value);
+    
+    const cleanItems = comboItems.value.map(i => ({
+        product_id: i.product_id,
+        product_variant_id: i.product_variant_id,
+        quantity: i.quantity
+    }));
+    formData.append('items_data', JSON.stringify(cleanItems));
 
-  createMutation.mutate(formData);
+    createMutation.mutate(formData);
+  };
+
+  if (finalEstimatedPrice.value < originalTotal.value / 2) {
+    Swal.fire({
+      title: 'Cảnh báo giảm giá sâu!',
+      text: 'Bạn đang thiết lập mức giảm giá vượt quá 50% so với giá trị gốc của Combo. Bạn có chắc chắn muốn lưu?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#198754',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Đồng ý lưu',
+      cancelButtonText: 'Kiểm tra lại'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        proceedSubmit();
+      }
+    });
+  } else {
+    proceedSubmit();
+  }
 };
 
 // Gọi Flatpickr khi UI load xong nếu đang không loading query
