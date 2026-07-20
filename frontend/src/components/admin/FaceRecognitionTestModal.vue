@@ -829,11 +829,28 @@ const runFaceAction = async (action) => {
     await action();
   } catch (error) {
     const data = error.response?.data?.data;
+    const statusCode = error.response?.status;
+    const msg = error.response?.data?.message || error.message || 'Không thể xử lý khuôn mặt.';
+    
     if (data) {
       applyRecognitionData(data);
       resultType.value = 'warning';
     }
-    errorMessage.value = error.response?.data?.message || error.message || 'Không thể xử lý khuôn mặt.';
+    
+    errorMessage.value = msg;
+    
+    if (data?.action === 'blocked') {
+      stopAutoScan();
+      Swal.fire({
+        title: 'Từ chối chấm công',
+        text: msg,
+        icon: 'error',
+        confirmButtonText: 'Đã hiểu',
+        confirmButtonColor: '#dc3545'
+      }).then(() => {
+        startAutoScan();
+      });
+    }
   } finally {
     isProcessing.value = false;
     isRegistering.value = false;

@@ -529,7 +529,12 @@ const handleLogout = () => {
       user.value = null;
       isUserMenuOpen.value = false;
       cartItemCount.value = 0;
-      safeNavigate('home');
+
+      const protectedRoutes = ['cart', 'checkout', 'checkout-success', 'checkout-failed', 'profile', 'order', 'favourite', 'orderHistory'];
+      if (protectedRoutes.includes(route.name)) {
+        safeNavigate('home');
+      }
+
       Toast.fire({ icon: 'success', title: 'Đã đăng xuất' });
     }
   });
