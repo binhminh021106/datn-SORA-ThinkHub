@@ -10,8 +10,8 @@
         @click.stop="handleCompareClick"
         class="compare-btn position-absolute top-0 start-0 m-3 z-index-2 border-0 bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center"
         style="width: 38px; height: 38px; z-index: 10;"
-        :class="{ 'active': isInCompare }"
-        :title="isInCompare ? 'Bỏ so sánh' : 'Thêm so sánh'"
+        :class="{ 'active': isProductInCompare }"
+        :title="isProductInCompare ? 'Bỏ so sánh' : 'Thêm so sánh'"
       >
         <i class="bi bi-arrow-left-right fs-6 transition-colors" style="margin-top: 2px;"></i>
       </button>
@@ -158,7 +158,6 @@ const props = defineProps({
   showHoverImage: { type: Boolean, default: true },
   showBadges: { type: Boolean, default: true },
   isInWishlist: { type: Boolean, default: false },
-  isInCompare: { type: Boolean, default: false },
   shopSlug: { type: String, default: 'sora' }
 });
 
@@ -227,6 +226,10 @@ const heartIconClass = computed(() => {
 const handleQuickAddClick = () => {
   globalModalState.openQuickAdd(props.product);
 };
+
+const isProductInCompare = computed(() => {
+  return globalModalState.compareList.some(item => item.id === props.product.id);
+});
 
 const handleWishlistClick = () => {
   const token = getUserToken();
