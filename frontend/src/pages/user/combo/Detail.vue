@@ -240,13 +240,11 @@
                 <ProductCard
                   :product="product"
                   :is-in-wishlist="isInWishlist(product.id)"
-                  :is-in-compare="isInCompare(product.id)"
                   :show-wishlist="true"
                   :show-compare="true"
                   :show-add-to-cart="true"
                   :hover-add-to-cart="true"
                   @toggle-wishlist="toggleWishlist"
-                  @toggle-compare="handleToggleCompare"
                   @add-to-cart="openQuickAdd"
                 />
               </swiper-slide>
@@ -261,12 +259,6 @@
           </div>
         </div>
       </div>
-
-      <CompareModal 
-        ref="compareModalRef" 
-        shop-slug="sora" 
-        @update-list="compareList = $event" 
-      />
 
       <div class="modal fade" id="quickAddModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -337,7 +329,6 @@ import { Navigation } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import ProductCard from '@/components/ui/ProductCard.vue';
-import CompareModal from '@/components/ui/CompareModal.vue';
 import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener.js';
 import SoraComboDetailSkeleton from '@/components/ui/SoraComboDetailSkeleton.vue';
 import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
@@ -551,15 +542,6 @@ const toggleWishlist = async (prod) => {
   } finally {
     isTogglingFav.value = null; 
   }
-};
-
-const compareModalRef = ref(null);
-const compareList = ref([]); 
-
-const isInCompare = (id) => compareList.value.some(item => item.id === id);
-
-const handleToggleCompare = (prod) => {
-  if (compareModalRef.value) compareModalRef.value.toggleCompare(prod);
 };
 
 const getSelectedVariant = (itemId) => {
