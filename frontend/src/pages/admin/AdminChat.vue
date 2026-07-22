@@ -44,7 +44,13 @@
           </div>
 
           <div v-for="user in filteredContacts" :key="user.id" class="contact-item"
-            :class="{ 'contact-active': activeUserId === user.id }" @click="selectUser(user)">
+            role="button"
+            tabindex="0"
+            :aria-pressed="activeUserId === user.id"
+            :class="{ 'contact-active': activeUserId === user.id }"
+            @click="selectUser(user)"
+            @keydown.enter="selectUser(user)"
+            @keydown.space.prevent="selectUser(user)">
             <div class="contact-avatar">
               {{ (user.fullName || user.email || 'U').charAt(0).toUpperCase() }}
             </div>
@@ -254,7 +260,9 @@
                 <input type="text" v-model="newMessage" class="message-input"
                   placeholder="Nhập tin nhắn trả lời khách hàng..." :disabled="isSending"
                   @keydown.enter.prevent="sendMessage" ref="messageInputRef">
-                <button type="submit" class="send-btn" :disabled="(!newMessage.trim() && !selectedFile) || isSending">
+                <button type="submit" class="send-btn"
+                  :aria-label="isSending ? 'Đang gửi tin nhắn' : 'Gửi tin nhắn'"
+                  :disabled="(!newMessage.trim() && !selectedFile) || isSending">
                   <i v-if="!isSending" class="bi bi-send-fill"></i>
                   <div v-else class="spinner-border spinner-border-sm" role="status"></div>
                 </button>

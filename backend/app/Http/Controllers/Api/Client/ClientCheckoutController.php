@@ -1113,67 +1113,73 @@ class ClientCheckoutController extends Controller
 
     private function cancelOrderAndRestoreStock($orderCode)
     {
-        $order = Order::with('items')->where('order_code', $orderCode)->first();
+        DB::transaction(function () use ($orderCode) {
+            $order = Order::with('items')->where('order_code', $orderCode)->lockForUpdate()->first();
 
-        if ($order && $order->status === 'pending' && $order->payment_status === 'unpaid') {
-            $order->update(['status' => 'cancelled', 'payment_status' => 'failed']);
+            if (!$order || $order->status === 'cancelled') {
+                return; // Idempotent check
+            }
 
-            TierServiceUsage::where('order_id', $order->id)
-                ->where('service_type', 'tier_discount')
-                ->delete();
+            if ($order->status === 'pending' && $order->payment_status === 'unpaid') {
+                $order->update(['status' => 'cancelled', 'payment_status' => 'failed']);
 
-            $this->restoreCouponUsage($order);
-            \App\Models\CommissionHistory::where('order_id', $order->id)
-                ->where('status', 'pending')
-                ->delete();
+                TierServiceUsage::where('order_id', $order->id)
+                    ->where('service_type', 'tier_discount')
+                    ->delete();
 
-            $updatedProductIds = [];
-            $updatedComboIds = [];
+                $this->restoreCouponUsage($order);
+                \App\Models\CommissionHistory::where('order_id', $order->id)
+                    ->where('status', 'pending')
+                    ->delete();
 
-            foreach ($order->items as $item) {
-                if ($item->product_variant_id) {
-                    $variant = ProductVariant::find($item->product_variant_id);
-                    if ($variant) {
-                        $variant->increment('stock_quantity', $item->quantity);
-                        $updatedProductIds[] = $variant->product_id;
-                    }
-                } elseif ($item->combo_id) {
-                    $updatedComboIds[] = $item->combo_id;
-                    Combo::where('id', $item->combo_id)
-                        ->whereNotNull('usage_limit')
-                        ->increment('usage_limit', $item->quantity);
+                $updatedProductIds = [];
+                $updatedComboIds = [];
 
-                    if (is_array($item->combo_selections)) {
-                        foreach ($item->combo_selections as $selection) {
-                            $vId = $selection['selected_variant_id'] ?? null;
-                            if ($vId) {
-                                $variant = ProductVariant::find($vId);
-                                if ($variant) {
-                                    $variant->increment('stock_quantity', $item->quantity);
-                                    $updatedProductIds[] = $variant->product_id;
+                foreach ($order->items as $item) {
+                    if ($item->product_variant_id) {
+                        $variant = ProductVariant::find($item->product_variant_id);
+                        if ($variant) {
+                            $variant->increment('stock_quantity', $item->quantity);
+                            $updatedProductIds[] = $variant->product_id;
+                        }
+                    } elseif ($item->combo_id) {
+                        $updatedComboIds[] = $item->combo_id;
+                        Combo::where('id', $item->combo_id)
+                            ->whereNotNull('usage_limit')
+                            ->increment('usage_limit', $item->quantity);
+
+                        if (is_array($item->combo_selections)) {
+                            foreach ($item->combo_selections as $selection) {
+                                $vId = $selection['selected_variant_id'] ?? null;
+                                if ($vId) {
+                                    $variant = ProductVariant::find($vId);
+                                    if ($variant) {
+                                        $variant->increment('stock_quantity', $item->quantity);
+                                        $updatedProductIds[] = $variant->product_id;
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    $combo = Combo::with('items')->find($item->combo_id);
-                    if ($combo) {
-                        foreach ($combo->items as $cItem) {
-                            if ($cItem->product_variant_id) {
-                                $variant = ProductVariant::find($cItem->product_variant_id);
-                                if ($variant) {
-                                    $totalQtyToRestore = $item->quantity * $cItem->quantity;
-                                    $variant->increment('stock_quantity', $totalQtyToRestore);
-                                    $updatedProductIds[] = $variant->product_id;
+                        $combo = Combo::with('items')->find($item->combo_id);
+                        if ($combo) {
+                            foreach ($combo->items as $cItem) {
+                                if ($cItem->product_variant_id) {
+                                    $variant = ProductVariant::find($cItem->product_variant_id);
+                                    if ($variant) {
+                                        $totalQtyToRestore = $item->quantity * $cItem->quantity;
+                                        $variant->increment('stock_quantity', $totalQtyToRestore);
+                                        $updatedProductIds[] = $variant->product_id;
+                                    }
                                 }
                             }
                         }
                     }
                 }
+                
+                $this->broadcastStockUpdates($updatedProductIds, $updatedComboIds);
             }
-            
-            $this->broadcastStockUpdates($updatedProductIds, $updatedComboIds);
-        }
+        });
     }
 
     private function broadcastStockUpdates(array $updatedProductIds, array $updatedComboIds): void
@@ -1199,10 +1205,14 @@ class ClientCheckoutController extends Controller
             return;
         }
 
+        /** @var \App\Models\Coupon|null $coupon */
         $coupon = Coupon::withTrashed()->find($order->coupon_id);
         if (!$coupon) {
             return;
         }
+
+        // Kiểm tra xem coupon có vừa chạm mức limit trước khi rollback không
+        $wasAtLimit = ($coupon->usage_limit !== null && $coupon->usage_count == $coupon->usage_limit);
 
         if ((int) $coupon->usage_count > 0) {
             $coupon->decrement('usage_count');
@@ -1213,13 +1223,13 @@ class ClientCheckoutController extends Controller
             $coupon->is_used = 0;
         }
 
-        // Khôi phục trạng thái nếu coupon đã bị xóa/ẩn do hết lượt
-        if ($coupon->usage_limit === null || $coupon->usage_count < $coupon->usage_limit) {
+        // Chỉ khôi phục trạng thái nếu coupon vừa bị khóa/xóa tự động do chạm limit
+        if ($wasAtLimit) {
             if (!$coupon->expires_at || $coupon->expires_at->isFuture()) {
-                if ($coupon->trashed()) {
+                if ($coupon->trashed() && ($coupon->type === 'birthday' || !is_null($coupon->user_id))) {
                     $coupon->restore();
                 }
-                if ($coupon->status === 'inactive') {
+                if ($coupon->status === 'inactive' && is_null($coupon->user_id)) {
                     $coupon->status = 'active';
                 }
             }

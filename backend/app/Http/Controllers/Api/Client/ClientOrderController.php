@@ -243,7 +243,10 @@ class ClientOrderController extends Controller
                     $coupon = Coupon::where('code', $request->coupon_code)->lockForUpdate()->first();
                     
                     if (!$coupon || $coupon->status !== 'active') {
-                        throw new \Exception("Mã giảm giá không hợp lệ hoặc đã hết hạn.");
+                        throw new \Exception("Mã giảm giá không hợp lệ hoặc đã bị khóa.");
+                    }
+                    if ($coupon->expires_at !== null && now()->greaterThanOrEqualTo($coupon->expires_at)) {
+                        throw new \Exception("Mã giảm giá đã hết hạn sử dụng.");
                     }
                     if ($coupon->usage_limit !== null && $coupon->usage_count >= $coupon->usage_limit) {
                         throw new \Exception("Mã giảm giá đã hết lượt sử dụng.");
