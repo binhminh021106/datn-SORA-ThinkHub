@@ -739,7 +739,7 @@ const setToday = (field) => {
         form.value.start_date = localISOTime;
         if (window.fpStart) window.fpStart.setDate(localISOTime);
         if (window.fpEnd) window.fpEnd.set('minDate', localISOTime);
-        calcEndDateFromDuration();
+        if (comboDurationDays.value) calcEndDateFromDuration();
     } else {
         form.value.end_date = localISOTime;
         if (window.fpEnd) window.fpEnd.setDate(localISOTime);
@@ -802,15 +802,17 @@ const initPickers = () => {
     window.fpStart = window.flatpickr("#start_date", { 
         ...config, 
         minDate: "today",
+        allowInvalidPreload: true,
         onChange: (dates, str) => {
             form.value.start_date = str;
             if (window.fpEnd) window.fpEnd.set('minDate', str);
-            calcEndDateFromDuration();
+            if (comboDurationDays.value) calcEndDateFromDuration();
         } 
     });
     window.fpEnd = window.flatpickr("#end_date", { 
         ...config, 
         minDate: form.value.start_date || "today",
+        allowInvalidPreload: true,
         onChange: (dates, str) => {
             form.value.end_date = str;
             if (form.value.start_date && str) {
