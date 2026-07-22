@@ -179,11 +179,14 @@ const queryClient = useQueryClient();
 
 const getHeaders = (isMultipart = false) => {
     const token = localStorage.getItem('admin_token') || localStorage.getItem('adminToken');
-    return {
+    const headers = {
         'Accept': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        ...(isMultipart ? { 'Content-Type': 'multipart/form-data' } : { 'Content-Type': 'application/json' })
+        'Authorization': `Bearer ${token}`
     };
+    if (!isMultipart) {
+        headers['Content-Type'] = 'application/json';
+    }
+    return headers;
 };
 
 const CATEGORIES = [

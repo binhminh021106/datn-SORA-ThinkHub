@@ -320,13 +320,13 @@
                                             formatPrice(getItemPrice(item)) }}</div>
 
                                         <div class="input-group input-group-sm" style="width: 85px;">
-                                            <button class="btn btn-outline-secondary rounded-0 px-2 border-light-subtle"
+                                            <button class="btn qty-btn rounded-0 px-2"
                                                 @click="updateQuantity(item, -1)"
                                                 :disabled="item.quantity <= 1 || item.isUpdating">-</button>
                                             <input type="text"
                                                 class="form-control text-center rounded-0 border-light-subtle px-1 fw-bold font-oswald text-dark"
                                                 :value="item.quantity" readonly>
-                                            <button class="btn btn-outline-secondary rounded-0 px-2 border-light-subtle"
+                                            <button class="btn qty-btn rounded-0 px-2"
                                                 @click="updateQuantity(item, 1)" :disabled="item.isUpdating">+</button>
                                         </div>
                                     </div>
@@ -387,7 +387,7 @@
                                 </div>
                                 <span class="badge bg-gold text-dark border rounded-pill font-oswald px-3 py-2"
                                     v-if="tierDiscountInfo.remaining_quota > 0">
-                                    TỰ ĐỘNG ÁP DỤNG
+                                    ĐÃ ÁP DỤNG
                                 </span>
                             </div>
                         </div>
@@ -417,13 +417,13 @@
                             <div v-if="discountAmount > 0"
                                 class="d-flex justify-content-between mb-3 text-success font-oswald tracking-wide text-uppercase small fw-bold">
                                 <span>Ưu đãi Voucher:</span>
-                                <span>- {{ formatPrice(discountAmount) }}</span>
+                                <span>- {{ formatPrice(discountAmount) }} <span class="ms-1 fw-normal opacity-75">({{ selectedCoupon?.type === 'fixed' ? formatPrice(selectedCoupon.value) : selectedCoupon?.value + '%' }})</span></span>
                             </div>
 
                             <div v-if="tierDiscountAmount > 0"
                                 class="d-flex justify-content-between mb-3 text-success font-oswald tracking-wide text-uppercase small fw-bold">
                                 <span>Ưu đãi hạng {{ tierDiscountInfo?.tier_name }}:</span>
-                                <span>- {{ formatPrice(tierDiscountAmount) }}</span>
+                                <span>- {{ formatPrice(tierDiscountAmount) }} <span class="ms-1 fw-normal opacity-75">({{ tierDiscountInfo?.discount_percent }}%)</span></span>
                             </div>
 
                             <div
@@ -489,7 +489,7 @@
                                         <span class="badge bg-dark rounded-pill font-monospace mb-2">{{ coupon.code
                                             }}</span>
                                         <div v-if="selectedCoupon?.id === coupon.id" class="text-success mt-2"><i
-                                                class="bi bi-check-circle-fill fs-3 shadow-sm rounded-circle bg-white"></i>
+                                                class="bi bi-check-circle-fill fs-3 shadow-sm rounded-circle bg-white lh-1 d-inline-block" style="width: max-content;"></i>
                                         </div>
                                     </div>
                                 </div>
@@ -1391,5 +1391,23 @@ onUnmounted(() => {
     border-bottom: none !important;
     padding-bottom: 0 !important;
     margin-bottom: 0 !important;
+}
+
+.qty-btn {
+    background-color: transparent;
+    border-color: #dee2e6;
+    color: #212529;
+    transition: all 0.2s ease;
+}
+
+.qty-btn:hover:not(:disabled) {
+    background-color: #f8f9fa;
+    border-color: #dee2e6;
+    color: #212529;
+}
+
+.qty-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 </style>
