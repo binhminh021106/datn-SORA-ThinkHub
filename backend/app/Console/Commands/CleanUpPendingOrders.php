@@ -35,7 +35,19 @@ class CleanUpPendingOrders extends Command
     private function cancelOrderAndRestoreStock(Order $order): void
     {
         DB::transaction(function () use ($order) {
-            $order->update(['status' => 'cancelled', 'payment_status' => 'failed']);
+            // Re-query with lockForUpdate to prevent race conditions during cleanup
+            $lockedOrder = Order::where('id', $order->id)
+                ->where('status', 'pending')
+                ->where('payment_status', 'unpaid')
+                ->where('created_at', '<', now()->subMinutes(15))
+                ->lockForUpdate()
+                ->first();
+
+            if (!$lockedOrder) {
+                return; // Order was paid or processed concurrently
+            }
+
+            $lockedOrder->update(['status' => 'cancelled', 'payment_status' => 'failed']);
 
             TierServiceUsage::where('order_id', $order->id)
                 ->where('service_type', 'tier_discount')
@@ -131,13 +143,9 @@ class CleanUpPendingOrders extends Command
             $coupon->refresh();
         }
 
-        if ($coupon->type === 'birthday') {
-            $coupon->is_used = 0;
-        }
-
         if ($wasAtLimit) {
             if (!$coupon->expires_at || $coupon->expires_at->isFuture()) {
-                if ($coupon->trashed() && ($coupon->type === 'birthday' || !is_null($coupon->user_id))) {
+                if ($coupon->trashed() && !is_null($coupon->user_id)) {
                     $coupon->restore();
                 }
                 if ($coupon->status === 'inactive' && is_null($coupon->user_id)) {

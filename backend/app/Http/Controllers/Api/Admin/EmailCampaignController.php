@@ -128,13 +128,15 @@ public function settings()
         $setting = EmailCampaignSetting::current();
         
         \Illuminate\Support\Facades\DB::transaction(function () use ($setting, $validated) {
+            $oldTiers = $setting->birthday_tiers ?? [];
+            
             $setting->update([
                 'is_auto_birthday' => (bool) ($validated['is_auto_birthday'] ?? false),
                 'birthday_subject' => $validated['birthday_subject'],
                 'birthday_content' => $validated['birthday_content'] ?? '',
                 'birthday_tiers'   => $validated['tiers'],
             ]);
-            $this->syncBirthdayVouchers($validated['tiers']);
+            $this->syncBirthdayVouchers($oldTiers, $validated['tiers']);
         });
 
         return response()->json([
@@ -143,14 +145,22 @@ public function settings()
             'data' => $this->settings()->getData()->data,
         ]);
     }
-    private function syncBirthdayVouchers(array $tiers): void
+    private function syncBirthdayVouchers(array $oldTiers, array $newTiers): void
     {
-        foreach ($tiers as $tier) {
+        $oldCodes = array_filter(array_column($oldTiers, 'voucherCode'));
+        $newCodes = array_filter(array_column($newTiers, 'voucherCode'));
+        
+        $removedCodes = array_diff($oldCodes, $newCodes);
+        if (!empty($removedCodes)) {
+            Coupon::whereIn('code', $removedCodes)->update(['status' => 'inactive']);
+        }
+
+        foreach ($newTiers as $tier) {
             if (empty($tier['voucherCode'])) {
                 continue;
             }
 
-            $coupon = Coupon::query()->firstOrNew([
+            $coupon = Coupon::firstOrNew([
                 'code' => $tier['voucherCode']
             ]);
 
@@ -164,6 +174,7 @@ public function settings()
             
             $coupon->name = 'Quà tặng sinh nhật hạng: ' . $tier['name'];
             $coupon->type = $tier['type'];
+            $coupon->tier_id = $tier['tier_id'];
             $coupon->value = $tier['value'];
             $coupon->min_spend = $tier['min_spend'];
             $coupon->usage_limit = $tier['usage_limit'];

@@ -71,30 +71,50 @@ class ClientCheckoutController extends Controller
                 // 1. Lấy các mã Public (Không gắn user cụ thể VÀ không phải mã sinh nhật)
                 $q->where(function ($subQ) {
                     $subQ->whereNull('user_id')
-                         ->where('type', '!=', 'birthday');
+                         ->where('name', 'NOT LIKE', '%sinh nhật%');
                 });
 
-                // 2. Hoặc lấy mã Cá nhân (Cấp riêng cho user này, bao gồm cả mã sinh nhật)
+                // 2. Hoặc lấy mã Cá nhân (Cấp riêng cho user này)
                 if ($user) {
                     $q->orWhere('user_id', $user->id);
+                    
+                    // 3. Hoặc mã cấp riêng cho hạng thành viên của user này (như mã sinh nhật)
+                    if ($user->tier_id) {
+                        $q->orWhere(function ($subQ) use ($user) {
+                            $subQ->where('tier_id', $user->tier_id)
+                                 ->where('name', 'LIKE', '%sinh nhật%');
+                        });
+                    }
                 }
             })
             // Chỉ lấy mã còn hạn
             ->where(function ($q) {
                 $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
             })
-            // Chỉ lấy mã còn tổng số lượng phát hành
-            ->where(function ($q) {
-                $q->whereNull('usage_limit')->orWhereColumn('usage_count', '<', 'usage_limit');
-            })
+            // Bỏ dòng lấy mã còn tổng số lượng phát hành ở đây để FE hiển thị xám
             ->get();
 
-        // 3. BỘ LỌC QUAN TRỌNG: Ẩn các mã mà User này đã xài hết lượt cá nhân (usage_limit_per_user)
-        if ($user) {
-            $coupons = $coupons->filter(function ($coupon) use ($user) {
-                return !$this->hasUserReachedCouponLimit($coupon, $user);
-            })->values();
-        }
+        // 3. Xử lý logic hiển thị mã khả dụng / vô hiệu hóa
+        $coupons->transform(function ($coupon) use ($user) {
+            $coupon->is_disabled = false;
+            $coupon->disabled_reason = '';
+
+            // Kiểm tra giới hạn tổng
+            if (!is_null($coupon->usage_limit) && $coupon->usage_count >= $coupon->usage_limit) {
+                $coupon->is_disabled = true;
+                $coupon->disabled_reason = 'Đã hết lượt sử dụng';
+            } 
+            // Kiểm tra giới hạn cá nhân
+            elseif ($user && $this->hasUserReachedCouponLimit($coupon, $user)) {
+                $coupon->is_disabled = true;
+                $coupon->disabled_reason = 'Bạn đã dùng mã này';
+            }
+
+            return $coupon;
+        });
+
+        // Đẩy mã disabled xuống cuối
+        $coupons = $coupons->sortBy('is_disabled')->values();
 
         return response()->json([
             'success'          => true,
@@ -288,13 +308,9 @@ class ClientCheckoutController extends Controller
                     if (!$coupon || $coupon->status !== 'active') {
                         throw new \Exception("Mã giảm giá không hợp lệ hoặc đã tạm ngưng sử dụng.");
                     }
-                  if ($coupon->type === 'birthday') {
-                        // Chỉ cần kiểm tra mã này có đúng là cấp cho user đang mua hàng hay không
-                        if ((int) $coupon->user_id !== (int) $user->id) {
+                    if (str_contains(mb_strtolower($coupon->name, 'UTF-8'), 'sinh nhật')) {
+                        if ($coupon->tier_id && (int) $coupon->tier_id !== (int) $user->tier_id) {
                             throw new \Exception("Mã voucher sinh nhật này không thuộc quyền sở hữu của bạn.");
-                        }
-                        if ($coupon->is_used) {
-                            throw new \Exception("Mã voucher sinh nhật này đã được sử dụng trước đó.");
                         }
                     }
                     if ($coupon->expires_at && now()->greaterThan($coupon->expires_at)) {
@@ -313,10 +329,7 @@ class ClientCheckoutController extends Controller
                     $discountAmount = ($coupon->type === 'fixed') ? $coupon->value : ($subTotal * ($coupon->value / 100));
                     $couponId = $coupon->id;
                     $coupon->increment('usage_count');
-                    if ($coupon->type === 'birthday') {
-                        $coupon->is_used = 1;
-                        $coupon->save();
-                    }
+
                 }
 
                 $tierDiscountAmount = 0;
@@ -523,11 +536,6 @@ class ClientCheckoutController extends Controller
         return Order::where('user_id', $userId)
             ->where('coupon_id', $coupon->id)
             ->whereNotIn('status', ['cancelled', 'returned'])
-            ->where(function ($query) {
-                $query->where('status', '!=', 'pending')
-                      ->orWhere('payment_status', '!=', 'unpaid')
-                      ->orWhere('created_at', '>=', now()->subMinutes(15));
-            })
             ->count();
     }
 
@@ -1206,14 +1214,10 @@ class ClientCheckoutController extends Controller
             $coupon->refresh();
         }
 
-        if ($coupon->type === 'birthday') {
-            $coupon->is_used = 0;
-        }
-
         // Chỉ khôi phục trạng thái nếu coupon vừa bị khóa/xóa tự động do chạm limit
         if ($wasAtLimit) {
             if (!$coupon->expires_at || $coupon->expires_at->isFuture()) {
-                if ($coupon->trashed() && ($coupon->type === 'birthday' || !is_null($coupon->user_id))) {
+                if ($coupon->trashed() && !is_null($coupon->user_id)) {
                     $coupon->restore();
                 }
                 if ($coupon->status === 'inactive' && is_null($coupon->user_id)) {

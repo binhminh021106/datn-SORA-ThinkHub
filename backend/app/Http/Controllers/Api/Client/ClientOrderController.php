@@ -265,7 +265,7 @@ class ClientOrderController extends Controller
 
                     // Tự động dọn dẹp nếu vừa hết lượt dùng
                     if ($coupon->usage_limit !== null && $coupon->usage_count >= $coupon->usage_limit) {
-                        if ($coupon->type === 'birthday' || !is_null($coupon->user_id)) {
+                        if (!is_null($coupon->user_id)) {
                             $coupon->delete();
                         } else {
                             $coupon->update(['status' => 'inactive']);

@@ -291,7 +291,7 @@ public function applyBirthdayCoupon(Request $request)
 
         $coupon = Coupon::where('code', $code)
             ->where('status', 'active')
-            ->where('type', 'birthday')
+            ->where('name', 'LIKE', '%sinh nhật%')
             ->where(function ($q) {
                 $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
             })
@@ -311,17 +311,13 @@ public function applyBirthdayCoupon(Request $request)
                 return response()->json(['success' => false, 'message' => 'Bạn cần đăng nhập để sử dụng voucher sinh nhật.']);
             }
 
-            if (!is_null($coupon->user_id)) {
-                if ($coupon->user_id != $user->id) {
-                    return response()->json(['success' => false, 'message' => 'Mã voucher sinh nhật này không thuộc về tài khoản của bạn.']);
+            if (!is_null($coupon->tier_id)) {
+                if ($coupon->tier_id != $user->tier_id) {
+                    return response()->json(['success' => false, 'message' => 'Mã voucher sinh nhật này không thuộc về hạng thành viên của bạn.']);
                 }
             } else {
-                $parts = explode('-', $coupon->code);
-                $targetUserId = $parts[count($parts) - 2] ?? null;
-                
-                if (!ctype_digit((string) $targetUserId) || (int) $user->id !== (int) $targetUserId) {
-                    return response()->json(['success' => false, 'message' => 'Mã voucher sinh nhật này không thuộc về tài khoản của bạn.']);
-                }
+                // Fallback nếu admin chưa cập nhật tier_id cho coupon cũ
+                return response()->json(['success' => false, 'message' => 'Mã voucher sinh nhật này không hợp lệ.']);
             }
         }
 
