@@ -309,7 +309,7 @@ class ClientCheckoutController extends Controller
                         throw new \Exception("Mã giảm giá không hợp lệ hoặc đã tạm ngưng sử dụng.");
                     }
                     if (str_contains(mb_strtolower($coupon->name, 'UTF-8'), 'sinh nhật')) {
-                        if ($coupon->tier_id && (int) $coupon->tier_id !== (int) $user->tier_id) {
+                        if (is_null($coupon->tier_id) || (int) $coupon->tier_id !== (int) $user->tier_id) {
                             throw new \Exception("Mã voucher sinh nhật này không thuộc quyền sở hữu của bạn.");
                         }
                     }
