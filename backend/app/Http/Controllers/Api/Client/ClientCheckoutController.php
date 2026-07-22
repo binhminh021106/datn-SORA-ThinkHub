@@ -1199,19 +1199,33 @@ class ClientCheckoutController extends Controller
             return;
         }
 
-        $coupon = Coupon::find($order->coupon_id);
+        $coupon = Coupon::withTrashed()->find($order->coupon_id);
         if (!$coupon) {
             return;
         }
 
         if ((int) $coupon->usage_count > 0) {
             $coupon->decrement('usage_count');
+            $coupon->refresh();
         }
 
         if ($coupon->type === 'birthday') {
             $coupon->is_used = 0;
-            $coupon->save();
         }
+
+        // Khôi phục trạng thái nếu coupon đã bị xóa/ẩn do hết lượt
+        if ($coupon->usage_limit === null || $coupon->usage_count < $coupon->usage_limit) {
+            if (!$coupon->expires_at || $coupon->expires_at->isFuture()) {
+                if ($coupon->trashed()) {
+                    $coupon->restore();
+                }
+                if ($coupon->status === 'inactive') {
+                    $coupon->status = 'active';
+                }
+            }
+        }
+        
+        $coupon->save();
     }
 
     public function getLocations(Request $request)

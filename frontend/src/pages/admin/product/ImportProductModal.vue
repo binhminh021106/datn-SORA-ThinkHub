@@ -113,11 +113,7 @@ const handleUpload = async () => {
   formData.append('file', selectedFile.value); 
   
   try {
-    const res = await adminApiClient.post('/products/import', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
+    const res = await adminApiClient.post('/products/import', formData);
 
     Swal.fire({
       icon: 'success',

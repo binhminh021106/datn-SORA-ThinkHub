@@ -258,6 +258,16 @@ class ClientOrderController extends Controller
                     $discountAmount = ($coupon->type === 'fixed') ? $coupon->value : ($subTotal * ($coupon->value / 100));
                     $couponId = $coupon->id;
                     $coupon->increment('usage_count');
+                    $coupon->refresh();
+
+                    // Tự động dọn dẹp nếu vừa hết lượt dùng
+                    if ($coupon->usage_limit !== null && $coupon->usage_count >= $coupon->usage_limit) {
+                        if ($coupon->type === 'birthday' || !is_null($coupon->user_id)) {
+                            $coupon->delete();
+                        } else {
+                            $coupon->update(['status' => 'inactive']);
+                        }
+                    }
                 }
 
                 $shippingFee = $subTotal > 500000 ? 0 : 30000;

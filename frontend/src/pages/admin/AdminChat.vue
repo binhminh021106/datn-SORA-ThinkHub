@@ -28,12 +28,7 @@
         <div class="contacts-search">
           <div class="search-wrapper">
             <i class="bi bi-search search-icon"></i>
-            <input
-              type="text"
-              v-model="searchQuery"
-              placeholder="Tìm khách hàng..."
-              class="search-input"
-            >
+            <input type="text" v-model="searchQuery" placeholder="Tìm khách hàng..." class="search-input">
           </div>
         </div>
 
@@ -48,13 +43,8 @@
             <span class="text-muted small">Chưa có tin nhắn nào</span>
           </div>
 
-          <div
-            v-for="user in filteredContacts"
-            :key="user.id"
-            class="contact-item"
-            :class="{ 'contact-active': activeUserId === user.id }"
-            @click="selectUser(user)"
-          >
+          <div v-for="user in filteredContacts" :key="user.id" class="contact-item"
+            :class="{ 'contact-active': activeUserId === user.id }" @click="selectUser(user)">
             <div class="contact-avatar">
               {{ (user.fullName || user.email || 'U').charAt(0).toUpperCase() }}
             </div>
@@ -120,76 +110,72 @@
                   <span>{{ getDateSeparatorLabel(msg.created_at) }}</span>
                 </div>
 
-                <div
-                  :id="'msg-' + msg.id"
-                  class="message-row"
-                :class="isAdminMessage(msg) ? 'message-sent' : 'message-received'"
-                @mouseenter="hoveredMsgId = msg.id"
-                @mouseleave="hoveredMsgId = null"
-                @click="hoveredMsgId = hoveredMsgId === msg.id ? null : msg.id"
-              >
-                <!-- Avatar (chỉ show khi không phải admin) -->
-                <div v-if="!isAdminMessage(msg)" class="msg-avatar">
-                  {{ (activeUser.fullName || 'K').charAt(0).toUpperCase() }}
-                </div>
-
-                <div class="message-group">
-                  <!-- Trích dẫn tin nhắn -->
-                  <div
-                    v-if="msg.reply_to"
-                    class="quote-block"
-                    :class="isAdminMessage(msg) ? 'quote-block-sent' : 'quote-block-received'"
-                    @click.stop="scrollToMessage(msg.reply_to.id)"
-                  >
-                    <div class="reply-preview-text" style="max-width: 200px;">
-                      <i class="bi bi-reply-fill me-1 opacity-75"></i>
-                      <i v-if="msg.reply_to.message_type === 'image'" class="bi bi-image"></i>
-                      <i v-else-if="msg.reply_to.message_type === 'file'" class="bi bi-file-earmark"></i>
-                      {{ msg.reply_to.content || 'Đã gửi một tệp' }}
-                    </div>
+                <div :id="'msg-' + msg.id" class="message-row"
+                  :class="isAdminMessage(msg) ? 'message-sent' : 'message-received'" @mouseenter="hoveredMsgId = msg.id"
+                  @mouseleave="hoveredMsgId = null" @click="hoveredMsgId = hoveredMsgId === msg.id ? null : msg.id">
+                  <!-- Avatar (chỉ show khi không phải admin) -->
+                  <div v-if="!isAdminMessage(msg)" class="msg-avatar">
+                    {{ (activeUser.fullName || 'K').charAt(0).toUpperCase() }}
                   </div>
 
-                  <!-- File/Image message -->
-                  <template v-if="msg.message_type === 'image'">
-                    <div class="message-bubble img-bubble" :class="isAdminMessage(msg) ? 'bubble-sent' : 'bubble-received'">
-                      <img :src="msg.file_url" :alt="msg.file_name" class="chat-image" @click="openImage(msg.file_url)" />
+                  <div class="message-group">
+                    <!-- Trích dẫn tin nhắn -->
+                    <div v-if="msg.reply_to" class="quote-block"
+                      :class="isAdminMessage(msg) ? 'quote-block-sent' : 'quote-block-received'"
+                      @click.stop="scrollToMessage(msg.reply_to.id)">
+                      <div class="reply-preview-text" style="max-width: 200px;">
+                        <i class="bi bi-reply-fill me-1 opacity-75"></i>
+                        <i v-if="msg.reply_to.message_type === 'image'" class="bi bi-image"></i>
+                        <i v-else-if="msg.reply_to.message_type === 'file'" class="bi bi-file-earmark"></i>
+                        {{ msg.reply_to.content || 'Đã gửi một tệp' }}
+                      </div>
                     </div>
-                  </template>
-                  <template v-else-if="msg.message_type === 'file'">
-                    <div class="message-bubble file-bubble" :class="isAdminMessage(msg) ? 'bubble-sent' : 'bubble-received'">
-                      <a :href="msg.file_url" target="_blank" download class="file-download-link">
-                        <div class="file-icon">
-                          <i class="bi bi-file-earmark-arrow-down-fill"></i>
-                        </div>
-                        <div class="file-info">
-                          <span class="file-name-text">{{ msg.file_name }}</span>
-                          <span class="file-size-text">{{ msg.file_size }}</span>
-                        </div>
-                      </a>
-                    </div>
-                  </template>
-                  <!-- Text/Emoji message -->
-                  <template v-else>
-                    <div class="message-bubble" :class="isAdminMessage(msg) ? 'bubble-sent' : 'bubble-received'">
-                      {{ msg.content }}
-                    </div>
-                  </template>
 
-                  <div class="message-time">
-                    <span v-if="msg.created_at">
-                      {{ formatTime(msg.created_at) }}
-                    </span>
-                    <span v-if="isAdminMessage(msg)" class="ms-1">
-                      <i class="bi bi-check2-all text-primary" style="font-size: 0.7rem;"></i>
-                    </span>
-                  </div>
-                  
-                  <!-- Action bar beside bubble -->
-                  <div class="msg-actions-side" :class="{ 'show-actions': hoveredMsgId === msg.id }">
-                    <button class="msg-action-btn-pro" @click.stop="setReply(msg)" title="Trả lời"><i class="bi bi-reply-fill"></i></button>
+                    <!-- File/Image message -->
+                    <template v-if="msg.message_type === 'image'">
+                      <div class="message-bubble img-bubble"
+                        :class="isAdminMessage(msg) ? 'bubble-sent' : 'bubble-received'">
+                        <img :src="msg.file_url" :alt="msg.file_name" class="chat-image"
+                          @click="openImage(msg.file_url)" />
+                      </div>
+                    </template>
+                    <template v-else-if="msg.message_type === 'file'">
+                      <div class="message-bubble file-bubble"
+                        :class="isAdminMessage(msg) ? 'bubble-sent' : 'bubble-received'">
+                        <a :href="msg.file_url" target="_blank" download class="file-download-link">
+                          <div class="file-icon">
+                            <i class="bi bi-file-earmark-arrow-down-fill"></i>
+                          </div>
+                          <div class="file-info">
+                            <span class="file-name-text">{{ msg.file_name }}</span>
+                            <span class="file-size-text">{{ msg.file_size }}</span>
+                          </div>
+                        </a>
+                      </div>
+                    </template>
+                    <!-- Text/Emoji message -->
+                    <template v-else>
+                      <div class="message-bubble" :class="isAdminMessage(msg) ? 'bubble-sent' : 'bubble-received'">
+                        {{ msg.content }}
+                      </div>
+                    </template>
+
+                    <div class="message-time">
+                      <span v-if="msg.created_at">
+                        {{ formatTime(msg.created_at) }}
+                      </span>
+                      <span v-if="isAdminMessage(msg)" class="ms-1">
+                        <i class="bi bi-check2-all text-primary" style="font-size: 0.7rem;"></i>
+                      </span>
+                    </div>
+
+                    <!-- Action bar beside bubble -->
+                    <div class="msg-actions-side" :class="{ 'show-actions': hoveredMsgId === msg.id }">
+                      <button class="msg-action-btn-pro" @click.stop="setReply(msg)" title="Trả lời"><i
+                          class="bi bi-reply-fill"></i></button>
+                    </div>
                   </div>
                 </div>
-              </div>
               </template>
 
               <!-- Typing indicator -->
@@ -235,63 +221,45 @@
 
             <!-- Input Area -->
             <div class="chat-input-area">
-            <div class="input-toolbar">
-              <!-- File Upload Button -->
-              <button class="toolbar-btn" title="Đính kèm file" @click.stop="triggerFileInput">
-                <i class="bi bi-paperclip"></i>
-              </button>
-              <input ref="fileInputRef" type="file" style="display:none" @change="onFileSelected" accept="*/*" />
-              <!-- Emoji Button -->
-              <button class="toolbar-btn" title="Emoji" @click.stop="toggleEmojiPicker">
-                <i class="bi bi-emoji-smile"></i>
-              </button>
-            </div>
+              <div class="input-toolbar">
+                <!-- File Upload Button -->
+                <button class="toolbar-btn" title="Đính kèm file" @click.stop="triggerFileInput">
+                  <i class="bi bi-paperclip"></i>
+                </button>
+                <input ref="fileInputRef" type="file" style="display:none" @change="onFileSelected" accept="*/*" />
+                <!-- Emoji Button -->
+                <button class="toolbar-btn" title="Emoji" @click.stop="toggleEmojiPicker">
+                  <i class="bi bi-emoji-smile"></i>
+                </button>
+              </div>
 
-            <!-- Emoji Picker -->
-            <div v-if="showEmojiPicker" class="emoji-picker-container admin-emoji" @click.stop>
-              <div class="emoji-search">
-                <input v-model="emojiSearch" placeholder="Tìm emoji..." class="emoji-search-input" />
+              <!-- Emoji Picker -->
+              <div v-if="showEmojiPicker" class="emoji-picker-container admin-emoji" @click.stop>
+                <div class="emoji-search">
+                  <input v-model="emojiSearch" placeholder="Tìm emoji..." class="emoji-search-input" />
+                </div>
+                <div class="emoji-categories">
+                  <button v-for="cat in emojiCategories" :key="cat.name" class="emoji-cat-btn"
+                    :class="{ active: activeCategoryAdmin === cat.name }" @click="activeCategoryAdmin = cat.name"
+                    :title="cat.label">{{ cat.icon }}</button>
+                </div>
+                <div class="emoji-grid">
+                  <button v-for="emoji in filteredEmojis" :key="emoji" class="emoji-btn"
+                    @click.stop="insertEmoji(emoji)">{{ emoji
+                    }}</button>
+                </div>
               </div>
-              <div class="emoji-categories">
-                <button
-                  v-for="cat in emojiCategories"
-                  :key="cat.name"
-                  class="emoji-cat-btn"
-                  :class="{ active: activeCategoryAdmin === cat.name }"
-                  @click="activeCategoryAdmin = cat.name"
-                  :title="cat.label"
-                >{{ cat.icon }}</button>
-              </div>
-              <div class="emoji-grid">
-                <button
-                  v-for="emoji in filteredEmojis"
-                  :key="emoji"
-                  class="emoji-btn"
-                  @click.stop="insertEmoji(emoji)"
-                >{{ emoji }}</button>
-              </div>
-            </div>
 
-            <form @submit.prevent="sendMessage" class="input-form">
-              <input
-                type="text"
-                v-model="newMessage"
-                class="message-input"
-                placeholder="Nhập tin nhắn trả lời khách hàng..."
-                :disabled="isSending"
-                @keydown.enter.prevent="sendMessage"
-                ref="messageInputRef"
-              >
-              <button
-                type="submit"
-                class="send-btn"
-                :disabled="(!newMessage.trim() && !selectedFile) || isSending"
-              >
-                <i v-if="!isSending" class="bi bi-send-fill"></i>
-                <div v-else class="spinner-border spinner-border-sm" role="status"></div>
-              </button>
-            </form>
-          </div>
+              <form @submit.prevent="sendMessage" class="input-form">
+                <input type="text" v-model="newMessage" class="message-input"
+                  placeholder="Nhập tin nhắn trả lời khách hàng..." :disabled="isSending"
+                  @keydown.enter.prevent="sendMessage" ref="messageInputRef">
+                <button type="submit" class="send-btn" :disabled="(!newMessage.trim() && !selectedFile) || isSending">
+                  <i v-if="!isSending" class="bi bi-send-fill"></i>
+                  <div v-else class="spinner-border spinner-border-sm" role="status"></div>
+                </button>
+              </form>
+            </div>
           </div>
         </template>
 
@@ -305,7 +273,9 @@
           <i class="bi bi-exclamation-triangle-fill"></i>
         </div>
         <h5>Xóa cuộc hội thoại?</h5>
-        <p>Toàn bộ tin nhắn giữa bạn và <strong>{{ activeUser?.fullName || activeUser?.email }}</strong> sẽ bị xóa vĩnh viễn và không thể khôi phục.</p>
+        <p>Toàn bộ tin nhắn giữa bạn và <strong>{{ activeUser?.fullName || activeUser?.email }}</strong> sẽ bị xóa vĩnh
+          viễn
+          và không thể khôi phục.</p>
         <div class="delete-modal-actions">
           <button class="btn-cancel" @click="showDeleteModal = false">Hủy</button>
           <button class="btn-delete-confirm" @click="deleteConversation" :disabled="isDeletingConv">
@@ -382,13 +352,13 @@ const emojiCategories = [
 ];
 
 const emojiData = {
-  smileys: ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','🤠','🥳','😎','🤓','🧐'],
-  people: ['👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','🫶','👐','🤲','🤝','🙏','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🫀','🫁','🦷','🦴','👀','👁️','👅','👄','🫦','💋','🫂','👶','🧒','👦','👧','🧑','👱','👨','🧔','👩','🧓','👴','👵'],
-  animals: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐔','🐧','🐦','🐤','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐜','🦟','🦗','🕷️','🦂','🐢','🐍','🦎','🦖','🦕','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈'],
-  food: ['🍕','🍔','🌮','🌯','🥙','🧆','🌭','🍟','🥓','🥚','🍳','🧇','🥞','🧈','🍞','🥐','🥖','🫓','🥨','🧀','🥗','🥘','🍲','🫕','🍜','🍝','🍛','🍣','🍱','🍗','🍖','🦴','🌽','🥩','🥨','🍡','🍘','🍙','🍚','🎂','🍰','🧁','🍭','🍬','🍫','🍩','🍦','🍨','🍧','🍮','☕','🍵','🧃','🥤','🧋','🍺','🍷','🍸'],
-  travel: ['✈️','🚀','🚁','🛸','🚂','🚃','🚄','🚅','🚆','🚇','🚈','🚉','🚊','🚝','🚞','🚋','🚌','🚍','🚎','🚐','🚑','🚒','🚓','🚔','🚕','🚖','🚗','🚘','🚙','🛻','🚚','🚛','🚜','🏎️','🏍️','🛵','🚲','🛴','🛹','🛼','🚏','🛣️','🛤️','⛽','🚨','🚥','🚦','🚧','⚓','🛟','⛵','🚤','🛥️','🛳️','⛴️','🚢','🗺️','🧭','🏔️','🌋','🗻','🏕️','🏖️','🏝️','🌅'],
-  objects: ['💡','🔦','🕯️','💰','💴','💵','💳','💎','⚖️','🪙','🔑','🗝️','🔐','🔒','🔓','🔏','🪪','📱','💻','⌨️','🖥️','🖨️','🖱️','🖲️','📷','📸','📹','🎥','📽️','🎞️','📞','☎️','📟','📠','📺','📻','🧭','⏱️','⏰','🕰️','⌚','🪒','🔬','🔭','📡','🧲','🪛','🔧','🔨','⚒️','🛠️','⛏️'],
-  symbols: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☯️','✡️','🕎','☸️','🛐','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','⛎','🔯','♻️','✅','❎','🆗','🆙','🆒','🆕','🆓','🚫','⭕','❌','❗','❓','💯','🔞'],
+  smileys: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🥵', '🥶', '🥴', '😵', '🤯', '🤠', '🥳', '😎', '🤓', '🧐'],
+  people: ['👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '🫶', '👐', '🤲', '🤝', '🙏', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🫀', '🫁', '🦷', '🦴', '👀', '👁️', '👅', '👄', '🫦', '💋', '🫂', '👶', '🧒', '👦', '👧', '🧑', '👱', '👨', '🧔', '👩', '🧓', '👴', '👵'],
+  animals: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🙈', '🙉', '🙊', '🐔', '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🦟', '🦗', '🕷️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈'],
+  food: ['🍕', '🍔', '🌮', '🌯', '🥙', '🧆', '🌭', '🍟', '🥓', '🥚', '🍳', '🧇', '🥞', '🧈', '🍞', '🥐', '🥖', '🫓', '🥨', '🧀', '🥗', '🥘', '🍲', '🫕', '🍜', '🍝', '🍛', '🍣', '🍱', '🍗', '🍖', '🦴', '🌽', '🥩', '🥨', '🍡', '🍘', '🍙', '🍚', '🎂', '🍰', '🧁', '🍭', '🍬', '🍫', '🍩', '🍦', '🍨', '🍧', '🍮', '☕', '🍵', '🧃', '🥤', '🧋', '🍺', '🍷', '🍸'],
+  travel: ['✈️', '🚀', '🚁', '🛸', '🚂', '🚃', '🚄', '🚅', '🚆', '🚇', '🚈', '🚉', '🚊', '🚝', '🚞', '🚋', '🚌', '🚍', '🚎', '🚐', '🚑', '🚒', '🚓', '🚔', '🚕', '🚖', '🚗', '🚘', '🚙', '🛻', '🚚', '🚛', '🚜', '🏎️', '🏍️', '🛵', '🚲', '🛴', '🛹', '🛼', '🚏', '🛣️', '🛤️', '⛽', '🚨', '🚥', '🚦', '🚧', '⚓', '🛟', '⛵', '🚤', '🛥️', '🛳️', '⛴️', '🚢', '🗺️', '🧭', '🏔️', '🌋', '🗻', '🏕️', '🏖️', '🏝️', '🌅'],
+  objects: ['💡', '🔦', '🕯️', '💰', '💴', '💵', '💳', '💎', '⚖️', '🪙', '🔑', '🗝️', '🔐', '🔒', '🔓', '🔏', '🪪', '📱', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '📷', '📸', '📹', '🎥', '📽️', '🎞️', '📞', '☎️', '📟', '📠', '📺', '📻', '🧭', '⏱️', '⏰', '🕰️', '⌚', '🪒', '🔬', '🔭', '📡', '🧲', '🪛', '🔧', '🔨', '⚒️', '🛠️', '⛏️'],
+  symbols: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❤️‍🔥', '❤️‍🩹', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☯️', '✡️', '🕎', '☸️', '🛐', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '⛎', '🔯', '♻️', '✅', '❎', '🆗', '🆙', '🆒', '🆕', '🆓', '🚫', '⭕', '❌', '❗', '❓', '💯', '🔞'],
 };
 
 const filteredEmojis = computed(() => {
@@ -622,8 +592,7 @@ const sendMessage = async () => {
       const res = await axios.post(`${API_URL}/admin/messages`, formData, {
         headers: {
           Authorization: `Bearer ${getToken()}`,
-          Accept: 'application/json',
-          'Content-Type': 'multipart/form-data'
+          Accept: 'application/json'
         }
       });
       if (res.data.status) {
@@ -783,7 +752,7 @@ onMounted(() => {
           moveContactToTop(msg.sender_id);
         }
       });
-      
+
     // Khắc phục lỗi chat lâu bị đơ (mất kết nối ngầm WebSocket)
     if (window.Echo.connector.pusher) {
       onReconnect = () => {
@@ -813,7 +782,9 @@ onUnmounted(() => {
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 
-* { font-family: 'Inter', sans-serif; }
+* {
+  font-family: 'Inter', sans-serif;
+}
 
 .admin-chat-page {
   min-height: 100vh;
@@ -839,7 +810,7 @@ onUnmounted(() => {
 .header-icon {
   width: 48px;
   height: 48px;
-  background: rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -847,8 +818,13 @@ onUnmounted(() => {
   font-size: 1.4rem;
 }
 
-.chat-page-header h4 { color: white; }
-.chat-page-header .text-muted { color: rgba(255,255,255,0.7) !important; }
+.chat-page-header h4 {
+  color: white;
+}
+
+.chat-page-header .text-muted {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
 
 /* ===== MAIN CONTAINER ===== */
 .chat-container {
@@ -856,7 +832,7 @@ onUnmounted(() => {
   background: var(--bs-body-bg, white);
   border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
   height: calc(100vh - 160px);
   min-height: 500px;
 }
@@ -876,7 +852,9 @@ onUnmounted(() => {
   border-bottom: 1px solid var(--bs-border-color, #f0f0f0);
 }
 
-.search-wrapper { position: relative; }
+.search-wrapper {
+  position: relative;
+}
 
 .search-icon {
   position: absolute;
@@ -901,7 +879,7 @@ onUnmounted(() => {
 
 .search-input:focus {
   border-color: #1e3a5f;
-  box-shadow: 0 0 0 3px rgba(30,58,95,0.1);
+  box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.1);
 }
 
 .contacts-list {
@@ -909,8 +887,14 @@ onUnmounted(() => {
   overflow-y: auto;
 }
 
-.contacts-list::-webkit-scrollbar { width: 4px; }
-.contacts-list::-webkit-scrollbar-thumb { background: #ddd; border-radius: 10px; }
+.contacts-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.contacts-list::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 10px;
+}
 
 .loading-state {
   display: flex;
@@ -938,7 +922,9 @@ onUnmounted(() => {
   position: relative;
 }
 
-.contact-item:hover { background: var(--bs-secondary-bg, #f3f4f6); }
+.contact-item:hover {
+  background: var(--bs-secondary-bg, #f3f4f6);
+}
 
 .contact-active {
   background: var(--bs-primary-bg-subtle, #e8f0fe) !important;
@@ -963,7 +949,10 @@ onUnmounted(() => {
   background: linear-gradient(135deg, #1e3a5f, #1a56db);
 }
 
-.contact-info { flex: 1; min-width: 0; }
+.contact-info {
+  flex: 1;
+  min-width: 0;
+}
 
 .contact-name {
   font-weight: 600;
@@ -974,7 +963,9 @@ onUnmounted(() => {
   text-overflow: ellipsis;
 }
 
-.contact-active .contact-name { color: var(--bs-primary, #1e3a5f); }
+.contact-active .contact-name {
+  color: var(--bs-primary, #1e3a5f);
+}
 
 .contact-email {
   font-size: 0.75rem;
@@ -1014,7 +1005,9 @@ onUnmounted(() => {
   justify-content: center;
 }
 
-.chat-empty-content { text-align: center; }
+.chat-empty-content {
+  text-align: center;
+}
 
 .chat-empty-icon {
   width: 80px;
@@ -1037,7 +1030,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   background: var(--bs-body-bg, white);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
   flex-shrink: 0;
 }
 
@@ -1091,7 +1084,7 @@ onUnmounted(() => {
   background: #dc2626;
   color: white;
   border-color: #dc2626;
-  box-shadow: 0 4px 12px rgba(220,38,38,0.3);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
 }
 
 /* ===== MESSAGES ===== */
@@ -1105,8 +1098,14 @@ onUnmounted(() => {
   background: var(--bs-tertiary-bg, #f8f9fa);
 }
 
-.messages-area::-webkit-scrollbar { width: 5px; }
-.messages-area::-webkit-scrollbar-thumb { background: #ddd; border-radius: 10px; }
+.messages-area::-webkit-scrollbar {
+  width: 5px;
+}
+
+.messages-area::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 10px;
+}
 
 .date-separator {
   text-align: center;
@@ -1129,7 +1128,9 @@ onUnmounted(() => {
   margin-bottom: 2px;
 }
 
-.message-sent { flex-direction: row-reverse; }
+.message-sent {
+  flex-direction: row-reverse;
+}
 
 .msg-avatar {
   width: 28px;
@@ -1152,8 +1153,13 @@ onUnmounted(() => {
   position: relative;
 }
 
-.message-sent .message-group { align-items: flex-end; }
-.message-received .message-group { align-items: flex-start; }
+.message-sent .message-group {
+  align-items: flex-end;
+}
+
+.message-received .message-group {
+  align-items: flex-start;
+}
 
 .message-bubble {
   padding: 10px 14px;
@@ -1173,7 +1179,7 @@ onUnmounted(() => {
   background: var(--bs-body-bg, white);
   color: var(--bs-body-color, #1f2937);
   border-bottom-left-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   border: 1px solid var(--bs-border-color, #f0f0f0);
 }
 
@@ -1192,10 +1198,13 @@ onUnmounted(() => {
   cursor: zoom-in;
   object-fit: cover;
   display: block;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
   transition: transform 0.2s;
 }
-.chat-image:hover { transform: scale(1.02); }
+
+.chat-image:hover {
+  transform: scale(1.02);
+}
 
 /* File bubble */
 .file-bubble {
@@ -1211,14 +1220,19 @@ onUnmounted(() => {
   color: inherit;
 }
 
-.bubble-sent .file-download-link { color: white; }
-.bubble-received .file-download-link { color: #1f2937; }
+.bubble-sent .file-download-link {
+  color: white;
+}
+
+.bubble-received .file-download-link {
+  color: #1f2937;
+}
 
 .file-icon {
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: rgba(255,255,255,0.2);
+  background: rgba(255, 255, 255, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1272,17 +1286,32 @@ onUnmounted(() => {
 .typing-indicator span {
   width: 7px;
   height: 7px;
-  background: rgba(255,255,255,0.7);
+  background: rgba(255, 255, 255, 0.7);
   border-radius: 50%;
   animation: typing-bounce 1.4s infinite ease-in-out both;
 }
 
-.typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
-.typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+.typing-indicator span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: -0.16s;
+}
 
 @keyframes typing-bounce {
-  0%, 80%, 100% { transform: scale(0); opacity: 0.4; }
-  40% { transform: scale(1); opacity: 1; }
+
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+    opacity: 0.4;
+  }
+
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 /* ===== FILE PREVIEW BAR ===== */
@@ -1349,7 +1378,11 @@ onUnmounted(() => {
   transition: all 0.15s;
   flex-shrink: 0;
 }
-.file-preview-remove:hover { background: #fee2e2; color: #dc2626; }
+
+.file-preview-remove:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
 
 /* ===== ACTION BAR (beside bubble) ===== */
 .msg-actions-side {
@@ -1362,12 +1395,15 @@ onUnmounted(() => {
   position: absolute;
   top: 50%;
 }
+
 .message-sent .msg-actions-side {
   right: calc(100% + 8px);
 }
+
 .message-received .msg-actions-side {
   left: calc(100% + 8px);
 }
+
 .message-row:hover .msg-actions-side,
 .msg-actions-side.show-actions {
   opacity: 1;
@@ -1378,14 +1414,22 @@ onUnmounted(() => {
 .highlight-msg {
   animation: highlight 2s ease;
 }
+
 @keyframes highlight {
-  0% { background-color: rgba(59, 130, 246, 0.2); border-radius: 8px; }
-  100% { background-color: transparent; border-radius: 8px; }
+  0% {
+    background-color: rgba(59, 130, 246, 0.2);
+    border-radius: 8px;
+  }
+
+  100% {
+    background-color: transparent;
+    border-radius: 8px;
+  }
 }
 
 .msg-action-btn-pro {
   background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(0,0,0,0.05);
+  border: 1px solid rgba(0, 0, 0, 0.05);
   color: #6b7280;
   cursor: pointer;
   font-size: 0.95rem;
@@ -1396,11 +1440,12 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
 }
-.msg-action-btn-pro:hover { 
-  background: #3b82f6; 
-  color: white; 
+
+.msg-action-btn-pro:hover {
+  background: #3b82f6;
+  color: white;
   transform: translateY(-2px) scale(1.05);
   box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
 }
@@ -1417,7 +1462,12 @@ onUnmounted(() => {
   border-left: 4px solid #3b82f6;
   animation: fadeInUp 0.18s ease;
 }
-.reply-preview-content { flex: 1; min-width: 0; }
+
+.reply-preview-content {
+  flex: 1;
+  min-width: 0;
+}
+
 .reply-preview-label {
   display: block;
   font-size: 0.72rem;
@@ -1425,6 +1475,7 @@ onUnmounted(() => {
   font-weight: 600;
   margin-bottom: 2px;
 }
+
 .reply-preview-text {
   margin: 0;
   font-size: 0.78rem;
@@ -1433,6 +1484,7 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .reply-cancel-btn {
   background: none;
   border: none;
@@ -1445,7 +1497,11 @@ onUnmounted(() => {
   flex-shrink: 0;
   transition: background 0.15s;
 }
-.reply-cancel-btn:hover { background: #fee2e2; color: #dc2626; }
+
+.reply-cancel-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
 
 /* ===== QUOTE BLOCK in bubble ===== */
 .quote-block {
@@ -1456,17 +1512,23 @@ onUnmounted(() => {
   cursor: pointer;
   transition: opacity 0.2s;
 }
-.quote-block:hover { opacity: 0.8; }
+
+.quote-block:hover {
+  opacity: 0.8;
+}
+
 .quote-block-sent {
-  background: rgba(255,255,255,0.2);
-  border-left: 3px solid rgba(255,255,255,0.7);
+  background: rgba(255, 255, 255, 0.2);
+  border-left: 3px solid rgba(255, 255, 255, 0.7);
   color: inherit;
 }
+
 .quote-block-received {
-  background: rgba(0,0,0,0.04);
+  background: rgba(0, 0, 0, 0.04);
   border-left: 3px solid #93c5fd;
   color: inherit;
 }
+
 .quote-block-label {
   display: block;
   font-weight: 600;
@@ -1521,7 +1583,7 @@ onUnmounted(() => {
 
 .input-form:focus-within {
   border-color: var(--bs-primary, #1e3a5f);
-  box-shadow: 0 0 0 3px rgba(30,58,95,0.1);
+  box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.1);
   background: var(--bs-body-bg, white);
 }
 
@@ -1535,7 +1597,9 @@ onUnmounted(() => {
   padding: 6px 0;
 }
 
-.message-input::placeholder { color: #9ca3af; }
+.message-input::placeholder {
+  color: #9ca3af;
+}
 
 .send-btn {
   width: 40px;
@@ -1554,7 +1618,7 @@ onUnmounted(() => {
 
 .send-btn:hover:not(:disabled) {
   transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(30,58,95,0.4);
+  box-shadow: 0 4px 12px rgba(30, 58, 95, 0.4);
 }
 
 .send-btn:disabled {
@@ -1571,7 +1635,7 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.4);
   border: 1px solid rgba(229, 231, 235, 0.4);
   border-radius: 16px;
-  box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   z-index: 1000;
@@ -1579,11 +1643,21 @@ onUnmounted(() => {
   animation: fadeInUp 0.2s ease;
 }
 
-.admin-emoji { left: 16px; bottom: calc(100% + 5px); }
+.admin-emoji {
+  left: 16px;
+  bottom: calc(100% + 5px);
+}
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .emoji-search {
@@ -1606,10 +1680,11 @@ onUnmounted(() => {
   display: flex;
   padding: 8px 10px;
   gap: 4px;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   overflow-x: auto;
   scrollbar-width: none;
 }
+
 .emoji-categories::-webkit-scrollbar {
   display: none;
 }
@@ -1625,7 +1700,8 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.emoji-cat-btn:hover, .emoji-cat-btn.active {
+.emoji-cat-btn:hover,
+.emoji-cat-btn.active {
   background: rgba(255, 255, 255, 0.6);
 }
 
@@ -1651,13 +1727,15 @@ onUnmounted(() => {
   text-align: center;
 }
 
-.emoji-btn:hover { background: rgba(255, 255, 255, 0.6); }
+.emoji-btn:hover {
+  background: rgba(255, 255, 255, 0.6);
+}
 
 /* ===== DELETE MODAL ===== */
 .delete-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.45);
+  background: rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(4px);
   z-index: 9999;
   display: flex;
@@ -1667,8 +1745,13 @@ onUnmounted(() => {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .delete-modal {
@@ -1678,13 +1761,20 @@ onUnmounted(() => {
   max-width: 420px;
   width: 90%;
   text-align: center;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
   animation: scaleIn 0.2s ease;
 }
 
 @keyframes scaleIn {
-  from { transform: scale(0.9); opacity: 0; }
-  to   { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .delete-modal-icon {
@@ -1732,7 +1822,10 @@ onUnmounted(() => {
   font-size: 0.9rem;
 }
 
-.btn-cancel:hover { background: #f3f4f6; border-color: #d1d5db; }
+.btn-cancel:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
 
 .btn-delete-confirm {
   padding: 10px 24px;
@@ -1749,17 +1842,20 @@ onUnmounted(() => {
 }
 
 .btn-delete-confirm:hover:not(:disabled) {
-  box-shadow: 0 4px 14px rgba(220,38,38,0.4);
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.4);
   transform: translateY(-1px);
 }
 
-.btn-delete-confirm:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-delete-confirm:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
 /* ===== LIGHTBOX ===== */
 .lightbox-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.85);
+  background: rgba(0, 0, 0, 0.85);
   z-index: 99999;
   display: flex;
   align-items: center;
@@ -1772,14 +1868,14 @@ onUnmounted(() => {
   max-height: 90vh;
   border-radius: 12px;
   object-fit: contain;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
 .lightbox-close {
   position: fixed;
   top: 20px;
   right: 24px;
-  background: rgba(255,255,255,0.15);
+  background: rgba(255, 255, 255, 0.15);
   border: none;
   color: white;
   width: 40px;
@@ -1793,16 +1889,24 @@ onUnmounted(() => {
   transition: background 0.2s;
 }
 
-.lightbox-close:hover { background: rgba(255,255,255,0.3); }
+.lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
 
 /* ===== ONLINE / OFFLINE DOTS ===== */
-.online-dot, .offline-dot {
+.online-dot,
+.offline-dot {
   display: inline-block;
   width: 8px;
   height: 8px;
   border-radius: 50%;
 }
 
-.online-dot { background: #22c55e; }
-.offline-dot { background: #ef4444; }
+.online-dot {
+  background: #22c55e;
+}
+
+.offline-dot {
+  background: #ef4444;
+}
 </style>
