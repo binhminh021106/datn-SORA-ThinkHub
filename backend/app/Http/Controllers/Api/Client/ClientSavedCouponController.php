@@ -36,7 +36,7 @@ class ClientSavedCouponController extends Controller
 
             if ($birthdayCouponModel) {
                 // Kiểm tra xem người dùng đã lưu mã này chưa, nếu rồi thì bỏ qua để tránh lặp
-                $alreadySaved = $savedCoupons->contains(fn ($item) => $item['id'] === $birthdayCouponModel->id);
+                $alreadySaved = $savedCoupons->contains(fn ($item) => (int) $item['coupon_id'] === (int) $birthdayCouponModel->id);
                 
                 if (!$alreadySaved) {
                     // Giả lập định dạng giống formatSavedCoupon để FE hiển thị đúng
