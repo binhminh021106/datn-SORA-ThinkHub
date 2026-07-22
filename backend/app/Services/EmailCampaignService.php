@@ -194,87 +194,63 @@ class EmailCampaignService
         $setting = EmailCampaignSetting::current();
         $tiers = $setting->birthday_tiers ?? [];
         
-        // 1. Xác định hạng hiện tại của User (Trả về: 'regular', 'silver', 'gold', 'diamond')
-        $userTierName = $this->getUserTierName($user);
-        
-        // 2. SỬA TẠI ĐÂY: Tìm cấu hình quà tặng tương ứng dựa trên thuộc tính ID phân hạng ổn định
-        $matchedTierConfig = collect($tiers)->first(function ($t) use ($userTierName) {
-            return ($t['id'] ?? '') === $userTierName;
-        });
+        if (!$user->tier_id) return null; // Bỏ qua nếu user không có hạng
 
-        // Nếu hạng này không được Admin cấu hình mã, trả về null
-        if (!$matchedTierConfig || empty($matchedTierConfig['voucherCode'])) {
+        // Mapping linh hoạt bằng tier_id thay vì so sánh chuỗi
+        $matchedTierConfig = collect($tiers)->firstWhere('tier_id', $user->tier_id);
+
+        if (!$matchedTierConfig || empty($matchedTierConfig['voucherCode']) || $matchedTierConfig['status'] !== 'active') {
             return null; 
         }
 
-        // 3. Lấy ra mã Coupon mà Admin đã tạo sẵn trong bảng coupons
         $couponCode = $matchedTierConfig['voucherCode'];
         $existingCoupon = Coupon::where('code', $couponCode)->first();
 
+        // Tính toán hạn sử dụng động dựa trên cấu hình admin
+        $validityDays = $matchedTierConfig['validity_days'] ?? 7;
+        $requiredExpiration = $today->copy()->addDays($validityDays)->endOfDay();
+
+        // Cập nhật gia hạn nếu coupon toàn cục chuẩn bị hết hạn trước sinh nhật
         if ($existingCoupon) {
+            if (!$existingCoupon->expires_at || $existingCoupon->expires_at->lt($requiredExpiration)) {
+                $existingCoupon->expires_at = $requiredExpiration;
+                $existingCoupon->save();
+            }
             return $existingCoupon;
         }
 
-        // 4. Fallback: Tự động tạo lại dựa trên Config nếu thất lạc data bảng coupons
-       $rawDiscount = trim($matchedTierConfig['discount']);
-        $lowerDiscount = mb_strtolower($rawDiscount, 'UTF-8');
-        
-        $isFreeship = str_contains($lowerDiscount, 'miễn phí') || str_contains($lowerDiscount, 'freeship');
-        $isPercentage = str_contains($rawDiscount, '%');
-        $numericValue = (float) preg_replace('/[^0-9.]/', '', $rawDiscount);
-
-        if ($numericValue <= 0 && !$isFreeship) return null;
-
         return Coupon::create([
-            'type' => $isFreeship ? 'freeship' : ($isPercentage ? 'percentage' : 'fixed'),
+            'type' => $matchedTierConfig['type'],
             'name' => 'Quà tặng sinh nhật hạng: ' . $matchedTierConfig['name'],
             'code' => $couponCode,
-            'min_spend' => 0,
-            'value' => $isFreeship ? 0 : $numericValue,
+            'min_spend' => $matchedTierConfig['min_spend'],
+            'value' => $matchedTierConfig['value'],
+            'usage_limit' => $matchedTierConfig['usage_limit'],
+            'usage_limit_per_user' => $matchedTierConfig['usage_limit_per_user'],
             'usage_count' => 0,
-            'status' => 'active',
-            'expires_at' => $today->copy()->addHours(24), // THIẾT LẬP HẠN DÙNG TRONG ĐÚNG 24 GIỜ
-            'user_id' => $user->id, // Gắn chủ sở hữu trực tiếp
-            'usage_limit' => 1, // Tổng số lần sử dụng tối đa
-            'usage_limit_per_user' => 1, // Giới hạn cho mỗi user
+            'status' => $matchedTierConfig['status'],
+            'expires_at' => $requiredExpiration, 
+            'user_id' => null, 
+            'is_used' => false
         ]);
     }
 
-    /**
-     * Phân loại nhanh tên hạng của User để match với cấu hình
-     */
-  /**
-     * Phân loại hạng linh hoạt dựa trên Min Spent thay vì so khớp chuỗi Text.
-     */
-private function getUserTierName(User $user): string
+  
+    private function getUserTierName(User $user): string
     {
         if (!$user->tier_id) return 'regular';
         
         $userTier = $user->relationLoaded('tier') ? $user->tier : MembershipTier::find($user->tier_id);
         if (!$userTier) return 'regular';
 
-        // Lấy danh sách hạng sắp xếp theo mức chi tiêu từ thấp đến cao
-        $allTiers = MembershipTier::orderBy('min_spent', 'asc')->get();
-        if ($allTiers->isEmpty()) return 'regular';
-
-        // Tìm vị trí hạng của user trong danh sách
-        $tierIndex = $allTiers->search(function ($tier) use ($userTier) {
-            return $tier->id === $userTier->id;
-        });
-
-        if ($tierIndex === false) return 'regular';
-
-        $totalTiers = $allTiers->count();
-        
-        // Đảm bảo hạng thấp nhất (index 0) luôn là regular
-        if ($tierIndex === 0) return 'regular';
-
-        // Quy chuẩn ánh xạ động (Top 1 là Diamond, Top 2 là Gold, còn lại là Silver)
-        if ($tierIndex == $totalTiers - 1) return 'diamond';
-        if ($tierIndex == $totalTiers - 2) return 'gold';
-        return 'silver';
+        // Ánh xạ nhãn hạng dựa trên ID cố định (đảm bảo tính ổn định khi thêm hạng mới)
+        return match ((int) $userTier->id) {
+            2 => 'silver',
+            3 => 'gold',
+            4 => 'diamond',
+            default => 'regular',
+        };
     }
-
  private function isSilverTierOrAbove(User $user): bool
     {
         if (!$user->tier_id) {

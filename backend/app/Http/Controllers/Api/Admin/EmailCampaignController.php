@@ -70,33 +70,59 @@ class EmailCampaignController extends Controller
             ]);
         }
     }
-
-    public function settings()
+public function settings()
     {
         $setting = EmailCampaignSetting::current();
+        
+        // Load linh hoạt danh sách hạng thành viên từ Database thay vì hard-code
+        $dbTiers = \App\Models\MembershipTier::orderBy('min_spent', 'asc')->get();
+        $savedTiers = collect($setting->birthday_tiers ?? []);
 
-       return response()->json([
+        $tiersData = $dbTiers->map(function ($tier) use ($savedTiers) {
+            $saved = $savedTiers->firstWhere('tier_id', $tier->id) ?? [];
+            return [
+                'tier_id' => $tier->id,
+                'name' => $tier->name,
+                'voucherCode' => $saved['voucherCode'] ?? '',
+                'type' => $saved['type'] ?? 'fixed',
+                'value' => $saved['value'] ?? 0,
+                'min_spend' => $saved['min_spend'] ?? 0,
+                'usage_limit' => $saved['usage_limit'] ?? 100,
+                'usage_limit_per_user' => $saved['usage_limit_per_user'] ?? 1,
+                'validity_days' => $saved['validity_days'] ?? 7, // Thời hạn tính từ ngày sinh nhật
+                'status' => $saved['status'] ?? 'active',
+            ];
+        });
+
+        return response()->json([
             'success' => true,
             'data' => [
                 'is_auto_birthday' => (bool) $setting->is_auto_birthday,
                 'birthday_subject' => $setting->birthday_subject,
                 'birthday_content' => $setting->birthday_content,
-                'tiers'            => $setting->birthday_tiers ?? [], // Trả data thật về Vue
+                'tiers'            => $tiersData,
             ],
         ]);
     }
 
     public function updateSettings(Request $request)
     {
+        // Áp dụng bộ validation chuẩn của hệ thống Coupon
         $validated = $request->validate([
             'is_auto_birthday' => 'sometimes|boolean',
             'birthday_subject' => 'required|string|max:255',
             'birthday_content' => 'nullable|string',
             'tiers' => 'required|array',
-            'tiers.*.id' => 'required|string',
+            'tiers.*.tier_id' => 'required|integer',
             'tiers.*.name' => 'required|string',
-            'tiers.*.voucherCode' => 'required|string',
-            'tiers.*.discount' => 'required|string',
+            'tiers.*.voucherCode' => 'nullable|string',
+            'tiers.*.type' => 'required|in:fixed,percentage',
+            'tiers.*.value' => 'required|numeric|min:0',
+            'tiers.*.min_spend' => 'required|numeric|min:0',
+            'tiers.*.usage_limit' => 'required|numeric|min:1',
+            'tiers.*.usage_limit_per_user' => 'required|numeric|min:1',
+            'tiers.*.validity_days' => 'required|numeric|min:1',
+            'tiers.*.status' => 'required|in:active,inactive',
         ]);
 
         $setting = EmailCampaignSetting::current();
@@ -114,45 +140,27 @@ class EmailCampaignController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Đã lưu cấu hình sinh nhật.',
-            
             'data' => $this->settings()->getData()->data,
         ]);
     }
 private function syncBirthdayVouchers(array $tiers): void
     {
         foreach ($tiers as $tier) {
-            if (empty($tier['voucherCode']) || empty($tier['discount'])) {
+            if (empty($tier['voucherCode']) || empty($tier['value']) || $tier['status'] !== 'active') {
                 continue;
             }
 
-            $rawDiscount = trim($tier['discount']);
-            $lowerDiscount = mb_strtolower($rawDiscount, 'UTF-8');
-            
-            // Nhận diện Freeship
-            $isFreeship = str_contains($lowerDiscount, 'miễn phí') || str_contains($lowerDiscount, 'freeship');
-            $isPercentage = str_contains($rawDiscount, '%');
-            $numericValue = (float) preg_replace('/[^0-9.]/', '', $rawDiscount);
-
-      
-            if ($numericValue <= 0 && !$isFreeship) continue;
-
-            $couponName = 'Quà tặng sinh nhật hạng: ' . $tier['name'];
             $coupon = Coupon::query()->firstOrNew([
                 'code' => $tier['voucherCode']
             ]);
             
-            $coupon->name = $couponName;
-            
-            if ($isFreeship) {
-                $coupon->type = 'freeship';
-                $coupon->value = 0;
-            } else {
-                $coupon->type = $isPercentage ? 'percentage' : 'fixed';
-                $coupon->value = $numericValue;
-            }
-
-            $coupon->min_spend = 0;
-            $coupon->status = 'active';
+            $coupon->name = 'Quà tặng sinh nhật hạng: ' . $tier['name'];
+            $coupon->type = $tier['type'];
+            $coupon->value = $tier['value'];
+            $coupon->min_spend = $tier['min_spend'];
+            $coupon->usage_limit = $tier['usage_limit'];
+            $coupon->usage_limit_per_user = $tier['usage_limit_per_user'];
+            $coupon->status = $tier['status'];
 
             if (!$coupon->exists) {
                 $coupon->usage_count = 0;

@@ -230,37 +230,57 @@
               <!-- SECTION MỚI: QUÀ TẶNG THEO HẠNG THÀNH VIÊN -->
               <div class="mb-3">
                 <label class="form-label fw-semibold text-dark small mb-2">Quà tặng theo hạng thành viên</label>
-                <div class="border rounded-2 p-3 bg-light bg-opacity-25">
-                  <div 
-                    class="row g-3 align-items-center mb-3" 
-                    v-for="(tier, index) in birthdaySettings.tiers" 
-                    :key="tier.id"
-                    :class="{'border-bottom pb-3 mb-0': index !== birthdaySettings.tiers.length - 1}">
-                    
-                    <div class="col-md-4 d-flex align-items-center gap-2">
-                      <div class="text-secondary d-flex align-items-center justify-content-center border bg-white rounded shadow-sm" style="width:24px; height:24px;">
-                        <i class="bi bi-person-badge-fill" style="font-size: 0.75rem;"></i>
-                      </div>
-                      <span class="fw-bold small text-dark">{{ tier.name }}</span>
-                    </div>
-                    <div class="col-md-4">
-                      <input 
-                        v-model.trim="tier.voucherCode" 
-                        type="text" 
-                        class="form-control form-control-sm text-danger fw-bold text-uppercase border-brand-focus bg-white" 
-                        placeholder="Nhập mã">
-                    </div>
-                    <div class="col-md-4">
-                      <input 
-                        v-model.trim="tier.discount" 
-                        type="text" 
-                        class="form-control form-control-sm border-brand-focus bg-white" 
-                        placeholder="Mức ưu đãi">
-                    </div>
-                    
+               <div class="border rounded-2 p-3 bg-light mb-3" v-for="(tier, index) in birthdaySettings.tiers" :key="tier.tier_id">
+                <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                  <span class="fw-bold text-dark"><i class="bi bi-star-fill text-warning me-1"></i> Hạng: {{ tier.name }}</span>
+                  
+                  <!-- Công tắc Trạng thái (Active/Inactive) -->
+                  <div class="form-check form-switch m-0">
+                    <input v-model="tier.status" class="form-check-input cursor-pointer" type="checkbox" true-value="active" false-value="inactive" title="Bật/Tắt quà cho hạng này">
+                  </div>
+                </div>
+
+                <div class="row g-2" v-if="tier.status === 'active'">
+                  <!-- Dữ liệu cơ bản -->
+                  <div class="col-md-6">
+                    <label class="small text-muted fw-semibold mb-1">Mã Voucher</label>
+                    <input v-model.trim="tier.voucherCode" type="text" class="form-control form-control-sm text-uppercase fw-bold border-brand-focus" placeholder="VD: BDAY2024">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="small text-muted fw-semibold mb-1">Loại giảm</label>
+                    <select v-model="tier.type" class="form-select form-select-sm border-brand-focus">
+                      <option value="fixed">VNĐ</option>
+                      <option value="percentage">%</option>
+                    </select>
+                  </div>
+                  <div class="col-md-3">
+                    <label class="small text-muted fw-semibold mb-1">Mức giảm</label>
+                    <input v-model.number="tier.value" type="number" class="form-control form-control-sm border-brand-focus">
+                  </div>
+
+                  <!-- Hạn mức và Hạn sử dụng -->
+                  <div class="col-md-4 mt-2">
+                    <label class="small text-muted fw-semibold mb-1">Đơn tối thiểu</label>
+                    <input v-model.number="tier.min_spend" type="number" class="form-control form-control-sm border-brand-focus">
+                  </div>
+                  <div class="col-md-4 mt-2">
+                    <label class="small text-muted fw-semibold mb-1">Lượt dùng/Khách</label>
+                    <input v-model.number="tier.usage_limit_per_user" type="number" class="form-control form-control-sm border-brand-focus">
+                  </div>
+                  <div class="col-md-4 mt-2">
+                    <label class="small text-muted fw-semibold mb-1">Hạn sử dụng (Ngày)</label>
+                    <input v-model.number="tier.validity_days" type="number" class="form-control form-control-sm border-brand-focus" placeholder="Tính từ ngày gửi">
+                  </div>
+                  <div class="col-md-12 mt-2 d-none">
+                     <!-- Ẩn trường này đi vì sinh nhật thường không giới hạn tổng lượt phát -->
+                    <input v-model.number="tier.usage_limit" type="number" value="10000">
                   </div>
                 </div>
               </div>
+              </div>
+
+
+
 
               <div class="mb-3">
                 <div class="d-flex justify-content-between align-items-end mb-1">
@@ -303,11 +323,11 @@
                 <h6 class="fw-bold mb-1 text-dark">Xem trước email hiển thị</h6>
                 <p class="text-muted small mb-0" style="font-size: 0.75rem;">Dựa trên dữ liệu của một khách hàng mẫu.</p>
               </div>
-              <select v-model="previewTierId" class="form-select form-select-sm bg-white" style="width: auto; font-size: 0.75rem;">
-                <option v-for="tier in birthdaySettings.tiers" :key="tier.id" :value="tier.id">
-                  Xem theo: {{ tier.name }}
-                </option>
-              </select>
+             <select v-model="previewTierId" class="form-select form-select-sm bg-white" style="width: auto; font-size: 0.75rem;">
+  <option v-for="tier in birthdaySettings.tiers" :key="tier.tier_id" :value="tier.tier_id">
+    Xem theo: {{ tier.name }}
+  </option>
+</select>
             </div>
             <div class="card-body p-3 d-flex align-items-center justify-content-center">
               
@@ -333,27 +353,26 @@
                     </div>
                     
                     <div class="sora-tp-content" v-html="previewBirthdayContent"></div>
-                    
-                    <div class="sora-tp-voucher-box p-2 rounded-2 bg-light border" v-if="previewTierData.voucherCode">
-                      <table class="sora-tp-table mb-0">
-                        <tr>
-                          <td class="text-muted">Mã quà tặng:</td>
-                          <td class="text-danger fw-bold font-monospace">{{ previewTierData.voucherCode }}</td>
-                        </tr>
-                        <tr>
-                          <td class="text-muted">Mức ưu đãi:</td>
-                          <td class="text-dark fw-bold">{{ previewTierData.discount || '...' }}</td>
-                        </tr>
-                        <tr>
-                          <td class="text-muted">Áp dụng:</td>
-                          <td class="text-dark">Tất cả bộ sưu tập</td>
-                        </tr>
-                        <tr>
-                          <td class="text-muted pb-0 border-0">Hạn sử dụng:</td>
-                          <td class="text-dark pb-0 border-0 fw-bold">{{ expireBirthdayDateDisplay }}</td>
-                        </tr>
-                      </table>
-                    </div>
+               <div class="sora-tp-voucher-box p-2 rounded-2 bg-light border" v-if="previewTierData?.voucherCode">
+  <table class="sora-tp-table mb-0">
+    <tr>
+      <td class="text-muted">Mã quà tặng:</td>
+      <td class="text-danger fw-bold font-monospace">{{ previewTierData?.voucherCode }}</td>
+    </tr>
+   <tr>
+  <td class="text-muted">Mức ưu đãi:</td>
+  <td class="text-dark fw-bold">{{ previewDiscountText }}</td>
+</tr>
+    <tr>
+      <td class="text-muted">Áp dụng:</td>
+      <td class="text-dark">Tất cả bộ sưu tập</td>
+    </tr>
+    <tr>
+      <td class="text-muted pb-0 border-0">Hạn sử dụng:</td>
+      <td class="text-dark pb-0 border-0 fw-bold">{{ expireBirthdayDateDisplay }}</td>
+    </tr>
+  </table>
+</div>
                     
                     <button class="sora-tp-btn mt-3 w-100 shadow-sm">CHỌN MÓN TRANG SỨC NGAY</button>
                   </div>
@@ -408,17 +427,11 @@ const birthdaySettings = ref({
   enabled: true,
   subject: '',
   content: 'Xin chào [Tên_Khách_Hàng],\n\nNhân dịp sinh nhật, SORA ThinkHub xin gửi đến bạn lời chúc một tuổi mới thật nhiều niềm vui, hạnh phúc và luôn tỏa sáng theo cách riêng của mình.\n\nCảm ơn bạn đã tin tưởng đồng hành cùng chúng tôi. SORA xin dành tặng bạn một ưu đãi đặc biệt để ngày sinh nhật thêm trọn vẹn và ý nghĩa.',
-  tiers: [
-    { id: 'regular', name: 'Khách Thường', voucherCode: 'BDAYREG', discount: 'Miễn phí Ship' },
-    { id: 'silver', name: 'Hạng Bạc', voucherCode: 'BDAYSILVER', discount: '5%' },
-    { id: 'gold', name: 'Hạng Vàng', voucherCode: 'BDAYGOLD', discount: '10%' },
-    { id: 'diamond', name: 'Hạng Kim cương', voucherCode: 'BDAYDIAMOND', discount: '15%' },
-  ]
+  tiers: []
 });
 
 const sampleCustomers = ref([{ id: 1, name: 'Lê Thị Mỹ Duyên', email: 'myduyen@example.com', gender: 'female', tier: 'diamond' }]);
-const previewTierId = ref('diamond');
-
+const previewTierId = ref(null);
 const fetchRecentLogs = async () => {
   try {
     const res = await apiClient.get('/admin/email-campaign/recent-logs');
@@ -447,10 +460,12 @@ const fetchBirthdaySettings = async () => {
       birthdaySettings.value.enabled = !!res.data.data.is_auto_birthday;
       birthdaySettings.value.subject = res.data.data.birthday_subject || '';
       birthdaySettings.value.content = res.data.data.birthday_content || '';
-   
-
-   if (res.data.data.tiers && res.data.data.tiers.length > 0) {
+      
+      // Đổ dữ liệu THẬT TỪ DATABASE vào biến giao diện
+      if (res.data.data.tiers && res.data.data.tiers.length > 0) {
         birthdaySettings.value.tiers = res.data.data.tiers;
+        // Gán hạng mặc định để hiển thị ở màn hình Preview bên phải
+        previewTierId.value = res.data.data.tiers[0].tier_id; 
       }
     }
   } catch (err) { console.error('Loi fetch birthday setting:', err); }
@@ -478,15 +493,31 @@ const stats = computed(() => [
   { label: 'Log gửi email', value: emailLogs.value.length, icon: 'bi-envelope-check', iconClass: 'blue' },
 ]);
 
-const previewTierData = computed(() => birthdaySettings.value.tiers.find(t => t.id === previewTierId.value) || birthdaySettings.value.tiers[0]);
-const previewBirthdaySubject = computed(() => replaceTokens(birthdaySettings.value.subject || '', sampleCustomers.value[0], previewTierData.value.voucherCode));
-const previewBirthdayContent = computed(() => replaceTokens(birthdaySettings.value.content || '', sampleCustomers.value[0], previewTierData.value.voucherCode).replace(/\n/g, '<br>'));
+// Dữ liệu của hạng đang được chọn để xem trước
+const previewTierData = computed(() => {
+  return birthdaySettings.value.tiers?.find(t => t.tier_id === previewTierId.value) 
+    || birthdaySettings.value.tiers?.[0] 
+    || { voucherCode: '', type: 'fixed', value: 0, validity_days: 7 };
+});
 
+// Chuyển đổi định dạng tiền tệ hoặc % cho màn hình preview
+const previewDiscountText = computed(() => {
+  const data = previewTierData.value;
+  if (!data?.value) return '...';
+  if (data.type === 'percentage') return `${data.value}%`;
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(data.value);
+});
+
+// Hạn sử dụng động (tính theo số ngày cài đặt, thay vì cộng cứng 3 ngày)
 const expireBirthdayDateDisplay = computed(() => {
-  const d = new Date()
-  d.setDate(d.getDate() + 3)
-  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`
-})
+  const data = previewTierData.value;
+  const days = data?.validity_days ? parseInt(data.validity_days) : 7;
+  
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+});
 
 async function runBirthdayCampaign() {
   if (sendingCampaign.value) return;
