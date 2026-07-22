@@ -65,31 +65,36 @@ class ClientCheckoutController extends Controller
             }
         }
 
+ // Thay thế toàn bộ khối truy vấn $coupons = Coupon::where...
         $coupons = Coupon::where('status', 'active')
             ->where(function ($q) use ($user) {
-                $q->whereNull('user_id'); // Lấy mã chung
+                // 1. Lấy các mã Public (Không gắn user cụ thể VÀ không phải mã sinh nhật)
+                $q->where(function ($subQ) {
+                    $subQ->whereNull('user_id')
+                         ->where('type', '!=', 'birthday');
+                });
+
+                // 2. Hoặc lấy mã Cá nhân (Cấp riêng cho user này, bao gồm cả mã sinh nhật)
                 if ($user) {
-                    $q->orWhere('user_id', $user->id); // Lấy thêm mã sinh nhật của riêng user này
+                    $q->orWhere('user_id', $user->id);
                 }
             })
+            // Chỉ lấy mã còn hạn
             ->where(function ($q) {
                 $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
             })
+            // Chỉ lấy mã còn tổng số lượng phát hành
             ->where(function ($q) {
                 $q->whereNull('usage_limit')->orWhereColumn('usage_count', '<', 'usage_limit');
             })
-            ->where(function ($q) use ($user) {
-                $q->where('type', '!=', 'birthday');
-
-                if ($user && $this->isSilverTierOrAbove($user)) {
-                    $q->orWhere(function ($birthday) use ($user) {
-                        $birthday->where('type', 'birthday')
-                            ->where('user_id', $user->id)
-                            ->where('is_used', 0);
-                    });
-                }
-            })
             ->get();
+
+        // 3. BỘ LỌC QUAN TRỌNG: Ẩn các mã mà User này đã xài hết lượt cá nhân (usage_limit_per_user)
+        if ($user) {
+            $coupons = $coupons->filter(function ($coupon) use ($user) {
+                return !$this->hasUserReachedCouponLimit($coupon, $user);
+            })->values();
+        }
 
         return response()->json([
             'success'          => true,
@@ -283,12 +288,13 @@ class ClientCheckoutController extends Controller
                     if (!$coupon || $coupon->status !== 'active') {
                         throw new \Exception("Mã giảm giá không hợp lệ hoặc đã tạm ngưng sử dụng.");
                     }
-                    if ($coupon->type === 'birthday') {
-                        if ((int) $coupon->user_id !== (int) $user->id || !$this->isSilverTierOrAbove($user)) {
-                            throw new \Exception("Voucher chỉ dành cho thành viên hạng Bạc trở lên.");
+                  if ($coupon->type === 'birthday') {
+                        // Chỉ cần kiểm tra mã này có đúng là cấp cho user đang mua hàng hay không
+                        if ((int) $coupon->user_id !== (int) $user->id) {
+                            throw new \Exception("Mã voucher sinh nhật này không thuộc quyền sở hữu của bạn.");
                         }
                         if ($coupon->is_used) {
-                            throw new \Exception("Mã voucher sinh nhật đã được sử dụng.");
+                            throw new \Exception("Mã voucher sinh nhật này đã được sử dụng trước đó.");
                         }
                     }
                     if ($coupon->expires_at && now()->greaterThan($coupon->expires_at)) {
@@ -319,7 +325,7 @@ class ClientCheckoutController extends Controller
 
                 if ($user->tier_id) {
                     $tier = MembershipTier::find($user->tier_id);
-                    if ($tier && $tier->discount_percent > 0) {
+                    if ($tier && $tier->discount_percent > 0) { 
                         $usedCount = TierServiceUsage::where('user_id', $user->id)
                             ->where('service_type', 'tier_discount')
                             ->whereYear('used_at', now()->year)
@@ -494,30 +500,7 @@ class ClientCheckoutController extends Controller
         }
     }
 
-    private function isSilverTierOrAbove($user): bool
-    {
-        if (!$user || !$user->tier_id) {
-            return false;
-        }
 
-        $userTier = $user->relationLoaded('tier') ? $user->tier : MembershipTier::find($user->tier_id);
-        if (!$userTier) {
-            return false;
-        }
-
-        $silverTier = MembershipTier::orderBy('min_spent', 'asc')
-            ->get()
-            ->first(function ($tier) {
-                $tierName = Str::lower(Str::ascii($tier->name ?? ''));
-                return Str::contains($tierName, ['silver', 'bac']);
-            });
-
-        if (!$silverTier) {
-            return false;
-        }
-
-        return (float) $userTier->min_spent >= (float) $silverTier->min_spent;
-    }
 
     private function hasUserReachedCouponLimit(Coupon $coupon, $user): bool
     {
@@ -539,8 +522,7 @@ class ClientCheckoutController extends Controller
     {
         return Order::where('user_id', $userId)
             ->where('coupon_id', $coupon->id)
-            ->where('status', '!=', 'cancelled')
-            ->where('payment_status', 'paid')
+            ->whereNotIn('status', ['cancelled', 'returned']) // Đã sửa: Bỏ check 'paid', thay bằng check không bị hủy
             ->count();
     }
 

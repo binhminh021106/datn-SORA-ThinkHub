@@ -327,8 +327,9 @@ const fetchEventDetail = async () => {
       holidayForm.content = data.email_content
       holidayForm.hasVoucher = !!data.voucher_code
       holidayForm.voucherCode = data.voucher_code || ''
-      if (data.discount) {
-        holidayForm.discount = data.discount.replace('%', '').trim();
+      // Ép kiểu an toàn thành String trước khi xử lý
+      if (data.discount !== null && data.discount !== undefined) {
+        holidayForm.discount = String(data.discount).replace('%', '').trim();
       } else {
         holidayForm.discount = '';
       }
