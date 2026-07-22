@@ -188,10 +188,7 @@ watch(rawBrandData, (b) => {
 const updateBrandMutation = useMutation({
   mutationFn: async (formData) => {
     const res = await axios.post(`${API_URL}/admin/brands/${brandId}`, formData, {
-      headers: {
-        ...getHeaders(),
-        'Content-Type': 'multipart/form-data'
-      }
+      headers: getHeaders()
     });
     return res.data;
   },

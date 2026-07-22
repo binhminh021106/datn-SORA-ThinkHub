@@ -639,7 +639,7 @@ import { useQuery, useMutation } from '@tanstack/vue-query';
 import Chart from 'chart.js/auto';
 import axios from 'axios';
 import Swal from 'sweetalert2';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import defaultImage from '@/assets/images/defaults/placeholder.png';
 
 const today = new Date();
@@ -684,16 +684,50 @@ const exportToExcel = () => {
     const formatMoney = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
     const formatNumber = (val) => new Intl.NumberFormat('vi-VN').format(val || 0);
 
+    const applyStyle = (ws) => {
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+          if (!ws[cellAddress]) continue;
+          ws[cellAddress].s = {
+            font: { name: "Arial", sz: 11, bold: R === 0 },
+            alignment: { vertical: "center", horizontal: "left" },
+            border: {
+              top: { style: "thin", color: { auto: 1 } },
+              bottom: { style: "thin", color: { auto: 1 } },
+              left: { style: "thin", color: { auto: 1 } },
+              right: { style: "thin", color: { auto: 1 } }
+            }
+          };
+          if (R === 0) {
+            ws[cellAddress].s.fill = { fgColor: { rgb: "E9ECEF" } };
+            ws[cellAddress].s.alignment.horizontal = "center";
+          }
+        }
+      }
+    };
+
     const overviewData = [
       { "Chỉ số": "Tổng doanh thu", "Giá trị": formatMoney(stats.value.totalRevenue) },
+      { "Chỉ số": "Tăng trưởng doanh thu", "Giá trị": formatGrowth(stats.value.revenueGrowth) },
       { "Chỉ số": "Đơn hàng mới", "Giá trị": formatNumber(stats.value.newOrders) },
+      { "Chỉ số": "Tăng trưởng đơn hàng", "Giá trị": formatGrowth(stats.value.ordersGrowth) },
       { "Chỉ số": "Tổng khách hàng", "Giá trị": formatNumber(stats.value.totalCustomers) },
+      { "Chỉ số": "Tăng trưởng khách hàng", "Giá trị": formatGrowth(stats.value.customersGrowth) },
       { "Chỉ số": "Tổng tồn kho hệ thống", "Giá trị": formatNumber(stats.value.inventory) },
       { "Chỉ số": "Mã giảm giá đang hoạt động", "Giá trị": formatNumber(couponData.value?.summary?.active) },
-      { "Chỉ số": "Tổng lượt dùng mã giảm giá", "Giá trị": formatNumber(couponData.value?.summary?.total_uses) }
+      { "Chỉ số": "Tổng lượt dùng mã giảm giá", "Giá trị": formatNumber(couponData.value?.summary?.total_uses) },
+      { "Chỉ số": "Tổng nhân sự hôm nay", "Giá trị": formatNumber(staffStats.value.total) },
+      { "Chỉ số": "Nhân sự ca hiện tại", "Giá trị": staffStats.value.current_shift || 'Không có ca làm' },
+      { "Chỉ số": "Tỷ lệ TT VNPay", "Giá trị": `${paymentStats.value.vnpayPercent}%` },
+      { "Chỉ số": "Tỷ lệ TT MoMo", "Giá trị": `${paymentStats.value.momoPercent}%` },
+      { "Chỉ số": "Tỷ lệ TT COD", "Giá trị": `${paymentStats.value.codPercent}%` },
+      { "Chỉ số": "Tỷ lệ TT Chuyển khoản", "Giá trị": `${paymentStats.value.bankPercent}%` }
     ];
     const wsOverview = XLSX.utils.json_to_sheet(overviewData);
     wsOverview['!cols'] = [{ wch: 35 }, { wch: 25 }];
+    applyStyle(wsOverview);
     XLSX.utils.book_append_sheet(wb, wsOverview, "Tổng Quan");
 
     if (recentOrders.value?.length) {
@@ -706,6 +740,7 @@ const exportToExcel = () => {
       }));
       const wsOrders = XLSX.utils.json_to_sheet(ordersData);
       wsOrders['!cols'] = [{ wch: 15 }, { wch: 25 }, { wch: 20 }, { wch: 20 }, { wch: 20 }];
+      applyStyle(wsOrders);
       XLSX.utils.book_append_sheet(wb, wsOrders, "Đơn Hàng Gần Đây");
     }
 
@@ -718,6 +753,7 @@ const exportToExcel = () => {
       }));
       const wsTop = XLSX.utils.json_to_sheet(topData);
       wsTop['!cols'] = [{ wch: 50 }, { wch: 20 }, { wch: 15 }, { wch: 20 }];
+      applyStyle(wsTop);
       XLSX.utils.book_append_sheet(wb, wsTop, "Top Bán Chạy");
     }
 
@@ -729,6 +765,7 @@ const exportToExcel = () => {
       }));
       const wsLowStock = XLSX.utils.json_to_sheet(lowStockData);
       wsLowStock['!cols'] = [{ wch: 50 }, { wch: 20 }, { wch: 15 }];
+      applyStyle(wsLowStock);
       XLSX.utils.book_append_sheet(wb, wsLowStock, "Sắp Hết Hàng");
     }
 
@@ -741,6 +778,7 @@ const exportToExcel = () => {
       }));
       const wsCombo = XLSX.utils.json_to_sheet(comboData);
       wsCombo['!cols'] = [{ wch: 40 }, { wch: 20 }, { wch: 20 }, { wch: 20 }];
+      applyStyle(wsCombo);
       XLSX.utils.book_append_sheet(wb, wsCombo, "Combo Đang Chạy");
     }
 

@@ -885,10 +885,7 @@ const validateDuplicates = () => {
 const updateProductMutation = useMutation({
     mutationFn: async (formData) => {
         const res = await axios.post(`${API_URL}/admin/products/${productId}`, formData, {
-            headers: {
-                ...getHeaders(),
-                'Content-Type': 'multipart/form-data'
-            }
+            headers: getHeaders()
         });
         return res.data;
     },

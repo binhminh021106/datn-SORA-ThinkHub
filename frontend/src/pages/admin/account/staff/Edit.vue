@@ -354,10 +354,7 @@ const removeAvatar = () => {
 const updateStaffMutation = useMutation({
   mutationFn: async (formData) => {
     const response = await axios.post(`${API_URL}/admin/staff/${route.params.id}`, formData, {
-      headers: {
-        ...getHeaders(),
-        'Content-Type': 'multipart/form-data'
-      }
+      headers: getHeaders()
     });
     return response.data;
   },

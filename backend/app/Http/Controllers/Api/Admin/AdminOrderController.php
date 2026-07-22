@@ -179,7 +179,6 @@ class AdminOrderController extends Controller
     }
 
     /**
-     * Hàm dùng chung để Hoàn lại Tồn kho và Hoàn lượt dùng Hạng TV
      * [TỐI ƯU ORM 4] Dọn sạch N+1 Query và Gom nhóm increment
      */
     private function restoreOrderResources(Order $order)
@@ -255,10 +254,8 @@ class AdminOrderController extends Controller
         // Kịch bản 2: Đơn bị Hủy hoặc Trả hàng
         elseif (in_array($newStatus, ['cancelled', 'returned'])) {
             if ($commission->status === 'pending') {
-                // Đơn hủy trước khi giao -> Xóa sổ luôn
                 $commission->update(['status' => 'rejected']);
             } elseif ($commission->status === 'approved') {
-                // Đơn bị hoàn sau khi đã giao -> Phải trừ lại tiền của Đối tác
                 $commission->update(['status' => 'rejected']);
                 User::where('id', $order->affiliate_user_id)->decrement('commission_balance', $commission->amount);
             }

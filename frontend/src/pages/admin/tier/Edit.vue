@@ -40,7 +40,7 @@
                           class="form-control text-end currency-input"
                           v-model="formattedMinSpent"
                           inputmode="numeric"
-                          pattern="[0-9]*"
+                          pattern="[0-9\.]*"
                           maxlength="14"
                           :readonly="isDefaultTier"
                           required
@@ -219,7 +219,7 @@ const handleUpload = (e) => {
 // ==========================================
 const updateTierMutation = useMutation({
   mutationFn: async (formData) => {
-    const res = await axios.post(`${API_URL}/admin/tiers/${tierId}`, formData, { headers: { ...getHeaders(), 'Content-Type': 'multipart/form-data' } });
+    const res = await axios.post(`${API_URL}/admin/tiers/${tierId}`, formData, { headers: getHeaders() });
     return res.data;
   },
   onMutate: () => { isSaving.value = true; },

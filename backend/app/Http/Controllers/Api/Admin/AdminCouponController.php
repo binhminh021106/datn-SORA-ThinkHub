@@ -15,6 +15,19 @@ class AdminCouponController extends Controller
      */
     public function index()
     {
+        // Tự động dọn dẹp các voucher hết hạn ngay khi Admin vừa mở danh sách (Lazy Cleanup)
+        \App\Models\Coupon::where('status', 'active')
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<', now())
+            ->whereNull('user_id')
+            ->update(['status' => 'inactive']);
+
+        \App\Models\Coupon::where('status', 'active')
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<', now())
+            ->whereNotNull('user_id')
+            ->delete();
+
         $coupons = Coupon::withTrashed()->orderBy('id', 'desc')->get();
         
         return response()->json([
