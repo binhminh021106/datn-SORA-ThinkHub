@@ -39,10 +39,12 @@
               v-if="item.product"
               :product="item.product"
               :is-in-wishlist="true"
+              :is-in-compare="isInCompare(item.product.id)"
               :show-wishlist="true"
               :show-compare="true"
               :show-add-to-cart="true"
               @toggle-wishlist="toggleFavorite"
+              @toggle-compare="handleToggleCompare"
               @add-to-cart="openQuickAdd"
             />
           </div>
@@ -52,6 +54,11 @@
 
     <!-- MODALS (outside layout) -->
     <!-- TÍCH HỢP COMPONENT COMPARE MODAL -->
+    <CompareModal 
+      ref="compareModalRef" 
+      shop-slug="sora" 
+      @update-list="compareList = $event" 
+    />
 
     <!-- MODAL QUICK ADD CHUẨN ĐỒNG BỘ 100% -->
     <div class="modal fade" id="quickAddModal" tabindex="-1" aria-hidden="true">
@@ -114,6 +121,7 @@ import { getUserToken } from '@/composables/useUtilities';
 import Toast from '@/utils/toastConfig';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
 import ProductCard from '@/components/ui/ProductCard.vue';
+import CompareModal from '@/components/ui/CompareModal.vue';
 import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
 import { getStorageUrl } from '@/utils/env';
@@ -178,6 +186,20 @@ const toggleFavorite = async (product) => {
     Toast.fire({ icon: 'error', title: 'Có lỗi xảy ra, thử lại sau' });
   } finally {
     isToggling.value = null;
+  }
+};
+
+// ==============================================
+// LOGIC COMPARE 
+// ==============================================
+const compareModalRef = ref(null);
+const compareList = ref([]); 
+
+const isInCompare = (id) => compareList.value.some(item => item.id === id);
+
+const handleToggleCompare = (prod) => {
+  if (compareModalRef.value) {
+    compareModalRef.value.toggleCompare(prod);
   }
 };
 

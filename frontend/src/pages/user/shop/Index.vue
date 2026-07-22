@@ -248,7 +248,7 @@
           <!-- LƯỚI SẢN PHẨM THỰC TẾ -->
           <div v-else class="product-grid product-grid-live" :class="{ 'is-refreshing': isProductRefreshing }">
             <ProductCard v-for="product in allProducts" :key="product.id" :product="product" :shop-slug="shopSlug"
-              :is-in-wishlist="isFavourited(product.id)" :show-wishlist="true"
+              :is-in-wishlist="isFavourited(product.id)" :is-in-compare="isInCompare(product.id)" :show-wishlist="true"
               :show-compare="true" :show-add-to-cart="true" @toggle-wishlist="handleToggleWishlist" />
           </div>
 
@@ -296,6 +296,8 @@
         </div>
       </div>
     </div>
+
+    <CompareModal :shop-slug="shopSlug" @update-list="compareList = $event" />
 
     <!-- MODAL QUICK ADD -->
     <div v-if="quickAddModal.isOpen"
@@ -398,6 +400,7 @@ import { ref, shallowRef, onMounted, onUnmounted, reactive, computed, watch } fr
 import { useRoute, useRouter } from 'vue-router';
 import { useQuery, keepPreviousData } from '@tanstack/vue-query';
 import ProductCard from '@/components/ui/ProductCard.vue';
+import CompareModal from '@/components/ui/CompareModal.vue';
 import SoraSkeleton from '@/components/ui/SoraSkeleton.vue';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
 import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
@@ -448,6 +451,7 @@ onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll);
 });
 
+const compareList = ref([]);
 const categoryImagesLoaded = ref({});
 const categories = computed(() => categoriesData.value || []);
 const showAllCategories = ref(false);
@@ -548,6 +552,8 @@ const hasHoverImage = (product) => product.hover_image && product.hover_image !=
 const handleToggleWishlist = (product) => {
   toggleFavourite(product, Toast, soraAlert, router);
 };
+
+const isInCompare = (id) => compareList.value.some(item => item.id === id);
 
 const isColorAttribute = (attrName) => {
   const name = attrName.toLowerCase();

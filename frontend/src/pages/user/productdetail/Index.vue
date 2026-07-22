@@ -208,10 +208,15 @@
 
             <!-- CỤM NÚT SO SÁNH & YÊU THÍCH -->
             <div class="d-flex flex-row gap-3 mt-4 align-items-center">
-              <button class="btn-action-sub" style="flex: 1;" @click="handleToggleCompare(product)" :class="{ 'active': isInCompare(product.id) }">
-                <i class="bi bi-arrow-left-right me-1"></i>
-                {{ isInCompare(product.id) ? 'Bỏ so sánh' : 'Thêm so sánh' }}
-              </button>
+            <button 
+  class="btn-action-sub" 
+  style="flex: 1;"
+  @click="handleToggleCompare(product)"
+  :class="{ 'active': isInCompare(product.id) }"
+>
+  <i class="bi bi-arrow-left-right me-1"></i>
+  {{ isInCompare(product.id) ? 'Bỏ so sánh' : 'Thêm so sánh' }}
+</button>
 
               <button 
                 class="btn-wishlist-action" 
@@ -335,12 +340,14 @@
             <!-- Sử dụng ProductCard Đã Được Nâng Cấp -->
             <ProductCard
               :product="item"
-              :shop-slug="item.shop_slug || shopSlug"
+:shop-slug="item.shop_slug || shopSlug"
               :is-in-wishlist="isFavourited(item.id)"
+              :is-in-compare="isInCompare(item.id)"
               :show-wishlist="true"
               :show-compare="true"
               :show-add-to-cart="true"
               @toggle-wishlist="toggleFavourite"
+              @toggle-compare="handleToggleCompare"
               @add-to-cart="openQuickAdd"
             />
           </div>
@@ -439,6 +446,14 @@
       @close="showSizeGuideModal = false"
     />
 
+    <!-- GỌI COMPONENT SO SÁNH VÀ CHUYỀN DỮ LIỆU TỪ TRONG PAGE VÀO -->
+    <CompareModal 
+      ref="compareModalRef" 
+      :shop-slug="shopSlug" 
+      :base-product-id="product?.id" 
+      @update-list="compareList = $event" 
+    />
+
     <!-- POPUP QUICK ADD TỪ COMPONENT PRODUCT CARD -->
     <div class="modal fade" id="quickAddModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
@@ -501,6 +516,7 @@ import Swal from 'sweetalert2';
 import Toast from '@/utils/toastConfig';
 
 import ProductCard from '@/components/ui/ProductCard.vue';
+import CompareModal from '@/components/ui/CompareModal.vue';
 import SizeGuideModal from '@/components/ui/SizeGuideModal.vue';
 import VariantSelector from '@/components/ui/VariantSelector.vue';
 import StockStatusBar from '@/components/ui/StockStatusBar.vue';
@@ -619,13 +635,17 @@ const isCurrentSelectionOutOfStock = computed(() => {
   return false;
 });
 
-// Quick Add
+// Compare & Quick Add
+const compareModalRef = ref(null);
+const compareList = ref([]);
+const quickAddProduct = ref(null);
 const quickAddMatrix = ref({});
 const quickAddSelections = ref({});
 const quickAddError = ref(false);
 let quickAddModalInstance = null;
 
-const isInCompare = (id) => globalModalState.compareList.some(item => item.id === id);
+// Helper functions
+const isInCompare = (id) => compareList.value.some(item => item.id === id);
 
 const normalizeAttributeName = (name) => String(name || '')
   .normalize('NFD')
@@ -755,12 +775,26 @@ const sizeGuideRows = computed(() => {
 });
 
 const handleToggleCompare = (prod) => {
+
   const compareData = {
     ...prod,
     thumbnail_image: prod.thumbnail_image || mainImage.value,
     image: prod.image || mainImage.value
   };
-  globalModalState.openCompare(compareData);
+
+  // 2. Gửi tín hiệu sang CompareModal thông qua kho lưu trữ toàn cục (ĐÚNG CHUẨN KIẾN TRÚC HIỆN TẠI)
+  globalModalState.compareProduct = compareData;
+  globalModalState.compareTrigger = Date.now(); 
+
+  // 3. (Tùy chọn) Cập nhật lại danh sách local để nút đổi màu ngay lập tức
+  setTimeout(() => {
+    try {
+   const stored = localStorage.getItem(`compare_list_${shopSlug || 'aurora'}`);
+      if (stored) {
+        compareList.value = JSON.parse(stored);
+      }
+    } catch (e) {}
+  }, 100);
 };
 
 // Quick Add computed properties

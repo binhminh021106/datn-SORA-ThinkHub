@@ -157,7 +157,7 @@ const props = defineProps({
 
 const router = useRouter();
 
-const compareList = computed(() => globalModalState.compareList);
+const compareList = ref([]);
 const showComparePopup = ref(false);
 const comparePopupTab = ref('suggestions');
 const searchQuery = ref('');
@@ -193,8 +193,21 @@ const getToken = () => {
 
 const isLoggedIn = computed(() => !!getToken());
 
+const loadCompareList = () => {
+  try {
+    const stored = localStorage.getItem(`compare_list_${props.shopSlug}`);
+    if (stored) {
+        compareList.value = JSON.parse(stored).slice(0, 3);
+    }
+  } catch (e) { compareList.value = []; }
+};
+
+watch(compareList, (newVal) => {
+  localStorage.setItem(`compare_list_${props.shopSlug}`, JSON.stringify(newVal));
+}, { deep: true });
+
 onMounted(() => {
-  globalModalState.initCompareList(props.shopSlug);
+  loadCompareList();
 });
 
 const filteredSuggestions = computed(() => {
@@ -243,7 +256,7 @@ const toggleCompareItem = (prod) => {
         name: prod.name,
         image: prod.image || getImageUrl(prod.thumbnail_image)
     };
-    globalModalState.updateCompareList([...compareList.value, item], props.shopSlug);
+    compareList.value.push(item);
     Toast.fire({ icon: 'success', title: 'Đã thêm vào danh sách so sánh' });
   }
   // Mở lại Bottom Bar nếu đang bị thu nhỏ
@@ -251,18 +264,17 @@ const toggleCompareItem = (prod) => {
 };
 
 const removeFromCompare = (id) => {
-  globalModalState.updateCompareList(compareList.value.filter(item => item.id !== id), props.shopSlug);
+  compareList.value = compareList.value.filter(item => item.id !== id);
 };
 
 const clearCompare = () => {
-  globalModalState.updateCompareList([], props.shopSlug);
+  compareList.value = [];
   isBottomBarMinimized.value = false; // Đặt lại trạng thái khi xóa sạch
 };
 
 const goToComparePage = () => {
   if (compareList.value.length < 2) return Toast.fire({ icon: 'info', title: 'Vui lòng chọn ít nhất 2 sản phẩm' });
   showComparePopup.value = false;
-  isBottomBarMinimized.value = true;
   router.push({ path: `/shop/${props.shopSlug}/compare`, query: { spGoc: compareList.value[0].id } });
 };
 
