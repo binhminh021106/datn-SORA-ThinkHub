@@ -291,20 +291,19 @@ public function applyBirthdayCoupon(Request $request)
 
         $coupon = Coupon::where('code', $code)
             ->where('status', 'active')
+            ->where('type', 'birthday')
             ->where(function ($q) {
                 $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
             })
-            ->where(function ($q) {
-                $q->whereNull('usage_limit')->orWhereColumn('usage_count', '<', 'usage_limit');
-            })
+            ->whereColumn('usage_count', '<', 'usage_limit')
             ->first();
 
         if (!$coupon) {
             return response()->json(['success' => false, 'message' => 'Mã voucher không hợp lệ hoặc đã hết hạn.']);
         }
 
-        // 2. Nếu là mã quà tặng sinh nhật, tiến hành kiểm tra tài khoản sở hữu độc quyền
-        $isBirthdayCoupon = str_contains(mb_strtolower($coupon->name, 'UTF-8'), 'sinh nhật');
+        // 2. Kiểm tra tài khoản sở hữu độc quyền đối với voucher sinh nhật
+        $isBirthdayCoupon = true;
 
         if ($isBirthdayCoupon) {
             $user = auth('sanctum')->user();
@@ -312,11 +311,15 @@ public function applyBirthdayCoupon(Request $request)
                 return response()->json(['success' => false, 'message' => 'Bạn cần đăng nhập để sử dụng voucher sinh nhật.']);
             }
 
-            // Tách chuỗi mã để lấy ID người nhận (VD: SORA-15-2026 lấy ID là 15)
-            $parts = explode('-', $code);
-            if (count($parts) >= 2) {
-                $targetUserId = $parts[count($parts) - 2];
-                if ($user->id != $targetUserId) {
+            if (!is_null($coupon->user_id)) {
+                if ($coupon->user_id != $user->id) {
+                    return response()->json(['success' => false, 'message' => 'Mã voucher sinh nhật này không thuộc về tài khoản của bạn.']);
+                }
+            } else {
+                $parts = explode('-', $coupon->code);
+                $targetUserId = $parts[count($parts) - 2] ?? null;
+                
+                if (!ctype_digit((string) $targetUserId) || (int) $user->id !== (int) $targetUserId) {
                     return response()->json(['success' => false, 'message' => 'Mã voucher sinh nhật này không thuộc về tài khoản của bạn.']);
                 }
             }

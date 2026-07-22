@@ -243,13 +243,19 @@ class EmailCampaignService
         $userTier = $user->relationLoaded('tier') ? $user->tier : MembershipTier::find($user->tier_id);
         if (!$userTier) return 'regular';
 
-        // Ánh xạ nhãn hạng dựa trên ID cố định (đảm bảo tính ổn định khi thêm hạng mới)
-        return match ((int) $userTier->id) {
-            2 => 'silver',
-            3 => 'gold',
-            4 => 'diamond',
-            default => 'regular',
-        };
+        $name = mb_strtolower($userTier->name, 'UTF-8');
+
+        if (str_contains($name, 'silver') || str_contains($name, 'bạc')) {
+            return 'silver';
+        }
+        if (str_contains($name, 'gold') || str_contains($name, 'vàng')) {
+            return 'gold';
+        }
+        if (str_contains($name, 'diamond') || str_contains($name, 'kim cương')) {
+            return 'diamond';
+        }
+
+        return 'regular';
     }
  private function isSilverTierOrAbove(User $user): bool
     {
