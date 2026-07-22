@@ -9,6 +9,7 @@
     <Footer />
     <MobileBottomNav />
     <ChatDock />
+    <CompareModal />
 
     <transition name="fade">
       <button
@@ -31,6 +32,7 @@ import Header from '../components/user/Header.vue';
 import Footer from '../components/user/Footer.vue';
 import MobileBottomNav from '../components/user/MobileBottomNav.vue';
 import ChatDock from '@/pages/user/chatbot/ChatDock.vue';
+import CompareModal from '@/components/ui/CompareModal.vue';
 
 const isVisible = ref(false);
 
