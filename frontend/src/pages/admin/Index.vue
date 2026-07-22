@@ -262,6 +262,7 @@
               <router-link :to="{ path: '/admin/orders' }"
                 class="btn btn-sm bg-brand-soft text-brand fw-bold rounded-pill px-3 transition-all border border-light">
                 Xem tất cả
+
               </router-link>
             </div>
             <div class="card-body p-0 custom-scrollbar" style="max-height: 420px; overflow-y: auto;">
@@ -269,11 +270,12 @@
                 <table class="table table-hover align-middle mb-0 custom-table">
                   <thead class="bg-light">
                     <tr>
-                      <th class="ps-4 py-3 fw-bold text-secondary border-0 font-size-sm">Mã ĐH</th>
-                      <th class="py-3 fw-bold text-secondary border-0 font-size-sm">Khách hàng</th>
-                      <th class="py-3 fw-bold text-secondary border-0 font-size-sm whitespace-nowrap">Ngày đặt</th>
-                      <th class="py-3 fw-bold text-secondary border-0 font-size-sm text-end">Tổng tiền</th>
-                      <th class="pe-4 py-3 fw-bold text-secondary border-0 text-center font-size-sm">Trạng thái</th>
+                      <th class="ps-4 py-3 fw-bold text-secondary border-0">Mã ĐH</th>
+                      <th class="py-3 fw-bold text-secondary border-0">Khách hàng</th>
+                      <th class="py-3 fw-bold text-secondary border-0">Ngày đặt</th>
+                      <th class="py-3 fw-bold text-secondary border-0">Tổng tiền</th>
+                      <th class="pe-4 py-3 fw-bold text-secondary border-0 text-center">Trạng thái</th>
+                      <th class="pe-4 py-3 fw-bold text-secondary border-0 text-center">Trạng thái</th>
                     </tr>
                   </thead>
                   <tbody>

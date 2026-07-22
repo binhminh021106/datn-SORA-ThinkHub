@@ -240,41 +240,22 @@ class EmailCampaignService
         ]);
     }
 
-    /**
-     * Phân loại nhanh tên hạng của User để match với cấu hình
-     */
-  /**
-     * Phân loại hạng linh hoạt dựa trên Min Spent thay vì so khớp chuỗi Text.
-     */
-private function getUserTierName(User $user): string
+  
+    private function getUserTierName(User $user): string
     {
         if (!$user->tier_id) return 'regular';
         
         $userTier = $user->relationLoaded('tier') ? $user->tier : MembershipTier::find($user->tier_id);
         if (!$userTier) return 'regular';
 
-        // Lấy danh sách hạng sắp xếp theo mức chi tiêu từ thấp đến cao
-        $allTiers = MembershipTier::orderBy('min_spent', 'asc')->get();
-        if ($allTiers->isEmpty()) return 'regular';
-
-        // Tìm vị trí hạng của user trong danh sách
-        $tierIndex = $allTiers->search(function ($tier) use ($userTier) {
-            return $tier->id === $userTier->id;
-        });
-
-        if ($tierIndex === false) return 'regular';
-
-        $totalTiers = $allTiers->count();
-        
-        // Đảm bảo hạng thấp nhất (index 0) luôn là regular
-        if ($tierIndex === 0) return 'regular';
-
-        // Quy chuẩn ánh xạ động (Top 1 là Diamond, Top 2 là Gold, còn lại là Silver)
-        if ($tierIndex == $totalTiers - 1) return 'diamond';
-        if ($tierIndex == $totalTiers - 2) return 'gold';
-        return 'silver';
+        // Ánh xạ nhãn hạng dựa trên ID cố định (đảm bảo tính ổn định khi thêm hạng mới)
+        return match ((int) $userTier->id) {
+            2 => 'silver',
+            3 => 'gold',
+            4 => 'diamond',
+            default => 'regular',
+        };
     }
-
  private function isSilverTierOrAbove(User $user): bool
     {
         if (!$user->tier_id) {
