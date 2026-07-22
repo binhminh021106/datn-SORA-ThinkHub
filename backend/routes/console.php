@@ -14,4 +14,4 @@ Schedule::command('email-campaign:auto-send')->dailyAt('09:37');
 
 Schedule::command('vouchers:cleanup')->dailyAt('00:01');
 
-Schedule::command('orders:cleanup')->everyMinute();
+Schedule::command('orders:cleanup')->everyMinute()->withoutOverlapping(10)->onOneServer();

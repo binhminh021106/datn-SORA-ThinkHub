@@ -13,6 +13,7 @@ class Coupon extends Model
 
     protected $fillable = [
         'user_id',
+        'tier_id',
         'name',
         'code',
         'min_spend', // chi tieu toi thieu
@@ -34,6 +35,11 @@ class Coupon extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function tier()
+    {
+        return $this->belongsTo(MembershipTier::class, 'tier_id');
     }
 
     public function birthdayEmailLog()

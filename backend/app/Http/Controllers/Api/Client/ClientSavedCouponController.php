@@ -14,17 +14,59 @@ class ClientSavedCouponController extends Controller
     {
         $user = $request->user();
 
+        // Lấy danh sách voucher đã lưu
         $savedCoupons = UserSavedCoupon::with('coupon')
             ->where('user_id', $user->id)
             ->latest('saved_at')
             ->get()
             ->filter(fn ($item) => $item->coupon)
-            ->map(fn ($item) => $this->formatSavedCoupon($item, $user))
-            ->values();
+            ->map(fn ($item) => $this->formatSavedCoupon($item, $user));
+
+        // Lấy thêm voucher sinh nhật theo hạng thành viên (nếu có)
+        $birthdayCoupon = null;
+        if ($user->tier_id) {
+            $birthdayCouponModel = Coupon::where('tier_id', $user->tier_id)
+                ->where('status', 'active')
+                ->where('name', 'LIKE', '%sinh nhật%')
+                ->where(function ($q) {
+                    $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                })
+                ->whereColumn('usage_count', '<', 'usage_limit')
+                ->first();
+
+            if ($birthdayCouponModel) {
+                // Kiểm tra xem người dùng đã lưu mã này chưa, nếu rồi thì bỏ qua để tránh lặp
+                $alreadySaved = $savedCoupons->contains(fn ($item) => (int) $item['coupon_id'] === (int) $birthdayCouponModel->id);
+                
+                if (!$alreadySaved) {
+                    // Giả lập định dạng giống formatSavedCoupon để FE hiển thị đúng
+                    $birthdayCoupon = [
+                        'id' => $birthdayCouponModel->id,
+                        'name' => $birthdayCouponModel->name,
+                        'code' => $birthdayCouponModel->code,
+                        'min_spend' => $birthdayCouponModel->min_spend,
+                        'type' => $birthdayCouponModel->type,
+                        'value' => $birthdayCouponModel->value,
+                        'usage_limit' => $birthdayCouponModel->usage_limit,
+                        'usage_count' => $birthdayCouponModel->usage_count,
+                        'usage_limit_per_user' => $birthdayCouponModel->usage_limit_per_user,
+                        'expires_at' => $birthdayCouponModel->expires_at ? $birthdayCouponModel->expires_at->format('Y-m-d H:i:s') : null,
+                        'is_used' => false, // Chưa dùng mới hiện
+                        'status' => $birthdayCouponModel->status,
+                        'saved_at' => now()->format('Y-m-d H:i:s'),
+                    ];
+                }
+            }
+        }
+
+        $allCoupons = $savedCoupons->values()->toArray();
+        if ($birthdayCoupon) {
+            array_unshift($allCoupons, $birthdayCoupon);
+        }
 
         return response()->json([
             'success' => true,
-            'data' => $savedCoupons,
+            'data' => $allCoupons,
         ]);
     }
 
@@ -162,8 +204,8 @@ class ClientSavedCouponController extends Controller
             $disabledReason = 'Mã giảm giá đã hết lượt sử dụng.';
         } elseif (!$isUserUsageAvailable) {
             $disabledReason = 'Bạn đã sử dụng hết lượt cho mã này.';
-        } elseif ($coupon->type === 'birthday' && ((int) $coupon->user_id !== (int) $user->id || $coupon->is_used)) {
-            $disabledReason = 'Mã sinh nhật không còn khả dụng.';
+        } elseif (str_contains(mb_strtolower($coupon->name, 'UTF-8'), 'sinh nhật') && $coupon->tier_id && (int) $coupon->tier_id !== (int) $user->tier_id) {
+            $disabledReason = 'Mã sinh nhật không thuộc hạng của bạn.';
         }
 
         return [

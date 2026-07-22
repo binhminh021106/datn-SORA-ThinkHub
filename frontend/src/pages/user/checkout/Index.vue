@@ -462,9 +462,14 @@
                         </div>
                         <div class="d-flex flex-column gap-3">
                             <div v-for="coupon in availableCoupons" :key="coupon.id"
-                                class="card border-0 shadow-sm rounded position-relative overflow-hidden cursor-pointer transition-all"
-                                :class="{ 'border border-sora-primary bg-danger-subtle bg-opacity-10': selectedCoupon?.id === coupon.id, 'opacity-50': subTotal < coupon.min_spend }"
-                                @click="applyCoupon(coupon)">
+                                class="card border-0 shadow-sm rounded position-relative overflow-hidden transition-all"
+                                :class="{ 
+                                    'border border-sora-primary bg-danger-subtle bg-opacity-10': selectedCoupon?.id === coupon.id, 
+                                    'opacity-50': subTotal < coupon.min_spend && !coupon.is_disabled,
+                                    'opacity-50 pointer-events-none bg-light': coupon.is_disabled,
+                                    'cursor-pointer': !coupon.is_disabled
+                                }"
+                                @click="!coupon.is_disabled && applyCoupon(coupon)">
                                 <div class="position-absolute top-0 bottom-0 start-0 border-start border-3 border-dashed border-sora-primary"
                                     style="width: 5px;"></div>
 
@@ -480,9 +485,13 @@
                                         <small class="text-muted d-block">Đơn tối thiểu: {{
                                             formatPrice(coupon.min_spend) }}</small>
                                         <div class="mt-2 text-danger small fw-bold font-oswald tracking-wide"
-                                            v-if="subTotal < coupon.min_spend">
+                                            v-if="!coupon.is_disabled && subTotal < coupon.min_spend">
                                             <i class="bi bi-exclamation-circle-fill me-1"></i> Mua thêm {{
                                             formatPrice(coupon.min_spend - subTotal) }} để dùng
+                                        </div>
+                                        <div class="mt-2 text-danger small fw-bold font-oswald tracking-wide"
+                                            v-if="coupon.is_disabled">
+                                            <i class="bi bi-slash-circle me-1"></i> {{ coupon.disabled_reason }}
                                         </div>
                                     </div>
                                     <div class="text-end ps-3 border-start">
@@ -554,7 +563,7 @@ const fetchCartSnapshot = async () => {
             
             if (
                 selectedCoupon.value &&
-                !availableCoupons.value.some(c => c.id === selectedCoupon.value.id)
+                !availableCoupons.value.some(c => c.id === selectedCoupon.value.id && !c.is_disabled)
             ) {
                 selectedCoupon.value = null;
             }
@@ -841,7 +850,7 @@ watch(isCouponBlocked, (isBlocked) => {
 });
 
 const discountAmount = computed(() => {
-    if (!selectedCoupon.value || isCouponBlocked.value) return 0;
+    if (!selectedCoupon.value || isCouponBlocked.value || selectedCoupon.value.is_disabled) return 0;
     if (subTotal.value < selectedCoupon.value.min_spend) return 0;
     if (selectedCoupon.value.type === 'fixed') return parseFloat(selectedCoupon.value.value);
     return subTotal.value * (parseFloat(selectedCoupon.value.value) / 100);
@@ -863,6 +872,13 @@ const fetchInitData = async () => {
             addresses.value = res.data.addresses || [];
             availableCoupons.value = res.data.coupons || [];
             tierDiscountInfo.value = res.data.tier_discount || null;
+
+            if (
+                selectedCoupon.value &&
+                !availableCoupons.value.some(c => c.id === selectedCoupon.value.id && !c.is_disabled)
+            ) {
+                selectedCoupon.value = null;
+            }
 
             if (res.data.user) {
                 form.value.customer_email = res.data.user.email || '';
@@ -1019,7 +1035,7 @@ const openCouponModal = () => {
     couponModalInstance.show();
 };
 const applyCoupon = (coupon) => {
-    if (subTotal.value < coupon.min_spend) return;
+    if (coupon.is_disabled || subTotal.value < coupon.min_spend) return;
     selectedCoupon.value = coupon;
     if (coupon.type === 'birthday') setSafeStorage('birthday_coupon_code', coupon.code);
 };
@@ -1034,7 +1050,7 @@ const autoApplyStoredBirthdayCoupon = () => {
     if (!storedCode || isCouponBlocked.value) return;
 
     const coupon = availableCoupons.value.find(c => String(c.code).toLowerCase() === String(storedCode).toLowerCase());
-    if (!coupon) {
+    if (!coupon || coupon.is_disabled) {
         removeSafeStorage('birthday_coupon_code');
         return;
     }
