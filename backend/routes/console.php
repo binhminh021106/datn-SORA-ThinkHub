@@ -13,3 +13,5 @@ Schedule::command('sora:crawl-gold')->everyFiveMinutes();
 Schedule::command('email-campaign:auto-send')->dailyAt('09:37');
 
 Schedule::command('vouchers:cleanup')->dailyAt('00:01');
+
+Schedule::command('orders:cleanup')->everyMinute();

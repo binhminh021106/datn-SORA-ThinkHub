@@ -522,7 +522,12 @@ class ClientCheckoutController extends Controller
     {
         return Order::where('user_id', $userId)
             ->where('coupon_id', $coupon->id)
-            ->whereNotIn('status', ['cancelled', 'returned']) // Đã sửa: Bỏ check 'paid', thay bằng check không bị hủy
+            ->whereNotIn('status', ['cancelled', 'returned'])
+            ->where(function ($query) {
+                $query->where('status', '!=', 'pending')
+                      ->orWhere('payment_status', '!=', 'unpaid')
+                      ->orWhere('created_at', '>=', now()->subMinutes(15));
+            })
             ->count();
     }
 

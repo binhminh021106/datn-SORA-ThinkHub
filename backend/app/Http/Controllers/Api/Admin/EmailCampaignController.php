@@ -113,9 +113,9 @@ public function settings()
             'birthday_subject' => 'required|string|max:255',
             'birthday_content' => 'nullable|string',
             'tiers' => 'required|array',
-            'tiers.*.tier_id' => 'required|integer',
+            'tiers.*.tier_id' => 'required|integer|exists:membership_tiers,id|distinct',
             'tiers.*.name' => 'required|string',
-            'tiers.*.voucherCode' => 'nullable|string',
+            'tiers.*.voucherCode' => 'nullable|string|distinct',
             'tiers.*.type' => 'required|in:fixed,percentage',
             'tiers.*.value' => 'required|numeric|min:0',
             'tiers.*.min_spend' => 'required|numeric|min:0',
@@ -143,16 +143,24 @@ public function settings()
             'data' => $this->settings()->getData()->data,
         ]);
     }
-private function syncBirthdayVouchers(array $tiers): void
+    private function syncBirthdayVouchers(array $tiers): void
     {
         foreach ($tiers as $tier) {
-            if (empty($tier['voucherCode']) || empty($tier['value']) || $tier['status'] !== 'active') {
+            if (empty($tier['voucherCode'])) {
                 continue;
             }
 
             $coupon = Coupon::query()->firstOrNew([
                 'code' => $tier['voucherCode']
             ]);
+
+            if ($tier['status'] !== 'active' || empty($tier['value'])) {
+                if ($coupon->exists) {
+                    $coupon->status = 'inactive';
+                    $coupon->save();
+                }
+                continue;
+            }
             
             $coupon->name = 'Quà tặng sinh nhật hạng: ' . $tier['name'];
             $coupon->type = $tier['type'];
