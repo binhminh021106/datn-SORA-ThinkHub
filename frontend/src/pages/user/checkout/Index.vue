@@ -563,7 +563,7 @@ const fetchCartSnapshot = async () => {
             
             if (
                 selectedCoupon.value &&
-                !availableCoupons.value.some(c => c.id === selectedCoupon.value.id)
+                !availableCoupons.value.some(c => c.id === selectedCoupon.value.id && !c.is_disabled)
             ) {
                 selectedCoupon.value = null;
             }
@@ -850,7 +850,7 @@ watch(isCouponBlocked, (isBlocked) => {
 });
 
 const discountAmount = computed(() => {
-    if (!selectedCoupon.value || isCouponBlocked.value) return 0;
+    if (!selectedCoupon.value || isCouponBlocked.value || selectedCoupon.value.is_disabled) return 0;
     if (subTotal.value < selectedCoupon.value.min_spend) return 0;
     if (selectedCoupon.value.type === 'fixed') return parseFloat(selectedCoupon.value.value);
     return subTotal.value * (parseFloat(selectedCoupon.value.value) / 100);
@@ -872,6 +872,13 @@ const fetchInitData = async () => {
             addresses.value = res.data.addresses || [];
             availableCoupons.value = res.data.coupons || [];
             tierDiscountInfo.value = res.data.tier_discount || null;
+
+            if (
+                selectedCoupon.value &&
+                !availableCoupons.value.some(c => c.id === selectedCoupon.value.id && !c.is_disabled)
+            ) {
+                selectedCoupon.value = null;
+            }
 
             if (res.data.user) {
                 form.value.customer_email = res.data.user.email || '';
@@ -1028,7 +1035,7 @@ const openCouponModal = () => {
     couponModalInstance.show();
 };
 const applyCoupon = (coupon) => {
-    if (subTotal.value < coupon.min_spend) return;
+    if (coupon.is_disabled || subTotal.value < coupon.min_spend) return;
     selectedCoupon.value = coupon;
     if (coupon.type === 'birthday') setSafeStorage('birthday_coupon_code', coupon.code);
 };
@@ -1043,7 +1050,7 @@ const autoApplyStoredBirthdayCoupon = () => {
     if (!storedCode || isCouponBlocked.value) return;
 
     const coupon = availableCoupons.value.find(c => String(c.code).toLowerCase() === String(storedCode).toLowerCase());
-    if (!coupon) {
+    if (!coupon || coupon.is_disabled) {
         removeSafeStorage('birthday_coupon_code');
         return;
     }
