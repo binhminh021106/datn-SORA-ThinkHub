@@ -23,7 +23,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('coupons', function (Blueprint $table) {
-            //
+            $table->dropForeign(['tier_id']);
+            $table->dropColumn('tier_id');
         });
     }
 };
