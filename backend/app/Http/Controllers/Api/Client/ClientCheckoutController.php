@@ -74,17 +74,9 @@ class ClientCheckoutController extends Controller
                          ->where('name', 'NOT LIKE', '%sinh nhật%');
                 });
 
-                // 2. Hoặc lấy mã Cá nhân (Cấp riêng cho user này)
+                // 2. Hoặc lấy mã Cá nhân (Cấp riêng cho user này, bao gồm mã sinh nhật cá nhân hoá)
                 if ($user) {
                     $q->orWhere('user_id', $user->id);
-                    
-                    // 3. Hoặc mã cấp riêng cho hạng thành viên của user này (như mã sinh nhật)
-                    if ($user->tier_id) {
-                        $q->orWhere(function ($subQ) use ($user) {
-                            $subQ->where('tier_id', $user->tier_id)
-                                 ->where('name', 'LIKE', '%sinh nhật%');
-                        });
-                    }
                 }
             })
             // Chỉ lấy mã còn hạn
@@ -308,10 +300,11 @@ class ClientCheckoutController extends Controller
                     if (!$coupon || $coupon->status !== 'active') {
                         throw new \Exception("Mã giảm giá không hợp lệ hoặc đã tạm ngưng sử dụng.");
                     }
-                    if (str_contains(mb_strtolower($coupon->name, 'UTF-8'), 'sinh nhật')) {
-                        if (is_null($coupon->tier_id) || (int) $coupon->tier_id !== (int) $user->tier_id) {
-                            throw new \Exception("Mã voucher sinh nhật này không thuộc quyền sở hữu của bạn.");
-                        }
+                    if (str_contains(mb_strtolower($coupon->name, 'UTF-8'), 'sinh nhật') && is_null($coupon->user_id)) {
+                        throw new \Exception("Mã giảm giá sinh nhật này đã cũ và không còn hợp lệ.");
+                    }
+                    if ($coupon->user_id && (!$user || (int) $user->id !== (int) $coupon->user_id)) {
+                        throw new \Exception("Mã giảm giá này không thuộc quyền sở hữu của bạn.");
                     }
                     if ($coupon->expires_at && now()->greaterThan($coupon->expires_at)) {
                         throw new \Exception("Mã giảm giá đã hết hạn.");

@@ -19,6 +19,10 @@
             Trang yêu cầu: <span class="badge" :class="getLevelColor(currentPageLevel)">Cấp {{ currentPageLevel }}</span>
           </div>
 
+          <button v-if="activeTab === 'deleted'" @click="handleCleanOrphans" class="btn btn-outline-danger px-4 py-2 fw-bold shadow-sm" :disabled="isMutating">
+            <i class="bi bi-trash3-fill me-1"></i> Dọn Dẹp Mã Chưa Sử Dụng
+          </button>
+
           <router-link :to="{ name: 'admin-coupon-create' }" class="btn btn-brand btn-brand-solid px-4 py-2 fw-bold shadow-sm">
             <i class="bi bi-plus-circle-fill me-1"></i> Thêm Mã Mới
           </router-link>
@@ -417,7 +421,7 @@ const deleteMutation = useMutation({
   },
   onMutate: async (id) => {
     isMutating.value = true;
-    await queryClient.cancelQueries(['admin', 'coupons']);
+    await queryClient.cancelQueries({ queryKey: ['admin', 'coupons'] });
     const prev = queryClient.getQueryData(['admin', 'coupons']);
     if (prev) queryClient.setQueryData(['admin', 'coupons'], old => old.map(c => c.id === id ? { ...c, deleted_at: new Date().toISOString() } : c));
     return { prev };
@@ -426,7 +430,7 @@ const deleteMutation = useMutation({
   onSuccess: () => {
     Swal.fire({icon: 'success', title: 'Đã đưa vào thùng rác', timer: 1500, showConfirmButton: false, toast: true, position: 'top-end'});
   },
-  onSettled: () => { isMutating.value = false; queryClient.invalidateQueries(['admin', 'coupons']); }
+  onSettled: () => { isMutating.value = false; queryClient.invalidateQueries({ queryKey: ['admin', 'coupons'] }); }
 });
 
 const confirmDelete = (id, code) => {
@@ -449,14 +453,50 @@ const restoreMutation = useMutation({
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã khôi phục mã giảm giá', showConfirmButton: false, timer: 1500 });
   },
   onError: () => Swal.fire('Lỗi', 'Không thể khôi phục', 'error'),
-  onSettled: () => { isMutating.value = false; queryClient.invalidateQueries(['admin', 'coupons']); }
+  onSettled: () => { isMutating.value = false; queryClient.invalidateQueries({ queryKey: ['admin', 'coupons'] }); }
 });
 
 const handleRestore = (id) => restoreMutation.mutate(id);
 
+const cleanOrphanMutation = useMutation({
+  mutationFn: async () => {
+    const res = await fetch(`${API_URL}/admin/coupons/clean-orphan`, { method: 'DELETE', headers: getHeaders() });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Dọn dẹp thất bại');
+    return data;
+  },
+  onMutate: () => { isMutating.value = true; },
+  onSuccess: (data) => {
+    Swal.fire({icon: 'success', title: 'Hoàn tất', text: data.message, confirmButtonColor: '#009981'});
+  },
+  onError: (err) => {
+    Swal.fire('Lỗi', err.message, 'error');
+  },
+  onSettled: () => { 
+    isMutating.value = false; 
+    queryClient.invalidateQueries({ queryKey: ['admin', 'coupons'] }); 
+  }
+});
+
+const handleCleanOrphans = () => {
+  Swal.fire({ 
+    title: 'Dọn dẹp mã chưa sử dụng?', 
+    html: 'Chỉ Super Admin mới có quyền thực hiện.<br><br>Hệ thống sẽ <b>xóa VĨNH VIỄN</b> các voucher đã xóa mềm, chưa từng được sử dụng, và đã hết hạn/hết lượt. Bạn chắc chắn chứ?', 
+    icon: 'warning', 
+    showCancelButton: true, 
+    confirmButtonColor: '#d33', 
+    confirmButtonText: 'Đồng ý xóa',
+    cancelButtonText: 'Hủy'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      cleanOrphanMutation.mutate();
+    }
+  });
+};
+
 useAdminRefreshListener((payload) => {
   if (payload.module === 'coupons') {
-    queryClient.invalidateQueries(['admin', 'coupons']);
+    queryClient.invalidateQueries({ queryKey: ['admin', 'coupons'] });
     Swal.fire({ toast: true, position: 'bottom-end', icon: 'info', title: 'Danh sách mã giảm giá đã được cập nhật', showConfirmButton: false, timer: 2000 });
   }
 });

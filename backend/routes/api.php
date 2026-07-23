@@ -443,6 +443,7 @@ Route::prefix('admin')->group(function () {
         Route::middleware(['check.module:admin_coupons'])->group(function () {
             Route::controller(AdminCouponController::class)->group(function () {
                 Route::get('coupons', 'index');
+                Route::delete('coupons/clean-orphan', 'cleanOrphanVouchers');
                 Route::get('coupons/{id}', 'show');
                 Route::post('coupons', 'store');
                 Route::patch('coupons/{id}', 'update');
