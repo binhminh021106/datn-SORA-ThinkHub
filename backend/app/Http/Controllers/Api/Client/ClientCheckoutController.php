@@ -300,6 +300,9 @@ class ClientCheckoutController extends Controller
                     if (!$coupon || $coupon->status !== 'active') {
                         throw new \Exception("Mã giảm giá không hợp lệ hoặc đã tạm ngưng sử dụng.");
                     }
+                    if (str_contains(mb_strtolower($coupon->name, 'UTF-8'), 'sinh nhật') && is_null($coupon->user_id)) {
+                        throw new \Exception("Mã giảm giá sinh nhật này đã cũ và không còn hợp lệ.");
+                    }
                     if ($coupon->user_id && (!$user || (int) $user->id !== (int) $coupon->user_id)) {
                         throw new \Exception("Mã giảm giá này không thuộc quyền sở hữu của bạn.");
                     }

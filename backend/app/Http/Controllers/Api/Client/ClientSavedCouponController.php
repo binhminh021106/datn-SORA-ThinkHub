@@ -204,6 +204,8 @@ class ClientSavedCouponController extends Controller
             $disabledReason = 'Mã giảm giá đã hết lượt sử dụng.';
         } elseif (!$isUserUsageAvailable) {
             $disabledReason = 'Bạn đã sử dụng hết lượt cho mã này.';
+        } elseif (str_contains(mb_strtolower($coupon->name, 'UTF-8'), 'sinh nhật') && is_null($coupon->user_id)) {
+            $disabledReason = 'Mã giảm giá sinh nhật này đã cũ và không còn hợp lệ.';
         } elseif ($coupon->user_id && (int) $coupon->user_id !== (int) $user->id) {
             $disabledReason = 'Mã giảm giá không thuộc quyền sở hữu của bạn.';
         }
