@@ -111,7 +111,52 @@ class AdminCouponController extends Controller
     }
 
     /**
+     * Dọn dẹp mã giảm giá mồ côi (chỉ Super Admin)
+     */
+    public function cleanOrphanVouchers()
+    {
+        $admin = request()->user();
+        if (!$admin || !$admin->role_id) {
+            return response()->json(['success' => false, 'message' => 'Lỗi xác thực.'], 401);
+        }
+        $role = \Illuminate\Support\Facades\DB::table('roles')->where('id', $admin->role_id)->first();
+        if (!$role || (int) $role->level !== 1) {
+            return response()->json(['success' => false, 'message' => 'Truy cập bị từ chối: Chỉ Super Admin (Level 1) mới có quyền xóa vĩnh viễn.'], 403);
+        }
+
+        try {
+            $trashedCoupons = Coupon::onlyTrashed()->get();
+            $deletedCount = 0;
+
+            foreach ($trashedCoupons as $coupon) {
+                // Kiểm tra xem voucher đã từng được dùng trong đơn hàng nào chưa
+                $hasOrders = \Illuminate\Support\Facades\DB::table('orders')->where('coupon_id', $coupon->id)->exists();
+                
+                // Cẩn thận: Chỉ xóa những mã đã hết hạn HOẶC hết lượt. Các mã rác được xoá mềm thường rơi vào 2 nhóm này.
+                $isExpired = $coupon->expires_at !== null && now()->greaterThan($coupon->expires_at);
+                $isUsedUp = $coupon->usage_limit !== null && $coupon->usage_count >= $coupon->usage_limit;
+                
+                if (!$hasOrders && ($isExpired || $isUsedUp)) {
+                    $coupon->forceDelete();
+                    $deletedCount++;
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "Đã dọn dẹp thành công {$deletedCount} mã giảm giá mồ côi."
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Lỗi khi dọn dẹp voucher: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Khôi phục từ thùng rác
+
      */
     public function restore(string $id)
     {
