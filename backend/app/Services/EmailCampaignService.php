@@ -203,7 +203,10 @@ class EmailCampaignService
             return null; 
         }
 
-        $couponCode = $matchedTierConfig['voucherCode'];
+        $baseCode = $matchedTierConfig['voucherCode'];
+        // Tạo mã độc nhất cho từng user theo năm (VD: TIERKC-U15-2026)
+        $couponCode = $baseCode . '-U' . $user->id . '-' . $today->year;
+        
         $existingCoupon = Coupon::where('code', $couponCode)->first();
 
         // Tính toán hạn sử dụng động dựa trên cấu hình admin
@@ -212,10 +215,7 @@ class EmailCampaignService
 
         // Cập nhật gia hạn nếu coupon toàn cục chuẩn bị hết hạn trước sinh nhật
         if ($existingCoupon) {
-            if (!$existingCoupon->expires_at || $existingCoupon->expires_at->lt($requiredExpiration)) {
-                $existingCoupon->expires_at = $requiredExpiration;
-                $existingCoupon->save();
-            }
+            // Mã cá nhân đã tạo cho năm nay rồi thì không cần gia hạn thêm nếu chạy lại cronjob trong cùng ngày
             return $existingCoupon;
         }
 
@@ -230,7 +230,8 @@ class EmailCampaignService
             'usage_count' => 0,
             'status' => $matchedTierConfig['status'],
             'expires_at' => $requiredExpiration, 
-            'user_id' => null, 
+            'user_id' => $user->id, 
+            'tier_id' => $user->tier_id,
             'is_used' => false
         ]);
     }

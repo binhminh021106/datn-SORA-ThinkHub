@@ -25,7 +25,7 @@ class ClientSavedCouponController extends Controller
         // Lấy thêm voucher sinh nhật theo hạng thành viên (nếu có)
         $birthdayCoupon = null;
         if ($user->tier_id) {
-            $birthdayCouponModel = Coupon::where('tier_id', $user->tier_id)
+            $birthdayCouponModel = Coupon::where('user_id', $user->id)
                 ->where('status', 'active')
                 ->where('name', 'LIKE', '%sinh nhật%')
                 ->where(function ($q) {
@@ -204,8 +204,8 @@ class ClientSavedCouponController extends Controller
             $disabledReason = 'Mã giảm giá đã hết lượt sử dụng.';
         } elseif (!$isUserUsageAvailable) {
             $disabledReason = 'Bạn đã sử dụng hết lượt cho mã này.';
-        } elseif (str_contains(mb_strtolower($coupon->name, 'UTF-8'), 'sinh nhật') && $coupon->tier_id && (int) $coupon->tier_id !== (int) $user->tier_id) {
-            $disabledReason = 'Mã sinh nhật không thuộc hạng của bạn.';
+        } elseif ($coupon->user_id && (int) $coupon->user_id !== (int) $user->id) {
+            $disabledReason = 'Mã giảm giá không thuộc quyền sở hữu của bạn.';
         }
 
         return [
