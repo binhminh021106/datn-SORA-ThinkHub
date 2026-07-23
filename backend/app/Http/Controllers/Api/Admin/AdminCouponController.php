@@ -125,22 +125,26 @@ class AdminCouponController extends Controller
         }
 
         try {
-            $trashedCoupons = Coupon::onlyTrashed()->get();
-            $deletedCount = 0;
+            $deletedCount = \Illuminate\Support\Facades\DB::transaction(function () {
+                $trashedCoupons = Coupon::onlyTrashed()->get();
+                $count = 0;
 
-            foreach ($trashedCoupons as $coupon) {
-                // Kiểm tra xem voucher đã từng được dùng trong đơn hàng nào chưa
-                $hasOrders = \Illuminate\Support\Facades\DB::table('orders')->where('coupon_id', $coupon->id)->exists();
-                
-                // Cẩn thận: Chỉ xóa những mã đã hết hạn HOẶC hết lượt. Các mã rác được xoá mềm thường rơi vào 2 nhóm này.
-                $isExpired = $coupon->expires_at !== null && now()->greaterThan($coupon->expires_at);
-                $isUsedUp = $coupon->usage_limit !== null && $coupon->usage_count >= $coupon->usage_limit;
-                
-                if (!$hasOrders && ($isExpired || $isUsedUp)) {
-                    $coupon->forceDelete();
-                    $deletedCount++;
+                foreach ($trashedCoupons as $coupon) {
+                    // Kiểm tra xem voucher đã từng được dùng trong đơn hàng nào chưa
+                    $hasOrders = \Illuminate\Support\Facades\DB::table('orders')->where('coupon_id', $coupon->id)->exists();
+                    
+                    // Cẩn thận: Chỉ xóa những mã đã hết hạn HOẶC hết lượt. Các mã rác được xoá mềm thường rơi vào 2 nhóm này.
+                    $isExpired = $coupon->expires_at !== null && now()->greaterThan($coupon->expires_at);
+                    $isUsedUp = $coupon->usage_limit !== null && $coupon->usage_count >= $coupon->usage_limit;
+                    
+                    if (!$hasOrders && ($isExpired || $isUsedUp)) {
+                        $coupon->forceDelete();
+                        $count++;
+                    }
                 }
-            }
+                
+                return $count;
+            });
 
             return response()->json([
                 'success' => true,
