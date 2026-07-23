@@ -421,7 +421,7 @@ const deleteMutation = useMutation({
   },
   onMutate: async (id) => {
     isMutating.value = true;
-    await queryClient.cancelQueries(['admin', 'coupons']);
+    await queryClient.cancelQueries({ queryKey: ['admin', 'coupons'] });
     const prev = queryClient.getQueryData(['admin', 'coupons']);
     if (prev) queryClient.setQueryData(['admin', 'coupons'], old => old.map(c => c.id === id ? { ...c, deleted_at: new Date().toISOString() } : c));
     return { prev };
@@ -430,7 +430,7 @@ const deleteMutation = useMutation({
   onSuccess: () => {
     Swal.fire({icon: 'success', title: 'Đã đưa vào thùng rác', timer: 1500, showConfirmButton: false, toast: true, position: 'top-end'});
   },
-  onSettled: () => { isMutating.value = false; queryClient.invalidateQueries(['admin', 'coupons']); }
+  onSettled: () => { isMutating.value = false; queryClient.invalidateQueries({ queryKey: ['admin', 'coupons'] }); }
 });
 
 const confirmDelete = (id, code) => {
@@ -453,7 +453,7 @@ const restoreMutation = useMutation({
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã khôi phục mã giảm giá', showConfirmButton: false, timer: 1500 });
   },
   onError: () => Swal.fire('Lỗi', 'Không thể khôi phục', 'error'),
-  onSettled: () => { isMutating.value = false; queryClient.invalidateQueries(['admin', 'coupons']); }
+  onSettled: () => { isMutating.value = false; queryClient.invalidateQueries({ queryKey: ['admin', 'coupons'] }); }
 });
 
 const handleRestore = (id) => restoreMutation.mutate(id);
@@ -474,7 +474,7 @@ const cleanOrphanMutation = useMutation({
   },
   onSettled: () => { 
     isMutating.value = false; 
-    queryClient.invalidateQueries(['admin', 'coupons']); 
+    queryClient.invalidateQueries({ queryKey: ['admin', 'coupons'] }); 
   }
 });
 
@@ -496,7 +496,7 @@ const handleCleanOrphans = () => {
 
 useAdminRefreshListener((payload) => {
   if (payload.module === 'coupons') {
-    queryClient.invalidateQueries(['admin', 'coupons']);
+    queryClient.invalidateQueries({ queryKey: ['admin', 'coupons'] });
     Swal.fire({ toast: true, position: 'bottom-end', icon: 'info', title: 'Danh sách mã giảm giá đã được cập nhật', showConfirmButton: false, timer: 2000 });
   }
 });

@@ -211,23 +211,34 @@ class EmailCampaignService
         $validityDays = $matchedTierConfig['validity_days'] ?? 7;
         $requiredExpiration = $today->copy()->addDays($validityDays)->endOfDay();
 
-        return Coupon::firstOrCreate(
-            ['code' => $couponCode],
-            [
-                'type' => $matchedTierConfig['type'],
-                'name' => 'Quà tặng sinh nhật hạng: ' . $matchedTierConfig['name'],
-                'min_spend' => $matchedTierConfig['min_spend'],
-                'value' => $matchedTierConfig['value'],
-                'usage_limit' => $matchedTierConfig['usage_limit'],
-                'usage_limit_per_user' => $matchedTierConfig['usage_limit_per_user'],
-                'usage_count' => 0,
-                'status' => $matchedTierConfig['status'],
-                'expires_at' => $requiredExpiration, 
-                'user_id' => $user->id, 
-                'tier_id' => $user->tier_id,
-                'is_used' => false
-            ]
-        );
+        try {
+            return Coupon::firstOrCreate(
+                ['code' => $couponCode],
+                [
+                    'type' => $matchedTierConfig['type'],
+                    'name' => 'Quà tặng sinh nhật hạng: ' . $matchedTierConfig['name'],
+                    'min_spend' => $matchedTierConfig['min_spend'],
+                    'value' => $matchedTierConfig['value'],
+                    'usage_limit' => $matchedTierConfig['usage_limit'],
+                    'usage_limit_per_user' => $matchedTierConfig['usage_limit_per_user'],
+                    'usage_count' => 0,
+                    'status' => $matchedTierConfig['status'],
+                    'expires_at' => $requiredExpiration, 
+                    'user_id' => $user->id, 
+                    'tier_id' => $user->tier_id,
+                    'is_used' => false
+                ]
+            );
+        } catch (\Illuminate\Database\QueryException $e) {
+            // 23000 = Integrity constraint violation (Duplicate entry)
+            if ($e->getCode() == 23000) {
+                $existing = Coupon::where('code', $couponCode)->first();
+                if ($existing) {
+                    return $existing;
+                }
+            }
+            throw $e;
+        }
     }
 
   
