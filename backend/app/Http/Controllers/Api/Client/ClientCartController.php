@@ -278,53 +278,36 @@ public function applyBirthdayCoupon(Request $request)
             return response()->json(['success' => false, 'message' => 'Không tìm thấy mã voucher.']);
         }
 
-
         $user = auth('sanctum')->user();
         if (!$user || !($user instanceof \App\Models\User)) {
-            return response()->json(['success' => false, 'message' => 'Bạn cần đăng nhập để sử dụng voucher sinh nhật.']);
+            return response()->json(['success' => false, 'message' => 'Bạn cần đăng nhập để sử dụng voucher.']);
         }
 
-        if (!$this->isSilverTierOrAbove($user)) {
-            return response()->json(['success' => false, 'message' => 'Voucher chỉ dành cho thành viên hạng Bạc trở lên.']);
-        }
-
-
-        $coupon = Coupon::where('code', $code)
-            ->where('status', 'active')
-            ->where('name', 'LIKE', '%sinh nhật%')
-            ->where(function ($q) {
-                $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
-            })
-            ->whereColumn('usage_count', '<', 'usage_limit')
-            ->first();
+        // Tìm mã voucher đang Active
+        $coupon = Coupon::where('code', $code)->where('status', 'active')->first();
 
         if (!$coupon) {
-            return response()->json(['success' => false, 'message' => 'Mã voucher không hợp lệ hoặc đã hết hạn.']);
+            return response()->json(['success' => false, 'message' => 'Mã voucher không hợp lệ hoặc đã bị vô hiệu hóa.']);
         }
 
-        // 2. Kiểm tra tài khoản sở hữu độc quyền đối với voucher sinh nhật
-        $isBirthdayCoupon = true;
-
-        if ($isBirthdayCoupon) {
-            $user = auth('sanctum')->user();
-            if (!$user) {
-                return response()->json(['success' => false, 'message' => 'Bạn cần đăng nhập để sử dụng voucher sinh nhật.']);
-            }
-
-            if (!is_null($coupon->tier_id)) {
-                if ($coupon->tier_id != $user->tier_id) {
-                    return response()->json(['success' => false, 'message' => 'Mã voucher sinh nhật này không thuộc về hạng thành viên của bạn.']);
-                }
-            } else {
-                // Fallback nếu admin chưa cập nhật tier_id cho coupon cũ
-                return response()->json(['success' => false, 'message' => 'Mã voucher sinh nhật này không hợp lệ.']);
-            }
+        // Kiểm tra quyền sở hữu (Nếu là mã cá nhân)
+        if ($coupon->user_id && $coupon->user_id !== $user->id) {
+            return response()->json(['success' => false, 'message' => 'Mã voucher này không thuộc quyền sở hữu của bạn.']);
         }
 
-        // 3. Trả về phản hồi thành công kèm lời nhắn chuẩn hóa
+        // Kiểm tra hạn sử dụng
+        if ($coupon->expires_at && now()->greaterThan($coupon->expires_at)) {
+            return response()->json(['success' => false, 'message' => 'Mã voucher đã hết hạn sử dụng.']);
+        }
+
+        // Kiểm tra lượt dùng
+        if ($coupon->usage_limit !== null && $coupon->usage_count >= $coupon->usage_limit) {
+            return response()->json(['success' => false, 'message' => 'Mã voucher đã hết lượt sử dụng.']);
+        }
+
         return response()->json([
             'success' => true,
-            'message' => 'Áp dụng mã ưu đãi thành công!',
+            'message' => 'Áp dụng ưu đãi thành công!',
             'coupon' => $coupon->code
         ]);
     }

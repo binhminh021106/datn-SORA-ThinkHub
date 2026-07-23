@@ -189,52 +189,54 @@ class EmailCampaignService
   /**
      * Tạo hoặc lấy Voucher sinh nhật dựa trên cấu hình của Admin
      */
-    private function createBirthdayCoupon(User $user, Carbon $today): ?Coupon
+  private function createBirthdayCoupon(User $user, Carbon $today): ?Coupon
     {
         $setting = EmailCampaignSetting::current();
         $tiers = $setting->birthday_tiers ?? [];
         
-        if (!$user->tier_id) return null; // Bỏ qua nếu user không có hạng
+        if (!$user->tier_id) return null;
 
-        // Mapping linh hoạt bằng tier_id thay vì so sánh chuỗi
         $matchedTierConfig = collect($tiers)->firstWhere('tier_id', $user->tier_id);
 
         if (!$matchedTierConfig || empty($matchedTierConfig['voucherCode']) || $matchedTierConfig['status'] !== 'active') {
             return null; 
         }
 
-        $couponCode = $matchedTierConfig['voucherCode'];
+        // TẠO MÃ ĐỘC QUYỀN CHO TỪNG USER (VD: Cấu hình là BD25 -> Mã tạo ra là BD25-U15)
+        $couponCode = $matchedTierConfig['voucherCode'] . '-U' . $user->id;
         $existingCoupon = Coupon::where('code', $couponCode)->first();
 
-        // Tính toán hạn sử dụng động dựa trên cấu hình admin
         $validityDays = $matchedTierConfig['validity_days'] ?? 7;
         $requiredExpiration = $today->copy()->addDays($validityDays)->endOfDay();
 
-        // Cập nhật gia hạn nếu coupon toàn cục chuẩn bị hết hạn trước sinh nhật
         if ($existingCoupon) {
+            // Cập nhật lại hạn sử dụng và reset lượt dùng nếu năm sau khách lại có sinh nhật
             if (!$existingCoupon->expires_at || $existingCoupon->expires_at->lt($requiredExpiration)) {
                 $existingCoupon->expires_at = $requiredExpiration;
+                $existingCoupon->usage_count = 0; 
+                $existingCoupon->is_used = false;
                 $existingCoupon->save();
             }
             return $existingCoupon;
         }
 
         return Coupon::create([
-            'type' => $matchedTierConfig['type'],
-            'name' => 'Quà tặng sinh nhật hạng: ' . $matchedTierConfig['name'],
+            'type' => $matchedTierConfig['type'] ?? 'fixed',
+            'name' => 'Quà tặng sinh nhật: ' . ($user->name ?? $user->fullName ?? 'Khách hàng'),
             'code' => $couponCode,
-            'min_spend' => $matchedTierConfig['min_spend'],
-            'value' => $matchedTierConfig['value'],
-            'usage_limit' => $matchedTierConfig['usage_limit'],
-            'usage_limit_per_user' => $matchedTierConfig['usage_limit_per_user'],
+            'min_spend' => $matchedTierConfig['min_spend'] ?? 0,
+            'value' => $matchedTierConfig['value'] ?? 0,
+            'usage_limit' => $matchedTierConfig['usage_limit_per_user'] ?? 1, 
+            'usage_limit_per_user' => $matchedTierConfig['usage_limit_per_user'] ?? 1,
             'usage_count' => 0,
-            'status' => $matchedTierConfig['status'],
+            'status' => 'active',
             'expires_at' => $requiredExpiration, 
-            'user_id' => null, 
+            'user_id' => $user->id, // CHỐT CHẶT QUYỀN SỞ HỮU CHO ĐÚNG USER NÀY
             'is_used' => false
         ]);
     }
-
+  
+   
   
     private function getUserTierName(User $user): string
     {
