@@ -19,8 +19,7 @@
                 :preload="index === activeHeroIndex ? 'auto' : 'metadata'"
                 :autoplay="index === activeHeroIndex"
                 loop muted playsinline 
-                :ref="el => setHeroVideoRef(el, index)"
-                @ended="$event.target.play()"></video>
+                :ref="el => setHeroVideoRef(el, index)"></video>
               <picture v-else>
                 <source v-if="banner.image_mobile" media="(max-width: 767px)"
                   :srcset="getImageUrl(banner.image_mobile)">
@@ -88,7 +87,7 @@
         <div class="container">
           <div class="story-grid">
             <div class="story-image" v-if="storyVideo || storyImage">
-              <video v-if="storyVideo" :src="getImageUrl(storyVideo)" class="w-100 h-100 object-fit-cover" autoplay loop muted playsinline @ended="$event.target.play()"></video>
+              <video v-if="storyVideo" :src="getImageUrl(storyVideo)" class="w-100 h-100 object-fit-cover" autoplay loop muted playsinline></video>
               <img v-else :src="getImageUrl(storyImage)" alt="SORA story" @error="handleImageError">
               <div class="story-thumb" v-if="storyAccentImage && !storyVideo">
                 <img :src="getImageUrl(storyAccentImage)" alt="SORA accent" @error="handleImageError">
@@ -322,7 +321,7 @@
 </template>
 
 <script setup>
-import { reactive, onMounted, onUnmounted, ref, computed, watch } from 'vue';
+import { reactive, onMounted, onUnmounted, ref, computed, watch, nextTick } from 'vue';
 import Toast from '@/utils/toastConfig';
 import soraAlert from '@/utils/soraAlertConfig';
 import ProductCard from '@/components/ui/ProductCard.vue';
