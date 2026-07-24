@@ -245,10 +245,11 @@ class ClientOrderController extends Controller
                     if (!$coupon || $coupon->status !== 'active') {
                         throw new \Exception("Mã giảm giá không hợp lệ hoặc đã bị khóa.");
                     }
-                    if (str_contains(mb_strtolower($coupon->name, 'UTF-8'), 'sinh nhật')) {
-                        if (is_null($coupon->tier_id) || (int) $coupon->tier_id !== (int) $user->tier_id) {
-                            throw new \Exception("Mã voucher sinh nhật này không thuộc quyền sở hữu của bạn.");
-                        }
+                    if (str_contains(mb_strtolower($coupon->name, 'UTF-8'), 'sinh nhật') && is_null($coupon->user_id)) {
+                        throw new \Exception("Mã giảm giá sinh nhật này đã cũ và không còn hợp lệ.");
+                    }
+                    if ($coupon->user_id && (!$user || (int) $user->id !== (int) $coupon->user_id)) {
+                        throw new \Exception("Mã giảm giá này không thuộc quyền sở hữu của bạn.");
                     }
                     if ($coupon->expires_at !== null && now()->greaterThanOrEqualTo($coupon->expires_at)) {
                         throw new \Exception("Mã giảm giá đã hết hạn sử dụng.");

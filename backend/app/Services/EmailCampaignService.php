@@ -194,7 +194,11 @@ class EmailCampaignService
         $setting = EmailCampaignSetting::current();
         $tiers = $setting->birthday_tiers ?? [];
         
+<<<<<<< HEAD
         if (!$user->tier_id) return null;
+=======
+        if (!$user->tier_id) return null;  
+>>>>>>> f99c5b9042cb7ae13a73c724455054f9d112b29e
 
         $matchedTierConfig = collect($tiers)->firstWhere('tier_id', $user->tier_id);
 
@@ -202,13 +206,20 @@ class EmailCampaignService
             return null; 
         }
 
+<<<<<<< HEAD
         // TẠO MÃ ĐỘC QUYỀN CHO TỪNG USER (VD: Cấu hình là BD25 -> Mã tạo ra là BD25-U15)
         $couponCode = $matchedTierConfig['voucherCode'] . '-U' . $user->id;
         $existingCoupon = Coupon::where('code', $couponCode)->first();
+=======
+        $baseCode = $matchedTierConfig['voucherCode'];
+        // Tạo mã độc nhất cho từng user theo năm (VD: TIERKC-U15-2026)
+        $couponCode = $baseCode . '-U' . $user->id . '-' . $today->year;
+>>>>>>> f99c5b9042cb7ae13a73c724455054f9d112b29e
 
         $validityDays = $matchedTierConfig['validity_days'] ?? 7;
         $requiredExpiration = $today->copy()->addDays($validityDays)->endOfDay();
 
+<<<<<<< HEAD
         if ($existingCoupon) {
             // Cập nhật lại hạn sử dụng và reset lượt dùng nếu năm sau khách lại có sinh nhật
             if (!$existingCoupon->expires_at || $existingCoupon->expires_at->lt($requiredExpiration)) {
@@ -216,9 +227,37 @@ class EmailCampaignService
                 $existingCoupon->usage_count = 0; 
                 $existingCoupon->is_used = false;
                 $existingCoupon->save();
+=======
+        try {
+            return Coupon::firstOrCreate(
+                ['code' => $couponCode],
+                [
+                    'type' => $matchedTierConfig['type'],
+                    'name' => 'Quà tặng sinh nhật hạng: ' . $matchedTierConfig['name'],
+                    'min_spend' => $matchedTierConfig['min_spend'],
+                    'value' => $matchedTierConfig['value'],
+                    'usage_limit' => $matchedTierConfig['usage_limit'],
+                    'usage_limit_per_user' => $matchedTierConfig['usage_limit_per_user'],
+                    'usage_count' => 0,
+                    'status' => $matchedTierConfig['status'],
+                    'expires_at' => $requiredExpiration, 
+                    'user_id' => $user->id, 
+                    'tier_id' => $user->tier_id,
+                    'is_used' => false
+                ]
+            );
+        } catch (\Illuminate\Database\QueryException $e) {
+            // 23000 = Integrity constraint violation (Duplicate entry)
+            if ($e->getCode() == 23000) {
+                $existing = Coupon::where('code', $couponCode)->first();
+                if ($existing) {
+                    return $existing;
+                }
+>>>>>>> f99c5b9042cb7ae13a73c724455054f9d112b29e
             }
-            return $existingCoupon;
+            throw $e;
         }
+<<<<<<< HEAD
 
         return Coupon::create([
             'type' => $matchedTierConfig['type'] ?? 'fixed',
@@ -234,6 +273,8 @@ class EmailCampaignService
             'user_id' => $user->id, // CHỐT CHẶT QUYỀN SỞ HỮU CHO ĐÚNG USER NÀY
             'is_used' => false
         ]);
+=======
+>>>>>>> f99c5b9042cb7ae13a73c724455054f9d112b29e
     }
   
    
