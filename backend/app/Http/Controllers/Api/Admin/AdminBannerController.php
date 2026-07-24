@@ -53,11 +53,17 @@ class AdminBannerController extends Controller
             $data['image_mobile'] = $fileMob->storeAs('banners/mobile', $fileNameMob, 'public');
         }
 
+        if ($request->hasFile('video_url')) {
+            $fileVideo = $request->file('video_url');
+            $fileNameVideo = 'banner_video_' . Str::slug($data['title']) . '_' . time() . '.' . $fileVideo->getClientOriginalExtension();
+            $data['video_url'] = $fileVideo->storeAs('banners/video', $fileNameVideo, 'public');
+        }
+
         $banner = Banner::create($data);
         $banner->load('brand:id,name,slug'); // Eager load trả về cho FE
 
         // Clear homepage cache when a new banner is stored
-        Cache::forget('sora_home_data_v2');
+        Cache::forget('sora_home_data_v4');
 
         return response()->json(['success' => true, 'message' => 'Tạo banner thành công', 'data' => $banner]);
     }
@@ -101,11 +107,18 @@ class AdminBannerController extends Controller
             if ($banner->image_mobile) Storage::disk('public')->delete($banner->image_mobile);
         }
 
+        if ($request->hasFile('video_url')) {
+            $fileVideo = $request->file('video_url');
+            $fileNameVideo = 'banner_video_' . Str::slug($data['title']) . '_' . time() . '.' . $fileVideo->getClientOriginalExtension();
+            $data['video_url'] = $fileVideo->storeAs('banners/video', $fileNameVideo, 'public');
+            if ($banner->video_url) Storage::disk('public')->delete($banner->video_url);
+        }
+
         $banner->update($data);
         $banner->load('brand:id,name,slug'); // Load lại quan hệ để FE update cache
 
         // Clear homepage cache when a banner is updated
-        Cache::forget('sora_home_data_v2');
+        Cache::forget('sora_home_data_v4');
 
         return response()->json(['success' => true, 'message' => 'Cập nhật thành công', 'data' => $banner]);
     }
@@ -120,7 +133,7 @@ class AdminBannerController extends Controller
         $banner->delete();
 
         // Clear homepage cache when a banner is deleted
-        Cache::forget('sora_home_data_v2');
+        Cache::forget('sora_home_data_v4');
 
         return response()->json(['success' => true, 'message' => 'Đã đưa banner vào thùng rác', 'id' => $id]);
     }
@@ -139,7 +152,7 @@ class AdminBannerController extends Controller
         $banner->load('brand:id,name,slug'); // Load lại data cho cache FE
 
         // Clear homepage cache when a banner is restored
-        Cache::forget('sora_home_data_v2');
+        Cache::forget('sora_home_data_v4');
 
         return response()->json(['success' => true, 'message' => 'Đã khôi phục banner', 'data' => $banner]);
     }

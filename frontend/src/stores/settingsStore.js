@@ -14,7 +14,12 @@ export const useSettingsStore = defineStore('settings', () => {
         footer_address: '',
         footer_email: '',
         footer_socials: [],
-        footer_trust_items: []
+        footer_trust_items: [],
+        home_stats: [
+            { value: 90, suffix: '%', label: 'Khách hàng hài lòng' },
+            { value: 15, suffix: '+', label: 'Bộ sưu tập nổi bật' },
+            { value: 3, suffix: 'K+', label: 'Khoảnh khắc SORA' }
+        ]
     });
 
     const isLoading = ref(false);
@@ -33,13 +38,42 @@ export const useSettingsStore = defineStore('settings', () => {
                 settings.value.footer_copyright = data.footer_copyright || '© 2026 SORA JEWELRY. ALL RIGHTS RESERVED.';
                 settings.value.footer_address = data.footer_address || '123 Đường Ngọc Hồi, Hà Nội';
                 settings.value.footer_email = data.footer_email || 'SORA@GMAIL.COM';
-                settings.value.footer_trust_items = data.footer_trust_items || [
+                let parsedFooterTrustItems = null;
+                if (data.footer_trust_items) {
+                    try {
+                        parsedFooterTrustItems = typeof data.footer_trust_items === 'string' ? JSON.parse(data.footer_trust_items) : data.footer_trust_items;
+                    } catch (e) {
+                        parsedFooterTrustItems = null;
+                    }
+                }
+                settings.value.footer_trust_items = parsedFooterTrustItems || [
                     { icon: 'bi-truck', title: 'GIAO HÀNG MIỄN PHÍ', subtitle: 'Cho đơn hàng từ 1.000.000đ' },
                     { icon: 'bi-shield-check', title: 'BẢO HÀNH TRỌN ĐỜI', subtitle: 'Làm sáng & đánh bóng miễn phí' },
                     { icon: 'bi-arrow-repeat', title: 'ĐỔI TRẢ DỄ DÀNG', subtitle: 'Trong vòng 7 ngày đầu tiên' },
                     { icon: 'bi-headset', title: 'HỖ TRỢ 24/7', subtitle: 'Hotline: 1234.567.8910' }
                 ];
-                settings.value.footer_socials = data.footer_socials || [
+                let parsedHomeStats = null;
+                if (data.home_stats) {
+                    try {
+                        parsedHomeStats = typeof data.home_stats === 'string' ? JSON.parse(data.home_stats) : data.home_stats;
+                    } catch (e) {
+                        parsedHomeStats = null;
+                    }
+                }
+                settings.value.home_stats = parsedHomeStats || [
+                    { value: 90, suffix: '%', label: 'Khách hàng hài lòng' },
+                    { value: 15, suffix: '+', label: 'Bộ sưu tập nổi bật' },
+                    { value: 3, suffix: 'K+', label: 'Khoảnh khắc SORA' }
+                ];
+                let parsedFooterSocials = null;
+                if (data.footer_socials) {
+                    try {
+                        parsedFooterSocials = typeof data.footer_socials === 'string' ? JSON.parse(data.footer_socials) : data.footer_socials;
+                    } catch (e) {
+                        parsedFooterSocials = null;
+                    }
+                }
+                settings.value.footer_socials = parsedFooterSocials || [
                      {icon: 'bi-facebook', url: '#', title: 'Facebook'},
                      {icon: 'bi-instagram', url: '#', title: 'Instagram'},
                      {icon: 'bi-twitter-x', url: '#', title: 'Twitter'},

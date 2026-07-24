@@ -14,7 +14,8 @@
           <div class="carousel-inner h-100">
             <div v-for="(banner, index) in heroBanners" :key="banner.id || index" class="carousel-item h-100"
               :class="{ active: index === 0 }">
-              <picture>
+              <video v-if="banner.video_url" :src="getImageUrl(banner.video_url)" class="w-100 h-100 object-fit-cover" autoplay loop muted playsinline></video>
+              <picture v-else>
                 <source v-if="banner.image_mobile" media="(max-width: 767px)"
                   :srcset="getImageUrl(banner.image_mobile)">
                 <img :src="getImageUrl(banner.image_desktop || banner.image_mobile)" :alt="banner.title || 'SORA hero'"
@@ -84,19 +85,17 @@
         <div class="banner-line-art banner-line-art-right d-none d-md-block"></div>
 
         <div class="stat-container position-relative z-index-2">
-          <div class="stat-item" v-for="item in homeStats" :key="item.value">
-            <strong>{{ item.value }}</strong>
-            <span>{{ item.label }}</span>
-          </div>
+          <StatItem v-for="(item, index) in homeStatsList" :key="'stat-'+index" :item="item" :index="index" />
         </div>
       </section>
 
       <section class="editorial-section story-section">
         <div class="container">
           <div class="story-grid">
-            <div class="story-image" v-if="storyImage">
-              <img :src="getImageUrl(storyImage)" alt="SORA story" @error="handleImageError">
-              <div class="story-thumb" v-if="storyAccentImage">
+            <div class="story-image" v-if="storyVideo || storyImage">
+              <video v-if="storyVideo" :src="getImageUrl(storyVideo)" class="w-100 h-100 object-fit-cover" autoplay loop muted playsinline></video>
+              <img v-else :src="getImageUrl(storyImage)" alt="SORA story" @error="handleImageError">
+              <div class="story-thumb" v-if="storyAccentImage && !storyVideo">
                 <img :src="getImageUrl(storyAccentImage)" alt="SORA accent" @error="handleImageError">
               </div>
             </div>
@@ -334,6 +333,7 @@ import soraAlert from '@/utils/soraAlertConfig';
 import ProductCard from '@/components/ui/ProductCard.vue';
 import NewsPostCard from '@/components/ui/NewsPostCard.vue';
 import ComboCarousel from '@/components/ui/ComboCarousel.vue';
+import StatItem from '@/components/ui/StatItem.vue';
 import SoraHomeIntroLoader from '@/components/ui/SoraHomeIntroLoader.vue';
 import SoraHomeSkeleton from '@/components/ui/SoraHomeSkeleton.vue';
 import QuickAddModal from '@/components/ui/QuickAddModal.vue';
@@ -341,6 +341,7 @@ import { getStorageUrl } from '@/utils/env';
 import clientApiClient from '@/utils/clientApiClient';
 import { getUserToken } from '@/composables/useUtilities';
 import { useQuery } from '@tanstack/vue-query';
+import { useSettingsStore } from '@/stores/settingsStore';
 
 const { data: homeQueryData, isPending: isQueryLoading, isError: isQueryError } = useQuery({
   queryKey: ['homeData'],
@@ -369,11 +370,21 @@ const data = reactive({
   news: []
 });
 
-const homeStats = [
-  { value: '90%', label: 'Khách hàng hài lòng' },
-  { value: '15+', label: 'Bộ sưu tập nổi bật' },
-  { value: '3K+', label: 'Khoảnh khắc SORA' }
-];
+const settingsStore = useSettingsStore();
+
+
+
+const homeStatsList = computed(() => {
+  const stats = settingsStore.settings?.home_stats;
+  if (Array.isArray(stats) && stats.length > 0) {
+    return stats;
+  }
+  return [
+    { value: 90, suffix: '%', label: 'Khách hàng hài lòng' },
+    { value: 15, suffix: '+', label: 'Bộ sưu tập nổi bật' },
+    { value: 3, suffix: 'K+', label: 'Khoảnh khắc SORA' }
+  ];
+});
 
 const craftItems = [
   { title: 'Đường nét tinh xảo', text: 'Từng chi tiết được hoàn thiện cẩn trọng để giữ trọn vẻ mềm mại và cân đối.' },
@@ -415,13 +426,16 @@ const imagePool = computed(() => {
   return [...bannerImages, ...galleryImages, ...productImages, ...comboImages, ...newsImages].filter(Boolean);
 });
 
-const heroBanners = computed(() => data.banners.filter((banner) => banner?.image_desktop || banner?.image_mobile));
+const heroBanners = computed(() => data.banners.filter((banner) => banner?.image_desktop || banner?.image_mobile || banner?.video_url));
 const heroImage = computed(() => {
   const firstBanner = heroBanners.value[0];
   return firstBanner?.image_desktop || firstBanner?.image_mobile || imagePool.value[0] || null;
 });
 const secondaryImages = computed(() => imagePool.value.filter((img) => img && img !== heroImage.value).slice(0, 6));
-const storyImage = computed(() => secondaryImages.value[0] || heroImage.value);
+
+const storyBanner = computed(() => data.banners.find(b => b.position === 'home_story'));
+const storyVideo = computed(() => storyBanner.value?.video_url || null);
+const storyImage = computed(() => storyBanner.value?.image_desktop || storyBanner.value?.image_mobile || secondaryImages.value[0] || heroImage.value);
 const storyAccentImage = computed(() => secondaryImages.value[1] || null);
 const craftImage = computed(() => secondaryImages.value[2] || storyImage.value);
 const craftAccentImage = computed(() => secondaryImages.value[3] || storyAccentImage.value);
@@ -1060,6 +1074,12 @@ onUnmounted(() => {
   box-shadow: inset 0 10px 30px rgba(0, 0, 0, 0.4);
 }
 
+@media (max-width: 767px) {
+  .home-stats-band {
+    padding: 1.25rem max(var(--home-gutter), calc((100vw - var(--home-container-width)) / 2 + var(--home-gutter)));
+  }
+}
+
 .banner-ambient, .banner-glow {
   display: none;
 }
@@ -1123,29 +1143,10 @@ onUnmounted(() => {
   grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
   width: 100%;
-}
-
-.stat-item {
-  text-align: center;
-}
-
-.stat-item strong {
-  display: block;
-  color: var(--sora-secondary);
-  font-family: 'Oswald', sans-serif;
-  font-weight: 500;
-  font-size: clamp(2rem, 4vw, 3rem);
-  line-height: 1;
-}
-
-.stat-item span {
-  display: block;
-  margin-top: 0.5rem;
-  font-family: 'Oswald', sans-serif;
-  font-size: 0.75rem;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.85);
+  position: relative;
+  z-index: 10;
+  max-width: 100%;
+  margin: 0 auto;
 }
 
 .editorial-section {
@@ -2367,22 +2368,10 @@ onUnmounted(() => {
     font-size: 0.75rem !important;
   }
 
-  .home-stats-band {
-    padding-top: 1.25rem;
-    padding-bottom: 1.25rem;
-  }
-
   .stat-container {
     grid-template-columns: repeat(3, 1fr);
     gap: 0.5rem;
-  }
-
-  .stat-item strong {
-    font-size: 1.25rem !important;
-  }
-
-  .stat-item span {
-    font-size: 0.55rem !important;
+    width: 100%;
   }
 
   .editorial-products-grid {
@@ -2550,4 +2539,5 @@ onUnmounted(() => {
     height: 40px;
   }
 }
+
 </style>

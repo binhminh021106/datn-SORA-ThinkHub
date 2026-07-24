@@ -20,11 +20,8 @@ const router = createRouter({
     history: createWebHistory(),
     routes,
     scrollBehavior(to, from, savedPosition) {
-        if (savedPosition) {
-            return savedPosition;
-        } else {
-            return { top: 0, behavior: 'smooth' };
-        }
+        // Always scroll to top on page change, ignore savedPosition
+        return { top: 0 };
     }
 });
 

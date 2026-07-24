@@ -99,6 +99,10 @@
                         <img :src="getImageUrl(banner.image_mobile)" @error="handleImageError" class="w-100 h-100 object-fit-cover">
                         <span class="position-absolute bottom-0 start-0 bg-dark text-white opacity-75 fw-bold" style="font-size: 0.55rem; padding: 1px 2px;">MB</span>
                       </div>
+                      <div v-if="banner.video_url" class="position-relative shadow-sm border rounded overflow-hidden bg-dark d-flex align-items-center justify-content-center" style="width: 60px; height: 45px;" title="Video Banner">
+                        <video :src="getImageUrl(banner.video_url)" class="w-100 h-100 object-fit-cover opacity-75" autoplay loop muted></video>
+                        <i class="bi bi-play-circle-fill text-white position-absolute fs-6 shadow-sm"></i>
+                      </div>
                     </div>
                   </td>
                   

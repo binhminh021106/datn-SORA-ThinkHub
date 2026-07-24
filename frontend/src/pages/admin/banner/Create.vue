@@ -35,6 +35,7 @@
                     <label class="form-label fw-bold">Vị trí hiển thị</label>
                     <select class="form-select" v-model="form.position">
                       <option value="home_slider">Slider Trang chủ</option>
+                      <option value="home_story">Giữa trang: Di sản SORA</option>
                       <option value="category_top">Đầu trang Danh mục</option>
                       <option value="popup">Popup Sale</option>
                     </select>
@@ -96,6 +97,19 @@
                 <input type="file" class="d-none" id="mobUpload" accept="image/*" @change="(e) => handleUpload(e, 'mob')">
                 <label for="mobUpload" class="btn btn-sm btn-outline-brand rounded-pill w-100 fw-semibold cursor-pointer"><i class="bi bi-upload"></i> Chọn ảnh Mobile</label>
               </div>
+
+              <div class="p-4 bg-light rounded-4 border text-center flex-fill">
+                <h6 class="fw-bold mb-3"><i class="bi bi-camera-video me-2"></i>Video Nền (Tùy chọn)</h6>
+                <div class="mb-3 border rounded bg-white shadow-sm position-relative overflow-hidden" style="height: 120px; padding: 0.2rem;">
+                  <video v-if="previewVideo" :src="previewVideo" class="w-100 h-100 object-fit-cover" autoplay loop muted></video>
+                  <div v-else class="d-flex flex-column justify-content-center align-items-center h-100 text-muted small">
+                     <i class="bi bi-film fs-3 mb-1 opacity-50"></i>
+                     MP4/WEBM (Max 50MB)
+                  </div>
+                </div>
+                <input type="file" class="d-none" id="videoUpload" accept="video/mp4,video/webm" @change="(e) => handleUpload(e, 'video')">
+                <label for="videoUpload" class="btn btn-sm btn-outline-brand rounded-pill w-100 fw-semibold cursor-pointer"><i class="bi bi-upload"></i> Chọn Video</label>
+              </div>
             </div>
             
             <div class="col-12 text-end border-top pt-4">
@@ -124,23 +138,30 @@ const brands = ref([]);
 
 const fileDesk = ref(null); const previewDesk = ref(null);
 const fileMob = ref(null); const previewMob = ref(null);
+const fileVideo = ref(null); const previewVideo = ref(null);
 
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
 
 const handleUpload = (e, type) => {
   const f = e.target.files[0];
   if(f) { 
-    if(f.size > 15 * 1024 * 1024) { return Swal.fire('Lỗi', 'Ảnh tối đa 15MB', 'error'); }
+    if(type === 'video' && f.size > 50 * 1024 * 1024) { return Swal.fire('Lỗi', 'Video tối đa 50MB', 'error'); }
+    if(type !== 'video' && f.size > 15 * 1024 * 1024) { return Swal.fire('Lỗi', 'Ảnh tối đa 15MB', 'error'); }
     
     if(type === 'desk') { 
       if (previewDesk.value) URL.revokeObjectURL(previewDesk.value);
       fileDesk.value = f; 
       previewDesk.value = URL.createObjectURL(f); 
     }
-    else { 
+    else if(type === 'mob') { 
       if (previewMob.value) URL.revokeObjectURL(previewMob.value);
       fileMob.value = f; 
       previewMob.value = URL.createObjectURL(f); 
+    }
+    else if(type === 'video') {
+      if (previewVideo.value) URL.revokeObjectURL(previewVideo.value);
+      fileVideo.value = f; 
+      previewVideo.value = URL.createObjectURL(f); 
     }
   }
 };
@@ -186,6 +207,7 @@ const submitBanner = async () => {
   
   if(fileDesk.value) fd.append('image_desktop', fileDesk.value);
   if(fileMob.value) fd.append('image_mobile', fileMob.value);
+  if(fileVideo.value) fd.append('video_url', fileVideo.value);
 
   try {
     const res = await fetch(`${API_URL}/admin/banners`, { method: 'POST', headers: getHeaders(), body: fd });

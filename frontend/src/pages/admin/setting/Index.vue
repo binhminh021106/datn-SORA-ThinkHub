@@ -149,6 +149,45 @@
       </div>
 
 
+      <!-- HOME STATS BUILDER -->
+      <div class="card custom-card border-0 shadow-sm rounded-4 mb-5">
+        <div class="card-header bg-warning-soft border-bottom pt-3 pb-3 px-4 d-flex align-items-center gap-2">
+          <div class="icon-circle bg-white text-warning flex-shrink-0 border" style="width: 32px; height: 32px;">
+            <i class="bi bi-bar-chart-line"></i>
+          </div>
+          <h5 class="fw-bold mb-0 text-dark">Thống kê Trang chủ (Home Stats)</h5>
+        </div>
+        <div class="card-body p-4">
+           <div class="row g-3 mb-4">
+             <div class="col-lg-4 col-md-6" v-for="(stat, index) in homeStats" :key="'stat-'+index">
+                <div class="border rounded-3 p-3 bg-light-soft h-100 border-top border-3 border-warning">
+                   <div class="d-flex align-items-center gap-2 mb-3">
+                     <span class="badge bg-warning text-dark rounded-circle p-2">{{ index + 1 }}</span>
+                   </div>
+                   <div class="row g-2 mb-2">
+                       <div class="col-6">
+                           <label class="form-label fw-semibold font-size-sm mb-1">Số đếm</label>
+                           <input type="number" v-model.number="stat.value" class="form-control form-control-sm fw-bold text-dark" placeholder="Vd: 90">
+                       </div>
+                       <div class="col-6">
+                           <label class="form-label fw-semibold font-size-sm mb-1">Hậu tố</label>
+                           <input type="text" v-model="stat.suffix" class="form-control form-control-sm font-monospace text-primary" placeholder="Vd: %">
+                       </div>
+                   </div>
+                   <label class="form-label fw-semibold font-size-sm mb-1">Tiêu đề (Nhãn)</label>
+                   <input type="text" v-model="stat.label" class="form-control form-control-sm text-muted" placeholder="Vd: KHÁCH HÀNG HÀI LÒNG">
+                </div>
+             </div>
+           </div>
+        </div>
+        <div class="card-footer bg-white p-3 text-end">
+            <button @click="saveHomeStatsSettings" type="button" class="btn btn-warning text-dark rounded-pill px-4 py-2 fw-bold shadow-sm" :disabled="isSavingHomeStats || !isInitialized">
+               <span v-if="isSavingHomeStats" class="spinner-border spinner-border-sm me-2"></span>
+               <i v-else class="bi bi-save me-2"></i> LƯU THỐNG KÊ
+            </button>
+        </div>
+      </div>
+
       <!-- FOOTER BUILDER -->
       <div class="card custom-card border-0 shadow-sm rounded-4 mb-5">
         <div class="card-header bg-info-soft border-bottom pt-3 pb-3 px-4 d-flex align-items-center gap-2">
@@ -362,6 +401,9 @@ const footerEmail = ref('');
 const footerTrustItems = ref([]);
 const footerSocials = ref([]);
 const isSavingFooter = ref(false);
+const isSavingHomeStats = ref(false);
+const homeStats = ref([]);
+
 
 const liveFooterData = computed(() => {
     return {
@@ -406,6 +448,9 @@ onMounted(async () => {
 
     footerSocials.value = Array.isArray(s.footer_socials) && s.footer_socials.length > 0 ? JSON.parse(JSON.stringify(s.footer_socials)) : [];
     while(footerSocials.value.length < 4) footerSocials.value.push({icon: 'bi bi-link', url: '', title: ''});
+
+    homeStats.value = Array.isArray(s.home_stats) && s.home_stats.length > 0 ? JSON.parse(JSON.stringify(s.home_stats)) : [];
+    while(homeStats.value.length < 3) homeStats.value.push({value: 0, suffix: '', label: ''});
 
     const modalEl = document.getElementById('cropperModal');
     cropperModalInstance = new Modal(modalEl, {
@@ -663,6 +708,29 @@ const saveFooterSettings = async () => {
         Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Đã có lỗi xảy ra khi lưu Footer!' });
     } finally {
         isSavingFooter.value = false;
+    }
+};
+
+const saveHomeStatsSettings = async () => {
+    isSavingHomeStats.value = true;
+    try {
+        const payload = {
+            settings: [
+                { key: 'home_stats', value: homeStats.value, type: 'json' }
+            ]
+        };
+        const res = await axios.post(`${BACKEND_URL}/admin/settings`, payload, { headers: getHeaders() });
+        if (res.data && res.data.status === 'success') {
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật Thống kê thành công!', showConfirmButton: false, timer: 2000 });
+            await settingsStore.fetchSettings(); 
+        } else {
+            throw new Error('Failed');
+        }
+    } catch (error) {
+        console.error(error);
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Đã có lỗi xảy ra khi lưu Thống kê!' });
+    } finally {
+        isSavingHomeStats.value = false;
     }
 };
 </script>

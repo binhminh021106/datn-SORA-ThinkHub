@@ -125,14 +125,21 @@ public function settings()
             'tiers.*.status' => 'required|in:active,inactive',
         ]);
 
+        $normalizedTiers = array_map(function ($tier) {
+            if (!isset($tier['usage_limit']) || $tier['usage_limit'] === '') {
+                $tier['usage_limit'] = null;
+            }
+            return $tier;
+        }, $validated['tiers']);
+
         $setting = EmailCampaignSetting::current();
         
-        \Illuminate\Support\Facades\DB::transaction(function () use ($setting, $validated) {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($setting, $validated, $normalizedTiers) {
             $setting->update([
                 'is_auto_birthday' => (bool) ($validated['is_auto_birthday'] ?? false),
                 'birthday_subject' => $validated['birthday_subject'],
                 'birthday_content' => $validated['birthday_content'] ?? '',
-                'birthday_tiers'   => $validated['tiers'],
+                'birthday_tiers'   => $normalizedTiers,
             ]);
         });
 

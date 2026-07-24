@@ -23,6 +23,7 @@ class AdminStoreBannerRequest extends FormRequest
             'status'        => 'required|in:active,hidden',
             'image_desktop' => 'required|image|mimes:jpeg,png,jpg,webp|max:10000',
             'image_mobile'  => 'required|image|mimes:jpeg,png,jpg,webp|max:10000',
+            'video_url'     => 'nullable|mimes:mp4,webm|max:51200',
         ];
     }
 
