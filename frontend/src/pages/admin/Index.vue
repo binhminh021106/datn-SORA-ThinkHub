@@ -275,6 +275,7 @@
                       <th class="py-3 fw-bold text-secondary border-0">Ngày đặt</th>
                       <th class="py-3 fw-bold text-secondary border-0">Tổng tiền</th>
                       <th class="pe-4 py-3 fw-bold text-secondary border-0 text-center">Trạng thái</th>
+                      <th class="pe-4 py-3 fw-bold text-secondary border-0 text-center">Trạng thái</th>
                     </tr>
                   </thead>
                   <tbody>

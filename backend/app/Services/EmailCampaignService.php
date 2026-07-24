@@ -189,28 +189,45 @@ class EmailCampaignService
   /**
      * Tạo hoặc lấy Voucher sinh nhật dựa trên cấu hình của Admin
      */
-    private function createBirthdayCoupon(User $user, Carbon $today): ?Coupon
+  private function createBirthdayCoupon(User $user, Carbon $today): ?Coupon
     {
         $setting = EmailCampaignSetting::current();
         $tiers = $setting->birthday_tiers ?? [];
         
+<<<<<<< HEAD
+        if (!$user->tier_id) return null;
+=======
         if (!$user->tier_id) return null;  
+>>>>>>> f99c5b9042cb7ae13a73c724455054f9d112b29e
 
-        // Mapping linh hoạt bằng tier_id thay vì so sánh chuỗi
         $matchedTierConfig = collect($tiers)->firstWhere('tier_id', $user->tier_id);
 
         if (!$matchedTierConfig || empty($matchedTierConfig['voucherCode']) || $matchedTierConfig['status'] !== 'active') {
             return null; 
         }
 
+<<<<<<< HEAD
+        // TẠO MÃ ĐỘC QUYỀN CHO TỪNG USER (VD: Cấu hình là BD25 -> Mã tạo ra là BD25-U15)
+        $couponCode = $matchedTierConfig['voucherCode'] . '-U' . $user->id;
+        $existingCoupon = Coupon::where('code', $couponCode)->first();
+=======
         $baseCode = $matchedTierConfig['voucherCode'];
         // Tạo mã độc nhất cho từng user theo năm (VD: TIERKC-U15-2026)
         $couponCode = $baseCode . '-U' . $user->id . '-' . $today->year;
+>>>>>>> f99c5b9042cb7ae13a73c724455054f9d112b29e
 
-        // Tính toán hạn sử dụng động dựa trên cấu hình admin
         $validityDays = $matchedTierConfig['validity_days'] ?? 7;
         $requiredExpiration = $today->copy()->addDays($validityDays)->endOfDay();
 
+<<<<<<< HEAD
+        if ($existingCoupon) {
+            // Cập nhật lại hạn sử dụng và reset lượt dùng nếu năm sau khách lại có sinh nhật
+            if (!$existingCoupon->expires_at || $existingCoupon->expires_at->lt($requiredExpiration)) {
+                $existingCoupon->expires_at = $requiredExpiration;
+                $existingCoupon->usage_count = 0; 
+                $existingCoupon->is_used = false;
+                $existingCoupon->save();
+=======
         try {
             return Coupon::firstOrCreate(
                 ['code' => $couponCode],
@@ -236,11 +253,31 @@ class EmailCampaignService
                 if ($existing) {
                     return $existing;
                 }
+>>>>>>> f99c5b9042cb7ae13a73c724455054f9d112b29e
             }
             throw $e;
         }
-    }
+<<<<<<< HEAD
 
+        return Coupon::create([
+            'type' => $matchedTierConfig['type'] ?? 'fixed',
+            'name' => 'Quà tặng sinh nhật: ' . ($user->name ?? $user->fullName ?? 'Khách hàng'),
+            'code' => $couponCode,
+            'min_spend' => $matchedTierConfig['min_spend'] ?? 0,
+            'value' => $matchedTierConfig['value'] ?? 0,
+            'usage_limit' => $matchedTierConfig['usage_limit_per_user'] ?? 1, 
+            'usage_limit_per_user' => $matchedTierConfig['usage_limit_per_user'] ?? 1,
+            'usage_count' => 0,
+            'status' => 'active',
+            'expires_at' => $requiredExpiration, 
+            'user_id' => $user->id, // CHỐT CHẶT QUYỀN SỞ HỮU CHO ĐÚNG USER NÀY
+            'is_used' => false
+        ]);
+=======
+>>>>>>> f99c5b9042cb7ae13a73c724455054f9d112b29e
+    }
+  
+   
   
     private function getUserTierName(User $user): string
     {
