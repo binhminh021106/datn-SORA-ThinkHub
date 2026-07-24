@@ -19,9 +19,6 @@
             Trang yêu cầu: <span class="badge" :class="getLevelColor(currentPageLevel)">Cấp {{ currentPageLevel }}</span>
           </div>
 
-          <button v-if="activeTab === 'deleted'" @click="handleCleanOrphans" class="btn btn-outline-danger px-4 py-2 fw-bold shadow-sm" :disabled="isMutating">
-            <i class="bi bi-trash3-fill me-1"></i> Dọn Dẹp Mã Chưa Sử Dụng
-          </button>
 
           <router-link :to="{ name: 'admin-coupon-create' }" class="btn btn-brand btn-brand-solid px-4 py-2 fw-bold shadow-sm">
             <i class="bi bi-plus-circle-fill me-1"></i> Thêm Mã Mới
@@ -68,6 +65,9 @@
           </h6>
           
           <div class="d-flex align-items-center gap-2">
+            <button v-if="activeTab === 'deleted' && currentPageLevel === 1" @click="handleCleanOrphans" class="btn btn-danger btn-sm rounded-pill px-3 shadow-sm" :disabled="isMutating" title="Xóa vĩnh viễn các mã giảm giá rác, đã hết hạn hoặc chưa từng sử dụng">
+              <i class="bi bi-trash3-fill me-1"></i> Dọn rác
+            </button>
             <!-- Search box -->
             <div class="search-box position-relative" style="width: 280px; max-width: 100%;">
               <input type="text" class="form-control form-control-sm rounded-pill pe-5 shadow-sm bg-light border-0 py-2" v-model="searchQuery" @input="currentPage = 1" placeholder="Tìm tên hoặc mã code...">
@@ -175,8 +175,11 @@
                       </button>
                     </template>
                     <template v-else>
-                      <button class="btn btn-sm btn-light text-success shadow-sm border" @click="handleRestore(coupon.id)" title="Khôi phục" :disabled="isMutating">
+                      <button class="btn btn-sm btn-light text-success me-1 shadow-sm border" @click="handleRestore(coupon.id)" title="Khôi phục" :disabled="isMutating">
                         <i class="bi bi-arrow-counterclockwise"></i>
+                      </button>
+                      <button v-if="coupon.usage_count === 0 && currentPageLevel === 1" class="btn btn-sm btn-light text-danger shadow-sm border" @click="confirmForceDelete(coupon.id, coupon.code)" title="Xóa vĩnh viễn" :disabled="isMutating">
+                        <i class="bi bi-trash-fill"></i>
                       </button>
                     </template>
                   </td>
@@ -269,7 +272,8 @@ const queryClient = useQueryClient();
 defineOptions({ name: 'CouponIndex' });
 
 const route = useRoute();
-const currentPageLevel = ref(null);
+const userLevelStr = localStorage.getItem('admin_level') || sessionStorage.getItem('admin_level');
+const currentPageLevel = ref(userLevelStr ? parseInt(userLevelStr) : Number(JSON.parse(localStorage.getItem('admin_info') || '{}')?.role?.level || 999));
 const searchQuery = ref('');
 const activeTab = ref('active');
 const currentPage = ref(1);
@@ -477,6 +481,42 @@ const cleanOrphanMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: ['admin', 'coupons'] }); 
   }
 });
+
+const forceDeleteMutation = useMutation({
+  mutationFn: async (id) => {
+    const res = await fetch(`${API_URL}/admin/coupons/${id}/force`, { method: 'DELETE', headers: getHeaders() });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Xóa vĩnh viễn thất bại');
+    return data;
+  },
+  onMutate: () => { isMutating.value = true; },
+  onSuccess: (data) => {
+    Swal.fire({icon: 'success', title: 'Đã xóa vĩnh viễn', text: data.message, confirmButtonColor: '#009981', timer: 1500});
+  },
+  onError: (err) => {
+    Swal.fire('Lỗi', err.message, 'error');
+  },
+  onSettled: () => { 
+    isMutating.value = false; 
+    queryClient.invalidateQueries({ queryKey: ['admin', 'coupons'] }); 
+  }
+});
+
+const confirmForceDelete = (id, code) => {
+  Swal.fire({ 
+    title: 'XÓA VĨNH VIỄN?', 
+    text: `Hành động này không thể hoàn tác! Bạn có chắc chắn muốn xóa vĩnh viễn mã "${code}" khỏi hệ thống?`, 
+    icon: 'error', 
+    showCancelButton: true, 
+    confirmButtonColor: '#d33', 
+    confirmButtonText: 'Xóa vĩnh viễn',
+    cancelButtonText: 'Hủy' 
+  }).then((result) => {
+    if (result.isConfirmed) {
+      forceDeleteMutation.mutate(id);
+    }
+  });
+};
 
 const handleCleanOrphans = () => {
   Swal.fire({ 

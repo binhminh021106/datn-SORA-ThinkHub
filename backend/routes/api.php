@@ -444,6 +444,7 @@ Route::prefix('admin')->group(function () {
             Route::controller(AdminCouponController::class)->group(function () {
                 Route::get('coupons', 'index');
                 Route::delete('coupons/clean-orphan', 'cleanOrphanVouchers');
+                Route::delete('coupons/{id}/force', 'forceDelete');
                 Route::get('coupons/{id}', 'show');
                 Route::post('coupons', 'store');
                 Route::patch('coupons/{id}', 'update');

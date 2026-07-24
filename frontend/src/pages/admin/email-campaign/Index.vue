@@ -273,7 +273,7 @@
                   </div>
                   <div class="col-md-12 mt-2 d-none">
                      <!-- Ẩn trường này đi vì sinh nhật thường không giới hạn tổng lượt phát -->
-                    <input v-model.number="tier.usage_limit" type="number" value="10000">
+                    <input type="hidden" v-model.number="tier.usage_limit">
                   </div>
                 </div>
               </div>
@@ -498,6 +498,28 @@ const previewTierData = computed(() => {
   return birthdaySettings.value.tiers?.find(t => t.tier_id === previewTierId.value) 
     || birthdaySettings.value.tiers?.[0] 
     || { voucherCode: '', type: 'fixed', value: 0, validity_days: 7 };
+});
+
+const previewBirthdaySubject = computed(() => {
+  return birthdaySettings.value.subject || '[Nhập tiêu đề...]';
+});
+
+const previewBirthdayContent = computed(() => {
+  let text = birthdaySettings.value.content || '[Nhập nội dung...]';
+  
+  // Sanitize to prevent XSS
+  text = text.replace(/&/g, '&amp;')
+             .replace(/</g, '&lt;')
+             .replace(/>/g, '&gt;')
+             .replace(/"/g, '&quot;')
+             .replace(/'/g, '&#039;');
+             
+  text = text.replace(/\[Tên_Khách_Hàng\]/g, '<strong>Lê Thị Mỹ Duyên</strong>');
+  
+  const vCode = previewTierData.value?.voucherCode || 'TIERVANG';
+  text = text.replace(/\[Voucher_Code\]/g, `<strong>${vCode}</strong>`);
+  
+  return text.replace(/\n/g, '<br>');
 });
 
 // Chuyển đổi định dạng tiền tệ hoặc % cho màn hình preview

@@ -115,13 +115,8 @@ class AdminCouponController extends Controller
      */
     public function cleanOrphanVouchers()
     {
-        $admin = request()->user();
-        if (!$admin || !$admin->role_id) {
-            return response()->json(['success' => false, 'message' => 'Lỗi xác thực.'], 401);
-        }
-        $role = \Illuminate\Support\Facades\DB::table('roles')->where('id', $admin->role_id)->first();
-        if (!$role || (int) $role->level !== 1) {
-            return response()->json(['success' => false, 'message' => 'Truy cập bị từ chối: Chỉ Super Admin (Level 1) mới có quyền xóa vĩnh viễn.'], 403);
+        if ($authError = $this->authorizeSuperAdmin()) {
+            return $authError;
         }
 
         try {
@@ -133,11 +128,12 @@ class AdminCouponController extends Controller
                     // Kiểm tra xem voucher đã từng được dùng trong đơn hàng nào chưa
                     $hasOrders = \Illuminate\Support\Facades\DB::table('orders')->where('coupon_id', $coupon->id)->exists();
                     
-                    // Cẩn thận: Chỉ xóa những mã đã hết hạn HOẶC hết lượt. Các mã rác được xoá mềm thường rơi vào 2 nhóm này.
+                    // Cẩn thận: Chỉ xóa những mã đã hết hạn HOẶC hết lượt HOẶC chưa từng sử dụng.
                     $isExpired = $coupon->expires_at !== null && now()->greaterThan($coupon->expires_at);
                     $isUsedUp = $coupon->usage_limit !== null && $coupon->usage_count >= $coupon->usage_limit;
+                    $isNeverUsed = $coupon->usage_count == 0;
                     
-                    if (!$hasOrders && ($isExpired || $isUsedUp)) {
+                    if (!$hasOrders && ($isExpired || $isUsedUp || $isNeverUsed)) {
                         $coupon->forceDelete();
                         $count++;
                     }
@@ -177,5 +173,49 @@ class AdminCouponController extends Controller
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Xóa vĩnh viễn 1 mã (chỉ Super Admin)
+     */
+    public function forceDelete(string $id)
+    {
+        if ($authError = $this->authorizeSuperAdmin()) {
+            return $authError;
+        }
+
+        $coupon = Coupon::onlyTrashed()->findOrFail($id);
+
+        if ($coupon->usage_count > 0) {
+            return response()->json(['success' => false, 'message' => 'Không thể xóa vĩnh viễn mã đã có lượt sử dụng.'], 400);
+        }
+
+        $hasOrders = \Illuminate\Support\Facades\DB::table('orders')->where('coupon_id', $coupon->id)->exists();
+        if ($hasOrders) {
+            return response()->json(['success' => false, 'message' => 'Không thể xóa mã đã lưu vào đơn hàng.'], 400);
+        }
+
+        try {
+            $coupon->forceDelete();
+            return response()->json(['success' => true, 'message' => 'Đã xóa vĩnh viễn mã giảm giá.']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Lỗi khi xóa vĩnh viễn: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Kiểm tra quyền Super Admin
+     */
+    private function authorizeSuperAdmin()
+    {
+        $admin = request()->user();
+        if (!$admin || !$admin->role_id) {
+            return response()->json(['success' => false, 'message' => 'Lỗi xác thực.'], 401);
+        }
+        $role = \Illuminate\Support\Facades\DB::table('roles')->where('id', $admin->role_id)->first();
+        if (!$role || (int) $role->level !== 1) {
+            return response()->json(['success' => false, 'message' => 'Truy cập bị từ chối: Chỉ Super Admin mới có quyền xóa vĩnh viễn.'], 403);
+        }
+        return null;
     }
 }

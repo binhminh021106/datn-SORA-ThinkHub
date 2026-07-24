@@ -311,30 +311,7 @@ public function applyBirthdayCoupon(Request $request)
             'coupon' => $coupon->code
         ]);
     }
-    private function isSilverTierOrAbove($user): bool
-    {
-        if (!$user || !$user->tier_id) {
-            return false;
-        }
 
-        $userTier = $user->relationLoaded('tier') ? $user->tier : MembershipTier::find($user->tier_id);
-        if (!$userTier) {
-            return false;
-        }
-
-        $silverTier = MembershipTier::orderBy('min_spent', 'asc')
-            ->get()
-            ->first(function ($tier) {
-                $tierName = Str::lower(Str::ascii($tier->name ?? ''));
-                return Str::contains($tierName, ['silver', 'bac']);
-            });
-
-        if (!$silverTier) {
-            return false;
-        }
-
-        return (float) $userTier->min_spent >= (float) $silverTier->min_spent;
-    }
 
     private function resolveCart(Request $request, $createIfNotFound = false)
     {
