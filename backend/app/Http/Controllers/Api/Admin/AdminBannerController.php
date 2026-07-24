@@ -55,7 +55,7 @@ class AdminBannerController extends Controller
 
         if ($request->hasFile('video_url')) {
             $fileVideo = $request->file('video_url');
-            $fileNameVideo = 'banner_video_' . Str::slug($data['title']) . '_' . time() . '.' . $fileVideo->getClientOriginalExtension();
+            $fileNameVideo = 'banner_video_' . Str::slug($data['title']) . '_' . uniqid() . '.' . $fileVideo->getClientOriginalExtension();
             $data['video_url'] = $fileVideo->storeAs('banners/video', $fileNameVideo, 'public');
         }
 
@@ -109,7 +109,7 @@ class AdminBannerController extends Controller
 
         if ($request->hasFile('video_url')) {
             $fileVideo = $request->file('video_url');
-            $fileNameVideo = 'banner_video_' . Str::slug($data['title']) . '_' . time() . '.' . $fileVideo->getClientOriginalExtension();
+            $fileNameVideo = 'banner_video_' . Str::slug($data['title']) . '_' . uniqid() . '.' . $fileVideo->getClientOriginalExtension();
             $data['video_url'] = $fileVideo->storeAs('banners/video', $fileNameVideo, 'public');
             if ($banner->video_url) Storage::disk('public')->delete($banner->video_url);
         }

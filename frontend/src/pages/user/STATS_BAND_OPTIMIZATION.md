@@ -82,29 +82,41 @@ newStats.forEach((stat, index) => {
 ### 1. **Composable: `useCountAnimation.js`**
 
 ```javascript
-export function useCountAnimation(targetValue, duration = 2000, delay = 0)
+export function useCountAnimation(targetValue, duration = 2500, delay = 0)
 ```
 
 **Cơ chế hoạt động:**
 
-1. **Intersection Observer** - Phát hiện khi element visible
+1. **Reactivity & Setup** - Lắng nghe thay đổi giá trị
    ```javascript
-   const observerOptions = {
-     root: null,
-     threshold: 0.1  // Trigger khi 10% element visible
+   const getTarget = () => {
+     if (typeof targetValue === 'function') return targetValue();
+     if (isRef(targetValue)) return targetValue.value;
+     return targetValue;
    };
-   observerInstance = new IntersectionObserver(handleIntersection, observerOptions);
+   
+   watch(
+     () => getTarget(),
+     (newVal, oldVal) => {
+       if (newVal !== oldVal) {
+         delay = 0; // No delay for updates
+         startAnimation();
+       }
+     }
+   );
    ```
 
 2. **AnimationFrame Loop** - Smooth animation 60fps
    ```javascript
    const animate = () => {
-     const elapsed = Math.max(0, now - startTime - delay);
+     const elapsed = now - startTime;
      const progress = Math.min(elapsed / duration, 1);
-     displayValue.value = Math.floor(numValue * progress);
+     displayValue.value = Math.floor(startValue + (numValue - startValue) * progress);
      
      if (progress < 1) {
        animationId = requestAnimationFrame(animate);  // 60fps
+     } else {
+       displayValue.value = numValue;
      }
    };
    ```
@@ -113,43 +125,30 @@ export function useCountAnimation(targetValue, duration = 2000, delay = 0)
    ```javascript
    onUnmounted(() => {
      if (animationId) cancelAnimationFrame(animationId);
-     if (observerInstance) observerInstance.disconnect();
+     if (timeoutId) clearTimeout(timeoutId);
    });
    ```
 
-### 2. **Vue Component Integration**
+### 2. **Vue Component Integration (`StatItem.vue`)**
 
 ```javascript
-// Khởi tạo animation state cho mỗi stat item
-const statsAnimationState = ref({});
-
-// Watch homeStatsList và setup animation
-watch(homeStatsList, (newStats) => {
-  newStats.forEach((stat, index) => {
-    if (!statsAnimationState.value[`stat-${index}`]) {
-      statsAnimationState.value[`stat-${index}`] = useCountAnimation(
-        stat.value,    // targetValue
-        2500,          // duration (ms)
-        100 + index * 150  // delay (stagger effect)
-      );
-    }
-  });
-}, { immediate: true });
+// Khởi tạo animation state bằng việc truyền getter function
+const { displayValue } = useCountAnimation(
+  () => props.item.value,  // targetValue (getter for reactivity)
+  2500,                    // duration (ms)
+  100 + props.index * 150  // delay (stagger effect)
+);
 ```
 
 ### 3. **Template Binding**
 
 ```vue
-<div class="stat-item" 
-     v-for="(item, index) in homeStatsList" 
-     :key="'stat-'+index"
-     :ref="el => statsAnimationState[`stat-${index}`]?.elementRef = el">
-  <strong>
-    {{ statsAnimationState[`stat-${index}`]?.displayValue?.value || item.value }}
-    {{ item.suffix }}
-  </strong>
-  <span>{{ item.label }}</span>
-</div>
+<template>
+  <div class="stat-item">
+    <strong>{{ displayValue }}{{ item.suffix }}</strong>
+    <span>{{ item.label }}</span>
+  </div>
+</template>
 ```
 
 ---
@@ -200,12 +199,12 @@ watch(homeStatsList, (newStats) => {
 
 ## ✅ Testing Checklist
 
-- [x] **Scroll test**: Khi scroll đến stats section, số bắt đầu chạy
-- [x] **Stagger timing**: Mỗi số có delay, không đồng thời
+- [x] **Auto start**: Animation bắt đầu ngay khi component mount (thông qua `onMounted`)
+- [x] **Reactivity test**: Thay đổi số liệu trên Admin Setting sẽ làm số tự động animate mượt mà sang số mới
+- [x] **Stagger timing**: Mỗi số có delay ban đầu, không đồng thời
 - [x] **No layout shift**: Text không nhảy vị trí khi animate
 - [x] **Responsive**: Desktop & mobile layout đều ổn
 - [x] **Color contrast**: Text rõ trên background
-- [x] **Run once**: Refresh page, animation chỉ chạy 1 lần
 - [x] **Performance**: 60fps smooth, không lag
 - [x] **Fallback**: Nếu JS disable, vẫn hiển thị số
 
@@ -224,71 +223,81 @@ watch(homeStatsList, (newStats) => {
 
 ## 🐛 Edge Cases Handled
 
-1. **Settings thay đổi động**
+1. **Settings thay đổi động (Live Preview)**
    ```javascript
-   watch(homeStatsList, ...)  // Re-init if settings change
+   watch(() => getTarget(), ...)  // Tự động re-animate khi thay đổi giá trị cấu hình
    ```
 
-2. **Multiple mounts**
+2. **Khởi tạo đúng lúc**
    ```javascript
-   if (!statsAnimationState.value[`stat-${index}`]) {
-     // Only init once
-   }
+   onMounted(() => {
+     startAnimation();
+   });
    ```
 
 3. **Component unmount**
    ```javascript
    onUnmounted(() => {
      cancelAnimationFrame(animationId);
-     observerInstance.disconnect();
+     clearTimeout(timeoutId);
    });
    ```
 
-4. **Viewport visibility**
+4. **Tránh delay khi update số**
    ```javascript
-   threshold: 0.1  // Start animation khi có 10% visible
+   if (newVal !== oldVal) {
+     delay = 0; // Hủy delay ban đầu để số chạy nhanh hơn khi Admin gõ
+     startAnimation();
+   }
    ```
 
 ---
 
 ## 🎬 Demo Flow
 
-```
-1. User loads homepage
+```text
+1. User tải trang hoặc mở Admin Setting
    ↓
-2. Browser renders stats section (not visible yet)
+2. Component HomeStatsBand & StatItem được mount
    ↓
-3. User scrolls down
+3. `useCountAnimation` trigger startAnimation() thông qua onMounted
    ↓
-4. Section enters viewport (10% visible)
-   ↓
-5. Intersection Observer triggers
-   ↓
-6. Animation starts (with stagger):
+4. Animation bắt đầu ngay (với stagger delay cho tải trang):
    Stat 0: [delay 100ms] → 0 → 90 (2500ms)
    Stat 1: [delay 250ms] → 0 → 15 (2500ms)
    Stat 2: [delay 400ms] → 0 → 3  (2500ms)
    ↓
-7. Animation completes
+5. Animation hoàn tất
    ↓
-8. Numbers stay at final value (90%, 15+, 3K+)
+6. (Trong Admin Setting): User sửa thông số 90 thành 95
+   ↓
+7. watch() phát hiện targetValue thay đổi
+   ↓
+8. Hủy bỏ delay, tiếp tục trigger startAnimation()
+   Stat 0: 90 → 95 (2500ms)
 ```
 
 ---
 
 ## 📝 File Changes Summary
 
-```
+```text
 ✏️ Modified:
   frontend/src/pages/user/Index.vue
-  - Added: useCountAnimation import
-  - Added: statsAnimationState ref + watch
-  - Updated: template to use displayValue
-  - Optimized: CSS for layout shift prevention
+  - Extracted: home-stats-band vào component HomeStatsBand.vue
+  
+  frontend/src/pages/admin/setting/Index.vue
+  - Added: Live Preview HomeStatsBand.vue
 
 ✨ Created:
+  frontend/src/components/ui/HomeStatsBand.vue
+  - New: Chứa giao diện chung của Stat Band
+  
+  frontend/src/components/ui/StatItem.vue
+  - New: Item riêng rẽ với composable logic
+  
   frontend/src/composables/useCountAnimation.js
-  - New: Composable with Intersection Observer
+  - New: Composable với Reactive Watcher
   - Smooth: RequestAnimationFrame animation
   - Safe: Proper cleanup on unmount
 ```

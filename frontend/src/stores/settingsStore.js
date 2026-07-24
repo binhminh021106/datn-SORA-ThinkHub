@@ -55,7 +55,10 @@ export const useSettingsStore = defineStore('settings', () => {
                 let parsedHomeStats = null;
                 if (data.home_stats) {
                     try {
-                        parsedHomeStats = typeof data.home_stats === 'string' ? JSON.parse(data.home_stats) : data.home_stats;
+                        let parsed = typeof data.home_stats === 'string' ? JSON.parse(data.home_stats) : data.home_stats;
+                        if (Array.isArray(parsed) && parsed.length > 0 && parsed.every(item => typeof item === 'object' && item !== null && 'value' in item && 'label' in item)) {
+                            parsedHomeStats = parsed;
+                        }
                     } catch (e) {
                         parsedHomeStats = null;
                     }

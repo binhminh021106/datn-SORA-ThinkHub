@@ -59,7 +59,7 @@ class HolidayCouponMail extends Mailable implements ShouldQueue
 
         $content = str_replace(
             ['[Ten_Khach_Hang]', '[Tên_Khách_Hàng]', '[TÃªn_KhÃ¡ch_HÃ ng]', '[TÃƒÂªn_KhÃƒÂ¡ch_HÃƒÂ ng]', '[Voucher_Code]'],
-            [$name, $name, $name, $name, $this->voucherCode],
+            [$name, $name, $name, $name, htmlspecialchars($this->voucherCode ?? '', ENT_QUOTES, 'UTF-8')],
             $content ?? ''
         );
 

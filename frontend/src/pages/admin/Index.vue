@@ -645,10 +645,10 @@ const today = new Date();
 const maxDate = today.toISOString().split('T')[0];
 const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
-const loadedImages = new Set();
+const loadedImages = ref(new Set());
 
 const handleImageLoad = (id) => {
-  loadedImages.add(id);
+  loadedImages.value.add(id);
 };
 
 const handleImageError = (e) => {
@@ -656,7 +656,7 @@ const handleImageError = (e) => {
   e.target.onerror = null;
 };
 
-const isImageLoaded = (id) => loadedImages.has(id);
+const isImageLoaded = (id) => loadedImages.value.has(id);
 
 const formatCompactCurrency = (value) => {
   if (!value) return '0đ';
@@ -1475,7 +1475,6 @@ button:focus {
 /* Image fade-in animation */
 .img-fade-in {
   opacity: 0;
-  animation: fadeInImage 0.5s ease-in-out forwards;
   will-change: opacity;
 }
 
