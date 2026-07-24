@@ -115,13 +115,8 @@ class AdminCouponController extends Controller
      */
     public function cleanOrphanVouchers()
     {
-        $admin = request()->user();
-        if (!$admin || !$admin->role_id) {
-            return response()->json(['success' => false, 'message' => 'Lỗi xác thực.'], 401);
-        }
-        $role = \Illuminate\Support\Facades\DB::table('roles')->where('id', $admin->role_id)->first();
-        if (!$role || (int) $role->level !== 1) {
-            return response()->json(['success' => false, 'message' => 'Truy cập bị từ chối: Chỉ Super Admin (Level 1) mới có quyền xóa vĩnh viễn.'], 403);
+        if ($authError = $this->authorizeSuperAdmin()) {
+            return $authError;
         }
 
         try {
@@ -185,13 +180,8 @@ class AdminCouponController extends Controller
      */
     public function forceDelete(string $id)
     {
-        $admin = request()->user();
-        if (!$admin || !$admin->role_id) {
-            return response()->json(['success' => false, 'message' => 'Lỗi xác thực.'], 401);
-        }
-        $role = \Illuminate\Support\Facades\DB::table('roles')->where('id', $admin->role_id)->first();
-        if (!$role || (int) $role->level !== 1) {
-            return response()->json(['success' => false, 'message' => 'Truy cập bị từ chối: Chỉ Super Admin mới có quyền xóa vĩnh viễn.'], 403);
+        if ($authError = $this->authorizeSuperAdmin()) {
+            return $authError;
         }
 
         $coupon = Coupon::onlyTrashed()->findOrFail($id);
@@ -211,5 +201,21 @@ class AdminCouponController extends Controller
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Lỗi khi xóa vĩnh viễn: ' . $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Kiểm tra quyền Super Admin
+     */
+    private function authorizeSuperAdmin()
+    {
+        $admin = request()->user();
+        if (!$admin || !$admin->role_id) {
+            return response()->json(['success' => false, 'message' => 'Lỗi xác thực.'], 401);
+        }
+        $role = \Illuminate\Support\Facades\DB::table('roles')->where('id', $admin->role_id)->first();
+        if (!$role || (int) $role->level !== 1) {
+            return response()->json(['success' => false, 'message' => 'Truy cập bị từ chối: Chỉ Super Admin mới có quyền xóa vĩnh viễn.'], 403);
+        }
+        return null;
     }
 }

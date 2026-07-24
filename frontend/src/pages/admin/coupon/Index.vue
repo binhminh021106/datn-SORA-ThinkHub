@@ -273,7 +273,7 @@ defineOptions({ name: 'CouponIndex' });
 
 const route = useRoute();
 const userLevelStr = localStorage.getItem('admin_level') || sessionStorage.getItem('admin_level');
-const currentPageLevel = ref(userLevelStr ? parseInt(userLevelStr) : (JSON.parse(localStorage.getItem('admin_info') || '{}')?.role?.level || 999));
+const currentPageLevel = ref(userLevelStr ? parseInt(userLevelStr) : Number(JSON.parse(localStorage.getItem('admin_info') || '{}')?.role?.level || 999));
 const searchQuery = ref('');
 const activeTab = ref('active');
 const currentPage = ref(1);

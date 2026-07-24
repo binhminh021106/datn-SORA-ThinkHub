@@ -506,7 +506,19 @@ const previewBirthdaySubject = computed(() => {
 
 const previewBirthdayContent = computed(() => {
   let text = birthdaySettings.value.content || '[Nhập nội dung...]';
+  
+  // Sanitize to prevent XSS
+  text = text.replace(/&/g, '&amp;')
+             .replace(/</g, '&lt;')
+             .replace(/>/g, '&gt;')
+             .replace(/"/g, '&quot;')
+             .replace(/'/g, '&#039;');
+             
   text = text.replace(/\[Tên_Khách_Hàng\]/g, '<strong>Lê Thị Mỹ Duyên</strong>');
+  
+  const vCode = previewTierData.value?.voucherCode || 'TIERVANG';
+  text = text.replace(/\[Voucher_Code\]/g, `<strong>${vCode}</strong>`);
+  
   return text.replace(/\n/g, '<br>');
 });
 
