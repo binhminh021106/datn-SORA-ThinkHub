@@ -500,6 +500,16 @@ const previewTierData = computed(() => {
     || { voucherCode: '', type: 'fixed', value: 0, validity_days: 7 };
 });
 
+const previewBirthdaySubject = computed(() => {
+  return birthdaySettings.value.subject || '[Nhập tiêu đề...]';
+});
+
+const previewBirthdayContent = computed(() => {
+  let text = birthdaySettings.value.content || '[Nhập nội dung...]';
+  text = text.replace(/\[Tên_Khách_Hàng\]/g, '<strong>Lê Thị Mỹ Duyên</strong>');
+  return text.replace(/\n/g, '<br>');
+});
+
 // Chuyển đổi định dạng tiền tệ hoặc % cho màn hình preview
 const previewDiscountText = computed(() => {
   const data = previewTierData.value;
