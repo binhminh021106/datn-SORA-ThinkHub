@@ -23,6 +23,7 @@ class AdminUpdateBannerRequest extends FormRequest
             'status'        => 'required|in:active,hidden',
             'image_desktop' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'image_mobile'  => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'video_url'     => 'nullable|mimes:mp4,webm|max:51200',
         ];
     }
 

@@ -17,6 +17,7 @@ class Banner extends Model
         'title',
         'image_desktop',
         'image_mobile',
+        'video_url',
         'target_url',
         'position',
         'sort_order',

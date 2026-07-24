@@ -75,7 +75,7 @@
 </template>
 
 <script setup>
-import { ref, nextTick, watch, defineProps, defineEmits } from 'vue';
+import { ref, nextTick, watch } from 'vue';
 import clientApiClient from '@/utils/clientApiClient';
 import { useRouter } from 'vue-router';
 import ProductCard from '@/components/ui/ProductCard.vue';

@@ -330,7 +330,7 @@
                     class="avatar-circle bg-light-soft text-dark fw-bolder border border-light shadow-sm flex-shrink-0 d-flex align-items-center justify-content-center"
                     style="width: 40px; height: 40px; border-radius: 50%; overflow: hidden;">
                     <img v-if="review.user_avatar && !reviewAvatarErrors[review.id]" :src="review.user_avatar"
-                      @error="reviewAvatarErrors[review.id] = true" class="w-100 h-100 object-fit-cover" />
+                      @load="handleImageLoad('review-' + review.id)" @error="reviewAvatarErrors[review.id] = true" class="w-100 h-100 object-fit-cover img-fade-in" :class="{ 'img-loaded': isImageLoaded('review-' + review.id) }" />
                     <span v-else>{{ review.user_name?.charAt(0).toUpperCase() || 'K' }}</span>
                   </div>
                   <div class="flex-grow-1 min-w-0">
@@ -375,8 +375,8 @@
                   <div
                     class="product-img-box ms-3 me-3 bg-light-soft position-relative d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm border border-light"
                     style="width: 48px; height: 48px; border-radius: 8px;">
-                    <img v-if="product.image" :src="product.image" @error="handleImageError" alt="Product"
-                      class="img-fluid rounded-2 h-100 w-100 position-absolute top-0 start-0"
+                    <img v-if="product.image" :src="product.image" @load="handleImageLoad('top-product-' + product.id)" @error="handleImageError" alt="Product"
+                      class="img-fluid rounded-2 h-100 w-100 position-absolute top-0 start-0 img-fade-in" :class="{ 'img-loaded': isImageLoaded('top-product-' + product.id) }"
                       style="object-fit: cover; z-index: 1;" />
                     <div v-if="!product.image"
                       class="w-100 h-100 d-flex align-items-center justify-content-center bg-light text-secondary rounded-2">
@@ -425,8 +425,8 @@
                   <div
                     class="product-img-box me-3 bg-light-soft position-relative d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm border border-light"
                     style="width: 48px; height: 48px; border-radius: 8px;">
-                    <img v-if="product.image" :src="product.image" @error="handleImageError"
-                      class="img-fluid rounded-2 h-100 w-100 position-absolute top-0 start-0"
+                    <img v-if="product.image" :src="product.image" @load="handleImageLoad('lowstock-' + product.id)" @error="handleImageError"
+                      class="img-fluid rounded-2 h-100 w-100 position-absolute top-0 start-0 img-fade-in" :class="{ 'img-loaded': isImageLoaded('lowstock-' + product.id) }"
                       style="object-fit: cover;" />
                     <i v-else class="bi bi-box-seam text-secondary"></i>
                   </div>
@@ -465,8 +465,8 @@
                   <div
                     class="product-img-box me-3 bg-light-soft position-relative d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm border border-info"
                     style="width: 48px; height: 48px; border-radius: 8px;">
-                    <img v-if="combo.image" :src="combo.image" @error="handleImageError"
-                      class="img-fluid h-100 w-100 position-absolute top-0 start-0"
+                    <img v-if="combo.image" :src="combo.image" @load="handleImageLoad('combo-' + combo.id)" @error="handleImageError"
+                      class="img-fluid h-100 w-100 position-absolute top-0 start-0 img-fade-in" :class="{ 'img-loaded': isImageLoaded('combo-' + combo.id) }"
                       style="object-fit: cover; border-radius: 8px;" />
                     <i v-else class="bi bi-basket2 text-info fs-4"></i>
                   </div>
@@ -645,10 +645,18 @@ const today = new Date();
 const maxDate = today.toISOString().split('T')[0];
 const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
+const loadedImages = new Set();
+
+const handleImageLoad = (id) => {
+  loadedImages.add(id);
+};
+
 const handleImageError = (e) => {
   e.target.src = defaultImage;
   e.target.onerror = null;
 };
+
+const isImageLoaded = (id) => loadedImages.has(id);
 
 const formatCompactCurrency = (value) => {
   if (!value) return '0đ';
@@ -1462,6 +1470,26 @@ button:focus {
 
 .custom-card {
   border-radius: 12px !important;
+}
+
+/* Image fade-in animation */
+.img-fade-in {
+  opacity: 0;
+  animation: fadeInImage 0.5s ease-in-out forwards;
+  will-change: opacity;
+}
+
+.img-fade-in.img-loaded {
+  animation: fadeInImage 0.5s ease-in-out forwards;
+}
+
+@keyframes fadeInImage {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 </style>
 

@@ -142,7 +142,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, computed } from 'vue';
+import { computed } from 'vue';
 import { globalModalState } from '@/stores/modalState';
 import Toast from '@/utils/toastConfig';
 import soraAlert from '@/utils/soraAlertConfig';
