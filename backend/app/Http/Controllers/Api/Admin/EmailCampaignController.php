@@ -87,7 +87,7 @@ public function settings()
                 'type' => $saved['type'] ?? 'fixed',
                 'value' => $saved['value'] ?? 0,
                 'min_spend' => $saved['min_spend'] ?? 0,
-                'usage_limit' => $saved['usage_limit'] ?? 100,
+                'usage_limit' => $saved['usage_limit'] ?? null,
                 'usage_limit_per_user' => $saved['usage_limit_per_user'] ?? 1,
                 'validity_days' => $saved['validity_days'] ?? 7, // Thời hạn tính từ ngày sinh nhật
                 'status' => $saved['status'] ?? 'active',
@@ -119,7 +119,7 @@ public function settings()
             'tiers.*.type' => 'required|in:fixed,percentage',
             'tiers.*.value' => 'required|numeric|min:0',
             'tiers.*.min_spend' => 'required|numeric|min:0',
-            'tiers.*.usage_limit' => 'required|numeric|min:1',
+            'tiers.*.usage_limit' => 'nullable|numeric|min:1',
             'tiers.*.usage_limit_per_user' => 'required|numeric|min:1',
             'tiers.*.validity_days' => 'required|numeric|min:1',
             'tiers.*.status' => 'required|in:active,inactive',

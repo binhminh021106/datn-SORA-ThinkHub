@@ -273,7 +273,7 @@
                   </div>
                   <div class="col-md-12 mt-2 d-none">
                      <!-- Ẩn trường này đi vì sinh nhật thường không giới hạn tổng lượt phát -->
-                    <input v-model.number="tier.usage_limit" type="number" value="10000">
+                    <input type="hidden" v-model.number="tier.usage_limit">
                   </div>
                 </div>
               </div>
