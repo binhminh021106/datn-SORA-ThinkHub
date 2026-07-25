@@ -20,8 +20,8 @@ const router = createRouter({
     history: createWebHistory(),
     routes,
     scrollBehavior(to, from, savedPosition) {
-        // Always scroll to top on page change, ignore savedPosition
-        return { top: 0 };
+        // Return saved position for back/forward navigation, otherwise scroll to top
+        return savedPosition || { top: 0 };
     }
 });
 

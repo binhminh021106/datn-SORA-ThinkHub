@@ -21,7 +21,7 @@ const props = defineProps({
 
 // Initialize animation for this specific stat
 const { displayValue } = useCountAnimation(
-  props.item.value,
+  () => props.item.value,
   2500,
   100 + props.index * 150  // Stagger: mỗi stat delay 150ms
 );

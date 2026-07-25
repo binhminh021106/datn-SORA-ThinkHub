@@ -57,9 +57,11 @@ class HolidayCouponMail extends Mailable implements ShouldQueue
     {
         $name = $this->user->fullName ?? $this->user->name ?? 'Quy khach';
 
+        $escapedName = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
+
         $content = str_replace(
             ['[Ten_Khach_Hang]', '[Tên_Khách_Hàng]', '[TÃªn_KhÃ¡ch_HÃ ng]', '[TÃƒÂªn_KhÃƒÂ¡ch_HÃƒÂ ng]', '[Voucher_Code]'],
-            [$name, $name, $name, $name, $this->voucherCode],
+            [$escapedName, $escapedName, $escapedName, $escapedName, htmlspecialchars($this->voucherCode ?? '', ENT_QUOTES, 'UTF-8')],
             $content ?? ''
         );
 

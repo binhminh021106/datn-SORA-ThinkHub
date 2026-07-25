@@ -8,13 +8,18 @@
       <template v-else-if="!showHomeLogoLoader">
         <section class="home-hero">
 
-        <div v-if="heroBanners.length > 0" id="homeEditorialCarousel"
+        <div v-if="heroBanners.length > 0" id="homeEditorialCarousel" ref="heroCarouselRef"
           class="home-hero-media carousel slide carousel-fade" data-bs-ride="carousel" data-bs-interval="6000"
           data-bs-touch="true">
           <div class="carousel-inner h-100">
             <div v-for="(banner, index) in heroBanners" :key="banner.id || index" class="carousel-item h-100"
               :class="{ active: index === 0 }">
-              <video v-if="banner.video_url" :src="getImageUrl(banner.video_url)" class="w-100 h-100 object-fit-cover" autoplay loop muted playsinline></video>
+              <video v-if="banner.video_url" :src="getImageUrl(banner.video_url)" 
+                class="w-100 h-100 object-fit-cover" 
+                :preload="index === activeHeroIndex ? 'auto' : 'metadata'"
+                :autoplay="index === activeHeroIndex"
+                loop muted playsinline 
+                :ref="el => setHeroVideoRef(el, index)"></video>
               <picture v-else>
                 <source v-if="banner.image_mobile" media="(max-width: 767px)"
                   :srcset="getImageUrl(banner.image_mobile)">
@@ -76,18 +81,7 @@
         </div>
       </section>
 
-      <section class="home-stats-band position-relative overflow-hidden">
-        <div class="banner-ambient"></div>
-        <div class="banner-glow banner-glow-left"></div>
-        <div class="banner-glow banner-glow-right"></div>
-        <div class="banner-monogram font-serif">SORA</div>
-        <div class="banner-line-art banner-line-art-left d-none d-md-block"></div>
-        <div class="banner-line-art banner-line-art-right d-none d-md-block"></div>
-
-        <div class="stat-container position-relative z-index-2">
-          <StatItem v-for="(item, index) in homeStatsList" :key="'stat-'+index" :item="item" :index="index" />
-        </div>
-      </section>
+      <HomeStatsBand :stats="homeStatsList" />
 
       <section class="editorial-section story-section">
         <div class="container">
@@ -327,11 +321,12 @@
 </template>
 
 <script setup>
-import { reactive, onMounted, onUnmounted, ref, computed, watch } from 'vue';
+import { reactive, onMounted, onUnmounted, ref, computed, watch, nextTick } from 'vue';
 import Toast from '@/utils/toastConfig';
 import soraAlert from '@/utils/soraAlertConfig';
 import ProductCard from '@/components/ui/ProductCard.vue';
 import NewsPostCard from '@/components/ui/NewsPostCard.vue';
+import HomeStatsBand from '@/components/ui/HomeStatsBand.vue';
 import ComboCarousel from '@/components/ui/ComboCarousel.vue';
 import StatItem from '@/components/ui/StatItem.vue';
 import SoraHomeIntroLoader from '@/components/ui/SoraHomeIntroLoader.vue';
@@ -426,7 +421,49 @@ const imagePool = computed(() => {
   return [...bannerImages, ...galleryImages, ...productImages, ...comboImages, ...newsImages].filter(Boolean);
 });
 
-const heroBanners = computed(() => data.banners.filter((banner) => banner?.image_desktop || banner?.image_mobile || banner?.video_url));
+const heroBanners = computed(() => data.banners.filter((banner) => {
+  const hasMedia = banner?.image_desktop || banner?.image_mobile || banner?.video_url;
+  const isValidPosition = !banner.position || banner.position === 'home_slider';
+  return hasMedia && isValidPosition;
+}));
+
+const activeHeroIndex = ref(0);
+const heroCarouselRef = ref(null);
+const heroVideoRefs = ref({});
+let isCarouselEventBound = false;
+
+const setHeroVideoRef = (el, index) => {
+  if (el) heroVideoRefs.value[index] = el;
+};
+
+watch(heroBanners, async (newVal) => {
+  if (newVal && newVal.length > 0) {
+    await nextTick();
+    if (heroCarouselRef.value && !isCarouselEventBound) {
+      heroCarouselRef.value.addEventListener('slid.bs.carousel', (event) => {
+        activeHeroIndex.value = event.to;
+        Object.keys(heroVideoRefs.value).forEach(key => {
+          const video = heroVideoRefs.value[key];
+          if (video && key != event.to) {
+            video.pause();
+          }
+        });
+        const activeVideo = heroVideoRefs.value[event.to];
+        if (activeVideo) {
+          activeVideo.play().catch(e => console.warn("Video play failed:", e));
+        }
+      });
+      isCarouselEventBound = true;
+      
+      // Auto play first video if exists
+      const firstVideo = heroVideoRefs.value[0];
+      if (firstVideo) {
+         firstVideo.play().catch(e => console.warn("Video play failed:", e));
+      }
+    }
+  }
+}, { immediate: true });
+
 const heroImage = computed(() => {
   const firstBanner = heroBanners.value[0];
   return firstBanner?.image_desktop || firstBanner?.image_mobile || imagePool.value[0] || null;
@@ -1063,91 +1100,7 @@ onUnmounted(() => {
 
 
 
-.home-stats-band {
-  background: linear-gradient(90deg, #1c060a 0%, var(--sora-primary) 50%, #1c060a 100%);
-  position: relative;
-  color: #fff;
-  padding: 2rem max(var(--home-gutter), calc((100vw - var(--home-container-width)) / 2 + var(--home-gutter)));
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  box-shadow: inset 0 10px 30px rgba(0, 0, 0, 0.4);
-}
 
-@media (max-width: 767px) {
-  .home-stats-band {
-    padding: 1.25rem max(var(--home-gutter), calc((100vw - var(--home-container-width)) / 2 + var(--home-gutter)));
-  }
-}
-
-.banner-ambient, .banner-glow {
-  display: none;
-}
-
-.banner-glow-left {
-  left: -80px;
-  bottom: -80px;
-}
-
-.banner-glow-right {
-  right: -80px;
-  top: -80px;
-}
-
-.banner-monogram {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  transform: translateY(-50%);
-  text-align: center;
-  color: rgba(255, 244, 218, 0.038);
-  font-size: clamp(3rem, 8vw, 6rem);
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  line-height: 1;
-  white-space: nowrap;
-  z-index: 0;
-}
-
-.banner-line-art {
-  position: absolute;
-  width: 70px;
-  height: 70px;
-  border: 1px solid rgba(231, 206, 125, 0.34);
-  z-index: 1;
-}
-
-.banner-line-art::before,
-.banner-line-art::after {
-  content: "";
-  position: absolute;
-  inset: 10px;
-  border: 1px solid rgba(231, 206, 125, 0.2);
-}
-
-.banner-line-art-left {
-  left: 8%;
-  top: 50%;
-  transform: translateY(-50%) rotate(45deg);
-}
-
-.banner-line-art-right {
-  right: 8%;
-  top: 50%;
-  transform: translateY(-50%) rotate(45deg);
-}
-
-.stat-container {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
-  width: 100%;
-  position: relative;
-  z-index: 10;
-  max-width: 100%;
-  margin: 0 auto;
-}
 
 .editorial-section {
   padding: clamp(20px, 3vw, 32px) 0;
