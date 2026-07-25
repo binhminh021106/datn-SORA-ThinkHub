@@ -23,6 +23,9 @@ use App\Models\User;
 use App\Models\AdminAttendance;
 use App\Models\AdminAttendanceAdjustment;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -39,6 +42,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->configureRateLimiting();
+
         $broadcastMapping = [
             Product::class => 'products',
             ProductVariant::class => 'products',
@@ -64,6 +69,48 @@ class AppServiceProvider extends ServiceProvider
         foreach ($broadcastMapping as $modelClass => $module) {
             $this->registerAdminRefreshBroadcaster($modelClass, $module);
         }
+    }
+
+    /**
+     * Configure the rate limiters for the application.
+     */
+    protected function configureRateLimiting(): void
+    {
+        RateLimiter::for('auth', function (Request $request) {
+            return Limit::perMinutes(15, 5)->by($request->ip());
+        });
+
+        RateLimiter::for('forgot-password', function (Request $request) {
+            return Limit::perDay(3)->by($request->ip());
+        });
+
+        RateLimiter::for('contact', function (Request $request) {
+            // Nới lỏng vòng ngoài để cho phép submit sai validate (không bị block)
+            // Giới hạn thực sự (3 lần/giờ đối với form đúng) sẽ nằm trong Controller.
+            return Limit::perHour(60)->by($request->ip());
+        });
+
+        RateLimiter::for('checkout', function (Request $request) {
+            return $request->user()
+                ? Limit::perMinute(5)->by($request->user()->id)
+                : Limit::perMinute(5)->by($request->ip());
+        });
+
+        RateLimiter::for('review', function (Request $request) {
+            return $request->user()
+                ? Limit::perMinutes(10, 5)->by($request->user()->id)
+                : Limit::perMinutes(10, 5)->by($request->ip());
+        });
+
+        RateLimiter::for('chatbot', function (Request $request) {
+            return Limit::perMinute(10)->by($request->ip());
+        });
+
+        RateLimiter::for('affiliate', function (Request $request) {
+            return $request->user()
+                ? Limit::perHour(1)->by($request->user()->id)
+                : Limit::perHour(1)->by($request->ip());
+        });
     }
 
     private function registerAdminRefreshBroadcaster(string $modelClass, string $module): void
