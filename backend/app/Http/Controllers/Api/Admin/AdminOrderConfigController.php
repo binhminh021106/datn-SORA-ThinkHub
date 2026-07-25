@@ -20,9 +20,10 @@ class AdminOrderConfigController extends Controller
         );
 
         $perPage = $request->input('per_page', 10);
+        $perPage = min((int) $perPage, 100);
         $search = $request->input('search', '');
         $sortBy = $request->input('sort_by', 'recent_orders_count');
-        $sortDir = $request->input('sort_dir', 'desc');
+        $sortDir = in_array(strtolower($request->input('sort_dir')), ['asc', 'desc'], true) ? strtolower($request->input('sort_dir')) : 'desc';
 
         $query = User::withCount([
             'orders',

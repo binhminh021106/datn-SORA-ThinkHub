@@ -133,8 +133,19 @@ class ClientCheckoutController extends Controller
 
         $sessionId = $request->header('X-Cart-Session-Id');
 
+        $lockKey = 'checkout_lock_' . ($user ? $user->id : $sessionId);
+        $lock = Cache::lock($lockKey, 10);
+
+        if (!$lock->get()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hệ thống đang xử lý đơn hàng của bạn, vui lòng không bấm liên tục...'
+            ], 429);
+        }
+
         // CHỐNG SPAM: Kiểm tra tài khoản có bị cấm đặt hàng không
         if ($user->is_order_blocked) {
+            $lock->release();
             return response()->json([
                 'success' => false,
                 'message' => 'Tài khoản của bạn đã bị hạn chế chức năng đặt hàng do dấu hiệu bất thường. Vui lòng liên hệ Admin.'
@@ -151,21 +162,12 @@ class ClientCheckoutController extends Controller
                 ->first();
 
             if ($latestOrder && now()->diffInMinutes($latestOrder->created_at) < $cooldownMinutes) {
+                $lock->release();
                 return response()->json([
                     'success' => false,
                     'message' => 'Bạn thao tác đặt hàng quá nhanh. Vui lòng chờ ' . $cooldownMinutes . ' phút trước khi đặt đơn tiếp theo.'
                 ], 429);
             }
-        }
-
-        $lockKey = 'checkout_lock_' . ($user ? $user->id : $sessionId);
-        $lock = Cache::lock($lockKey, 10);
-
-        if (!$lock->get()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Hệ thống đang xử lý đơn hàng của bạn, vui lòng không bấm liên tục...'
-            ], 429);
         }
 
         try {
