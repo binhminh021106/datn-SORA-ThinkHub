@@ -42,7 +42,12 @@
             <input type="email" v-model="form.email" placeholder="Nhập email của bạn" required />
           </div>
 
-          <button type="submit" class="btn-primary" :disabled="isLoading">
+          <!-- CAPTCHA -->
+          <div class="form-group">
+            <div id="otp-recaptcha"></div>
+          </div>
+
+          <button type="submit" class="btn-primary" :disabled="isLoading || !recaptchaToken">
             {{ isLoading ? 'ĐANG XỬ LÝ...' : 'NHẬN MÃ OTP' }}
           </button>
         </form>
@@ -130,6 +135,33 @@ const isResending = ref(false);
 const showPass1 = ref(false);
 const showPass2 = ref(false);
 
+const recaptchaToken = ref('');
+
+const renderRecaptcha = () => {
+  if (window.grecaptcha && window.grecaptcha.render && document.getElementById('otp-recaptcha')) {
+    // Clear previous before re-rendering if it was already rendered
+    document.getElementById('otp-recaptcha').innerHTML = '';
+    window.grecaptcha.render('otp-recaptcha', {
+      sitekey: import.meta.env.VITE_RECAPTCHA_SITE_KEY,
+      callback: (token) => { recaptchaToken.value = token; },
+      'expired-callback': () => { recaptchaToken.value = ''; }
+    });
+  }
+};
+
+onMounted(() => {
+  if (window.grecaptcha) {
+    renderRecaptcha();
+  } else {
+    const script = document.createElement('script');
+    script.src = 'https://www.google.com/recaptcha/api.js?render=explicit';
+    script.async = true;
+    script.defer = true;
+    script.onload = renderRecaptcha;
+    document.head.appendChild(script);
+  }
+});
+
 const form = ref({
   email: '',
   otp: '',
@@ -181,7 +213,9 @@ const goBackToStep1 = () => {
   form.value.reset_token = '';
   form.value.password = '';
   form.value.password_confirmation = '';
+  recaptchaToken.value = '';
   if (timer) clearInterval(timer);
+  nextTick(() => { renderRecaptcha(); });
 };
 
 const countdown = ref(0);
@@ -218,17 +252,32 @@ const handleSendOtp = async () => {
     return;
   }
   
+  if (step.value === 1 && !recaptchaToken.value) {
+    Toast.fire({ icon: 'warning', title: 'Vui lòng xác minh bạn không phải là robot.' });
+    return;
+  }
+  
   if (step.value === 1) isLoading.value = true;
   else isResending.value = true;
 
   try {
-    await clientApiClient.post('/client/forgot-password/send-otp', { email: form.value.email.trim() });
+    const payload = { email: form.value.email.trim() };
+    if (step.value === 1 && recaptchaToken.value) {
+        payload['g-recaptcha-response'] = recaptchaToken.value;
+    }
+    
+    await clientApiClient.post('/client/forgot-password/send-otp', payload);
     Toast.fire({ icon: 'success', title: 'Nếu email hợp lệ, mã OTP sẽ được gửi đến bạn.' });
     step.value = 2;
     nextTick(() => { if(otpInputs.value[0]) otpInputs.value[0].focus(); });
     startCountdown();
   } catch (error) {
     handleFormErrors(error, 'Lỗi gửi OTP.');
+    // Reset recaptcha if failed so they can try again
+    if (step.value === 1 && window.grecaptcha) {
+        window.grecaptcha.reset();
+        recaptchaToken.value = '';
+    }
   } finally {
     isLoading.value = false;
     isResending.value = false;

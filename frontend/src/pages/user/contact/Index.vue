@@ -92,9 +92,13 @@
                     <label class="premium-form-label">Mong muốn hoặc thắc mắc của bạn *</label>
                     <textarea class="premium-form-control w-100" id="message" v-model="form.message" placeholder="Xin vui lòng mô tả chi tiết..." style="height: 140px; resize: none;" required></textarea>
                   </div>
-                  <div class="col-12 mt-5 text-end">
+                  <!-- CAPTCHA -->
+                  <div class="col-12 mt-3">
+                    <div id="contact-recaptcha"></div>
+                  </div>
+                  <div class="col-12 mt-4 text-end">
                     <!-- Nút Gửi kèm trạng thái Loading -->
-                    <button type="submit" class="editorial-btn text-uppercase px-5 py-3 w-100 w-md-auto d-flex align-items-center justify-content-center ms-auto" style="letter-spacing: 0.1em;" :disabled="isSubmitting">
+                    <button type="submit" class="editorial-btn text-uppercase px-5 py-3 w-100 w-md-auto d-flex align-items-center justify-content-center ms-auto" style="letter-spacing: 0.1em;" :disabled="isSubmitting || !recaptchaToken">
                       <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2" role="status"></span>
                       GỬI LỜI NHẮN
                     </button>
@@ -122,7 +126,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
 import clientApiClient from '@/utils/clientApiClient';
 
@@ -134,6 +138,31 @@ const form = ref({
   message: ''
 });
 const isSubmitting = ref(false);
+const recaptchaToken = ref('');
+
+// Render CAPTCHA
+const renderRecaptcha = () => {
+  if (window.grecaptcha && window.grecaptcha.render) {
+    window.grecaptcha.render('contact-recaptcha', {
+      sitekey: import.meta.env.VITE_RECAPTCHA_SITE_KEY,
+      callback: (token) => { recaptchaToken.value = token; },
+      'expired-callback': () => { recaptchaToken.value = ''; }
+    });
+  }
+};
+
+onMounted(() => {
+  if (window.grecaptcha) {
+    renderRecaptcha();
+  } else {
+    const script = document.createElement('script');
+    script.src = 'https://www.google.com/recaptcha/api.js?render=explicit';
+    script.async = true;
+    script.defer = true;
+    script.onload = renderRecaptcha;
+    document.head.appendChild(script);
+  }
+});
 
 // 3. Cấu hình SweetAlert2 đồng bộ với toàn hệ thống
 const soraAlert = createSoraAlert({
@@ -144,10 +173,15 @@ const soraAlert = createSoraAlert({
 
 // 4. Hàm Gửi Form Lưu Database
 const submitContactForm = async () => {
+  if (!recaptchaToken.value) {
+    soraAlert.fire({ icon: 'warning', title: 'Thiếu xác thực', text: 'Vui lòng xác nhận bạn không phải là robot.' });
+    return;
+  }
   isSubmitting.value = true;
   
   try {
-    const response = await clientApiClient.post('/client/contact', form.value, {
+    const payload = { ...form.value, 'g-recaptcha-response': recaptchaToken.value };
+    const response = await clientApiClient.post('/client/contact', payload, {
       ignoreAuthRedirect: true,
       skipCartSession: true
     });
@@ -160,6 +194,8 @@ const submitContactForm = async () => {
       });
       // Reset form cho sạch
       form.value = { fullname: '', phone: '', email: '', message: '' };
+      recaptchaToken.value = '';
+      if (window.grecaptcha) window.grecaptcha.reset();
     }
   } catch (error) {
     if (error.response && error.response.status === 422) {
@@ -167,8 +203,21 @@ const submitContactForm = async () => {
       const errors = error.response.data.errors;
       const firstErrorMsg = Object.values(errors)[0][0]; 
       soraAlert.fire({ icon: 'error', title: 'Kiểm tra lại dữ liệu', text: firstErrorMsg });
+      if (window.grecaptcha) window.grecaptcha.reset();
+      recaptchaToken.value = '';
+    } else if (error.response && error.response.status === 429) {
+      // Lỗi do gửi quá nhiều (Rate limit / Chống Spam)
+      let msg = error.response.data.message || 'Bạn đã thao tác quá nhiều. Vui lòng thử lại sau!';
+      if (msg === 'Too Many Attempts.') {
+        msg = 'Bạn đã vượt quá số lần thử nghiệm (3 lần/giờ). Vui lòng quay lại sau!';
+      }
+      soraAlert.fire({ 
+        icon: 'warning', 
+        title: 'Thao tác quá nhanh', 
+        text: msg
+      });
     } else {
-      // Lỗi do server sập hoặc chưa chạy php artisan serve
+      // Lỗi do server sập hoặc lỗi kết nối
       soraAlert.fire({ icon: 'error', title: 'Lỗi Kết Nối', text: 'Có lỗi máy chủ xảy ra. Vui lòng thử lại sau!' });
     }
   } finally {

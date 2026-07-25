@@ -89,11 +89,17 @@
               </span>
             </a>
           </li>
+          <li class="nav-item" v-if="adminLevel === '1'">
+            <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#"
+              :class="{ 'active-tab': activeTab === 'config' }" @click.prevent="switchTab('config')">
+              <i class="bi bi-gear-fill me-2 text-dark"></i> Cấu hình & Chống Spam
+            </a>
+          </li>
         </ul>
       </div>
 
       <!-- Bộ lọc -->
-      <div class="d-flex flex-column flex-md-row flex-wrap gap-3 gap-md-4 mb-4 align-items-start">
+      <div v-if="activeTab !== 'config'" class="d-flex flex-column flex-md-row flex-wrap gap-3 gap-md-4 mb-4 align-items-start">
 
         <div class="filter-wrapper">
           <label class="form-label small text-muted fw-bold mb-2">
@@ -129,8 +135,11 @@
 
       </div>
 
+      <!-- Order Config Tab -->
+      <OrderConfigTab v-if="activeTab === 'config'" />
+
       <!-- Bảng Đơn Hàng -->
-      <div class="card border-0 shadow-sm rounded-4 mb-4">
+      <div v-if="activeTab !== 'config'" class="card border-0 shadow-sm rounded-4 mb-4">
         <div
           class="card-header bg-white border-bottom-0 pt-4 pb-3 px-4 d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center gap-3">
           <h6 class="fw-bold mb-0 text-dark d-flex align-items-center">
@@ -294,10 +303,14 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
+import adminApiClient from '@/utils/adminApiClient';
+import Toast from '@/utils/toastConfig';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import * as bootstrap from 'bootstrap';
+import OrderConfigTab from './OrderConfigTab.vue';
 import OrderQuickViewModal from './OrderQuickViewModal.vue';
 import TrackingMapModal from '@/components/admin/TrackingMapModal.vue';
 import StatusConfirmSelect from '@/components/admin/StatusConfirmSelect.vue';
@@ -305,7 +318,8 @@ import StatusConfirmSelect from '@/components/admin/StatusConfirmSelect.vue';
 let adminChannel = null;
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 const route = useRoute();
-const queryClient = useQueryClient();
+const router = useRouter();
+const adminLevel = localStorage.getItem('admin_level');
 
 const activeTab = ref('all');
 const currentPage = ref(1);

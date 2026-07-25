@@ -105,8 +105,8 @@ Route::prefix('news')->group(function () {
 });
 
 
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:auth');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:auth');
 Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect']);
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback']);
 
@@ -114,8 +114,8 @@ Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback']);
 use App\Http\Controllers\Api\Auth\MobileAuthController;
 
 Route::prefix('mobile')->group(function () {
-    Route::post('/register', [MobileAuthController::class, 'register']);
-    Route::post('/login',    [MobileAuthController::class, 'login']);
+    Route::post('/register', [MobileAuthController::class, 'register'])->middleware('throttle:auth');
+    Route::post('/login',    [MobileAuthController::class, 'login'])->middleware('throttle:auth');
     Route::post('/google-login', [MobileAuthController::class, 'googleLogin']);
 
     // Routes cần xác thực
@@ -130,7 +130,7 @@ Route::prefix('mobile')->group(function () {
 Route::prefix('client')->group(function () {
     Route::get('/settings', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'index']);
     // BỔ SUNG: AUTH & FORGOT PASSWORD (Client)
-    Route::prefix('forgot-password')->group(function () {
+    Route::prefix('forgot-password')->middleware('throttle:forgot-password')->group(function () {
         Route::post('/send-otp', [\App\Http\Controllers\Api\Auth\UserForgotPasswordController::class, 'sendOtp']);
         Route::post('/verify-otp', [\App\Http\Controllers\Api\Auth\UserForgotPasswordController::class, 'verifyOtp']);
         Route::post('/reset', [\App\Http\Controllers\Api\Auth\UserForgotPasswordController::class, 'resetPassword']);
@@ -157,9 +157,9 @@ Route::prefix('client')->group(function () {
     // API Lấy Bảng Giá Vàng (Thêm mới)
     Route::get('/gold-prices', [ClientHomeController::class, 'goldPrices']);
 
-    Route::post('/chatbot', [ChatbotController::class, 'chat']);
+    Route::post('/chatbot', [ChatbotController::class, 'chat'])->middleware('throttle:chatbot');
 
-    Route::post('/contact', [ClientContactController::class, 'store']);
+    Route::post('/contact', [ClientContactController::class, 'store'])->middleware('throttle:contact');
 
     // MODULE GIỎ HÀNG (Cart)
     Route::controller(ClientCartController::class)->prefix('cart')->group(function () {
@@ -218,11 +218,11 @@ Route::prefix('client')->group(function () {
     // MODULE ĐƠN HÀNG (Orders)
     Route::controller(ClientOrderController::class)->prefix('orders')->group(function () {
         Route::get('/', 'index');
-        Route::post('/', 'store');
+        Route::post('/', 'store')->middleware('throttle:checkout');
         Route::get('/{order_code}/status', 'status');
         Route::get('/{order_code}', 'show');
         Route::put('/{order_code}', 'update');
-        Route::post('/{order_code}/review', 'review');
+        Route::post('/{order_code}/review', 'review')->middleware('throttle:review');
         Route::get('/{order_code}/review', 'getReview');
         Route::post('/{order_code}/reorder', 'reorder');
         
@@ -240,7 +240,7 @@ Route::prefix('client')->group(function () {
     // ROUTE PAYMENT
     Route::prefix('checkout')->group(function () {
         Route::get('/init', [ClientCheckoutController::class, 'initData']);
-        Route::post('/', [ClientCheckoutController::class, 'processCheckout']);
+        Route::post('/', [ClientCheckoutController::class, 'processCheckout'])->middleware('throttle:checkout');
         Route::post('/orders/{order_code}/momo-retry', [ClientCheckoutController::class, 'retryMomoPayment']);
         Route::post('/orders/{order_code}/vnpay-retry', [ClientCheckoutController::class, 'retryVnpayPayment']);
         Route::get('/momo-return', [ClientCheckoutController::class, 'momoReturn']);
@@ -254,7 +254,7 @@ Route::prefix('client')->group(function () {
     // CHƯƠNG TRÌNH ĐỐI TÁC (AFFILIATE)
     Route::middleware('auth:sanctum')->prefix('affiliate')->group(function () {
         Route::get('/status', [ClientAffiliateController::class, 'status']);
-        Route::post('/apply', [ClientAffiliateController::class, 'apply']);
+        Route::post('/apply', [ClientAffiliateController::class, 'apply'])->middleware('throttle:affiliate');
     
         Route::post('/withdraw', [ClientAffiliateController::class, 'withdraw']); 
     });
@@ -280,12 +280,12 @@ Route::get('/user', function (Request $request) {
 // ADMIN API ROUTES
 Route::prefix('admin')->group(function () {
 
-    Route::controller(AdminAccountController::class)->group(function () {
+    Route::controller(AdminAccountController::class)->middleware('throttle:auth')->group(function () {
         Route::post('login', 'login');
         Route::post('register', 'store');
     });
 
-    Route::prefix('forgot-password')->controller(AdminForgotPasswordController::class)->group(function () {
+    Route::prefix('forgot-password')->middleware('throttle:forgot-password')->controller(AdminForgotPasswordController::class)->group(function () {
         Route::post('/send-otp', 'sendOtp');
         Route::post('/verify-otp', 'verifyOtp');
         Route::post('/reset', 'resetPassword');
@@ -428,6 +428,12 @@ Route::prefix('admin')->group(function () {
 
         // Quản lý Đơn hàng (Mã: admin_orders)
         Route::middleware(['check.module:admin_orders'])->group(function () {
+            Route::controller(\App\Http\Controllers\Api\Admin\AdminOrderConfigController::class)->prefix('order-config')->group(function () {
+                Route::get('/', 'index');
+                Route::post('/cooldown', 'updateConfig');
+                Route::post('/toggle-block-order/{id}', 'toggleBlockOrder');
+                Route::post('/toggle-lock-account/{id}', 'toggleLockAccount');
+            });
             Route::controller(AdminOrderController::class)->group(function () {
                 Route::get('orders', 'index');
                 Route::get('orders/{id}', 'show');

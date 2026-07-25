@@ -133,6 +133,31 @@ class ClientCheckoutController extends Controller
 
         $sessionId = $request->header('X-Cart-Session-Id');
 
+        // CHỐNG SPAM: Kiểm tra tài khoản có bị cấm đặt hàng không
+        if ($user->is_order_blocked) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tài khoản của bạn đã bị hạn chế chức năng đặt hàng do dấu hiệu bất thường. Vui lòng liên hệ Admin.'
+            ], 403);
+        }
+
+        // CHỐNG GĂM HÀNG: Kiểm tra khoảng cách thời gian đặt đơn (Cooldown)
+        $cooldownSetting = \App\Models\Setting::where('key', 'order_cooldown_minutes')->first();
+        $cooldownMinutes = $cooldownSetting ? (int)$cooldownSetting->value : 0;
+
+        if ($cooldownMinutes > 0) {
+            $latestOrder = \App\Models\Order::where('user_id', $user->id)
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            if ($latestOrder && now()->diffInMinutes($latestOrder->created_at) < $cooldownMinutes) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Bạn thao tác đặt hàng quá nhanh. Vui lòng chờ ' . $cooldownMinutes . ' phút trước khi đặt đơn tiếp theo.'
+                ], 429);
+            }
+        }
+
         $lockKey = 'checkout_lock_' . ($user ? $user->id : $sessionId);
         $lock = Cache::lock($lockKey, 10);
 
