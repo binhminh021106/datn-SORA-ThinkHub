@@ -352,26 +352,32 @@ const closeMegaMenu = () => {
 const isScrolled = ref(false);
 const isHidden = ref(false);
 let lastScrollY = 0;
+let scrollUpStartY = 0;
 const { clearAuthSession } = useAuthSync();
 
 const handleScroll = () => {
   if (props.previewData) return; // Không xử lý cuộn khi ở chế độ Preview
   const currentScrollY = window.scrollY;
 
-  if (currentScrollY > 100) {
+  if (currentScrollY > 10) {
     isScrolled.value = true;
-  } else if (currentScrollY < 20) {
+  } else if (currentScrollY <= 10) {
     isScrolled.value = false;
   }
 
-  if (currentScrollY > 200) {
-    if (currentScrollY > lastScrollY && !isHidden.value) {
-      isHidden.value = true;
-      isUserMenuOpen.value = false;
-      showSearchResults.value = false;
-      isMegaMenuOpen.value = false;
+  if (currentScrollY > 80) {
+    if (currentScrollY > lastScrollY) {
+      if (!isHidden.value) {
+        isHidden.value = true;
+        isUserMenuOpen.value = false;
+        showSearchResults.value = false;
+        isMegaMenuOpen.value = false;
+      }
+      scrollUpStartY = currentScrollY;
     } else if (currentScrollY < lastScrollY && isHidden.value) {
-      isHidden.value = false;
+      if (scrollUpStartY - currentScrollY > 80) {
+        isHidden.value = false;
+      }
     }
   } else {
     isHidden.value = false;

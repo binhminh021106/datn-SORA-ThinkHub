@@ -54,7 +54,7 @@
                   <th class="py-3 px-4 text-secondary border-0" style="width: 25%;">Hiển thị (PC & Mobile)</th>
                   <th class="py-3 px-4 text-secondary border-0" style="width: 25%;">Thông tin Chiến dịch</th>
                   <th class="py-3 px-4 text-secondary border-0" style="width: 20%;">Thời gian chạy</th>
-                  <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 15%;">Trạng thái <span class="d-none d-xl-inline">(Sửa nhanh)</span></th>
+                  <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 15%;">Trạng thái</th>
                   <th class="py-3 px-4 text-secondary text-center border-0" style="width: 15%" v-if="!isReorderMode">Thao tác</th>
                 </tr>
               </thead>
@@ -134,8 +134,8 @@
                         @confirm="saveBannerStatus(banner)"
                         @cancel="cancelStatusChange(banner)"
                       >
-                        <option value="active">Hiển thị</option>
-                        <option value="hidden">Đang ẩn</option>
+                        <option value="active">Hoạt động</option>
+                        <option value="hidden">Ẩn Banner</option>
                       </StatusConfirmSelect>
                     </div>
                   </td>
