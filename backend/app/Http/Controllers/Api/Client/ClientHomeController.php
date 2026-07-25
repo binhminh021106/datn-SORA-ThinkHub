@@ -33,10 +33,7 @@ class ClientHomeController extends Controller
                     'news' => []
                 ];
 
-                // 1. Lấy Banners
-                $result['banners'] = Banner::where('status', 'active')
-                    ->orderBy('sort_order', 'asc')
-                    ->get()->toArray();
+                // Banners query moved outside of cache to ensure real-time scheduling
 
                 // 2. Lấy Coupons
                 $result['coupons'] = Coupon::where('status', 'active')
@@ -162,6 +159,20 @@ class ClientHomeController extends Controller
 
                 return $result;
             });
+
+            // 1. Lấy Banners (Tách khỏi cache để kiểm tra start_date/end_date theo thời gian thực)
+            $now = now();
+            $data['banners'] = Banner::query()->where('status', 'active')
+                ->where(function ($q) use ($now) {
+                    $q->whereNull('start_date')
+                        ->orWhere('start_date', '<=', $now);
+                })
+                ->where(function ($q) use ($now) {
+                    $q->whereNull('end_date')
+                        ->orWhere('end_date', '>=', $now);
+                })
+                ->orderBy('sort_order', 'asc')
+                ->get()->toArray();
 
             return response()->json([
                 'success' => true,

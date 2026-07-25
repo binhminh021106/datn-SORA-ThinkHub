@@ -59,12 +59,12 @@
 
                   <div class="col-md-6 mt-3">
                     <label class="form-label fw-bold text-success"><i class="bi bi-calendar-play me-1"></i>Thời gian bắt đầu</label>
-                    <input type="datetime-local" class="form-control" v-model="form.start_date">
+                    <input type="datetime-local" class="form-control" v-model="form.start_date" :min="computedMinStartDate">
                   </div>
                   
                   <div class="col-md-6 mt-3">
                     <label class="form-label fw-bold text-danger"><i class="bi bi-calendar-x me-1"></i>Thời gian kết thúc</label>
-                    <input type="datetime-local" class="form-control" v-model="form.end_date" :min="form.start_date">
+                    <input type="datetime-local" class="form-control" v-model="form.end_date" :min="form.start_date || minDateTime">
                   </div>
 
                   <div class="col-md-12 mt-4">
@@ -126,7 +126,7 @@
 </template>
 
 <script setup>
-import { ref, watchEffect, computed } from 'vue';
+import { ref, watchEffect, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
@@ -141,14 +141,35 @@ const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bear
 const getImageUrl = (path) => path ? getFullImage(path) : '/placeholder.png';
 const handleImageError = (e) => { e.target.src = '/placeholder.png'; };
 
+const pad = (n) => n.toString().padStart(2, '0');
+
+const currentTime = ref(new Date());
+let timeInterval;
+onMounted(() => {
+  timeInterval = setInterval(() => { currentTime.value = new Date(); }, 60000);
+});
+onUnmounted(() => { if (timeInterval) clearInterval(timeInterval); });
+
+const minDateTime = computed(() => {
+  const now = currentTime.value;
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+});
+
 const formatForInput = (dateString) => {
   if (!dateString) return '';
   const d = new Date(dateString);
-  const pad = (n) => n.toString().padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
 const form = ref({ title: '', brand_id: '', target_url: '', position: 'home_slider', start_date: '', end_date: '', isActive: true });
+const initialStartDate = ref(null);
+const computedMinStartDate = computed(() => {
+  if (initialStartDate.value && initialStartDate.value < minDateTime.value) {
+    return initialStartDate.value;
+  }
+  return minDateTime.value;
+});
+
 const missingBrand = ref(null);
 const fileDesk = ref(null); const previewDesk = ref(null);
 const fileMob = ref(null); const previewMob = ref(null);
@@ -191,6 +212,9 @@ watchEffect(() => {
     form.value.position = b.position || 'home_slider';
     form.value.target_url = b.target_url || '';
     form.value.start_date = formatForInput(b.start_date);
+    if (initialStartDate.value === null) {
+      initialStartDate.value = form.value.start_date;
+    }
     form.value.end_date = formatForInput(b.end_date);
     form.value.isActive = b.status === 'active';
     

@@ -51,12 +51,12 @@
 
                   <div class="col-md-6 mt-3">
                     <label class="form-label fw-bold text-success"><i class="bi bi-calendar-play me-1"></i>Thời gian bắt đầu</label>
-                    <input type="datetime-local" class="form-control" v-model="form.start_date">
+                    <input type="datetime-local" class="form-control" v-model="form.start_date" :min="minDateTime">
                   </div>
                   
                   <div class="col-md-6 mt-3">
                     <label class="form-label fw-bold text-danger"><i class="bi bi-calendar-x me-1"></i>Thời gian kết thúc</label>
-                    <input type="datetime-local" class="form-control" v-model="form.end_date" :min="form.start_date">
+                    <input type="datetime-local" class="form-control" v-model="form.end_date" :min="form.start_date || minDateTime">
                   </div>
 
                   <div class="col-md-12 mt-4">
@@ -125,7 +125,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 
@@ -135,6 +135,19 @@ const router = useRouter();
 const isSaving = ref(false);
 const form = ref({ title: '', brand_id: '', target_url: '', position: 'home_slider', start_date: '', end_date: '', isActive: true });
 const brands = ref([]);
+
+const pad = (n) => n < 10 ? '0' + n : n;
+const currentTime = ref(new Date());
+let timeInterval;
+onMounted(() => {
+  timeInterval = setInterval(() => { currentTime.value = new Date(); }, 60000);
+});
+onUnmounted(() => { if (timeInterval) clearInterval(timeInterval); });
+
+const minDateTime = computed(() => {
+  const now = currentTime.value;
+  return `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+});
 
 const fileDesk = ref(null); const previewDesk = ref(null);
 const fileMob = ref(null); const previewMob = ref(null);
