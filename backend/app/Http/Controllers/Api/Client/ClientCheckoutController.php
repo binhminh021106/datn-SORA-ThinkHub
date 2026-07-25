@@ -158,10 +158,11 @@ class ClientCheckoutController extends Controller
 
         if ($cooldownMinutes > 0) {
             $latestOrder = \App\Models\Order::where('user_id', $user->id)
+                ->whereNotIn('status', ['cancelled', 'returned'])
                 ->orderBy('created_at', 'desc')
                 ->first();
 
-            if ($latestOrder && now()->diffInMinutes($latestOrder->created_at) < $cooldownMinutes) {
+            if ($latestOrder && now()->diffInMinutes($latestOrder->created_at, true) < $cooldownMinutes) {
                 $lock->release();
                 return response()->json([
                     'success' => false,

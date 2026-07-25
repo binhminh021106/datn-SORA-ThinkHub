@@ -28,7 +28,7 @@ class ClientContactController extends Controller
         $request->validate([
             'g-recaptcha-response' => ['required', new \App\Rules\Recaptcha],
             'fullname' => 'required|string|min:2|max:150',
-            'phone'    => ['required', 'string', 'regex:/^(0[3|5|7|8|9])+([0-9]{8})$/'], // Đúng chuẩn SĐT Việt Nam
+            'phone'    => ['required', 'string', 'regex:/^0[35789][0-9]{8}$/'], // Đúng chuẩn SĐT Việt Nam
             'email'    => [
                 'required',
                 'email:rfc,dns', // Phải đúng định dạng RFC và Tên miền phải có bản ghi MX/A

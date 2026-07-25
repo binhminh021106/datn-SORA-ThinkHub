@@ -22,16 +22,19 @@ class Recaptcha implements ValidationRule
             return;
         }
 
-        $response = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
-            'secret' => $secret,
-            'response' => $value,
-            'remoteip' => request()->ip()
-        ]);
+        try {
+            $response = Http::asForm()->timeout(5)->post('https://www.google.com/recaptcha/api/siteverify', [
+                'secret' => $secret,
+                'response' => $value,
+                'remoteip' => request()->ip()
+            ]);
 
-        $responseData = $response->json();
-
-        if (!$responseData['success']) {
-            $fail('Mã xác nhận CAPTCHA không hợp lệ hoặc đã hết hạn.');
+            if (!$response->json('success', false)) {
+                $fail('Mã xác nhận CAPTCHA không hợp lệ hoặc đã hết hạn.');
+            }
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            report($e);
+            $fail('Không thể xác minh CAPTCHA lúc này. Vui lòng thử lại.');
         }
     }
 }

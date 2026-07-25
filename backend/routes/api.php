@@ -130,8 +130,8 @@ Route::prefix('mobile')->group(function () {
 Route::prefix('client')->group(function () {
     Route::get('/settings', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'index']);
     // BỔ SUNG: AUTH & FORGOT PASSWORD (Client)
-    Route::prefix('forgot-password')->middleware('throttle:forgot-password')->group(function () {
-        Route::post('/send-otp', [\App\Http\Controllers\Api\Auth\UserForgotPasswordController::class, 'sendOtp']);
+    Route::prefix('forgot-password')->group(function () {
+        Route::post('/send-otp', [\App\Http\Controllers\Api\Auth\UserForgotPasswordController::class, 'sendOtp'])->middleware('throttle:forgot-password');
         Route::post('/verify-otp', [\App\Http\Controllers\Api\Auth\UserForgotPasswordController::class, 'verifyOtp']);
         Route::post('/reset', [\App\Http\Controllers\Api\Auth\UserForgotPasswordController::class, 'resetPassword']);
     });
@@ -285,8 +285,8 @@ Route::prefix('admin')->group(function () {
         Route::post('register', 'store');
     });
 
-    Route::prefix('forgot-password')->middleware('throttle:forgot-password')->controller(AdminForgotPasswordController::class)->group(function () {
-        Route::post('/send-otp', 'sendOtp');
+    Route::prefix('forgot-password')->controller(AdminForgotPasswordController::class)->group(function () {
+        Route::post('/send-otp', 'sendOtp')->middleware('throttle:forgot-password');
         Route::post('/verify-otp', 'verifyOtp');
         Route::post('/reset', 'resetPassword');
     });

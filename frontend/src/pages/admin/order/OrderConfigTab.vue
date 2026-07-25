@@ -259,7 +259,7 @@ const toggleBlockOrder = async (user) => {
   if (result.isConfirmed) {
     try {
       const res = await adminApiClient.post(`/order-config/toggle-block-order/${user.id}`);
-      user.is_order_blocked = res.data.is_order_blocked;
+      queryClient.invalidateQueries(['order-config']);
       Toast.fire({ icon: 'success', title: res.data.message });
     } catch (error) {
       Toast.fire({ icon: 'error', title: 'Lỗi thực thi' });
@@ -284,7 +284,7 @@ const toggleLockAccount = async (user) => {
   if (result.isConfirmed) {
     try {
       const res = await adminApiClient.post(`/order-config/toggle-lock-account/${user.id}`);
-      user.status = res.data.status;
+      queryClient.invalidateQueries(['order-config']);
       Toast.fire({ icon: 'success', title: res.data.message });
     } catch (error) {
       Toast.fire({ icon: 'error', title: 'Lỗi thực thi' });
