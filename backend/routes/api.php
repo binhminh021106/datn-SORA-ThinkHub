@@ -65,7 +65,7 @@ use App\Http\Controllers\Api\Admin\EmailCampaignController;
 
 
 
-Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
+Route::middleware(['auth:sanctum', 'ability:access'])->prefix('admin')->group(function () {
     
     // SETTINGS API
     Route::middleware(['check.module:admin_settings'])->group(function () {
@@ -107,12 +107,15 @@ Route::prefix('news')->group(function () {
 
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:auth');
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:auth');
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['extract.cookie', 'auth:sanctum', 'ability:refresh'])->group(function () {
     Route::post('/refresh-token', [AuthController::class, 'refresh']);
+});
+Route::middleware(['auth:sanctum', 'ability:access'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 });
 Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect']);
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback']);
+Route::post('/auth/google/exchange', [GoogleAuthController::class, 'exchange']);
 
 // ── MOBILE APP AUTH ROUTES ─────────────────────────────────────────────────────
 use App\Http\Controllers\Api\Auth\MobileAuthController;
@@ -123,7 +126,7 @@ Route::prefix('mobile')->group(function () {
     Route::post('/google-login', [MobileAuthController::class, 'googleLogin']);
 
     // Routes cần xác thực
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware(['auth:sanctum', 'ability:access'])->group(function () {
         Route::post('/logout', [MobileAuthController::class, 'logout']);
         Route::get('/me',      [MobileAuthController::class, 'me']);
     });
@@ -142,7 +145,7 @@ Route::prefix('client')->group(function () {
 
 
     // THÊM VÀO ĐÂY (trước hoặc sau các route khác đều được)
-    Route::middleware('auth:sanctum')->prefix('messages')->group(function () {
+    Route::middleware(['auth:sanctum', 'ability:access'])->prefix('messages')->group(function () {
         Route::get('/', [MessageController::class, 'history']);
         Route::post('/', [MessageController::class, 'store']);
     });
@@ -186,19 +189,19 @@ Route::prefix('client')->group(function () {
         Route::get('/check/{productId}', [ClientFavouriteController::class, 'check']);
     });
 
-    Route::middleware('auth:sanctum')->prefix('saved-coupons')->group(function () {
+    Route::middleware(['auth:sanctum', 'ability:access'])->prefix('saved-coupons')->group(function () {
         Route::get('/', [ClientSavedCouponController::class, 'index']);
         Route::post('/', [ClientSavedCouponController::class, 'store']);
         Route::delete('/{id}', [ClientSavedCouponController::class, 'destroy']);
     });
 
     // Hồ Sơ Cá Nhân (Profile)
-    Route::middleware('auth:sanctum')->prefix('push-tokens')->group(function () {
+    Route::middleware(['auth:sanctum', 'ability:access'])->prefix('push-tokens')->group(function () {
         Route::post('/', [ClientPushTokenController::class, 'store']);
         Route::delete('/', [ClientPushTokenController::class, 'destroy']);
     });
 
-    Route::middleware('auth:sanctum')->prefix('notifications')->group(function () {
+    Route::middleware(['auth:sanctum', 'ability:access'])->prefix('notifications')->group(function () {
         Route::get('/', [ClientNotificationController::class, 'index']);
         Route::put('/read-all', [ClientNotificationController::class, 'markAllAsRead']);
         Route::put('/{id}/read', [ClientNotificationController::class, 'markAsRead']);
@@ -206,7 +209,7 @@ Route::prefix('client')->group(function () {
         Route::delete('/{id}', [ClientNotificationController::class, 'destroy']);
     });
 
-    Route::prefix('profile')->middleware('auth:sanctum')->group(function () {
+    Route::prefix('profile')->middleware(['auth:sanctum', 'ability:access'])->group(function () {
         Route::get('/', [ClientProfileController::class, 'show']);
         Route::post('/', [ClientProfileController::class, 'update']);
         Route::post('/password', [ClientProfileController::class, 'updatePassword']);
@@ -230,7 +233,7 @@ Route::prefix('client')->group(function () {
         Route::get('/{order_code}/review', 'getReview');
         Route::post('/{order_code}/reorder', 'reorder');
         
-        Route::middleware('auth:sanctum')->group(function () {
+        Route::middleware(['auth:sanctum', 'ability:access'])->group(function () {
             Route::post('/{order_code}/return', 'requestReturn');
             Route::post('/{order_code}/return/confirm', 'confirmRefundProposal');
         });
@@ -256,7 +259,7 @@ Route::prefix('client')->group(function () {
         ->name('client.orders.invoice');
 
     // CHƯƠNG TRÌNH ĐỐI TÁC (AFFILIATE)
-    Route::middleware('auth:sanctum')->prefix('affiliate')->group(function () {
+    Route::middleware(['auth:sanctum', 'ability:access'])->prefix('affiliate')->group(function () {
         Route::get('/status', [ClientAffiliateController::class, 'status']);
         Route::post('/apply', [ClientAffiliateController::class, 'apply'])->middleware('throttle:affiliate');
     
@@ -279,7 +282,7 @@ Route::get('shop/{shop_slug}/attributes', [ShopController::class, 'attributes'])
 
 Route::get('/user', function (Request $request) {
     return $request->user();
-})->middleware('auth:sanctum');
+})->middleware(['auth:sanctum', 'ability:access']);
 
 // ADMIN API ROUTES
 Route::prefix('admin')->group(function () {
@@ -289,8 +292,10 @@ Route::prefix('admin')->group(function () {
         Route::post('register', 'store');
     });
 
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware(['extract.cookie', 'auth:sanctum', 'ability:refresh'])->group(function () {
         Route::post('refresh-token', [AdminAccountController::class, 'refresh']);
+    });
+    Route::middleware(['auth:sanctum', 'ability:access'])->group(function () {
         Route::post('logout', [AdminAccountController::class, 'logout']);
     });
 
@@ -300,7 +305,7 @@ Route::prefix('admin')->group(function () {
         Route::post('/reset', 'resetPassword');
     });
 
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware(['auth:sanctum', 'ability:access'])->group(function () {
 
         // Lấy thông tin admin hiện tại
         Route::get('me', [AdminAccountController::class, 'me']);

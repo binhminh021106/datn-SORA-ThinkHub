@@ -523,6 +523,7 @@ import { globalModalState } from '@/stores/modalState';
 const route = useRoute();
 const router = useRouter();
 const product = ref(null);
+const quickAddProduct = ref(null);
 const mainImage = ref('');
 const isLoading = ref(true);
 const showSizeGuideModal = ref(false);

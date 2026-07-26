@@ -151,14 +151,18 @@ const renderRecaptcha = () => {
   }
 };
 
+let recaptchaInitTimeout = null;
+let maxRetries = 50;
+
 onMounted(() => {
   const init = () => {
     if (window.grecaptcha && window.grecaptcha.ready) {
       window.grecaptcha.ready(() => {
         renderRecaptcha();
       });
-    } else {
-      setTimeout(init, 100);
+    } else if (maxRetries > 0) {
+      maxRetries--;
+      recaptchaInitTimeout = setTimeout(init, 200);
     }
   };
 
@@ -170,7 +174,17 @@ onMounted(() => {
     script.async = true;
     script.defer = true;
     script.onload = init;
+    script.onerror = () => { console.error('Failed to load reCAPTCHA script'); };
     document.head.appendChild(script);
+  }
+});
+
+onUnmounted(() => {
+  if (recaptchaInitTimeout) {
+    clearTimeout(recaptchaInitTimeout);
+  }
+  if (timer) {
+    clearInterval(timer);
   }
 });
 

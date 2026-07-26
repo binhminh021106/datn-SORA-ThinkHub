@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { clearUserAuthStorage, getUserToken, getUserRefreshToken } from '@/composables/useUtilities';
+import { clearUserAuthStorage, getUserToken } from '@/composables/useUtilities';
 import { API_BASE_URL } from '@/utils/env';
 
 const PROTECTED_CLIENT_PATHS = ['/profile', '/order', '/checkout', '/favourite'];
@@ -119,40 +119,36 @@ clientApiClient.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = getUserRefreshToken();
-      if (refreshToken) {
-        try {
-          const { data } = await axios.post(`${API_BASE_URL}/refresh-token`, {}, {
-            headers: {
-              'Authorization': `Bearer ${refreshToken}`,
-              'Accept': 'application/json'
-            }
-          });
-          
-          localStorage.setItem('auth_token', data.access_token);
-          localStorage.setItem('refresh_token', data.refresh_token);
-          
-          clientApiClient.defaults.headers.common['Authorization'] = 'Bearer ' + data.access_token;
-          originalRequest.headers['Authorization'] = 'Bearer ' + data.access_token;
-          
-          processQueue(null, data.access_token);
-          isRefreshing = false;
-          
-          return clientApiClient(originalRequest);
-        } catch (err) {
-          processQueue(err, null);
-          isRefreshing = false;
+      try {
+        const { data } = await axios.post(`${API_BASE_URL}/refresh-token`, {}, {
+          withCredentials: true,
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        
+        localStorage.setItem('auth_token', data.access_token);
+        
+        clientApiClient.defaults.headers.common['Authorization'] = 'Bearer ' + data.access_token;
+        originalRequest.headers['Authorization'] = 'Bearer ' + data.access_token;
+        
+        processQueue(null, data.access_token);
+        isRefreshing = false;
+        
+        return clientApiClient(originalRequest);
+      } catch (err) {
+        processQueue(err, null);
+        isRefreshing = false;
+        clearUserAuthStorage();
+
+        const currentPath = window.location.pathname || '';
+        const isProtectedPath = PROTECTED_CLIENT_PATHS.some((path) => currentPath.startsWith(path));
+
+        if (!originalRequest.ignoreAuthRedirect && isProtectedPath && !currentPath.includes('/login')) {
+          const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+          window.location.href = `/login?redirect=${returnUrl}`;
         }
-      }
-
-      clearUserAuthStorage();
-
-      const currentPath = window.location.pathname || '';
-      const isProtectedPath = PROTECTED_CLIENT_PATHS.some((path) => currentPath.startsWith(path));
-
-      if (!originalRequest.ignoreAuthRedirect && isProtectedPath && !currentPath.includes('/login')) {
-        const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
-        window.location.href = `/login?redirect=${returnUrl}`;
+        return Promise.reject(err);
       }
     }
 
