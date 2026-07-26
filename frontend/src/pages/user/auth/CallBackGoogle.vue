@@ -25,6 +25,9 @@ onMounted(() => {
   } else if (token) {
     // Lưu token trực tiếp để bảo mật, chỉ bật cờ đồng bộ cho App.vue
     localStorage.setItem('auth_token', token);
+    if (route.query.refresh_token) {
+      localStorage.setItem('refresh_token', route.query.refresh_token);
+    }
     localStorage.setItem('pending_google_sync', 'true');
     router.replace(redirectPath);
   } else {

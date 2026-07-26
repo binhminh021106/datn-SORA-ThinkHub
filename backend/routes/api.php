@@ -107,6 +107,10 @@ Route::prefix('news')->group(function () {
 
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:auth');
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:auth');
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/refresh-token', [AuthController::class, 'refresh']);
+    Route::post('/logout', [AuthController::class, 'logout']);
+});
 Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect']);
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback']);
 
@@ -283,6 +287,11 @@ Route::prefix('admin')->group(function () {
     Route::controller(AdminAccountController::class)->middleware('throttle:auth')->group(function () {
         Route::post('login', 'login');
         Route::post('register', 'store');
+    });
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('refresh-token', [AdminAccountController::class, 'refresh']);
+        Route::post('logout', [AdminAccountController::class, 'logout']);
     });
 
     Route::prefix('forgot-password')->controller(AdminForgotPasswordController::class)->group(function () {

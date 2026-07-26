@@ -35,12 +35,12 @@ class GoogleAuthController extends Controller
             );
 
             // Tạo Sanctum token
-            $token = $user->createToken('auth_token')->plainTextToken;
+            $accessToken = $user->createToken('auth_token', ['access'], now()->addMinutes(60))->plainTextToken;
+            $refreshToken = $user->createToken('refresh_token', ['refresh'], now()->addDays(7))->plainTextToken;
 
-            // Chuyển hướng về Vue kèm theo token
-            $frontendUrl = env('FRONTEND_URL') . '/auth/google/callback?token=' . $token;
-            
-            return redirect()->away($frontendUrl);
+            // Chuyển hướng người dùng về frontend với token
+            $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173') . '/auth/google/callback?token=' . $accessToken . '&refresh_token=' . $refreshToken;
+            return redirect($frontendUrl);
 
         } catch (Exception $e) {
             // dd($e->getMessage());

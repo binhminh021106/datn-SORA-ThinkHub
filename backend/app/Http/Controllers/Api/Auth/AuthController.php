@@ -31,12 +31,15 @@ class AuthController extends Controller
             'status'   => 'active',
         ]);
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $accessToken = $user->createToken('auth_token', ['access'], now()->addMinutes(60))->plainTextToken;
+        $refreshToken = $user->createToken('refresh_token', ['refresh'], now()->addDays(7))->plainTextToken;
 
         return response()->json([
-            'message'      => 'Đăng ký thành công!',
-            'access_token' => $token,
-            'user'         => $user
+            'message'       => 'Đăng ký thành công!',
+            'access_token'  => $accessToken,
+            'refresh_token' => $refreshToken,
+            'expires_in'    => 3600,
+            'user'          => $user
         ], 201);
     }
 
@@ -61,18 +64,47 @@ class AuthController extends Controller
             ]);
         }
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $accessToken = $user->createToken('auth_token', ['access'], now()->addMinutes(60))->plainTextToken;
+        $refreshToken = $user->createToken('refresh_token', ['refresh'], now()->addDays(7))->plainTextToken;
 
         return response()->json([
-            'message' => 'Đăng nhập thành công!',
-            'access_token' => $token,
-            'user' => $user
+            'message'       => 'Đăng nhập thành công!',
+            'access_token'  => $accessToken,
+            'refresh_token' => $refreshToken,
+            'expires_in'    => 3600,
+            'user'          => $user
         ]);
     }
 
     public function logout(Request $request)
     {
+        // Xóa access token hiện tại
         $request->user()->currentAccessToken()->delete();
         return response()->json(['message' => 'Đăng xuất thành công']);
+    }
+
+    public function refresh(Request $request)
+    {
+        $user = $request->user();
+
+        // Kiểm tra xem token đang dùng có phải là refresh_token không
+        if (!$user->currentAccessToken()->can('refresh')) {
+            return response()->json([
+                'message' => 'Token không hợp lệ để thực hiện Refresh.'
+            ], 403);
+        }
+
+        // Xóa refresh_token cũ
+        $user->currentAccessToken()->delete();
+
+        // Tạo bộ token mới
+        $accessToken = $user->createToken('auth_token', ['access'], now()->addMinutes(60))->plainTextToken;
+        $refreshToken = $user->createToken('refresh_token', ['refresh'], now()->addDays(7))->plainTextToken;
+
+        return response()->json([
+            'access_token'  => $accessToken,
+            'refresh_token' => $refreshToken,
+            'expires_in'    => 3600
+        ]);
     }
 }

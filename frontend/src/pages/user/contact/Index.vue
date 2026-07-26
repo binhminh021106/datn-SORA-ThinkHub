@@ -143,23 +143,37 @@ const recaptchaToken = ref('');
 // Render CAPTCHA
 const renderRecaptcha = () => {
   if (window.grecaptcha && window.grecaptcha.render) {
-    window.grecaptcha.render('contact-recaptcha', {
-      sitekey: import.meta.env.VITE_RECAPTCHA_SITE_KEY,
-      callback: (token) => { recaptchaToken.value = token; },
-      'expired-callback': () => { recaptchaToken.value = ''; }
-    });
+    const el = document.getElementById('contact-recaptcha');
+    if (el) {
+      el.innerHTML = '';
+      window.grecaptcha.render(el, {
+        sitekey: import.meta.env.VITE_RECAPTCHA_SITE_KEY,
+        callback: (token) => { recaptchaToken.value = token; },
+        'expired-callback': () => { recaptchaToken.value = ''; }
+      });
+    }
   }
 };
 
 onMounted(() => {
+  const init = () => {
+    if (window.grecaptcha && window.grecaptcha.ready) {
+      window.grecaptcha.ready(() => {
+        renderRecaptcha();
+      });
+    } else {
+      setTimeout(init, 100);
+    }
+  };
+
   if (window.grecaptcha) {
-    renderRecaptcha();
+    init();
   } else {
     const script = document.createElement('script');
     script.src = 'https://www.google.com/recaptcha/api.js?render=explicit';
     script.async = true;
     script.defer = true;
-    script.onload = renderRecaptcha;
+    script.onload = init;
     document.head.appendChild(script);
   }
 });

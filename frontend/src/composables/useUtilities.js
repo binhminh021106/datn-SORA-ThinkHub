@@ -1,12 +1,16 @@
 import { API_BASE_URL, BACKEND_URL, getStorageUrl } from '@/utils/env';
 
 export const ADMIN_AUTH_STORAGE_KEYS = ['admin_token', 'adminToken'];
+export const ADMIN_REFRESH_STORAGE_KEYS = ['admin_refresh_token'];
 export const ADMIN_AUTH_STATE_KEYS = ['admin_role', 'admin_level', 'admin_info'];
 export const USER_AUTH_STORAGE_KEYS = ['access_token', 'token', 'auth_token', 'userToken', 'user_token'];
+export const USER_REFRESH_STORAGE_KEYS = ['refresh_token', 'user_refresh_token'];
 export const AUTH_STORAGE_KEYS = [
   ...ADMIN_AUTH_STORAGE_KEYS,
+  ...ADMIN_REFRESH_STORAGE_KEYS,
   ...ADMIN_AUTH_STATE_KEYS,
   ...USER_AUTH_STORAGE_KEYS,
+  ...USER_REFRESH_STORAGE_KEYS,
 ];
 
 const readTokenFromStorage = (keys) => {
@@ -21,8 +25,16 @@ export const getAdminToken = () => {
   return readTokenFromStorage(ADMIN_AUTH_STORAGE_KEYS);
 };
 
+export const getAdminRefreshToken = () => {
+  return readTokenFromStorage(ADMIN_REFRESH_STORAGE_KEYS);
+};
+
 export const getUserToken = () => {
   return readTokenFromStorage(USER_AUTH_STORAGE_KEYS);
+};
+
+export const getUserRefreshToken = () => {
+  return readTokenFromStorage(USER_REFRESH_STORAGE_KEYS);
 };
 
 export const getToken = () => getAdminToken() || getUserToken();
@@ -35,11 +47,11 @@ export const clearAuthStorage = (keys = AUTH_STORAGE_KEYS) => {
 };
 
 export const clearAdminAuthStorage = () => {
-  clearAuthStorage([...ADMIN_AUTH_STORAGE_KEYS, ...ADMIN_AUTH_STATE_KEYS]);
+  clearAuthStorage([...ADMIN_AUTH_STORAGE_KEYS, ...ADMIN_REFRESH_STORAGE_KEYS, ...ADMIN_AUTH_STATE_KEYS]);
 };
 
 export const clearUserAuthStorage = () => {
-  clearAuthStorage(USER_AUTH_STORAGE_KEYS);
+  clearAuthStorage([...USER_AUTH_STORAGE_KEYS, ...USER_REFRESH_STORAGE_KEYS]);
 };
 
 export const getHeaders = () => {
