@@ -101,9 +101,6 @@ const handleLogin = async () => {
       clearAdminAuthStorage();
 
       localStorage.setItem('admin_token', data.token);
-      if (data.refresh_token) {
-        localStorage.setItem('admin_refresh_token', data.refresh_token);
-      }
       localStorage.setItem('admin_role', data.admin.role_id);
 
       if (data.admin.role && data.admin.role.level) {

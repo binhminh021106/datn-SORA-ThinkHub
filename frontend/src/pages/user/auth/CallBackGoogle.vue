@@ -6,12 +6,13 @@
 <script setup>
 import { onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import clientApiClient from '@/utils/clientApiClient';
 
 const route = useRoute();
 const router = useRouter();
 
-onMounted(() => {
-  const token = route.query.token;
+onMounted(async () => {
+  const exchangeCode = route.query.exchange_code;
   const error = route.query.error;
 
   let redirectPath = localStorage.getItem('redirect_after_login') || '/';
@@ -22,14 +23,20 @@ onMounted(() => {
 
   if (error) {
     router.replace({ path: '/login', query: { error: 'google_auth_failed' } });
-  } else if (token) {
-    // Lưu token trực tiếp để bảo mật, chỉ bật cờ đồng bộ cho App.vue
-    localStorage.setItem('auth_token', token);
-    if (route.query.refresh_token) {
-      localStorage.setItem('refresh_token', route.query.refresh_token);
+  } else if (exchangeCode) {
+    try {
+      const response = await clientApiClient.post('/auth/google/exchange', { exchange_code: exchangeCode });
+      const data = response.data;
+      
+      localStorage.setItem('auth_token', data.access_token);
+      clientApiClient.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
+      localStorage.setItem('userData', JSON.stringify(data.user));
+      
+      localStorage.setItem('pending_google_sync', 'true');
+      router.replace(redirectPath);
+    } catch (err) {
+      router.replace({ path: '/login', query: { error: 'google_auth_failed' } });
     }
-    localStorage.setItem('pending_google_sync', 'true');
-    router.replace(redirectPath);
   } else {
     router.replace({ path: '/login' });
   }

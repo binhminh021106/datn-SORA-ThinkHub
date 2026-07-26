@@ -143,9 +143,7 @@ const handleRegister = async () => {
 
     // Lưu Token
     localStorage.setItem('auth_token', response.data.access_token);
-    localStorage.setItem('refresh_token', response.data.refresh_token);
-
-    // CẬP NHẬT MỚI: Lưu thông tin User
+    clientApiClient.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
     localStorage.setItem('userData', JSON.stringify(response.data.user));
 
     // Đồng bộ giỏ hàng Guest vào tài khoản

@@ -126,7 +126,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
 import clientApiClient from '@/utils/clientApiClient';
 
@@ -155,14 +155,17 @@ const renderRecaptcha = () => {
   }
 };
 
+let recaptchaTimer = null;
 onMounted(() => {
+  let retryCount = 0;
   const init = () => {
     if (window.grecaptcha && window.grecaptcha.ready) {
       window.grecaptcha.ready(() => {
         renderRecaptcha();
       });
-    } else {
-      setTimeout(init, 100);
+    } else if (retryCount < 50) {
+      retryCount++;
+      recaptchaTimer = setTimeout(init, 100);
     }
   };
 
@@ -174,8 +177,15 @@ onMounted(() => {
     script.async = true;
     script.defer = true;
     script.onload = init;
+    script.onerror = () => {
+      console.error('Failed to load reCAPTCHA script');
+    };
     document.head.appendChild(script);
   }
+});
+
+onUnmounted(() => {
+  if (recaptchaTimer) clearTimeout(recaptchaTimer);
 });
 
 // 3. Cấu hình SweetAlert2 đồng bộ với toàn hệ thống

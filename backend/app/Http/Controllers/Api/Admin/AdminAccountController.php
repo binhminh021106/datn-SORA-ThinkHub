@@ -54,10 +54,9 @@ class AdminAccountController extends Controller
             'message'       => 'Đăng nhập thành công',
             'token'         => $accessToken,
             'access_token'  => $accessToken,
-            'refresh_token' => $refreshToken,
             'expires_in'    => 3600,
             'admin'         => $admin 
-        ]);
+        ])->cookie('admin_refresh_token', $refreshToken, 60 * 24 * 7, '/', null, false, true, false, 'Strict');
     }
 
     public function refresh(Request $request)
@@ -81,15 +80,16 @@ class AdminAccountController extends Controller
             'success'       => true,
             'token'         => $accessToken,
             'access_token'  => $accessToken,
-            'refresh_token' => $refreshToken,
             'expires_in'    => 3600
-        ]);
+        ])->cookie('admin_refresh_token', $refreshToken, 60 * 24 * 7, '/', null, false, true, false, 'Strict');
     }
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
-        return response()->json(['success' => true, 'message' => 'Đăng xuất thành công']);
+        $request->user()->tokens()->whereIn('name', ['admin_token', 'admin_refresh_token'])->delete();
+        
+        return response()->json(['success' => true, 'message' => 'Đăng xuất thành công'])
+            ->cookie(\cookie()->forget('admin_refresh_token'));
     }
 
     public function me(Request $request)

@@ -70,17 +70,18 @@ class AuthController extends Controller
         return response()->json([
             'message'       => 'Đăng nhập thành công!',
             'access_token'  => $accessToken,
-            'refresh_token' => $refreshToken,
             'expires_in'    => 3600,
             'user'          => $user
-        ]);
+        ])->cookie('refresh_token', $refreshToken, 60 * 24 * 7, '/', null, false, true, false, 'Strict');
     }
 
     public function logout(Request $request)
     {
-        // Xóa access token hiện tại
-        $request->user()->currentAccessToken()->delete();
-        return response()->json(['message' => 'Đăng xuất thành công']);
+        // Xóa cả access_token và refresh_token
+        $request->user()->tokens()->whereIn('name', ['auth_token', 'refresh_token'])->delete();
+        
+        return response()->json(['message' => 'Đăng xuất thành công'])
+            ->cookie(\cookie()->forget('refresh_token'));
     }
 
     public function refresh(Request $request)
@@ -103,8 +104,7 @@ class AuthController extends Controller
 
         return response()->json([
             'access_token'  => $accessToken,
-            'refresh_token' => $refreshToken,
             'expires_in'    => 3600
-        ]);
+        ])->cookie('refresh_token', $refreshToken, 60 * 24 * 7, '/', null, false, true, false, 'Strict');
     }
 }

@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Exception;
 
 class GoogleAuthController extends Controller
@@ -34,17 +37,55 @@ class GoogleAuthController extends Controller
                 ]
             );
 
-            // Tạo Sanctum token
-            $accessToken = $user->createToken('auth_token', ['access'], now()->addMinutes(60))->plainTextToken;
-            $refreshToken = $user->createToken('refresh_token', ['refresh'], now()->addDays(7))->plainTextToken;
+            // Tạo một exchange_code ngắn hạn thay vì tạo token trực tiếp
+            $exchangeCode = Str::random(60);
+            
+            // Lưu userId vào cache với thời hạn 5 phút
+            Cache::put('google_exchange_' . $exchangeCode, $user->id, now()->addMinutes(5));
 
-            // Chuyển hướng người dùng về frontend với token
-            $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173') . '/auth/google/callback?token=' . $accessToken . '&refresh_token=' . $refreshToken;
+            // Chuyển hướng người dùng về frontend với exchange code
+            $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173') . '/auth/google/callback?exchange_code=' . $exchangeCode;
             return redirect($frontendUrl);
 
         } catch (Exception $e) {
             // dd($e->getMessage());
             return redirect()->away(env('FRONTEND_URL') . '/login?error=google_auth_failed');
         }
+    }
+
+    // Trao đổi mã exchange_code lấy bộ token
+    public function exchange(Request $request)
+    {
+        $request->validate([
+            'exchange_code' => 'required|string'
+        ]);
+
+        $exchangeCode = $request->input('exchange_code');
+        $cacheKey = 'google_exchange_' . $exchangeCode;
+        
+        $userId = Cache::get($cacheKey);
+
+        if (!$userId) {
+            return response()->json(['message' => 'Mã xác thực không hợp lệ hoặc đã hết hạn.'], 401);
+        }
+
+        // Lấy lại user và xóa cache
+        $user = User::find($userId);
+        Cache::forget($cacheKey);
+
+        if (!$user) {
+            return response()->json(['message' => 'Người dùng không tồn tại.'], 404);
+        }
+
+        // Tạo bộ token thật
+        $accessToken = $user->createToken('auth_token', ['access'], now()->addMinutes(60))->plainTextToken;
+        $refreshToken = $user->createToken('refresh_token', ['refresh'], now()->addDays(7))->plainTextToken;
+
+        return response()->json([
+            'message'       => 'Xác thực Google thành công!',
+            'access_token'  => $accessToken,
+            'expires_in'    => 3600,
+            'user'          => $user
+        ])->cookie('refresh_token', $refreshToken, 60 * 24 * 7, '/', null, false, true, false, 'Strict');
     }
 }

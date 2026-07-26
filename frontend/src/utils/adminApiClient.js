@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { clearAdminAuthStorage, getAdminToken, getAdminRefreshToken } from '@/composables/useUtilities';
+import { clearAdminAuthStorage, getAdminToken } from '@/composables/useUtilities';
 import { API_BASE_URL } from '@/utils/env';
 
 const adminApiClient = axios.create({
@@ -63,38 +63,32 @@ adminApiClient.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = getAdminRefreshToken();
-      if (refreshToken) {
-        try {
-          const { data } = await axios.post(`${API_BASE_URL}/admin/refresh-token`, {}, {
-            headers: {
-              'Authorization': `Bearer ${refreshToken}`,
-              'Accept': 'application/json'
-            }
-          });
-          
-          localStorage.setItem('admin_token', data.access_token);
-          if (data.refresh_token) {
-            localStorage.setItem('admin_refresh_token', data.refresh_token);
+      try {
+        const { data } = await axios.post(`${API_BASE_URL}/admin/refresh-token`, {}, {
+          withCredentials: true,
+          headers: {
+            'Accept': 'application/json'
           }
-          
-          adminApiClient.defaults.headers.common['Authorization'] = 'Bearer ' + data.access_token;
-          originalRequest.headers['Authorization'] = 'Bearer ' + data.access_token;
-          
-          processQueue(null, data.access_token);
-          isRefreshing = false;
-          
-          return adminApiClient(originalRequest);
-        } catch (err) {
-          processQueue(err, null);
-          isRefreshing = false;
+        });
+        
+        localStorage.setItem('admin_token', data.access_token);
+        
+        adminApiClient.defaults.headers.common['Authorization'] = 'Bearer ' + data.access_token;
+        originalRequest.headers['Authorization'] = 'Bearer ' + data.access_token;
+        
+        processQueue(null, data.access_token);
+        isRefreshing = false;
+        
+        return adminApiClient(originalRequest);
+      } catch (err) {
+        processQueue(err, null);
+        isRefreshing = false;
+        
+        clearAdminAuthStorage();
+
+        if (!originalRequest.ignoreAuthRedirect && !window.location.pathname.includes('/admin/login')) {
+          window.location.href = '/admin/login';
         }
-      }
-
-      clearAdminAuthStorage();
-
-      if (!originalRequest.ignoreAuthRedirect && !window.location.pathname.includes('/admin/login')) {
-        window.location.href = '/admin/login';
       }
     }
 

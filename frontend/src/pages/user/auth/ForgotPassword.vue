@@ -151,14 +151,17 @@ const renderRecaptcha = () => {
   }
 };
 
+let recaptchaTimer = null;
 onMounted(() => {
+  let retryCount = 0;
   const init = () => {
     if (window.grecaptcha && window.grecaptcha.ready) {
       window.grecaptcha.ready(() => {
         renderRecaptcha();
       });
-    } else {
-      setTimeout(init, 100);
+    } else if (retryCount < 50) {
+      retryCount++;
+      recaptchaTimer = setTimeout(init, 100);
     }
   };
 
@@ -170,8 +173,15 @@ onMounted(() => {
     script.async = true;
     script.defer = true;
     script.onload = init;
+    script.onerror = () => {
+      console.error('Failed to load reCAPTCHA script');
+    };
     document.head.appendChild(script);
   }
+});
+
+onUnmounted(() => {
+  if (recaptchaTimer) clearTimeout(recaptchaTimer);
 });
 
 const form = ref({
