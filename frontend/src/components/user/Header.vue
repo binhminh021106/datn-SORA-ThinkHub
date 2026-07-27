@@ -375,7 +375,7 @@ const handleScroll = () => {
       }
       scrollUpStartY = currentScrollY;
     } else if (currentScrollY < lastScrollY && isHidden.value) {
-      if (scrollUpStartY - currentScrollY > 80) {
+      if (scrollUpStartY - currentScrollY > 200) {
         isHidden.value = false;
       }
     }
@@ -682,9 +682,6 @@ onUnmounted(() => {
   letter-spacing: 0.5px;
 }
 
-/* ==========================================
-   CSS SMART STICKY HEADER
-========================================== */
 .site-header {
   border-bottom: 1px solid transparent;
   transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);

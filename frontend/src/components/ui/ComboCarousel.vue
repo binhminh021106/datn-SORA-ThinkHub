@@ -9,10 +9,9 @@
 
           <div class="combo-left-panel">
             <div class="combo-bg-image" :style="{ backgroundImage: `url(${combo.comboImage})` }"></div>
-            <div v-if="combo.discountAmount && combo.discountAmount !== '0 đ'" class="luxury-discount-tag">
+            <div v-if="combo.hasDiscount" class="luxury-discount-tag">
               GIẢM {{ combo.discountAmount }}
             </div>
-            <div class="combo-bg-overlay"></div>
 
             <div class="combo-left-content">
               <h2 class="combo-title font-serif">{{ combo.title }}</h2>
@@ -49,7 +48,7 @@
 
               <div class="combo-pricing">
                 <div class="price-row">
-                  <span class="original-price font-sans" v-if="combo.discountAmount && combo.discountAmount !== '0 đ'">{{ combo.originalPrice }}</span>
+                  <span class="original-price font-sans" v-if="combo.hasDiscount">{{ combo.originalPrice }}</span>
                   <span class="discount-price font-sans fw-bold">{{ combo.discountPrice }}</span>
                 </div>
               </div>
@@ -228,6 +227,7 @@ const formattedCombos = computed(() => {
       originalPrice: formatPrice(basePrice),
       discountPrice: formatPrice(promoPrice),
       discountAmount: discountPercent > 0 ? `${discountPercent}%` : discountAmount,
+      hasDiscount: basePrice > promoPrice,
       products: products,
       endDate: parseDBDate(combo.end_date),
       comboImage: getImageUrl(combo.thumbnail_image || combo.image)
@@ -753,9 +753,6 @@ onUnmounted(() => {
   transform: scale(1.05);
 }
 
-.combo-bg-overlay {
-  display: none;
-}
 
 .combo-left-content {
   position: relative;
@@ -891,7 +888,6 @@ onUnmounted(() => {
     height: 72px !important;
   }
   .combo-nav-btn { display: none; }
-  .combo-overlay { display: none !important; }
   .combo-products-scroll { height: auto; max-height: 250px; }
 }
 

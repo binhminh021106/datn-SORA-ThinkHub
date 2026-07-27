@@ -90,6 +90,7 @@ const handleLogin = async () => {
   try {
     const response = await fetch(`${API_URL}/admin/login`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({ email: form.value.email, password: form.value.password })
     });

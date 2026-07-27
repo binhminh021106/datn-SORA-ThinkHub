@@ -95,7 +95,7 @@ class AuthController extends Controller
         }
 
         if ($user->status !== 'active') {
-            $user->currentAccessToken()->delete();
+            $user->tokens()->delete();
             return response()->json([
                 'message' => 'Tài khoản của bạn đã bị khóa.'
             ], 403);

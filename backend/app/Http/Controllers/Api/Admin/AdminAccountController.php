@@ -71,7 +71,7 @@ class AdminAccountController extends Controller
         }
 
         if ($admin->status !== 'active') {
-            $admin->currentAccessToken()->delete();
+            $admin->tokens()->delete();
             return response()->json([
                 'success' => false,
                 'message' => 'Tài khoản của bạn đã bị khóa'

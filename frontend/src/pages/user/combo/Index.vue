@@ -127,7 +127,6 @@
                     </div>
                   </div>
                 </div>
-                <div class="combo-bg-gradient"></div>
 
                 <div class="position-relative z-index-2 d-flex flex-column justify-content-center flex-grow-1 p-4 text-center text-md-start bg-white">
                   <h3 class="combo-title font-serif mb-2">{{ combo.name }}</h3>
@@ -167,7 +166,7 @@
                   @mouseleave="stopDrag(combo.id)"
                   @mouseup="stopDrag(combo.id)"
                   @mousemove="doDrag($event, combo.id)">
-                  <div class="combo-item-card flex-shrink-0 d-flex flex-column" v-for="item in combo.items" :key="item.id" @dragstart.prevent>
+                  <div class="combo-item-card flex-shrink-0 d-flex flex-column bg-sora-primary text-white" v-for="item in combo.items" :key="item.id" @dragstart.prevent>
                     <div class="item-image-frame position-relative overflow-hidden">
                       <div class="item-display-surface"></div>
                       <img :src="getImage(item.product?.thumbnail_image)" class="item-img-hover"
@@ -177,22 +176,22 @@
                       </div>
                     </div>
                     <div class="d-flex flex-column flex-grow-1">
-                      <h6 class="item-name font-serif mb-2 text-truncate" :title="item.product?.name">{{
+                      <h6 class="item-name font-serif mb-2 text-truncate text-white" :title="item.product?.name">{{
                         item.product?.name }}</h6>
                       <div class="item-meta small mb-3 d-flex align-items-center">
-                        <span v-if="item.product_variant_id" class="selection-badge">
+                        <span v-if="item.product_variant_id" class="selection-badge text-white-50">
                           <i class="bi bi-tag-fill me-1"></i>{{ item.variant?.sku }}
                         </span>
-                        <span v-else class="selection-text">
+                        <span v-else class="selection-text text-white-50">
                           <i class="bi bi-sliders me-1"></i>Được chọn phân loại
                         </span>
                       </div>
 
-                      <div class="mt-auto pt-2 border-top border-secondary border-opacity-25 d-flex flex-column gap-1">
-                        <div class="brand-info text-muted text-truncate" style="font-size: 0.72rem;">
-                          <i class="bi bi-award text-sora-primary"></i> {{ item.product?.brand?.name || 'SORA Boutique' }}
+                      <div class="mt-auto pt-3 border-top d-flex flex-column gap-1" style="border-color: rgba(231, 206, 125, 0.3) !important;">
+                        <div class="brand-info text-white-50 text-truncate" style="font-size: 0.72rem;">
+                          <i class="bi bi-award text-gold-gradient"></i> {{ item.product?.brand?.name || 'SORA Boutique' }}
                         </div>
-                        <div class="item-price font-oswald text-sora-primary fs-5">{{ formatCurrency(item.computedPrice) }}</div>
+                        <div class="item-price font-oswald text-gold-gradient fs-5 fw-bold">{{ formatCurrency(item.computedPrice) }}</div>
                       </div>
                     </div>
                   </div>
@@ -226,14 +225,13 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { useQuery } from '@tanstack/vue-query';
 import clientApiClient from '@/utils/clientApiClient';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
 import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
 
 
 const router = useRouter();
-const combos = ref([]);
-const isLoading = ref(true);
 const activeFilter = ref('all');
 const displayLimit = ref(2);
 
@@ -339,43 +337,35 @@ const doDrag = (e, comboId) => {
   container.scrollLeft = scrollLeft.value[comboId] - walk;
 };
 
-const fetchCombos = async (gender = null) => {
-  isLoading.value = true;
-  try {
+const { data: combos, isLoading, refetch } = useQuery({
+  queryKey: ['clientCombos', activeFilter],
+  queryFn: async () => {
     const params = {};
-    if (gender && gender !== 'all') params.gender = gender;
+    if (activeFilter.value && activeFilter.value !== 'all') params.gender = activeFilter.value;
     const res = await clientApiClient.get('/client/combos', { params, ignoreAuthRedirect: true });
 
-    combos.value = res.data.data.data.map(combo => {
+    return res.data.data.data.map(combo => {
       combo.parsed_start_date = parseDBDate(combo.start_date);
       combo.parsed_end_date = parseDBDate(combo.end_date);
-
       combo.items = combo.items.map(item => ({
         ...item,
         computedPrice: getItemPrice(item)
       }));
-
       combo.originalPrice = calculateOriginal(combo.items);
       combo.finalPrice = calculateFinal(combo.originalPrice, combo.discount_type, combo.discount_value);
-
       return combo;
     });
-
-  } catch (error) {
-    console.error(error);
-  } finally {
-    isLoading.value = false;
-  }
-};
+  },
+  staleTime: 5 * 60 * 1000, 
+});
 
 const handleRealtimeRefresh = () => {
-  fetchCombos(activeFilter.value);
+  refetch();
 };
 
 const filterCombo = (gender) => {
   activeFilter.value = gender;
   displayLimit.value = 2;
-  fetchCombos(gender);
 };
 
 const goToDetail = (slug) => {
@@ -394,8 +384,9 @@ const loadAll = () => {
 const processedCombos = computed(() => {
   const now = currentTime.value;
   const oneDayMs = 24 * 60 * 60 * 1000;
+  const currentCombos = combos.value || [];
 
-  let result = combos.value.filter(combo => {
+  let result = currentCombos.filter(combo => {
     if (!combo.parsed_end_date) return true;
     return now - combo.parsed_end_date <= oneDayMs;
   });
@@ -421,7 +412,6 @@ const displayCombos = computed(() => {
 
 onMounted(() => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  fetchCombos();
   window.addEventListener('realtime-refresh-data', handleRealtimeRefresh);
   timerInterval = setInterval(() => {
     currentTime.value = new Date().getTime();
@@ -689,18 +679,7 @@ onUnmounted(() => {
   font-size: 0.55rem;
 }
 
-.included-title {
-  color: #8f2034;
-  font-size: 1.05rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  font-family: 'Oswald', sans-serif;
-}
 
-.combo-bg-gradient {
-  display: none;
-}
 
 .luxury-badge {
   display: inline-flex;
@@ -959,14 +938,12 @@ onUnmounted(() => {
 }
 
 .item-name {
-  color: #2f2020;
   font-size: 1rem;
   font-weight: 700;
 }
 
 .item-meta {
   min-height: 24px;
-  color: #7f6b66;
 }
 
 .selection-badge {
@@ -975,18 +952,15 @@ onUnmounted(() => {
   max-width: 100%;
   padding: 4px 9px;
   border-radius: 999px;
-  color: #69534f;
-  background: rgba(255, 252, 246, 0.84);
-  border: 1px solid rgba(197, 158, 74, 0.38);
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .selection-text {
-  color: #8f2034;
   font-weight: 600;
 }
 
 .item-price {
-  color: #8f2034;
   font-size: 1.1rem;
   font-weight: 700;
 }
