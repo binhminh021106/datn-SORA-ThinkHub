@@ -56,7 +56,7 @@ class AdminAccountController extends Controller
             'access_token'  => $accessToken,
             'expires_in'    => 3600,
             'admin'         => $admin 
-        ])->cookie('admin_refresh_token', $refreshToken, 60 * 24 * 7, '/', null, false, true, false, 'Strict');
+        ])->cookie('admin_refresh_token', $refreshToken, 60 * 24 * 7, '/', null, true, true, false, 'Strict');
     }
 
     public function refresh(Request $request)
@@ -67,6 +67,14 @@ class AdminAccountController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Token không hợp lệ để thực hiện Refresh.'
+            ], 403);
+        }
+
+        if ($admin->status !== 'active') {
+            $admin->currentAccessToken()->delete();
+            return response()->json([
+                'success' => false,
+                'message' => 'Tài khoản của bạn đã bị khóa'
             ], 403);
         }
 
@@ -81,7 +89,7 @@ class AdminAccountController extends Controller
             'token'         => $accessToken,
             'access_token'  => $accessToken,
             'expires_in'    => 3600
-        ])->cookie('admin_refresh_token', $refreshToken, 60 * 24 * 7, '/', null, false, true, false, 'Strict');
+        ])->cookie('admin_refresh_token', $refreshToken, 60 * 24 * 7, '/', null, true, true, false, 'Strict');
     }
 
     public function logout(Request $request)

@@ -28,7 +28,7 @@
       </div>
 
       <div class="container pt-4">
-        <div class="row g-0 g-lg-5 mb-5 pb-5 combo-detail-hero-row">
+        <div class="row g-0 g-lg-5 mb-3 pb-3 combo-detail-hero-row">
           
           <div class="col-lg-6 mb-4 mb-lg-0">
             <div class="sticky-top" :style="{ top: imageTop, transition: 'top 0.3s cubic-bezier(0.4, 0, 0.2, 1)', zIndex: 1 }">
@@ -218,7 +218,7 @@
       
       <div class="related-products-section py-5" v-if="relatedProducts.length > 0">
         <div class="container">
-          <div class="text-center mb-5">
+          <div class="text-center mb-3">
             <h3 class="font-serif fw-bold text-dark display-6 mb-3">Có Thể Bạn Sẽ Thích</h3>
             <div class="divider-gold mx-auto"></div>
           </div>
@@ -970,10 +970,6 @@ onUnmounted(() => {
 
 .combo-breadcrumb-shell {
   background: linear-gradient(180deg, rgba(255, 252, 246, 0.7), transparent);
-}
-
-.combo-detail-hero-row {
-  /* removed border-bottom to avoid duplicate line with related-products-section */
 }
 
 .combo-detail-copy {

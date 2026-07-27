@@ -13,12 +13,10 @@ class ExtractRefreshTokenCookie
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next, string $cookieName = 'refresh_token'): Response
     {
-        if ($request->hasCookie('refresh_token')) {
-            $request->headers->set('Authorization', 'Bearer ' . $request->cookie('refresh_token'));
-        } elseif ($request->hasCookie('admin_refresh_token')) {
-            $request->headers->set('Authorization', 'Bearer ' . $request->cookie('admin_refresh_token'));
+        if ($request->hasCookie($cookieName)) {
+            $request->headers->set('Authorization', 'Bearer ' . $request->cookie($cookieName));
         }
         
         return $next($request);

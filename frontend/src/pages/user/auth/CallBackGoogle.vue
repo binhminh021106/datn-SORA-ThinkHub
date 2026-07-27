@@ -1,6 +1,23 @@
 <template>
-  <!-- Route pass-through (không cần render UI) -->
-  <div></div>
+  <div class="google-auth-fullscreen">
+    <div class="google-auth-box">
+      <svg class="shadcn-spinner" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="2" x2="12" y2="6" opacity="1"></line>
+        <line x1="12" y1="2" x2="12" y2="6" transform="rotate(30 12 12)" opacity="0.916"></line>
+        <line x1="12" y1="2" x2="12" y2="6" transform="rotate(60 12 12)" opacity="0.833"></line>
+        <line x1="12" y1="2" x2="12" y2="6" transform="rotate(90 12 12)" opacity="0.75"></line>
+        <line x1="12" y1="2" x2="12" y2="6" transform="rotate(120 12 12)" opacity="0.666"></line>
+        <line x1="12" y1="2" x2="12" y2="6" transform="rotate(150 12 12)" opacity="0.583"></line>
+        <line x1="12" y1="2" x2="12" y2="6" transform="rotate(180 12 12)" opacity="0.5"></line>
+        <line x1="12" y1="2" x2="12" y2="6" transform="rotate(210 12 12)" opacity="0.416"></line>
+        <line x1="12" y1="2" x2="12" y2="6" transform="rotate(240 12 12)" opacity="0.333"></line>
+        <line x1="12" y1="2" x2="12" y2="6" transform="rotate(270 12 12)" opacity="0.25"></line>
+        <line x1="12" y1="2" x2="12" y2="6" transform="rotate(300 12 12)" opacity="0.166"></line>
+        <line x1="12" y1="2" x2="12" y2="6" transform="rotate(330 12 12)" opacity="0.083"></line>
+      </svg>
+      <p class="google-auth-text">Đang xác thực Google...</p>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -25,7 +42,7 @@ onMounted(async () => {
     router.replace({ path: '/login', query: { error: 'google_auth_failed' } });
   } else if (code) {
     try {
-      const response = await clientApiClient.post('/auth/google/exchange', { code });
+      const response = await clientApiClient.post('/auth/google/exchange', { code }, { withCredentials: true });
       
       localStorage.setItem('auth_token', response.data.access_token);
       localStorage.setItem('pending_google_sync', 'true');
@@ -40,95 +57,16 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* Tái sử dụng Base CSS của bạn */
-.auth-wrapper {
-  min-height: 100vh;
+.google-auth-fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  background-color: #f8f9fa;
+  z-index: 99999;
   display: flex;
-  justify-content: center;
   align-items: center;
-  background-color: #fcf9f5;
-  padding: 40px 20px;
-  font-family: 'Helvetica Neue', Arial, sans-serif;
-}
-
-.auth-container.callback-container {
-  max-width: 500px;
-  min-height: 400px;
-}
-
-.auth-box {
-  flex: 1;
-  padding: 50px 60px;
-  display: flex;
-  flex-direction: column;
   justify-content: center;
-  align-items: center;
-  background-color: #ffffff;
-}
-
-.text-center {
-  text-align: center;
-}
-
-.callback-logo {
-  color: #9f273b;
-  text-shadow: none;
-  margin-bottom: 40px;
-}
-
-.brand-name-large {
-  font-size: 48px;
-  font-weight: bold;
-  letter-spacing: 12px;
-  font-family: 'Josefin Sans', sans-serif;
-}
-
-.auth-title {
-  color: #9f273b;
-  font-size: 26px;
-  margin: 0 0 8px;
-  font-family: 'Josefin Sans', sans-serif;
-}
-
-.text-error {
-  color: #cc1e2e;
-}
-
-.subtitle {
-  color: #666;
-  font-size: 15px;
-  margin: 0;
-}
-
-.mt-4 {
-  margin-top: 24px;
-}
-
-/* Spinner Animation */
-.shadcn-spinner {
-  width: 50px;
-  height: 50px;
-  color: #9f273b; /* Sử dụng màu chủ đề */
-  animation: spin 1s steps(12) infinite;
-  margin: 0 auto;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Error Icon */
-.error-icon {
-  width: 60px;
-  height: 60px;
-  color: #cc1e2e;
-  margin: 0 auto;
-}
-
-@media (max-width: 768px) {
-  .auth-box {
-    padding: 40px 25px;
-  }
 }
 </style>

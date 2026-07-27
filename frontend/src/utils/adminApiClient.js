@@ -53,6 +53,7 @@ adminApiClient.interceptors.response.use(
         return new Promise(function(resolve, reject) {
           failedQueue.push({ resolve, reject });
         }).then(token => {
+          originalRequest._retry = true;
           originalRequest.headers['Authorization'] = 'Bearer ' + token;
           return adminApiClient(originalRequest);
         }).catch(err => {
@@ -66,6 +67,7 @@ adminApiClient.interceptors.response.use(
       try {
         const { data } = await axios.post(`${API_BASE_URL}/admin/refresh-token`, {}, {
           withCredentials: true,
+          timeout: 15000,
           headers: {
             'Accept': 'application/json'
           }
@@ -83,11 +85,14 @@ adminApiClient.interceptors.response.use(
       } catch (err) {
         processQueue(err, null);
         isRefreshing = false;
-        clearAdminAuthStorage();
-
-        if (!originalRequest.ignoreAuthRedirect && !window.location.pathname.includes('/admin/login')) {
-          window.location.href = '/admin/login';
+        
+        if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+          clearAdminAuthStorage();
+          if (!originalRequest.ignoreAuthRedirect && !window.location.pathname.includes('/admin/login')) {
+            window.location.href = '/admin/login';
+          }
         }
+        
         return Promise.reject(err);
       }
     }

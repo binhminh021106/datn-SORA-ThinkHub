@@ -9,6 +9,9 @@
 
           <div class="combo-left-panel">
             <div class="combo-bg-image" :style="{ backgroundImage: `url(${combo.comboImage})` }"></div>
+            <div v-if="combo.discountAmount && combo.discountAmount !== '0 đ'" class="luxury-discount-tag">
+              GIẢM {{ combo.discountAmount }}
+            </div>
             <div class="combo-bg-overlay"></div>
 
             <div class="combo-left-content">
@@ -45,9 +48,8 @@
               </div>
 
               <div class="combo-pricing">
-                <p class="discount-text">Giảm <span>{{ combo.discountAmount }}</span></p>
                 <div class="price-row">
-                  <span class="original-price font-sans">{{ combo.originalPrice }}</span>
+                  <span class="original-price font-sans" v-if="combo.discountAmount && combo.discountAmount !== '0 đ'">{{ combo.originalPrice }}</span>
                   <span class="discount-price font-sans fw-bold">{{ combo.discountPrice }}</span>
                 </div>
               </div>
@@ -61,7 +63,9 @@
           </div>
 
           <div class="combo-right-panel">
-            <h3 class="combo-products-title font-serif">Bao Gồm {{ combo.products.length }} Sản Phẩm</h3>
+            <h3 class="combo-products-title font-serif">
+              <span class="diamond">✧</span> Bao gồm {{ combo.products.length }} sản phẩm <span class="diamond">✧</span>
+            </h3>
 
             <div class="combo-products-scroll no-scrollbar scroll-mask">
               <div class="products-stack">
@@ -73,11 +77,11 @@
                   </div>
 
                   <div class="product-info">
-                    <h4 class="font-serif text-truncate mb-1">{{ product.name }}</h4>
+                    <h4 class="font-serif text-truncate mb-1" style="font-size: 0.95rem;">{{ product.name }}</h4>
                     <p class="text-truncate mb-1"
-                      style="font-size: 11px; color: #8b7a6a; font-family: 'Manrope', sans-serif;">{{ product.code
+                      style="font-size: 10px; color: rgba(255, 255, 255, 0.7); font-family: 'Manrope', sans-serif;">{{ product.code
                       }}</p>
-                    <strong class="font-sans text-sora-primary" style="font-size: 15px;">{{ product.price
+                    <strong class="font-sans text-gold-gradient" style="font-size: 14px; font-weight: 700;">{{ product.price
                     }}</strong>
                   </div>
 
@@ -354,12 +358,13 @@ onUnmounted(() => {
 }
 
 .combo-title {
-  color: #2a1810;
+  color: var(--sora-primary);
   font-size: clamp(1.4rem, 2vw, 1.8rem);
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.2;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -429,15 +434,20 @@ onUnmounted(() => {
   border-bottom: 1px solid rgba(var(--sora-secondary-rgb), 0.2);
 }
 
-.discount-text {
-  color: #8b7a6a;
-  font-size: 0.875rem;
-  margin-bottom: 0;
-}
-
-.discount-text span {
-  color: var(--sora-primary);
-  font-weight: 600;
+.luxury-discount-tag {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  background-color: var(--sora-primary);
+  color: #fff;
+  padding: 0.4rem 1rem;
+  border-radius: 4px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  z-index: 5;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
 }
 
 .price-row {
@@ -458,11 +468,24 @@ onUnmounted(() => {
 }
 
 .combo-products-title {
-  color: #2a1810;
-  font-size: 1.5rem;
+  color: var(--sora-primary);
+  font-size: 0.95rem;
   font-weight: 600;
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
   flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid rgba(231, 206, 125, 0.3);
+  padding-bottom: 0.75rem;
+}
+
+.combo-products-title .diamond {
+  color: var(--sora-secondary);
+  font-size: 1.1rem;
 }
 
 .combo-products-scroll {
@@ -481,27 +504,30 @@ onUnmounted(() => {
 }
 
 .combo-product-item {
-  background-color: #fff;
-  border-radius: 16px;
-  padding: 1rem;
+  background-color: var(--sora-primary);
+  color: #fff;
+  border-radius: 12px;
+  padding: 0.75rem;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  border: 1px solid rgba(var(--sora-secondary-rgb), 0.2);
-  transition: border-color 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  gap: 0.85rem;
+  border: 1px solid rgba(231, 206, 125, 0.3); /* secondary gold border */
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(159, 39, 59, 0.2);
 }
 
 .combo-product-item:hover {
-  border-color: rgba(var(--sora-secondary-rgb), 0.6);
+  border-color: var(--sora-secondary);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(159, 39, 59, 0.4);
 }
 
 .product-img-box {
   position: relative;
-  width: 96px;
-  height: 96px;
+  width: 72px;
+  height: 72px;
   flex-shrink: 0;
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
   background: linear-gradient(135deg, #f9f9f9, #f1f1f1);
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
@@ -516,19 +542,19 @@ onUnmounted(() => {
 
 .product-qty {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 24px;
-  height: 24px;
-  background-color: var(--sora-primary);
-  color: #fff;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  background-color: #fff;
+  color: var(--sora-primary);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 700;
-  border: 1px solid #fff;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
 .product-info {
@@ -537,7 +563,7 @@ onUnmounted(() => {
 }
 
 .product-info h4 {
-  color: #2a1810;
+  color: #fff;
   font-size: 1rem;
   font-weight: 600;
 }
@@ -708,13 +734,15 @@ onUnmounted(() => {
   background-color: #ffffff;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: flex-start;
   overflow: hidden;
 }
 
 .combo-bg-image {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  width: 100%;
+  height: 52%;
+  inset: auto;
   background-size: cover;
   background-position: center;
   z-index: 0;
@@ -726,17 +754,18 @@ onUnmounted(() => {
 }
 
 .combo-bg-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.2) 40%, rgba(255, 255, 255, 0.9) 65%, rgba(255, 255, 255, 1) 100%);
-  z-index: 0;
+  display: none;
 }
 
 .combo-left-content {
   position: relative;
   z-index: 1;
+  flex: 1;
   padding: 1.5rem 2.5rem;
-  padding-top: 5rem;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .combo-right-panel {

@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ['middleware' => ['auth:sanctum'], 'prefix' => 'api']
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->trustProxies(at: '*');
         $middleware->alias([
             'check.module' => \App\Http\Middleware\CheckModulePermission::class,
             'extract.cookie' => \App\Http\Middleware\ExtractRefreshTokenCookie::class,

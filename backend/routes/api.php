@@ -107,7 +107,7 @@ Route::prefix('news')->group(function () {
 
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:auth');
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:auth');
-Route::middleware(['extract.cookie', 'auth:sanctum', 'ability:refresh'])->group(function () {
+Route::middleware(['extract.cookie:refresh_token', 'auth:sanctum', 'ability:refresh'])->group(function () {
     Route::post('/refresh-token', [AuthController::class, 'refresh']);
 });
 Route::middleware(['auth:sanctum', 'ability:access'])->group(function () {
@@ -292,7 +292,7 @@ Route::prefix('admin')->group(function () {
         Route::post('register', 'store');
     });
 
-    Route::middleware(['extract.cookie', 'auth:sanctum', 'ability:refresh'])->group(function () {
+    Route::middleware(['extract.cookie:admin_refresh_token', 'auth:sanctum', 'ability:refresh'])->group(function () {
         Route::post('refresh-token', [AdminAccountController::class, 'refresh']);
     });
     Route::middleware(['auth:sanctum', 'ability:access'])->group(function () {
