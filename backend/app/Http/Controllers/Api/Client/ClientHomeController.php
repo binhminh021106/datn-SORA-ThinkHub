@@ -21,7 +21,7 @@ class ClientHomeController extends Controller
     {
         try {
             // LẤY DỮ LIỆU TỪ CACHE
-            $data = Cache::remember('sora_home_data_v4', 3600, function () {
+            $data = Cache::remember('sora_home_data_v5', 3600, function () {
                 $result = [
                     'banners' => [],
                     'coupons' => [],
