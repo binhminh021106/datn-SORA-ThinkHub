@@ -169,7 +169,7 @@
                   <div class="combo-item-card flex-shrink-0 d-flex flex-column bg-sora-primary text-white" v-for="item in combo.items" :key="item.id" @dragstart.prevent>
                     <div class="item-image-frame position-relative overflow-hidden">
                       <div class="item-display-surface"></div>
-                      <img :src="getImage(item.product?.thumbnail_image)" class="item-img-hover"
+                      <img :src="getImage(item.variant?.image_url || item.product?.thumbnail_image)" class="item-img-hover"
                         :alt="item.product?.name || 'SORA jewelry item'">
                       <div class="position-absolute top-0 end-0 m-2 z-index-2">
                         <span class="quantity-badge shadow-sm">x{{ item.quantity }}</span>
@@ -180,7 +180,13 @@
                         item.product?.name }}</h6>
                       <div class="item-meta small mb-3 d-flex align-items-center">
                         <span v-if="item.product_variant_id" class="selection-badge text-white-50">
-                          <i class="bi bi-tag-fill me-1"></i>{{ item.variant?.sku }}
+                          <i class="bi bi-tag-fill me-1"></i>
+                          <template v-if="item.variant?.formatted_attributes">
+                            {{ Object.values(item.variant.formatted_attributes).join(' - ') }}
+                          </template>
+                          <template v-else>
+                            {{ item.variant?.sku }}
+                          </template>
                         </span>
                         <span v-else class="selection-text text-white-50">
                           <i class="bi bi-sliders me-1"></i>Được chọn phân loại
