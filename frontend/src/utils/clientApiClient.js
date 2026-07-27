@@ -84,20 +84,71 @@ const sanitizeErrorMessage = (error) => {
   }
 };
 
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 clientApiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config;
     sanitizeErrorMessage(error);
 
-    if (error.response?.status === 401) {
-      clearUserAuthStorage();
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise(function(resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        }).then(token => {
+          originalRequest.headers['Authorization'] = 'Bearer ' + token;
+          return clientApiClient(originalRequest);
+        }).catch(err => {
+          return Promise.reject(err);
+        });
+      }
 
-      const currentPath = window.location.pathname || '';
-      const isProtectedPath = PROTECTED_CLIENT_PATHS.some((path) => currentPath.startsWith(path));
+      originalRequest._retry = true;
+      isRefreshing = true;
 
-      if (!error.config?.ignoreAuthRedirect && isProtectedPath && !currentPath.includes('/login')) {
-        const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
-        window.location.href = `/login?redirect=${returnUrl}`;
+      try {
+        const { data } = await axios.post(`${API_BASE_URL}/refresh-token`, {}, {
+          withCredentials: true,
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        
+        localStorage.setItem('auth_token', data.access_token);
+        
+        clientApiClient.defaults.headers.common['Authorization'] = 'Bearer ' + data.access_token;
+        originalRequest.headers['Authorization'] = 'Bearer ' + data.access_token;
+        
+        processQueue(null, data.access_token);
+        isRefreshing = false;
+        
+        return clientApiClient(originalRequest);
+      } catch (err) {
+        processQueue(err, null);
+        isRefreshing = false;
+        clearUserAuthStorage();
+
+        const currentPath = window.location.pathname || '';
+        const isProtectedPath = PROTECTED_CLIENT_PATHS.some((path) => currentPath.startsWith(path));
+
+        if (!originalRequest.ignoreAuthRedirect && isProtectedPath && !currentPath.includes('/login')) {
+          const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+          window.location.href = `/login?redirect=${returnUrl}`;
+        }
+        return Promise.reject(err);
       }
     }
 

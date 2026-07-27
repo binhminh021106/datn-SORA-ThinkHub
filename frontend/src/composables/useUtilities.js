@@ -39,7 +39,7 @@ export const clearAdminAuthStorage = () => {
 };
 
 export const clearUserAuthStorage = () => {
-  clearAuthStorage(USER_AUTH_STORAGE_KEYS);
+  clearAuthStorage([...USER_AUTH_STORAGE_KEYS]);
 };
 
 export const getHeaders = () => {

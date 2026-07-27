@@ -143,24 +143,51 @@ const recaptchaToken = ref('');
 // Render CAPTCHA
 const renderRecaptcha = () => {
   if (window.grecaptcha && window.grecaptcha.render) {
-    window.grecaptcha.render('contact-recaptcha', {
-      sitekey: import.meta.env.VITE_RECAPTCHA_SITE_KEY,
-      callback: (token) => { recaptchaToken.value = token; },
-      'expired-callback': () => { recaptchaToken.value = ''; }
-    });
+    const el = document.getElementById('contact-recaptcha');
+    if (el) {
+      el.innerHTML = '';
+      window.grecaptcha.render(el, {
+        sitekey: import.meta.env.VITE_RECAPTCHA_SITE_KEY,
+        callback: (token) => { recaptchaToken.value = token; },
+        'expired-callback': () => { recaptchaToken.value = ''; }
+      });
+    }
   }
 };
 
+let recaptchaInitTimeout = null;
+let maxRetries = 50;
+
 onMounted(() => {
+  const init = () => {
+    if (window.grecaptcha && window.grecaptcha.ready) {
+      window.grecaptcha.ready(() => {
+        renderRecaptcha();
+      });
+    } else if (maxRetries > 0) {
+      maxRetries--;
+      recaptchaInitTimeout = setTimeout(init, 200);
+    }
+  };
+
   if (window.grecaptcha) {
-    renderRecaptcha();
+    init();
   } else {
     const script = document.createElement('script');
     script.src = 'https://www.google.com/recaptcha/api.js?render=explicit';
     script.async = true;
     script.defer = true;
-    script.onload = renderRecaptcha;
+    script.onload = init;
+    script.onerror = () => { console.error('Failed to load reCAPTCHA script'); };
     document.head.appendChild(script);
+  }
+});
+
+import { onUnmounted } from 'vue';
+
+onUnmounted(() => {
+  if (recaptchaInitTimeout) {
+    clearTimeout(recaptchaInitTimeout);
   }
 });
 

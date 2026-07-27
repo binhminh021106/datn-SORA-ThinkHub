@@ -6,12 +6,13 @@
 <script setup>
 import { onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import clientApiClient from '@/utils/clientApiClient';
 
 const route = useRoute();
 const router = useRouter();
 
-onMounted(() => {
-  const token = route.query.token;
+onMounted(async () => {
+  const code = route.query.code;
   const error = route.query.error;
 
   let redirectPath = localStorage.getItem('redirect_after_login') || '/';
@@ -22,11 +23,16 @@ onMounted(() => {
 
   if (error) {
     router.replace({ path: '/login', query: { error: 'google_auth_failed' } });
-  } else if (token) {
-    // Lưu token trực tiếp để bảo mật, chỉ bật cờ đồng bộ cho App.vue
-    localStorage.setItem('auth_token', token);
-    localStorage.setItem('pending_google_sync', 'true');
-    router.replace(redirectPath);
+  } else if (code) {
+    try {
+      const response = await clientApiClient.post('/auth/google/exchange', { code });
+      
+      localStorage.setItem('auth_token', response.data.access_token);
+      localStorage.setItem('pending_google_sync', 'true');
+      router.replace(redirectPath);
+    } catch (err) {
+      router.replace({ path: '/login', query: { error: 'google_auth_failed' } });
+    }
   } else {
     router.replace({ path: '/login' });
   }

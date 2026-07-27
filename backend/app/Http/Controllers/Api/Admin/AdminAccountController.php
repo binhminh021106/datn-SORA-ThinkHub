@@ -45,15 +45,50 @@ class AdminAccountController extends Controller
             return response()->json(['success' => false, 'message' => 'Tài khoản của bạn đã bị khóa'], 403);
         }
 
-        $abilities = $admin->role ? ['level:' . $admin->role->level] : ['level:5'];
-        $token = $admin->createToken('admin_token', $abilities)->plainTextToken;
+        $accessAbilities = $admin->role ? ['level:' . $admin->role->level, 'access'] : ['level:5', 'access'];
+        $accessToken = $admin->createToken('admin_token', $accessAbilities, now()->addMinutes(60))->plainTextToken;
+        $refreshToken = $admin->createToken('admin_refresh_token', ['refresh'], now()->addDays(7))->plainTextToken;
 
         return response()->json([
-            'success' => true,
-            'message' => 'Đăng nhập thành công',
-            'token'   => $token,
-            'admin'   => $admin 
-        ]);
+            'success'       => true,
+            'message'       => 'Đăng nhập thành công',
+            'token'         => $accessToken,
+            'access_token'  => $accessToken,
+            'expires_in'    => 3600,
+            'admin'         => $admin 
+        ])->cookie('admin_refresh_token', $refreshToken, 60 * 24 * 7, '/', null, false, true, false, 'Strict');
+    }
+
+    public function refresh(Request $request)
+    {
+        $admin = $request->user();
+
+        if (!$admin->currentAccessToken()->can('refresh')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Token không hợp lệ để thực hiện Refresh.'
+            ], 403);
+        }
+
+        $admin->currentAccessToken()->delete();
+
+        $accessAbilities = $admin->role ? ['level:' . $admin->role->level, 'access'] : ['level:5', 'access'];
+        $accessToken = $admin->createToken('admin_token', $accessAbilities, now()->addMinutes(60))->plainTextToken;
+        $refreshToken = $admin->createToken('admin_refresh_token', ['refresh'], now()->addDays(7))->plainTextToken;
+
+        return response()->json([
+            'success'       => true,
+            'token'         => $accessToken,
+            'access_token'  => $accessToken,
+            'expires_in'    => 3600
+        ])->cookie('admin_refresh_token', $refreshToken, 60 * 24 * 7, '/', null, false, true, false, 'Strict');
+    }
+
+    public function logout(Request $request)
+    {
+        $request->user()->tokens()->whereIn('name', ['admin_token', 'admin_refresh_token'])->delete();
+        return response()->json(['success' => true, 'message' => 'Đăng xuất thành công'])
+            ->cookie(\cookie()->forget('admin_refresh_token'));
     }
 
     public function me(Request $request)
