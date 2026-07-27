@@ -711,7 +711,7 @@ const confirmQuickAdd = async () => {
     const res = await clientApiClient.post('/client/cart', {
       product_variant_id: selectedVar.id,
       quantity: 1
-    }, { ensureCartSession: true, ignoreAuthRedirect: true });
+    }, { headers, ensureCartSession: true, ignoreAuthRedirect: true });
 
     if (res.data.session_id) {
       setSafeStorage('cart_session_id', res.data.session_id);
@@ -808,12 +808,12 @@ const fetchRelatedProducts = async () => {
   } catch (error) { }
 };
 
-const slug = route.params.slug;
+const slug = computed(() => route.params.slug);
 
 const { data: combo, isLoading } = useQuery({
   queryKey: ['clientComboDetail', slug],
   queryFn: async () => {
-    const res = await clientApiClient.get(`/client/combos/${slug}`, { ignoreAuthRedirect: true });
+    const res = await clientApiClient.get(`/client/combos/${slug.value}`, { ignoreAuthRedirect: true });
     let fetchedCombo = res.data.data;
 
     fetchedCombo.parsed_start_date = parseDBDate(fetchedCombo.start_date);
@@ -826,7 +826,7 @@ const { data: combo, isLoading } = useQuery({
     for (const filter of filters) {
       const cachedCombos = queryClient.getQueryData(['clientCombos', filter]);
       if (cachedCombos) {
-        const found = cachedCombos.find(c => c.slug === slug);
+        const found = cachedCombos.find(c => c.slug === slug.value);
         if (found) return found;
       }
     }
@@ -835,16 +835,22 @@ const { data: combo, isLoading } = useQuery({
   staleTime: 5 * 60 * 1000,
 });
 
-watch(combo, (newCombo) => {
+watch(combo, (newCombo, oldCombo) => {
   if (!newCombo) return;
 
-  userSelections.value = {};
-  validationErrors.value = {};
-  itemMatrices.value = {};
+  const isSameCombo = oldCombo && oldCombo.id === newCombo.id;
+
+  if (!isSameCombo) {
+    userSelections.value = {};
+    validationErrors.value = {};
+    itemMatrices.value = {};
+  }
 
   newCombo.items.forEach(item => {
     if (!item.product_variant_id) {
-      userSelections.value[item.id] = {};
+      if (!userSelections.value[item.id]) {
+        userSelections.value[item.id] = {};
+      }
 
       itemMatrices.value[item.id] = buildVariantMatrix(item.product?.variants);
 
@@ -852,14 +858,18 @@ watch(combo, (newCombo) => {
         const singleVariant = item.product.variants[0];
         if (singleVariant.formatted_attributes) {
           Object.entries(singleVariant.formatted_attributes).forEach(([attrName, attrValue]) => {
-            userSelections.value[item.id][attrName] = attrValue;
+            if (!userSelections.value[item.id][attrName]) {
+              userSelections.value[item.id][attrName] = attrValue;
+            }
           });
         }
       }
     }
   });
 
-  fetchRelatedProducts();
+  if (!isSameCombo) {
+    fetchRelatedProducts();
+  }
 }, { immediate: true });
 
 usePublicRefreshListener({
@@ -920,7 +930,7 @@ const addToCart = async () => {
 
   try {
     const headers = getCartHeaders();
-    const res = await clientApiClient.post('/client/cart/add-combo', payload, { ensureCartSession: true });
+    const res = await clientApiClient.post('/client/cart/add-combo', payload, { headers, ensureCartSession: true });
 
     if (res.data.session_id) {
       setSafeStorage('cart_session_id', res.data.session_id);
@@ -948,9 +958,6 @@ const buyNow = () => {
   });
 };
 
-watch(() => route.params.slug, (newSlug) => {
-  if (newSlug && route.name === 'client-combo-detail') fetchDetail(newSlug);
-});
 
 const imageTop = ref('100px');
 let lastScrollY = typeof window !== 'undefined' ? window.scrollY : 0;

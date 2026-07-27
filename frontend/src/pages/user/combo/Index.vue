@@ -212,6 +212,13 @@
             </button>
           </div>
         </div>
+        <div v-else-if="isError" class="error-state text-center fade-in py-5">
+          <i class="bi bi-exclamation-triangle fs-1 d-block mb-3 text-danger opacity-75"></i>
+          <h5 class="font-serif mb-4">Đã xảy ra lỗi khi tải dữ liệu gói ưu đãi.</h5>
+          <button class="btn luxury-outline-cta px-4 py-2 font-oswald tracking-widest text-uppercase fw-bold" @click="refetch()">
+            <i class="bi bi-arrow-clockwise me-1"></i> Thử Lại
+          </button>
+        </div>
 
         <div v-else class="empty-state text-center fade-in">
           <i class="bi bi-box2-heart fs-1 d-block mb-3 text-champagne opacity-75"></i>
@@ -337,7 +344,7 @@ const doDrag = (e, comboId) => {
   container.scrollLeft = scrollLeft.value[comboId] - walk;
 };
 
-const { data: combos, isLoading, refetch } = useQuery({
+const { data: combos, isLoading, isError, refetch } = useQuery({
   queryKey: ['clientCombos', activeFilter],
   queryFn: async () => {
     const params = {};
@@ -872,7 +879,6 @@ onUnmounted(() => {
   padding: 14px;
   border: 1px solid rgba(197, 158, 74, 0.34);
   border-radius: 18px;
-  background: #ffffff;
   box-shadow: 0 16px 36px rgba(65, 35, 24, 0.08);
   transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
 }
