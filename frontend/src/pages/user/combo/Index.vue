@@ -27,7 +27,7 @@
 
     <section class="combo-content-section">
       <div class="container">
-        <div class="d-flex justify-content-center mb-4 mb-lg-5">
+        <div class="d-flex justify-content-center mb-4">
           <div class="filter-group d-inline-flex">
             <button class="filter-btn" :class="{ active: activeFilter === 'all' }" @click="filterCombo('all')">TẤT
               CẢ</button>
@@ -43,11 +43,37 @@
         <div v-if="isLoading" class="combo-list-container fade-in">
           <div v-for="item in 2" :key="'combo-skeleton-' + item" class="combo-row-card overflow-hidden mb-4 mb-lg-5">
             <div class="row g-0">
-              <div class="col-lg-4 combo-offer-panel">
-                <SoraListSkeleton :rows="4" :image="false" />
+              <div class="col-lg-4 combo-offer-panel position-relative d-flex flex-column p-0 placeholder-glow">
+                <div class="placeholder w-100" style="height: 340px; flex-shrink: 0; border-radius: 0;"></div>
+                <div class="position-relative z-index-2 d-flex flex-column justify-content-center flex-grow-1 p-4 bg-white">
+                  <div class="placeholder w-75 mb-3 rounded" style="height: 28px;"></div>
+                  <div class="placeholder w-100 mb-2 rounded" style="height: 16px;"></div>
+                  <div class="placeholder w-50 mb-4 rounded" style="height: 16px;"></div>
+
+                  <div class="offer-footer d-flex align-items-end justify-content-between flex-wrap gap-3">
+                    <div>
+                      <div class="placeholder w-50 mb-1 rounded" style="height: 14px; min-width: 80px;"></div>
+                      <div class="placeholder w-75 rounded" style="height: 24px; min-width: 120px;"></div>
+                    </div>
+                    <div class="placeholder rounded" style="width: 120px; height: 40px;"></div>
+                  </div>
+                </div>
               </div>
-              <div class="col-lg-8 combo-products-panel">
-                <SoraProductGridSkeleton :count="3" min="180px" />
+              <div class="col-lg-8 combo-products-panel position-relative placeholder-glow">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                  <div class="placeholder w-25 rounded" style="height: 24px; min-width: 150px;"></div>
+                </div>
+                <div class="d-flex gap-3 overflow-hidden pt-2 pb-5">
+                  <div class="combo-item-card flex-shrink-0 d-flex flex-column" style="width: 250px; background: transparent; box-shadow: none; border-color: rgba(197, 158, 74, 0.1);" v-for="i in 3" :key="'item-skeleton-' + i">
+                    <div class="placeholder rounded w-100 mb-3" style="height: 210px;"></div>
+                    <div class="placeholder w-75 mb-2 rounded" style="height: 18px;"></div>
+                    <div class="placeholder w-50 mb-3 rounded" style="height: 14px;"></div>
+                    <div class="mt-auto pt-2 d-flex flex-column gap-1">
+                      <div class="placeholder w-50 rounded" style="height: 12px;"></div>
+                      <div class="placeholder w-75 rounded" style="height: 20px;"></div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -56,57 +82,57 @@
         <div class="combo-list-container fade-in" v-else-if="processedCombos.length > 0">
           <article class="combo-row-card overflow-hidden mb-4 mb-lg-5" v-for="combo in displayCombos" :key="combo.id">
             <div class="row g-0 align-items-stretch">
-              <div class="col-lg-4 combo-offer-panel position-relative d-flex flex-column">
+              <div class="col-lg-4 combo-offer-panel position-relative d-flex flex-column p-0">
                 <div v-if="combo.timerData.isEnded"
                   class="ended-overlay d-flex align-items-center justify-content-center flex-column text-center p-4">
                   <i class="bi bi-x-circle fs-1 text-white opacity-75 mb-2"></i>
                   <h3 class="text-white font-oswald tracking-widest m-0">{{ combo.timerData.title }}</h3>
                 </div>
 
-                <div class="combo-bg-img" :style="`background-image: url(${getImage(combo.thumbnail_image)})`"></div>
-                <div class="combo-bg-gradient"></div>
-
-                <div class="position-relative z-index-2 d-flex flex-column h-100 text-center text-md-start">
-                  <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start mb-4">
-                    <span class="luxury-badge luxury-badge-discount">
-                      GIẢM {{ combo.discount_type === 'percentage' ? combo.discount_value + '%' :
-                        formatCurrency(combo.discount_value) }}
+                <div class="combo-image-wrapper position-relative" style="height: 340px; flex-shrink: 0;">
+                  <div class="combo-bg-img h-100 w-100" :style="`background-image: url(${getImage(combo.thumbnail_image)})`"></div>
+                  
+                  <div class="position-absolute top-0 start-0 m-3 d-flex flex-column align-items-start gap-2 z-index-2">
+                    <span class="luxury-badge luxury-badge-discount shadow-sm">
+                      GIẢM {{ combo.discount_type === 'percentage' ? combo.discount_value + '%' : formatCurrency(combo.discount_value) }}
                     </span>
-                    <span v-if="combo.theme" class="luxury-badge luxury-badge-theme">{{ combo.theme }}</span>
+                    <span v-if="combo.theme" class="luxury-badge luxury-badge-theme shadow-sm">{{ combo.theme }}</span>
                   </div>
 
-                  <h3 class="combo-title font-serif mb-3">{{ combo.name }}</h3>
-                  <p class="combo-description small mb-4 line-clamp-2">{{ combo.description }}</p>
-
-                  <div class="timer-section mb-4 mt-auto">
-                    <h6 class="timer-title font-oswald mb-3 tracking-wide text-uppercase"
+                  
+                  <div class="timer-overlay position-absolute bottom-0 start-50 translate-middle-x w-100 p-3 pb-2 text-center">
+                    <h6 class="timer-title font-oswald mb-2 tracking-wide text-uppercase"
                       :class="{ active: combo.timerData.type === 'active' }">
                       <i class="bi bi-clock-history me-1"></i> {{ combo.timerData.title }}
                     </h6>
 
                     <div v-if="!combo.timerData.isEnded && combo.timerData.type !== 'forever'"
-                      class="d-flex justify-content-center justify-content-md-start gap-2">
-                      <div class="time-box">
+                      class="d-flex justify-content-center gap-2">
+                      <div class="time-box time-box-small">
                         <span class="num font-oswald">{{ combo.timerData.d }}</span>
                         <span class="label">Ngày</span>
                       </div>
-                      <div class="time-box">
+                      <div class="time-box time-box-small">
                         <span class="num font-oswald">{{ combo.timerData.h }}</span>
                         <span class="label">Giờ</span>
                       </div>
-                      <div class="time-box">
+                      <div class="time-box time-box-small">
                         <span class="num font-oswald">{{ combo.timerData.m }}</span>
                         <span class="label">Phút</span>
                       </div>
-                      <div class="time-box">
+                      <div class="time-box time-box-small">
                         <span class="num font-oswald">{{ combo.timerData.s }}</span>
                         <span class="label">Giây</span>
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  <div
-                    class="offer-footer d-flex align-items-end justify-content-center justify-content-md-between flex-wrap gap-3">
+                <div class="position-relative z-index-2 d-flex flex-column justify-content-center flex-grow-1 p-4 text-center text-md-start bg-white">
+                  <h3 class="combo-title font-serif mb-2">{{ combo.name }}</h3>
+                  <p class="combo-description small mb-4 line-clamp-2 text-muted fst-italic" v-if="combo.description && combo.description.toLowerCase() !== 'ưu đãi'">{{ combo.description }}</p>
+
+                  <div class="offer-footer d-flex align-items-end justify-content-center justify-content-md-between flex-wrap gap-3">
                     <div>
                       <div class="old-price text-decoration-line-through">{{ formatCurrency(combo.originalPrice) }}
                       </div>
@@ -121,7 +147,7 @@
 
               <div class="col-lg-8 combo-products-panel position-relative">
                 <div class="d-flex justify-content-between align-items-center gap-3 mb-4">
-                  <h5 class="included-title font-serif m-0">Bao Gồm {{ combo.items?.length || 0 }} Tác Phẩm</h5>
+                  <h5 class="included-title m-0">✧ BAO GỒM {{ combo.items?.length || 0 }} TÁC PHẨM ✧</h5>
                   <div class="d-flex gap-2" v-if="combo.items && combo.items.length > 2">
                     <button class="btn slider-btn" @click="scrollSlider(combo.id, -1)"
                       aria-label="Previous combo items">
@@ -133,9 +159,14 @@
                   </div>
                 </div>
 
-                <div class="combo-items-slider d-flex gap-3 gap-xl-4 overflow-auto hide-scrollbar pt-2 pb-3"
-                  :id="'scroll-container-' + combo.id">
-                  <div class="combo-item-card flex-shrink-0" v-for="item in combo.items" :key="item.id">
+                <div class="combo-items-slider d-flex gap-3 gap-xl-3 overflow-auto hide-scrollbar pt-2 pb-5"
+                  :id="'scroll-container-' + combo.id"
+                  :class="{ 'is-dragging': isDragging[combo.id] }"
+                  @mousedown="startDrag($event, combo.id)"
+                  @mouseleave="stopDrag(combo.id)"
+                  @mouseup="stopDrag(combo.id)"
+                  @mousemove="doDrag($event, combo.id)">
+                  <div class="combo-item-card flex-shrink-0 d-flex flex-column bg-sora-primary text-white" v-for="item in combo.items" :key="item.id" @dragstart.prevent>
                     <div class="item-image-frame position-relative overflow-hidden">
                       <div class="item-display-surface"></div>
                       <img :src="getImage(item.product?.thumbnail_image)" class="item-img-hover"
@@ -144,17 +175,25 @@
                         <span class="quantity-badge shadow-sm">x{{ item.quantity }}</span>
                       </div>
                     </div>
-                    <h6 class="item-name font-serif mb-2 text-truncate" :title="item.product?.name">{{
-                      item.product?.name }}</h6>
-                    <div class="item-meta small mb-2 d-flex align-items-center">
-                      <span v-if="item.product_variant_id" class="selection-badge">
-                        <i class="bi bi-tag-fill me-1"></i>{{ item.variant?.sku }}
-                      </span>
-                      <span v-else class="selection-text">
-                        <i class="bi bi-sliders me-1"></i>Được chọn phân loại
-                      </span>
+                    <div class="d-flex flex-column flex-grow-1">
+                      <h6 class="item-name font-serif mb-2 text-truncate text-white" :title="item.product?.name">{{
+                        item.product?.name }}</h6>
+                      <div class="item-meta small mb-3 d-flex align-items-center">
+                        <span v-if="item.product_variant_id" class="selection-badge text-white-50">
+                          <i class="bi bi-tag-fill me-1"></i>{{ item.variant?.sku }}
+                        </span>
+                        <span v-else class="selection-text text-white-50">
+                          <i class="bi bi-sliders me-1"></i>Được chọn phân loại
+                        </span>
+                      </div>
+
+                      <div class="mt-auto pt-3 border-top d-flex flex-column gap-1" style="border-color: rgba(231, 206, 125, 0.3) !important;">
+                        <div class="brand-info text-white-50 text-truncate" style="font-size: 0.72rem;">
+                          <i class="bi bi-award text-gold-gradient"></i> {{ item.product?.brand?.name || 'SORA Boutique' }}
+                        </div>
+                        <div class="item-price font-oswald text-gold-gradient fs-5 fw-bold">{{ formatCurrency(item.computedPrice) }}</div>
+                      </div>
                     </div>
-                    <div class="item-price font-oswald">{{ formatCurrency(item.computedPrice) }}</div>
                   </div>
                 </div>
               </div>
@@ -173,6 +212,13 @@
             </button>
           </div>
         </div>
+        <div v-else-if="isError" class="error-state text-center fade-in py-5">
+          <i class="bi bi-exclamation-triangle fs-1 d-block mb-3 text-danger opacity-75"></i>
+          <h5 class="font-serif mb-4">Đã xảy ra lỗi khi tải dữ liệu gói ưu đãi.</h5>
+          <button class="btn luxury-outline-cta px-4 py-2 font-oswald tracking-widest text-uppercase fw-bold" @click="refetch()">
+            <i class="bi bi-arrow-clockwise me-1"></i> Thử Lại
+          </button>
+        </div>
 
         <div v-else class="empty-state text-center fade-in">
           <i class="bi bi-box2-heart fs-1 d-block mb-3 text-champagne opacity-75"></i>
@@ -186,14 +232,13 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { useQuery } from '@tanstack/vue-query';
 import clientApiClient from '@/utils/clientApiClient';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
 import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
 
 
 const router = useRouter();
-const combos = ref([]);
-const isLoading = ref(true);
 const activeFilter = ref('all');
 const displayLimit = ref(2);
 
@@ -273,43 +318,61 @@ const scrollSlider = (comboId, direction) => {
   }
 };
 
-const fetchCombos = async (gender = null) => {
-  isLoading.value = true;
-  try {
+const isDragging = ref({});
+const startX = ref({});
+const scrollLeft = ref({});
+
+const startDrag = (e, comboId) => {
+  isDragging.value[comboId] = true;
+  const container = document.getElementById('scroll-container-' + comboId);
+  if (!container) return;
+  startX.value[comboId] = e.pageX - container.offsetLeft;
+  scrollLeft.value[comboId] = container.scrollLeft;
+};
+
+const stopDrag = (comboId) => {
+  isDragging.value[comboId] = false;
+};
+
+const doDrag = (e, comboId) => {
+  if (!isDragging.value[comboId]) return;
+  e.preventDefault();
+  const container = document.getElementById('scroll-container-' + comboId);
+  if (!container) return;
+  const x = e.pageX - container.offsetLeft;
+  const walk = (x - startX.value[comboId]) * 1.5;
+  container.scrollLeft = scrollLeft.value[comboId] - walk;
+};
+
+const { data: combos, isLoading, isError, refetch } = useQuery({
+  queryKey: ['clientCombos', activeFilter],
+  queryFn: async () => {
     const params = {};
-    if (gender && gender !== 'all') params.gender = gender;
+    if (activeFilter.value && activeFilter.value !== 'all') params.gender = activeFilter.value;
     const res = await clientApiClient.get('/client/combos', { params, ignoreAuthRedirect: true });
 
-    combos.value = res.data.data.data.map(combo => {
+    return res.data.data.data.map(combo => {
       combo.parsed_start_date = parseDBDate(combo.start_date);
       combo.parsed_end_date = parseDBDate(combo.end_date);
-
       combo.items = combo.items.map(item => ({
         ...item,
         computedPrice: getItemPrice(item)
       }));
-
       combo.originalPrice = calculateOriginal(combo.items);
       combo.finalPrice = calculateFinal(combo.originalPrice, combo.discount_type, combo.discount_value);
-
       return combo;
     });
-
-  } catch (error) {
-    console.error(error);
-  } finally {
-    isLoading.value = false;
-  }
-};
+  },
+  staleTime: 5 * 60 * 1000, 
+});
 
 const handleRealtimeRefresh = () => {
-  fetchCombos(activeFilter.value);
+  refetch();
 };
 
 const filterCombo = (gender) => {
   activeFilter.value = gender;
   displayLimit.value = 2;
-  fetchCombos(gender);
 };
 
 const goToDetail = (slug) => {
@@ -328,8 +391,9 @@ const loadAll = () => {
 const processedCombos = computed(() => {
   const now = currentTime.value;
   const oneDayMs = 24 * 60 * 60 * 1000;
+  const currentCombos = combos.value || [];
 
-  let result = combos.value.filter(combo => {
+  let result = currentCombos.filter(combo => {
     if (!combo.parsed_end_date) return true;
     return now - combo.parsed_end_date <= oneDayMs;
   });
@@ -355,7 +419,6 @@ const displayCombos = computed(() => {
 
 onMounted(() => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  fetchCombos();
   window.addEventListener('realtime-refresh-data', handleRealtimeRefresh);
   timerInterval = setInterval(() => {
     currentTime.value = new Date().getTime();
@@ -532,7 +595,7 @@ onUnmounted(() => {
 }
 
 .combo-content-section {
-  padding: 42px 0 48px;
+  padding: 24px 0 48px;
 }
 
 .filter-group {
@@ -592,29 +655,38 @@ onUnmounted(() => {
 
 .combo-offer-panel {
   min-height: 520px;
-  padding: 34px;
+  padding: 0;
   border-right: 1px solid rgba(197, 158, 74, 0.28);
   background: linear-gradient(160deg, rgba(255, 251, 244, 0.94), rgba(248, 236, 219, 0.92));
+  overflow: hidden;
 }
 
 .combo-bg-img {
-  position: absolute;
-  inset: 0;
+  width: 100%;
   background-size: cover;
   background-position: center;
-  opacity: 0.08;
-  filter: blur(2px) saturate(0.85);
-  z-index: 0;
 }
 
-.combo-bg-gradient {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 18% 8%, rgba(231, 206, 125, 0.2), transparent 34%),
-    linear-gradient(180deg, rgba(255, 252, 246, 0.92), rgba(255, 250, 241, 0.98));
-  z-index: 1;
+.timer-overlay {
+  background: linear-gradient(to top, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0.8) 50%, transparent 100%);
+  padding-top: 3rem !important;
 }
+
+.time-box.time-box-small {
+  width: 50px;
+  height: 54px;
+}
+
+.time-box.time-box-small .num {
+  font-size: 1.15rem;
+  margin-bottom: 2px;
+}
+
+.time-box.time-box-small .label {
+  font-size: 0.55rem;
+}
+
+
 
 .luxury-badge {
   display: inline-flex;
@@ -759,15 +831,26 @@ onUnmounted(() => {
 }
 
 .combo-products-panel {
-  padding: 34px;
-  background:
-    linear-gradient(180deg, rgba(255, 253, 248, 0.98), rgba(255, 249, 240, 0.98)),
-    radial-gradient(circle at 92% 8%, rgba(231, 206, 125, 0.12), transparent 28%);
+  padding: 20px;
+  background: transparent;
+}
+
+.combo-items-slider {
+  scroll-behavior: smooth;
+  cursor: grab;
+  user-select: none;
+}
+.combo-items-slider.is-dragging {
+  scroll-behavior: auto;
+  cursor: grabbing;
 }
 
 .included-title {
-  color: #2f2020;
-  font-size: 1.28rem;
+  color: #8f2034;
+  font-family: 'Oswald', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
   line-height: 1.2;
 }
 
@@ -792,11 +875,10 @@ onUnmounted(() => {
 }
 
 .combo-item-card {
-  width: 220px;
+  width: 250px;
   padding: 14px;
   border: 1px solid rgba(197, 158, 74, 0.34);
   border-radius: 18px;
-  background: linear-gradient(180deg, #fffdf8, #fbf3e8);
   box-shadow: 0 16px 36px rgba(65, 35, 24, 0.08);
   transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
 }
@@ -862,14 +944,12 @@ onUnmounted(() => {
 }
 
 .item-name {
-  color: #2f2020;
   font-size: 1rem;
   font-weight: 700;
 }
 
 .item-meta {
   min-height: 24px;
-  color: #7f6b66;
 }
 
 .selection-badge {
@@ -878,18 +958,15 @@ onUnmounted(() => {
   max-width: 100%;
   padding: 4px 9px;
   border-radius: 999px;
-  color: #69534f;
-  background: rgba(255, 252, 246, 0.84);
-  border: 1px solid rgba(197, 158, 74, 0.38);
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .selection-text {
-  color: #8f2034;
   font-weight: 600;
 }
 
 .item-price {
-  color: #8f2034;
   font-size: 1.1rem;
   font-weight: 700;
 }
@@ -914,6 +991,11 @@ onUnmounted(() => {
 .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+.combo-list-container .placeholder {
+  background: linear-gradient(135deg, rgba(231, 206, 125, 0.16), rgba(159, 39, 59, 0.06)), #f5efe8 !important;
+  opacity: 0.6;
 }
 
 .fade-in {

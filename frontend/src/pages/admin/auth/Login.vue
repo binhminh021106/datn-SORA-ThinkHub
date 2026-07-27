@@ -90,6 +90,7 @@ const handleLogin = async () => {
   try {
     const response = await fetch(`${API_URL}/admin/login`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({ email: form.value.email, password: form.value.password })
     });
@@ -101,9 +102,7 @@ const handleLogin = async () => {
       clearAdminAuthStorage();
 
       localStorage.setItem('admin_token', data.token);
-      if (data.refresh_token) {
-        localStorage.setItem('admin_refresh_token', data.refresh_token);
-      }
+
       localStorage.setItem('admin_role', data.admin.role_id);
 
       if (data.admin.role && data.admin.role.level) {

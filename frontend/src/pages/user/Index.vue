@@ -237,7 +237,7 @@
         <div class="container position-relative z-index-2">
           <div class="section-heading text-center text-white">
             <span class="kicker-base section-kicker">Đặc Quyền SORA</span>
-            <h2 class="fs-3 font-serif fw-bold mb-4 text-capitalize">Sự Chăm Sóc Tận Tâm Cho Mọi Nhu Cầu</h2>
+            <h2 class="fs-3 font-serif fw-bold mb-4 text-capitalize text-gold-gradient">Sự Chăm Sóc Tận Tâm Cho Mọi Nhu Cầu</h2>
           </div>
           <div class="expertise-grid">
             <div class="expertise-card" v-for="service in serviceCards" :key="service.title">
@@ -1954,6 +1954,54 @@ onUnmounted(() => {
   padding: clamp(1rem, 2vw, 3rem) 0;
 }
 
+.banner-ambient {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top right, rgba(231, 206, 125, 0.08), transparent 60%);
+  z-index: 0;
+}
+
+.banner-glow {
+  position: absolute;
+  width: 330px;
+  height: 330px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(231, 206, 125, 0.15), transparent 68%);
+  filter: blur(3px);
+  z-index: 0;
+}
+
+.banner-glow-left { left: -120px; bottom: -150px; }
+.banner-glow-right { right: -100px; top: -120px; }
+
+.banner-monogram {
+  position: absolute;
+  text-align: center;
+  color: rgba(255, 244, 218, 0.04);
+  font-size: clamp(4rem, 12vw, 12rem);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  white-space: nowrap;
+  z-index: 0;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.banner-line-art {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, rgba(var(--sora-secondary-rgb), 0.15), transparent);
+  z-index: 1;
+}
+
+.banner-line-art-left { left: 10%; }
+.banner-line-art-right { right: 10%; }
+
 .expertise-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1993,10 +2041,11 @@ onUnmounted(() => {
   text-transform: uppercase;
   letter-spacing: 0.12em;
   font-size: 0.95rem;
+  color: var(--sora-secondary);
 }
 
 .expertise-card p {
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(255, 255, 255, 0.85);
   font-size: 0.95rem;
   line-height: 1.7;
 }

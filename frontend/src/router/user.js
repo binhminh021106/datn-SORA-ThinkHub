@@ -39,11 +39,7 @@ const user = [
         name: 'forgot-password',
         component: () => import('../pages/user/auth/ForgotPassword.vue'),
       },
-      {
-        path: '/auth/google/callback',
-        name: 'GoogleCallback',
-        component: () => import('../pages/user/auth/CallBackGoogle.vue'),
-      },
+
       {
         path: 'shop',
         name: 'shop',
@@ -146,6 +142,11 @@ const user = [
       },
 
     ],
+  },
+  {
+    path: '/auth/google/callback',
+    name: 'GoogleCallback',
+    component: () => import('../pages/user/auth/CallBackGoogle.vue'),
   },
 ]
 

@@ -39,7 +39,7 @@ class AuthController extends Controller
             'access_token'  => $accessToken,
             'expires_in'    => 3600,
             'user'          => $user
-        ], 201)->cookie('refresh_token', $refreshToken, 60 * 24 * 7, '/', null, false, true, false, 'Strict');
+        ], 201)->cookie('refresh_token', $refreshToken, 60 * 24 * 7, '/', null, true, true, false, 'Strict');
     }
 
     public function login(Request $request)
@@ -71,7 +71,7 @@ class AuthController extends Controller
             'access_token'  => $accessToken,
             'expires_in'    => 3600,
             'user'          => $user
-        ])->cookie('refresh_token', $refreshToken, 60 * 24 * 7, '/', null, false, true, false, 'Strict');
+        ])->cookie('refresh_token', $refreshToken, 60 * 24 * 7, '/', null, true, true, false, 'Strict');
     }
 
     public function logout(Request $request)
@@ -94,6 +94,13 @@ class AuthController extends Controller
             ], 403);
         }
 
+        if ($user->status !== 'active') {
+            $user->tokens()->delete();
+            return response()->json([
+                'message' => 'Tài khoản của bạn đã bị khóa.'
+            ], 403);
+        }
+
         // Xóa refresh_token cũ
         $user->currentAccessToken()->delete();
 
@@ -104,6 +111,6 @@ class AuthController extends Controller
         return response()->json([
             'access_token'  => $accessToken,
             'expires_in'    => 3600
-        ])->cookie('refresh_token', $refreshToken, 60 * 24 * 7, '/', null, false, true, false, 'Strict');
+        ])->cookie('refresh_token', $refreshToken, 60 * 24 * 7, '/', null, true, true, false, 'Strict');
     }
 }

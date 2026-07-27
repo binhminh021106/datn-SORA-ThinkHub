@@ -44,7 +44,11 @@
 
           <!-- CAPTCHA -->
           <div class="form-group">
-            <div id="otp-recaptcha"></div>
+            <div id="otp-recaptcha" v-show="!recaptchaError"></div>
+            <div v-if="recaptchaError" class="recaptcha-error">
+               <p style="color: #cc1e2e; font-size: 14px; margin-bottom: 8px;">Không thể tải mã bảo vệ CAPTCHA do lỗi mạng.</p>
+               <button type="button" @click="retryRecaptcha" class="btn-resend" style="width: auto; padding: 5px 15px; font-size: 13px;">Thử lại</button>
+            </div>
           </div>
 
           <button type="submit" class="btn-primary" :disabled="isLoading || !recaptchaToken">
@@ -136,13 +140,27 @@ const showPass1 = ref(false);
 const showPass2 = ref(false);
 
 const recaptchaToken = ref('');
+const recaptchaError = ref(false);
+
+const retryRecaptcha = () => {
+  recaptchaError.value = false;
+  const el = document.getElementById('otp-recaptcha');
+  if (el) el.innerHTML = '';
+  recaptchaToken.value = '';
+  
+  const oldScript = document.getElementById('grecaptcha-script');
+  if (oldScript) oldScript.remove();
+  
+  maxRetries = 50;
+  initRecaptchaScript();
+};
 
 const renderRecaptcha = () => {
   if (window.grecaptcha && window.grecaptcha.render) {
     const el = document.getElementById('otp-recaptcha');
     if (el) {
       el.innerHTML = '';
-      window.grecaptcha.render(el, {
+      recaptchaWidgetId = window.grecaptcha.render(el, {
         sitekey: import.meta.env.VITE_RECAPTCHA_SITE_KEY,
         callback: (token) => { recaptchaToken.value = token; },
         'expired-callback': () => { recaptchaToken.value = ''; }
@@ -153,8 +171,9 @@ const renderRecaptcha = () => {
 
 let recaptchaInitTimeout = null;
 let maxRetries = 50;
+let recaptchaWidgetId = null;
 
-onMounted(() => {
+const initRecaptchaScript = () => {
   const init = () => {
     if (window.grecaptcha && window.grecaptcha.ready) {
       window.grecaptcha.ready(() => {
@@ -163,6 +182,8 @@ onMounted(() => {
     } else if (maxRetries > 0) {
       maxRetries--;
       recaptchaInitTimeout = setTimeout(init, 200);
+    } else {
+      recaptchaError.value = true;
     }
   };
 
@@ -170,13 +191,21 @@ onMounted(() => {
     init();
   } else {
     const script = document.createElement('script');
+    script.id = 'grecaptcha-script';
     script.src = 'https://www.google.com/recaptcha/api.js?render=explicit';
     script.async = true;
     script.defer = true;
     script.onload = init;
-    script.onerror = () => { console.error('Failed to load reCAPTCHA script'); };
+    script.onerror = () => { 
+        console.error('Failed to load reCAPTCHA script'); 
+        recaptchaError.value = true;
+    };
     document.head.appendChild(script);
   }
+};
+
+onMounted(() => {
+  initRecaptchaScript();
 });
 
 onUnmounted(() => {
@@ -301,7 +330,7 @@ const handleSendOtp = async () => {
     handleFormErrors(error, 'Lỗi gửi OTP.');
     // Reset recaptcha if failed so they can try again
     if (step.value === 1 && window.grecaptcha) {
-        window.grecaptcha.reset();
+        window.grecaptcha.reset(recaptchaWidgetId);
         recaptchaToken.value = '';
     }
   } finally {

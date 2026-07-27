@@ -27,7 +27,7 @@ defineProps({
 
 <style scoped>
 .home-stats-band {
-  background: linear-gradient(90deg, #1c060a 0%, #681f2b 50%, #1c060a 100%);
+  background: linear-gradient(90deg, #380710 0%, #7d1225 50%, #380710 100%);
   position: relative;
   color: #fff;
   padding: 2rem 1rem;
@@ -64,7 +64,7 @@ defineProps({
   right: 0;
   transform: translateY(-50%);
   text-align: center;
-  color: rgba(255, 244, 218, 0.038);
+  color: rgba(231, 206, 125, 0.06);
   font-size: clamp(3rem, 8vw, 6rem);
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -77,7 +77,8 @@ defineProps({
   position: absolute;
   width: 70px;
   height: 70px;
-  border: 1px solid rgba(231, 206, 125, 0.34);
+  border: 1px solid rgba(231, 206, 125, 0.5);
+  box-shadow: 0 0 15px rgba(231, 206, 125, 0.1) inset;
   z-index: 1;
 }
 
@@ -86,7 +87,7 @@ defineProps({
   content: "";
   position: absolute;
   inset: 10px;
-  border: 1px solid rgba(231, 206, 125, 0.2);
+  border: 1px solid rgba(231, 206, 125, 0.3);
 }
 
 .banner-line-art-left {

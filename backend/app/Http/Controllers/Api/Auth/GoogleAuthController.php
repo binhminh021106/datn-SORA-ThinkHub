@@ -59,11 +59,18 @@ class GoogleAuthController extends Controller
             'code' => 'required|string'
         ]);
 
-        $userId = Cache::pull('google_auth_exchange_' . $request->code);
+        $lock = Cache::lock('lock_google_auth_exchange_' . $request->code, 5);
 
-        if (!$userId) {
-            return response()->json(['message' => 'Mã xác thực không hợp lệ hoặc đã hết hạn.'], 400);
+        if (!$lock->get()) {
+            return response()->json(['message' => 'Yêu cầu đang được xử lý.'], 429);
         }
+
+        try {
+            $userId = Cache::pull('google_auth_exchange_' . $request->code);
+
+            if (!$userId) {
+                return response()->json(['message' => 'Mã xác thực không hợp lệ hoặc đã hết hạn.'], 400);
+            }
 
         $user = User::find($userId);
         if (!$user) {
@@ -82,6 +89,10 @@ class GoogleAuthController extends Controller
             'access_token'  => $accessToken,
             'expires_in'    => 3600,
             'user'          => $user
-        ])->cookie('refresh_token', $refreshToken, 60 * 24 * 7, '/', null, false, true, false, 'Strict');
+        ])->cookie('refresh_token', $refreshToken, 60 * 24 * 7, '/', null, true, true, false, 'Strict');
+        
+        } finally {
+            $lock->release();
+        }
     }
 }

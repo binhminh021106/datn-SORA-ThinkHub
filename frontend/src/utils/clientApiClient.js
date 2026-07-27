@@ -109,6 +109,7 @@ clientApiClient.interceptors.response.use(
         return new Promise(function(resolve, reject) {
           failedQueue.push({ resolve, reject });
         }).then(token => {
+          originalRequest._retry = true;
           originalRequest.headers['Authorization'] = 'Bearer ' + token;
           return clientApiClient(originalRequest);
         }).catch(err => {
@@ -122,6 +123,7 @@ clientApiClient.interceptors.response.use(
       try {
         const { data } = await axios.post(`${API_BASE_URL}/refresh-token`, {}, {
           withCredentials: true,
+          timeout: 15000,
           headers: {
             'Accept': 'application/json'
           }
@@ -139,15 +141,19 @@ clientApiClient.interceptors.response.use(
       } catch (err) {
         processQueue(err, null);
         isRefreshing = false;
-        clearUserAuthStorage();
 
-        const currentPath = window.location.pathname || '';
-        const isProtectedPath = PROTECTED_CLIENT_PATHS.some((path) => currentPath.startsWith(path));
+        if (err.response && (err.response.status === 401 || err.response.status === 403)) {
+          clearUserAuthStorage();
 
-        if (!originalRequest.ignoreAuthRedirect && isProtectedPath && !currentPath.includes('/login')) {
-          const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
-          window.location.href = `/login?redirect=${returnUrl}`;
+          const currentPath = window.location.pathname || '';
+          const isProtectedPath = PROTECTED_CLIENT_PATHS.some((path) => currentPath.startsWith(path));
+
+          if (!originalRequest.ignoreAuthRedirect && isProtectedPath && !currentPath.includes('/login')) {
+            const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+            window.location.href = `/login?redirect=${returnUrl}`;
+          }
         }
+        
         return Promise.reject(err);
       }
     }
