@@ -245,8 +245,7 @@
               <div class="shop-feature-row d-flex justify-content-between mt-5 pt-4">
                 <div v-for="(feat, index) in shopFeatures" :key="index" class="feature-pill text-center">
                   <i :class="['bi', feat.icon, 'fs-4 text-dark mb-1 d-block']"></i>
-                  <span class="font-oswald text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;"
-                    v-html="feat.text"></span>
+                  <span class="font-oswald text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">{{ feat.text }}</span>
                 </div>
               </div>
 
@@ -370,6 +369,7 @@ import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener
 import SoraComboDetailSkeleton from '@/components/ui/SoraComboDetailSkeleton.vue';
 import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
 import { getStorageUrl } from '@/utils/env';
+import { createCartSessionId } from '@/composables/useUtilities';
 
 const swiperModules = [Navigation];
 const route = useRoute();
@@ -445,8 +445,8 @@ const getCartHeaders = () => {
   const token = getToken();
   let sessionId = getSafeStorage('cart_session_id');
   if (!sessionId && !token) {
-    sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
-    setSafeStorage('cart_session_id', sessionId);
+    sessionId = createCartSessionId();
+    if (sessionId) setSafeStorage('cart_session_id', sessionId);
   }
   const headers = { 'Accept': 'application/json', 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;

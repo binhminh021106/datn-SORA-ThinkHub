@@ -13,6 +13,7 @@ use App\Models\Coupon;
 use App\Models\Combo;
 use App\Models\TierServiceUsage;
 use App\Models\MembershipTier;
+use App\Models\PaymentAttempt;
 use App\Http\Requests\Client\Checkout\UserCheckoutRequest;
 use App\Jobs\SendOrderSuccessNotificationsJob;
 use Illuminate\Http\Request;
@@ -22,6 +23,7 @@ use Illuminate\Support\Facades\Http;
 use App\Events\NewOrderReceived;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Database\QueryException;
 
 class ClientCheckoutController extends Controller
 {
@@ -65,25 +67,20 @@ class ClientCheckoutController extends Controller
             }
         }
 
- // Thay thế toàn bộ khối truy vấn $coupons = Coupon::where...
         $coupons = Coupon::where('status', 'active')
             ->where(function ($q) use ($user) {
-                // 1. Lấy các mã Public (Không gắn user cụ thể VÀ không phải mã sinh nhật)
                 $q->where(function ($subQ) {
                     $subQ->whereNull('user_id')
                          ->where('name', 'NOT LIKE', '%sinh nhật%');
                 });
 
-                // 2. Hoặc lấy mã Cá nhân (Cấp riêng cho user này, bao gồm mã sinh nhật cá nhân hoá)
                 if ($user) {
                     $q->orWhere('user_id', $user->id);
                 }
             })
-            // Chỉ lấy mã còn hạn
             ->where(function ($q) {
                 $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
             })
-            // Bỏ dòng lấy mã còn tổng số lượng phát hành ở đây để FE hiển thị xám
             ->get();
 
         // 3. Xử lý logic hiển thị mã khả dụng / vô hiệu hóa
@@ -133,14 +130,43 @@ class ClientCheckoutController extends Controller
 
         $sessionId = $request->header('X-Cart-Session-Id');
 
+        $idempotencyKey = trim((string) ($request->header('Idempotency-Key') ?: $request->input('idempotency_key', '')));
+        if ($idempotencyKey === '') {
+            $idempotencyKey = (string) Str::uuid();
+        }
+        if (strlen($idempotencyKey) > 100) {
+            return response()->json(['success' => false, 'message' => 'Idempotency key không hợp lệ.'], 422);
+        }
+
+        $existingOrder = Order::where('idempotency_key', $idempotencyKey)->first();
+        if ($existingOrder) {
+            if ((int) $existingOrder->user_id !== (int) $user->id) {
+                return response()->json(['success' => false, 'message' => 'Idempotency key không hợp lệ.'], 409);
+            }
+
+            return $this->buildIdempotentCheckoutResponse($existingOrder);
+        }
+
         $lockKey = 'checkout_lock_' . ($user ? $user->id : $sessionId);
-        $lock = Cache::lock($lockKey, 10);
+        // This covers the longest gateway request timeout plus database work.
+        // The route also holds the shared cart mutation lock.
+        $lock = Cache::lock($lockKey, 60);
 
         if (!$lock->get()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Hệ thống đang xử lý đơn hàng của bạn, vui lòng không bấm liên tục...'
             ], 429);
+        }
+
+        $existingOrder = Order::where('idempotency_key', $idempotencyKey)->first();
+        if ($existingOrder) {
+            $lock->release();
+            if ((int) $existingOrder->user_id !== (int) $user->id) {
+                return response()->json(['success' => false, 'message' => 'Idempotency key không hợp lệ.'], 409);
+            }
+
+            return $this->buildIdempotentCheckoutResponse($existingOrder);
         }
 
         // CHỐNG SPAM: Kiểm tra tài khoản có bị cấm đặt hàng không
@@ -172,7 +198,7 @@ class ClientCheckoutController extends Controller
         }
 
         try {
-            return DB::transaction(function () use ($request, $cart, $user) {
+            $checkoutResult = DB::transaction(function () use ($request, $cart, $user, $idempotencyKey) {
 
                 $customerName = $request->customer_name;
                 $customerPhone = $request->customer_phone;
@@ -180,16 +206,18 @@ class ClientCheckoutController extends Controller
 
                 if ($request->user_address_id && $user) {
                     $address = UserAddress::where('user_id', $user->id)->find($request->user_address_id);
-                    if ($address) {
-                        $customerName = $address->customer_name;
-                        $customerPhone = $address->customer_phone;
-                        $customerAddress = collect([
-                            $address->shipping_address,
-                            $address->ward,
-                            $address->district,
-                            $address->city,
-                        ])->filter()->implode(', ');
+                    if (! $address) {
+                        throw new \DomainException('Địa chỉ giao hàng không thuộc tài khoản của bạn.');
                     }
+
+                    $customerName = $address->customer_name;
+                    $customerPhone = $address->customer_phone;
+                    $customerAddress = collect([
+                        $address->shipping_address,
+                        $address->ward,
+                        $address->district,
+                        $address->city,
+                    ])->filter()->implode(', ');
                 }
 
                 $variantIdsToLock = [];
@@ -230,8 +258,11 @@ class ClientCheckoutController extends Controller
                 foreach ($cart->items as $item) {
                     if ($item->product_variant_id) {
                         $variant = $variants->get($item->product_variant_id);
-                        if (!$variant || $variant->stock_quantity < $item->quantity) {
-                            throw new \Exception("Sản phẩm SKU {$variant->sku} không đủ số lượng.");
+                        if (! $variant || ! $variant->product || $variant->product->status !== 'published') {
+                            throw new \DomainException('Sản phẩm này không còn kinh doanh.');
+                        }
+                        if ($variant->stock_quantity < $item->quantity) {
+                            throw new \DomainException("Sản phẩm SKU {$variant->sku} không đủ số lượng.");
                         }
 
                         $variant->stock_quantity -= $item->quantity;
@@ -260,13 +291,15 @@ class ClientCheckoutController extends Controller
                         ];
                     } elseif ($item->combo_id) {
                         $combo = $combos->get($item->combo_id);
-                        if (!$combo) {
-                            throw new \Exception("Combo không tồn tại hoặc đã ngừng kinh doanh.");
+                        if (! $combo || $combo->status !== 'active'
+                            || ($combo->start_date && $combo->start_date->isFuture())
+                            || ($combo->end_date && $combo->end_date->isPast())) {
+                            throw new \DomainException("Combo không tồn tại hoặc đã ngừng kinh doanh.");
                         }
 
                         if ($combo->usage_limit !== null) {
                             if ($combo->usage_limit < $item->quantity) {
-                                throw new \Exception("Gói ưu đãi {$combo->name} đã vượt quá số lượt bán cho phép.");
+                                throw new \DomainException("Gói ưu đãi {$combo->name} đã vượt quá số lượt bán cho phép.");
                             }
                             $combo->usage_limit -= $item->quantity;
                             $combo->save();
@@ -279,7 +312,7 @@ class ClientCheckoutController extends Controller
                                 if ($vId) {
                                     $variant = $variants->get($vId);
                                     if (!$variant || $variant->stock_quantity < $item->quantity) {
-                                        throw new \Exception("Một sản phẩm tự chọn trong bộ {$combo->name} đã hết hàng.");
+                                        throw new \DomainException("Một sản phẩm tự chọn trong bộ {$combo->name} đã hết hàng.");
                                     }
                                     $variant->stock_quantity -= $item->quantity;
                                     $variant->save();
@@ -294,7 +327,7 @@ class ClientCheckoutController extends Controller
                                 $totalQtyNeeded = $item->quantity * $cItem->quantity;
 
                                 if (!$variant || $variant->stock_quantity < $totalQtyNeeded) {
-                                    throw new \Exception("Sản phẩm cố định trong bộ {$combo->name} đã hết hàng.");
+                                    throw new \DomainException("Sản phẩm cố định trong bộ {$combo->name} đã hết hàng.");
                                 }
                                 $variant->stock_quantity -= $totalQtyNeeded;
                                 $variant->save();
@@ -326,25 +359,25 @@ class ClientCheckoutController extends Controller
                 if ($request->coupon_code) {
                     $coupon = Coupon::where('code', $request->coupon_code)->lockForUpdate()->first();
                     if (!$coupon || $coupon->status !== 'active') {
-                        throw new \Exception("Mã giảm giá không hợp lệ hoặc đã tạm ngưng sử dụng.");
+                        throw new \DomainException("Mã giảm giá không hợp lệ hoặc đã tạm ngưng sử dụng.");
                     }
                     if (str_contains(mb_strtolower($coupon->name, 'UTF-8'), 'sinh nhật') && is_null($coupon->user_id)) {
-                        throw new \Exception("Mã giảm giá sinh nhật này đã cũ và không còn hợp lệ.");
+                        throw new \DomainException("Mã giảm giá sinh nhật này đã cũ và không còn hợp lệ.");
                     }
                     if ($coupon->user_id && (!$user || (int) $user->id !== (int) $coupon->user_id)) {
-                        throw new \Exception("Mã giảm giá này không thuộc quyền sở hữu của bạn.");
+                        throw new \DomainException("Mã giảm giá này không thuộc quyền sở hữu của bạn.");
                     }
                     if ($coupon->expires_at && now()->greaterThan($coupon->expires_at)) {
-                        throw new \Exception("Mã giảm giá đã hết hạn.");
+                        throw new \DomainException("Mã giảm giá đã hết hạn.");
                     }
                     if ($coupon->usage_limit !== null && $coupon->usage_count >= $coupon->usage_limit) {
-                        throw new \Exception("Mã giảm giá đã hết lượt sử dụng.");
+                        throw new \DomainException("Mã giảm giá đã hết lượt sử dụng.");
                     }
                     if ($this->hasUserReachedCouponLimit($coupon, $user)) {
-                        throw new \Exception("Bạn đã sử dụng hết lượt cho mã giảm giá này.");
+                        throw new \DomainException("Bạn đã sử dụng hết lượt cho mã giảm giá này.");
                     }
                     if ($subTotal < $coupon->min_spend) {
-                        throw new \Exception("Đơn hàng chưa đạt giá trị tối thiểu (" . number_format($coupon->min_spend, 0, ',', '.') . "đ) để áp dụng mã giảm giá này.");
+                        throw new \DomainException("Đơn hàng chưa đạt giá trị tối thiểu (" . number_format($coupon->min_spend, 0, ',', '.') . "đ) để áp dụng mã giảm giá này.");
                     }
 
                     $discountAmount = ($coupon->type === 'fixed') ? $coupon->value : ($subTotal * ($coupon->value / 100));
@@ -375,7 +408,7 @@ class ClientCheckoutController extends Controller
                     }
                 }
 
-                $shippingFee = $request->shipping_fee !== null ? (float)$request->shipping_fee : 0;
+                $shippingFee = $this->calculateShippingFee($subTotal);
                 $totalAmount = max($subTotal - $discountAmount - $tierDiscountAmount, 0) + $shippingFee;
 
                 // CÂN BẰNG TỈ LỆ HOA HỒNG THEO SỐ TIỀN THỰC TẾ
@@ -397,6 +430,7 @@ class ClientCheckoutController extends Controller
 
                 $order = Order::create([
                     'order_code'           => 'ORD-' . now()->format('Ymd') . '-' . strtoupper(Str::random(5)),
+                    'idempotency_key'      => $idempotencyKey,
                     'user_id'              => $user->id ?? null,
                     'affiliate_user_id'    => $affiliateUserId,
                     'customer_name'        => $customerName,
@@ -490,48 +524,79 @@ class ClientCheckoutController extends Controller
                 }
 
                 if ($request->payment_method === 'momo') {
-                    $momoUrl = $this->generateMomoUrl(
+                    $attempt = $this->startPaymentAttempt(
                         $order,
+                        'momo',
+                        $cart,
                         $request->input('checkout_source', 'web'),
-                        $cart->id,
                         $request->input('mobile_return_url')
                     );
-                    return response()->json([
-                        'success' => true,
-                        'payment_url' => $momoUrl,
-                        'data' => [
-                            'order_code'   => $order->order_code,
-                            'total_amount' => $order->total_amount
-                        ],
-                        'message' => 'Đang chuyển hướng sang Ví MoMo...'
-                    ]);
+                    return ['payment_attempt_id' => $attempt->id];
                 }
 
                 if ($request->payment_method === 'vnpay') {
-                    $vnpayUrl = $this->generateVnpayUrl(
+                    $attempt = $this->startPaymentAttempt(
                         $order,
+                        'vnpay',
+                        $cart,
                         $request->input('checkout_source', 'web'),
-                        $cart->id,
                         $request->input('mobile_return_url')
                     );
-
-                    return response()->json([
-                        'success' => true,
-                        'payment_url' => $vnpayUrl,
-                        'data' => [
-                            'order_code'   => $order->order_code,
-                            'total_amount' => $order->total_amount
-                        ],
-                        'message' => 'Dang chuyen huong sang cong thanh toan VNPay...'
-                    ]);
+                    return ['payment_attempt_id' => $attempt->id];
                 }
 
             });
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+
+            if (! is_array($checkoutResult) || ! isset($checkoutResult['payment_attempt_id'])) {
+                return $checkoutResult;
+            }
+
+            $attempt = PaymentAttempt::with('order')->findOrFail($checkoutResult['payment_attempt_id']);
+            $order = $attempt->order;
+            if (! $order) {
+                throw new \RuntimeException('Payment attempt is missing its order.');
+            }
+
+            $paymentUrl = $attempt->gateway === 'momo'
+                ? $this->generateMomoUrl($order, $attempt)
+                : $this->generateVnpayUrl($order, $attempt);
+
+            return response()->json([
+                'success' => true,
+                'payment_url' => $paymentUrl,
+                'data' => [
+                    'order_code' => $order->order_code,
+                    'total_amount' => $order->total_amount,
+                ],
+                'message' => $attempt->gateway === 'momo'
+                    ? 'Dang chuyen huong sang MoMo...'
+                    : 'Dang chuyen huong sang cong thanh toan VNPay...',
+            ]);
+        } catch (\DomainException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (QueryException $e) {
+            if ($this->isIdempotencyKeyCollision($e)) {
+                $existingOrder = Order::where('idempotency_key', $idempotencyKey)->first();
+
+                if ($existingOrder && (int) $existingOrder->user_id === (int) $user->id) {
+                    return $this->buildIdempotentCheckoutResponse($existingOrder);
+                }
+            }
+
+            report($e);
+            return response()->json(['success' => false, 'message' => 'Khong the xu ly thanh toan luc nay. Vui long thu lai sau.'], 500);
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json(['success' => false, 'message' => 'Không thể xử lý thanh toán lúc này. Vui lòng thử lại sau.'], 500);
         } finally {
             $lock->release();
         }
+    }
+
+    private function isIdempotencyKeyCollision(QueryException $exception): bool
+    {
+        return in_array((string) $exception->getCode(), ['23000', '23505'], true)
+            && str_contains(strtolower($exception->getMessage()), 'idempotency_key');
     }
 
 
@@ -541,7 +606,7 @@ class ClientCheckoutController extends Controller
         $limit = (int) ($coupon->usage_limit_per_user ?? 0);
         
         // Block coupons with user quota if not authenticated
-        if (!$user) {
+        if (! $user instanceof \App\Models\User) {
             return $limit > 0; // Reject if coupon has per-user limit
         }
         
@@ -560,12 +625,91 @@ class ClientCheckoutController extends Controller
             ->count();
     }
 
-    private function generateMomoUrl($order, string $checkoutSource = 'web', ?int $cartId = null, ?string $mobileReturnUrl = null)
+    private function buildIdempotentCheckoutResponse(Order $order)
     {
-        $endpoint = env('MOMO_ENDPOINT');
-        $partnerCode = env('MOMO_PARTNER_CODE');
-        $accessKey   = env('MOMO_ACCESS_KEY');
-        $secretKey   = env('MOMO_SECRET_KEY');
+        $response = [
+            'success' => true,
+            'idempotent_replay' => true,
+            'message' => 'Yêu cầu đặt hàng này đã được xử lý trước đó.',
+            'data' => [
+                'order_code' => $order->order_code,
+                'total_amount' => $order->total_amount,
+                'payment_status' => $order->payment_status,
+            ],
+        ];
+
+        if ($order->payment_status !== 'paid' && in_array($order->payment_method, ['momo', 'vnpay'], true)) {
+            // An idempotent replay must not create a second provider payment
+            // reference/link. The customer can deliberately retry from their
+            // order history if the original payment session has expired.
+            $response['payment_pending'] = true;
+            $response['message'] = 'Đơn hàng đang chờ thanh toán. Vui lòng kiểm tra lại trong Đơn mua của tôi.';
+        }
+
+        return response()->json($response);
+    }
+
+    private function calculateShippingFee(float $subTotal): int
+    {
+        // Shipping rules are authoritative on the server. The client value is never trusted.
+        return $subTotal > 500000 ? 0 : 30000;
+    }
+
+    private function startPaymentAttempt(Order $order, string $gateway, ?Cart $cart, string $checkoutSource, ?string $mobileReturnUrl): PaymentAttempt
+    {
+        $previousAttempt = PaymentAttempt::where('order_id', $order->id)
+            ->where('gateway', $gateway)
+            ->latest('id')
+            ->lockForUpdate()
+            ->first();
+
+        if ($previousAttempt && $previousAttempt->status === 'pending') {
+            if (! $previousAttempt->expires_at || $previousAttempt->expires_at->isFuture()) {
+                throw new \DomainException('Cong thanh toan hien tai van con hieu luc. Vui long hoan tat hoac cho het han truoc khi thu lai.');
+            }
+
+            $previousAttempt->update(['status' => 'expired']);
+        }
+
+        $snapshot = $cart ? $this->buildCartSnapshot($cart) : $previousAttempt?->cart_snapshot;
+        $referenceSuffix = now()->format('YmdHis') . Str::upper(Str::random(10));
+
+        return PaymentAttempt::create([
+            'order_id' => $order->id,
+            'gateway' => $gateway,
+            'merchant_reference' => $order->order_code . '_' . $referenceSuffix,
+            'gateway_request_id' => $gateway === 'momo' ? $referenceSuffix : null,
+            'amount' => (int) round($order->total_amount),
+            'status' => 'pending',
+            'cart_snapshot' => $snapshot,
+            'checkout_source' => $checkoutSource === 'mobile' ? 'mobile' : 'web',
+            'mobile_return_url' => $this->sanitizeMobileReturnUrl($mobileReturnUrl),
+            'expires_at' => now()->addMinutes(max(1, (int) config('payment.attempt_ttl_minutes', 15))),
+        ]);
+    }
+
+    private function buildCartSnapshot(Cart $cart): array
+    {
+        $cart->loadMissing('items');
+
+        return [
+            'cart_id' => (int) $cart->id,
+            'items' => $cart->items->map(fn ($item) => [
+                'id' => (int) $item->id,
+                'product_variant_id' => $item->product_variant_id ? (int) $item->product_variant_id : null,
+                'combo_id' => $item->combo_id ? (int) $item->combo_id : null,
+                'combo_selections' => $item->combo_selections,
+                'quantity' => (int) $item->quantity,
+            ])->values()->all(),
+        ];
+    }
+
+    private function generateMomoUrl(Order $order, PaymentAttempt $attempt): string
+    {
+        $endpoint = config('payment.momo.endpoint');
+        $partnerCode = config('payment.momo.partner_code');
+        $accessKey   = config('payment.momo.access_key');
+        $secretKey   = config('payment.momo.secret_key');
 
         $missing = [];
         if (empty($endpoint)) $missing[] = 'MOMO_ENDPOINT';
@@ -579,18 +723,17 @@ class ClientCheckoutController extends Controller
 
         $orderInfo = "Thanh toan don hang SORA " . $order->order_code;
         $amount = (string) round($order->total_amount);
-        $orderId = $order->order_code . "_" . time();
+        $orderId = $attempt->merchant_reference;
 
         $redirectUrl = $this->paymentCallbackUrl('/api/client/checkout/momo-return');
-        $ipnUrl = $this->paymentCallbackUrl('/api/client/checkout/momo-return');
+        $ipnUrl = $this->paymentCallbackUrl('/api/client/checkout/momo-ipn');
 
         $extraData = base64_encode(json_encode([
-            'source' => $checkoutSource === 'mobile' ? 'mobile' : 'web',
-            'cart_id' => $cartId,
-            'mobile_return_url' => $this->sanitizeMobileReturnUrl($mobileReturnUrl),
+            'source' => $attempt->checkout_source,
+            'mobile_return_url' => $attempt->mobile_return_url,
         ]));
-        $requestId = time() . "";
-        $requestType = env('MOMO_REQUEST_TYPE', 'payWithATM');
+        $requestId = $attempt->gateway_request_id;
+        $requestType = config('payment.momo.request_type', 'payWithATM');
 
         $rawHash = "accessKey=" . $accessKey . "&amount=" . $amount . "&extraData=" . $extraData . "&ipnUrl=" . $ipnUrl . "&orderId=" . $orderId . "&orderInfo=" . $orderInfo . "&partnerCode=" . $partnerCode . "&redirectUrl=" . $redirectUrl . "&requestId=" . $requestId . "&requestType=" . $requestType;
 
@@ -622,11 +765,11 @@ class ClientCheckoutController extends Controller
         throw new \Exception("MoMo API Error: " . ($result['message'] ?? 'Lỗi tạo link'));
     }
 
-    private function generateVnpayUrl($order, string $checkoutSource = 'web', ?int $cartId = null, ?string $mobileReturnUrl = null): string
+    private function generateVnpayUrl(Order $order, PaymentAttempt $attempt): string
     {
-        $tmnCode = env('VNPAY_TMN_CODE');
-        $hashSecret = env('VNPAY_HASH_SECRET');
-        $paymentUrl = env('VNPAY_PAYMENT_URL', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html');
+        $tmnCode = config('payment.vnpay.tmn_code');
+        $hashSecret = config('payment.vnpay.hash_secret');
+        $paymentUrl = config('payment.vnpay.payment_url', 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html');
 
         $missing = [];
         if (empty($tmnCode)) $missing[] = 'VNPAY_TMN_CODE';
@@ -638,21 +781,17 @@ class ClientCheckoutController extends Controller
         }
 
         $returnParams = [
-            'source' => $checkoutSource === 'mobile' ? 'mobile' : 'web',
+            'source' => $attempt->checkout_source,
         ];
 
-        if ($cartId) {
-            $returnParams['cart_id'] = $cartId;
-        }
-
-        $sanitizedMobileReturnUrl = $this->sanitizeMobileReturnUrl($mobileReturnUrl);
+        $sanitizedMobileReturnUrl = $attempt->mobile_return_url;
         if ($sanitizedMobileReturnUrl) {
             $returnParams['mobile_return_url'] = $sanitizedMobileReturnUrl;
         }
 
         $returnUrl = $this->paymentCallbackUrl('/api/client/checkout/vnpay-return') . '?' . http_build_query($returnParams);
-        $txnRef = $order->order_code . '_' . time();
-        $bankCode = trim((string) env('VNPAY_BANK_CODE', ''));
+        $txnRef = $attempt->merchant_reference;
+        $bankCode = trim((string) config('payment.vnpay.bank_code', ''));
 
         $inputData = [
             'vnp_Amount' => (int) round($order->total_amount * 100),
@@ -700,17 +839,17 @@ class ClientCheckoutController extends Controller
 
     private function paymentCallbackUrl(string $path): string
     {
-        $baseUrl = rtrim((string) env('PAYMENT_CALLBACK_BASE_URL', ''), '/');
-
-        if ($baseUrl === '') {
-            $baseUrl = rtrim(config('app.url'), '/');
+        $baseUrl = rtrim((string) config('payment.callback_base_url', ''), '/');
+        if ($baseUrl === '' && app()->environment('local', 'testing')) {
+            $baseUrl = rtrim((string) config('app.url'), '/');
         }
 
-        $requestHost = request()->getHost();
-        $configuredHost = parse_url($baseUrl, PHP_URL_HOST);
+        $scheme = strtolower((string) parse_url($baseUrl, PHP_URL_SCHEME));
+        $host = parse_url($baseUrl, PHP_URL_HOST);
+        $requiresHttps = ! app()->environment('local', 'testing');
 
-        if ($requestHost && in_array($configuredHost, ['127.0.0.1', 'localhost'], true) && !in_array($requestHost, ['127.0.0.1', 'localhost'], true)) {
-            $baseUrl = rtrim(request()->getSchemeAndHttpHost(), '/');
+        if (! $host || ($requiresHttps && $scheme !== 'https') || (! $requiresHttps && ! in_array($scheme, ['http', 'https'], true))) {
+            throw new \RuntimeException('PAYMENT_CALLBACK_BASE_URL must be configured as a valid public callback URL.');
         }
 
         return $baseUrl . '/' . ltrim($path, '/');
@@ -719,7 +858,7 @@ class ClientCheckoutController extends Controller
     public function retryMomoPayment(Request $request, string $order_code)
     {
         $user = auth('sanctum')->user();
-        if (!$user) {
+        if (! $user instanceof \App\Models\User) {
             return response()->json([
                 'success' => false,
                 'message' => 'Vui lòng đăng nhập để tiếp tục thanh toán.',
@@ -771,17 +910,26 @@ class ClientCheckoutController extends Controller
             ], 422);
         }
 
+        $retryLock = Cache::lock('payment_retry:momo:' . $order->id, 30);
+        if (!$retryLock->get()) {
+            return response()->json(['success' => false, 'message' => 'Đơn hàng đang được mở lại cổng thanh toán.'], 429);
+        }
+
         try {
-            // Find user's cart to persist cart ID across retry attempts
-            $userCart = Cart::where('user_id', $user->id)->first();
-            $cartId = $userCart ? $userCart->id : null;
-            
-            $paymentUrl = $this->generateMomoUrl(
-                $order,
-                $request->input('checkout_source', 'mobile'),
-                $cartId,
-                $request->input('mobile_return_url')
-            );
+            // tìm giỏ hàng của người dùng để giữ lại ID giỏ hàng trong các lần thử lại
+            $attempt = DB::transaction(function () use ($order, $request) {
+                $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+                return $this->startPaymentAttempt(
+                    $lockedOrder,
+                    'momo',
+                    null,
+                    $request->input('checkout_source', 'mobile'),
+                    $request->input('mobile_return_url')
+                );
+            });
+
+            $paymentUrl = $this->generateMomoUrl($order, $attempt);
 
             return response()->json([
                 'success' => true,
@@ -794,11 +942,19 @@ class ClientCheckoutController extends Controller
                 ],
                 'message' => 'Đang mở lại cổng thanh toán MoMo...',
             ]);
-        } catch (\Throwable $e) {
+        } catch (\DomainException $e) {
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
+            ], 409);
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể mở lại cổng thanh toán lúc này. Vui lòng thử lại sau.',
             ], 400);
+        } finally {
+            $retryLock->release();
         }
     }
 
@@ -849,17 +1005,26 @@ class ClientCheckoutController extends Controller
             ], 422);
         }
 
+        $retryLock = Cache::lock('payment_retry:vnpay:' . $order->id, 30);
+        if (!$retryLock->get()) {
+            return response()->json(['success' => false, 'message' => 'Đơn hàng đang được mở lại cổng thanh toán.'], 429);
+        }
+
         try {
-            // Find user's cart to persist cart ID across retry attempts
-            $userCart = Cart::where('user_id', $user->id)->first();
-            $cartId = $userCart ? $userCart->id : null;
-            
-            $paymentUrl = $this->generateVnpayUrl(
-                $order,
-                $request->input('checkout_source', 'mobile'),
-                $cartId,
-                $request->input('mobile_return_url')
-            );
+            // tìm giỏ hàng của người dùng để giữ lại ID giỏ hàng trong các lần thử lại
+            $attempt = DB::transaction(function () use ($order, $request) {
+                $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+                return $this->startPaymentAttempt(
+                    $lockedOrder,
+                    'vnpay',
+                    null,
+                    $request->input('checkout_source', 'mobile'),
+                    $request->input('mobile_return_url')
+                );
+            });
+
+            $paymentUrl = $this->generateVnpayUrl($order, $attempt);
 
             return response()->json([
                 'success' => true,
@@ -872,37 +1037,94 @@ class ClientCheckoutController extends Controller
                 ],
                 'message' => 'Dang mo lai cong thanh toan VNPay...',
             ]);
-        } catch (\Throwable $e) {
+        } catch (\DomainException $e) {
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
+            ], 409);
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể mở lại cổng thanh toán lúc này. Vui lòng thử lại sau.',
             ], 400);
+        } finally {
+            $retryLock->release();
         }
     }
 
     public function momoReturn(Request $request)
     {
-        $parts = explode('_', $request->orderId);
-        $orderCode = $parts[0] ?? '';
-        $extraData = json_decode(base64_decode($request->extraData ?? ''), true) ?: [];
+        $orderId = trim((string) $request->input('orderId', ''));
+        $parts = explode('_', $orderId, 2);
+        $orderCode = trim((string) ($parts[0] ?? ''));
+        $decodedExtraData = base64_decode((string) $request->input('extraData', ''), true);
+        $extraData = is_string($decodedExtraData) ? json_decode($decodedExtraData, true) : [];
+        $extraData = is_array($extraData) ? $extraData : [];
         $isMobileCheckout = ($extraData['source'] ?? 'web') === 'mobile';
         $cartId = isset($extraData['cart_id']) ? (int) $extraData['cart_id'] : null;
         $mobileReturnUrl = $extraData['mobile_return_url'] ?? null;
 
-        $frontendUrl = rtrim(env('FRONTEND_URL', 'http://localhost:5173'), '/');
+        $frontendUrl = rtrim((string) config('payment.frontend_url', 'http://localhost:5173'), '/');
 
-        if ($request->resultCode == 0) {
-            $order = Order::with('items')->where('order_code', $orderCode)->first();
-            if ($order) {
-                $alreadyPaid = $order->payment_status === 'paid';
+        // Verify the gateway signature before performing an order lookup so
+        // arbitrary browser traffic cannot turn this public endpoint into a
+        // database-probing endpoint.
+        $hasValidGatewaySignature = $this->verifyMomoCallbackSignature($request)
+            && (string) $request->input('partnerCode') === (string) config('payment.momo.partner_code')
+            && $orderId !== '';
 
-                if (!$alreadyPaid) {
-                    $order->payment_status = 'paid';
-                    $order->save();
+        if (! $hasValidGatewaySignature) {
+            Log::warning('MoMo browser return rejected before order lookup.', [
+                'order_code' => $orderCode,
+                'result_code' => $request->input('resultCode'),
+            ]);
 
-                    $this->clearCartAfterPaidOrder($order, $cartId);
-                    $this->queueOrderSuccessNotifications($order);
+            if ($isMobileCheckout) {
+                return redirect($this->buildMobileMomoReturnUrl($mobileReturnUrl, $orderCode, 'failed', 'cart'));
+            }
+
+            return redirect($frontendUrl . '/checkout/failed?order=' . urlencode($orderCode));
+        }
+
+        // Use server-side order data for every business check after the
+        // signature has established that the gateway payload is authentic.
+        $order = $orderCode !== '' ? Order::where('order_code', $orderCode)->first() : null;
+
+        $isValidCallback = $order
+            && str_starts_with($orderId, $orderCode . '_')
+            && (string) $request->input('orderInfo') === "Thanh toan don hang SORA {$orderCode}"
+            && is_numeric($request->input('amount'))
+            && (int) $request->input('amount') === (int) round($order->total_amount)
+            && $order->payment_method === 'momo'
+            && !in_array($order->status, ['cancelled', 'returned'], true);
+
+        if (!$isValidCallback) {
+            Log::warning('MoMo callback rejected.', [
+                'order_code' => $orderCode,
+                'result_code' => $request->input('resultCode'),
+            ]);
+
+            if ($isMobileCheckout) {
+                return redirect($this->buildMobileMomoReturnUrl($mobileReturnUrl, $orderCode, 'failed', 'cart'));
+            }
+
+            return redirect($frontendUrl . '/checkout/failed?order=' . urlencode($orderCode));
+        }
+
+        if ((int) $request->input('resultCode') === 0) {
+            $paidOrder = $this->markOnlineOrderAsPaid($orderCode, 'momo', $orderId);
+            if (! $paidOrder) {
+                Log::warning('MoMo browser return could not settle the order.', [
+                    'order_code' => $orderCode,
+                    'result_code' => $request->input('resultCode'),
+                ]);
+
+                if ($isMobileCheckout) {
+                    return redirect($this->buildMobileMomoReturnUrl($mobileReturnUrl, $orderCode, 'failed', 'cart'));
                 }
+
+                return redirect($frontendUrl . '/checkout/failed?order=' . urlencode($orderCode));
             }
 
             if ($isMobileCheckout) {
@@ -912,22 +1134,122 @@ class ClientCheckoutController extends Controller
             return redirect($frontendUrl . '/checkout/success?order=' . $orderCode);
         }
 
-        $this->cancelOrderAndRestoreStock($orderCode);
+        // Browser returns are user-agent traffic and can race the provider's
+        // IPN. A verified IPN performs cancellation for a failed payment; the
+        // browser return only renders the outcome.
         if ($isMobileCheckout) {
-            return redirect($this->buildMobileMomoReturnUrl($mobileReturnUrl, $orderCode, 'cancelled', 'cart'));
+            return redirect($this->buildMobileMomoReturnUrl($mobileReturnUrl, $orderCode, 'failed', 'cart'));
         }
 
         return redirect($frontendUrl . '/checkout/failed?order=' . $orderCode);
     }
 
+    private function verifyMomoCallbackSignature(Request $request): bool
+    {
+        $secretKey = (string) config('payment.momo.secret_key', '');
+        $accessKey = (string) config('payment.momo.access_key', '');
+        $signature = (string) $request->input('signature', '');
+
+        if ($secretKey === '' || $accessKey === '' || $signature === '') {
+            return false;
+        }
+
+        $rawHash = 'accessKey=' . $accessKey
+            . '&amount=' . (string) $request->input('amount', '')
+            . '&extraData=' . (string) $request->input('extraData', '')
+            . '&message=' . (string) $request->input('message', '')
+            . '&orderId=' . (string) $request->input('orderId', '')
+            . '&orderInfo=' . (string) $request->input('orderInfo', '')
+            . '&orderType=' . (string) $request->input('orderType', '')
+            . '&partnerCode=' . (string) $request->input('partnerCode', '')
+            . '&payType=' . (string) $request->input('payType', '')
+            . '&requestId=' . (string) $request->input('requestId', '')
+            . '&responseTime=' . (string) $request->input('responseTime', '')
+            . '&resultCode=' . (string) $request->input('resultCode', '')
+            . '&transId=' . (string) $request->input('transId', '');
+
+        $expectedSignature = hash_hmac('sha256', $rawHash, $secretKey);
+
+        return hash_equals($expectedSignature, $signature);
+    }
+
+    /**
+     * Server-to-server MoMo notification. This endpoint intentionally has no
+     * browser redirect: a valid notification is acknowledged with 204 after
+     * its idempotent settlement work completes.
+     */
+    public function momoIpn(Request $request)
+    {
+        $orderId = trim((string) $request->input('orderId', ''));
+        $orderCode = trim((string) (explode('_', $orderId, 2)[0] ?? ''));
+
+        $hasValidGatewaySignature = $this->verifyMomoCallbackSignature($request)
+            && (string) $request->input('partnerCode') === (string) config('payment.momo.partner_code')
+            && $orderId !== '';
+
+        if (! $hasValidGatewaySignature) {
+            Log::warning('MoMo IPN signature or partner validation failed.', [
+                'order_code' => $orderCode,
+                'result_code' => $request->input('resultCode'),
+            ]);
+
+            return response()->json(['message' => 'Invalid payment notification.'], 400);
+        }
+
+        $order = $orderCode !== '' ? Order::where('order_code', $orderCode)->first() : null;
+        $isValidOrder = $order
+            && str_starts_with($orderId, $orderCode . '_')
+            && (string) $request->input('orderInfo') === "Thanh toan don hang SORA {$orderCode}"
+            && is_numeric($request->input('amount'))
+            && (int) $request->input('amount') === (int) round($order->total_amount)
+            && $order->payment_method === 'momo'
+            && ! in_array($order->status, ['cancelled', 'returned'], true);
+
+        if (! $isValidOrder) {
+            Log::warning('MoMo IPN rejected because the order data is invalid.', [
+                'order_code' => $orderCode,
+                'result_code' => $request->input('resultCode'),
+            ]);
+
+            return response()->noContent(204);
+        }
+
+        try {
+            if ((int) $request->input('resultCode') === 0) {
+                $decodedExtraData = base64_decode((string) $request->input('extraData', ''), true);
+                $extraData = is_string($decodedExtraData) ? json_decode($decodedExtraData, true) : [];
+                $extraData = is_array($extraData) ? $extraData : [];
+                $cartId = isset($extraData['cart_id']) ? (int) $extraData['cart_id'] : null;
+                $paidOrder = $this->markOnlineOrderAsPaid($orderCode, 'momo', $orderId);
+
+                if (! $paidOrder) {
+                    Log::warning('MoMo IPN could not settle an otherwise valid order.', [
+                        'order_code' => $orderCode,
+                    ]);
+
+                    return response()->json(['message' => 'Order is no longer payable.'], 409);
+                }
+            } else {
+                $this->cancelOrderAndRestoreStock($orderCode, 'momo', $orderId);
+            }
+        } catch (\Throwable $e) {
+            report($e);
+            Log::error('MoMo IPN settlement failed.', ['order_code' => $orderCode]);
+
+            return response()->json(['message' => 'Temporary payment processing failure.'], 500);
+        }
+
+        return response()->noContent(204);
+    }
+
     public function vnpayReturn(Request $request)
     {
-        $hashSecret = env('VNPAY_HASH_SECRET');
+        $hashSecret = config('payment.vnpay.hash_secret');
         
-        // Fail closed: check secret is configured before proceeding
+        // thông báo lỗi nếu chưa cấu hình VNPAY_HASH_SECRET để tránh lỗi không rõ ràng
         if (empty($hashSecret)) {
             Log::error('VNPay callback failed: VNPAY_HASH_SECRET is not configured.');
-            $frontendUrl = rtrim(env('FRONTEND_URL', 'http://localhost:5173'), '/');
+            $frontendUrl = rtrim((string) config('payment.frontend_url', 'http://localhost:5173'), '/');
             return redirect($frontendUrl . '/checkout/failed?reason=config');
         }
         
@@ -942,26 +1264,39 @@ class ClientCheckoutController extends Controller
         $parts = explode('_', (string) $request->query('vnp_TxnRef', ''));
         $orderCode = $parts[0] ?? '';
         $isMobileCheckout = $request->query('source', 'web') === 'mobile';
-        $cartId = $request->query('cart_id') ? (int) $request->query('cart_id') : null;
         $mobileReturnUrl = $request->query('mobile_return_url');
-        $frontendUrl = rtrim(env('FRONTEND_URL', 'http://localhost:5173'), '/');
+        $frontendUrl = rtrim((string) config('payment.frontend_url', 'http://localhost:5173'), '/');
 
         $isPaid = hash_equals($calculatedHash, $secureHash)
+            && $request->query('vnp_TmnCode') === config('payment.vnpay.tmn_code')
             && $request->query('vnp_ResponseCode') === '00'
             && $request->query('vnp_TransactionStatus') === '00';
 
         if ($isPaid) {
-            $order = Order::with('items')->where('order_code', $orderCode)->first();
-            if ($order) {
-                $alreadyPaid = $order->payment_status === 'paid';
+            $order = Order::where('order_code', $orderCode)->first();
+            $expectedAmount = $order ? (int) round($order->total_amount * 100) : null;
+            if (!$order || $order->payment_method !== 'vnpay' || (int) $request->query('vnp_Amount') !== $expectedAmount) {
+                Log::warning('VNPay return rejected because the order or amount is invalid.', [
+                    'order_code' => $orderCode,
+                    'payment_method' => $order?->payment_method,
+                    'received_amount' => $request->query('vnp_Amount'),
+                    'expected_amount' => $expectedAmount,
+                ]);
 
-                if (!$alreadyPaid) {
-                    $order->payment_status = 'paid';
-                    $order->save();
-
-                    $this->clearCartAfterPaidOrder($order, $cartId);
-                    $this->queueOrderSuccessNotifications($order);
+                if ($isMobileCheckout) {
+                    return redirect($this->buildMobilePaymentReturnUrl($mobileReturnUrl, $orderCode, 'failed', 'cart'));
                 }
+
+                return redirect($frontendUrl . '/checkout/failed?order=' . $orderCode);
+            }
+
+            $paidOrder = $this->markOnlineOrderAsPaid($orderCode, 'vnpay', (string) $request->query('vnp_TxnRef', ''));
+            if (!$paidOrder) {
+                if ($isMobileCheckout) {
+                    return redirect($this->buildMobilePaymentReturnUrl($mobileReturnUrl, $orderCode, 'failed', 'cart'));
+                }
+
+                return redirect($frontendUrl . '/checkout/failed?order=' . $orderCode);
             }
 
             if ($isMobileCheckout) {
@@ -977,19 +1312,19 @@ class ClientCheckoutController extends Controller
                 'txn_ref' => $request->query('vnp_TxnRef'),
             ]);
             
-            // Do not cancel order on unverified callback to prevent abuse
+            // An unverified browser return must never mutate order state.
             if ($isMobileCheckout) {
-                return redirect($this->buildMobilePaymentReturnUrl($mobileReturnUrl, $orderCode, 'cancelled', 'cart'));
+                return redirect($this->buildMobilePaymentReturnUrl($mobileReturnUrl, $orderCode, 'failed', 'cart'));
             }
 
             return redirect($frontendUrl . '/checkout/failed?order=' . $orderCode);
         }
 
-        // Only cancel order after signature verification succeeds
-        $this->cancelOrderAndRestoreStock($orderCode);
+        // A gateway IPN is authoritative for failed/cancelled payments. Do
+        // not let a browser return race it and cancel a paid order.
 
         if ($isMobileCheckout) {
-            return redirect($this->buildMobilePaymentReturnUrl($mobileReturnUrl, $orderCode, 'cancelled', 'cart'));
+            return redirect($this->buildMobilePaymentReturnUrl($mobileReturnUrl, $orderCode, 'failed', 'cart'));
         }
 
         return redirect($frontendUrl . '/checkout/failed?order=' . $orderCode);
@@ -997,7 +1332,18 @@ class ClientCheckoutController extends Controller
 
     public function vnpayIpn(Request $request)
     {
-        $hashSecret = env('VNPAY_HASH_SECRET');
+        $hashSecret = (string) config('payment.vnpay.hash_secret', '');
+        $tmnCode = (string) config('payment.vnpay.tmn_code', '');
+
+        if ($hashSecret === '' || $tmnCode === '') {
+            Log::error('VNPay IPN rejected because payment credentials are not configured.');
+
+            return response()->json([
+                'RspCode' => '99',
+                'Message' => 'Payment configuration error',
+            ]);
+        }
+
         $secureHash = (string) $request->query('vnp_SecureHash', '');
         $inputData = collect($request->query())
             ->filter(fn ($value, $key) => str_starts_with($key, 'vnp_') && !in_array($key, ['vnp_SecureHash', 'vnp_SecureHashType'], true))
@@ -1005,7 +1351,7 @@ class ClientCheckoutController extends Controller
         ksort($inputData);
 
         $calculatedHash = hash_hmac('sha512', $this->buildVnpayHashData($inputData), $hashSecret);
-        if (!hash_equals($calculatedHash, $secureHash)) {
+        if ($request->query('vnp_TmnCode') !== $tmnCode || $secureHash === '' || !hash_equals($calculatedHash, $secureHash)) {
             return response()->json([
                 'RspCode' => '97',
                 'Message' => 'Invalid signature',
@@ -1023,6 +1369,27 @@ class ClientCheckoutController extends Controller
             ]);
         }
 
+        if ($order->payment_method !== 'vnpay') {
+            return response()->json([
+                'RspCode' => '02',
+                'Message' => 'Invalid payment method',
+            ]);
+        }
+
+        if ($order->payment_status === 'paid') {
+            return response()->json([
+                'RspCode' => '02',
+                'Message' => 'Order already confirmed',
+            ]);
+        }
+
+        if ($order->status !== 'pending' || $order->payment_status !== 'unpaid') {
+            return response()->json([
+                'RspCode' => '02',
+                'Message' => 'Order is no longer payable',
+            ]);
+        }
+
         $expectedAmount = (int) round($order->total_amount * 100);
         if ((int) $request->query('vnp_Amount') !== $expectedAmount) {
             return response()->json([
@@ -1031,8 +1398,26 @@ class ClientCheckoutController extends Controller
             ]);
         }
 
-        if ($request->query('vnp_ResponseCode') === '00' && $request->query('vnp_TransactionStatus') === '00') {
-            $this->markOnlineOrderAsPaid($orderCode);
+        try {
+            if ($request->query('vnp_ResponseCode') === '00' && $request->query('vnp_TransactionStatus') === '00') {
+                $paidOrder = $this->markOnlineOrderAsPaid($orderCode, 'vnpay', (string) $request->query('vnp_TxnRef', ''));
+                if (! $paidOrder) {
+                    return response()->json([
+                        'RspCode' => '02',
+                        'Message' => 'Order is no longer payable',
+                    ]);
+                }
+            } else {
+                $this->cancelOrderAndRestoreStock($orderCode, 'vnpay', (string) $request->query('vnp_TxnRef', ''));
+            }
+        } catch (\Throwable $e) {
+            report($e);
+            Log::error('VNPay IPN settlement failed.', ['order_code' => $orderCode]);
+
+            return response()->json([
+                'RspCode' => '99',
+                'Message' => 'Temporary processing error',
+            ]);
         }
 
         return response()->json([
@@ -1065,7 +1450,7 @@ class ClientCheckoutController extends Controller
 
         $returnUrl = trim($returnUrl);
         $scheme = strtolower((string) parse_url($returnUrl, PHP_URL_SCHEME));
-        $allowedSchemes = collect(explode(',', (string) env('MOBILE_APP_ALLOWED_SCHEMES', 'sora,exp,exps')))
+        $allowedSchemes = collect(config('payment.mobile_allowed_schemes', []))
             ->map(fn ($item) => strtolower(trim($item)))
             ->filter()
             ->values()
@@ -1078,12 +1463,59 @@ class ClientCheckoutController extends Controller
         return $returnUrl;
     }
 
-    private function markOnlineOrderAsPaid(string $orderCode): ?Order
+    private function markOnlineOrderAsPaid(string $orderCode, string $expectedPaymentMethod, string $merchantReference): ?Order
     {
-        return DB::transaction(function () use ($orderCode) {
+        return DB::transaction(function () use ($orderCode, $expectedPaymentMethod, $merchantReference) {
             $order = Order::with('items')->where('order_code', $orderCode)->lockForUpdate()->first();
             if (!$order) {
                 return null;
+            }
+
+            if ($order->payment_method !== $expectedPaymentMethod) {
+                Log::warning('Payment callback method does not match the order.', [
+                    'order_code' => $orderCode,
+                    'expected_payment_method' => $expectedPaymentMethod,
+                    'actual_payment_method' => $order->payment_method,
+                ]);
+
+                return null;
+            }
+
+            $attempt = PaymentAttempt::where('merchant_reference', $merchantReference)
+                ->where('gateway', $expectedPaymentMethod)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $attempt || (int) $attempt->order_id !== (int) $order->id) {
+                Log::warning('Payment callback does not match a known payment attempt.', [
+                    'order_code' => $orderCode,
+                    'gateway' => $expectedPaymentMethod,
+                ]);
+
+                return null;
+            }
+
+            if ($attempt->status === 'succeeded' && $order->payment_status === 'paid') {
+                return $order;
+            }
+
+            if (! in_array($attempt->status, ['pending', 'superseded'], true)) {
+                Log::warning('Ignoring a non-active payment attempt callback.', [
+                    'order_code' => $orderCode,
+                    'gateway' => $expectedPaymentMethod,
+                    'attempt_status' => $attempt->status,
+                ]);
+
+                return null;
+            }
+
+            if ($order->payment_status === 'paid') {
+                $attempt->update([
+                    'status' => 'succeeded',
+                    'completed_at' => now(),
+                ]);
+
+                return $order;
             }
 
             if (in_array($order->status, ['cancelled', 'returned'], true)) {
@@ -1093,14 +1525,25 @@ class ClientCheckoutController extends Controller
                     'payment_status' => $order->payment_status,
                 ]);
 
-                return $order;
+                return null;
             }
 
             if ($order->payment_status !== 'paid') {
                 $order->payment_status = 'paid';
                 $order->save();
 
-                $this->clearCartAfterPaidOrder($order);
+                $attempt->update([
+                    'status' => 'succeeded',
+                    'completed_at' => now(),
+                ]);
+
+                PaymentAttempt::where('order_id', $order->id)
+                    ->where('gateway', $expectedPaymentMethod)
+                    ->where('status', 'pending')
+                    ->where('id', '!=', $attempt->id)
+                    ->update(['status' => 'superseded']);
+
+                $this->clearCartAfterPaidOrder($order, $attempt->cart_snapshot);
                 $this->queueOrderSuccessNotifications($order);
             }
 
@@ -1108,35 +1551,76 @@ class ClientCheckoutController extends Controller
         });
     }
 
-    private function clearCartAfterPaidOrder(Order $order, ?int $cartId = null): void
+    private function clearCartAfterPaidOrder(Order $order, ?array $snapshot): void
     {
-        $cart = $cartId ? Cart::find($cartId) : null;
-
-        if (!$cart && $order->user_id) {
-            $cart = Cart::where('user_id', $order->user_id)->first();
+        if (! $order->user_id || ! is_array($snapshot) || empty($snapshot['cart_id']) || empty($snapshot['items'])) {
+            return;
         }
 
-        if ($cart) {
-            $cart->items()->delete();
+        $cart = Cart::whereKey((int) $snapshot['cart_id'])
+            ->where('user_id', $order->user_id)
+            ->lockForUpdate()
+            ->first();
+
+        if (! $cart) {
+            return;
+        }
+
+        $cartItems = \App\Models\CartItem::where('cart_id', $cart->id)->lockForUpdate()->get()->keyBy('id');
+
+        foreach ($snapshot['items'] as $snapshotItem) {
+            $cartItem = $cartItems->get((int) ($snapshotItem['id'] ?? 0));
+
+            if (! $cartItem) {
+                continue;
+            }
+
+            if ((int) $cartItem->product_variant_id !== (int) ($snapshotItem['product_variant_id'] ?? 0)
+                || (int) $cartItem->combo_id !== (int) ($snapshotItem['combo_id'] ?? 0)
+                || $cartItem->combo_selections != ($snapshotItem['combo_selections'] ?? null)) {
+                continue;
+            }
+
+            $remainingQuantity = (int) $cartItem->quantity - (int) ($snapshotItem['quantity'] ?? 0);
+            if ($remainingQuantity > 0) {
+                $cartItem->update(['quantity' => $remainingQuantity]);
+                continue;
+            }
+
+            $cartItem->delete();
+            $cartItems->forget((int) $cartItem->id);
+        }
+
+        if ($cartItems->isEmpty()) {
             $cart->delete();
         }
     }
 
     private function queueOrderSuccessNotifications(Order $order): void
     {
-        SendOrderSuccessNotificationsJob::dispatch($order->id);
+        SendOrderSuccessNotificationsJob::dispatch($order->id)->afterCommit();
     }
 
-    private function cancelOrderAndRestoreStock($orderCode)
+    private function cancelOrderAndRestoreStock(string $orderCode, string $gateway, string $merchantReference): void
     {
-        DB::transaction(function () use ($orderCode) {
+        DB::transaction(function () use ($orderCode, $gateway, $merchantReference) {
             $order = Order::with('items')->where('order_code', $orderCode)->lockForUpdate()->first();
 
-            if (!$order || $order->status === 'cancelled') {
+            $attempt = PaymentAttempt::where('merchant_reference', $merchantReference)
+                ->where('gateway', $gateway)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $attempt || ! $order || (int) $attempt->order_id !== (int) $order->id || $attempt->status !== 'pending') {
+                return;
+            }
+
+            if ($order->status === 'cancelled') {
                 return; // Idempotent check
             }
 
             if ($order->status === 'pending' && $order->payment_status === 'unpaid') {
+                $attempt->update(['status' => 'failed']);
                 $order->update(['status' => 'cancelled', 'payment_status' => 'failed']);
 
                 TierServiceUsage::where('order_id', $order->id)

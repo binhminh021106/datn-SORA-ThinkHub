@@ -91,12 +91,6 @@ class ClientProfileUpdateRequest extends FormRequest
                     }
                 }
 
-                \Illuminate\Support\Facades\Log::info('ClientProfileUpdateRequest - Validating phone', [
-                    'phone' => $this->phone,
-                    'auth_sanctum_id' => $userId,
-                    'auth_header' => $this->header('Authorization')
-                ]);
-
                 $exists = \App\Models\User::where('phone', $this->phone)
                     ->when($userId, fn($q) => $q->where('id', '!=', $userId))
                     ->exists();

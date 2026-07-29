@@ -18,23 +18,26 @@ class UserStoreCartItemRequest extends FormRequest
         return [
             // Bắt buộc phải có 1 trong 2: hoặc là sản phẩm lẻ, hoặc là combo
             'product_variant_id' => [
-                'required_without:combo_id',
-                'nullable',
+                'required',
+                'integer',
                 'exists:product_variants,id,deleted_at,NULL' 
             ],
             'combo_id' => [
+                'prohibited',
                 'required_without:product_variant_id',
                 'nullable',
                 'exists:combos,id,deleted_at,NULL'
             ],
             'combo_selections' => [
+                'prohibited',
                 'nullable',
                 'array'
             ],
             'quantity' => [
                 'required',
                 'integer',
-                'min:1'
+                'min:1',
+                'max:100'
             ],
         ];
     }

@@ -9,6 +9,7 @@ use App\Models\Coupon;
 use App\Services\EmailCampaignService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class EmailCampaignController extends Controller
 {
@@ -150,8 +151,13 @@ public function settings()
         ]);
     }
 
-public function triggerBirthday()
+    public function triggerBirthday()
     {
+        $lock = Cache::lock('email_campaign:birthday', 3600);
+        if (!$lock->get()) {
+            return response()->json(['success' => false, 'message' => 'Campaign sinh nhật đang được xử lý.'], 429);
+        }
+
         try {
             // Truyền tham số để bỏ qua check AutoSetting nhưng BẬT check chống trùng lặp
             return response()->json($this->emailCampaignService->sendBirthdayCampaign(
@@ -165,11 +171,18 @@ public function triggerBirthday()
                 'success' => false,
                 'message' => 'Loi Server: ' . $e->getMessage() . ' (Dong ' . $e->getLine() . ')',
             ]);
+        } finally {
+            $lock->release();
         }
     }
 
     public function triggerHoliday()
     {
+        $lock = Cache::lock('email_campaign:holiday', 3600);
+        if (!$lock->get()) {
+            return response()->json(['success' => false, 'message' => 'Campaign ngày lễ đang được xử lý.'], 429);
+        }
+
         try {
             // Bật cờ preventDuplicateSends thành true khi trigger bằng tay
             return response()->json($this->emailCampaignService->sendHolidayCampaign(preventDuplicateSends: true));
@@ -180,6 +193,8 @@ public function triggerBirthday()
                 'success' => false,
                 'message' => 'Loi Server: ' . $e->getMessage() . ' (Dong ' . $e->getLine() . ')',
             ]);
+        } finally {
+            $lock->release();
         }
     }
 

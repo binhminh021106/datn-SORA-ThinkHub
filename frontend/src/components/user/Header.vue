@@ -288,6 +288,7 @@ import { cartItemCount } from '@/stores/cartStore';
 import { API_BASE_URL, getStorageUrl } from '@/utils/env';
 import { useSettingsStore } from '@/stores/settingsStore';
 import defaultLogoUrl from '@/assets/images/logo1.png';
+import { escapeHtml } from '@/utils/sanitizeHtml';
 
 const props = defineProps({
   previewData: {
@@ -359,10 +360,9 @@ const handleScroll = () => {
   if (props.previewData) return; // Không xử lý cuộn khi ở chế độ Preview
   const currentScrollY = window.scrollY;
 
-  if (currentScrollY > 10) {
-    isScrolled.value = true;
-  } else if (currentScrollY <= 10) {
-    isScrolled.value = false;
+  const shouldShrink = currentScrollY > 0;
+  if (isScrolled.value !== shouldShrink) {
+    isScrolled.value = shouldShrink;
   }
 
   if (currentScrollY > 80) {
@@ -425,8 +425,20 @@ const handleLogoError = (e) => {
 };
 const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
 const highlightText = (text) => {
-  if (!searchQuery.value) return text;
-  return text.replace(new RegExp(`(${searchQuery.value})`, 'gi'), '<mark class="text-primary-custom bg-transparent p-0">$1</mark>');
+  const source = String(text || '');
+  const query = String(searchQuery.value || '').trim();
+  if (!query) return escapeHtml(source);
+
+  const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const matcher = new RegExp(`(${escapedQuery})`, 'ig');
+  const normalizedQuery = query.toLocaleLowerCase();
+
+  return source
+    .split(matcher)
+    .map((part) => part.toLocaleLowerCase() === normalizedQuery
+      ? `<mark class="text-primary-custom bg-transparent p-0">${escapeHtml(part)}</mark>`
+      : escapeHtml(part))
+    .join('');
 };
 
 const getHeaders = () => {
@@ -594,6 +606,7 @@ onMounted(() => {
 
   document.addEventListener('click', handleClickOutside);
   if (!props.previewData) {
+    handleScroll();
     window.addEventListener('scroll', handleScroll, { passive: true });
   }
   window.addEventListener('update-cart-count', handleCartUpdateEvent);

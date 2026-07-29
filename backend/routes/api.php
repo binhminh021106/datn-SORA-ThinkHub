@@ -65,7 +65,7 @@ use App\Http\Controllers\Api\Admin\EmailCampaignController;
 
 
 
-Route::middleware(['auth:sanctum', 'ability:access'])->prefix('admin')->group(function () {
+Route::middleware(['auth:sanctum', 'ability:access', 'admin.user', 'throttle:admin-api'])->prefix('admin')->group(function () {
     
     // SETTINGS API
     Route::middleware(['check.module:admin_settings'])->group(function () {
@@ -86,11 +86,11 @@ Route::middleware(['auth:sanctum', 'ability:access'])->prefix('admin')->group(fu
         // Xử lý gửi & Lịch sử
         Route::prefix('email-campaign')->group(function () {
             Route::get('/settings', [EmailCampaignController::class, 'settings']);
-            Route::post('/settings', [EmailCampaignController::class, 'updateSettings']);
-            Route::post('/trigger-birthday', [EmailCampaignController::class, 'triggerBirthday']);
-            Route::post('/trigger-holiday', [EmailCampaignController::class, 'triggerHoliday']);
+            Route::post('/settings', [EmailCampaignController::class, 'updateSettings'])->middleware('throttle:email-campaign');
+            Route::post('/trigger-birthday', [EmailCampaignController::class, 'triggerBirthday'])->middleware('throttle:email-campaign');
+            Route::post('/trigger-holiday', [EmailCampaignController::class, 'triggerHoliday'])->middleware('throttle:email-campaign');
             Route::get('/recent-logs', [EmailCampaignController::class, 'recentLogs']);
-            Route::delete('/recent-logs', [EmailCampaignController::class, 'clearLogs']);
+            Route::delete('/recent-logs', [EmailCampaignController::class, 'clearLogs'])->middleware('throttle:email-campaign');
         });
         
     });
@@ -98,7 +98,7 @@ Route::middleware(['auth:sanctum', 'ability:access'])->prefix('admin')->group(fu
 });
 
 
-Route::prefix('news')->group(function () {
+Route::prefix('news')->middleware('throttle:public-read')->group(function () {
     Route::get('/', [ClientNewController::class, 'index']);
     Route::get('/popular', [ClientNewController::class, 'popular']);
     Route::get('/{slug}', [ClientNewController::class, 'show']);
@@ -107,15 +107,15 @@ Route::prefix('news')->group(function () {
 
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:auth');
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:auth');
-Route::middleware(['extract.cookie:refresh_token', 'auth:sanctum', 'ability:refresh'])->group(function () {
-    Route::post('/refresh-token', [AuthController::class, 'refresh']);
+Route::middleware(['extract.cookie:refresh_token', 'auth:sanctum', 'ability:refresh', 'client.user', 'throttle:client-api'])->group(function () {
+    Route::post('/refresh-token', [AuthController::class, 'refresh'])->middleware('throttle:refresh-token');
 });
-Route::middleware(['auth:sanctum', 'ability:access'])->group(function () {
+Route::middleware(['auth:sanctum', 'ability:access', 'client.user', 'throttle:client-api'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 });
 Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect']);
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback']);
-Route::post('/auth/google/exchange', [GoogleAuthController::class, 'exchange']);
+Route::post('/auth/google/exchange', [GoogleAuthController::class, 'exchange'])->middleware('throttle:google-auth');
 
 // ── MOBILE APP AUTH ROUTES ─────────────────────────────────────────────────────
 use App\Http\Controllers\Api\Auth\MobileAuthController;
@@ -123,10 +123,10 @@ use App\Http\Controllers\Api\Auth\MobileAuthController;
 Route::prefix('mobile')->group(function () {
     Route::post('/register', [MobileAuthController::class, 'register'])->middleware('throttle:auth');
     Route::post('/login',    [MobileAuthController::class, 'login'])->middleware('throttle:auth');
-    Route::post('/google-login', [MobileAuthController::class, 'googleLogin']);
+    Route::post('/google-login', [MobileAuthController::class, 'googleLogin'])->middleware('throttle:google-auth');
 
     // Routes cần xác thực
-    Route::middleware(['auth:sanctum', 'ability:access'])->group(function () {
+    Route::middleware(['auth:sanctum', 'ability:access', 'client.user', 'throttle:client-api'])->group(function () {
         Route::post('/logout', [MobileAuthController::class, 'logout']);
         Route::get('/me',      [MobileAuthController::class, 'me']);
     });
@@ -135,34 +135,34 @@ Route::prefix('mobile')->group(function () {
 
 // CLIENT API ROUTES
 Route::prefix('client')->group(function () {
-    Route::get('/settings', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'index']);
+    Route::get('/settings', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'publicIndex'])->middleware('throttle:public-read');
     // BỔ SUNG: AUTH & FORGOT PASSWORD (Client)
     Route::prefix('forgot-password')->group(function () {
         Route::post('/send-otp', [\App\Http\Controllers\Api\Auth\UserForgotPasswordController::class, 'sendOtp'])->middleware('throttle:forgot-password');
-        Route::post('/verify-otp', [\App\Http\Controllers\Api\Auth\UserForgotPasswordController::class, 'verifyOtp']);
-        Route::post('/reset', [\App\Http\Controllers\Api\Auth\UserForgotPasswordController::class, 'resetPassword']);
+        Route::post('/verify-otp', [\App\Http\Controllers\Api\Auth\UserForgotPasswordController::class, 'verifyOtp'])->middleware('throttle:otp-verify');
+        Route::post('/reset', [\App\Http\Controllers\Api\Auth\UserForgotPasswordController::class, 'resetPassword'])->middleware('throttle:otp-verify');
     });
 
 
     // THÊM VÀO ĐÂY (trước hoặc sau các route khác đều được)
-    Route::middleware(['auth:sanctum', 'ability:access'])->prefix('messages')->group(function () {
-        Route::get('/', [MessageController::class, 'history']);
-        Route::post('/', [MessageController::class, 'store']);
+    Route::middleware(['auth:sanctum', 'ability:access', 'client.user', 'throttle:client-api'])->prefix('messages')->group(function () {
+        Route::get('/', [MessageController::class, 'history'])->middleware('throttle:direct-chat-read');
+        Route::post('/', [MessageController::class, 'store'])->middleware('throttle:direct-chat-write');
     });
 
-    Route::prefix('geo')->group(function () {
+    Route::prefix('geo')->middleware('throttle:geo')->group(function () {
         Route::get('autocomplete', [GeoController::class, 'autocomplete']);
         Route::get('reverse', [GeoController::class, 'reverse']);
         Route::get('geocode', [GeoController::class, 'geocode']);
     });
 
-    Route::get('header-data', [ClientHeaderController::class, 'getMegaMenuData']);
-    Route::get('search', [ClientHeaderController::class, 'search']);
-    Route::get('/home-data', [ClientHomeController::class, 'index']);
-    Route::get('/recommendations/personalized', [ClientRecommendationController::class, 'personalized']);
+    Route::get('header-data', [ClientHeaderController::class, 'getMegaMenuData'])->middleware('throttle:public-read');
+    Route::get('search', [ClientHeaderController::class, 'search'])->middleware('throttle:public-read');
+    Route::get('/home-data', [ClientHomeController::class, 'index'])->middleware('throttle:public-read');
+    Route::get('/recommendations/personalized', [ClientRecommendationController::class, 'personalized'])->middleware('throttle:public-read');
 
     // API Lấy Bảng Giá Vàng (Thêm mới)
-    Route::get('/gold-prices', [ClientHomeController::class, 'goldPrices']);
+    Route::get('/gold-prices', [ClientHomeController::class, 'goldPrices'])->middleware('throttle:public-read');
 
     Route::post('/chatbot', [ChatbotController::class, 'chat'])->middleware('throttle:chatbot');
 
@@ -170,105 +170,115 @@ Route::prefix('client')->group(function () {
 
     // MODULE GIỎ HÀNG (Cart)
     Route::controller(ClientCartController::class)->prefix('cart')->group(function () {
+        Route::get('/', 'index')->middleware('throttle:cart-read');
+
+        Route::middleware(['cart.mutation.lock', 'throttle:cart-mutation'])->group(function () {
         Route::post('/add-combo', 'addCombo');
         Route::post('/merge', 'mergeCart');
         Route::post('/clear', 'clear');
         Route::post('/apply-birthday-coupon', 'applyBirthdayCoupon'); // Thêm route này
 
-        Route::get('/', 'index');
         Route::post('/', 'store');
 
         Route::put('/{cartItem}', 'update');
         Route::delete('/{cartItem}', 'destroy');
+        });
     });
 
     // Danh sách yêu thích (Favourites)
     Route::prefix('favourites')->group(function () {
-        Route::get('/', [ClientFavouriteController::class, 'index']);
-        Route::post('/toggle', [ClientFavouriteController::class, 'toggle']);
-        Route::get('/check/{productId}', [ClientFavouriteController::class, 'check']);
+        Route::get('/', [ClientFavouriteController::class, 'index'])->middleware('throttle:public-read');
+        Route::post('/toggle', [ClientFavouriteController::class, 'toggle'])->middleware('throttle:client-mutation');
+        Route::get('/check/{productId}', [ClientFavouriteController::class, 'check'])->middleware('throttle:public-read');
     });
 
-    Route::middleware(['auth:sanctum', 'ability:access'])->prefix('saved-coupons')->group(function () {
+    Route::middleware(['auth:sanctum', 'ability:access', 'client.user', 'throttle:client-api'])->prefix('saved-coupons')->group(function () {
         Route::get('/', [ClientSavedCouponController::class, 'index']);
-        Route::post('/', [ClientSavedCouponController::class, 'store']);
-        Route::delete('/{id}', [ClientSavedCouponController::class, 'destroy']);
+        Route::post('/', [ClientSavedCouponController::class, 'store'])->middleware('throttle:client-mutation');
+        Route::delete('/{id}', [ClientSavedCouponController::class, 'destroy'])->middleware('throttle:client-mutation');
     });
 
     // Hồ Sơ Cá Nhân (Profile)
-    Route::middleware(['auth:sanctum', 'ability:access'])->prefix('push-tokens')->group(function () {
-        Route::post('/', [ClientPushTokenController::class, 'store']);
-        Route::delete('/', [ClientPushTokenController::class, 'destroy']);
+    Route::middleware(['auth:sanctum', 'ability:access', 'client.user', 'throttle:client-api'])->prefix('push-tokens')->group(function () {
+        Route::post('/', [ClientPushTokenController::class, 'store'])->middleware('throttle:client-mutation');
+        Route::delete('/', [ClientPushTokenController::class, 'destroy'])->middleware('throttle:client-mutation');
     });
 
-    Route::middleware(['auth:sanctum', 'ability:access'])->prefix('notifications')->group(function () {
+    Route::middleware(['auth:sanctum', 'ability:access', 'client.user', 'throttle:client-api'])->prefix('notifications')->group(function () {
         Route::get('/', [ClientNotificationController::class, 'index']);
-        Route::put('/read-all', [ClientNotificationController::class, 'markAllAsRead']);
-        Route::put('/{id}/read', [ClientNotificationController::class, 'markAsRead']);
-        Route::delete('/read', [ClientNotificationController::class, 'destroyRead']);
-        Route::delete('/{id}', [ClientNotificationController::class, 'destroy']);
+        Route::put('/read-all', [ClientNotificationController::class, 'markAllAsRead'])->middleware('throttle:client-mutation');
+        Route::put('/{id}/read', [ClientNotificationController::class, 'markAsRead'])->middleware('throttle:client-mutation');
+        Route::delete('/read', [ClientNotificationController::class, 'destroyRead'])->middleware('throttle:client-mutation');
+        Route::delete('/{id}', [ClientNotificationController::class, 'destroy'])->middleware('throttle:client-mutation');
     });
 
-    Route::prefix('profile')->middleware(['auth:sanctum', 'ability:access'])->group(function () {
+    Route::prefix('profile')->middleware(['auth:sanctum', 'ability:access', 'client.user', 'throttle:client-api'])->group(function () {
         Route::get('/', [ClientProfileController::class, 'show']);
-        Route::post('/', [ClientProfileController::class, 'update']);
-        Route::post('/password', [ClientProfileController::class, 'updatePassword']);
+        Route::post('/', [ClientProfileController::class, 'update'])->middleware('throttle:client-mutation');
+        Route::post('/password', [ClientProfileController::class, 'updatePassword'])->middleware('throttle:sensitive-mutation');
 
         // Sổ Địa Chỉ (Address Book)
         Route::get('/addresses', [ClientProfileController::class, 'getAddresses']);
-        Route::post('/addresses', [ClientProfileController::class, 'storeAddress']);
-        Route::put('/addresses/{id}', [ClientProfileController::class, 'updateAddress']);
-        Route::delete('/addresses/{id}', [ClientProfileController::class, 'deleteAddress']);
-        Route::put('/addresses/{id}/default', [ClientProfileController::class, 'setDefaultAddress']);
+        Route::post('/addresses', [ClientProfileController::class, 'storeAddress'])->middleware('throttle:client-mutation');
+        Route::put('/addresses/{id}', [ClientProfileController::class, 'updateAddress'])->middleware('throttle:client-mutation');
+        Route::delete('/addresses/{id}', [ClientProfileController::class, 'deleteAddress'])->middleware('throttle:client-mutation');
+        Route::put('/addresses/{id}/default', [ClientProfileController::class, 'setDefaultAddress'])->middleware('throttle:client-mutation');
     });
 
     // MODULE ĐƠN HÀNG (Orders)
     Route::controller(ClientOrderController::class)->prefix('orders')->group(function () {
-        Route::get('/', 'index');
-        Route::post('/', 'store')->middleware('throttle:checkout');
-        Route::get('/{order_code}/status', 'status');
-        Route::get('/{order_code}', 'show');
-        Route::put('/{order_code}', 'update');
+        Route::get('/', 'index')->middleware(['auth:sanctum', 'ability:access', 'client.user', 'throttle:cart-read']);
+        // Keep the legacy URL as a compatibility alias, but route it through
+        // the single hardened checkout implementation instead of a second flow.
+        Route::post('/', [ClientCheckoutController::class, 'processCheckout'])
+            ->middleware(['auth:sanctum', 'ability:access', 'client.user', 'cart.mutation.lock', 'throttle:checkout']);
+        Route::get('/{order_code}/status', 'status')->middleware('throttle:30,1');
+        Route::get('/{order_code}', 'show')->middleware('throttle:30,1');
+        Route::put('/{order_code}', 'update')->middleware('throttle:10,1');
         Route::post('/{order_code}/review', 'review')->middleware('throttle:review');
-        Route::get('/{order_code}/review', 'getReview');
-        Route::post('/{order_code}/reorder', 'reorder');
+        Route::get('/{order_code}/review', 'getReview')->middleware('throttle:30,1');
+        Route::post('/{order_code}/reorder', 'reorder')->middleware(['auth:sanctum', 'ability:access', 'client.user', 'cart.mutation.lock', 'throttle:cart-mutation']);
         
-        Route::middleware(['auth:sanctum', 'ability:access'])->group(function () {
-            Route::post('/{order_code}/return', 'requestReturn');
-            Route::post('/{order_code}/return/confirm', 'confirmRefundProposal');
+        Route::middleware(['auth:sanctum', 'ability:access', 'client.user', 'throttle:client-api'])->group(function () {
+            Route::post('/{order_code}/return', 'requestReturn')->middleware('throttle:return-request');
+            Route::post('/{order_code}/return/confirm', 'confirmRefundProposal')->middleware('throttle:return-request');
         });
     });
 
-    Route::controller(ClientComboController::class)->prefix('combos')->group(function () {
+    Route::controller(ClientComboController::class)->prefix('combos')->middleware('throttle:public-read')->group(function () {
         Route::get('/', 'index');
         Route::get('/{slug}', 'show');
     });
 
     // ROUTE PAYMENT
     Route::prefix('checkout')->group(function () {
-        Route::get('/init', [ClientCheckoutController::class, 'initData']);
-        Route::post('/', [ClientCheckoutController::class, 'processCheckout'])->middleware('throttle:checkout');
-        Route::post('/orders/{order_code}/momo-retry', [ClientCheckoutController::class, 'retryMomoPayment']);
-        Route::post('/orders/{order_code}/vnpay-retry', [ClientCheckoutController::class, 'retryVnpayPayment']);
+        Route::get('/init', [ClientCheckoutController::class, 'initData'])->middleware('throttle:cart-read');
+        Route::post('/', [ClientCheckoutController::class, 'processCheckout'])->middleware(['auth:sanctum', 'ability:access', 'client.user', 'cart.mutation.lock', 'throttle:checkout']);
+        Route::post('/orders/{order_code}/momo-retry', [ClientCheckoutController::class, 'retryMomoPayment'])->middleware(['auth:sanctum', 'ability:access', 'client.user', 'throttle:payment-retry']);
+        Route::post('/orders/{order_code}/vnpay-retry', [ClientCheckoutController::class, 'retryVnpayPayment'])->middleware(['auth:sanctum', 'ability:access', 'client.user', 'throttle:payment-retry']);
         Route::get('/momo-return', [ClientCheckoutController::class, 'momoReturn']);
-        Route::post('/momo-return', [ClientCheckoutController::class, 'momoReturn']);
+        // Keep POST /momo-return as a compatibility alias for links issued
+        // before the dedicated IPN endpoint was introduced.
+        Route::post('/momo-return', [ClientCheckoutController::class, 'momoIpn']);
+        Route::post('/momo-ipn', [ClientCheckoutController::class, 'momoIpn']);
         Route::get('/vnpay-return', [ClientCheckoutController::class, 'vnpayReturn']);
         Route::get('/vnpay-ipn', [ClientCheckoutController::class, 'vnpayIpn']);
     });
     Route::get('orders/{order_code}/invoice', [ClientOrderController::class, 'invoice'])
+        ->middleware('throttle:10,1')
         ->name('client.orders.invoice');
 
     // CHƯƠNG TRÌNH ĐỐI TÁC (AFFILIATE)
-    Route::middleware(['auth:sanctum', 'ability:access'])->prefix('affiliate')->group(function () {
+    Route::middleware(['auth:sanctum', 'ability:access', 'client.user', 'throttle:client-api'])->prefix('affiliate')->group(function () {
         Route::get('/status', [ClientAffiliateController::class, 'status']);
         Route::post('/apply', [ClientAffiliateController::class, 'apply'])->middleware('throttle:affiliate');
     
-        Route::post('/withdraw', [ClientAffiliateController::class, 'withdraw']); 
+        Route::post('/withdraw', [ClientAffiliateController::class, 'withdraw'])->middleware('throttle:withdrawal'); 
     });
 });
 
 // ROUTE SHOP CLIENT
-Route::prefix('shop/{shop_slug}')->group(function () {
+Route::prefix('shop/{shop_slug}')->middleware('throttle:public-read')->group(function () {
     Route::get('/info', [ShopController::class, 'shopInfo']);
     Route::get('/products', [ShopController::class, 'index']);
     Route::get('/products/featured', [ShopController::class, 'featured']);
@@ -276,36 +286,35 @@ Route::prefix('shop/{shop_slug}')->group(function () {
     Route::get('/products/{slug}', [ProductDetailController::class, 'show']);
     Route::post('/compare', [ClientCompareController::class, 'getCompareData']);
 });
-Route::get('shop/{shop_slug}/categories', [ShopController::class, 'categories']);
-Route::get('shop/{shop_slug}/colors', [ShopController::class, 'colors']);
-Route::get('shop/{shop_slug}/attributes', [ShopController::class, 'attributes']);
+Route::get('shop/{shop_slug}/categories', [ShopController::class, 'categories'])->middleware('throttle:public-read');
+Route::get('shop/{shop_slug}/colors', [ShopController::class, 'colors'])->middleware('throttle:public-read');
+Route::get('shop/{shop_slug}/attributes', [ShopController::class, 'attributes'])->middleware('throttle:public-read');
 
 Route::get('/user', function (Request $request) {
     return $request->user();
-})->middleware(['auth:sanctum', 'ability:access']);
+})->middleware(['auth:sanctum', 'ability:access', 'client.user']);
 
 // ADMIN API ROUTES
 Route::prefix('admin')->group(function () {
 
     Route::controller(AdminAccountController::class)->middleware('throttle:auth')->group(function () {
         Route::post('login', 'login');
-        Route::post('register', 'store');
     });
 
-    Route::middleware(['extract.cookie:admin_refresh_token', 'auth:sanctum', 'ability:refresh'])->group(function () {
+    Route::middleware(['extract.cookie:admin_refresh_token', 'auth:sanctum', 'ability:refresh', 'admin.user', 'throttle:admin-api'])->group(function () {
         Route::post('refresh-token', [AdminAccountController::class, 'refresh']);
     });
-    Route::middleware(['auth:sanctum', 'ability:access'])->group(function () {
+    Route::middleware(['auth:sanctum', 'ability:access', 'admin.user', 'throttle:admin-api'])->group(function () {
         Route::post('logout', [AdminAccountController::class, 'logout']);
     });
 
     Route::prefix('forgot-password')->controller(AdminForgotPasswordController::class)->group(function () {
-        Route::post('/send-otp', 'sendOtp')->middleware('throttle:forgot-password');
-        Route::post('/verify-otp', 'verifyOtp');
-        Route::post('/reset', 'resetPassword');
+        Route::post('/send-otp', 'sendOtp')->middleware('throttle:admin-forgot-password');
+        Route::post('/verify-otp', 'verifyOtp')->middleware('throttle:admin-otp-verify');
+        Route::post('/reset', 'resetPassword')->middleware('throttle:admin-otp-verify');
     });
 
-    Route::middleware(['auth:sanctum', 'ability:access'])->group(function () {
+    Route::middleware(['auth:sanctum', 'ability:access', 'admin.user', 'throttle:admin-api'])->group(function () {
 
         // Lấy thông tin admin hiện tại
         Route::get('me', [AdminAccountController::class, 'me']);

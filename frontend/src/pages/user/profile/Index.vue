@@ -1,6 +1,8 @@
 <template>
   <div>
-          <SoraListSkeleton v-if="isLoading" :rows="4" :image="false" card />
+          <ProfileFormSkeleton v-if="isLoading && activeTab === 'profile'" />
+          <AddressBookSkeleton v-else-if="isLoading && activeTab === 'address'" />
+          <AffiliateTabSkeleton v-else-if="isLoading && activeTab === 'affiliate'" />
           
           <div v-else-if="!isLoggedIn" class="alert alert-warning m-4 bg-light-custom border-main text-main p-4 text-center rounded-0 font-inter shadow-sm">
             <i class="bi bi-exclamation-triangle-fill fs-3 mb-2 d-block"></i>
@@ -43,7 +45,9 @@ import ProfileForm from './components/ProfileForm.vue';
 import PasswordForm from './components/PasswordForm.vue';
 import AddressBook from './components/AddressBook.vue';
 import AffiliateTab from './components/AffiliateTab.vue';
-import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
+import ProfileFormSkeleton from './components/ProfileFormSkeleton.vue';
+import AddressBookSkeleton from './components/AddressBookSkeleton.vue';
+import AffiliateTabSkeleton from './components/AffiliateTabSkeleton.vue';
 import { getStorageUrl } from '@/utils/env';
 import clientApiClient from '@/utils/clientApiClient';
 import { getUserToken } from '@/composables/useUtilities';

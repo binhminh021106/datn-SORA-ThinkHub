@@ -1,8 +1,8 @@
 <template>
   <div class="user-edit-wrapper ">
-    <div class="container-fluid py-4" v-if="isLoaded">
+    <div class="container-fluid py-3" v-if="isLoaded">
       <!-- Header -->
-      <div class="row mb-4 align-items-center">
+      <div class="row mb-3 align-items-center">
         <div class="col-md-8 d-flex align-items-center">
           <router-link :to="{ name: 'admin-users' }"
             class="btn btn-light shadow-sm me-3 rounded-circle d-flex align-items-center justify-content-center"
@@ -16,14 +16,14 @@
         </div>
       </div>
 
-      <div class="row g-4">
+      <div class="row g-3">
         <div class="col-md-4 col-lg-3">
-          <div class="card border-0 shadow-sm rounded-4 text-center p-4 h-100 mb-4">
-            <div class="position-relative d-inline-block mx-auto mb-3" style="width: 140px; height: 140px;">
+          <div class="card border-0 shadow-sm rounded-4 text-center p-3 h-100 mb-3">
+            <div class="position-relative d-inline-block mx-auto mb-3" style="width: 120px; height: 120px;">
               <!-- Thay thế bằng SoraImage -->
               <SoraImage :src="previewAvatar" :placeholder="placeholderImg"
                 imgClass="rounded-circle shadow-sm border border-3 border-white object-fit-cover"
-                style="width: 140px; height: 140px;" alt="Avatar" />
+                style="width: 120px; height: 120px;" alt="Avatar" />
               <label for="avatarUpload"
                 class="position-absolute bottom-0 end-0 bg-brand rounded-circle shadow-sm p-2 text-white cursor-pointer"
                 title="Đổi ảnh đại diện">
@@ -63,10 +63,10 @@
 
         <!-- ================= CỘT PHẢI: TABS THÔNG TIN & ĐỊA CHỈ ================= -->
         <div class="col-md-8 col-lg-9">
-          <div class="card border-0 shadow-sm rounded-4 h-100 mb-4">
+          <div class="card border-0 shadow-sm rounded-4 h-100 mb-3 account-edit-card">
 
             <!-- Tabs Header -->
-            <div class="card-header bg-white border-bottom-0 pt-3 pb-0 px-4">
+            <div class="card-header bg-white border-bottom-0 pt-3 pb-0 px-3">
               <ul class="nav nav-tabs-custom mb-3">
                 <li class="nav-item">
                   <a class="nav-link d-flex align-items-center" :class="{ 'active': activeTab === 'info' }" href="#"
@@ -86,10 +86,10 @@
               </ul>
             </div>
 
-            <div class="card-body p-4 pt-2">
+            <div class="card-body p-3 pt-2">
 
               <!-- ================= TAB 1: THÔNG TIN CHUNG ================= -->
-              <form v-if="activeTab === 'info'" @submit.prevent="updateUser">
+              <form v-if="activeTab === 'info'" class="account-edit-form" @submit.prevent="updateUser">
                 <div class="row">
                   <div class="col-md-6 mb-4">
                     <label class="form-label fw-bold text-dark">Họ và tên <span class="text-danger">*</span></label>
@@ -170,7 +170,7 @@
                   </div>
                 </div>
 
-                <div class="text-end mt-2 pt-4 border-top">
+                <div class="text-end mt-2 pt-3 border-top">
                   <button type="button" class="btn btn-light me-2 px-4 fw-bold shadow-sm" @click="handleRestore"
                     :disabled="isRestoring">
                     <span v-if="isRestoring" class="spinner-border spinner-border-sm me-2"></span>Khôi phục gốc
@@ -468,6 +468,7 @@ const updateUserMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: ['adminUser', route.params.id] });
     queryClient.invalidateQueries({ queryKey: ['adminUsers'] }); // Update list
     form.value.password = ''; form.value.password_confirmation = '';
+    router.push({ name: 'admin-users' });
   },
   onError: (err) => handleAxiosError(err, 'Không thể cập nhật hồ sơ'),
   onSettled: () => { isSavingUser.value = false; }
@@ -607,7 +608,7 @@ const setDefaultAddress = (id) => { setDefaultAddressMutation.mutate(id); };
   color: #6c757d;
   border: none;
   border-bottom: 3px solid transparent;
-  padding: 12px 20px;
+  padding: 9px 16px;
   font-weight: 600;
   transition: all 0.3s ease;
   background: transparent;
@@ -643,5 +644,31 @@ const setDefaultAddress = (id) => { setDefaultAddressMutation.mutate(id); };
 
 .cursor-pointer {
   cursor: pointer;
+}
+
+.account-edit-form .row > [class*='col-'] {
+  margin-bottom: 1rem !important;
+}
+
+.account-edit-form .form-label {
+  margin-bottom: 0.35rem;
+  font-size: 0.875rem;
+}
+
+.account-edit-form .form-control,
+.account-edit-form .form-select,
+.account-edit-form .input-group-text {
+  min-height: 38px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.95rem;
+}
+
+.account-edit-form .form-control-lg,
+.account-edit-form .form-select-lg,
+.account-edit-form .input-group-lg > .form-control,
+.account-edit-form .input-group-lg > .input-group-text {
+  min-height: 38px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.95rem;
 }
 </style>

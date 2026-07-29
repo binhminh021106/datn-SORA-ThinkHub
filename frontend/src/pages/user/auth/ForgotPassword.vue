@@ -85,7 +85,14 @@
           </button>
           
           <div class="resend-container">
-             <button type="button" class="btn-resend" :disabled="countdown > 0 || isResending" @click="handleSendOtp">
+             <div class="form-group mb-2">
+               <div id="otp-recaptcha-resend" v-show="!recaptchaError"></div>
+               <div v-if="recaptchaError" class="recaptcha-error">
+                 <p style="color: #cc1e2e; font-size: 14px; margin-bottom: 8px;">Khong the tai CAPTCHA. Vui long thu lai.</p>
+                 <button type="button" @click="retryRecaptcha" class="btn-resend" style="width: auto; padding: 5px 15px; font-size: 13px;">Thu lai</button>
+               </div>
+             </div>
+             <button type="button" class="btn-resend" :disabled="countdown > 0 || isResending || !recaptchaToken" @click="handleSendOtp">
                {{ isResending ? 'ĐANG GỬI...' : 'GỬI LẠI MÃ ' + (countdown > 0 ? `(${countdown}s)` : '') }}
              </button>
           </div>
@@ -144,7 +151,7 @@ const recaptchaError = ref(false);
 
 const retryRecaptcha = () => {
   recaptchaError.value = false;
-  const el = document.getElementById('otp-recaptcha');
+  const el = document.getElementById(recaptchaElementId());
   if (el) el.innerHTML = '';
   recaptchaToken.value = '';
   
@@ -157,7 +164,7 @@ const retryRecaptcha = () => {
 
 const renderRecaptcha = () => {
   if (window.grecaptcha && window.grecaptcha.render) {
-    const el = document.getElementById('otp-recaptcha');
+    const el = document.getElementById(recaptchaElementId());
     if (el) {
       el.innerHTML = '';
       recaptchaWidgetId = window.grecaptcha.render(el, {
@@ -168,6 +175,8 @@ const renderRecaptcha = () => {
     }
   }
 };
+
+const recaptchaElementId = () => step.value === 2 ? 'otp-recaptcha-resend' : 'otp-recaptcha';
 
 let recaptchaInitTimeout = null;
 let maxRetries = 50;
@@ -307,7 +316,7 @@ const handleSendOtp = async () => {
     return;
   }
   
-  if (step.value === 1 && !recaptchaToken.value) {
+  if (!recaptchaToken.value) {
     Toast.fire({ icon: 'warning', title: 'Vui lòng xác minh bạn không phải là robot.' });
     return;
   }
@@ -317,19 +326,21 @@ const handleSendOtp = async () => {
 
   try {
     const payload = { email: form.value.email.trim() };
-    if (step.value === 1 && recaptchaToken.value) {
-        payload['g-recaptcha-response'] = recaptchaToken.value;
-    }
+    payload['g-recaptcha-response'] = recaptchaToken.value;
     
     await clientApiClient.post('/client/forgot-password/send-otp', payload);
     Toast.fire({ icon: 'success', title: 'Nếu email hợp lệ, mã OTP sẽ được gửi đến bạn.' });
     step.value = 2;
-    nextTick(() => { if(otpInputs.value[0]) otpInputs.value[0].focus(); });
+    recaptchaToken.value = '';
+    nextTick(() => {
+      renderRecaptcha();
+      if (otpInputs.value[0]) otpInputs.value[0].focus();
+    });
     startCountdown();
   } catch (error) {
     handleFormErrors(error, 'Lỗi gửi OTP.');
     // Reset recaptcha if failed so they can try again
-    if (step.value === 1 && window.grecaptcha) {
+    if (window.grecaptcha) {
         window.grecaptcha.reset(recaptchaWidgetId);
         recaptchaToken.value = '';
     }

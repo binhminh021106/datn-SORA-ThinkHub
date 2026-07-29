@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { clearAdminAuthStorage, clearUserAuthStorage, getAdminToken, getUserToken } from '@/composables/useUtilities';
 import { API_BASE_URL } from '@/utils/env';
+import { logSafeApiError } from '@/utils/safeConsole';
 
 // Tạo axios instance với default config
 const apiClient = axios.create({
@@ -46,9 +47,7 @@ const sanitizeErrorMessage = (error) => {
       msg.includes('syntax error');
 
     if (isSensitive) {
-      console.error(`[API Error Masked] HTTP ${status} | URL: ${url}`);
-      console.error('[Original Error Data]:', error.response.data);
-      console.error('[Full Error Object]:', error);
+      logSafeApiError(`[API Error Masked] HTTP ${status} | URL: ${url}`, error);
 
       error.response.data.message = 'Hệ thống đang gặp sự cố. Vui lòng thử lại sau!';
     }

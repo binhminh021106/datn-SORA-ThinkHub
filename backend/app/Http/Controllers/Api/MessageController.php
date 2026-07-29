@@ -10,6 +10,8 @@ use App\Events\MessageSent;
 use App\Events\ConversationDeleted;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 
 class MessageController extends Controller
 {
@@ -58,11 +60,25 @@ class MessageController extends Controller
         // Nếu gửi file
         if ($request->hasFile('file')) {
             $request->validate([
-                'file' => 'required|file|max:20480', // max 20MB
+                'file' => [
+                    'required',
+                    'file',
+                    'mimes:jpg,jpeg,png,webp,pdf,txt,doc,docx,xls,xlsx',
+                    'max:5120',
+                ],
             ]);
 
+            $uploadKey = 'direct-chat-upload:' . $senderId;
+            if (RateLimiter::tooManyAttempts($uploadKey, 10)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Báº¡n Ä‘Ã£ táº£i lÃªn quÃ¡ nhiá»u tá»‡p. Vui lÃ²ng thá»­ láº¡i sau.',
+                ], 429);
+            }
+            RateLimiter::hit($uploadKey, 3600);
+
             $file = $request->file('file');
-            $originalName = $file->getClientOriginalName();
+            $originalName = $this->sanitizeFileName($file->getClientOriginalName());
             $fileSize = $this->formatFileSize($file->getSize());
             $mimeType = $file->getMimeType();
 
@@ -87,7 +103,7 @@ class MessageController extends Controller
         } else {
             // Gửi text/emoji
             $request->validate([
-                'content'     => 'required|string|max:5000',
+                'content'     => 'required|string|max:2000',
             ]);
 
             $message = Message::create([
@@ -123,6 +139,9 @@ class MessageController extends Controller
             $partnerId = $request->query('partner_id');
         }
 
+        $limit = min(max((int) $request->query('limit', 50), 1), 100);
+        $beforeId = $request->integer('before_id') ?: null;
+
         if ($partnerId) {
             // Mark unread messages as read
             Message::where('sender_id', $partnerId)
@@ -130,18 +149,40 @@ class MessageController extends Controller
                 ->where('is_read', false)
                 ->update(['is_read' => true]);
 
-            $messages = Message::with('replyToMessage')->where(function($q) use ($userId, $partnerId) {
+            $messagesQuery = Message::with('replyToMessage')->where(function($q) use ($userId, $partnerId) {
                 $q->where('sender_id', $userId)->where('receiver_id', $partnerId);
             })->orWhere(function($q) use ($userId, $partnerId) {
                 $q->where('sender_id', $partnerId)->where('receiver_id', $userId);
-            })->orderBy('created_at', 'asc')->get();
+            });
         } else {
-            $messages = Message::with('replyToMessage')->where('sender_id', $userId)
-                               ->orWhere('receiver_id', $userId)
-                               ->orderBy('created_at', 'asc')->get();
+            $messagesQuery = Message::with('replyToMessage')->where('sender_id', $userId)
+                ->orWhere('receiver_id', $userId);
         }
-                           
-        return response()->json(['status' => true, 'data' => $messages]);
+
+        if ($beforeId) {
+            $messagesQuery->where('id', '<', $beforeId);
+        }
+
+        // Read newest records first so a long-running conversation cannot make
+        // the initial load unbounded, then restore chronological UI ordering.
+        $messages = $messagesQuery
+            ->latest('id')
+            ->take($limit + 1)
+            ->get();
+        $hasMore = $messages->count() > $limit;
+        $messages = $messages
+            ->take($limit)
+            ->sortBy('id')
+            ->values();
+
+        return response()->json([
+            'status' => true,
+            'data' => $messages,
+            'meta' => [
+                'has_more' => $hasMore,
+                'next_before_id' => $hasMore ? $messages->first()?->id : null,
+            ],
+        ]);
     }
 
     /**
@@ -239,5 +280,13 @@ class MessageController extends Controller
         if ($bytes >= 1048576) return round($bytes / 1048576, 2) . ' MB';
         if ($bytes >= 1024)    return round($bytes / 1024, 2) . ' KB';
         return $bytes . ' B';
+    }
+
+    private function sanitizeFileName(string $fileName): string
+    {
+        $fileName = basename(str_replace('\\', '/', $fileName));
+        $fileName = preg_replace('/[^\pL\pN ._()\-]/u', '_', $fileName) ?: 'attachment';
+
+        return Str::limit($fileName, 180, '');
     }
 }

@@ -182,9 +182,10 @@ class ClientHomeController extends Controller
                 'data' => $data
             ]);
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
-                'message' => 'Cảnh báo Backend: ' . $e->getMessage()
+                'message' => 'Không thể tải dữ liệu trang chủ lúc này. Vui lòng thử lại sau.'
             ], 500);
         }
     }
@@ -203,9 +204,10 @@ class ClientHomeController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
-                'message' => 'Lỗi tải giá vàng: ' . $e->getMessage()
+                'message' => 'Không thể tải giá vàng lúc này. Vui lòng thử lại sau.'
             ], 500);
         }
     }

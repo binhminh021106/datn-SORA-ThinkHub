@@ -1,25 +1,22 @@
 import axios from 'axios';
-import { clearUserAuthStorage, getUserToken } from '@/composables/useUtilities';
+import { clearUserAuthStorage, createCartSessionId, getUserToken } from '@/composables/useUtilities';
 import { API_BASE_URL } from '@/utils/env';
+import { logSafeApiError } from '@/utils/safeConsole';
 
 const PROTECTED_CLIENT_PATHS = ['/profile', '/order', '/checkout', '/favourite'];
 
-const createCartSessionId = () => {
-  const randomId = globalThis.crypto?.randomUUID?.();
-
-  if (randomId) {
-    return `session_${randomId}`;
-  }
-
-  return `session_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-};
-
 const getCartSessionId = (ensure = false) => {
-  let sessionId = localStorage.getItem('cart_session_id');
+  let sessionId = null;
 
-  if (!sessionId && ensure) {
-    sessionId = createCartSessionId();
-    localStorage.setItem('cart_session_id', sessionId);
+  try {
+    sessionId = localStorage.getItem('cart_session_id');
+
+    if (!sessionId && ensure) {
+      sessionId = createCartSessionId();
+      if (sessionId) localStorage.setItem('cart_session_id', sessionId);
+    }
+  } catch {
+    return null;
   }
 
   return sessionId;
@@ -75,9 +72,7 @@ const sanitizeErrorMessage = (error) => {
       msg.includes('syntax error');
 
     if (isSensitive) {
-      console.error(`[API Error Masked] HTTP ${status} | URL: ${url}`);
-      console.error('[Original Error Data]:', error.response.data);
-      console.error('[Full Error Object]:', error);
+      logSafeApiError(`[API Error Masked] HTTP ${status} | URL: ${url}`, error);
       
       error.response.data.message = 'Hệ thống đang gặp sự cố. Vui lòng thử lại sau!';
     }

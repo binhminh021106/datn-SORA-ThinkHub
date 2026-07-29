@@ -50,16 +50,22 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-if="isLoading">
-                <td colspan="7" class="text-center py-5">
-                  <div class="spinner-border text-primary" role="status"></div>
-                </td>
-              </tr>
-              <tr v-else-if="filteredContacts.length === 0">
+              <template v-if="isLoading">
+                <tr v-for="row in 5" :key="`contact-skeleton-${row}`" class="contact-skeleton-row">
+                  <td class="ps-4"><span class="contact-skeleton contact-skeleton-check"></span></td>
+                  <td><div class="d-flex align-items-center gap-3"><span class="contact-skeleton contact-skeleton-avatar"></span><span class="contact-skeleton contact-skeleton-name"></span></div></td>
+                  <td><span class="contact-skeleton contact-skeleton-line"></span><span class="contact-skeleton contact-skeleton-line short mt-2"></span></td>
+                  <td><span class="contact-skeleton contact-skeleton-message"></span></td>
+                  <td class="text-center"><span class="contact-skeleton contact-skeleton-badge"></span></td>
+                  <td><span class="contact-skeleton contact-skeleton-date"></span></td>
+                  <td class="pe-4 text-end"><span class="contact-skeleton contact-skeleton-action"></span></td>
+                </tr>
+              </template>
+              <tr v-else-if="contacts.length === 0">
                 <td colspan="7" class="text-center py-5 text-muted small">Không tìm thấy yêu cầu nào phù hợp.</td>
               </tr>
               <!-- DANH SÁCH ĐÃ ĐƯỢC LỌC VÀ SẮP XẾP -->
-              <tr v-else v-for="contact in filteredContacts" :key="contact.id" :class="{'table-warning-custom': contact.status === 'pending'}">
+              <tr v-else v-for="contact in contacts" :key="contact.id" :class="{'table-warning-custom': contact.status === 'pending'}">
                 <td class="ps-4">
                   <div class="form-check custom-checkbox">
                     <input class="form-check-input" type="checkbox" v-model="selectedIds" :value="contact.id">
@@ -97,6 +103,19 @@
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <div v-if="pagination.lastPage > 1" class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2 mt-3 px-1">
+      <span class="small text-muted">Hiển thị {{ pagination.from }}–{{ pagination.to }} trong {{ pagination.total }} yêu cầu</span>
+      <div class="btn-group shadow-sm" role="group" aria-label="Phân trang liên hệ">
+        <button type="button" class="btn btn-sm btn-light border" :disabled="pagination.currentPage === 1 || isLoading" @click="fetchContacts(pagination.currentPage - 1)">
+          <i class="bi bi-chevron-left"></i>
+        </button>
+        <button type="button" class="btn btn-sm btn-light border disabled">{{ pagination.currentPage }} / {{ pagination.lastPage }}</button>
+        <button type="button" class="btn btn-sm btn-light border" :disabled="pagination.currentPage === pagination.lastPage || isLoading" @click="fetchContacts(pagination.currentPage + 1)">
+          <i class="bi bi-chevron-right"></i>
+        </button>
       </div>
     </div>
 
@@ -139,7 +158,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { Modal } from 'bootstrap'; 
@@ -152,6 +171,7 @@ const isLoading = ref(true);
 const selectedIds = ref([]);
 const filterStatus = ref('all'); // State bộ lọc
 const isSocketActive = ref(false);
+const pagination = ref({ currentPage: 1, lastPage: 1, from: 0, to: 0, total: 0 });
 
 // --- MODAL & FORM ---
 const selectedContact = ref(null);
@@ -161,32 +181,14 @@ let bsModal = null;
 
 // --- 1. LOGIC LỌC VÀ SẮP XẾP THÔNG MINH ---
 // Pending luôn lên đầu, sau đó mới đến thời gian mới nhất
-const filteredContacts = computed(() => {
-  let result = [...contacts.value];
-
-  // Lọc theo trạng thái dropdown
-  if (filterStatus.value !== 'all') {
-    result = result.filter(c => c.status === filterStatus.value);
-  }
-
-  // Sắp xếp: Thư mới (pending) lên đầu, sau đó mới đến thời gian
-  return result.sort((a, b) => {
-    // Nếu a đang pending mà b đã xong -> a lên đầu (-1)
-    if (a.status === 'pending' && b.status !== 'pending') return -1;
-    if (a.status !== 'pending' && b.status === 'pending') return 1;
-    // Nếu cùng trạng thái, so sánh thời gian (mới nhất lên trước)
-    return new Date(b.created_at) - new Date(a.created_at);
-  });
-});
-
 // --- 2. LOGIC CHỌN HÀNG LOẠT ---
 const isAllSelected = computed(() => {
-  return filteredContacts.value.length > 0 && selectedIds.value.length === filteredContacts.value.length;
+  return contacts.value.length > 0 && selectedIds.value.length === contacts.value.length;
 });
 
 const selectAll = (event) => {
   if (event.target.checked) {
-    selectedIds.value = filteredContacts.value.map(c => c.id);
+    selectedIds.value = contacts.value.map(c => c.id);
   } else {
     selectedIds.value = [];
   }
@@ -199,11 +201,28 @@ const axiosConfig = computed(() => ({
   }
 }));
 
-const fetchContacts = async () => {
+const fetchContacts = async (page = 1) => {
   isLoading.value = true;
   try {
-    const res = await axios.get(API_URL, axiosConfig.value);
-    contacts.value = res.data.data.data || res.data.data;
+    const res = await axios.get(API_URL, {
+      ...axiosConfig.value,
+      params: {
+        page,
+        ...(filterStatus.value !== 'all' ? { status: filterStatus.value } : {}),
+      },
+    });
+    const result = res.data.data;
+    if ((result.data || []).length === 0 && result.last_page > 0 && page > result.last_page) {
+      return fetchContacts(result.last_page);
+    }
+    contacts.value = result.data || [];
+    pagination.value = {
+      currentPage: result.current_page || 1,
+      lastPage: result.last_page || 1,
+      from: result.from || 0,
+      to: result.to || 0,
+      total: result.total || 0,
+    };
   } catch (err) { console.error(err); } finally { isLoading.value = false; }
 };
 
@@ -221,8 +240,8 @@ const bulkDelete = async () => {
     try {
       // Sếp lưu ý: Sẽ cần thêm route 'bulk-delete' ở backend
       await axios.post(`${API_URL}/bulk-delete`, { ids: selectedIds.value }, axiosConfig.value);
-      contacts.value = contacts.value.filter(c => !selectedIds.value.includes(c.id));
       selectedIds.value = [];
+      await fetchContacts(pagination.value.currentPage);
       Swal.fire({ icon: 'success', title: 'Đã xóa hoàn tất!', timer: 2000, showConfirmButton: false });
     } catch (err) {
       Swal.fire('Lỗi', 'Không thể xóa hàng loạt', 'error');
@@ -238,8 +257,7 @@ const sendReplyEmail = async () => {
       Swal.fire({ icon: 'success', title: 'Đã Gửi!', text: 'Email phản hồi đã bay đi.' });
       bsModal.hide();
       // Cập nhật trạng thái tại chỗ
-      const target = contacts.value.find(c => c.id === selectedContact.value.id);
-      if (target) target.status = 'resolved';
+      await fetchContacts(pagination.value.currentPage);
     }
   } catch (e) { Swal.fire('Lỗi', 'Gửi mail thất bại', 'error'); } finally { isReplying.value = false; }
 };
@@ -255,7 +273,7 @@ const confirmDelete = (id) => {
   Swal.fire({ title: 'Xóa yêu cầu?', icon: 'warning', showCancelButton: true }).then(async (result) => {
     if (result.isConfirmed) {
       await axios.delete(`${API_URL}/${id}`, axiosConfig.value);
-      contacts.value = contacts.value.filter(c => c.id !== id);
+      await fetchContacts(pagination.value.currentPage);
     }
   });
 };
@@ -268,9 +286,14 @@ onMounted(() => {
     isSocketActive.value = true;
     window.Echo.channel('admin-contacts').listen('.NewContactSubmitted', (e) => {
       Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: '🔔 Liên hệ mới!', showConfirmButton: false, timer: 4000 });
-      contacts.value.unshift(e.contact);
+      fetchContacts(pagination.value.currentPage);
     });
   }
+});
+
+watch(filterStatus, () => {
+  selectedIds.value = [];
+  fetchContacts(1);
 });
 </script>
 
@@ -287,6 +310,41 @@ onMounted(() => {
 }
 .table-warning-custom td {
   font-weight: 500;
+}
+
+.contact-skeleton-row td {
+  height: 72px;
+}
+
+.contact-skeleton {
+  display: inline-block;
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.4rem;
+  background: #eaf5f2;
+}
+
+.contact-skeleton::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75), transparent);
+  transform: translateX(-100%);
+  animation: contact-skeleton-shimmer 1.4s infinite;
+  content: '';
+}
+
+.contact-skeleton-check { width: 16px; height: 16px; }
+.contact-skeleton-avatar { width: 36px; height: 36px; border-radius: 50%; }
+.contact-skeleton-name { width: 110px; height: 14px; }
+.contact-skeleton-line { display: block; width: 130px; height: 11px; }
+.contact-skeleton-line.short { width: 95px; }
+.contact-skeleton-message { width: 170px; height: 12px; }
+.contact-skeleton-badge { width: 82px; height: 24px; border-radius: 50rem; }
+.contact-skeleton-date { width: 96px; height: 12px; }
+.contact-skeleton-action { width: 70px; height: 30px; }
+
+@keyframes contact-skeleton-shimmer {
+  to { transform: translateX(100%); }
 }
 
 /* Custom checkbox */

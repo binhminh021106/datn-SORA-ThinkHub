@@ -52,7 +52,8 @@
                 <div v-if="msg.reply_to" class="quote-block mb-1" :class="msg.type === 'user' ? 'quote-block-user' : 'quote-block-admin'" @click="scrollToMessage(msg.reply_to.id)" style="cursor: pointer;">
                   <p class="quote-text"><i class="bi bi-reply-fill me-1 opacity-75"></i>{{ msg.reply_to.text || (msg.reply_to.message_type === 'image' ? '📷 Hình ảnh' : '📎 File') }}</p>
                 </div>
-                <img :src="msg.file_url" :alt="msg.file_name || 'image'" class="user-chat-image" @click="openLightbox(msg.file_url)" />
+                <img v-if="safeChatFileUrl(msg.file_url)" :src="safeChatFileUrl(msg.file_url)" :alt="msg.file_name || 'image'" class="user-chat-image" @click="openLightbox(msg.file_url)" />
+                <div v-else class="small text-muted p-2">Tep dinh kem khong hop le.</div>
                 <div><small :class="msg.type === 'user' ? 'text-white-50' : 'text-muted'" style="font-size: 0.65rem;">{{ msg.time }}</small></div>
               </div>
               <!-- Action bar beside bubble -->
@@ -70,11 +71,12 @@
                 <div v-if="msg.reply_to" class="quote-block mb-1" :class="msg.type === 'user' ? 'quote-block-user' : 'quote-block-admin'" @click="scrollToMessage(msg.reply_to.id)" style="cursor: pointer;">
                   <p class="quote-text"><i class="bi bi-reply-fill me-1 opacity-75"></i>{{ msg.reply_to.text || (msg.reply_to.message_type === 'image' ? '📷 Hình ảnh' : '📎 File') }}</p>
                 </div>
-                <a :href="msg.file_url" target="_blank" rel="noopener noreferrer" download class="user-file-link" :class="msg.type === 'user' ? 'text-white' : 'text-dark'">
+                <a v-if="safeChatFileUrl(msg.file_url)" :href="safeChatFileUrl(msg.file_url)" target="_blank" rel="noopener noreferrer" download class="user-file-link" :class="msg.type === 'user' ? 'text-white' : 'text-dark'">
                   <i class="bi bi-file-earmark-arrow-down-fill me-1"></i>
                   <span style="font-size: 0.82rem; font-weight: 600;">{{ msg.file_name || msg.text }}</span>
                   <span v-if="msg.file_size" style="font-size: 0.65rem; opacity: 0.75; display: block;">{{ msg.file_size }}</span>
                 </a>
+                <span v-else class="small opacity-75">Tep dinh kem khong hop le.</span>
                 <small :class="msg.type === 'user' ? 'text-white-50' : 'text-muted'" style="font-size: 0.65rem;">{{ msg.time }}</small>
               </div>
               <!-- Action bar beside bubble -->
@@ -163,21 +165,22 @@
             class="chat-toolbar-btn"
             title="Đính kèm file"
             @click.stop="triggerFileInput"
-            :disabled="!isLoggedIn"
+            :disabled="!isLoggedIn || isSending"
           >
             <i class="bi bi-paperclip"></i>
           </button>
-          <input ref="fileInputRef" type="file" style="display:none" @change="onFileSelected" accept="*/*" />
+          <input ref="fileInputRef" type="file" style="display:none" @change="onFileSelected" accept=".jpg,.jpeg,.png,.webp,.pdf,.txt,.doc,.docx,.xls,.xlsx" />
           <!-- Emoji Button -->
           <button
             class="chat-toolbar-btn"
             title="Emoji"
             @click.stop="toggleEmojiPicker"
-            :disabled="!isLoggedIn"
+            :disabled="!isLoggedIn || isSending"
           >
             <i class="bi bi-emoji-smile"></i>
           </button>
         </div>
+        <small v-if="fileValidationError" class="text-danger px-2 pb-1 d-block">{{ fileValidationError }}</small>
 
         <form @submit.prevent="sendMessage" class="d-flex flex-column px-2 pb-2">
           <div class="d-flex align-items-center gap-2">
@@ -186,7 +189,7 @@
               v-model="inputText" 
               class="form-control rounded-pill bg-light border-0 px-3 py-2" 
               placeholder="Nhập tin nhắn..."
-              :disabled="!isLoggedIn"
+              :disabled="!isLoggedIn || isSending"
               ref="messageInputRef"
               style="font-size: 0.88rem;"
               maxlength="500"
@@ -195,7 +198,7 @@
               type="submit"
               class="btn btn-primary rounded-circle p-2 d-flex align-items-center justify-content-center"
               style="width: 38px; height: 38px; flex-shrink: 0;"
-              :disabled="(!inputText.trim() && !selectedFile) || !isLoggedIn"
+              :disabled="(!inputText.trim() && !selectedFile) || !isLoggedIn || isSending"
             >
               <i class="bi bi-send-fill" style="font-size: 0.85rem;"></i>
             </button>
@@ -223,6 +226,7 @@
 import { ref, onMounted, onUnmounted, nextTick, computed, watch } from 'vue';
 import clientApiClient from '@/utils/clientApiClient';
 import { getUserToken } from '@/composables/useUtilities';
+import { BACKEND_URL } from '@/utils/env';
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -233,6 +237,7 @@ const emit = defineEmits(['update:visible']);
 const isOpen = ref(false);
 const inputText = ref('');
 const isTyping = ref(false);
+const isSending = ref(false);
 const chatBodyRef = ref(null);
 const messageInputRef = ref(null);
 const messages = ref([]);
@@ -244,6 +249,7 @@ const isLoggedIn = ref(false);
 const fileInputRef = ref(null);
 const selectedFile = ref(null);
 const selectedFilePreview = ref(null);
+const fileValidationError = ref('');
 
 // Emoji (input)
 const showEmojiPicker = ref(false);
@@ -312,29 +318,78 @@ const scrollToBottom = async () => {
   }
 };
 
-const openLightbox = (url) => { lightboxUrl.value = url; };
+const openLightbox = (url) => {
+  lightboxUrl.value = safeChatFileUrl(url);
+};
+
+const safeChatFileUrl = (value) => {
+  if (!value) return '';
+
+  try {
+    const storageBase = new URL(`${BACKEND_URL.replace(/\/+$/, '')}/storage/`);
+    const fileUrl = new URL(String(value), window.location.origin);
+    const allowedPath = `${storageBase.pathname}chat_files/`;
+
+    if (!['http:', 'https:'].includes(fileUrl.protocol)
+      || fileUrl.origin !== storageBase.origin
+      || !fileUrl.pathname.startsWith(allowedPath)) {
+      return '';
+    }
+
+    return fileUrl.toString();
+  } catch {
+    return '';
+  }
+};
 
 // ===== EMOJI (input) =====
-const toggleEmojiPicker = () => { showEmojiPicker.value = !showEmojiPicker.value; };
+const toggleEmojiPicker = () => {
+  if (isSending.value) return;
+  showEmojiPicker.value = !showEmojiPicker.value;
+};
 const closeAllPickers = () => { showEmojiPicker.value = false; };
 const insertEmoji = (emoji) => {
+  if (isSending.value) return;
   inputText.value += emoji;
   messageInputRef.value?.focus();
 };
 
 // ===== REPLY =====
 const setReply = (msg) => {
+  if (isSending.value) return;
   replyTo.value = msg;
   nextTick(() => messageInputRef.value?.focus());
 };
 const clearReply = () => { replyTo.value = null; };
 
 // ===== FILE UPLOAD =====
-const triggerFileInput = () => { fileInputRef.value?.click(); };
+const triggerFileInput = () => {
+  if (isSending.value) return;
+  fileInputRef.value?.click();
+};
 
 const onFileSelected = (e) => {
+  if (isSending.value) return;
   const file = e.target.files[0];
   if (!file) return;
+
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  const allowedExtensions = new Set(['jpg', 'jpeg', 'png', 'webp', 'pdf', 'txt', 'doc', 'docx', 'xls', 'xlsx']);
+  const maxBytes = 5 * 1024 * 1024;
+
+  if (!extension || !allowedExtensions.has(extension)) {
+    fileValidationError.value = 'Chi ho tro anh JPG, PNG, WEBP va tep PDF, TXT, Word, Excel.';
+    e.target.value = '';
+    return;
+  }
+
+  if (file.size > maxBytes) {
+    fileValidationError.value = 'Tep dinh kem khong duoc vuot qua 5 MB.';
+    e.target.value = '';
+    return;
+  }
+
+  fileValidationError.value = '';
   selectedFile.value = file;
   if (file.type.startsWith('image/')) {
     const reader = new FileReader();
@@ -349,6 +404,7 @@ const onFileSelected = (e) => {
 const removeSelectedFile = () => {
   selectedFile.value = null;
   selectedFilePreview.value = null;
+  fileValidationError.value = '';
 };
 
 // ===== AUTH =====
@@ -461,7 +517,9 @@ watch(() => props.visible, (visible) => {
 const sendMessage = async () => {
   const hasText = inputText.value.trim();
   const hasFile = selectedFile.value;
-  if ((!hasText && !hasFile) || !isLoggedIn.value) return;
+  if (isSending.value || (!hasText && !hasFile) || !isLoggedIn.value) return;
+
+  isSending.value = true;
 
   if (hasFile) {
     // Gửi file
@@ -514,6 +572,8 @@ const sendMessage = async () => {
     } catch(err) {
       console.error(err);
       messages.value = messages.value.filter(m => m.id !== tempId);
+    } finally {
+      isSending.value = false;
     }
   } else {
     // Gửi text
@@ -562,6 +622,7 @@ const sendMessage = async () => {
       messages.value = messages.value.filter(m => m.id !== tempMsg.id);
     } finally {
       isTyping.value = false;
+      isSending.value = false;
     }
   }
 };

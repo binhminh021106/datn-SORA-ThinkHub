@@ -16,6 +16,7 @@ use App\Models\Coupon;
 use App\Models\Review; // BẮT BUỘC: Đảm bảo bạn đã thêm dòng này
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
@@ -23,6 +24,9 @@ use Barryvdh\DomPDF\Facade\Pdf;   // ← Thêm dòng này
 
 class ClientOrderController extends Controller
 {
+    private const MAX_CART_LINES = 50;
+    private const MAX_CART_TOTAL_QUANTITY = 200;
+
     /**
      * Lấy danh sách đơn hàng của User hiện tại.
      */
@@ -143,6 +147,23 @@ class ClientOrderController extends Controller
         $user = ($user instanceof \App\Models\User) ? $user : null;
         $sessionId = $request->header('X-Cart-Session-Id');
 
+        $lockOwner = $user ? (string) $user->id : (string) ($sessionId ?: 'ip:' . $request->ip());
+        $checkoutLock = Cache::lock('checkout_lock_' . $lockOwner, 10);
+        if (!$checkoutLock->get()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hệ thống đang xử lý đơn hàng của bạn. Vui lòng không gửi yêu cầu lặp lại.',
+            ], 429);
+        }
+
+        try {
+            if ($user && $user->is_order_blocked) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tài khoản của bạn đang bị hạn chế chức năng đặt hàng. Vui lòng liên hệ hỗ trợ.',
+                ], 403);
+            }
+
         $cartQuery = Cart::with(['items.variant', 'items.combo']);
         $cart = $user ? $cartQuery->where('user_id', $user->id)->first() 
                       : $cartQuery->where('session_id', $sessionId)->first();
@@ -151,7 +172,6 @@ class ClientOrderController extends Controller
             return response()->json(['success' => false, 'message' => 'Giỏ hàng của bạn đang trống'], 400);
         }
 
-        try {
             return DB::transaction(function () use ($request, $user, $cart) {
                 
                 // 1. GOM TOÀN BỘ ID CỦA VARIANT (Bao gồm Sản phẩm lẻ & Món trong Combo) để Lock 1 lần
@@ -285,6 +305,7 @@ class ClientOrderController extends Controller
                 // 4. TẠO ĐƠN HÀNG
                 $order = Order::create([
                     'order_code'       => 'ORD-' . now()->format('Ymd') . '-' . strtoupper(Str::random(5)),
+                    'guest_access_token' => $user ? null : Str::random(64),
                     'user_id'          => $user->id ?? null,
                     'customer_name'    => $request->customer_name,
                     'customer_phone'   => $request->customer_phone,
@@ -326,12 +347,20 @@ class ClientOrderController extends Controller
                     'message' => 'Đặt hàng thành công!',
                     'data' => [
                         'order_code'   => $order->order_code,
+                        'guest_access_token' => $order->guest_access_token,
                         'total_amount' => $order->total_amount
                     ]
                 ]);
             });
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể tạo đơn hàng lúc này. Vui lòng thử lại sau.',
+            ], 500);
+        } finally {
+            $checkoutLock->release();
         }
     }
 
@@ -357,14 +386,18 @@ class ClientOrderController extends Controller
     /**
      * Polling trạng thái đơn hàng (nhẹ, không chứa PII, không yêu cầu auth khắt khe)
      */
-    public function status(string $order_code)
+    public function status(Request $request, string $order_code)
     {
-        $order = Order::select('order_code', 'payment_status', 'status')
+        $order = Order::select('order_code', 'guest_access_token', 'payment_status', 'status')
                     ->where('order_code', $order_code)
                     ->first();
 
         if (!$order) {
             return response()->json(['success' => false, 'message' => 'Không tìm thấy đơn hàng'], 404);
+        }
+
+        if (!$this->canAccessOrder($request, $order)) {
+            return response()->json(['success' => false, 'message' => 'Khong co quyen xem don hang nay'], 403);
         }
 
         return response()->json(['success' => true, 'data' => $order]);
@@ -373,7 +406,7 @@ class ClientOrderController extends Controller
     /**
      * Xem chi tiết đơn hàng (Dành cho User đã login)
      */
-    public function show(string $order_code)
+    public function show(Request $request, string $order_code)
     {
         $user = auth('sanctum')->user();
         $user = ($user instanceof \App\Models\User) ? $user : null;
@@ -386,7 +419,7 @@ class ClientOrderController extends Controller
         }
 
         // Bảo mật: Nếu có User_id, phải check xem đúng chính chủ không
-        if ($order->user_id && (!$user || (int)$user->id !== (int)$order->user_id)) {
+        if (!$this->canAccessOrder($request, $order, $user)) {
             return response()->json(['success' => false, 'message' => 'Bạn không có quyền xem đơn hàng này'], 403);
         }
 
@@ -406,27 +439,69 @@ class ClientOrderController extends Controller
             return response()->json(['success' => false, 'message' => 'Không tìm thấy đơn hàng'], 404);
         }
 
-        if ($order->status !== 'pending') {
-            return response()->json(['success' => false, 'message' => 'Chỉ có thể hủy đơn khi đang ở trạng thái Chờ xác nhận'], 400);
+        if ($order->status !== 'pending' || $order->payment_status !== 'unpaid') {
+            return response()->json(['success' => false, 'message' => 'Chỉ có thể hủy đơn chưa thanh toán đang ở trạng thái Chờ xác nhận'], 400);
         }
 
-        if ($order->user_id && (!$user || (int)$user->id !== (int)$order->user_id)) {
+        if (!$this->canAccessOrder($request, $order, $user)) {
             return response()->json(['success' => false, 'message' => 'Bạn không có quyền hủy đơn hàng này'], 403);
         }
 
         try {
             return DB::transaction(function () use ($order, $request, $user) {
-                $order->update(['status' => 'cancelled']);
+                $lockedOrder = Order::with('items')->whereKey($order->id)->lockForUpdate()->first();
+                if (!$lockedOrder || $lockedOrder->status !== 'pending' || $lockedOrder->payment_status !== 'unpaid') {
+                    return response()->json(['success' => false, 'message' => 'Đơn hàng không còn ở trạng thái có thể hủy.'], 409);
+                }
 
-                // FIX LỖI TỬ HUYỆT: Hoàn lại tồn kho cho cả Sản phẩm lẻ VÀ Combo
-                foreach ($order->items as $item) {
+                if (!$this->canAccessOrder($request, $lockedOrder, $user)) {
+                    return response()->json(['success' => false, 'message' => 'Bạn không có quyền hủy đơn hàng này.'], 403);
+                }
+
+                $lockedOrder->update([
+                    'status' => 'cancelled',
+                    'payment_status' => 'failed',
+                ]);
+
+                // Checkout reserves these resources before an unpaid order is
+                // completed. Undo them atomically with the cancellation.
+                \App\Models\TierServiceUsage::where('order_id', $lockedOrder->id)
+                    ->where('service_type', 'tier_discount')
+                    ->delete();
+                $this->restoreCouponUsage($lockedOrder);
+                \App\Models\CommissionHistory::where('order_id', $lockedOrder->id)
+                    ->where('status', 'pending')
+                    ->delete();
+
+                $comboIds = $lockedOrder->items->pluck('combo_id')->filter()->unique()->values();
+                $combos = Combo::with('items')
+                    ->whereIn('id', $comboIds)
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
+
+                // Restore only an unpaid pending order. The same row lock also
+                // serializes this transition against a payment callback.
+                foreach ($lockedOrder->items as $item) {
                     if ($item->product_variant_id) {
                         ProductVariant::where('id', $item->product_variant_id)->increment('stock_quantity', $item->quantity);
-                    } elseif ($item->combo_id && is_array($item->combo_selections)) {
-                        foreach ($item->combo_selections as $selection) {
+                    } elseif ($item->combo_id) {
+                        $combo = $combos->get($item->combo_id);
+                        if ($combo?->usage_limit !== null) {
+                            $combo->increment('usage_limit', $item->quantity);
+                        }
+
+                        foreach (is_array($item->combo_selections) ? $item->combo_selections : [] as $selection) {
                             $vId = $selection['selected_variant_id'] ?? null;
                             if ($vId) {
                                 ProductVariant::where('id', $vId)->increment('stock_quantity', $item->quantity);
+                            }
+                        }
+
+                        foreach ($combo?->items ?? [] as $comboItem) {
+                            if ($comboItem->product_variant_id) {
+                                ProductVariant::where('id', $comboItem->product_variant_id)
+                                    ->increment('stock_quantity', $item->quantity * max((int) $comboItem->quantity, 1));
                             }
                         }
                     }
@@ -434,7 +509,7 @@ class ClientOrderController extends Controller
 
                 // Ghi lịch sử rõ ràng
                 OrderStatusHistory::create([
-                    'order_id'        => $order->id,
+                    'order_id'        => $lockedOrder->id,
                     'old_status'      => 'pending',
                     'new_status'      => 'cancelled',
                     'note'            => 'Khách hủy: ' . $request->cancel_reason,
@@ -444,8 +519,9 @@ class ClientOrderController extends Controller
 
                 return response()->json(['success' => true, 'message' => 'Đã hủy đơn hàng thành công']);
             });
-        } catch (\Exception $e) {
-             return response()->json(['success' => false, 'message' => 'Không thể hủy đơn: ' . $e->getMessage()], 500);
+        } catch (\Throwable $e) {
+             report($e);
+             return response()->json(['success' => false, 'message' => 'Không thể hủy đơn hàng lúc này. Vui lòng thử lại sau.'], 500);
         }
     }
 
@@ -473,26 +549,47 @@ class ClientOrderController extends Controller
                 return response()->json(['success' => false, 'message' => 'Bạn chỉ có thể đánh giá khi đơn hàng đã giao thành công'], 400);
             }
 
-            if ($order->user_id && (!$user || (int)$user->id !== (int)$order->user_id)) {
+            if (!$this->canAccessOrder($request, $order, $user)) {
                 return response()->json(['success' => false, 'message' => 'Bạn không có quyền đánh giá đơn hàng này'], 403);
             }
 
             // Validate dữ liệu từ FormData
             $request->validate([
-                'reviews' => 'required|array',
+                'reviews' => 'required|array|min:1|max:20',
                 'reviews.*.product_id' => 'nullable|integer|exists:products,id',
                 'reviews.*.combo_id'   => 'nullable|integer|exists:combos,id',
                 'reviews.*.rating'     => 'required|integer|min:1|max:5',
                 'reviews.*.comment'    => 'nullable|string|max:1000',
+                'reviews.*.images'     => 'nullable|array|max:5',
                 'reviews.*.images.*'   => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             ]);
+
+            $totalReviewImages = collect($request->file('reviews', []))
+                ->sum(fn ($review) => is_array($review) ? count($review['images'] ?? []) : 0);
+            if ($totalReviewImages > 10) {
+                return response()->json(['success' => false, 'message' => 'Mỗi lần đánh giá chỉ được tải lên tối đa 10 ảnh.'], 422);
+            }
+
+            if (count($request->reviews) > max(1, $order->items->count())) {
+                return response()->json(['success' => false, 'message' => 'Số lượng đánh giá vượt quá số sản phẩm trong đơn hàng.'], 422);
+            }
 
             $orderProductIds = $order->items->pluck('product_id')->filter()->unique()->values();
             $orderComboIds = $order->items->pluck('combo_id')->filter()->unique()->values();
 
+            $reviewTargets = [];
             foreach ($request->reviews as $itemData) {
                 $productId = $itemData['product_id'] ?? null;
                 $comboId = $itemData['combo_id'] ?? null;
+
+                $reviewTarget = $productId ? 'product:' . $productId : 'combo:' . $comboId;
+                if (isset($reviewTargets[$reviewTarget])) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Không thể gửi nhiều đánh giá cho cùng một sản phẩm trong một đơn hàng.',
+                    ], 422);
+                }
+                $reviewTargets[$reviewTarget] = true;
 
                 if ($productId && $comboId) {
                     return response()->json([
@@ -529,6 +626,11 @@ class ClientOrderController extends Controller
             if (!$lockedOrder) {
                 DB::rollBack();
                 return response()->json(['success' => false, 'message' => 'Không tìm thấy đơn hàng'], 404);
+            }
+
+            if ($lockedOrder->status !== 'delivered' || !$this->canAccessOrder($request, $lockedOrder, $user)) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'Đơn hàng không còn đủ điều kiện để đánh giá.'], 409);
             }
 
             $existingReview = Review::where('order_id', $lockedOrder->id)->lockForUpdate()->first();
@@ -590,9 +692,10 @@ class ClientOrderController extends Controller
             if (DB::transactionLevel() > 0) {
                 DB::rollBack();
             }
+            report($e);
             return response()->json([
                 'success' => false, 
-                'message' => 'Lỗi Backend: ' . $e->getMessage() . ' (Dòng ' . $e->getLine() . ')'
+                'message' => 'Không thể lưu đánh giá lúc này. Vui lòng thử lại sau.'
             ], 500);
         }
     }
@@ -632,7 +735,7 @@ class ClientOrderController extends Controller
     /**
      * Lấy đánh giá của một đơn hàng
      */
-    public function getReview(string $order_code)
+    public function getReview(Request $request, string $order_code)
     {
         $user = auth('sanctum')->user();
         $user = ($user instanceof \App\Models\User) ? $user : null;
@@ -642,7 +745,7 @@ class ClientOrderController extends Controller
             return response()->json(['success' => false, 'message' => 'Không tìm thấy đơn hàng'], 404);
         }
 
-        if ($order->user_id && (!$user || (int)$user->id !== (int)$order->user_id)) {
+        if (!$this->canAccessOrder($request, $order, $user)) {
             return response()->json(['success' => false, 'message' => 'Bạn không có quyền xem đánh giá này'], 403);
         }
 
@@ -673,6 +776,10 @@ class ClientOrderController extends Controller
         $sessionId = $request->header('X-Cart-Session-Id');
 
         // 1. Tìm hoặc tạo Giỏ hàng (Cart) gốc cho User hoặc Session
+        if (!$this->canAccessOrder($request, $order, $user)) {
+            return response()->json(['success' => false, 'message' => 'Khong co quyen mua lai don hang nay'], 403);
+        }
+
         $cart = Cart::where(function($query) use ($user, $sessionId) {
             if ($user) $query->where('user_id', $user->id);
             else $query->where('session_id', $sessionId);
@@ -683,6 +790,26 @@ class ClientOrderController extends Controller
             if ($user) $cart->user_id = $user->id;
             else $cart->session_id = $sessionId;
             $cart->save();
+        }
+
+        // Reorder can import a legacy order with hundreds of lines. Reject the
+        // operation up-front rather than letting it bypass cart-size limits.
+        $cartSummary = \App\Models\CartItem::where('cart_id', $cart->id)
+            ->selectRaw('COUNT(*) as line_count, COALESCE(SUM(quantity), 0) as total_quantity')
+            ->first();
+        $incomingLineCount = $order->items
+            ->filter(fn ($item) => $item->product_variant_id || $item->combo_id)
+            ->count();
+        $incomingQuantity = $order->items->sum(fn ($item) => max(0, (int) $item->quantity));
+
+        if (
+            (int) ($cartSummary->line_count ?? 0) + $incomingLineCount > self::MAX_CART_LINES
+            || (int) ($cartSummary->total_quantity ?? 0) + $incomingQuantity > self::MAX_CART_TOTAL_QUANTITY
+        ) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Đơn cũ vượt quá giới hạn giỏ hàng hiện tại. Vui lòng thêm từng sản phẩm với tổng tối đa ' . self::MAX_CART_TOTAL_QUANTITY . ' sản phẩm và ' . self::MAX_CART_LINES . ' mặt hàng khác nhau.',
+            ], 422);
         }
 
         $addedItems = [];
@@ -802,7 +929,7 @@ class ClientOrderController extends Controller
         /**
      * Xuất hóa đơn PDF (khách hàng tự xuất)
      */
-    public function invoice(string $order_code)
+    public function invoice(Request $request, string $order_code)
     {
         $user = auth('sanctum')->user();
         $user = ($user instanceof \App\Models\User) ? $user : null;
@@ -812,7 +939,7 @@ class ClientOrderController extends Controller
                     ->firstOrFail();
 
         // Bảo mật: chỉ chủ đơn hàng mới được xuất
-        if ($order->user_id && (!$user || (int)$order->user_id !== (int)$user->id)) {
+        if (!$this->canAccessOrder($request, $order, $user)) {
             abort(403, 'Bạn không có quyền xuất hóa đơn này.');
         }
 
@@ -831,6 +958,54 @@ class ClientOrderController extends Controller
         /**
      * Khách hàng yêu cầu hoàn hàng / hoàn tiền
      */
+    private function canAccessOrder(Request $request, Order $order, ?\App\Models\User $user = null): bool
+    {
+        if ($order->user_id !== null) {
+            $user ??= auth('sanctum')->user();
+            return $user instanceof \App\Models\User
+                && (int) $user->id === (int) $order->user_id;
+        }
+
+        $token = (string) $request->header('X-Guest-Order-Token', '');
+        return $token !== ''
+            && is_string($order->guest_access_token)
+            && hash_equals($order->guest_access_token, $token);
+    }
+
+    private function restoreCouponUsage(Order $order): void
+    {
+        if (! $order->coupon_id) {
+            return;
+        }
+
+        $coupon = Coupon::withTrashed()
+            ->whereKey($order->coupon_id)
+            ->lockForUpdate()
+            ->first();
+        if (! $coupon) {
+            return;
+        }
+
+        $wasAtLimit = $coupon->usage_limit !== null
+            && (int) $coupon->usage_count === (int) $coupon->usage_limit;
+
+        if ((int) $coupon->usage_count > 0) {
+            $coupon->decrement('usage_count');
+            $coupon->refresh();
+        }
+
+        if ($wasAtLimit && (! $coupon->expires_at || $coupon->expires_at->isFuture())) {
+            if ($coupon->trashed() && $coupon->user_id !== null) {
+                $coupon->restore();
+            }
+            if ($coupon->status === 'inactive' && $coupon->user_id === null) {
+                $coupon->status = 'active';
+            }
+        }
+
+        $coupon->save();
+    }
+
     public function requestReturn(Request $request, string $order_code)
     {
         $user = auth('sanctum')->user();
@@ -854,11 +1029,21 @@ class ClientOrderController extends Controller
             'refund_bank_name' => 'required|string|max:100',
             'refund_account_number' => 'required|string|max:50',
             'refund_account_name' => 'required|string|max:100',
+            'images'        => 'nullable|array|max:5',
             'images.*'      => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
 
         try {
             return DB::transaction(function () use ($order, $request, $user) {
+                $lockedOrder = Order::with('items')->whereKey($order->id)->lockForUpdate()->first();
+                if (!$lockedOrder || $lockedOrder->status !== 'delivered') {
+                    return response()->json(['success' => false, 'message' => 'Đơn hàng không còn ở trạng thái có thể yêu cầu hoàn trả.'], 409);
+                }
+
+                if (!$lockedOrder->user_id || !$user || (int) $user->id !== (int) $lockedOrder->user_id) {
+                    return response()->json(['success' => false, 'message' => 'Bạn không có quyền gửi yêu cầu hoàn trả cho đơn hàng này.'], 403);
+                }
+
                 $imagePaths = null;
                 if ($request->hasFile('images')) {
                     $imagePaths = [];
@@ -868,19 +1053,21 @@ class ClientOrderController extends Controller
                 }
 
                 // Cập nhật trạng thái đơn hàng và thông tin ngân hàng thụ hưởng
-                $order->update([
+                $lockedOrder->update([
                     'status' => 'return_requested',
                     'refund_bank_name' => $request->refund_bank_name,
                     'refund_account_number' => $request->refund_account_number,
                     'refund_account_name' => mb_strtoupper($request->refund_account_name, 'UTF-8'),
                     'refund_amount' => null,
                     'refund_note' => null,
-                    'return_images' => $imagePaths ? json_encode($imagePaths) : null
+                    // Order::return_images is cast to an array; passing the
+                    // array directly avoids persisting a double-encoded value.
+                    'return_images' => $imagePaths ?: null
                 ]);
 
                 // Lưu lịch sử
                 OrderStatusHistory::create([
-                    'order_id'        => $order->id,
+                    'order_id'        => $lockedOrder->id,
                     'old_status'      => 'delivered',
                     'new_status'      => 'return_requested',
                     'note'            => 'Khách yêu cầu hoàn hàng: ' . $request->return_reason,
@@ -893,14 +1080,16 @@ class ClientOrderController extends Controller
                     'message' => 'Yêu cầu hoàn hàng đã được gửi. Chúng tôi sẽ kiểm tra và phản hồi sớm nhất!'
                 ]);
             });
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json(['success' => false, 'message' => 'Không thể gửi yêu cầu hoàn trả lúc này. Vui lòng thử lại sau.'], 500);
         }
     }
 
     public function confirmRefundProposal(Request $request, $order_code)
     {
         $user = auth('sanctum')->user();
+        $user = $user instanceof \App\Models\User ? $user : null;
         $order = Order::where('order_code', $order_code)->first();
 
         if (!$order) {
@@ -924,6 +1113,10 @@ class ClientOrderController extends Controller
                 $lockedOrder = Order::where('id', $order->id)->lockForUpdate()->first();
                 if (!$lockedOrder || $lockedOrder->status !== 'return_negotiating') {
                     return response()->json(['success' => false, 'message' => 'Đơn hàng không ở trạng thái chờ xác nhận thỏa thuận'], 400);
+                }
+
+                if (!$lockedOrder->user_id || !$user || (int) $user->id !== (int) $lockedOrder->user_id) {
+                    return response()->json(['success' => false, 'message' => 'Bạn không có quyền xác nhận yêu cầu hoàn trả này.'], 403);
                 }
 
                 if ($request->is_accepted) {
@@ -965,8 +1158,9 @@ class ClientOrderController extends Controller
                     ]);
                 }
             });
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json(['success' => false, 'message' => 'Không thể xác nhận phương án hoàn trả lúc này. Vui lòng thử lại sau.'], 500);
         }
     }
 }

@@ -6,8 +6,7 @@ const admin = [
   },
   {
     path: '/admin/register',
-    name: 'admin-register',
-    component: () => import('../pages/admin/auth/Register.vue'),
+    redirect: { name: 'admin-login' },
   },
   {
     path: '/admin/forgot-password',
@@ -75,13 +74,13 @@ const admin = [
       {
         path: 'account/users/create',
         name: 'admin-user-create',
-        meta: { moduleCode: 'admin_users' },
+        meta: { moduleCode: 'admin_users', sidebarPath: '/admin/users' },
         component: () => import('../pages/admin/account/user/Create.vue'),
       },
       {
         path: 'account/users/edit/:id',
         name: 'admin-user-edit',
-        meta: { moduleCode: 'admin_users' },
+        meta: { moduleCode: 'admin_users', sidebarPath: '/admin/users' },
         component: () => import('../pages/admin/account/user/Edit.vue'),
       },
       // ROUTE QUẢN LÝ DANH MỤC (CATEGORIES)

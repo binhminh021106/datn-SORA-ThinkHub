@@ -6,6 +6,13 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class VerifyOtpRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'email' => mb_strtolower(trim((string) $this->input('email', ''))),
+        ]);
+    }
+
     public function authorize()
     {
         return true;
@@ -14,7 +21,7 @@ class VerifyOtpRequest extends FormRequest
     public function rules()
     {
         return [
-            'email' => 'required|email',
+            'email' => 'required|string|max:255|email',
             'otp'   => 'required|digits:6',
         ];
     }

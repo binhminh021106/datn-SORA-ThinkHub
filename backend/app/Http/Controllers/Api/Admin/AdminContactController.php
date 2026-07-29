@@ -13,11 +13,16 @@ class AdminContactController extends Controller
     /**
      * Lấy danh sách liên hệ (Mới nhất lên đầu)
      */
-    public function index()
+    public function index(Request $request)
     {
-        $contacts = Contact::orderByRaw("FIELD(status, 'pending', 'resolved')")
+        $query = Contact::orderByRaw("FIELD(status, 'pending', 'resolved')")
             ->orderBy('created_at', 'desc')
-            ->paginate(15);
+            ->when(
+                $request->filled('status') && in_array($request->string('status')->toString(), ['pending', 'resolved'], true),
+                fn ($contacts) => $contacts->where('status', $request->string('status')->toString())
+            );
+
+        $contacts = $query->paginate(15);
 
         return response()->json([
             'status' => true,

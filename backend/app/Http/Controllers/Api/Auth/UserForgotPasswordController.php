@@ -23,13 +23,14 @@ class UserForgotPasswordController extends Controller
     public function sendOtp(SendOtpRequest $request)
     {
         $email = $request->validated('email');
+        $rateLimitKey = 'send-otp:' . hash('sha256', $email);
 
         // Chống spam: Tối đa 1 lần / 2 phút
-        if (RateLimiter::tooManyAttempts('send-otp-'.$email, 1)) {
-            $seconds = RateLimiter::availableIn('send-otp-'.$email);
+        if (RateLimiter::tooManyAttempts($rateLimitKey, 1)) {
+            $seconds = RateLimiter::availableIn($rateLimitKey);
             return response()->json(['message' => "Hệ thống đang xử lý. Vui lòng thử lại sau {$seconds} giây."], 429);
         }
-        RateLimiter::hit('send-otp-'.$email, 120);
+        RateLimiter::hit($rateLimitKey, 120);
 
         // Chỉ tạo và gửi OTP nếu User tồn tại trong hệ thống
         $user = User::where('email', $email)->first();
@@ -38,9 +39,8 @@ class UserForgotPasswordController extends Controller
 
             $expiresAt = now()->addMinutes(5);
 
-            // DÙNG CACHE FILE: Không sợ lỗi Timezone của MySQL
-            Cache::store('file')->put('user_password_reset_otp_' . $email, [
-                'otp' => $otp,
+            Cache::put($this->otpCacheKey($email), [
+                'otp_hash' => $this->otpHash($otp),
                 'attempts' => 0,
                 'expires_at' => $expiresAt,
             ], $expiresAt);
@@ -49,6 +49,7 @@ class UserForgotPasswordController extends Controller
             try {
                 Mail::to($email)->send(new UserForgotPasswordOtpMail($otp));
             } catch (\Exception $e) {
+                Cache::forget($this->otpCacheKey($email));
                 \Illuminate\Support\Facades\Log::error('Lỗi gửi mail SMTP (OTP): ' . $e->getMessage());
                 // Không throw error ra ngoài để tránh lộ việc email có tồn tại hay không
             }
@@ -65,14 +66,22 @@ class UserForgotPasswordController extends Controller
     {
         $email = $request->validated('email');
         $otp = $request->validated('otp');
+        $otpRateKey = 'verify-otp:' . hash('sha256', $email);
+        $cacheKey = $this->otpCacheKey($email);
+        $lock = Cache::lock('user-password-reset-otp-lock:' . hash('sha256', $email), 10);
+
+        if (! $lock->get()) {
+            return response()->json(['message' => 'Yêu cầu đang được xử lý. Vui lòng thử lại sau.'], 429);
+        }
+
+        try {
 
         // Chống Brute-force: Khóa 5 phút nếu sai 5 lần
-        if (RateLimiter::tooManyAttempts('verify-otp-'.$email, 5)) {
+        if (RateLimiter::tooManyAttempts($otpRateKey, 5)) {
             return response()->json(['message' => 'Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau 5 phút.'], 403);
         }
 
-        $cacheKey = 'user_password_reset_otp_' . $email;
-        $cacheData = Cache::store('file')->get($cacheKey);
+        $cacheData = Cache::get($cacheKey);
 
         // 1. Lỗi: Hết hạn hoặc không tồn tại
         if (!$cacheData) {
@@ -81,32 +90,46 @@ class UserForgotPasswordController extends Controller
 
         // 2. Lỗi: Vượt quá số lần cho phép trong cùng 1 vòng đời OTP
         if ($cacheData['attempts'] >= 5) {
-            Cache::store('file')->forget($cacheKey);
+            Cache::forget($cacheKey);
             return response()->json(['message' => 'Bạn đã nhập sai quá nhiều lần. Mã OTP đã bị hủy để bảo mật.'], 403);
         }
 
         // 3. Lỗi: OTP Sai
-        if ($cacheData['otp'] !== $otp) {
+        $storedOtpHash = (string) ($cacheData['otp_hash'] ?? '');
+        $isValidOtp = $storedOtpHash !== ''
+            ? hash_equals($storedOtpHash, $this->otpHash($otp))
+            : hash_equals((string) ($cacheData['otp'] ?? ''), (string) $otp);
+
+        if (! $isValidOtp) {
             $cacheData['attempts']++;
-            Cache::store('file')->put($cacheKey, $cacheData, $cacheData['expires_at'] ?? now());
-            RateLimiter::hit('verify-otp-'.$email, 300);
+            if ($cacheData['attempts'] >= 5) {
+                Cache::forget($cacheKey);
+            } else {
+                Cache::put($cacheKey, $cacheData, $cacheData['expires_at'] ?? now());
+            }
+            RateLimiter::hit($otpRateKey, 300);
             $attemptsLeft = 5 - $cacheData['attempts'];
             return response()->json(['message' => "Mã OTP không chính xác. Bạn còn {$attemptsLeft} lần thử."], 400);
         }
 
         // 4. THÀNH CÔNG: Xóa OTP, sinh Token bảo mật để đi tiếp Bước 3
-        Cache::store('file')->forget($cacheKey);
-        RateLimiter::clear('verify-otp-'.$email);
+        Cache::forget($cacheKey);
+        RateLimiter::clear($otpRateKey);
 
         $resetToken = Str::random(60);
         // Token sống 15 phút
-        Cache::store('file')->put('user_password_reset_token_' . $email, $resetToken, now()->addMinutes(15));
+        Cache::put($this->resetTokenCacheKey($email), [
+            'token_hash' => hash('sha256', $resetToken),
+        ], now()->addMinutes(15));
 
         return response()->json([
             'success' => true, 
             'message' => 'Xác thực OTP thành công.',
             'reset_token' => $resetToken
         ]);
+        } finally {
+            $lock->release();
+        }
     }
 
     /**
@@ -117,15 +140,26 @@ class UserForgotPasswordController extends Controller
         $email = $request->validated('email');
         $resetToken = $request->validated('reset_token');
         $newPassword = $request->validated('password');
+        $lock = Cache::lock('user-password-reset-token-lock:' . hash('sha256', $email), 15);
 
-        $validToken = Cache::store('file')->get('user_password_reset_token_' . $email);
+        if (! $lock->get()) {
+            return response()->json(['message' => 'Yêu cầu đang được xử lý. Vui lòng thử lại sau.'], 429);
+        }
+
+        try {
+
+        $validToken = Cache::get($this->resetTokenCacheKey($email));
 
         // Kiểm tra Token
         if (!$validToken) {
             return response()->json(['message' => 'Phiên làm việc đã hết hạn. Vui lòng yêu cầu lại OTP.'], 403);
         }
 
-        if ($validToken !== $resetToken) {
+        $validTokenHash = is_array($validToken)
+            ? (string) ($validToken['token_hash'] ?? '')
+            : hash('sha256', (string) $validToken);
+
+        if (!hash_equals($validTokenHash, hash('sha256', $resetToken))) {
             return response()->json(['message' => 'Mã bảo mật không khớp. Phiên làm việc lỗi.'], 403);
         }
 
@@ -150,8 +184,26 @@ class UserForgotPasswordController extends Controller
         }
 
         // Hủy Token bảo mật sau khi đổi xong
-        Cache::store('file')->forget('user_password_reset_token_' . $email);
+        Cache::forget($this->resetTokenCacheKey($email));
 
         return response()->json(['success' => true, 'message' => 'Đổi mật khẩu thành công! Bạn có thể đăng nhập ngay.']);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    private function otpCacheKey(string $email): string
+    {
+        return 'user_password_reset_otp_' . hash('sha256', $email);
+    }
+
+    private function resetTokenCacheKey(string $email): string
+    {
+        return 'user_password_reset_token_' . hash('sha256', $email);
+    }
+
+    private function otpHash(string $otp): string
+    {
+        return hash_hmac('sha256', $otp, (string) config('app.key'));
     }
 }

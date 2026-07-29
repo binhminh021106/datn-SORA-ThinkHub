@@ -1,7 +1,7 @@
 <template>
   <div class="vietnam-address-picker">
     <div class="row g-3">
-      <div :class="columnClass">
+      <div :class="effectiveColumnClass">
         <label v-if="showLabels" class="form-label" :class="labelClass">
           {{ provinceLabel }} <span v-if="required" class="text-danger">*</span>
         </label>
@@ -44,56 +44,7 @@
         </div>
       </div>
 
-      <div :class="columnClass">
-        <label v-if="showLabels" class="form-label" :class="labelClass">
-          {{ districtLabel }} <span v-if="required && hasDistrictLevel" class="text-danger">*</span>
-        </label>
-        <div class="address-select" :class="{ 'is-open': openDropdown === 'district', 'is-disabled': !canSelectDistrict, 'is-invalid': invalidDistrict }" @click.stop>
-          <button
-            type="button"
-            class="address-select-toggle"
-            :class="inputClass"
-            :disabled="!canSelectDistrict"
-            @click="toggleDropdown('district')"
-          >
-            <span :class="{ 'address-placeholder': !selectedDistrictName }">
-              {{ districtDisplayText }}
-            </span>
-            <i class="bi bi-chevron-down"></i>
-          </button>
-          <div v-if="openDropdown === 'district'" class="address-select-menu">
-            <div class="address-search-box">
-              <i class="bi bi-search"></i>
-              <input
-                ref="districtSearchInput"
-                v-model="search.district"
-                type="text"
-                class="form-control"
-                placeholder="Tìm quận/huyện..."
-                @keydown.stop
-              >
-            </div>
-            <div class="address-options">
-              <button
-                v-for="item in filteredDistricts"
-                :key="item.id"
-                type="button"
-                class="address-option"
-                :class="{ active: item.id === selectedDistrict?.id }"
-                @click="selectDistrict(item)"
-              >
-                <span>{{ item.name }}</span>
-                <i v-if="item.id === selectedDistrict?.id" class="bi bi-check2"></i>
-              </button>
-              <div v-if="!filteredDistricts.length" class="address-empty">
-                Không tìm thấy quận/huyện phù hợp
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div :class="columnClass">
+      <div :class="effectiveColumnClass">
         <label v-if="showLabels" class="form-label" :class="labelClass">
           {{ wardLabel }} <span v-if="required" class="text-danger">*</span>
         </label>
@@ -153,8 +104,39 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 
-const NEW_API_BASE = 'https://esgoo.net/api-tinhthanh-new';
-const LEGACY_API_BASE = 'https://esgoo.net/api-tinhthanh';
+const ADDRESS_API_BASE = 'https://34tinhthanh.com/api';
+const CENTRAL_CITY_CODES = new Set(['01', '31', '46', '48', '79', '92']);
+const LEGACY_PROVINCE_CODE_BY_NAME = {
+  'ha giang': '08',
+  'yen bai': '15',
+  'bac kan': '19',
+  'vinh phuc': '25',
+  'hoa binh': '25',
+  'bac giang': '24',
+  'thai binh': '33',
+  'hai duong': '31',
+  'ha nam': '37',
+  'nam dinh': '37',
+  'quang binh': '44',
+  'quang nam': '48',
+  'kon tum': '51',
+  'binh dinh': '52',
+  'ninh thuan': '56',
+  'phu yen': '66',
+  'dak nong': '68',
+  'binh thuan': '68',
+  'binh phuoc': '75',
+  'ba ria vung tau': '79',
+  'binh duong': '79',
+  'long an': '80',
+  'ben tre': '86',
+  'tra vinh': '86',
+  'tien giang': '82',
+  'soc trang': '92',
+  'hau giang': '92',
+  'kien giang': '91',
+  'bac lieu': '96',
+};
 
 let provincesCache = null;
 let provincesPromise = null;
@@ -195,7 +177,6 @@ const emit = defineEmits([
 ]);
 
 const provinces = ref([]);
-const districts = ref([]);
 const wards = ref([]);
 const selectedProvince = ref(null);
 const selectedDistrict = ref(null);
@@ -206,29 +187,22 @@ const isSyncingExternal = ref(false);
 
 const openDropdown = ref('');
 const provinceSearchInput = ref(null);
-const districtSearchInput = ref(null);
 const wardSearchInput = ref(null);
 
 const search = reactive({
   province: '',
-  district: '',
   ward: '',
 });
 
+const effectiveColumnClass = computed(() => (
+  props.columnClass === 'col-md-4' ? 'col-md-6' : props.columnClass
+));
 const selectedProvinceName = computed(() => selectedProvince.value?.name || props.province || '');
-const selectedDistrictName = computed(() => selectedDistrict.value?.name || props.district || '');
 const selectedWardName = computed(() => selectedWard.value?.name || props.ward || '');
 
-const canSelectDistrict = computed(() => Boolean(selectedProvince.value && hasDistrictLevel.value && districts.value.length));
 const canSelectWard = computed(() => Boolean(selectedProvince.value && (!hasDistrictLevel.value || selectedDistrict.value) && wards.value.length));
-const districtDisplayText = computed(() => {
-  if (!selectedProvince.value) return props.districtPlaceholder;
-  if (!hasDistrictLevel.value) return 'Không áp dụng sau sáp nhập';
-  return selectedDistrictName.value || props.districtPlaceholder;
-});
 
 const filteredProvinces = computed(() => filterBySearch(provinces.value, search.province));
-const filteredDistricts = computed(() => filterBySearch(districts.value, search.district));
 const filteredWards = computed(() => filterBySearch(wards.value, search.ward));
 
 const normalizeText = (value) => {
@@ -263,22 +237,48 @@ const filterBySearch = (items, keyword) => {
 };
 
 const getDisplayName = (item) => {
-  return item?.full_name || item?.name || item?.Name || item?.ten || item?.title || '';
+  return item?.full_name || item?.ward_name || item?.name || item?.Name || item?.ten || item?.title || '';
 };
 
 const getId = (item) => {
-  return String(item?.id || item?.code || item?.Id || item?.ma || getDisplayName(item));
+  return String(
+    item?.id
+    || item?.ward_code
+    || item?.province_code
+    || item?.code
+    || item?.Id
+    || item?.ma
+    || getDisplayName(item),
+  );
+};
+
+const getCode = (item) => {
+  return String(
+    item?.ward_code
+    || item?.province_code
+    || item?.code
+    || item?.id
+    || item?.Id
+    || item?.ma
+    || getDisplayName(item),
+  );
 };
 
 const normalizeItems = (items = [], source = '') => {
   return items
     .map((item) => {
-      const name = getDisplayName(item);
+      const code = getCode(item);
+      let name = getDisplayName(item).replace(/\s+/g, ' ').trim();
+      if (source === 'province' && !/^(Tỉnh|Thành phố)\s/i.test(name)) {
+        name = `${CENTRAL_CITY_CODES.has(code) ? 'Thành phố' : 'Tỉnh'} ${name}`;
+      }
+      const aliases = Array.isArray(item?.old_units) ? item.old_units : [];
       return {
         id: getId(item),
-        code: getId(item),
+        code,
         name,
-        searchText: normalizeText(name),
+        searchText: normalizeText([name, ...aliases].join(' ')),
+        aliases,
         source,
         raw: item,
       };
@@ -297,27 +297,22 @@ const responseData = (payload) => {
 const fetchJson = async (url) => {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Request failed: ${url}`);
-  return response.json();
+  const payload = await response.json();
+  if (Number(payload?.error) === 1) {
+    throw new Error(payload?.error_text || `Invalid address response: ${url}`);
+  }
+  return payload;
 };
 
 const loadProvinces = async () => {
   if (provincesCache) return provincesCache;
   if (!provincesPromise) {
     provincesPromise = (async () => {
-      // Ưu tiên legacy API để province ID khớp với district API (legacy/2/{id}.htm)
-      try {
-        const legacyPayload = await fetchJson(`${LEGACY_API_BASE}/1/0.htm`);
-        const legacyData = normalizeItems(responseData(legacyPayload), 'legacy');
-        if (legacyData.length) {
-          provincesCache = legacyData;
-          return legacyData;
-        }
-      } catch (error) {
-        // Fallback sang new API nếu legacy lỗi.
+      const payload = await fetchJson(`${ADDRESS_API_BASE}/provinces`);
+      const data = normalizeItems(responseData(payload), 'province');
+      if (data.length !== 34) {
+        throw new Error(`Expected 34 provinces, received ${data.length}`);
       }
-
-      const payload = await fetchJson(`${NEW_API_BASE}/1/0.htm`);
-      const data = normalizeItems(responseData(payload), 'new');
       provincesCache = data;
       return data;
     })().catch((error) => {
@@ -339,78 +334,32 @@ const extractEmbeddedChildren = (item) => {
     .concat(responseData(raw.phuong_xa));
 };
 
-const looksLikeDistrict = (item) => {
-  const name = normalizeText(item.name);
-  return /\b(quan|huyen|thi xa|tp|thanh pho)\b/.test(name);
-};
-
 const loadChildren = async (provinceItem) => {
   if (!provinceItem) return { kind: 'none', items: [] };
-  const cacheKey = `province:${provinceItem.id}`;
+  const cacheKey = `province:${provinceItem.code}`;
   if (childrenCache.has(cacheKey)) return childrenCache.get(cacheKey);
 
   const embedded = normalizeItems(extractEmbeddedChildren(provinceItem), provinceItem.source);
   if (embedded.length) {
-    const result = embedded.some(looksLikeDistrict)
-      ? { kind: 'districts', items: embedded }
-      : { kind: 'wards', items: embedded };
+    const result = { kind: 'wards', items: embedded };
     childrenCache.set(cacheKey, result);
     return result;
   }
 
-  // Luôn thử legacy API trước (có districts) để giữ hasDistrictLevel=true cho các tỉnh còn quận/huyện.
-  // Nếu legacy trả về rỗng (tỉnh đã sáp nhập hoàn toàn), mới fall back sang new API (trả về wards trực tiếp).
-  const attempts = [
-    { url: `${LEGACY_API_BASE}/2/${provinceItem.id}.htm`, kind: 'districts', source: 'legacy' },
-    { url: `${NEW_API_BASE}/2/${provinceItem.id}.htm`, kind: 'wards', source: 'new' },
-  ];
-
-  for (const attempt of attempts) {
-    try {
-      const payload = await fetchJson(attempt.url);
-      const items = normalizeItems(responseData(payload), attempt.source);
-      if (items.length) {
-        const result = { kind: attempt.kind, items };
-        childrenCache.set(cacheKey, result);
-        return result;
-      }
-    } catch (error) {
-      // Thử endpoint kế tiếp.
-    }
-  }
-
-  const result = { kind: 'none', items: [] };
+  const payload = await fetchJson(
+    `${ADDRESS_API_BASE}/wards?province_code=${encodeURIComponent(provinceItem.code)}`,
+  );
+  const items = normalizeItems(responseData(payload), 'ward');
+  const result = { kind: 'wards', items };
   childrenCache.set(cacheKey, result);
   return result;
-};
-
-const loadWardsForDistrict = async (districtItem) => {
-  if (!districtItem) return [];
-  const cacheKey = `district:${districtItem.id}`;
-  if (childrenCache.has(cacheKey)) return childrenCache.get(cacheKey).items || [];
-
-  const embedded = normalizeItems(extractEmbeddedChildren(districtItem), districtItem.source);
-  if (embedded.length) {
-    childrenCache.set(cacheKey, { kind: 'wards', items: embedded });
-    return embedded;
-  }
-
-  try {
-    const payload = await fetchJson(`${LEGACY_API_BASE}/3/${districtItem.id}.htm`);
-    const items = normalizeItems(responseData(payload), 'legacy');
-    childrenCache.set(cacheKey, { kind: 'wards', items });
-    return items;
-  } catch (error) {
-    childrenCache.set(cacheKey, { kind: 'wards', items: [] });
-    return [];
-  }
 };
 
 const findOption = (items, name, code) => {
   const normalizedName = normalizeText(name);
   const normalizedCode = String(code || '');
   return items.find((item) => {
-    return (normalizedCode && item.id === normalizedCode)
+    return (normalizedCode && (item.id === normalizedCode || item.code === normalizedCode))
       || (normalizedName && (item.searchText === normalizedName || item.searchText.includes(normalizedName) || normalizedName.includes(item.searchText)));
   }) || null;
 };
@@ -459,6 +408,22 @@ const findBestOption = (items, candidates = [], code = '') => {
   return bestScore >= 60 ? best : null;
 };
 
+const findProvinceOption = (items, provinceName = '', provinceCode = '', addressText = '') => {
+  const directMatch = findOption(items, provinceName, provinceCode);
+  if (directMatch) return directMatch;
+
+  const candidates = buildAddressCandidates(provinceName, addressText);
+  for (const candidate of candidates) {
+    const legacyCode = LEGACY_PROVINCE_CODE_BY_NAME[stripAdministrativePrefix(candidate)];
+    if (legacyCode) {
+      const mergedProvince = items.find((item) => item.code === legacyCode);
+      if (mergedProvince) return mergedProvince;
+    }
+  }
+
+  return findBestOption(items, candidates, provinceCode);
+};
+
 const getMergedWardAlias = (provinceName, wardName) => {
   const key = `${stripAdministrativePrefix(provinceName)}|${stripAdministrativePrefix(wardName)}`;
   const aliases = {
@@ -492,23 +457,22 @@ const emitSelection = () => {
 
 const emitProvince = (item) => {
   emit('update:province', item?.name || '');
-  emit('update:provinceCode', item?.id || '');
+  emit('update:provinceCode', item?.code || '');
 };
 
 const emitDistrict = (item) => {
   emit('update:district', item?.name || '');
-  emit('update:districtCode', item?.id || '');
+  emit('update:districtCode', item?.code || '');
 };
 
 const emitWard = (item) => {
   emit('update:ward', item?.name || '');
-  emit('update:wardCode', item?.id || '');
+  emit('update:wardCode', item?.code || '');
 };
 
 const resetDistrictAndWard = () => {
   selectedDistrict.value = null;
   selectedWard.value = null;
-  districts.value = [];
   wards.value = [];
   emitDistrict(null);
   emitWard(null);
@@ -526,32 +490,10 @@ const selectProvince = async (item, silent = false) => {
 
   loadError.value = false;
   const childResult = await loadChildren(item);
-  hasDistrictLevel.value = childResult.kind === 'districts';
+  hasDistrictLevel.value = false;
+  wards.value = childResult.items;
+  if (!silent) emitDistrict(null);
 
-  if (childResult.kind === 'districts') {
-    districts.value = childResult.items;
-    wards.value = [];
-  } else {
-    districts.value = [];
-    wards.value = childResult.items;
-    if (!silent) emitDistrict(null);
-  }
-
-  if (!silent) emitSelection();
-};
-
-const selectDistrict = async (item, silent = false) => {
-  selectedDistrict.value = item;
-  openDropdown.value = '';
-  search.district = '';
-
-  if (!silent) {
-    emitDistrict(item);
-    selectedWard.value = null;
-    emitWard(null);
-  }
-
-  wards.value = await loadWardsForDistrict(item);
   if (!silent) emitSelection();
 };
 
@@ -573,40 +515,20 @@ const resolveAddress = async ({ province = '', district = '', ward = '', address
       provinces.value = await loadProvinces();
     }
 
-    const provinceCandidates = buildAddressCandidates(province, addressText);
-    const provinceItem = findBestOption(provinces.value, provinceCandidates, props.provinceCode);
+    const provinceItem = findProvinceOption(
+      provinces.value,
+      province,
+      props.provinceCode,
+      addressText,
+    );
     if (!provinceItem) {
       return { resolved: false, province: null, district: null, ward: null, hasDistrictLevel: hasDistrictLevel.value };
     }
 
     await selectProvince(provinceItem, true);
 
-    let districtItem = null;
-    if (hasDistrictLevel.value && districts.value.length) {
-      // Try matching district name directly first (without noisy addressText)
-      if (district) {
-        const directCandidates = buildAddressCandidates(district);
-        districtItem = findBestOption(districts.value, directCandidates, props.districtCode);
-      }
-      // If direct match failed, try extracting district from addressText parts
-      if (!districtItem && addressText) {
-        const addressParts = splitAddressText(addressText);
-        // Try each part individually to avoid matching noise
-        for (const part of addressParts) {
-          const candidate = findBestOption(districts.value, [part], '');
-          if (candidate) {
-            districtItem = candidate;
-            break;
-          }
-        }
-      }
-      if (districtItem) {
-        await selectDistrict(districtItem, true);
-      }
-    }
-
     const aliasWard = getMergedWardAlias(provinceItem.name, ward);
-    const wardCandidates = buildAddressCandidates(aliasWard, ward, addressText);
+    const wardCandidates = buildAddressCandidates(aliasWard, ward, district, addressText);
     const wardItem = findBestOption(wards.value, wardCandidates, props.wardCode);
 
     if (wardItem) {
@@ -616,31 +538,29 @@ const resolveAddress = async ({ province = '', district = '', ward = '', address
     }
 
     emitProvince(provinceItem);
-    emitDistrict(hasDistrictLevel.value ? districtItem : null);
+    emitDistrict(null);
     emitWard(wardItem);
     emitSelection();
 
     return {
       resolved: Boolean(provinceItem && wardItem),
       province: provinceItem,
-      district: hasDistrictLevel.value ? districtItem : null,
+      district: null,
       ward: wardItem,
       hasDistrictLevel: hasDistrictLevel.value,
     };
-  } catch (error) {
+  } catch {
     loadError.value = true;
     return { resolved: false, province: null, district: null, ward: null, hasDistrictLevel: hasDistrictLevel.value };
   }
 };
 
 const toggleDropdown = async (name) => {
-  if (name === 'district' && !canSelectDistrict.value) return;
   if (name === 'ward' && !canSelectWard.value) return;
   openDropdown.value = openDropdown.value === name ? '' : name;
 
   await nextTick();
   if (openDropdown.value === 'province') provinceSearchInput.value?.focus();
-  if (openDropdown.value === 'district') districtSearchInput.value?.focus();
   if (openDropdown.value === 'ward') wardSearchInput.value?.focus();
 };
 
@@ -657,31 +577,28 @@ const syncFromProps = async () => {
       selectedProvince.value = null;
       selectedDistrict.value = null;
       selectedWard.value = null;
-      districts.value = [];
       wards.value = [];
       hasDistrictLevel.value = false;
+      emitDistrict(null);
       return;
     }
 
-    const provinceItem = findOption(provinces.value, props.province, props.provinceCode)
-      || findBestOption(provinces.value, buildAddressCandidates(props.addressText), props.provinceCode);
+    const provinceItem = findProvinceOption(
+      provinces.value,
+      props.province,
+      props.provinceCode,
+      props.addressText,
+    );
     if (provinceItem && provinceItem.id !== selectedProvince.value?.id) {
       await selectProvince(provinceItem, true);
     }
 
-    if (hasDistrictLevel.value) {
-      const districtItem = findOption(districts.value, props.district, props.districtCode)
-        || (props.district ? findBestOption(districts.value, buildAddressCandidates(props.district), props.districtCode) : null);
-      if (districtItem && districtItem.id !== selectedDistrict.value?.id) {
-        await selectDistrict(districtItem, true);
-      }
-    } else {
-      selectedDistrict.value = null;
-    }
+    selectedDistrict.value = null;
+    emitDistrict(null);
 
     const aliasWard = selectedProvince.value ? getMergedWardAlias(selectedProvince.value.name, props.ward) : '';
     const wardItem = findOption(wards.value, props.ward, props.wardCode)
-      || findBestOption(wards.value, buildAddressCandidates(aliasWard, props.addressText), props.wardCode);
+      || findBestOption(wards.value, buildAddressCandidates(aliasWard, props.district, props.addressText), props.wardCode);
     if (wardItem && wardItem.id !== selectedWard.value?.id) {
       selectWard(wardItem, true);
     }
@@ -708,7 +625,7 @@ onMounted(async () => {
   try {
     provinces.value = await loadProvinces();
     await syncFromProps();
-  } catch (error) {
+  } catch {
     loadError.value = true;
   }
 });

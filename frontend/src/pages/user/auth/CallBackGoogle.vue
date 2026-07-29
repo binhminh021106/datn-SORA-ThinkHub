@@ -28,14 +28,18 @@ import clientApiClient from '@/utils/clientApiClient';
 const route = useRoute();
 const router = useRouter();
 
+const isSafeClientRedirect = (value) => typeof value === 'string'
+  && value.startsWith('/')
+  && !value.startsWith('//')
+  && !value.startsWith('/\\')
+  && !value.startsWith('/admin');
+
 onMounted(async () => {
   const code = route.query.code;
   const error = route.query.error;
 
-  let redirectPath = localStorage.getItem('redirect_after_login') || '/';
-  if (redirectPath.startsWith('/admin')) {
-    redirectPath = '/';
-  }
+  const storedRedirect = localStorage.getItem('redirect_after_login');
+  const redirectPath = isSafeClientRedirect(storedRedirect) ? storedRedirect : '/';
   localStorage.removeItem('redirect_after_login');
 
   if (error) {

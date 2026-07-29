@@ -17,7 +17,7 @@ class AuthController extends Controller
             'fullName' => 'required|string|max:150',
             'email'    => 'required|string|email|max:150|unique:users',
             'phone'    => 'nullable|string|max:20|unique:users,phone',
-            'password' => 'required|string|min:6|confirmed',
+            'password' => 'required|string|min:8|confirmed',
         ], [
             'phone.unique' => 'Số điện thoại này đã được sử dụng.',
             'email.unique' => 'Email này đã được sử dụng.',
@@ -39,7 +39,7 @@ class AuthController extends Controller
             'access_token'  => $accessToken,
             'expires_in'    => 3600,
             'user'          => $user
-        ], 201)->cookie('refresh_token', $refreshToken, 60 * 24 * 7, '/', null, true, true, false, 'Strict');
+        ], 201)->cookie('refresh_token', $refreshToken, 60 * 24 * 7, '/', config('session.domain'), config('session.secure') ?? app()->environment('production'), true, false, 'Strict');
     }
 
     public function login(Request $request)
@@ -71,7 +71,7 @@ class AuthController extends Controller
             'access_token'  => $accessToken,
             'expires_in'    => 3600,
             'user'          => $user
-        ])->cookie('refresh_token', $refreshToken, 60 * 24 * 7, '/', null, true, true, false, 'Strict');
+        ])->cookie('refresh_token', $refreshToken, 60 * 24 * 7, '/', config('session.domain'), config('session.secure') ?? app()->environment('production'), true, false, 'Strict');
     }
 
     public function logout(Request $request)
@@ -111,6 +111,6 @@ class AuthController extends Controller
         return response()->json([
             'access_token'  => $accessToken,
             'expires_in'    => 3600
-        ])->cookie('refresh_token', $refreshToken, 60 * 24 * 7, '/', null, true, true, false, 'Strict');
+        ])->cookie('refresh_token', $refreshToken, 60 * 24 * 7, '/', config('session.domain'), config('session.secure') ?? app()->environment('production'), true, false, 'Strict');
     }
 }

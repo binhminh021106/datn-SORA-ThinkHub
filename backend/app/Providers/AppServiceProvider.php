@@ -23,6 +23,9 @@ use App\Models\User;
 use App\Models\AdminAttendance;
 use App\Models\AdminAttendanceAdjustment;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Mail\Events\MessageSent;
+use Illuminate\Support\Facades\Event;
+use App\Models\EmailLog;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -42,6 +45,19 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Event::listen(MessageSent::class, function (MessageSent $event): void {
+            $header = $event->message->getHeaders()->get('X-SORA-Email-Log-ID');
+            $emailLogId = $header?->getBodyAsString();
+
+            if ($emailLogId) {
+                EmailLog::whereKey((int) $emailLogId)->update([
+                    'status' => 'sent',
+                    'sent_at' => now(),
+                    'error_message' => null,
+                ]);
+            }
+        });
+
         $this->configureRateLimiting();
 
         $broadcastMapping = [
@@ -77,11 +93,25 @@ class AppServiceProvider extends ServiceProvider
     protected function configureRateLimiting(): void
     {
         RateLimiter::for('auth', function (Request $request) {
-            return Limit::perMinutes(15, 5)->by($request->ip());
+            $email = mb_strtolower(trim((string) $request->input('email', '')));
+
+            return [
+                Limit::perMinutes(15, 5)->by('auth-ip:' . $request->ip()),
+                Limit::perMinutes(15, 5)->by('auth-email:' . hash('sha256', $email ?: $request->ip())),
+            ];
         });
 
         RateLimiter::for('forgot-password', function (Request $request) {
             return Limit::perDay(3)->by($request->ip());
+        });
+
+        RateLimiter::for('admin-forgot-password', function (Request $request) {
+            $email = mb_strtolower(trim((string) $request->input('email', '')));
+
+            return [
+                Limit::perMinutes(15, 3)->by('admin-forgot-ip:' . $request->ip()),
+                Limit::perHour(3)->by('admin-forgot-email:' . hash('sha256', $email ?: $request->ip())),
+            ];
         });
 
         RateLimiter::for('contact', function (Request $request) {
@@ -103,13 +133,129 @@ class AppServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('chatbot', function (Request $request) {
-            return Limit::perMinute(10)->by($request->ip());
+            return [
+                Limit::perMinute(10)->by('chatbot-ip:' . $request->ip()),
+                Limit::perHour(60)->by('chatbot-ip:' . $request->ip()),
+            ];
         });
 
         RateLimiter::for('affiliate', function (Request $request) {
             return $request->user()
                 ? Limit::perHour(1)->by($request->user()->id)
                 : Limit::perHour(1)->by($request->ip());
+        });
+
+        RateLimiter::for('email-campaign', function (Request $request) {
+            return Limit::perMinutes(10, 2)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('payment-retry', function (Request $request) {
+            return Limit::perMinutes(10, 3)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('cart-mutation', function (Request $request) {
+            $owner = $request->user()?->id ?: ($request->header('X-Cart-Session-Id') ?: 'guest');
+
+            return [
+                Limit::perMinute(30)->by('cart-owner:' . $owner),
+                Limit::perMinute(60)->by('cart-ip:' . $request->ip()),
+                Limit::perDay(300)->by('cart-ip:' . $request->ip()),
+            ];
+        });
+
+        RateLimiter::for('cart-read', function (Request $request) {
+            return Limit::perMinute(60)->by('cart-read:' . ($request->user()?->id ?: $request->ip()));
+        });
+
+        RateLimiter::for('geo', function (Request $request) {
+            return [
+                Limit::perMinute(30)->by('geo-ip:' . $request->ip()),
+                Limit::perHour(300)->by('geo-ip:' . $request->ip()),
+            ];
+        });
+
+        RateLimiter::for('public-read', function (Request $request) {
+            return Limit::perMinute(120)->by('public-read:' . $request->ip());
+        });
+
+        RateLimiter::for('direct-chat-read', function (Request $request) {
+            return [
+                Limit::perMinute(30)->by('chat-read-user:' . ($request->user()?->id ?: 'guest')),
+                Limit::perMinute(60)->by('chat-read-ip:' . $request->ip()),
+            ];
+        });
+
+        RateLimiter::for('direct-chat-write', function (Request $request) {
+            return [
+                Limit::perMinute(10)->by('chat-write-user:' . ($request->user()?->id ?: 'guest')),
+                Limit::perMinute(30)->by('chat-write-ip:' . $request->ip()),
+            ];
+        });
+
+        RateLimiter::for('client-mutation', function (Request $request) {
+            $actor = $request->user()?->id ?: $request->ip();
+
+            return [
+                Limit::perMinute(30)->by('client-mutation-user:' . $actor . ':' . $request->path()),
+                Limit::perMinute(60)->by('client-mutation-ip:' . $request->ip()),
+            ];
+        });
+
+        RateLimiter::for('sensitive-mutation', function (Request $request) {
+            return [
+                Limit::perMinutes(10, 5)->by('sensitive-user:' . ($request->user()?->id ?: 'guest')),
+                Limit::perMinutes(10, 10)->by('sensitive-ip:' . $request->ip()),
+            ];
+        });
+
+        RateLimiter::for('withdrawal', function (Request $request) {
+            return Limit::perHour(2)->by('withdrawal-user:' . ($request->user()?->id ?: $request->ip()));
+        });
+
+        RateLimiter::for('return-request', function (Request $request) {
+            return Limit::perMinutes(10, 5)->by('return-user:' . ($request->user()?->id ?: $request->ip()));
+        });
+
+        RateLimiter::for('google-auth', function (Request $request) {
+            return [
+                Limit::perMinutes(15, 10)->by('google-auth-ip:' . $request->ip()),
+                Limit::perHour(30)->by('google-auth-ip:' . $request->ip()),
+            ];
+        });
+
+        RateLimiter::for('refresh-token', function (Request $request) {
+            return [
+                Limit::perMinute(10)->by('refresh-user:' . ($request->user()?->id ?: 'guest')),
+                Limit::perMinute(30)->by('refresh-ip:' . $request->ip()),
+            ];
+        });
+
+        RateLimiter::for('otp-verify', function (Request $request) {
+            $email = mb_strtolower(trim((string) $request->input('email', '')));
+
+            return [
+                Limit::perMinute(15)->by('otp-verify-ip:' . $request->ip()),
+                Limit::perMinutes(10, 10)->by('otp-verify-email:' . hash('sha256', $email ?: $request->ip())),
+            ];
+        });
+
+        RateLimiter::for('admin-otp-verify', function (Request $request) {
+            $email = mb_strtolower(trim((string) $request->input('email', '')));
+
+            return [
+                Limit::perMinute(10)->by('admin-otp-verify-ip:' . $request->ip()),
+                Limit::perMinutes(10, 5)->by('admin-otp-verify-email:' . hash('sha256', $email ?: $request->ip())),
+            ];
+        });
+
+        // Broad safety nets for authenticated APIs. Sensitive and write routes
+        // keep their stricter, route-specific limiters above.
+        RateLimiter::for('admin-api', function (Request $request) {
+            return Limit::perMinute(120)->by('admin-api:' . ($request->user()?->id ?: $request->ip()));
+        });
+
+        RateLimiter::for('client-api', function (Request $request) {
+            return Limit::perMinute(120)->by('client-api:' . ($request->user()?->id ?: $request->ip()));
         });
     }
 

@@ -27,6 +27,27 @@ export const getUserToken = () => {
 
 export const getToken = () => getAdminToken() || getUserToken();
 
+// Guest cart session IDs are bearer-like identifiers. Never fall back to Date/Math.random;
+// the backend can issue a session ID on the first cart mutation when secure browser crypto is unavailable.
+export const createCartSessionId = () => {
+  const cryptoApi = globalThis.crypto;
+
+  try {
+    const uuid = cryptoApi?.randomUUID?.();
+    if (uuid) return `session_${uuid}`;
+
+    if (typeof cryptoApi?.getRandomValues === 'function') {
+      const bytes = new Uint8Array(16);
+      cryptoApi.getRandomValues(bytes);
+      return `session_${Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('')}`;
+    }
+  } catch {
+    // Let the server issue the cart session when browser storage/crypto is unavailable.
+  }
+
+  return null;
+};
+
 export const clearAuthStorage = (keys = AUTH_STORAGE_KEYS) => {
   keys.forEach((key) => {
     localStorage.removeItem(key);
@@ -48,12 +69,8 @@ export const getHeaders = () => {
   if (token) headers['Authorization'] = `Bearer ${token}`;
   let sid = localStorage.getItem('cart_session_id');
   if (!sid && !token) {
-    try {
-      sid = 'session_' + (crypto.randomUUID ? crypto.randomUUID() : 'fallback_' + Date.now());
-    } catch {
-      sid = 'session_' + Date.now();
-    }
-    localStorage.setItem('cart_session_id', sid);
+    sid = createCartSessionId();
+    if (sid) localStorage.setItem('cart_session_id', sid);
   }
   if (sid) headers['X-Cart-Session-Id'] = sid;
   return headers;

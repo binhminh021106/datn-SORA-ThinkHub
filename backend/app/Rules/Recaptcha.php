@@ -15,10 +15,17 @@ class Recaptcha implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        $secret = env('RECAPTCHA_SECRET_KEY');
+        $secret = config('services.recaptcha.secret');
 
         if (empty($secret)) {
-            // Bypass validation if key is not configured (e.g., local dev without keys)
+            // Local/test environments may deliberately omit third-party keys.
+            // Every deployed environment must fail closed instead of accepting
+            // automated contact submissions without a CAPTCHA verification.
+            if (app()->environment(['local', 'testing'])) {
+                return;
+            }
+
+            $fail('Hệ thống xác minh CAPTCHA chưa được cấu hình. Vui lòng thử lại sau.');
             return;
         }
 

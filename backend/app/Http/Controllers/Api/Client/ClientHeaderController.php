@@ -67,17 +67,22 @@ class ClientHeaderController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false, 
-                'message' => $e->getMessage()
+                'message' => 'Không thể tải dữ liệu điều hướng lúc này. Vui lòng thử lại sau.'
             ], 500);
         }
     }
 
     public function search(Request $request)
     {
-        $keyword = $request->query('keyword');
-        $categoryName = $request->query('category');
+        $data = $request->validate([
+            'keyword' => ['nullable', 'string', 'max:100'],
+            'category' => ['nullable', 'string', 'max:100'],
+        ]);
+        $keyword = $data['keyword'] ?? null;
+        $categoryName = $data['category'] ?? null;
 
         if (!$keyword) {
             return response()->json(['success' => true, 'data' => ['products' => [], 'categories' => []]]);

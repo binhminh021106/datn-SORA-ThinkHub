@@ -27,8 +27,8 @@
               {{ s.footer_brand_desc || 'SORA mang đến những thiết kế trang sức tinh tế, tôn vinh vẻ đẹp đích thực và phong cách cá nhân của bạn. Mỗi chế tác là một tác phẩm nghệ thuật.' }}
             </p>
             <div class="social-links d-flex gap-3 justify-content-start mb-4 mb-md-0">
-              <template v-if="s.footer_socials && s.footer_socials.length">
-                <a :href="social.url" target="_blank" rel="noopener noreferrer" class="social-btn" v-for="(social, index) in s.footer_socials" :key="index" :title="social.title" v-show="social.url">
+              <template v-if="safeSocials.length">
+                <a :href="social.url" target="_blank" rel="noopener noreferrer" class="social-btn" v-for="(social, index) in safeSocials" :key="index" :title="social.title">
                   <i :class="social.icon"></i>
                 </a>
               </template>
@@ -116,6 +116,7 @@ import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { safeNavigationUrl } from '@/utils/sanitizeHtml';
 
 const props = defineProps({
   previewData: {
@@ -128,6 +129,13 @@ const settingsStore = useSettingsStore();
 
 // Use previewData if provided (for live preview in admin), else use global settings
 const s = computed(() => props.previewData || settingsStore.settings);
+const safeSocials = computed(() => {
+  const socials = Array.isArray(s.value?.footer_socials) ? s.value.footer_socials : [];
+
+  return socials
+    .map((social) => ({ ...social, url: safeNavigationUrl(social?.url) }))
+    .filter((social) => social.url);
+});
 
 const router = useRouter();
 const email = ref('');

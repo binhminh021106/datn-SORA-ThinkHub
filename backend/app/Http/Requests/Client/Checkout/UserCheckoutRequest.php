@@ -23,7 +23,7 @@ class UserCheckoutRequest extends FormRequest
             'payment_method'   => 'required|in:cod,momo,vnpay,bank_transfer',
             'coupon_code'      => 'nullable|string|exists:coupons,code',
             'affiliate_code'   => 'nullable|string|max:50',
-            'shipping_fee'     => 'required|integer|min:0|max:200000',
+            'idempotency_key'  => 'nullable|string|max:100',
             'checkout_source'  => 'nullable|in:web,mobile',
             'mobile_return_url' => 'nullable|string|max:1000',
         ];
@@ -51,10 +51,6 @@ class UserCheckoutRequest extends FormRequest
             
             'coupon_code.exists'                => 'Mã giảm giá không tồn tại trên hệ thống.',
             
-            'shipping_fee.required'             => 'Phí vận chuyển không được để trống.',
-            'shipping_fee.integer'              => 'Phí vận chuyển phải là số nguyên.',
-            'shipping_fee.min'                  => 'Phí vận chuyển không được âm.',
-            'shipping_fee.max'                  => 'Phí vận chuyển không được vượt quá 200.000đ.',
         ];
     }
 }

@@ -91,6 +91,7 @@ import { globalModalState } from '@/stores/modalState';
 import SoraSkeleton from '@/components/ui/SoraSkeleton.vue';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
 import { API_BASE_URL, getStorageUrl } from '@/utils/env';
+import { createCartSessionId } from '@/composables/useUtilities';
 
 // CẬP NHẬT: Không dùng hàm replace() xóa /api nữa, khai báo tương tự Index.vue và Detail.vue
 const quickAddProduct = ref(null);
@@ -360,8 +361,8 @@ const confirmQuickAdd = async () => {
         const token = getToken();
         let sessionId = getSafeStorage('cart_session_id');
         if (!sessionId && !token) { 
-            sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
-            setSafeStorage('cart_session_id', sessionId);
+            sessionId = createCartSessionId();
+            if (sessionId) setSafeStorage('cart_session_id', sessionId);
         }
         
         const headers = { 'Accept': 'application/json', 'Content-Type': 'application/json' };

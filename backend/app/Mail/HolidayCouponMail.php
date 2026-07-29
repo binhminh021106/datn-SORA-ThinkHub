@@ -8,6 +8,9 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
+use App\Models\EmailLog;
+use Throwable;
+use Symfony\Component\Mime\Email;
 
 class HolidayCouponMail extends Mailable implements ShouldQueue
 {
@@ -24,10 +27,11 @@ class HolidayCouponMail extends Mailable implements ShouldQueue
     
     public $expiresAt;
     public $applicableScope;
+    public $emailLogId;
 
     private array $couponCache = [];
 
-    public function __construct($user, $event, $holidayName = null)
+    public function __construct($user, $event, $holidayName = null, ?int $emailLogId = null)
     {
         $this->user = $user;
         $this->event = $event;
@@ -42,6 +46,24 @@ class HolidayCouponMail extends Mailable implements ShouldQueue
         $this->expiresAt = $this->resolveExpiresAtLabel($coupon);
        
         $this->applicableScope = $this->resolveApplicableScopeLabel($coupon);
+        $this->emailLogId = $emailLogId;
+    }
+
+    public function failed(Throwable $exception): void
+    {
+        if ($this->emailLogId) {
+            EmailLog::whereKey($this->emailLogId)->update([
+                'status' => 'failed',
+                'error_message' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    public function withSymfonyMessage(Email $message): void
+    {
+        if ($this->emailLogId) {
+            $message->getHeaders()->addTextHeader('X-SORA-Email-Log-ID', (string) $this->emailLogId);
+        }
     }
 
     public function build()

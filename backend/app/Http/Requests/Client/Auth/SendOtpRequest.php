@@ -6,6 +6,13 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class SendOtpRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'email' => mb_strtolower(trim((string) $this->input('email', ''))),
+        ]);
+    }
+
     public function authorize()
     {
         return true;
@@ -13,16 +20,10 @@ class SendOtpRequest extends FormRequest
 
     public function rules()
     {
-        $rules = [
-            'email' => 'required|email',
+        return [
+            'email' => 'required|string|max:255|email',
+            'g-recaptcha-response' => ['required', new \App\Rules\Recaptcha],
         ];
-
-        // Chỉ yêu cầu CAPTCHA nếu là yêu cầu gửi OTP mới (chưa có trong Cache)
-        if (!\Illuminate\Support\Facades\Cache::store('file')->has('user_password_reset_otp_' . $this->input('email'))) {
-            $rules['g-recaptcha-response'] = ['required', new \App\Rules\Recaptcha];
-        }
-
-        return $rules;
     }
 
     public function messages()

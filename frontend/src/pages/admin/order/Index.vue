@@ -141,7 +141,7 @@
       <!-- Bảng Đơn Hàng -->
       <div v-if="activeTab !== 'config'" class="card border-0 shadow-sm rounded-4 mb-4">
         <div
-          class="card-header bg-white border-bottom-0 pt-4 pb-3 px-4 d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center gap-3">
+          class="card-header bg-white border-bottom-0 pt-2   pb-3 px-4 d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center gap-3">
           <h6 class="fw-bold mb-0 text-dark d-flex align-items-center">
             <i class="bi bi-receipt me-2"></i>Danh sách Đơn hàng
           </h6>
@@ -156,11 +156,10 @@
 
         <div class="card-body p-0 mt-2 position-relative">
           
-          <!-- Ocean Wave Loading Overlay -->
           <div v-if="isFetching" class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75" style="z-index: 10;">
-             <div class="ocean-wave" style="position: sticky; top: 50vh; transform: translateY(-50%); margin: 0 auto; width: fit-content;">
-               <span></span><span></span><span></span>
-             </div>
+            <div class="w-100 h-100 d-flex align-items-center justify-content-center">
+              <AdminLoadingSpinner size="32" label="Đang tải đơn hàng" />
+            </div>
           </div>
 
           <div class="table-responsive border-0" style="min-height: 300px;">
@@ -319,6 +318,7 @@ let adminChannel = null;
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 const route = useRoute();
 const router = useRouter();
+const queryClient = useQueryClient();
 const adminLevel = localStorage.getItem('admin_level');
 
 const activeTab = ref('all');
@@ -526,7 +526,7 @@ const pagination = computed(() => {
 
 const displayedOrders = computed(() => {
   if (activeTab.value === 'all') return localOrders.value.filter(o => !['returned', 'return_requested'].includes(o.status));
-  return localOrders.value;
+  return localOrders.value.filter(o => o.status === activeTab.value);
 });
 
 // Mutation: Xử lý cập nhật trạng thái đơn hàng & trạng thái thanh toán
@@ -535,8 +535,22 @@ const updateOrderMutation = useMutation({
     return axios.put(`${API_URL}/admin/orders/${id}/status`, payload, { headers: getHeaders() });
   },
   onSuccess: (data, variables) => {
-    queryClient.invalidateQueries(['admin-orders']);
-    if (variables.payload.status === 'delivered') {
+    const order = localOrders.value.find(o => o.id === variables.id);
+    if (order) {
+      if (variables.type === 'status') {
+        order.status = variables.payload.status;
+        order.localStatus = variables.payload.status;
+        if (variables.payload.payment_status) order.payment_status = variables.payload.payment_status;
+        order.isStatusChanged = false;
+      } else {
+        order.payment_status = variables.payload.payment_status;
+        order.localPaymentStatus = variables.payload.payment_status;
+        order.isPaymentStatusChanged = false;
+      }
+    }
+
+    queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
+    if (variables.type === 'status' && variables.payload.status === 'delivered') {
       Swal.fire({ icon: 'success', title: 'Giao hàng thành công!', text: 'Đang khởi động hệ thống theo dõi xe tải...', timer: 1500, showConfirmButton: false }).then(() => {
         if (trackingMapModalRef.value) trackingMapModalRef.value.show(variables.id, 'bmt', 'delivered', true);
       });
@@ -738,14 +752,14 @@ onMounted(() => {
     // Nghe Broadcast đơn hàng mới từ Reverb
     adminChannel.listen('.NewOrderReceived', (data) => {
       // Chỉ invalidate lại danh sách đơn hàng. Toast đã được xử lý chung ở Header.vue
-      queryClient.invalidateQueries(['admin-orders']);
+      queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
     });
 
     // Nghe tự động đồng bộ từ controller (broadcastUpdate)
     adminChannel.listen('.AdminRefresh', (data) => {
       if (data.module === 'orders') {
         Swal.fire({ toast: true, position: 'bottom-start', icon: 'info', title: 'Hệ thống tự động', text: data.message, showConfirmButton: false, timer: 4000 });
-        queryClient.invalidateQueries(['admin-orders']);
+        queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
       }
     });
   }
@@ -837,28 +851,6 @@ onMounted(() => {
   filter: brightness(1.1) !important;
 }
 
-/* Hiệu ứng Ocean Wave Loading */
-.ocean-wave {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-}
-.ocean-wave span {
-  width: 14px;
-  height: 14px;
-  background-color: #009981;
-  border-radius: 50%;
-  animation: oceanWave 1.2s ease-in-out infinite;
-}
-.ocean-wave span:nth-child(1) { animation-delay: -0.4s; }
-.ocean-wave span:nth-child(2) { animation-delay: -0.2s; }
-.ocean-wave span:nth-child(3) { animation-delay: 0s; }
-
-@keyframes oceanWave {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-12px); background-color: #4dffdf; }
-}
 
 .animate-fade-in {
   animation: fadeIn 0.3s ease-in-out;

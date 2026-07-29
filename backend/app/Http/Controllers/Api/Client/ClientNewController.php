@@ -5,12 +5,20 @@ namespace App\Http\Controllers\Api\Client;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\News;
+use Illuminate\Support\Facades\Cache;
 
 class ClientNewController extends Controller
 {
     // Lấy danh sách bài viết (Đã tối ưu ORM Select & Pagination)
     public function index(Request $request)
     {
+        $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
+            'author' => ['nullable', 'string', 'max:100'],
+            'category' => ['nullable', 'string', 'max:100'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:24'],
+        ]);
+
         // TỐI ƯU 1: Chỉ select các cột cần dùng cho giao diện danh sách (BỎ cột `content` nặng nề)
         $query = News::select('id', 'title', 'slug', 'excerpt', 'image_url', 'author_name', 'category', 'created_at', 'views')
                      ->where('status', 'published');
@@ -75,14 +83,17 @@ class ClientNewController extends Controller
     }
 
     // Chi tiết bài viết (Giữ nguyên vì cần load toàn bộ content)
-    public function show($slug)
+    public function show(Request $request, $slug)
     {
         $news = News::where('slug', $slug)
             ->where('status', 'published')
             ->firstOrFail();
 
         // Tăng lượt xem
-        $news->increment('views');
+        $viewKey = 'news:view:' . $news->id . ':' . hash('sha256', (string) $request->ip());
+        if (Cache::add($viewKey, true, now()->addHours(6))) {
+            $news->increment('views');
+        }
 
         return response()->json([
             'status' => 'success',

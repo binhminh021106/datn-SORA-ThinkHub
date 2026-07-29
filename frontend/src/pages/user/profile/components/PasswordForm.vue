@@ -17,7 +17,7 @@
       <div class="row mb-4 align-items-center">
         <label for="newPassword" class="col-sm-3 col-form-label text-sm-end text-secondary fw-medium">Mật Khẩu Mới</label>
         <div class="col-sm-9 col-md-7 position-relative">
-          <input :type="showNewPassword ? 'text' : 'password'" class="form-control custom-input pe-5" id="newPassword" v-model="passwordForm.password" required minlength="6" placeholder="Nhập mật khẩu mới (ít nhất 6 ký tự)">
+          <input :type="showNewPassword ? 'text' : 'password'" class="form-control custom-input pe-5" id="newPassword" v-model="passwordForm.password" required minlength="8" placeholder="Nhập mật khẩu mới (ít nhất 8 ký tự)">
           <button type="button" class="password-toggle" @click="showNewPassword = !showNewPassword">
             <i :class="showNewPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
           </button>
@@ -50,6 +50,7 @@
 import { ref } from 'vue';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
 import clientApiClient from '@/utils/clientApiClient';
+import { clearUserAuthStorage } from '@/composables/useUtilities';
 
 const isChangingPassword = ref(false);
 const showCurrentPassword = ref(false);
@@ -84,8 +85,15 @@ const changePassword = async () => {
   try {
     const response = await clientApiClient.post('/client/profile/password', passwordForm.value);
     if (response.data.status) {
-      showToast(response.data.message, 'success');
       passwordForm.value = { current_password: '', password: '', password_confirmation: '' };
+      await soraAlert.fire({
+        icon: 'success',
+        title: 'Đổi mật khẩu thành công',
+        text: response.data.message,
+        confirmButtonText: 'Đăng nhập lại',
+      });
+      clearUserAuthStorage();
+      window.location.assign('/login?password_changed=1');
     }
   } catch (error) {
     if (error.response && error.response.status === 400) {

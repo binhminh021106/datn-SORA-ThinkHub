@@ -143,7 +143,7 @@ class AdminOrderController extends Controller
         $orders = $baseQuery->with(['user:id,fullName,email'])
             ->withCount('items')
             ->orderBy($sortCol, 'desc')
-            ->paginate(15);
+            ->paginate(10);
 
         return response()->json([
             'success' => true,

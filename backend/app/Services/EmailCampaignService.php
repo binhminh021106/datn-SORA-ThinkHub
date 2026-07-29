@@ -48,13 +48,16 @@ class EmailCampaignService
             ];
         }
 
-        $sentCount = 0;
+        $queuedCount = 0;
+        $failedCount = 0;
+        $skippedCount = 0;
 
         foreach ($birthdayUsers as $user) {
+            $emailLog = null;
             if ($preventDuplicateSends) {
                 $alreadySent = EmailLog::where('user_id', $user->id)
                     ->where('event_type', 'birthday')
-                    ->where('status', 'success')
+                    ->whereIn('status', ['success', 'queued'])
                     ->whereYear('sent_at', $today->year)
                     ->exists();
 
@@ -71,31 +74,39 @@ class EmailCampaignService
 
                 // Nếu hạng của User không được Admin cấu hình mã quà tặng thì bỏ qua
                 if (!$coupon) {
+                    $skippedCount++;
                     continue; 
                 }
 
-                Mail::to($user->email)->send(new BirthdayVoucherMail($user, $coupon));
-
-                EmailLog::create([
+                $emailLog = EmailLog::create([
                     'user_id' => $user->id,
                     'event_type' => 'birthday',
-                    'sent_at' => now(),
-                    'status' => 'success',
+                    'queued_at' => now(),
+                    'status' => 'queued',
                     'voucher_code' => $coupon->code,
                     'action_url' => $this->shopCouponUrl($coupon->code),
                 ]);
 
-                $sentCount++;
+                Mail::to($user->email)->queue(new BirthdayVoucherMail($user, $coupon, $emailLog->id));
+                $queuedCount++;
             } catch (\Throwable $e) {
                 Log::error("Birthday campaign mail failed for user {$user->id}: {$e->getMessage()}");
-                $this->logFailedEmail($user->id, 'birthday');
+                $failedCount++;
+                if (isset($emailLog)) {
+                    $emailLog->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
+                } else {
+                    $this->logFailedEmail($user->id, 'birthday', $e->getMessage());
+                }
             }
         }
 
         return [
-            'success' => true,
-            'sent_count' => $sentCount,
-            'message' => "Hoàn tất! Đã gửi thành công {$sentCount} email sinh nhật.",
+            'success' => $failedCount === 0,
+            'sent_count' => 0,
+            'queued_count' => $queuedCount,
+            'failed_count' => $failedCount,
+            'skipped_count' => $skippedCount,
+            'message' => "Đã xếp {$queuedCount} email sinh nhật vào queue; {$failedCount} email lỗi, {$skippedCount} email bị bỏ qua.",
         ];
     }
 
@@ -116,7 +127,8 @@ class EmailCampaignService
             ];
         }
 
-        $totalSentCount = 0;
+        $totalQueuedCount = 0;
+        $totalFailedCount = 0;
         
         $audienceService = new AudienceFilterService();
 
@@ -142,42 +154,49 @@ class EmailCampaignService
             $sentUserIds = [];
             if ($preventDuplicateSends) {
                 $sentUserIds = EmailLog::where('event_type', $eventTypeKey)
-                    ->where('status', 'success')
+                    ->whereIn('status', ['success', 'queued'])
                     ->whereYear('sent_at', $today->year)
                     ->pluck('user_id')
                     ->toArray();
             }
 
             foreach ($targetUsers as $user) {
+                $emailLog = null;
                 // Kiểm tra trùng lặp bằng array PHP trên RAM, thay vì gọi DB
                 if ($preventDuplicateSends && in_array($user->id, $sentUserIds, true)) {
                     continue;
                 }
 
                 try {
-                    Mail::to($user->email)->send(new HolidayCouponMail($user, $event));
-
-                    EmailLog::create([
+                    $emailLog = EmailLog::create([
                         'user_id' => $user->id,
                         'event_type' => $eventTypeKey,
-                        'sent_at' => now(),
-                        'status' => 'success',
+                        'queued_at' => now(),
+                        'status' => 'queued',
                         'voucher_code' => $event->voucher_code,
                         'action_url' => $event->voucher_code ? $this->shopCouponUrl($event->voucher_code) : $this->shopUrl(),
                     ]);
 
-                    $totalSentCount++;
+                    Mail::to($user->email)->queue(new HolidayCouponMail($user, $event, null, $emailLog->id));
+                    $totalQueuedCount++;
                 } catch (\Throwable $e) {
                     Log::error("Holiday campaign mail failed for user {$user->id}, event {$event->id}: {$e->getMessage()}");
-                    $this->logFailedEmail($user->id, $eventTypeKey);
+                    $totalFailedCount++;
+                    if (isset($emailLog)) {
+                        $emailLog->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
+                    } else {
+                        $this->logFailedEmail($user->id, $eventTypeKey, $e->getMessage());
+                    }
                 }
             }
         }
 
         return [
-            'success' => true,
-            'sent_count' => $totalSentCount,
-            'message' => "Hoàn tất! Đã gửi thành công {$totalSentCount} email sự kiện ngày lễ.",
+            'success' => $totalFailedCount === 0,
+            'sent_count' => 0,
+            'queued_count' => $totalQueuedCount,
+            'failed_count' => $totalFailedCount,
+            'message' => "Đã xếp {$totalQueuedCount} email sự kiện vào queue; {$totalFailedCount} email lỗi.",
         ];
     }
 
@@ -300,13 +319,14 @@ class EmailCampaignService
         return $targets ?: ['all'];
     }
 
-    private function logFailedEmail(int $userId, string $eventType): void
+    private function logFailedEmail(int $userId, string $eventType, ?string $errorMessage = null): void
     {
         EmailLog::create([
             'user_id' => $userId,
             'event_type' => $eventType,
             'sent_at' => now(),
             'status' => 'failed',
+            'error_message' => $errorMessage,
         ]);
     }
 

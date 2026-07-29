@@ -322,6 +322,7 @@ import SoraSkeleton from '@/components/ui/SoraSkeleton.vue';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
 import SoraProductGridSkeleton from '@/components/ui/SoraProductGridSkeleton.vue';
 import { getStorageUrl } from '@/utils/env';
+import { sanitizeRichHtml } from '@/utils/sanitizeHtml';
 
 const route = useRoute();
 const router = useRouter();
@@ -661,7 +662,7 @@ const formatMoney = (amount) => amount ? new Intl.NumberFormat('vi-VN').format(a
 const truncateHtml = (html, length) => {
   if (!html) return '';
   const tmp = document.createElement("DIV");
-  tmp.innerHTML = html;
+  tmp.innerHTML = sanitizeRichHtml(html);
   const text = tmp.textContent || tmp.innerText || "";
   return text.length > length ? text.substring(0, length) + "..." : text;
 };
