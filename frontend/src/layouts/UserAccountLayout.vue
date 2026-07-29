@@ -7,7 +7,7 @@
         <router-link to="/login" class="editorial-btn px-5 py-2">Đăng nhập ngay</router-link>
       </div>
 
-      <div v-else class="row g-4 g-lg-5">
+      <div v-else class="row gy-4 gx-3 gx-lg-2">
         <!-- SIDEBAR -->
         <div class="col-lg-3">
           <div class="position-sticky sidebar-sticky" :style="{ top: sidebarTop }">

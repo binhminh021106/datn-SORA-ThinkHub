@@ -25,22 +25,6 @@ const user = [
         component: () => import('../pages/user/order/OrderDetailModal.vue'),
       },
       {
-        path: 'login',
-        name: 'login',
-        component: () => import('../pages/user/auth/Login.vue'),
-      },
-      {
-        path: 'register',
-        name: 'register',
-        component: () => import('../pages/user/auth/Register.vue'),
-      },
-      {
-        path: 'forgot-password',
-        name: 'forgot-password',
-        component: () => import('../pages/user/auth/ForgotPassword.vue'),
-      },
-
-      {
         path: 'shop',
         name: 'shop',
         component: () => import('../pages/user/shop/Index.vue'),
@@ -141,6 +125,39 @@ const user = [
         component: () => import('../pages/user/policy/Index.vue'),
       },
 
+    ],
+  },
+  {
+    path: '/login',
+    component: () => import('../layouts/AuthLayout.vue'),
+    children: [
+      {
+        path: '',
+        name: 'login',
+        component: () => import('../pages/user/auth/Login.vue'),
+      },
+    ],
+  },
+  {
+    path: '/register',
+    component: () => import('../layouts/AuthLayout.vue'),
+    children: [
+      {
+        path: '',
+        name: 'register',
+        component: () => import('../pages/user/auth/Register.vue'),
+      },
+    ],
+  },
+  {
+    path: '/forgot-password',
+    component: () => import('../layouts/AuthLayout.vue'),
+    children: [
+      {
+        path: '',
+        name: 'forgot-password',
+        component: () => import('../pages/user/auth/ForgotPassword.vue'),
+      },
     ],
   },
   {

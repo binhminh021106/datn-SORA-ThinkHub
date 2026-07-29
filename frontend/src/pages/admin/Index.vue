@@ -42,8 +42,7 @@
             <div class="card-body p-3 d-flex flex-column justify-content-between">
               <div class="d-flex align-items-start justify-content-between mb-2">
                 <div class="pe-2 min-w-0">
-                  <p class="text-muted fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate">Tổng
-                    Doanh Thu</p>
+                  <p class="text-muted fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate">Doanh thu kỳ lọc</p>
                   <h4 class="fw-bolder mb-0 text-dark stat-number text-truncate"
                     :title="formatCurrency(stats.totalRevenue)">{{ formatCompactCurrency(stats.totalRevenue) }}</h4>
                 </div>
@@ -56,7 +55,7 @@
                   <i class="me-1" :class="getGrowthIcon(stats.revenueGrowth)"></i> {{ formatGrowth(stats.revenueGrowth)
                   }}
                 </span>
-                <span class="text-muted font-size-xs fw-medium text-truncate">Tháng trước</span>
+                <span class="text-muted font-size-xs fw-medium text-truncate">So với kỳ trước</span>
               </div>
             </div>
           </div>
@@ -68,8 +67,7 @@
             <div class="card-body p-3 d-flex flex-column justify-content-between">
               <div class="d-flex align-items-start justify-content-between mb-2">
                 <div class="pe-2 min-w-0">
-                  <p class="text-muted fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate">Đơn hàng
-                    mới</p>
+                  <p class="text-muted fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate">Đơn hàng kỳ lọc</p>
                   <h4 class="fw-bolder mb-0 text-dark stat-number text-truncate">{{ stats.newOrders }}</h4>
                 </div>
                 <div class="icon-circle bg-info-soft text-info flex-shrink-0" style="width: 38px; height: 38px;">
@@ -80,7 +78,7 @@
                 <span class="badge fw-bold me-2 px-2 py-1 font-size-xs" :class="getGrowthClass(stats.ordersGrowth)">
                   <i class="me-1" :class="getGrowthIcon(stats.ordersGrowth)"></i> {{ formatGrowth(stats.ordersGrowth) }}
                 </span>
-                <span class="text-muted font-size-xs fw-medium text-truncate">Hôm qua</span>
+                <span class="text-muted font-size-xs fw-medium text-truncate">So với kỳ trước</span>
               </div>
             </div>
           </div>
@@ -114,8 +112,7 @@
             <div class="card-body p-3 d-flex flex-column justify-content-between">
               <div class="d-flex align-items-start justify-content-between mb-2">
                 <div class="pe-2 min-w-0">
-                  <p class="text-muted fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate">Khách
-                    hàng</p>
+                  <p class="text-muted fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate">Khách mới kỳ lọc</p>
                   <h4 class="fw-bolder mb-0 text-dark stat-number text-truncate">{{ stats.totalCustomers }}</h4>
                 </div>
                 <div class="icon-circle bg-danger-soft text-danger flex-shrink-0" style="width: 38px; height: 38px;">
@@ -127,7 +124,7 @@
                   <i class="me-1" :class="getGrowthIcon(stats.customersGrowth)"></i> {{
                     formatGrowth(stats.customersGrowth) }}
                 </span>
-                <span class="text-muted font-size-xs fw-medium text-truncate">Tháng trước</span>
+                <span class="text-muted font-size-xs fw-medium text-truncate">So với kỳ trước</span>
               </div>
             </div>
           </div>
@@ -168,12 +165,19 @@
               class="card-header bg-transparent border-0 pt-3 pb-0 px-3 px-xxl-4 d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
               <div>
                 <h5 class="fw-bold text-dark mb-0">Thống kê doanh thu</h5>
-                <span class="text-muted font-size-xs">Dữ liệu doanh thu thực tế từ luồng đơn hàng được kiểm duyệt</span>
+                <span class="text-muted font-size-xs">Kỳ {{ periodInfo.label }} · {{ periodInfo.start_date }} đến {{ periodInfo.end_date }}</span>
               </div>
 
               <!-- Bộ lọc ngày thông minh -->
-              <div class="d-flex flex-wrap align-items-center gap-2">
-                <div
+              <div class="d-flex flex-wrap align-items-center gap-2 dashboard-period-filter">
+                <button v-for="preset in periodPresets" :key="preset.key" @click="selectPeriod(preset.key)"
+                  class="btn btn-sm rounded-pill px-3 fw-semibold dashboard-period-button"
+                  :class="filterParams.period === preset.key ? 'btn-brand' : 'btn-light border-light text-secondary'"
+                  :disabled="isFetching">
+                  {{ preset.label }}
+                </button>
+
+                <div v-if="filterParams.period === 'custom'"
                   class="d-flex align-items-center gap-1 bg-white rounded-3 px-3 py-1 shadow-sm border border-light transition-all filter-group position-relative">
                   <i class="bi bi-calendar-range text-brand me-1"></i>
                   <div class="d-flex flex-column position-relative">
@@ -184,30 +188,52 @@
                   </div>
                   <span class="text-muted font-size-xs fw-bold px-1">-</span>
                   <div class="d-flex flex-column position-relative">
-                    <input type="date" v-model="filterParams.endDate" :max="maxDate"
+                    <input type="date" v-model="filterParams.endDate" :min="filterParams.startDate || undefined" :max="maxDate"
                       class="form-control form-control-sm border-0 bg-transparent shadow-none text-dark fw-semibold font-size-sm p-1 cursor-pointer custom-date-input"
                       title="Đến ngày">
                     <span class="helper-date-label">Đến ngày</span>
                   </div>
                 </div>
 
-                <button @click="applyChartFilter(false)"
+                <button v-if="filterParams.period === 'custom'" @click="applyDashboardFilter"
                   class="btn btn-brand rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-2 transition-all shadow-sm"
-                  style="height: 42px;" :disabled="chartMutation.isPending.value">
-                  <span v-if="chartMutation.isPending.value" class="spinner-border spinner-border-sm" role="status"
+                  style="height: 42px;" :disabled="isFetching">
+                  <span v-if="isFetching" class="spinner-border spinner-border-sm" role="status"
                     aria-hidden="true"></span>
                   <i v-else class="bi bi-funnel-fill"></i>
                 </button>
 
-                <button @click="applyChartFilter(true)"
-                  class="btn btn-light border-light rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-2 transition-all shadow-sm text-secondary"
-                  style="height: 42px;" :disabled="chartMutation.isPending.value">
-                  <i class="bi bi-calendar-check"></i> Tất cả
+                <button @click="selectPeriod('custom')"
+                  class="btn btn-light border-light rounded-pill px-3 py-2 fw-bold d-flex align-items-center gap-2 transition-all shadow-sm text-secondary"
+                  style="height: 42px;" :class="{ 'border-brand text-brand': filterParams.period === 'custom' }"
+                  :disabled="isFetching">
+                  <i class="bi bi-sliders"></i> Tùy chỉnh
                 </button>
+                <p v-if="filterError" class="w-100 mb-0 text-danger font-size-xs fw-semibold">{{ filterError }}</p>
               </div>
             </div>
             <div class="card-body p-3 p-xxl-4">
-              <div style="height: 350px; width: 100%;">
+              <div class="row g-2 mb-3">
+                <div class="col-12 col-md-4">
+                  <div class="dashboard-inline-kpi">
+                    <span>Giá trị đơn TB</span>
+                    <strong>{{ formatCompactCurrency(stats.averageOrderValue) }}</strong>
+                  </div>
+                </div>
+                <div class="col-6 col-md-4">
+                  <div class="dashboard-inline-kpi">
+                    <span>Đơn hoàn tất</span>
+                    <strong class="text-success">{{ stats.successfulOrders }}</strong>
+                  </div>
+                </div>
+                <div class="col-6 col-md-4">
+                  <div class="dashboard-inline-kpi">
+                    <span>Đơn hủy/hoàn</span>
+                    <strong class="text-danger">{{ stats.cancelledOrders }}</strong>
+                  </div>
+                </div>
+              </div>
+              <div style="height: 310px; width: 100%;">
                 <canvas id="revenueChart" ref="chartCanvas"></canvas>
               </div>
             </div>
@@ -634,15 +660,18 @@
 
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue';
-import { useQuery, useMutation } from '@tanstack/vue-query';
+import { useQuery } from '@tanstack/vue-query';
 import Chart from 'chart.js/auto';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import * as XLSX from 'xlsx-js-style';
 import defaultImage from '@/assets/images/defaults/placeholder.png';
 
-const today = new Date();
-const maxDate = today.toISOString().split('T')[0];
+const toDateInputValue = (date) => {
+  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return offsetDate.toISOString().split('T')[0];
+};
+const maxDate = toDateInputValue(new Date());
 const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
 const loadedImages = ref(new Set());
@@ -691,28 +720,71 @@ const exportToExcel = () => {
     const formatMoney = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
     const formatNumber = (val) => new Intl.NumberFormat('vi-VN').format(val || 0);
 
-    const applyStyle = (ws) => {
-      const range = XLSX.utils.decode_range(ws['!ref']);
-      for (let R = range.s.r; R <= range.e.r; ++R) {
-        for (let C = range.s.c; C <= range.e.c; ++C) {
-          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-          if (!ws[cellAddress]) continue;
-          ws[cellAddress].s = {
-            font: { name: "Arial", sz: 11, bold: R === 0 },
-            alignment: { vertical: "center", horizontal: "left" },
-            border: {
-              top: { style: "thin", color: { auto: 1 } },
-              bottom: { style: "thin", color: { auto: 1 } },
-              left: { style: "thin", color: { auto: 1 } },
-              right: { style: "thin", color: { auto: 1 } }
-            }
+    const exportedAt = new Date().toLocaleString('vi-VN');
+    const createReportSheet = ({ title, headers, rows, widths, rightAligned = [] }) => {
+      const data = [
+        [title],
+        ['Xuất báo cáo: ' + exportedAt],
+        [],
+        headers,
+        ...rows,
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      const lastColumn = headers.length - 1;
+      const lastRow = rows.length + 3;
+      const borderColor = 'D9E4E1';
+      const thinBorder = {
+        top: { style: 'thin', color: { rgb: borderColor } },
+        bottom: { style: 'thin', color: { rgb: borderColor } },
+        left: { style: 'thin', color: { rgb: borderColor } },
+        right: { style: 'thin', color: { rgb: borderColor } },
+      };
+
+      ws['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: lastColumn } },
+        { s: { r: 1, c: 0 }, e: { r: 1, c: lastColumn } },
+      ];
+      ws['!cols'] = widths.map((width) => ({ wch: width }));
+      ws['!rows'] = [{ hpt: 28 }, { hpt: 18 }, { hpt: 8 }, { hpt: 22 }];
+      ws['!autofilter'] = { ref: 'A4:' + XLSX.utils.encode_col(lastColumn) + String(lastRow + 1) };
+      ws['!sheetViews'] = [{ showGridLines: false }];
+
+      for (let row = 0; row <= lastRow; row += 1) {
+        for (let column = 0; column <= lastColumn; column += 1) {
+          const address = XLSX.utils.encode_cell({ r: row, c: column });
+          if (!ws[address]) continue;
+
+          const isHeader = row === 3;
+          const isDataRow = row > 3;
+          const value = String(ws[address].v ?? '');
+          const cellStyle = {
+            font: {
+              name: 'Calibri',
+              sz: row === 0 ? 16 : (isHeader ? 11 : 10.5),
+              bold: row === 0 || isHeader || (isDataRow && column === 0),
+              color: { rgb: row <= 1 || isHeader ? 'FFFFFF' : (value.startsWith('-') ? 'C0392B' : '1F2937') },
+            },
+            fill: {
+              fgColor: {
+                rgb: row === 0
+                  ? '009981'
+                  : (row === 1 ? '007A67' : (isHeader ? '0B5D52' : (isDataRow && row % 2 === 0 ? 'F2FAF8' : 'FFFFFF'))),
+              },
+            },
+            alignment: {
+              vertical: 'center',
+              horizontal: row <= 1 ? 'left' : (isHeader ? 'center' : (rightAligned.includes(column) ? 'right' : 'left')),
+              wrapText: true,
+            },
           };
-          if (R === 0) {
-            ws[cellAddress].s.fill = { fgColor: { rgb: "E9ECEF" } };
-            ws[cellAddress].s.alignment.horizontal = "center";
+          if (isHeader || isDataRow) {
+            cellStyle.border = thinBorder;
           }
+          ws[address].s = cellStyle;
         }
       }
+
+      return ws;
     };
 
     const overviewData = [
@@ -732,9 +804,13 @@ const exportToExcel = () => {
       { "Chỉ số": "Tỷ lệ TT COD", "Giá trị": `${paymentStats.value.codPercent}%` },
       { "Chỉ số": "Tỷ lệ TT Chuyển khoản", "Giá trị": `${paymentStats.value.bankPercent}%` }
     ];
-    const wsOverview = XLSX.utils.json_to_sheet(overviewData);
-    wsOverview['!cols'] = [{ wch: 35 }, { wch: 25 }];
-    applyStyle(wsOverview);
+    const wsOverview = createReportSheet({
+      title: 'BÁO CÁO TỔNG QUAN THINKHUB',
+      headers: ['Chỉ số', 'Giá trị'],
+      rows: overviewData.map((item) => [item['Chỉ số'], item['Giá trị']]),
+      widths: [38, 28],
+      rightAligned: [1],
+    });
     XLSX.utils.book_append_sheet(wb, wsOverview, "Tổng Quan");
 
     if (recentOrders.value?.length) {
@@ -745,9 +821,13 @@ const exportToExcel = () => {
         "Tổng tiền": formatMoney(o.total),
         "Trạng thái": o.status === 'delivered' ? 'Đã giao hàng' : (o.status === 'shipping' ? 'Đang giao' : (o.status === 'pending' ? 'Chờ xác nhận' : o.status))
       }));
-      const wsOrders = XLSX.utils.json_to_sheet(ordersData);
-      wsOrders['!cols'] = [{ wch: 15 }, { wch: 25 }, { wch: 20 }, { wch: 20 }, { wch: 20 }];
-      applyStyle(wsOrders);
+      const wsOrders = createReportSheet({
+        title: 'ĐƠN HÀNG GẦN ĐÂY',
+        headers: ['Mã ĐH', 'Khách hàng', 'Ngày đặt', 'Tổng tiền', 'Trạng thái'],
+        rows: ordersData.map((item) => [item['Mã ĐH'], item['Khách hàng'], item['Ngày đặt'], item['Tổng tiền'], item['Trạng thái']]),
+        widths: [16, 28, 20, 20, 20],
+        rightAligned: [3],
+      });
       XLSX.utils.book_append_sheet(wb, wsOrders, "Đơn Hàng Gần Đây");
     }
 
@@ -758,9 +838,13 @@ const exportToExcel = () => {
         "Tồn kho": formatNumber(p.stock),
         "Giá bán": formatMoney(p.price)
       }));
-      const wsTop = XLSX.utils.json_to_sheet(topData);
-      wsTop['!cols'] = [{ wch: 50 }, { wch: 20 }, { wch: 15 }, { wch: 20 }];
-      applyStyle(wsTop);
+      const wsTop = createReportSheet({
+        title: 'SẢN PHẨM BÁN CHẠY',
+        headers: ['Tên sản phẩm', 'Số lượng đã bán', 'Tồn kho', 'Giá bán'],
+        rows: topData.map((item) => [item['Tên Sản phẩm'], item['Số lượng đã bán'], item['Tồn kho'], item['Giá bán']]),
+        widths: [48, 20, 16, 20],
+        rightAligned: [1, 2, 3],
+      });
       XLSX.utils.book_append_sheet(wb, wsTop, "Top Bán Chạy");
     }
 
@@ -770,9 +854,13 @@ const exportToExcel = () => {
         "SKU": p.sku || 'Không có',
         "Tồn kho": formatNumber(p.stock)
       }));
-      const wsLowStock = XLSX.utils.json_to_sheet(lowStockData);
-      wsLowStock['!cols'] = [{ wch: 50 }, { wch: 20 }, { wch: 15 }];
-      applyStyle(wsLowStock);
+      const wsLowStock = createReportSheet({
+        title: 'SẢN PHẨM SẮP HẾT HÀNG',
+        headers: ['Tên sản phẩm', 'SKU', 'Tồn kho'],
+        rows: lowStockData.map((item) => [item['Tên Sản phẩm'], item.SKU, item['Tồn kho']]),
+        widths: [48, 24, 16],
+        rightAligned: [2],
+      });
       XLSX.utils.book_append_sheet(wb, wsLowStock, "Sắp Hết Hàng");
     }
 
@@ -783,9 +871,13 @@ const exportToExcel = () => {
         "Ngày bắt đầu": c.start_date,
         "Ngày kết thúc": c.end_date
       }));
-      const wsCombo = XLSX.utils.json_to_sheet(comboData);
-      wsCombo['!cols'] = [{ wch: 40 }, { wch: 20 }, { wch: 20 }, { wch: 20 }];
-      applyStyle(wsCombo);
+      const wsCombo = createReportSheet({
+        title: 'COMBO ĐANG HOẠT ĐỘNG',
+        headers: ['Tên combo', 'Mức giảm', 'Ngày bắt đầu', 'Ngày kết thúc'],
+        rows: comboData.map((item) => [item['Tên Combo'], item['Mức giảm'], item['Ngày bắt đầu'], item['Ngày kết thúc']]),
+        widths: [42, 18, 18, 18],
+        rightAligned: [1],
+      });
       XLSX.utils.book_append_sheet(wb, wsCombo, "Combo Đang Chạy");
     }
 
@@ -822,10 +914,19 @@ let paymentChartInstance = null;
 let couponChartInstance = null;
 
 const filterParams = ref({
+  period: 'this_month',
   startDate: '',
-  endDate: '',
-  isAll: false
+  endDate: ''
 });
+const filterError = ref('');
+const periodPresets = [
+  { key: 'today', label: 'Hôm nay' },
+  { key: 'last_7_days', label: '7 ngày' },
+  { key: 'last_30_days', label: '30 ngày' },
+  { key: 'this_month', label: 'Tháng này' },
+  { key: 'last_month', label: 'Tháng trước' },
+  { key: 'all', label: 'Tất cả' }
+];
 
 const paymentStats = ref({
   vnpayPercent: 0,
@@ -853,7 +954,14 @@ const hasAccess = ref(Boolean(
 const { data: dashboardData, isLoading, isFetching, refetch } = useQuery({
   queryKey: ['admin-dashboard-main'],
   queryFn: async () => {
-    const res = await axios.get(`${apiUrl}/admin/dashboard`, { headers: getHeaders() });
+    const res = await axios.get(`${apiUrl}/admin/dashboard`, {
+      params: {
+        period: filterParams.value.period,
+        start_date: filterParams.value.startDate || undefined,
+        end_date: filterParams.value.endDate || undefined
+      },
+      headers: getHeaders()
+    });
     return res.data.data;
   },
   staleTime: 5 * 60 * 1000,
@@ -863,7 +971,13 @@ const { data: dashboardData, isLoading, isFetching, refetch } = useQuery({
 
 const stats = computed(() => dashboardData.value?.stats || {
   totalRevenue: 0, revenueGrowth: 0, newOrders: 0, ordersGrowth: 0,
-  inventory: 0, totalCustomers: 0, customersGrowth: 0
+  inventory: 0, totalCustomers: 0, customersGrowth: 0,
+  averageOrderValue: 0, successfulOrders: 0, cancelledOrders: 0
+});
+const periodInfo = computed(() => dashboardData.value?.period || {
+  label: 'Tháng này',
+  start_date: '',
+  end_date: ''
 });
 const recentOrders = computed(() => dashboardData.value?.recentOrders || []);
 const topProducts = computed(() => dashboardData.value?.topProducts || []);
@@ -887,7 +1001,7 @@ watch(dashboardData, (newData) => {
       paymentStats.value = newData.paymentStats;
     }
     nextTick(() => {
-      initOrUpdateChart(newData.chartData.labels, newData.chartData.values);
+      initOrUpdateChart(newData.chartData.labels, newData.chartData.values, newData.chartData.orderCounts || []);
       initPaymentChart();
       if (newData.couponChart) {
         initCouponChart(newData.couponChart.labels, newData.couponChart.values);
@@ -896,42 +1010,37 @@ watch(dashboardData, (newData) => {
   }
 }, { immediate: true });
 
-// ==========================================
-// 2. TANSTACK MUTATION: LỌC BIỂU ĐỒ & API TOGGLE TRẠNG THÁI MÃ
-// ==========================================
-const chartMutation = useMutation({
-  mutationFn: async () => {
-    const res = await axios.get(`${apiUrl}/admin/dashboard/chart`, {
-      params: {
-        start_date: filterParams.value.startDate,
-        end_date: filterParams.value.endDate,
-        is_all: filterParams.value.isAll
-      },
-      headers: getHeaders()
-    });
-    return res.data.data;
-  },
-  onSuccess: (data) => {
-    if (data) {
-      if (data.paymentStats) {
-        paymentStats.value = data.paymentStats;
-        initPaymentChart();
-      }
-      initOrUpdateChart(data.labels, data.values);
-      if (data.couponChart) {
-        initCouponChart(data.couponChart.labels, data.couponChart.values);
-      }
-    }
-  },
-  onError: (err) => {
-    Swal.fire({ icon: 'error', title: 'Lỗi lọc ngày', text: err.message || 'Không thể lọc dữ liệu.', confirmButtonColor: '#009981' });
-  }
-});
+const selectPeriod = (period) => {
+  filterError.value = '';
+  filterParams.value.period = period;
 
-const applyChartFilter = (isAll = false) => {
-  filterParams.value.isAll = isAll;
-  if (isAll) { filterParams.value.startDate = ''; filterParams.value.endDate = ''; }
-  chartMutation.mutate();
+  if (period !== 'custom') {
+    filterParams.value.startDate = '';
+    filterParams.value.endDate = '';
+    applyDashboardFilter();
+  }
+};
+
+const applyDashboardFilter = async () => {
+  filterError.value = '';
+
+  if (filterParams.value.period === 'custom') {
+    if (!filterParams.value.startDate || !filterParams.value.endDate) {
+      filterError.value = 'Vui lòng chọn đầy đủ từ ngày và đến ngày.';
+      return;
+    }
+
+    if (filterParams.value.startDate > filterParams.value.endDate) {
+      filterError.value = 'Đến ngày phải sau hoặc bằng từ ngày.';
+      return;
+    }
+  }
+
+  const result = await refetch();
+  if (result.error) {
+    const errors = result.error?.response?.data?.errors;
+    filterError.value = errors ? Object.values(errors).flat().join(' ') : 'Không thể tải dữ liệu cho kỳ đã chọn.';
+  }
 };
 
 // API: Kích hoạt / Dừng mã giảm giá (DÙNG PATCH DO ROUTE LÀ PATCH)
@@ -967,24 +1076,70 @@ const generateColors = (count) => {
   return colors;
 };
 
-const initOrUpdateChart = (labels, values) => {
+const initOrUpdateChart = (labels, values, orderCounts = []) => {
   const ctx = document.getElementById('revenueChart');
   if (!ctx) return;
   if (chartInstance) {
     chartInstance.data.labels = labels;
     chartInstance.data.datasets[0].data = values;
+    chartInstance.data.datasets[1].data = orderCounts;
     chartInstance.data.datasets[0].backgroundColor = generateColors(labels.length);
     chartInstance.data.datasets[0].barPercentage = labels.length > 15 ? 0.8 : 0.5;
     chartInstance.update();
   } else {
     chartInstance = new Chart(ctx, {
       type: 'bar',
-      data: { labels: labels, datasets: [{ label: 'Doanh thu', data: values, backgroundColor: generateColors(labels.length), borderRadius: 6, barPercentage: 0.5 }] },
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Doanh thu',
+            data: values,
+            backgroundColor: generateColors(labels.length),
+            borderRadius: 6,
+            barPercentage: 0.5,
+            yAxisID: 'yRevenue'
+          },
+          {
+            type: 'line',
+            label: 'Số đơn hoàn tất',
+            data: orderCounts,
+            borderColor: '#f59e0b',
+            backgroundColor: '#f59e0b',
+            pointBackgroundColor: '#ffffff',
+            pointBorderColor: '#f59e0b',
+            pointBorderWidth: 2,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            borderWidth: 2,
+            tension: 0.35,
+            yAxisID: 'yOrders'
+          }
+        ]
+      },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            align: 'end',
+            labels: { usePointStyle: true, boxWidth: 8, font: { size: 11, weight: '600' } }
+          }
+        },
         scales: {
-          y: { beginAtZero: true, grid: { color: '#eef2f6', drawBorder: false, borderDash: [5, 5] }, ticks: { callback: (value) => new Intl.NumberFormat('vi-VN').format(value) + ' đ' } },
+          yRevenue: {
+            beginAtZero: true,
+            position: 'left',
+            grid: { color: '#eef2f6', drawBorder: false, borderDash: [5, 5] },
+            ticks: { callback: (value) => new Intl.NumberFormat('vi-VN', { notation: 'compact', maximumFractionDigits: 1 }).format(value) + ' đ' }
+          },
+          yOrders: {
+            beginAtZero: true,
+            position: 'right',
+            grid: { drawOnChartArea: false },
+            ticks: { precision: 0, callback: (value) => value + ' đơn' }
+          },
           x: { grid: { display: false, drawBorder: false } }
         }
       }
@@ -1233,6 +1388,36 @@ const formatCouponDate = (dateStr) => {
 .filter-group:hover {
   border-color: #009981 !important;
   box-shadow: 0 4px 10px rgba(0, 153, 129, 0.1) !important;
+}
+
+.dashboard-period-filter {
+  max-width: 100%;
+}
+
+.dashboard-period-button {
+  min-height: 34px;
+  white-space: nowrap;
+}
+
+.dashboard-inline-kpi {
+  min-height: 62px;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid #e7edf2;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, #fbfefd 0%, #f1faf7 100%);
+}
+
+.dashboard-inline-kpi span {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: #728091;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.dashboard-inline-kpi strong {
+  color: #243447;
+  font-size: 1rem;
 }
 
 .icon-circle {
@@ -1548,6 +1733,19 @@ button:focus {
 [data-bs-theme="dark"] .dashboard-wrapper .filter-group {
   background-color: #1e2125 !important;
   border-color: #373b3e !important;
+}
+
+[data-bs-theme="dark"] .dashboard-inline-kpi {
+  background: #17212f;
+  border-color: #334155;
+}
+
+[data-bs-theme="dark"] .dashboard-inline-kpi span {
+  color: #94a3b8;
+}
+
+[data-bs-theme="dark"] .dashboard-inline-kpi strong {
+  color: #e2e8f0;
 }
 
 [data-bs-theme="dark"] .dashboard-wrapper .custom-date-input {

@@ -1,8 +1,6 @@
 <template>
   <div>
-      <!-- Hiển thị bộ lọc và tab nếu đã từng có đơn hàng hoặc đang tải -->
-      <div class="mb-4">
-        <!-- Vẫn hiển thị bộ lọc nếu đã từng có đơn hàng, ngay cả khi đang loading skeleton bên dưới -->
+      <div>
         <div v-show="hasEverHadOrders || isQueryLoading" class="bg-white p-2 p-md-3 shadow-sm border border-light-subtle d-flex flex-column gap-3 mb-3">
           <div class="order-tabs d-flex gap-3 overflow-auto pb-3 pt-2 text-nowrap hide-scrollbar" style="scrollbar-width: none;">
             <button v-for="tab in statusTabs" :key="tab.value" v-on:click="filterStatus = tab.value"

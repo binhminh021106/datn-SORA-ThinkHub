@@ -61,7 +61,7 @@
             <!-- CỘT PHẢI: NỘI DUNG -->
             <div class="col-md-8 col-lg-9">
                 <div class="card border-0 shadow-sm rounded-4 h-100">
-                    <div class="card-body p-4 p-lg-5">
+                    <div class="card-body p-4 p-lg-1">
 
                         <!-- TAB 1: THÔNG TIN CHUNG -->
                         <div v-if="activeTab === 'info'">

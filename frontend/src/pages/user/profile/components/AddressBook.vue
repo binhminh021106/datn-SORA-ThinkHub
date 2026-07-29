@@ -1,5 +1,5 @@
 <template>
-  <div class="address-book-shell p-4 p-md-5 mb-4 rounded-4">
+  <div class="address-book-shell p-4 p-md-5 rounded-4">
     
     <div class="address-book-header d-flex justify-content-between align-items-end mb-4 pb-3">
       <div>

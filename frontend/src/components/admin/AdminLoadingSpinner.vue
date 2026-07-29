@@ -50,7 +50,7 @@ const spinnerStyle = computed(() => ({
 }
 
 .admin-loading-spinner g {
-  animation: admin-spinner-fade 1.2s linear infinite;
+  animation: admin-spinner-fade 1.6s linear infinite;
 }
 
 .admin-loading-spinner line {

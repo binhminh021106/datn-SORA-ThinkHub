@@ -190,11 +190,9 @@
                               </div>
                             </div>
 
-                            <div
-                              class="text-white small mt-3 fst-italic p-2 bg-white bg-opacity-10 border border-white border-opacity-25 rounded"
-                              v-if="validationErrors[item.id]">
-                              <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i> Vui lòng hoàn tất tùy chọn thiết kế
-                              cho món này.
+                            <div v-if="validationErrors[item.id]" class="combo-selection-warning" role="alert">
+                              <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
+                              <span>Chọn đủ phân loại để tiếp tục.</span>
                             </div>
                           </div>
                         </div>
@@ -242,7 +240,7 @@
                 </div>
               </div>
 
-              <div class="shop-feature-row d-flex justify-content-between mt-5 pt-4">
+              <div class="shop-feature-row d-flex justify-content-between mt-2 pt-2">
                 <div v-for="(feat, index) in shopFeatures" :key="index" class="feature-pill text-center">
                   <i :class="['bi', feat.icon, 'fs-4 text-dark mb-1 d-block']"></i>
                   <span class="font-oswald text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">{{ feat.text }}</span>
@@ -1373,11 +1371,36 @@ onUnmounted(() => {
   color: #fff !important;
 }
 
-.attr-chip.error .chip-inner {
-  border-color: #dc3545;
-  color: #dc3545;
-  background-color: rgba(220, 53, 69, 0.05);
+.attr-chip.error:not(.selected) .chip-inner {
+  border-color: rgba(255, 202, 207, 0.78);
+  color: #ffd9dc;
+  background-color: rgba(255, 255, 255, 0.08);
   animation: shake 0.4s;
+}
+
+.attr-chip.error:not(.selected):hover:not(.disabled) .chip-inner {
+  border-color: #fff0f1;
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.16);
+}
+
+.combo-selection-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid rgba(255, 221, 157, 0.52);
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff6e8;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.combo-selection-warning i {
+  color: var(--sora-secondary);
+  font-size: 1rem;
 }
 
 @keyframes shake {

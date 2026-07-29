@@ -1,5 +1,5 @@
 <template>
-  <div class="luxury-related-card d-flex flex-column group position-relative overflow-hidden h-100" style="background-color: #ffffff !important; border: 1px solid #eaeaea; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); transition: all 0.35s ease;">
+  <div class="luxury-related-card d-flex flex-column group position-relative overflow-hidden h-100">
     
     <div class="position-relative bg-white text-center border-bottom sora-img-container" style="border-color: #f8f9fa !important;" :class="{'has-hover-image': showHoverImage && hasHoverImage(product)}">
       
@@ -65,7 +65,7 @@
       <div class="theme-bar position-absolute bottom-0 start-0 bg-sora-primary z-index-2"></div>
     </div>
 
-    <div class="position-relative flex-grow-1 d-flex flex-column" style="background-color: #ffffff !important;">
+    <div class="position-relative flex-grow-1 d-flex flex-column product-card-content">
       <div class="p-4 text-start d-flex flex-column flex-grow-1 product-card-body">
         <router-link
           :to="{ name: 'productDetail', params: { shop_slug: shopSlug, slug: product.slug } }"
@@ -293,12 +293,20 @@ const hasHoverImage = (product) => {
 
 .luxury-related-card {
   transition: all 0.4s ease;
-  border-color: #eaeaea !important;
+  border-color: rgba(231, 206, 125, 0.58) !important;
+  border-radius: 18px !important;
+  background-color: #fffdfa !important;
+  box-shadow: 0 10px 24px rgba(88, 50, 38, 0.08) !important;
 }
 
 .luxury-related-card:hover {
-  box-shadow: 0 15px 35px rgba(0,0,0,0.06);
-  border-color: #d1d5db !important;
+  z-index: 2;
+  box-shadow: 0 18px 34px rgba(88, 50, 38, 0.14) !important;
+  border-color: rgba(201, 164, 78, 0.9) !important;
+}
+
+.sora-img-container {
+  background-color: #f7f3eb !important;
 }
 
 .sora-main-img, .sora-hover-img {
@@ -314,14 +322,18 @@ const hasHoverImage = (product) => {
 .has-hover-image:hover .sora-hover-img { opacity: 1; }
 
 .theme-bar {
-  width: 0;
-  height: 3px;
-  background-color: #9f273b;
-  transition: width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--sora-primary, #9f273b), #d3ad54, var(--sora-primary, #9f273b));
+  opacity: 0.72;
+  transform: scaleX(0.28);
+  transform-origin: left center;
+  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.4s ease;
   left: 0;
 }
 .luxury-related-card:hover .theme-bar {
-  width: 30%;
+  transform: scaleX(1);
+  opacity: 1;
 }
 
 .wishlist-btn, .compare-btn {
@@ -329,14 +341,17 @@ const hasHoverImage = (product) => {
   transition: all 0.25s ease;
   pointer-events: none;
   color: #6c757d;
+  background-color: rgba(255, 253, 248, 0.94) !important;
+  border: 1px solid rgba(231, 206, 125, 0.58) !important;
+  box-shadow: 0 5px 14px rgba(73, 45, 35, 0.12) !important;
 }
 .luxury-related-card:hover .wishlist-btn,
 .luxury-related-card:hover .compare-btn {
   opacity: 1;
   pointer-events: auto;
 }
-.wishlist-btn:hover { color: #cc1e2e; transform: scale(1.1); }
-.compare-btn:hover { color: #9f273b; transform: scale(1.1); }
+.wishlist-btn:hover { color: #cc1e2e; transform: translateY(-2px) scale(1.06); }
+.compare-btn:hover { color: #9f273b; transform: translateY(-2px) scale(1.06); }
 
 .compare-btn.active { background-color: #9f273b !important; color: #fff !important; opacity: 1; }
 .compare-btn.active i { color: #fff !important; }
@@ -398,7 +413,40 @@ const hasHoverImage = (product) => {
 }
 
 .product-card-body {
-  padding-bottom: 64px !important;
+  padding: 1.5rem 1.6rem 64px !important;
+  background-color: #fffdfa;
+}
+
+.product-name {
+  color: #2a1810 !important;
+  font-size: 1.1rem !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.7px !important;
+}
+
+.product-card-body p.font-oswald {
+  color: #8b7a6a !important;
+  opacity: 1 !important;
+}
+
+.product-card-body .text-main,
+.product-card-body .product-price {
+  color: #9f273b !important;
+  font-size: 1.25rem !important;
+  font-weight: 500 !important;
+}
+
+.product-card-body .product-old-price {
+  color: #8b7a6a !important;
+}
+
+.product-card-body .text-success {
+  color: #9f273b !important;
+}
+
+.related-btn-add {
+  background-color: transparent;
+  padding: 0 1px 1px;
 }
 
 @media (max-width: 767.98px) {

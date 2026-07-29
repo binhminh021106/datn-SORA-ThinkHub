@@ -9,9 +9,8 @@ use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Broadcasting\PrivateChannel;
 
-class AdminAlertNotification extends Notification implements ShouldQueue
+class AdminAlertNotification extends Notification
 {
-    use Queueable;
 
     public $title;
     public $message;

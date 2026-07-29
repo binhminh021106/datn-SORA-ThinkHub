@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white p-4 p-md-5 shadow-sm border border-light mb-4 rounded-3">
+  <div class="bg-white p-4 p-md-5 shadow-sm border border-light rounded-3">
     
     <h3 class="h4 font-serif text-dark mb-1">Hồ Sơ Của Tôi</h3>
     <p class="text-secondary fw-light border-bottom pb-3 mb-4">Quản lý thông tin hồ sơ để bảo mật tài khoản</p>
