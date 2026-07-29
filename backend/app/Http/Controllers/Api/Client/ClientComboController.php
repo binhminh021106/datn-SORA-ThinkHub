@@ -22,7 +22,8 @@ class ClientComboController extends Controller
             ->with([
                 'items:id,combo_id,product_id,product_variant_id,quantity',
                 'items.product:id,name,slug,base_price,promotional_price,thumbnail_image',
-                'items.variant:id,product_id,sku,price,promotional_price'
+                'items.variant:id,product_id,sku,price,promotional_price,image_url',
+                'items.variant.attributeValues.attribute:id,name'
             ])
             ->where('status', 'active')
             ->where(function($q) use ($yesterday) {
@@ -37,6 +38,15 @@ class ClientComboController extends Controller
         $combos = $query->orderByRaw('CASE WHEN end_date IS NOT NULL AND end_date < NOW() THEN 1 ELSE 0 END ASC')
             ->orderBy('id', 'desc')
             ->paginate(12);
+
+        $combos->getCollection()->transform(function($combo) {
+            foreach ($combo->items as $item) {
+                if ($item->variant) {
+                    $this->formatVariantAttributes($item->variant);
+                }
+            }
+            return $combo;
+        });
 
         return response()->json([
             'success' => true, 
@@ -97,35 +107,11 @@ class ClientComboController extends Controller
         foreach ($combo->items as $item) {
             if ($item->product && $item->product->variants) {
                 foreach ($item->product->variants as $variant) {
-                    $attrMap = [];
-                    if ($variant->attributeValues) {
-                        foreach ($variant->attributeValues as $val) {
-                            if ($val->attribute) {
-                                $attrMap[$val->attribute->name] = $val->value;
-                            }
-                        }
-                    }
-                    if (empty($attrMap)) {
-                        $attrMap['Phiên bản'] = $variant->sku;
-                    }
-                    $variant->formatted_attributes = $attrMap;
-                    unset($variant->attributeValues);
+                    $this->formatVariantAttributes($variant);
                 }
             }
             if ($item->variant) {
-                $attrMap = [];
-                if ($item->variant->attributeValues) {
-                    foreach ($item->variant->attributeValues as $val) {
-                        if ($val->attribute) {
-                            $attrMap[$val->attribute->name] = $val->value;
-                        }
-                    }
-                }
-                if (empty($attrMap)) {
-                    $attrMap['Phiên bản'] = $item->variant->sku;
-                }
-                $item->variant->formatted_attributes = $attrMap;
-                unset($item->variant->attributeValues);
+                $this->formatVariantAttributes($item->variant);
             }
         }
 
@@ -134,5 +120,22 @@ class ClientComboController extends Controller
             'data' => $combo,
             'related_products' => $relatedProducts
         ]);
+    }
+
+    private function formatVariantAttributes($variant)
+    {
+        $attrMap = [];
+        if ($variant->attributeValues) {
+            foreach ($variant->attributeValues as $val) {
+                if ($val->attribute) {
+                    $attrMap[$val->attribute->name] = $val->value;
+                }
+            }
+        }
+        if (empty($attrMap)) {
+            $attrMap['Phiên bản'] = $variant->sku;
+        }
+        $variant->formatted_attributes = $attrMap;
+        unset($variant->attributeValues);
     }
 }

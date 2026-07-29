@@ -21,7 +21,7 @@ class ClientHomeController extends Controller
     {
         try {
             // LẤY DỮ LIỆU TỪ CACHE
-            $data = Cache::remember('sora_home_data_v4', 3600, function () {
+            $data = Cache::remember('sora_home_data_v5', 3600, function () {
                 $result = [
                     'banners' => [],
                     'coupons' => [],
@@ -80,9 +80,12 @@ class ClientHomeController extends Controller
 
                 // 5. Lấy Combos
                 $yesterday = Carbon::now()->subDay();
-                $combosList = Combo::with(['items.product' => function ($q) {
-                    $q->select('id', 'name', 'thumbnail_image', 'base_price', 'promotional_price');
-                }])
+                $combosList = Combo::with([
+                    'items.product' => function ($q) {
+                        $q->select('id', 'name', 'thumbnail_image', 'base_price', 'promotional_price');
+                    },
+                    'items.variant:id,product_id,image_url,price,promotional_price'
+                ])
                     ->where('status', 'active')
                     ->where(function ($q) use ($yesterday) {
                         $q->whereNull('end_date')
@@ -98,12 +101,12 @@ class ClientHomeController extends Controller
 
                     foreach ($combo->items as $item) {
                         if ($item->product) {
-                            $priceToUse = $item->product->promotional_price > 0 ? $item->product->promotional_price : $item->product->base_price;
+                            $priceToUse = $item->variant ? ($item->variant->promotional_price > 0 ? $item->variant->promotional_price : $item->variant->price) : ($item->product->promotional_price > 0 ? $item->product->promotional_price : $item->product->base_price);
                             $totalBasePrice += ($priceToUse * $item->quantity);
                             $productsArray[] = [
                                 'id' => $item->product->id,
                                 'name' => $item->product->name,
-                                'thumbnail_image' => $item->product->thumbnail_image,
+                                'thumbnail_image' => ($item->variant && $item->variant->image_url) ? $item->variant->image_url : $item->product->thumbnail_image,
                                 'quantity' => (int) $item->quantity,
                                 'price' => $priceToUse
                             ];

@@ -163,7 +163,7 @@
                           <div v-else>
                             <div v-if="itemMatrices[item.id]" class="row g-3">
                               <div v-for="(values, attrName) in itemMatrices[item.id]" :key="attrName"
-                                class="col-sm-6 col-md-12 col-xl-6">
+                                class="col-12">
                                 <p class="text-white font-oswald tracking-wide text-uppercase mb-2"
                                   style="font-size: 0.8rem;">
                                   {{ attrName }}: <span class="fw-bold text-gold-gradient ms-1">{{ userSelections[item.id][attrName] || 'Chưa chọn' }}</span>

@@ -46,4 +46,6 @@ frontend/.env
 # backend/.env
 backend/.env
 
+*.zip
+*.7z
 
