@@ -16,12 +16,22 @@ return Application::configure(basePath: dirname(__DIR__))
         ['middleware' => ['auth:sanctum'], 'prefix' => 'api']
     )
     ->withMiddleware(function (Middleware $middleware) {
-        $middleware->trustProxies(at: explode(',', env('TRUSTED_PROXIES', '127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16')));
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
+
+        // Production must explicitly list the reverse proxy / load-balancer addresses.
+        // Trusting every private range lets a caller that can reach the app directly spoof client IP headers.
+        $middleware->trustProxies(at: array_values(array_filter(array_map(
+            'trim',
+            explode(',', env('TRUSTED_PROXIES', '127.0.0.1'))
+        ))));
         $middleware->alias([
             'check.module' => \App\Http\Middleware\CheckModulePermission::class,
             'extract.cookie' => \App\Http\Middleware\ExtractRefreshTokenCookie::class,
             'abilities' => \Laravel\Sanctum\Http\Middleware\CheckAbilities::class,
             'ability' => \Laravel\Sanctum\Http\Middleware\CheckForAnyAbility::class,
+            'client.user' => \App\Http\Middleware\EnsureClientUser::class,
+            'admin.user' => \App\Http\Middleware\EnsureAdminUser::class,
+            'cart.mutation.lock' => \App\Http\Middleware\CartMutationLock::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

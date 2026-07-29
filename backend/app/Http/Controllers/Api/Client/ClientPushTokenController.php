@@ -16,16 +16,39 @@ class ClientPushTokenController extends Controller
             'device_name' => ['nullable', 'string', 'max:255'],
         ]);
 
-        $token = UserPushToken::updateOrCreate(
-            ['expo_push_token' => $data['expo_push_token']],
-            [
-                'user_id' => $request->user()->id,
-                'platform' => $data['platform'] ?? null,
-                'device_name' => $data['device_name'] ?? null,
-                'is_active' => true,
-                'last_used_at' => now(),
-            ]
-        );
+        $userId = $request->user()->id;
+        $token = UserPushToken::where('expo_push_token', $data['expo_push_token'])->first();
+
+        // A device token must not be reassigned by another authenticated
+        // account simply because that account submits the same value.
+        if ($token && (int) $token->user_id !== (int) $userId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Thiết bị này đang được liên kết với một tài khoản khác.',
+            ], 409);
+        }
+
+        if (! $token) {
+            $activeTokenCount = UserPushToken::where('user_id', $userId)
+                ->where('is_active', true)
+                ->count();
+
+            if ($activeTokenCount >= 10) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tài khoản chỉ có thể liên kết tối đa 10 thiết bị nhận thông báo.',
+                ], 422);
+            }
+
+            $token = new UserPushToken(['expo_push_token' => $data['expo_push_token']]);
+            $token->user_id = $userId;
+        }
+
+        $token->platform = $data['platform'] ?? null;
+        $token->device_name = $data['device_name'] ?? null;
+        $token->is_active = true;
+        $token->last_used_at = now();
+        $token->save();
 
         return response()->json([
             'success' => true,

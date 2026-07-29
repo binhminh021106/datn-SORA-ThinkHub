@@ -13,9 +13,16 @@ class EmailLog extends Model
         'user_id',
         'event_type',
         'sent_at',
+        'queued_at',
         'status',
         'voucher_code',
         'action_url',
+        'error_message',
+    ];
+
+    protected $casts = [
+        'sent_at' => 'datetime',
+        'queued_at' => 'datetime',
     ];
 
     // Quan hệ với bảng User

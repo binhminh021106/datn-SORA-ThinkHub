@@ -1,9 +1,9 @@
 <template>
   <div class="staff-edit-wrapper">
 
-    <div class="container-fluid py-4" v-if="isLoaded">
+    <div class="container-fluid py-3" v-if="isLoaded">
       <!-- Header & Badge Cấp độ trang -->
-      <div class="row mb-4 align-items-center">
+      <div class="row mb-3 align-items-center">
         <div class="col-md-8 d-flex align-items-center">
           <router-link :to="{ name: 'admin-staff-index' }"
             class="btn btn-light shadow-sm me-3 rounded-circle d-flex align-items-center justify-content-center"
@@ -36,17 +36,17 @@
           vụ</strong> và <strong>Trạng thái</strong> của bản thân.
       </div>
 
-      <form @submit.prevent="updateStaff">
-        <div class="row g-4">
+      <form class="account-edit-form" @submit.prevent="updateStaff">
+        <div class="row g-3">
           <!-- ================= CỘT TRÁI: AVATAR & TRẠNG THÁI ================= -->
           <div class="col-md-4 col-lg-3">
-            <div class="card border-0 shadow-sm rounded-4 text-center p-4 h-100">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-3 h-100">
               <label class="form-label fw-bold mb-3 text-dark">Ảnh đại diện</label>
-              <div class="position-relative d-inline-block mx-auto mb-3" style="width: 140px; height: 140px;">
+              <div class="position-relative d-inline-block mx-auto mb-3" style="width: 120px; height: 120px;">
                 <!-- Sử dụng SoraImage thay cho img thường để xử lý lỗi ảnh mượt mà -->
                 <SoraImage :src="previewAvatar" :placeholder="defaultAvatar"
                   imgClass="rounded-circle shadow-sm border border-3 border-white object-fit-cover"
-                  style="width: 140px; height: 140px;" alt="Avatar" />
+                  style="width: 120px; height: 120px;" alt="Avatar" />
                 <label for="avatarUpload"
                   class="position-absolute bottom-0 end-0 bg-brand rounded-circle shadow-sm p-2 text-white cursor-pointer"
                   style="line-height: 1;" title="Đổi ảnh đại diện">
@@ -86,12 +86,12 @@
 
           <!-- ================= CỘT PHẢI: THÔNG TIN CHI TIẾT ================= -->
           <div class="col-md-8 col-lg-9">
-            <div class="card border-0 shadow-sm rounded-4">
-              <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
+            <div class="card border-0 shadow-sm rounded-4 account-edit-card">
+              <div class="card-header bg-white border-bottom-0 pt-3 pb-0 px-3">
                 <h5 class="fw-bold text-dark mb-0"><i class="bi bi-person-lines-fill text-brand me-2"></i> Thông tin cá
                   nhân</h5>
               </div>
-              <div class="card-body p-4 pt-3">
+              <div class="card-body p-3 pt-2">
                 <div class="row">
                   <div class="col-md-6 mb-4">
                     <label class="form-label fw-bold text-dark">Họ và tên <span class="text-danger">*</span></label>
@@ -158,7 +158,7 @@
                   </div>
                 </div>
 
-                <div class="text-end border-top pt-4 mt-2">
+                <div class="text-end border-top pt-3 mt-2">
                   <router-link :to="{ name: 'admin-staff-index' }" class="btn btn-light me-2 px-4 fw-bold shadow-sm">Hủy
                     bỏ</router-link>
                   <button type="submit" class="btn btn-brand px-5 fw-bold text-white shadow-sm" :disabled="isSaving">
@@ -490,5 +490,28 @@ const updateStaff = async () => {
 
 .cursor-pointer:hover {
   transform: scale(1.1);
+}
+
+.account-edit-form .card-body .row > [class*='col-'] {
+  margin-bottom: 1rem !important;
+}
+
+.account-edit-form .form-label {
+  margin-bottom: 0.35rem;
+  font-size: 0.875rem;
+}
+
+.account-edit-form .form-control,
+.account-edit-form .form-select,
+.account-edit-form .input-group-text {
+  min-height: 38px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.95rem;
+}
+
+.account-edit-form .form-select-lg {
+  min-height: 38px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.95rem;
 }
 </style>

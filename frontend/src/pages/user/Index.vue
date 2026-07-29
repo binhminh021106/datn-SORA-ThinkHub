@@ -35,7 +35,7 @@
                 <div class="home-hero-copy text-center">
                   <span class="kicker-base hero-kicker">Trang Sức Cao Cấp SORA</span>
                   <h1 class="font-serif" v-html="formatBannerTitle(banner.title)"></h1>
-                  <a v-if="banner.target_url" :href="banner.target_url" class="editorial-btn text-decoration-none">Khám
+                  <a v-if="safeNavigationUrl(banner.target_url)" :href="safeNavigationUrl(banner.target_url)" class="editorial-btn text-decoration-none">Khám
                     phá ngay</a>
                   <router-link v-else :to="{ name: 'shop' }" class="editorial-btn text-decoration-none">Khám phá bộ sưu
                     tập</router-link>
@@ -337,6 +337,7 @@ import clientApiClient from '@/utils/clientApiClient';
 import { getUserToken } from '@/composables/useUtilities';
 import { useQuery } from '@tanstack/vue-query';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { safeNavigationUrl, textWithLineBreaks } from '@/utils/sanitizeHtml';
 
 const { data: homeQueryData, isPending: isQueryLoading, isError: isQueryError } = useQuery({
   queryKey: ['homeData'],
@@ -409,7 +410,7 @@ const formatPrice = (value) => {
 
 const formatBannerTitle = (title) => {
   if (!title) return 'Tỏa Sáng Cùng<br>Vẻ Đẹp Đích Thực';
-  return title.replace(/\n/g, '<br>');
+  return textWithLineBreaks(title);
 };
 
 const imagePool = computed(() => {

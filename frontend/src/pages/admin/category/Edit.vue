@@ -217,7 +217,7 @@ watch(categoryData, (u) => {
       name: u.name, slug: u.slug, parent_id: u.parent_id, 
       description: u.description || '', status: u.status,
       sort_order: u.sort_order || 0,
-      attributes_schema: u.attributes_schema || [] 
+      attributes_schema: Array.isArray(u.attributes_schema) ? [...u.attributes_schema] : []
     };
     
     previewImage.value = u.thumbnail ? getFullImage(u.thumbnail) : defaultImage;
@@ -294,6 +294,7 @@ const { mutate: mutateUpdate, isPending: isSaving } = useMutation({
     queryClient.invalidateQueries({ queryKey: ['admin-categories-all'] });
     queryClient.invalidateQueries({ queryKey: ['admin-categories-tree'] });
     queryClient.invalidateQueries({ queryKey: ['admin-category-detail', route.params.id] });
+    router.push({ name: 'admin-categories' });
   },
   onError: (err) => {
     if (err.response) {

@@ -353,7 +353,7 @@
 
       <section class="product-description-section fade-in">
         <h2 class="section-title text-center font-serif text-sora-primary mb-5"><i class="bi bi-journal-text text-gold me-2"></i>MÔ TẢ SẢN PHẨM</h2>
-        <div class="description-content" v-html="product.description"></div>
+        <div class="description-content" v-html="sanitizeRichHtml(product?.description)"></div>
       </section>
 
       <!-- PRODUCT REVIEWS SECTION -->
@@ -519,6 +519,7 @@ import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener
 import { API_BASE_URL } from '@/utils/env';
 import clientApiClient from '@/utils/clientApiClient';
 import { globalModalState } from '@/stores/modalState';
+import { sanitizeRichHtml } from '@/utils/sanitizeHtml';
 
 const route = useRoute();
 const router = useRouter();

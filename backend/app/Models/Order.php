@@ -12,8 +12,15 @@ class Order extends Model
 
     protected $table = 'orders';
 
+    protected $hidden = [
+        'guest_access_token',
+        'idempotency_key',
+    ];
+
     protected $fillable = [
         'order_code',
+        'guest_access_token',
+        'idempotency_key',
         'user_id',
         'customer_name',
         'customer_phone',
@@ -35,7 +42,8 @@ class Order extends Model
         'refund_account_number',
         'refund_account_name',
         'refund_amount',
-        'refund_note'
+        'refund_note',
+        'return_images',
     ];
 
     protected function casts(): array
@@ -46,6 +54,7 @@ class Order extends Model
             'shipping_fee' => 'decimal:2',
             'total_amount' => 'decimal:2',
             'tier_discount_amount' => 'decimal:2',
+            'return_images' => 'array',
         ];
     }
 
@@ -67,6 +76,11 @@ class Order extends Model
     public function reviews()
     {
         return $this->hasMany(Review::class);
+    }
+
+    public function paymentAttempts()
+    {
+        return $this->hasMany(PaymentAttempt::class);
     }
     
 }

@@ -11,6 +11,9 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use App\Models\User;
 use App\Models\Coupon;
+use App\Models\EmailLog;
+use Throwable;
+use Symfony\Component\Mime\Email;
 
 class BirthdayVoucherMail extends Mailable implements ShouldQueue
 {
@@ -18,14 +21,33 @@ class BirthdayVoucherMail extends Mailable implements ShouldQueue
 
     public $user;
     public $coupon;
+    public $emailLogId;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(User $user, Coupon $coupon)
+    public function __construct(User $user, Coupon $coupon, ?int $emailLogId = null)
     {
         $this->user = $user;
         $this->coupon = $coupon;
+        $this->emailLogId = $emailLogId;
+    }
+
+    public function failed(Throwable $exception): void
+    {
+        if ($this->emailLogId) {
+            EmailLog::whereKey($this->emailLogId)->update([
+                'status' => 'failed',
+                'error_message' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    public function withSymfonyMessage(Email $message): void
+    {
+        if ($this->emailLogId) {
+            $message->getHeaders()->addTextHeader('X-SORA-Email-Log-ID', (string) $this->emailLogId);
+        }
     }
 
     /**

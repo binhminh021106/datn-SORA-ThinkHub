@@ -95,10 +95,15 @@ class ClientProfileController extends Controller
         $user->password = Hash::make($request->password);
         $user->save();
 
+        // Revoke every existing session so a previously stolen token cannot
+        // survive after the account owner changes their password.
+        $user->tokens()->delete();
+
         return response()->json([
             'status' => true,
-            'message' => 'Đổi mật khẩu thành công!'
-        ]);
+            'message' => 'Đổi mật khẩu thành công. Vui lòng đăng nhập lại để tiếp tục sử dụng tài khoản.',
+            'requires_relogin' => true,
+        ])->cookie(\cookie()->forget('refresh_token'));
     }
 
     
@@ -122,6 +127,13 @@ class ClientProfileController extends Controller
     {
         $user = Auth::guard('sanctum')->user();
         if (!$user) return response()->json(['status' => false, 'message' => 'Vui lòng đăng nhập'], 401);
+
+        if (UserAddress::where('user_id', $user->id)->count() >= 10) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Mỗi tài khoản chỉ có thể lưu tối đa 10 địa chỉ.',
+            ], 422);
+        }
 
         // Form request đã validate và chuẩn hóa số điện thoại rồi
         $isDefault = $request->is_default ? 1 : 0;

@@ -32,6 +32,44 @@ class AdminSettingController extends Controller
     }
 
     /**
+     * Return only the storefront settings that are safe to expose publicly.
+     *
+     * The admin settings table may also contain operational configuration in
+     * the future, so the client API must never serialize every row by default.
+     */
+    public function publicIndex()
+    {
+        $publicKeys = [
+            'logo_header',
+            'logo_footer',
+            'footer_brand_desc',
+            'footer_copyright',
+            'footer_address',
+            'footer_email',
+            'footer_socials',
+            'footer_trust_items',
+            'home_stats',
+        ];
+
+        $settings = Setting::query()
+            ->whereIn('key', $publicKeys)
+            ->get()
+            ->mapWithKeys(function ($setting) {
+                $value = $setting->value;
+                if ($setting->type === 'json') {
+                    $value = json_decode($value, true);
+                }
+
+                return [$setting->key => $value];
+            });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $settings,
+        ]);
+    }
+
+    /**
      * Update settings
      */
     public function update(UpdateSettingRequest $request)

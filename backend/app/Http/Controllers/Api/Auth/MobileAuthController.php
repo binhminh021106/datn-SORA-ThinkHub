@@ -21,7 +21,7 @@ class MobileAuthController extends Controller
         $request->validate([
             'fullName' => 'required|string|max:150',
             'email'    => 'required|string|email|max:150|unique:users',
-            'password' => 'required|string|min:6|confirmed',
+            'password' => 'required|string|min:8|confirmed',
         ], [
             'fullName.required' => 'Vui lòng nhập họ và tên.',
             'email.required'    => 'Vui lòng nhập email.',
@@ -39,7 +39,7 @@ class MobileAuthController extends Controller
             'status'   => 'active',
         ]);
 
-        $token = $user->createToken('mobile_token')->plainTextToken;
+        $token = $user->createToken('mobile_token', ['access'], now()->addDays(30))->plainTextToken;
 
         return response()->json([
             'message'      => 'Đăng ký thành công!',
@@ -81,7 +81,7 @@ class MobileAuthController extends Controller
         // Thu hồi token cũ (đăng nhập 1 thiết bị) - tuỳ chọn
         // $user->tokens()->delete();
 
-        $token = $user->createToken('mobile_token')->plainTextToken;
+        $token = $user->createToken('mobile_token', ['access'], now()->addDays(30))->plainTextToken;
 
         return response()->json([
             'message'      => 'Đăng nhập thành công!',
@@ -156,7 +156,7 @@ class MobileAuthController extends Controller
         $user->status = $user->status ?: 'active';
         $user->save();
 
-        $token = $user->createToken('mobile_token')->plainTextToken;
+        $token = $user->createToken('mobile_token', ['access'], now()->addDays(30))->plainTextToken;
 
         return response()->json([
             'message' => 'Đăng nhập Google thành công!',

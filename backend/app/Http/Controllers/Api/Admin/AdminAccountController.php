@@ -56,7 +56,7 @@ class AdminAccountController extends Controller
             'access_token'  => $accessToken,
             'expires_in'    => 3600,
             'admin'         => $admin 
-        ])->cookie('admin_refresh_token', $refreshToken, 60 * 24 * 7, '/', null, true, true, false, 'Strict');
+        ])->cookie('admin_refresh_token', $refreshToken, 60 * 24 * 7, '/', config('session.domain'), config('session.secure') ?? app()->environment('production'), true, false, 'Strict');
     }
 
     public function refresh(Request $request)
@@ -89,7 +89,7 @@ class AdminAccountController extends Controller
             'token'         => $accessToken,
             'access_token'  => $accessToken,
             'expires_in'    => 3600
-        ])->cookie('admin_refresh_token', $refreshToken, 60 * 24 * 7, '/', null, true, true, false, 'Strict');
+        ])->cookie('admin_refresh_token', $refreshToken, 60 * 24 * 7, '/', config('session.domain'), config('session.secure') ?? app()->environment('production'), true, false, 'Strict');
     }
 
     public function logout(Request $request)

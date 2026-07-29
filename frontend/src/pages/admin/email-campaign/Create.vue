@@ -217,6 +217,7 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import apiClient from '@/utils/apiClient'
 import { useToast } from 'vue-toastification'
+import { textWithLineBreaks } from '@/utils/sanitizeHtml'
 
 const router = useRouter()
 const toast = useToast()
@@ -317,7 +318,7 @@ const displayDate = computed({
 })
 
 const previewHolidayContent = computed(() => {
-  return replaceTokens(holidayForm.content || '').replace(/\n/g, '<br>')
+  return textWithLineBreaks(replaceTokens(holidayForm.content || ''))
 })
 
 const holidaySubject = computed(() => {

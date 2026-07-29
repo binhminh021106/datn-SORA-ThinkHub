@@ -10,7 +10,7 @@
       </div>
     </div>
 
-    <SoraListSkeleton v-if="isLoading" :rows="4" :image="false" card />
+    <AffiliateTabSkeleton v-if="isLoading" />
 
     <div v-else>
       <div v-if="affiliateData.is_affiliate" class="affiliate-dashboard">
@@ -239,7 +239,7 @@
 import { ref, reactive, onMounted } from 'vue';
 import Toast from '@/utils/toastConfig';
 import soraAlert from '@/utils/soraAlertConfig';
-import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
+import AffiliateTabSkeleton from './AffiliateTabSkeleton.vue';
 import clientApiClient from '@/utils/clientApiClient';
 
 const isLoading = ref(true);

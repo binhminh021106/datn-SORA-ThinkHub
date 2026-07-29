@@ -106,7 +106,7 @@
                       <td colspan="5" class="text-center text-muted py-4 small">Chưa có log gửi email.</td>
                     </tr>
                     <tr v-for="log in emailLogs" :key="log.id">
-                      <td class="px-3 py-2 small fw-semibold">{{ formatDateTime(log.sent_at) }}</td>
+                      <td class="px-3 py-2 small fw-semibold">{{ formatDateTime(log.sent_at || log.queued_at) }}</td>
                       <td class="px-3 py-2">
                         <span class="event-type-badge badge bg-secondary bg-opacity-10 text-secondary border">
                           {{ formatEventType(log.event_type) }}
@@ -120,9 +120,12 @@
                         <span class="text-muted" style="font-size: 0.75rem;">Theo sự kiện</span>
                       </td>
                       <td class="px-3 py-2 text-center">
-                        <span class="badge" :class="log.status === 'success' ? 'bg-success' : 'bg-danger'">
-                          {{ log.status === 'success' ? 'Thành công' : 'Thất bại' }}
+                        <span class="badge" :class="emailStatusClass(log.status)" :title="log.error_message || ''">
+                          {{ emailStatusLabel(log.status) }}
                         </span>
+                        <div v-if="log.error_message" class="small text-danger mt-1" :title="log.error_message">
+                          {{ log.error_message }}
+                        </div>
                       </td>
                     </tr>
                   </tbody>
@@ -656,6 +659,8 @@ async function saveBirthdaySettings() {
 function replaceTokens(text, customer, voucherCode) { return text.replaceAll('[Tên_Khách_Hàng]', customer.name).replaceAll('[Voucher_Code]', voucherCode || ''); }
 function formatDateTime(dateString) { if (!dateString) return 'N/A'; const d = new Date(dateString); return d.toLocaleString('vi-VN'); }
 function formatEventType(typeStr) { if (typeStr === 'birthday') return 'Sinh nhật'; if (typeStr?.startsWith('holiday_')) return `Sự kiện #${typeStr.split('_')[1]}`; return typeStr; }
+function emailStatusLabel(status) { return ({ queued: 'Đang chờ queue', sent: 'Đã gửi', success: 'Đã gửi', failed: 'Thất bại' })[status] || status || 'Không rõ'; }
+function emailStatusClass(status) { return ({ queued: 'bg-warning text-dark', sent: 'bg-success', success: 'bg-success', failed: 'bg-danger' })[status] || 'bg-secondary'; }
 
 async function clearLogs() {
   const result = await Swal.fire({ title: 'Xóa vĩnh viễn lịch sử?', text: 'Toàn bộ log gửi email đang hiển thị sẽ bị xóa khỏi hệ thống.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Xóa lịch sử', cancelButtonText: 'Hủy', confirmButtonColor: '#dc3545', });

@@ -8,6 +8,7 @@ import SoraSkeleton from '@/components/ui/SoraSkeleton.vue';
 import SoraBlogSkeleton from '@/components/ui/SoraBlogSkeleton.vue';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
 import { API_BASE_URL, getStorageUrl } from '@/utils/env';
+import { sanitizeRichHtml } from '@/utils/sanitizeHtml';
 
 const route = useRoute();
 const router = useRouter();
@@ -48,19 +49,7 @@ const formatDate = (dateString) => {
 };
 
 const sanitizeHTML = (html) => {
-    if (!html) return '';
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    const scripts = doc.querySelectorAll('script, iframe, object, embed');
-    scripts.forEach(s => s.remove());
-    const elements = doc.querySelectorAll('*');
-    elements.forEach(el => {
-        Array.from(el.attributes).forEach(attr => {
-            if (attr.name.startsWith('on') || attr.value.trim().toLowerCase().startsWith('javascript:')) {
-                el.removeAttribute(attr.name);
-            }
-        });
-    });
-    return doc.body.innerHTML;
+    return sanitizeRichHtml(html);
 };
 
 const updateSeoTags = (postData) => {
@@ -290,7 +279,7 @@ watch(currentSlug, () => {
                             </div>
                             
                             <!-- NẾU ĐÃ LOAD XONG DATA THẬT -->
-                            <div v-else class="article-body text-dark fade-in" style="line-height: 1.8; font-size: 1.05rem; text-align: justify;" v-html="post.content"></div>
+                            <div v-else class="article-body text-dark fade-in" style="line-height: 1.8; font-size: 1.05rem; text-align: justify;" v-html="sanitizeHTML(post.content)"></div>
 
                             <!-- Thẻ tác giả -->
                             <div class="author-box d-flex align-items-center bg-light-custom p-4 rounded-4 mt-5 border border-light-subtle">

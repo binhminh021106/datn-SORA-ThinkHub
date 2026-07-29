@@ -44,11 +44,10 @@
 
         <div class="card-body p-0 mt-2 position-relative">
           
-          <!-- Ocean Wave Loading Overlay -->
           <div v-if="isStaffsFetching" class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75" style="z-index: 10;">
-             <div class="ocean-wave" style="position: sticky; top: 50vh; transform: translateY(-50%); margin: 0 auto; width: fit-content;">
-               <span></span><span></span><span></span>
-             </div>
+            <div class="w-100 h-100 d-flex align-items-center justify-content-center">
+              <AdminLoadingSpinner size="32" label="Đang tải nhân sự" />
+            </div>
           </div>
 
           <div class="table-responsive border-0" style="min-height: 300px;">
@@ -736,28 +735,6 @@ const paginatedStaff = computed(() => {
 .custom-scrollbar-y::-webkit-scrollbar-thumb { background: #d1d1d1; border-radius: 10px; }
 .custom-scrollbar-y::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
 
-/* Hiệu ứng Ocean Wave Loading */
-.ocean-wave {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-}
-.ocean-wave span {
-  width: 14px;
-  height: 14px;
-  background-color: #009981;
-  border-radius: 50%;
-  animation: oceanWave 1.2s ease-in-out infinite;
-}
-.ocean-wave span:nth-child(1) { animation-delay: -0.4s; }
-.ocean-wave span:nth-child(2) { animation-delay: -0.2s; }
-.ocean-wave span:nth-child(3) { animation-delay: 0s; }
-
-@keyframes oceanWave {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-12px); background-color: #4dffdf; }
-}
 
 /* Các tiện ích khác */
 .tracking-widest { letter-spacing: 2px; }

@@ -4,17 +4,21 @@ import App from './App.vue'
 import router from './router'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap/dist/js/bootstrap.bundle.min.js' 
+import './assets/admin-loading.css'
 
 import axios from 'axios';
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 import { getAdminToken, getUserToken } from '@/composables/useUtilities';
 import { API_BASE_URL, REVERB_APP_KEY, REVERB_HOST, REVERB_PORT, REVERB_SCHEME } from '@/utils/env';
+import AdminLoadingSpinner from '@/components/admin/AdminLoadingSpinner.vue';
+import { installSafeConsoleRedaction } from '@/utils/safeConsole';
 
 // 1. IMPORT VUE QUERY VÀO ĐÂY
 import { VueQueryPlugin } from '@tanstack/vue-query';
 
 window.Pusher = Pusher;
+installSafeConsoleRedaction();
 
 // Cấu hình Axios mặc định
 window.axios = axios;
@@ -137,6 +141,7 @@ const app = createApp(App)
 
 app.use(createPinia())
 app.use(router)
+app.component('AdminLoadingSpinner', AdminLoadingSpinner)
 
 app.use(VueQueryPlugin, {
   queryClientConfig: {

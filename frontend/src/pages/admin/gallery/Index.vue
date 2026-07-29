@@ -124,7 +124,7 @@
 
                   <td class="px-4 text-center">
                     <button class="btn btn-sm btn-light text-info me-1 shadow-sm border action-btn-hover" title="Xem ảnh lớn" @click="openQuickView(item)">
-                      <i class="bi bi-arrows-fullscreen"></i>
+                      <i class="bi bi-eye"></i>
                     </button>
                     <router-link :to="{ name: 'admin-gallery-edit', params: { id: item.id } }" class="btn btn-sm btn-light text-primary me-1 shadow-sm border action-btn-hover" title="Chỉnh sửa">
                       <i class="bi bi-pencil-square"></i>

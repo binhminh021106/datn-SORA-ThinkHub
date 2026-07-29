@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Api\Client;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Favourite;
+use App\Models\Product;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class ClientFavouriteController extends Controller
 {
@@ -17,7 +20,7 @@ class ClientFavouriteController extends Controller
         // FIX: Dùng guard sanctum để bắt token ở mọi trường hợp
         $user = Auth::guard('sanctum')->user();
         
-        if (!$user) {
+        if (! $user instanceof User) {
             return response()->json([
                 'status' => false,
                 'message' => 'Vui lòng đăng nhập để xem danh sách yêu thích',
@@ -36,6 +39,7 @@ class ClientFavouriteController extends Controller
                     ->with('variants:id,product_id,stock_quantity,price,promotional_price,sku,image_url');
             }])
             ->where('user_id', $user->id)
+            ->limit(200)
             ->latest()
             ->get();
 
@@ -57,7 +61,7 @@ class ClientFavouriteController extends Controller
 
         $user = Auth::guard('sanctum')->user();
         
-        if (!$user) {
+        if (! $user instanceof User) {
             return response()->json([
                 'status' => false,
                 'message' => 'Vui lòng đăng nhập để thực hiện chức năng này',
@@ -68,25 +72,40 @@ class ClientFavouriteController extends Controller
         $productId = $request->product_id;
 
         // Tìm xem user đã tim sản phẩm này chưa
-        $favourite = Favourite::where('user_id', $user->id)
-                              ->where('product_id', $productId)
-                              ->first();
+        return DB::transaction(function () use ($user, $productId) {
+            // Serialize a user's whole favourite set. This keeps both the per-user
+            // cap and the toggle operation correct even without a composite unique key.
+            User::query()->whereKey($user->id)->lockForUpdate()->first();
 
-        if ($favourite) {
-            $favourite->delete(); // Hủy tim
-            return response()->json([
-                'status' => true,
-                'action' => 'removed',
-                'message' => 'Đã xóa sản phẩm khỏi danh sách yêu thích'
-            ]);
-        } else {
+            // Serialize toggles for the same product to avoid duplicate rows.
+            $product = Product::query()->whereKey($productId)->lockForUpdate()->first();
+            $favourite = Favourite::where('user_id', $user->id)
+                ->where('product_id', $productId)
+                ->lockForUpdate()
+                ->first();
+
+            if ($favourite) {
+                $favourite->delete(); // Hủy tim
+                return response()->json([
+                    'status' => true,
+                    'action' => 'removed',
+                    'message' => 'Đã xóa sản phẩm khỏi danh sách yêu thích'
+                ]);
+            }
+
             // Chỉ cho phép thêm nếu sản phẩm tồn tại và đang được bán
-            $product = \App\Models\Product::find($productId);
             if (!$product || $product->status !== 'published') {
                 return response()->json([
                     'status' => false,
                     'message' => 'Sản phẩm không tồn tại hoặc ngừng kinh doanh'
                 ], 403);
+            }
+
+            if (Favourite::where('user_id', $user->id)->count() >= 200) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Bạn chỉ có thể lưu tối đa 200 sản phẩm yêu thích.'
+                ], 422);
             }
 
             Favourite::create([   // Thả tim
@@ -98,7 +117,7 @@ class ClientFavouriteController extends Controller
                 'action' => 'added',
                 'message' => 'Đã thêm sản phẩm vào danh sách yêu thích'
             ]);
-        }
+        });
     }
 
     /**
@@ -108,7 +127,7 @@ class ClientFavouriteController extends Controller
     {
         $user = Auth::guard('sanctum')->user();
         
-        if (!$user) {
+        if (! $user instanceof User) {
             return response()->json(['is_favourited' => false]);
         }
 

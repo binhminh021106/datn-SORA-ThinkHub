@@ -1,7 +1,7 @@
 <template>
     <div class="user-create-wrapper ">
-        <div class="container-fluid py-4">
-            <div class="d-flex align-items-center mb-4">
+        <div class="container-fluid py-3">
+            <div class="d-flex align-items-center mb-3">
                 <router-link :to="{ name: 'admin-users' }"
                     class="btn btn-light shadow-sm me-3 rounded-circle d-flex align-items-center justify-content-center"
                     style="width: 40px; height: 40px;">
@@ -14,16 +14,16 @@
             </div>
 
             <!-- Tắt autocomplete ở cấp độ form -->
-            <form @submit.prevent="saveUser" autocomplete="off">
-                <div class="row g-4">
+            <form class="account-create-form" @submit.prevent="saveUser" autocomplete="off">
+                <div class="row g-3">
                     <!-- Cột Trái: Avatar & Trạng thái -->
                     <div class="col-md-4 col-lg-3">
-                        <div class="card border-0 shadow-sm rounded-4 text-center p-4 h-100">
+                        <div class="card border-0 shadow-sm rounded-4 text-center p-3 h-100">
                             <label class="form-label fw-bold mb-3">Ảnh đại diện</label>
-                            <div class="position-relative d-inline-block mx-auto mb-4">
+                            <div class="position-relative d-inline-block mx-auto mb-3">
                                 <img :src="previewAvatar"
                                     class="rounded-circle shadow-sm border border-2 border-white object-fit-cover"
-                                    style="width: 150px; height: 150px;" alt="Avatar">
+                                    style="width: 120px; height: 120px;" alt="Avatar">
                                 <label for="avatarUpload"
                                     class="position-absolute bottom-0 end-0 bg-brand rounded-circle shadow-sm p-2 text-white"
                                     style="cursor: pointer;">
@@ -46,8 +46,8 @@
 
                     <!-- Cột Phải: Thông tin chi tiết -->
                     <div class="col-md-8 col-lg-9">
-                        <div class="card border-0 shadow-sm rounded-4 mb-4">
-                            <div class="card-body p-4">
+                        <div class="card border-0 shadow-sm rounded-4 mb-3">
+                            <div class="card-body p-3">
                                 <h5 class="fw-bold mb-4 text-brand"><i class="bi bi-person-lines-fill me-2"></i>Thông tin cơ bản</h5>
                                 
                                 <div class="row">
@@ -121,7 +121,7 @@
 
                         <!-- ĐỊA CHỈ MẶC ĐỊNH -->
                         <div class="card border-0 shadow-sm rounded-4">
-                            <div class="card-body p-4">
+                            <div class="card-body p-3">
                                 <h5 class="fw-bold mb-4 text-brand"><i class="bi bi-geo-alt-fill me-2"></i>Địa chỉ mặc định (Tùy chọn)</h5>
                                 <div class="row">
                                     <div class="col-12 mb-3">
@@ -139,7 +139,7 @@
                                     </div>
                                 </div>
 
-                                <hr class="text-muted opacity-25 my-4">
+                                <hr class="text-muted opacity-25 my-3">
                                 <div class="text-end">
                                     <router-link :to="{ name: 'admin-users' }" class="btn btn-light me-2 px-4 shadow-sm fw-bold">Hủy bỏ</router-link>
                                     <button type="submit" class="btn btn-brand px-5 fw-bold text-white shadow-sm" :disabled="isSaving">
@@ -271,4 +271,21 @@ const saveUser = async () => {
 .form-control:focus, .form-select:focus { border-color: #009981; box-shadow: 0 0 0 0.25rem rgba(0, 153, 129, 0.25); }
 .text-brand { color: #009981 !important; }
 .invalid-feedback { font-size: 0.8rem; font-weight: 500; }
+
+.account-create-form .card-body .row > [class*='col-'] {
+    margin-bottom: 1rem !important;
+}
+
+.account-create-form .form-label {
+    margin-bottom: 0.35rem;
+    font-size: 0.875rem;
+}
+
+.account-create-form .form-control,
+.account-create-form .form-select,
+.account-create-form .input-group-text {
+    min-height: 38px;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.95rem;
+}
 </style>

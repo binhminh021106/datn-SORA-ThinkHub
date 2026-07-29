@@ -31,7 +31,7 @@
             </div>
             <div class="password-input-wrapper">
               <input v-model="form.password" :type="showPassword ? 'text' : 'password'" placeholder="Nhập mật khẩu"
-                required autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');" />
+                required autocomplete="current-password" readonly onfocus="this.removeAttribute('readonly');" />
               <button type="button" class="password-toggle" @click="showPassword = !showPassword"
                 :aria-label="showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'" :aria-pressed="showPassword">
                 <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
@@ -56,7 +56,7 @@
 
         <!-- Social Logins -->
         <div class="social-login">
-          <button @click="LoginWithGoogle" class="btn-social" type="button">
+          <button @click="LoginWithGoogle" class="btn-social" type="button" :disabled="isLoading">
             <svg class="social-icon" viewBox="0 0 24 24">
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -109,8 +109,11 @@ const route = useRoute();
 const queryClient = useQueryClient();
 
 const LoginWithGoogle = () => {
-  if (route.query.redirect) {
-    localStorage.setItem('redirect_after_login', route.query.redirect);
+  const redirect = route.query.redirect;
+  if (typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//') && !redirect.startsWith('/\\') && !redirect.startsWith('/admin')) {
+    localStorage.setItem('redirect_after_login', redirect);
+  } else {
+    localStorage.removeItem('redirect_after_login');
   }
   window.location.href = `${API_BASE_URL}/auth/google/redirect`;
 }
@@ -127,6 +130,8 @@ const form = reactive({
 const { syncAfterLogin } = useAuthSync();
 
 const handleLogin = async () => {
+  if (isLoading.value) return;
+
   isLoading.value = true;
   errorMessage.value = '';
 

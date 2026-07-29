@@ -73,7 +73,8 @@ class ClientAffiliateController extends Controller
             ], 200);
 
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()], 500);
+            report($e);
+            return response()->json(['success' => false, 'message' => 'Không thể tải thông tin đối tác lúc này. Vui lòng thử lại sau.'], 500);
         }
     }
 
@@ -117,7 +118,8 @@ class ClientAffiliateController extends Controller
                 'data'    => $application
             ], 201);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'Lỗi: ' . $e->getMessage()], 500);
+            report($e);
+            return response()->json(['success' => false, 'message' => 'Không thể gửi đơn đăng ký lúc này. Vui lòng thử lại sau.'], 500);
         }
     }
 
@@ -178,7 +180,8 @@ class ClientAffiliateController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['success' => false, 'message' => 'Lỗi xử lý hệ thống: ' . $e->getMessage()], 500);
+            report($e);
+            return response()->json(['success' => false, 'message' => 'Không thể xử lý yêu cầu rút tiền lúc này. Vui lòng thử lại sau.'], 500);
         }
     }
 }

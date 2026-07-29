@@ -13,6 +13,19 @@ class ShopController extends Controller
 {
     public function index(Request $request, $shop_slug)
     {
+        $filters = $request->validate([
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:48'],
+            'keyword' => ['nullable', 'string', 'max:100'],
+            'categories' => ['nullable', 'string', 'max:500'],
+            'color' => ['nullable', 'string', 'max:500'],
+            'attribute_values' => ['nullable', 'string', 'max:500'],
+            'dimension' => ['nullable', 'string', 'max:500'],
+            'size' => ['nullable', 'string', 'max:500'],
+            'min_price' => ['nullable', 'numeric', 'min:0', 'max:100000000000'],
+            'max_price' => ['nullable', 'numeric', 'min:0', 'max:100000000000'],
+            'sort' => ['nullable', 'in:new,price_asc,price_desc,recommended'],
+        ]);
+
         $query = Product::with([
             'category:id,name,slug,parent_id',
             'variants' => function ($variantQuery) {
@@ -31,12 +44,12 @@ class ShopController extends Controller
             $this->applyCategoryScope($query, $request);
         }
 
-        if ($request->filled('keyword')) {
-            $query->where('name', 'like', '%' . $request->keyword . '%');
+        if (!empty($filters['keyword'])) {
+            $query->where('name', 'like', '%' . $filters['keyword'] . '%');
         }
 
         if ($request->filled('color')) {
-            $colorsArr = explode(',', $request->color);
+            $colorsArr = array_slice(array_filter(array_map('trim', explode(',', $request->color))), 0, 20);
             $query->whereHas('variants', function ($variantQuery) use ($colorsArr) {
                 $variantQuery->where('stock_quantity', '>', 0)
                     ->whereHas('attributeValues', function ($attributeValueQuery) use ($colorsArr) {
@@ -49,7 +62,7 @@ class ShopController extends Controller
         }
 
         if ($request->filled('attribute_values')) {
-            $attrValues = explode(',', $request->attribute_values);
+            $attrValues = array_slice(array_filter(array_map('trim', explode(',', $request->attribute_values))), 0, 20);
             $query->whereHas('variants', function ($variantQuery) use ($attrValues) {
                 $variantQuery->where('stock_quantity', '>', 0)
                     ->whereHas('attributeValues', function ($attributeValueQuery) use ($attrValues) {
@@ -88,7 +101,7 @@ class ShopController extends Controller
                 break;
         }
 
-        $products = $query->paginate($request->input('per_page', 12));
+        $products = $query->paginate($filters['per_page'] ?? 12);
 
         $products->getCollection()->transform(function ($product) {
             $product->is_new = $product->created_at >= now()->subDays(30);
@@ -182,7 +195,7 @@ class ShopController extends Controller
             return;
         }
 
-        $categoriesArr = explode(',', $request->categories);
+        $categoriesArr = array_slice(array_filter(array_map('trim', explode(',', $request->categories))), 0, 20);
 
         $productQuery->whereHas('category', function ($categoryQuery) use ($categoriesArr) {
             $categoryQuery->whereIn('slug', $categoriesArr)
@@ -198,7 +211,7 @@ class ShopController extends Controller
             return;
         }
 
-        $attributeValues = array_filter(array_map('trim', explode(',', $values)));
+        $attributeValues = array_slice(array_filter(array_map('trim', explode(',', $values))), 0, 20);
 
         $productQuery->whereHas('variants', function ($variantQuery) use ($attributeValues, $attributeNames) {
             $variantQuery->where('stock_quantity', '>', 0)

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 class GeoController extends Controller
@@ -19,8 +20,13 @@ class GeoController extends Controller
     public function autocomplete(Request $request)
     {
         $query = trim($request->get('q', ''));
-        if ($query === '') {
+        if ($query === '' || mb_strlen($query) > 160) {
             return response()->json(['error' => 'Missing q parameter'], 422);
+        }
+
+        $cacheKey = 'geo:autocomplete:' . hash('sha256', mb_strtolower($query, 'UTF-8'));
+        if ($cached = Cache::get($cacheKey)) {
+            return response()->json($cached);
         }
 
         if ($this->apiKey) {
@@ -29,13 +35,17 @@ class GeoController extends Controller
                 'api_key' => $this->apiKey,
             ]);
 
+            if ($response->successful()) {
+                Cache::put($cacheKey, $response->json(), now()->addMinutes(5));
+            }
+
             return response()->json($response->json(), $response->status());
         }
 
         // Fallback to Nominatim
         $response = Http::withHeaders([
             'User-Agent' => 'Laravel/SORA-ThinkHub'
-        ])->get('https://nominatim.openstreetmap.org/search', [
+        ])->timeout(8)->retry(2, 200)->get('https://nominatim.openstreetmap.org/search', [
             'format' => 'jsonv2',
             'q' => $query,
             'addressdetails' => 1,
@@ -52,7 +62,10 @@ class GeoController extends Controller
                     'place_id' => $item['place_id'] ?? '',
                 ];
             }
-            return response()->json(['predictions' => $predictions]);
+            $payload = ['predictions' => $predictions];
+            Cache::put($cacheKey, $payload, now()->addMinutes(5));
+
+            return response()->json($payload);
         }
 
         return response()->json(['error' => 'Autocomplete failed'], 500);
@@ -63,16 +76,27 @@ class GeoController extends Controller
         $lat = $request->get('lat');
         $lng = $request->get('lng');
 
-        if (!is_numeric($lat) || !is_numeric($lng)) {
+        if (!is_numeric($lat) || !is_numeric($lng) || $lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
             return response()->json(['error' => 'Missing or invalid lat/lng parameters'], 422);
+        }
+
+        $lat = round((float) $lat, 5);
+        $lng = round((float) $lng, 5);
+        $cacheKey = "geo:reverse:{$lat}:{$lng}";
+        if ($cached = Cache::get($cacheKey)) {
+            return response()->json($cached);
         }
 
         if ($this->apiKey) {
             // Use geocode endpoint with latlng param for reverse geocoding (rsapi.goong.io expects latlng)
-            $response = Http::get("{$this->baseUrl}/geocode", [
+            $response = Http::timeout(8)->retry(2, 200)->get("{$this->baseUrl}/geocode", [
                 'latlng' => $lat . ',' . $lng,
                 'api_key' => $this->apiKey,
             ]);
+
+            if ($response->successful()) {
+                Cache::put($cacheKey, $response->json(), now()->addMinutes(10));
+            }
 
             return response()->json($response->json(), $response->status());
         }
@@ -80,7 +104,7 @@ class GeoController extends Controller
         // Fallback to OpenStreetMap Nominatim
         $response = Http::withHeaders([
             'User-Agent' => 'Laravel/SORA-ThinkHub'
-        ])->get('https://nominatim.openstreetmap.org/reverse', [
+        ])->timeout(8)->retry(2, 200)->get('https://nominatim.openstreetmap.org/reverse', [
             'format' => 'jsonv2',
             'lat' => $lat,
             'lon' => $lng,
@@ -100,7 +124,7 @@ class GeoController extends Controller
             $ward = $address['quarter'] ?? $address['neighbourhood'] ?? $address['village'] ?? $address['hamlet'] ?? $address['suburb'] ?? '';
 
             // Format to match Goong API response expected by frontend
-            return response()->json([
+            $payload = [
                 'results' => [
                     [
                         'formatted_address' => $data['display_name'] ?? '',
@@ -111,7 +135,10 @@ class GeoController extends Controller
                         ]
                     ]
                 ]
-            ]);
+            ];
+            Cache::put($cacheKey, $payload, now()->addMinutes(10));
+
+            return response()->json($payload);
         }
 
         return response()->json(['error' => 'Unable to geocode'], 500);
@@ -120,15 +147,24 @@ class GeoController extends Controller
     public function geocode(Request $request)
     {
         $address = trim($request->get('address', ''));
-        if ($address === '') {
+        if ($address === '' || mb_strlen($address) > 255) {
             return response()->json(['error' => 'Missing address parameter'], 422);
         }
 
+        $cacheKey = 'geo:geocode:' . hash('sha256', mb_strtolower($address, 'UTF-8'));
+        if ($cached = Cache::get($cacheKey)) {
+            return response()->json($cached);
+        }
+
         if ($this->apiKey) {
-            $response = Http::get("{$this->baseUrl}/geocode", [
+            $response = Http::timeout(8)->retry(2, 200)->get("{$this->baseUrl}/geocode", [
                 'address' => $address,
                 'api_key' => $this->apiKey,
             ]);
+
+            if ($response->successful()) {
+                Cache::put($cacheKey, $response->json(), now()->addMinutes(10));
+            }
 
             return response()->json($response->json(), $response->status());
         }
@@ -156,7 +192,7 @@ class GeoController extends Controller
             $district = $addr['district'] ?? $addr['county'] ?? $addr['suburb'] ?? '';
             $ward = $addr['quarter'] ?? $addr['neighbourhood'] ?? $addr['village'] ?? $addr['hamlet'] ?? $addr['suburb'] ?? '';
 
-            return response()->json([
+            $payload = [
                 'results' => [
                     [
                         'formatted_address' => $item['display_name'] ?? '',
@@ -173,7 +209,10 @@ class GeoController extends Controller
                         ]
                     ]
                 ]
-            ]);
+            ];
+            Cache::put($cacheKey, $payload, now()->addMinutes(10));
+
+            return response()->json($payload);
         }
 
         return response()->json(['error' => 'Geocode failed'], 500);

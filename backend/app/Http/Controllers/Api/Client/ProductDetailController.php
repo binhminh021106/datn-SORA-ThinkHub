@@ -134,10 +134,10 @@ class ProductDetailController extends Controller
             ]);
             
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
-                'message' => 'Không tìm thấy sản phẩm hoặc có lỗi xảy ra',
-                'error' => $e->getMessage()
+                'message' => 'Không tìm thấy sản phẩm hoặc có lỗi xảy ra'
             ], 404);
         }
     }

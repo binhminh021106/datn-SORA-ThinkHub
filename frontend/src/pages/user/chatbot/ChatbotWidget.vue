@@ -25,13 +25,14 @@
           <div class="d-flex flex-column gap-3">
             <div v-for="(msg, index) in messages" :key="index" class="d-flex flex-column">
               <div class="message-bubble p-3 shadow-sm" :class="msg.sender === 'bot' ? 'bot-msg' : 'user-msg'">
-                <div v-html="msg.text" class="msg-text font-luxury" style="font-size: 0.95rem; line-height: 1.6;"></div>
+                <div v-html="messageHtml(msg)" class="msg-text font-luxury" style="font-size: 0.95rem; line-height: 1.6;"></div>
                 <div class="time-stamp text-end mt-2 font-luxury" :class="msg.sender === 'bot' ? 'text-muted' : 'text-white-50'">{{ msg.time }}</div>
               </div>
 
               <div v-if="msg.sender === 'bot' && msg.options && msg.options.length > 0" class="d-flex flex-wrap gap-2 mt-2">
                 <button v-for="(opt, idx) in msg.options" :key="idx" 
                         @click="handleOptionClick(opt)"
+                        :disabled="isLoading"
                         class="btn btn-sm rounded-pill btn-outline-gold fw-bold font-luxury transition-all shadow-sm d-flex align-items-center">
                   {{ opt.label }}
                   <i v-if="opt.link" class="bi bi-box-arrow-up-right ms-2" style="font-size: 0.75rem;"></i>
@@ -63,7 +64,7 @@
 
         <div class="chat-footer p-3 bg-white border-top">
           <form @submit.prevent="sendMessage" class="d-flex gap-2 align-items-center">
-            <input type="text" v-model="userInput" class="form-control sora-input shadow-none" placeholder="Nhập câu hỏi tại đây..." :disabled="isLoading" required>
+            <input type="text" v-model="userInput" class="form-control sora-input shadow-none" placeholder="Nhập câu hỏi tại đây..." :disabled="isLoading" maxlength="1000" required>
             <button type="submit" class="btn btn-send shadow-sm d-flex justify-content-center align-items-center" :disabled="isLoading || !userInput.trim()">
               <i class="bi bi-send-fill text-white fs-5"></i>
             </button>
@@ -79,6 +80,7 @@ import { ref, nextTick, watch } from 'vue';
 import clientApiClient from '@/utils/clientApiClient';
 import { useRouter } from 'vue-router';
 import ProductCard from '@/components/ui/ProductCard.vue';
+import { escapeHtml, safeNavigationUrl, sanitizeRichHtml } from '@/utils/sanitizeHtml';
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -90,6 +92,10 @@ const isOpen = ref(false);
 const isLoading = ref(false);
 const userInput = ref('');
 const chatBody = ref(null);
+
+const messageHtml = (message) => message?.sender === 'bot'
+  ? sanitizeRichHtml(message.text)
+  : escapeHtml(message?.text);
 
 watch(() => props.visible, (visible) => {
   isOpen.value = visible;
@@ -123,21 +129,34 @@ const toggleChat = () => {
 };
 const scrollToBottom = async () => { await nextTick(); if (chatBody.value) chatBody.value.scrollTop = chatBody.value.scrollHeight; };
 
-// XỬ LÝ KHI KHÁCH BẤM NÚT
-const handleOptionClick = (opt) => {
-  if (opt.link && opt.link.trim() !== '') {
-    // Nếu có Link -> Chuyển trang
-    if (opt.link.startsWith('http')) {
-      window.open(opt.link, '_blank');
-    } else {
-      router.push(opt.link);
-      isOpen.value = false;
-    }
-  } else {
-    // Nếu không có Link -> Chat tiếp bằng Label của nút đó
-    userInput.value = opt.label;
-    sendMessage();
+const toInternalPath = (value) => {
+  const safeUrl = safeNavigationUrl(value);
+  if (!safeUrl) return null;
+
+  try {
+    const parsed = new URL(safeUrl, window.location.origin);
+    if (parsed.origin !== window.location.origin) return null;
+
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return null;
   }
+};
+
+const handleOptionClick = (opt) => {
+  if (isLoading.value) return;
+
+  const destination = toInternalPath(opt?.link);
+  if (destination) {
+    router.push(destination);
+    isOpen.value = false;
+    return;
+  }
+
+  // Bot-provided links are intentionally limited to this application. If a
+  // link is absent or rejected, treat the option as a follow-up message.
+  userInput.value = String(opt?.label || '').slice(0, 1000);
+  sendMessage();
 };
 
 const closeAfterProductClick = () => {
@@ -146,6 +165,8 @@ const closeAfterProductClick = () => {
 };
 
 const sendMessage = async () => {
+  if (isLoading.value) return;
+
   const text = userInput.value.trim();
   if (!text) return;
 

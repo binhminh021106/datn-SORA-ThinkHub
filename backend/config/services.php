@@ -28,6 +28,10 @@ return [
         'key' => env('GOONG_API_KEY'),
     ],
 
+    'recaptcha' => [
+        'secret' => env('RECAPTCHA_SECRET_KEY'),
+    ],
+
     'ai' => [
         'provider' => env('AI_PROVIDER', 'freemodel'),
         'key' => env('AI_API_KEY'),

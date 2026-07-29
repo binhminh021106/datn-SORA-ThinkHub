@@ -29,7 +29,7 @@
 
           <div class="form-floating mb-3 position-relative">
             <input :type="showPassword ? 'text' : 'password'" class="form-control pe-5" id="password"
-              v-model="form.password" placeholder="Password" required autocomplete="new-password"
+              v-model="form.password" placeholder="Password" required autocomplete="current-password"
               readonly onfocus="this.removeAttribute('readonly');">
             <label for="password">Mật khẩu</label>
             <button type="button" class="btn border-0 position-absolute top-50 end-0 translate-middle-y text-muted me-1"
@@ -59,9 +59,7 @@
           </button>
 
           <div class="text-center small text-muted">
-            Chưa có tài khoản?
-            <router-link :to="{ name: 'admin-register' }" class="text-decoration-none fw-semibold text-brand">Đăng ký
-              ngay</router-link>
+            Tài khoản quản trị do quản trị viên cấp.
           </div>
         </form>
       </div>
@@ -86,6 +84,8 @@ const showPassword = ref(false);
 const isLoading = ref(false);
 
 const handleLogin = async () => {
+  if (isLoading.value) return;
+
   isLoading.value = true;
   try {
     const response = await fetch(`${API_URL}/admin/login`, {

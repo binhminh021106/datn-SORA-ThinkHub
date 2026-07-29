@@ -1,19 +1,19 @@
 <template>
-  <div class="bg-white p-4 p-md-5 shadow-sm border border-light mb-4 rounded-3">
+  <div class="address-book-shell p-4 p-md-5 mb-4 rounded-4">
     
-    <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
+    <div class="address-book-header d-flex justify-content-between align-items-end mb-4 pb-3">
       <div>
         <h3 class="h4 font-serif text-dark mb-1">Sổ Địa Chỉ</h3>
         <p class="text-secondary fw-light mb-0">Quản lý địa chỉ nhận hàng của bạn</p>
       </div>
-      <button v-if="!showAddressForm" @click="openAddForm" class="editorial-btn px-4 py-2" style="font-size: 0.85rem;">
+      <button v-if="!showAddressForm" @click="openAddForm" class="address-primary-btn address-add-btn">
         <i class="bi bi-plus-lg me-1"></i> Thêm Địa Chỉ
       </button>
     </div>
 
     <!-- DANH SÁCH ĐỊA CHỈ -->
     <div v-if="!showAddressForm">
-      <SoraListSkeleton v-if="isLoading" :rows="3" :image="false" card />
+      <AddressBookSkeleton v-if="isLoading" />
 
       <div v-else-if="addresses.length === 0" class="text-center py-5 bg-light border border-light rounded-3">
         <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="text-muted mb-3 opacity-50 mx-auto">
@@ -21,14 +21,12 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
         <p class="text-secondary mb-3">Bạn chưa có địa chỉ nào được lưu.</p>
-        <button @click="openAddForm" class="editorial-btn px-5 py-2"><i class="bi bi-plus-lg me-2"></i> Thêm Địa Chỉ Đầu Tiên</button>
+        <button @click="openAddForm" class="address-primary-btn"><i class="bi bi-plus-lg me-2"></i> Thêm Địa Chỉ Đầu Tiên</button>
       </div>
 
       <div v-else class="row g-3">
         <div v-for="addr in addresses" :key="addr.id" class="col-12">
-          <div class="border border-light p-4 position-relative bg-light-custom rounded-3 transition-all hover-shadow">
-            <span v-if="addr.is_default" class="badge bg-main position-absolute top-0 end-0 m-3 px-3 py-2 fw-medium tracking-wide">Mặc Định</span>
-            
+          <div class="address-card p-4 position-relative rounded-4 transition-all hover-shadow" :class="{ 'is-default': addr.is_default }">
             <div class="row align-items-center">
               <div class="col-md-8 col-lg-9">
                 <h5 class="font-serif text-dark mb-2 d-flex align-items-center fw-bold">
@@ -37,15 +35,16 @@
                   <span class="text-secondary fw-normal fs-6">{{ addr.customer_phone }}</span>
                 </h5>
                 <p class="text-secondary mb-1">{{ addr.shipping_address }}</p>
-                <p class="text-secondary mb-0 fw-light">{{ addr.ward }}, {{ addr.district }}, {{ addr.city }}</p>
+                <p class="text-secondary mb-0 fw-light">{{ [addr.ward, addr.district, addr.city].filter(Boolean).join(', ') }}</p>
               </div>
               
-              <div class="col-md-4 col-lg-3 d-flex flex-column justify-content-center align-items-md-end mt-3 mt-md-0 border-md-start ps-md-4">
-                <div class="d-flex gap-3 mb-2">
-                  <a href="#" @click.prevent="openEditForm(addr)" class="text-accent text-decoration-none fw-medium hover-main transition-all">Cập nhật</a>
-                  <a href="#" @click.prevent="confirmDelete(addr.id)" class="text-danger-custom text-decoration-none fw-medium transition-all">Xóa</a>
+              <div class="address-card-actions col-md-4 col-lg-3 d-flex flex-column justify-content-center align-items-md-end mt-3 mt-md-0 border-md-start ps-md-4">
+                <span v-if="addr.is_default" class="address-default-badge align-self-md-end mb-3 px-3 py-2 fw-medium tracking-wide">Mặc Định</span>
+                <div class="d-flex flex-wrap gap-2 mb-2">
+                  <button type="button" @click="openEditForm(addr)" class="address-text-btn address-text-btn--edit">Cập nhật</button>
+                  <button type="button" @click="confirmDelete(addr.id)" class="address-text-btn address-text-btn--delete">Xóa</button>
                 </div>
-                <button v-if="!addr.is_default" @click="setDefault(addr.id)" class="editorial-btn-outline mt-2 w-100" style="padding: 0.5rem 1rem; min-height: 36px;">Làm mặc định</button>
+                <button v-if="!addr.is_default" @click="setDefault(addr.id)" class="address-outline-btn mt-2 w-100">Làm mặc định</button>
               </div>
             </div>
           </div>
@@ -54,7 +53,7 @@
     </div>
 
     <!-- FORM THÊM / SỬA ĐỊA CHỈ -->
-    <div v-if="showAddressForm" class="bg-white">
+    <div v-if="showAddressForm" class="address-form-panel">
       <h4 class="font-serif text-main mb-4">{{ isEditing ? 'Cập Nhật Địa Chỉ' : 'Thêm Địa Chỉ Mới' }}</h4>
       <form @submit.prevent="saveAddress">
         <div class="row g-4 mb-4">
@@ -95,7 +94,7 @@
         <div class="mb-4">
           <div class="d-flex justify-content-between align-items-end mb-2">
             <label class="form-label text-secondary small fw-medium mb-0">Địa chỉ cụ thể <span class="text-danger">*</span></label>
-            <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2" @click="getCurrentLocation" :disabled="isLocating">
+            <button type="button" class="address-secondary-btn d-flex align-items-center gap-2" @click="getCurrentLocation" :disabled="isLocating">
               <span v-if="isLocating" class="spinner-border spinner-border-sm"></span>
               <i v-else class="bi bi-geo-alt"></i> Lấy định vị hiện tại
             </button>
@@ -113,11 +112,11 @@
           <label class="form-check-label text-secondary" for="isDefaultAddr">Đặt làm địa chỉ mặc định</label>
         </div>
 
-        <div class="d-flex gap-3">
-          <button type="submit" class="editorial-btn px-5 py-2" :disabled="isSaving">
+        <div class="address-form-actions d-flex flex-wrap gap-3">
+          <button type="submit" class="address-primary-btn" :disabled="isSaving">
             <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>Hoàn Thành
           </button>
-          <button type="button" @click="closeForm" class="editorial-btn-outline px-5 py-2">Trở Lại</button>
+          <button type="button" @click="closeForm" class="address-outline-btn">Trở Lại</button>
         </div>
       </form>
     </div>
@@ -129,7 +128,7 @@
 import { ref, onMounted } from 'vue';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
 import VietnamAddressPicker from '@/components/ui/VietnamAddressPicker.vue';
-import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
+import AddressBookSkeleton from './AddressBookSkeleton.vue';
 import clientApiClient from '@/utils/clientApiClient';
 
 const props = defineProps({
@@ -166,7 +165,7 @@ const isLocating = ref(false);
 const mapUrl = ref('');
 const addressPickerRef = ref(null);
 
-const addressHasDistrictLevel = ref(true);
+const addressHasDistrictLevel = ref(false);
 
 const addrForm = ref({
   id: null, customer_name: '', customer_phone: '',
@@ -207,7 +206,7 @@ const openAddForm = () => {
     shipping_address: '', city: '', district: '', ward: '',
     is_default: addresses.value.length === 0
   };
-  addressHasDistrictLevel.value = true;
+  addressHasDistrictLevel.value = false;
   mapUrl.value = '';
   Object.keys(errs.value).forEach(k => errs.value[k] = '');
   showAddressForm.value = true;
@@ -221,7 +220,7 @@ const openEditForm = async (addr) => {
     ...addr, 
     is_default: addr.is_default === 1 || addr.is_default === true
   };
-  addressHasDistrictLevel.value = true;
+  addressHasDistrictLevel.value = false;
   mapUrl.value = '';
   Object.keys(errs.value).forEach(k => errs.value[k] = '');
 };
@@ -448,4 +447,223 @@ onMounted(() => {
 .custom-input { border-radius: 4px; border: 1px solid #ced4da; padding: 0.6rem 1rem; transition: all 0.3s ease; }
 .custom-input:focus { border-color: #9f273b; box-shadow: 0 0 0 0.2rem rgba(159,39,59,0.15); outline: none; }
 select.custom-input { padding-right: 2.5rem; }
+
+.address-book-shell {
+  background: linear-gradient(145deg, #fffdf9 0%, #faf4ed 100%);
+  border: 1px solid rgba(159, 39, 59, 0.16);
+  box-shadow: 0 18px 45px rgba(77, 39, 28, 0.08);
+}
+
+.address-book-header {
+  border-bottom: 1px solid rgba(159, 39, 59, 0.14);
+}
+
+.address-book-header p {
+  color: #6f6b68 !important;
+}
+
+.address-card {
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(159, 39, 59, 0.12);
+  box-shadow: 0 8px 22px rgba(77, 39, 28, 0.045);
+}
+
+.address-card.is-default {
+  border-color: rgba(159, 39, 59, 0.28);
+  box-shadow: 0 12px 28px rgba(159, 39, 59, 0.1);
+}
+
+.address-card h5 {
+  padding-right: 0;
+}
+
+.address-card-actions {
+  border-color: rgba(159, 39, 59, 0.13) !important;
+}
+
+.address-default-badge {
+  background: #9f273b;
+  color: #fff;
+  border: 1px solid rgba(231, 206, 125, 0.7);
+  border-radius: 8px;
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.address-primary-btn,
+.address-outline-btn,
+.address-secondary-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 42px;
+  padding: 0.7rem 1.25rem;
+  border-radius: 10px;
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.address-primary-btn {
+  color: #fff;
+  background: #9f273b;
+  border: 1px solid rgba(231, 206, 125, 0.7);
+  box-shadow: 0 8px 18px rgba(159, 39, 59, 0.18);
+}
+
+.address-primary-btn:hover:not(:disabled) {
+  color: #fff;
+  background: #cc1e2e;
+  border-color: #e7ce7d;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(159, 39, 59, 0.24);
+}
+
+.address-outline-btn {
+  color: #9f273b;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(159, 39, 59, 0.55);
+}
+
+.address-outline-btn:hover:not(:disabled) {
+  color: #fff;
+  background: #9f273b;
+  border-color: #9f273b;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(159, 39, 59, 0.16);
+}
+
+.address-secondary-btn {
+  min-height: 36px;
+  padding: 0.55rem 0.9rem;
+  color: #6f5b42;
+  background: #fffaf0;
+  border: 1px solid rgba(231, 206, 125, 0.9);
+}
+
+.address-secondary-btn:hover:not(:disabled) {
+  color: #7b1d2d;
+  background: #f9efd4;
+  border-color: #d4af37;
+}
+
+.address-primary-btn:disabled,
+.address-outline-btn:disabled,
+.address-secondary-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.address-text-btn {
+  min-height: 40px;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid;
+  border-radius: 7px;
+  background: #fffaf0;
+  font-family: 'Oswald', sans-serif;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.address-text-btn--edit {
+  color: #866f1e;
+  border-color: rgba(231, 206, 125, 0.9);
+}
+
+.address-text-btn--edit:hover {
+  color: #6f5810;
+  background: #f9efd4;
+  border-color: #d4af37;
+  transform: translateY(-1px);
+}
+
+.address-text-btn--delete {
+  color: #cc1e2e;
+  background: #fff;
+  border-color: rgba(204, 30, 46, 0.45);
+}
+
+.address-text-btn--delete:hover {
+  color: #fff;
+  background: #cc1e2e;
+  border-color: #cc1e2e;
+  transform: translateY(-1px);
+}
+
+.address-form-panel {
+  padding-top: 0.35rem;
+}
+
+.address-form-actions {
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(159, 39, 59, 0.12);
+}
+
+.hover-shadow:hover {
+  border-color: rgba(231, 206, 125, 0.9) !important;
+  box-shadow: 0 14px 28px rgba(77, 39, 28, 0.1);
+  transform: translateY(-2px);
+}
+
+.custom-input {
+  border-radius: 9px;
+  border-color: #d9d0c8;
+  padding: 0.7rem 1rem;
+}
+
+@media (max-width: 767.98px) {
+  .address-book-shell {
+    padding: 1.25rem !important;
+  }
+
+  .address-book-header {
+    align-items: flex-start !important;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .address-add-btn {
+    width: 100%;
+  }
+
+  .address-card h5 {
+    padding-right: 0;
+  }
+
+  .address-default-badge {
+    display: inline-flex;
+    align-self: stretch !important;
+    justify-content: center;
+    margin-bottom: 0.85rem !important;
+  }
+
+  .address-card-actions {
+    align-items: stretch !important;
+    border-top: 1px solid rgba(159, 39, 59, 0.13);
+    border-left: 0 !important;
+    margin-top: 1.25rem !important;
+    padding: 1rem 0 0 !important;
+  }
+
+  .address-form-actions > button {
+    flex: 1 1 100%;
+  }
+}
 </style>

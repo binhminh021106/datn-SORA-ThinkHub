@@ -12,6 +12,10 @@ class ClientComboController extends Controller
 {
     public function index(Request $request)
     {
+        $request->validate([
+            'gender' => ['nullable', 'string', 'max:30'],
+        ]);
+
         $yesterday = Carbon::now()->subDay();
 
         $query = Combo::select(

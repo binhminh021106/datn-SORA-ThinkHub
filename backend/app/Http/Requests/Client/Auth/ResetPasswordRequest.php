@@ -3,9 +3,17 @@
 namespace App\Http\Requests\Client\Auth;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules;
 
 class ResetPasswordRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'email' => mb_strtolower(trim((string) $this->input('email', ''))),
+        ]);
+    }
+
     public function authorize()
     {
         return true;
@@ -14,9 +22,9 @@ class ResetPasswordRequest extends FormRequest
     public function rules()
     {
         return [
-            'email' => 'required|email',
-            'reset_token' => 'required|string',
-            'password' => 'required|string|min:8|confirmed',
+            'email' => 'required|string|max:255|email',
+            'reset_token' => 'required|string|size:60',
+            'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ];
     }
 

@@ -13,7 +13,11 @@ class ClientCompareController extends Controller
      */
     public function getCompareData(Request $request, $shop_slug)
     {
-        $productIds = $request->input('product_ids', []);
+        $data = $request->validate([
+            'product_ids' => ['nullable', 'array', 'max:3'],
+            'product_ids.*' => ['integer', 'distinct', 'exists:products,id'],
+        ]);
+        $productIds = $data['product_ids'] ?? [];
 
         if (empty($productIds)) {
             return response()->json([
@@ -72,10 +76,10 @@ class ClientCompareController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'success' => false,
-                'message' => 'Có lỗi xảy ra khi lấy dữ liệu so sánh',
-                'error' => $e->getMessage()
+                'message' => 'Có lỗi xảy ra khi lấy dữ liệu so sánh'
             ], 500);
         }
     }
