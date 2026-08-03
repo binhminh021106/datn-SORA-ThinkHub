@@ -425,7 +425,18 @@ class AdminDashboardController extends Controller
         $hasCouponId = Schema::hasColumn('orders', 'coupon_id');
         $hasDiscountAmount = Schema::hasColumn('orders', 'discount_amount');
 
-        $orders = $this->applyRevenueFilter($ordersQuery)->get();
+        $orderColumns = ['created_at', 'total_amount', 'payment_method'];
+        if ($hasCouponId) {
+            $orderColumns[] = 'coupon_id';
+        }
+        if ($hasDiscountAmount) {
+            $orderColumns[] = 'discount_amount';
+        }
+
+        // Iterate lazily so a long dashboard period does not retain every order in memory.
+        $orders = $this->applyRevenueFilter($ordersQuery)
+            ->select($orderColumns)
+            ->cursor();
         $diffDays = $startDate->diffInDays($endDate);
 
         if ($diffDays <= 60) {

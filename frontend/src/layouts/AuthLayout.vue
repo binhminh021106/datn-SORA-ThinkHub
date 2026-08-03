@@ -6,7 +6,7 @@
 
 <style scoped>
 .auth-layout {
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .auth-home-link-mobile {

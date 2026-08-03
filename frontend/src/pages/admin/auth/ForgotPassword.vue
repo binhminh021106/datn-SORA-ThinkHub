@@ -207,9 +207,9 @@ const initRecaptchaScript = () => {
     script.async = true;
     script.defer = true;
     script.onload = init;
-    script.onerror = () => { 
-        console.error('Failed to load reCAPTCHA script'); 
-        recaptchaError.value = true;
+    script.onerror = () => {
+        console.error('Failed to load reCAPTCHA script');
+        setRecaptchaError('Không thể tải CAPTCHA do lỗi mạng. Vui lòng thử lại.');
     };
     document.head.appendChild(script);
   }
@@ -334,13 +334,12 @@ const handleSendOtp = async () => {
     if (response.ok) {
         Swal.fire({ icon: 'success', title: 'Hoàn tất', text: 'Nếu email hợp lệ, mã OTP sẽ được gửi đến bạn.', confirmButtonColor: '#009981', timer: 2000, showConfirmButton: false });
         step.value = 2;
-        nextTick(() => { 
-          if(otpInputs.value[0]) otpInputs.value[0].focus(); 
-          if(window.grecaptcha && recaptchaWidgetId !== null) {
-            try { window.grecaptcha.reset(recaptchaWidgetId); } catch (e) {}
-          }
+        nextTick(() => {
+          if(otpInputs.value[0]) otpInputs.value[0].focus();
           recaptchaToken.value = '';
-          retryRecaptcha(); // Render again for step 2
+          recaptchaWidgetId = null;
+          recaptchaError.value = false;
+          renderRecaptcha();
         });
         startCountdown();
     } else {

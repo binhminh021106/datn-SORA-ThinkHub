@@ -78,9 +78,16 @@
                               @click="selectAdmin(admin.id)"
                             >
                               <td class="text-center">
-                                <span class="staff-select-indicator" :class="{ 'is-selected': String(selectedAdminId) === String(admin.id) }">
-                                  <i class="bi bi-check-lg" aria-hidden="true"></i>
-                                </span>
+                                <input
+                                  class="form-check-input staff-select-control"
+                                  type="radio"
+                                  name="face-registration-admin"
+                                  :value="String(admin.id)"
+                                  :checked="String(selectedAdminId) === String(admin.id)"
+                                  :aria-label="`Chọn ${displayAdminName(admin)}`"
+                                  @click.stop
+                                  @change="selectAdmin(admin.id)"
+                                >
                               </td>
                               <td>
                                 <div class="d-flex align-items-center gap-3">
@@ -237,7 +244,7 @@
               </div>
               <label v-if="videoInputDevices.length > 1" class="scanner-camera-picker mt-3">
                 <i class="bi bi-camera-video" aria-hidden="true"></i>
-                <select v-model="selectedCameraId" :disabled="isSwitchingCamera" @change="switchCamera">
+                <select v-model="selectedCameraId" aria-label="Chọn thiết bị camera" :disabled="isSwitchingCamera" @change="switchCamera">
                   <option v-for="(device, index) in videoInputDevices" :key="device.deviceId" :value="device.deviceId">
                     {{ device.label || `Camera ${index + 1}` }}
                   </option>
@@ -367,6 +374,7 @@ const canRetryCurrentScan = computed(() => (
   !isProcessing.value
   && !isLoadingModels.value
   && !isRegistering.value
+  && !isSwitchingCamera.value
 ));
 
 const startScanningMode = async (action) => {
@@ -645,16 +653,26 @@ const startCamera = async () => {
       return;
     }
 
-    const stream = await navigator.mediaDevices.getUserMedia({
+    const createStream = (deviceId = '') => navigator.mediaDevices.getUserMedia({
       video: {
-        ...(selectedCameraId.value
-          ? { deviceId: { exact: selectedCameraId.value } }
-          : { facingMode: 'user' }),
+        ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'user' }),
         width: { ideal: 1280 },
         height: { ideal: 720 }
       },
       audio: false,
     });
+
+    let stream;
+    try {
+      stream = await createStream(selectedCameraId.value);
+    } catch (error) {
+      if (!selectedCameraId.value || !['NotFoundError', 'OverconstrainedError'].includes(error?.name)) {
+        throw error;
+      }
+
+      selectedCameraId.value = '';
+      stream = await createStream();
+    }
 
     streamRef.value = stream;
     if (videoRef.value) {
@@ -673,7 +691,14 @@ const startCamera = async () => {
 const refreshVideoInputs = async () => {
   if (!navigator.mediaDevices?.enumerateDevices) return;
 
-  const devices = await navigator.mediaDevices.enumerateDevices();
+  let devices;
+  try {
+    devices = await navigator.mediaDevices.enumerateDevices();
+  } catch (error) {
+    console.warn('Không thể liệt kê thiết bị camera.', error);
+    return;
+  }
+
   videoInputDevices.value = devices.filter((device) => device.kind === 'videoinput');
 
   const activeCameraId = streamRef.value?.getVideoTracks?.()[0]?.getSettings?.().deviceId;
@@ -947,10 +972,7 @@ const verifyFace = async () => {
     
     if (data.is_matched && data.matched_admin) {
       selectedAdminId.value = data.matched_admin.id;
-      const admin = admins.value.find(a => a.id === data.matched_admin.id);
-      if (admin) {
-        searchQuery.value = admin.fullname || admin.email;
-      }
+      searchQuery.value = data.matched_admin.fullname || data.matched_admin.email || '';
       await fetchProfile();
 
     }
@@ -1263,22 +1285,23 @@ onUnmounted(() => {
   min-width: 0;
 }
 
-.staff-select-indicator {
+.staff-select-control {
   width: 24px;
   height: 24px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   border: 1px solid #ced4da;
-  border-radius: 50%;
-  color: transparent;
+  cursor: pointer;
+  margin: 0;
   transition: all 0.2s ease;
 }
 
-.staff-select-indicator.is-selected {
+.staff-select-control:checked {
   border-color: #009981;
   background: #009981;
-  color: #fff;
+}
+
+.staff-select-control:focus-visible {
+  outline: 2px solid rgba(0, 153, 129, 0.35);
+  outline-offset: 2px;
 }
 
 .face-manager-table thead th {

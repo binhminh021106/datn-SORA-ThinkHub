@@ -133,12 +133,17 @@ class ProductDetailController extends Controller
                 ]
             ]);
             
-        } catch (\Exception $e) {
-            report($e);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Không tìm thấy sản phẩm hoặc có lỗi xảy ra'
             ], 404);
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể tải thông tin sản phẩm. Vui lòng thử lại sau.'
+            ], 500);
         }
     }
 
@@ -223,13 +228,18 @@ class ProductDetailController extends Controller
                     'variants' => $variants,
                 ],
             ]);
-        } catch (\Exception $exception) {
-            report($exception);
-
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
             return response()->json([
                 'success' => false,
                 'message' => 'Khong tim thay san pham hoac san pham khong con kha dung.',
             ], 404);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Khong the tai tuy chon san pham. Vui long thu lai sau.',
+            ], 500);
         }
     }
 

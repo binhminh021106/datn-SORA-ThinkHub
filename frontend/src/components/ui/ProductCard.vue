@@ -350,6 +350,25 @@ const hasHoverImage = (product) => {
   opacity: 1;
   pointer-events: auto;
 }
+.luxury-related-card:focus-within .wishlist-btn,
+.luxury-related-card:focus-within .compare-btn,
+.wishlist-btn:focus-visible,
+.compare-btn:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.wishlist-btn:focus-visible,
+.compare-btn:focus-visible {
+  outline: 2px solid #9f273b;
+  outline-offset: 2px;
+}
+@media (hover: none), (pointer: coarse) {
+  .wishlist-btn,
+  .compare-btn {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
 .wishlist-btn:hover { color: #cc1e2e; transform: translateY(-2px) scale(1.06); }
 .compare-btn:hover { color: #9f273b; transform: translateY(-2px) scale(1.06); }
 

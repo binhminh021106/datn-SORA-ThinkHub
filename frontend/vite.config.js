@@ -6,9 +6,10 @@ import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 
 const readEnvValue = (fileName, key) => {
-  if (!existsSync(fileName)) return undefined
+  const filePath = fileURLToPath(new URL(fileName, import.meta.url))
+  if (!existsSync(filePath)) return undefined
 
-  const line = readFileSync(fileName, 'utf8')
+  const line = readFileSync(filePath, 'utf8')
     .split(/\r?\n/)
     .find((entry) => entry.trim().startsWith(`${key}=`))
 
@@ -19,7 +20,7 @@ const readEnvValue = (fileName, key) => {
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '')
+  const env = loadEnv(mode, process.cwd(), 'VITE_')
   const recaptchaSiteKey = env.VITE_RECAPTCHA_SITE_KEY
     || readEnvValue('.env-deploy', 'VITE_RECAPTCHA_SITE_KEY')
 
