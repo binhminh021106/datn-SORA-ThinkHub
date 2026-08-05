@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\UserNotification;
 
+// chức năng: dịch vụ thông báo trong ứng dụng (in-app notification), cho phép tạo thông báo cho người dùng với các loại, tiêu đề, nội dung, màn hình hành động và tham số hành động tùy chỉnh.
 class InAppNotificationService
 {
     public function createForUser(

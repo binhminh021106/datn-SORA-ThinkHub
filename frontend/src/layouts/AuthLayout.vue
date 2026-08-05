@@ -15,7 +15,6 @@
   top: 1rem;
   right: 1rem;
   z-index: 20;
-  display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.7rem;

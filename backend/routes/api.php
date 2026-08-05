@@ -457,6 +457,7 @@ Route::prefix('admin')->group(function () {
                 Route::post('/cooldown', 'updateConfig');
                 Route::post('/toggle-block-order/{id}', 'toggleBlockOrder');
                 Route::post('/toggle-lock-account/{id}', 'toggleLockAccount');
+                Route::post('/users/{id}/cleanup-spam-orders', 'cleanupSpamOrders');
             });
             Route::controller(AdminOrderController::class)->group(function () {
                 Route::get('orders', 'index');

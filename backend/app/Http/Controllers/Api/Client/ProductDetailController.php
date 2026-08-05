@@ -231,14 +231,14 @@ class ProductDetailController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
             return response()->json([
                 'success' => false,
-                'message' => 'Khong tim thay san pham hoac san pham khong con kha dung.',
+                'message' => 'Không tìm thấy sản phẩm hoặc sản phẩm không còn khả dụng.',
             ], 404);
         } catch (\Throwable $exception) {
             report($exception);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Khong the tai tuy chon san pham. Vui long thu lai sau.',
+                'message' => 'Không thể tải tùy chọn sản phẩm. Vui lòng thử lại sau.',
             ], 500);
         }
     }

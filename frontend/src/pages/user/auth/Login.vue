@@ -179,7 +179,12 @@ const handleLogin = async () => {
         router.push(redirectPath);
       }, 1000);
   } catch (error) {
-    if (error.response && error.response.data.errors) {
+    if (error.response?.status === 429) {
+      const retryAfter = Number(error.response.headers?.['retry-after']);
+      errorMessage.value = Number.isFinite(retryAfter) && retryAfter > 0
+        ? `Bạn đã thử đăng nhập quá nhiều lần. Vui lòng thử lại sau ${Math.ceil(retryAfter / 60)} phút.`
+        : 'Bạn đã thử đăng nhập quá nhiều lần. Vui lòng thử lại sau.';
+    } else if (error.response && error.response.data.errors) {
       errorMessage.value = Object.values(error.response.data.errors).flat().join('\n');
     } else {
       errorMessage.value = 'Email hoặc mật khẩu không chính xác.';

@@ -286,7 +286,7 @@ const submitContactForm = async () => {
     } else if (error.response && error.response.status === 429) {
       // Lỗi do gửi quá nhiều (Rate limit / Chống Spam)
       let msg = error.response.data.message || 'Bạn đã thao tác quá nhiều. Vui lòng thử lại sau!';
-      if (msg === 'Too Many Attempts.') {
+      if (msg === 'Chậm thôi bạn!') {
         msg = 'Bạn đã vượt quá số lần thử nghiệm (3 lần/giờ). Vui lòng quay lại sau!';
       }
       soraAlert.fire({ 

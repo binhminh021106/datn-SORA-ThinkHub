@@ -16,6 +16,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
+// chức năng: gửi email chiến dịch sinh nhật và ngày lễ, bao gồm việc tạo mã giảm giá (coupon) dựa trên cấu hình của Admin, lọc đối tượng người dùng theo tiêu chí, và quản lý trạng thái gửi email.
 class EmailCampaignService
 {
     private string $birthdayColumn = 'birthday'; // Nhớ đảm bảo cột này đúng với DB của bạn

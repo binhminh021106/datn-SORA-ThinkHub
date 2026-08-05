@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Setting;
 use App\Models\User;
+use App\Models\Order;
+use App\Services\PendingOrderCancellationService;
 
 class AdminOrderConfigController extends Controller
 {
@@ -29,6 +31,10 @@ class AdminOrderConfigController extends Controller
             'orders',
             'orders as recent_orders_count' => function ($query) {
                 $query->where('created_at', '>=', now()->subHours(24));
+            },
+            'orders as pending_unpaid_orders_count' => function ($query) {
+                $query->where('status', 'pending')
+                    ->where('payment_status', 'unpaid');
             }
         ]);
 
@@ -61,7 +67,7 @@ class AdminOrderConfigController extends Controller
     public function updateConfig(Request $request)
     {
         $request->validate([
-            'cooldown_minutes' => 'required|integer|min:0'
+            'cooldown_minutes' => 'required|integer|min:0|max:60'
         ]);
 
         $setting = Setting::firstOrCreate(
@@ -117,6 +123,54 @@ class AdminOrderConfigController extends Controller
             'success' => true,
             'message' => $message,
             'status' => $user->status
+        ]);
+    }
+
+    /**
+     * Soft-delete only a user's suspicious unpaid pending orders after safely reversing reservations.
+     */
+    public function cleanupSpamOrders(Request $request, int $id, PendingOrderCancellationService $cancellationService)
+    {
+        $data = $request->validate([
+            'reason' => 'required|string|min:5|max:500',
+        ]);
+
+        $user = User::findOrFail($id);
+        $actorId = $request->user()?->id;
+        $orders = Order::where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->where('payment_status', 'unpaid')
+            ->select('id')
+            ->lazyById(100);
+
+        $cleanedCount = 0;
+        foreach ($orders as $order) {
+            $orderId = $order->id;
+            if (! $cancellationService->cancel(
+                (int) $orderId,
+                'failed',
+                'Admin dọn đơn spam: ' . $data['reason'],
+                $actorId,
+                'admin'
+            )) {
+                continue;
+            }
+
+            Order::whereKey($orderId)
+                ->where('user_id', $user->id)
+                ->where('status', 'cancelled')
+                ->where('payment_status', 'failed')
+                ->delete();
+
+            $cleanedCount++;
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $cleanedCount > 0
+                ? "Đã dọn an toàn {$cleanedCount} đơn spam của {$user->email}."
+                : 'Không có đơn pending chưa thanh toán phù hợp để dọn.',
+            'cleaned_count' => $cleanedCount,
         ]);
     }
 }

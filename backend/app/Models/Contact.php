@@ -19,5 +19,26 @@ class Contact extends Model
         'email',
         'message',
         'status',
+        'reply_subject',
+        'reply_message',
+        'replied_at',
+        'replied_by',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'replied_at' => 'datetime',
+        ];
+    }
+
+    public function customerAccount()
+    {
+        return $this->belongsTo(User::class, 'email', 'email');
+    }
+
+    public function repliedBy()
+    {
+        return $this->belongsTo(Admin::class, 'replied_by');
+    }
 }

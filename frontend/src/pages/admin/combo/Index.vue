@@ -1,9 +1,11 @@
 <template>
   <div class="combo-index-wrapper ">
-    
-    <div v-if="isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
+
+    <div v-if="isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100"
+      style="min-height: 70vh;">
       <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải danh sách Combo...</p>
+      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải danh
+        sách Combo...</p>
     </div>
 
     <div class="container-fluid py-4" v-else>
@@ -12,10 +14,11 @@
           <h3 class="fw-bold text-dark mb-0">Quản lý Combo</h3>
         </div>
         <div class="col-md-6 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end align-items-center gap-3">
-<button class="btn btn-light border shadow-sm fw-bold text-dark px-4 py-2" @click="fetchData(true)">
+          <button class="btn btn-light border shadow-sm fw-bold text-dark px-4 py-2" @click="fetchData(true)">
             <i class="bi bi-arrow-clockwise me-1"></i> Làm mới
           </button>
-          <router-link :to="{ name: 'admin-combos-create' }" class="btn btn-brand px-4 py-2 fw-bold shadow-sm text-white rounded-pill">
+          <router-link :to="{ name: 'admin-combos-create' }"
+            class="btn btn-brand px-4 py-2 fw-bold shadow-sm text-white rounded-pill">
             <i class="bi bi-plus-circle me-1"></i> Thêm Combo
           </router-link>
         </div>
@@ -24,60 +27,78 @@
       <div class="mb-3">
         <ul class="nav nav-underline border-bottom mb-2 pb-1" style="flex-wrap: wrap !important; gap: 8px;">
           <li class="nav-item">
-            <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#" :class="{ 'active-tab': activeTab === 'all' }" @click.prevent="switchTab('all')">
+            <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#"
+              :class="{ 'active-tab': activeTab === 'all' }" @click.prevent="switchTab('all')">
               <i class="bi bi-grid-fill me-2"></i> Tất cả
-              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'all'}">{{ combos.filter(c => !c.deleted_at).length }}</span>
+              <span class="badge ms-2 rounded-pill tab-badge" :class="{ 'active-badge': activeTab === 'all' }">{{
+                combos.filter(c => !c.deleted_at).length }}</span>
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#" :class="{ 'active-tab': activeTab === 'active' }" @click.prevent="switchTab('active')">
+            <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#"
+              :class="{ 'active-tab': activeTab === 'active' }" @click.prevent="switchTab('active')">
               <i class="bi bi-check-circle-fill me-2 text-success"></i> Đang hoạt động
-              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'active'}">{{ combos.filter(c => c.status === 'active' && !c.deleted_at).length }}</span>
+              <span class="badge ms-2 rounded-pill tab-badge" :class="{ 'active-badge': activeTab === 'active' }">{{
+                combos.filter(c => c.status === 'active' && !c.deleted_at).length }}</span>
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#" :class="{ 'active-tab': activeTab === 'hidden' }" @click.prevent="switchTab('hidden')">
+            <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#"
+              :class="{ 'active-tab': activeTab === 'hidden' }" @click.prevent="switchTab('hidden')">
               <i class="bi bi-eye-slash-fill me-2 text-secondary"></i> Đang ẩn
-              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'hidden'}">{{ combos.filter(c => c.status === 'hidden' && !c.deleted_at).length }}</span>
+              <span class="badge ms-2 rounded-pill tab-badge" :class="{ 'active-badge': activeTab === 'hidden' }">{{
+                combos.filter(c => c.status === 'hidden' && !c.deleted_at).length }}</span>
             </a>
           </li>
           <li class="nav-item ms-auto">
-            <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab text-danger" href="#" :class="{ 'active-tab': activeTab === 'deleted' }" @click.prevent="switchTab('deleted')">
+            <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab text-danger" href="#"
+              :class="{ 'active-tab': activeTab === 'deleted' }" @click.prevent="switchTab('deleted')">
               <i class="bi bi-trash3-fill me-2"></i> Đã xóa
-              <span class="badge ms-2 rounded-pill bg-danger text-white">{{ combos.filter(c => c.deleted_at).length }}</span>
+              <span class="badge ms-2 rounded-pill bg-danger text-white">{{combos.filter(c => c.deleted_at).length
+                }}</span>
             </a>
           </li>
         </ul>
       </div>
 
-      <div class="d-flex flex-wrap gap-3 mb-4">
-        <div class="d-flex align-items-center bg-white px-3 py-2 rounded-pill border shadow-sm">
-          <span class="text-muted small fw-semibold me-2"><i class="bi bi-gender-ambiguous text-brand"></i> Đối tượng:</span>
-          <select class="form-select form-select-sm border-0 bg-transparent fw-bold p-0 pe-4 cursor-pointer" style="width: auto; box-shadow: none;" v-model="selectedGenderFilter">
-            <option value="all">Tất cả</option>
-            <option value="female">Nữ giới</option>
-            <option value="male">Nam giới</option>
-            <option value="couple">Cặp đôi</option>
-            <option value="unisex">Unisex</option>
-          </select>
-        </div>
-      </div>
 
       <div class="card border-0 shadow-sm rounded-4 mb-4">
-        <div class="card-header bg-white border-bottom-0 pt-2 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div
+          class="card-header bg-white border-bottom-0 pt-2 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
           <h6 class="fw-bold mb-0 text-dark d-flex align-items-center">
-            <i class="bi bi-list-ul me-2"></i>Danh sách Combo
-            <div v-if="isSilentLoading || isTableLoading" class="spinner-border spinner-border-sm text-brand ms-2" role="status"></div>
+            <i class="bi bi-list-ul me-2"></i> <span>Danh sách Combo</span>
+
+            <div class="d-flex flex-wrap gap-3">
+              <div class="d-flex align-items-center bg-white px-3 py-2 rounded-pill border shadow-sm">
+                <span class="text-muted small fw-semibold me-2"><i class="bi bi-gender-ambiguous text-brand"></i> Đối
+                  tượng:</span>
+                <select class="form-select form-select-sm border-0 bg-transparent fw-bold p-0 pe-4 cursor-pointer"
+                  style="width: auto; box-shadow: none;" v-model="selectedGenderFilter">
+                  <option value="all">Tất cả</option>
+                  <option value="female">Nữ giới</option>
+                  <option value="male">Nam giới</option>
+                  <option value="couple">Cặp đôi</option>
+                  <option value="unisex">Unisex</option>
+                </select>
+              </div>
+            </div>
+
+            <div v-if="isSilentLoading || isTableLoading" class="spinner-border spinner-border-sm text-brand ms-2"
+              role="status"></div>
           </h6>
           <div class="search-box position-relative" style="width: 300px; max-width: 100%;">
-            <input type="text" class="form-control rounded-pill pe-5 shadow-sm bg-light border-0" v-model="searchQuery" @input="currentPage = 1" placeholder="Tìm tên Combo, chủ đề...">
+            <input type="text" class="form-control rounded-pill pe-5 shadow-sm bg-light border-0" v-model="searchQuery"
+              @input="currentPage = 1" placeholder="Tìm tên Combo, chủ đề...">
             <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-3 text-muted"></i>
           </div>
         </div>
-        
+
+
+
         <div class="card-body p-0 mt-2">
           <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" style="table-layout: fixed; width: 100%; min-width: 1000px;">
+            <table class="table table-hover align-middle mb-0"
+              style="table-layout: fixed; width: 100%; min-width: 1000px;">
               <thead class="bg-light">
                 <tr>
                   <th class="py-3 px-4 text-secondary border-0" style="width: 30%;">Thông tin Combo</th>
@@ -87,75 +108,82 @@
                   <th class="py-3 px-4 text-secondary text-center border-0" style="width: 20%;">Thao tác</th>
                 </tr>
               </thead>
-              <tbody :class="{'pe-none': isSilentLoading}">
+              <tbody :class="{ 'pe-none': isSilentLoading }">
                 <tr v-if="paginatedCombos.length === 0 && !isSilentLoading && !isTableLoading">
                   <td colspan="5" class="text-center py-5 text-muted">
                     <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>Không có dữ liệu.
                   </td>
                 </tr>
-                <tr v-else v-for="combo in paginatedCombos" :key="combo.id" :class="{'bg-light opacity-75': combo.deleted_at}">
+                <tr v-else v-for="combo in paginatedCombos" :key="combo.id"
+                  :class="{ 'bg-light opacity-75': combo.deleted_at }">
                   <td class="px-4 py-3">
                     <div class="d-flex align-items-center">
-                      <div class="position-relative d-inline-block me-3 shadow-sm border rounded-3 overflow-hidden bg-white flex-shrink-0" style="width: 60px; height: 60px;">
+                      <div
+                        class="position-relative d-inline-block me-3 shadow-sm border rounded-3 overflow-hidden bg-white flex-shrink-0"
+                        style="width: 60px; height: 60px;">
                         <!-- SỬ DỤNG SORA IMAGE Ở ĐÂY -->
-                        <SoraImage 
-                          :src="combo.thumbnail_image" 
-                          imgClass="w-100 h-100 object-fit-cover" 
-                          :placeholder="defaultPlaceholder"
-                        />
+                        <SoraImage :src="combo.thumbnail_image" imgClass="w-100 h-100 object-fit-cover"
+                          :placeholder="defaultPlaceholder" />
                       </div>
                       <div class="overflow-hidden">
-                        <div class="fw-bold text-dark fs-6 mb-1 text-truncate" :title="combo.name">{{ combo.name }}</div>
+                        <div class="fw-bold text-dark fs-6 mb-1 text-truncate" :title="combo.name">{{ combo.name }}
+                        </div>
                         <div class="d-flex flex-wrap align-items-center gap-1 mb-1">
-                            <span class="badge bg-light text-secondary border" v-if="combo.theme"><i class="bi bi-bookmark-star me-1"></i>{{ combo.theme }}</span>
-                            <span class="badge bg-light text-secondary border"><i class="bi bi-gender-ambiguous me-1"></i>{{ getGenderLabel(combo.target_gender) }}</span>
+                          <span class="badge bg-light text-secondary border" v-if="combo.theme"><i
+                              class="bi bi-bookmark-star me-1"></i>{{ combo.theme }}</span>
+                          <span class="badge bg-light text-secondary border"><i
+                              class="bi bi-gender-ambiguous me-1"></i>{{ getGenderLabel(combo.target_gender) }}</span>
                         </div>
                         <div class="d-flex flex-wrap gap-2 mt-2">
-                           <span class="badge bg-danger">Giảm: {{ combo.discount_type === 'percentage' ? Number(combo.discount_value) + '%' : formatCurrency(combo.discount_value) }}</span>
-                           <span class="badge border" :class="combo.is_discount_stackable ? 'border-success text-success' : 'border-secondary text-secondary'">
-                              <i class="bi" :class="combo.is_discount_stackable ? 'bi-check2-circle' : 'bi-dash-circle'"></i> 
-                              {{ combo.is_discount_stackable ? 'Cộng dồn KM' : 'Không cộng dồn KM' }}
-                           </span>
+                          <span class="badge bg-danger">Giảm: {{ combo.discount_type === 'percentage' ?
+                            Number(combo.discount_value) + '%' : formatCurrency(combo.discount_value) }}</span>
+                          <span class="badge border"
+                            :class="combo.is_discount_stackable ? 'border-success text-success' : 'border-secondary text-secondary'">
+                            <i class="bi"
+                              :class="combo.is_discount_stackable ? 'bi-check2-circle' : 'bi-dash-circle'"></i>
+                            {{ combo.is_discount_stackable ? 'Cộng dồn KM' : 'Không cộng dồn KM' }}
+                          </span>
                         </div>
                       </div>
                     </div>
                   </td>
-                  
+
                   <td class="px-4 text-center">
                     <span class="badge bg-opacity-10 text-brand border border-brand px-3 py-2">
                       <i class="bi bi-box-seam me-1"></i> {{ combo.items_count || 0 }} món
                     </span>
                   </td>
-                  
+
                   <td class="px-4">
                     <div class="small fw-semibold text-dark mb-2">
-                      {{ combo.start_date ? formatDateShort(combo.start_date) : 'Bất kỳ lúc nào' }} 
-                      <i class="bi bi-arrow-right mx-1 text-muted"></i> 
+                      {{ combo.start_date ? formatDateShort(combo.start_date) : 'Bất kỳ lúc nào' }}
+                      <i class="bi bi-arrow-right mx-1 text-muted"></i>
                       {{ combo.end_date ? formatDateShort(combo.end_date) : 'Không giới hạn' }}
                     </div>
                     <div v-if="combo.end_date">
                       <template v-for="days in [getDaysRemaining(combo.end_date)]" :key="days">
-                        <span v-if="days > 0" class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>Còn {{ days }} ngày</span>
-                        <span v-else-if="days === 0" class="badge bg-danger"><i class="bi bi-exclamation-circle me-1"></i>Hết hạn hôm nay</span>
-                        <span v-else class="badge bg-secondary bg-opacity-75"><i class="bi bi-x-circle me-1"></i>Đã hết hạn</span>
+                        <span v-if="days > 0" class="badge bg-warning text-dark"><i
+                            class="bi bi-hourglass-split me-1"></i>Còn {{ days }} ngày</span>
+                        <span v-else-if="days === 0" class="badge bg-danger"><i
+                            class="bi bi-exclamation-circle me-1"></i>Hết hạn hôm nay</span>
+                        <span v-else class="badge bg-secondary bg-opacity-75"><i class="bi bi-x-circle me-1"></i>Đã hết
+                          hạn</span>
                       </template>
                     </div>
                     <div v-else class="badge bg-success bg-opacity-10 text-success border border-success">
                       <i class="bi bi-infinity me-1"></i>Vô thời hạn
                     </div>
                   </td>
-                  
+
                   <td class="px-4 text-center">
-                    <span v-if="combo.deleted_at" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary"><i class="bi bi-trash3-fill"></i> Đã xóa</span>
+                    <span v-if="combo.deleted_at"
+                      class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary"><i
+                        class="bi bi-trash3-fill"></i> Đã xóa</span>
                     <div v-else class="w-100">
-                      <StatusConfirmSelect
-                        v-model="combo.localStatus"
-                        :originalValue="combo.status"
+                      <StatusConfirmSelect v-model="combo.localStatus" :originalValue="combo.status"
                         :selectClass="getStatusSelectClass(combo.localStatus || combo.status)"
-                        :isUpdating="combo.isUpdatingStatus"
-                        @confirm="saveComboStatus(combo)"
-                        @cancel="cancelStatusChange(combo)"
-                      >
+                        :isUpdating="combo.isUpdatingStatus" @confirm="saveComboStatus(combo)"
+                        @cancel="cancelStatusChange(combo)">
                         <option value="active">Hoạt động</option>
                         <option value="hidden">Đang ẩn</option>
                       </StatusConfirmSelect>
@@ -163,13 +191,18 @@
                   </td>
 
                   <td class="px-4 text-center">
-                    <button class="btn btn-sm btn-light text-info me-2 shadow-sm border" @click="openQuickView(combo.id)"><i class="bi bi-eye"></i></button>
+                    <button class="btn btn-sm btn-light text-info me-2 shadow-sm border"
+                      @click="openQuickView(combo.id)"><i class="bi bi-eye"></i></button>
                     <template v-if="!combo.deleted_at">
-                      <router-link :to="{ name: 'admin-combos-edit', params: {id: combo.id} }" class="btn btn-sm btn-light text-primary me-2 shadow-sm border"><i class="bi bi-pencil-square"></i></router-link>
-                      <button class="btn btn-sm btn-light text-danger shadow-sm border" @click="confirmDelete(combo.id, combo.name)"><i class="bi bi-trash"></i></button>
+                      <router-link :to="{ name: 'admin-combos-edit', params: { id: combo.id } }"
+                        class="btn btn-sm btn-light text-primary me-2 shadow-sm border"><i
+                          class="bi bi-pencil-square"></i></router-link>
+                      <button class="btn btn-sm btn-light text-danger shadow-sm border"
+                        @click="confirmDelete(combo.id, combo.name)"><i class="bi bi-trash"></i></button>
                     </template>
                     <template v-else>
-                      <button class="btn btn-sm btn-light text-success shadow-sm border" @click="restoreCombo(combo.id)"><i class="bi bi-arrow-counterclockwise"></i></button>
+                      <button class="btn btn-sm btn-light text-success shadow-sm border"
+                        @click="restoreCombo(combo.id)"><i class="bi bi-arrow-counterclockwise"></i></button>
                     </template>
                   </td>
                 </tr>
@@ -179,13 +212,19 @@
         </div>
       </div>
 
-      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2" v-if="totalPages > 1 && !isTableLoading">
-        <span class="text-muted small">Hiển thị {{ (currentPage - 1) * itemsPerPage + 1 }} đến {{ Math.min(currentPage * itemsPerPage, processedCombos.length) }}</span>
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2"
+        v-if="totalPages > 1 && !isTableLoading">
+        <span class="text-muted small">Hiển thị {{ (currentPage - 1) * itemsPerPage + 1 }} đến {{ Math.min(currentPage *
+          itemsPerPage, processedCombos.length) }}</span>
         <nav>
           <ul class="pagination pagination-sm mb-0 shadow-sm">
-            <li class="page-item" :class="{ disabled: currentPage === 1 }"><button class="page-link text-brand" @click="currentPage--"><i class="bi bi-chevron-left"></i></button></li>
-            <li class="page-item" v-for="page in totalPages" :key="page" :class="{ active: currentPage === page }"><button class="page-link" :class="currentPage === page ? 'bg-brand border-brand text-white' : 'text-dark'" @click="currentPage = page">{{ page }}</button></li>
-            <li class="page-item" :class="{ disabled: currentPage === totalPages }"><button class="page-link text-brand" @click="currentPage++"><i class="bi bi-chevron-right"></i></button></li>
+            <li class="page-item" :class="{ disabled: currentPage === 1 }"><button class="page-link text-brand"
+                @click="currentPage--"><i class="bi bi-chevron-left"></i></button></li>
+            <li class="page-item" v-for="page in totalPages" :key="page" :class="{ active: currentPage === page }">
+              <button class="page-link" :class="currentPage === page ? 'bg-brand border-brand text-white' : 'text-dark'"
+                @click="currentPage = page">{{ page }}</button></li>
+            <li class="page-item" :class="{ disabled: currentPage === totalPages }"><button class="page-link text-brand"
+                @click="currentPage++"><i class="bi bi-chevron-right"></i></button></li>
           </ul>
         </nav>
       </div>
@@ -199,49 +238,54 @@
             <h5 class="fw-bold text-dark mb-0"><i class="bi bi-box2-heart text-brand me-2"></i>Chi tiết Combo</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
           </div>
-          
+
           <div class="modal-body p-0" v-if="selectedCombo">
             <!-- Header Modal -->
             <div class="p-3 bg-white border-bottom d-flex align-items-center gap-3 position-relative">
-              
+
               <!-- THÊM: Indicator báo hiệu đang fetch API ngầm -->
-              <div v-if="isFetchingDetail" class="position-absolute top-0 end-0 m-3 text-brand small fw-bold d-flex align-items-center bg-white px-2 py-1 rounded shadow-sm border">
-                 <div class="spinner-border spinner-border-sm me-2" role="status"></div> Đang tải chi tiết...
+              <div v-if="isFetchingDetail"
+                class="position-absolute top-0 end-0 m-3 text-brand small fw-bold d-flex align-items-center bg-white px-2 py-1 rounded shadow-sm border">
+                <div class="spinner-border spinner-border-sm me-2" role="status"></div> Đang tải chi tiết...
               </div>
 
               <!-- SỬ DỤNG SORA IMAGE Ở ĐÂY -->
-              <SoraImage 
-                :src="selectedCombo.thumbnail_image" 
-                imgClass="rounded border object-fit-cover shadow-sm" 
-                style="width: 80px; height: 80px;" 
-                :placeholder="defaultPlaceholder"
-              />
+              <SoraImage :src="selectedCombo.thumbnail_image" imgClass="rounded border object-fit-cover shadow-sm"
+                style="width: 80px; height: 80px;" :placeholder="defaultPlaceholder" />
               <div class="flex-grow-1">
-                 <h5 class="mb-1 fw-bold text-dark">{{ selectedCombo.name }}</h5>
-                 <div class="text-muted small mb-2">{{ selectedCombo.description || 'Chưa có thông tin mô tả...' }}</div>
-                 
-                 <!-- Tags Giới hạn & Thời gian -->
-                 <div class="d-flex flex-wrap gap-2">
-                    <span class="badge bg-danger">Giảm: {{ selectedCombo.discount_type === 'percentage' ? selectedCombo.discount_value + '%' : formatCurrency(selectedCombo.discount_value) }}</span>
-                    <span v-if="selectedCombo.usage_limit" class="badge border border-info text-info"><i class="bi bi-person-fill me-1"></i>Giới hạn: {{ selectedCombo.usage_limit }} lượt mua</span>
-                    <span v-else class="badge border border-success text-success"><i class="bi bi-infinity me-1"></i>Không giới hạn lượt mua</span>
-                 </div>
-                 <div class="small mt-2 text-muted fw-semibold" v-if="selectedCombo.start_date || selectedCombo.end_date">
-                    <i class="bi bi-clock-history me-1"></i>
-                    {{ formatDateTime(selectedCombo.start_date) || 'Bất kỳ lúc nào' }} 
-                    <i class="bi bi-arrow-right mx-1"></i> 
-                    {{ formatDateTime(selectedCombo.end_date) || 'Không có ngày kết thúc' }}
-                 </div>
+                <h5 class="mb-1 fw-bold text-dark">{{ selectedCombo.name }}</h5>
+                <div class="text-muted small mb-2">{{ selectedCombo.description || 'Chưa có thông tin mô tả...' }}</div>
+
+                <!-- Tags Giới hạn & Thời gian -->
+                <div class="d-flex flex-wrap gap-2">
+                  <span class="badge bg-danger">Giảm: {{ selectedCombo.discount_type === 'percentage' ?
+                    selectedCombo.discount_value + '%' : formatCurrency(selectedCombo.discount_value) }}</span>
+                  <span v-if="selectedCombo.usage_limit" class="badge border border-info text-info"><i
+                      class="bi bi-person-fill me-1"></i>Giới hạn: {{ selectedCombo.usage_limit }} lượt mua</span>
+                  <span v-else class="badge border border-success text-success"><i class="bi bi-infinity me-1"></i>Không
+                    giới hạn lượt mua</span>
+                </div>
+                <div class="small mt-2 text-muted fw-semibold"
+                  v-if="selectedCombo.start_date || selectedCombo.end_date">
+                  <i class="bi bi-clock-history me-1"></i>
+                  {{ formatDateTime(selectedCombo.start_date) || 'Bất kỳ lúc nào' }}
+                  <i class="bi bi-arrow-right mx-1"></i>
+                  {{ formatDateTime(selectedCombo.end_date) || 'Không có ngày kết thúc' }}
+                </div>
               </div>
             </div>
-            
+
             <div class="p-3 bg-light">
-              <h6 class="fw-bold text-dark mb-3">Sản phẩm có trong gói ({{ selectedCombo.items?.length || selectedCombo.items_count || 0 }} món):</h6>
-              
+              <h6 class="fw-bold text-dark mb-3">Sản phẩm có trong gói ({{ selectedCombo.items?.length ||
+                selectedCombo.items_count || 0 }} món):</h6>
+
               <!-- THÊM: Nếu chỉ mới có dữ liệu mồi (isPartial), hiển thị bảng Loading mượt mà -->
-              <div v-if="selectedCombo.isPartial && isFetchingDetail" class="text-center py-5 bg-white border rounded-3 shadow-sm">
-                 <div class="spinner-border text-brand mb-3" style="width: 2.5rem; height: 2.5rem;" role="status"></div>
-                 <div class="text-muted small fw-semibold text-uppercase tracking-widest">Đang đồng bộ danh sách sản phẩm...</div>
+              <div v-if="selectedCombo.isPartial && isFetchingDetail"
+                class="text-center py-5 bg-white border rounded-3 shadow-sm">
+                <div class="spinner-border text-brand mb-3" style="width: 2.5rem; height: 2.5rem;" role="status"></div>
+                <div class="text-muted small fw-semibold text-uppercase tracking-widest">Đang đồng bộ danh sách sản
+                  phẩm...
+                </div>
               </div>
 
               <!-- Nếu đã lấy đủ data từ API -->
@@ -261,12 +305,8 @@
                         <td class="px-3">
                           <div class="d-flex align-items-center gap-2">
                             <!-- SỬ DỤNG SORA IMAGE Ở ĐÂY -->
-                            <SoraImage 
-                              :src="item.product?.thumbnail_image" 
-                              imgClass="rounded border" 
-                              style="width: 40px; height: 40px; object-fit: cover;" 
-                              :placeholder="defaultPlaceholder"
-                            />
+                            <SoraImage :src="item.product?.thumbnail_image" imgClass="rounded border"
+                              style="width: 40px; height: 40px; object-fit: cover;" :placeholder="defaultPlaceholder" />
                             <div class="fw-semibold">{{ item.product?.name }}</div>
                           </div>
                         </td>
@@ -287,24 +327,25 @@
 
                 <!-- BẢNG TÍNH TỔNG GIÁ COMBO -->
                 <div class="bg-white border rounded-3 p-3 mt-3 shadow-sm ms-auto" style="max-width: 350px;">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted fw-semibold">Tổng giá gốc ước tính:</span>
-                        <strong class="text-dark">{{ formatCurrency(quickViewOriginalTotal) }}</strong>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2 text-danger">
-                        <span class="fw-semibold">Trừ khuyến mãi Combo:</span>
-                        <strong>- {{ formatCurrency(quickViewDiscountAmount) }}</strong>
-                    </div>
-                    <div class="d-flex justify-content-between pt-2 border-top mt-2">
-                        <span class="fw-bold text-dark">Giá Combo xuất bán:</span>
-                        <strong class="fs-5 text-brand">{{ formatCurrency(quickViewFinalPrice) }}</strong>
-                    </div>
+                  <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted fw-semibold">Tổng giá gốc ước tính:</span>
+                    <strong class="text-dark">{{ formatCurrency(quickViewOriginalTotal) }}</strong>
+                  </div>
+                  <div class="d-flex justify-content-between mb-2 text-danger">
+                    <span class="fw-semibold">Trừ khuyến mãi Combo:</span>
+                    <strong>- {{ formatCurrency(quickViewDiscountAmount) }}</strong>
+                  </div>
+                  <div class="d-flex justify-content-between pt-2 border-top mt-2">
+                    <span class="fw-bold text-dark">Giá Combo xuất bán:</span>
+                    <strong class="fs-5 text-brand">{{ formatCurrency(quickViewFinalPrice) }}</strong>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
           <div class="modal-footer bg-light border-top-0 rounded-bottom-4">
-             <button type="button" class="btn btn-outline-brand rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Đóng</button>
+            <button type="button" class="btn btn-outline-brand rounded-pill px-4 fw-bold"
+              data-bs-dismiss="modal">Đóng</button>
           </div>
         </div>
       </div>
@@ -340,7 +381,7 @@ const activeTab = ref('all');
 const selectedGenderFilter = ref('all');
 
 const currentPage = ref(1);
-const itemsPerPage = 8; 
+const itemsPerPage = 8;
 
 const selectedCombo = ref(null);
 let quickViewModalInstance = null;
@@ -356,35 +397,35 @@ onBeforeUnmount(() => {
 
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
 
-const formatCurrency = (val) => { 
-  if (val === null || val === undefined || isNaN(val)) return '---'; 
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val); 
+const formatCurrency = (val) => {
+  if (val === null || val === undefined || isNaN(val)) return '---';
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val);
 };
 const formatDateTime = (dateString) => {
-    if (!dateString) return '';
-    const d = new Date(dateString.replace(' ', 'T'));
-    return `${d.toLocaleDateString('vi-VN')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+  if (!dateString) return '';
+  const d = new Date(dateString.replace(' ', 'T'));
+  return `${d.toLocaleDateString('vi-VN')} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
 };
 
 const formatDateShort = (dateString) => {
-    if (!dateString) return '';
-    const d = new Date(dateString.replace(' ', 'T'));
-    return d.toLocaleDateString('vi-VN');
+  if (!dateString) return '';
+  const d = new Date(dateString.replace(' ', 'T'));
+  return d.toLocaleDateString('vi-VN');
 };
 
 const getDaysRemaining = (endDateString) => {
-    if (!endDateString) return null;
-    const end = new Date(endDateString.replace(' ', 'T'));
-    const now = new Date();
-    end.setHours(0, 0, 0, 0);
-    now.setHours(0, 0, 0, 0);
-    const diffTime = end - now;
-    return Math.round(diffTime / (1000 * 60 * 60 * 24));
+  if (!endDateString) return null;
+  const end = new Date(endDateString.replace(' ', 'T'));
+  const now = new Date();
+  end.setHours(0, 0, 0, 0);
+  now.setHours(0, 0, 0, 0);
+  const diffTime = end - now;
+  return Math.round(diffTime / (1000 * 60 * 60 * 24));
 };
 
 const getGenderLabel = (val) => {
-    const map = { 'male': 'Nam', 'female': 'Nữ', 'unisex': 'Unisex', 'couple': 'Cặp đôi' };
-    return map[val] || val;
+  const map = { 'male': 'Nam', 'female': 'Nữ', 'unisex': 'Unisex', 'couple': 'Cặp đôi' };
+  return map[val] || val;
 };
 
 const checkStatusChange = (combo) => { combo.isStatusChanged = (combo.localStatus !== combo.status); };
@@ -394,10 +435,10 @@ const saveComboStatus = async (combo) => {
   combo.isUpdatingStatus = true;
   try {
     const res = await axios.patch(`${API_URL}/admin/combos/${combo.id}/status`, { status: combo.localStatus }, { headers: getHeaders() });
-    combo.status = combo.localStatus; 
+    combo.status = combo.localStatus;
     combo.isStatusChanged = false;
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
-  } catch (error) { 
+  } catch (error) {
     cancelStatusChange(combo);
     Swal.fire('Lỗi', 'Không thể cập nhật trạng thái', 'error');
   } finally {
@@ -406,32 +447,32 @@ const saveComboStatus = async (combo) => {
 };
 
 const getStatusSelectClass = (status) => {
-  const map = { 
-    'active': 'text-success border-success bg-success bg-opacity-10', 
+  const map = {
+    'active': 'text-success border-success bg-success bg-opacity-10',
     'hidden': 'text-secondary border-secondary bg-secondary bg-opacity-10'
-  }; 
-  return map[status] || 'bg-light text-secondary'; 
+  };
+  return map[status] || 'bg-light text-secondary';
 };
 
 // FETCH DATA DÙNG LẠI CHUẨN AXIOS GỐC
 const fetchData = async (silent = false) => {
   if (silent) isSilentLoading.value = true;
   else if (!isFirstLoad.value) isTableLoading.value = true;
-  
+
   try {
     const res = await axios.get(`${API_URL}/admin/combos`, { headers: getHeaders() });
     if (isUnmounted) return;
-    
+
     combos.value = res.data.data.map(c => ({
       ...c,
-      localStatus: c.status, 
+      localStatus: c.status,
       isStatusChanged: false,
       isUpdatingStatus: false
     }));
   } catch (err) {
     console.error('Lỗi Load Combo:', err);
-  } finally { 
-    if(!isUnmounted) { isFirstLoad.value = false; isTableLoading.value = false; isSilentLoading.value = false; }
+  } finally {
+    if (!isUnmounted) { isFirstLoad.value = false; isTableLoading.value = false; isSilentLoading.value = false; }
   }
 };
 
@@ -440,25 +481,25 @@ const openQuickView = async (id) => {
   // 1. Chụp dữ liệu mồi từ danh sách có sẵn để Modal hiện ngay lập tức
   const cachedCombo = combos.value.find(c => c.id === id);
   if (cachedCombo) {
-     selectedCombo.value = { ...cachedCombo, isPartial: true }; // Gắn cờ báo hiệu thiếu danh sách sản phẩm
-     if(!quickViewModalInstance) quickViewModalInstance = new window.bootstrap.Modal(document.getElementById('quickViewComboModal'));
-     quickViewModalInstance.show();
+    selectedCombo.value = { ...cachedCombo, isPartial: true }; // Gắn cờ báo hiệu thiếu danh sách sản phẩm
+    if (!quickViewModalInstance) quickViewModalInstance = new window.bootstrap.Modal(document.getElementById('quickViewComboModal'));
+    quickViewModalInstance.show();
   }
 
   // 2. Fetch API dưới nền để cập nhật đầy đủ chi tiết
   isFetchingDetail.value = true;
   try {
     const res = await axios.get(`${API_URL}/admin/combos/${id}`, { headers: getHeaders() });
-    if(!isUnmounted) {
+    if (!isUnmounted) {
       selectedCombo.value = res.data.data;
-      
+
       // Nếu cực kỳ hiếm trường hợp mảng danh sách trống, Modal sẽ tự bật khi API gọi xong
       if (!cachedCombo) {
-        if(!quickViewModalInstance) quickViewModalInstance = new window.bootstrap.Modal(document.getElementById('quickViewComboModal'));
+        if (!quickViewModalInstance) quickViewModalInstance = new window.bootstrap.Modal(document.getElementById('quickViewComboModal'));
         quickViewModalInstance.show();
       }
     }
-  } catch(e) {
+  } catch (e) {
     Swal.fire('Lỗi', 'Không thể tải chi tiết Combo', 'error');
   } finally {
     isFetchingDetail.value = false;
@@ -466,38 +507,38 @@ const openQuickView = async (id) => {
 };
 
 const getItemPrice = (item) => {
-    if (item.product_variant_id && item.variant) {
-        return parseFloat(item.variant.price);
-    }
-    return item.product ? parseFloat(item.product.base_price) : 0;
+  if (item.product_variant_id && item.variant) {
+    return parseFloat(item.variant.price);
+  }
+  return item.product ? parseFloat(item.product.base_price) : 0;
 };
 
 const quickViewOriginalTotal = computed(() => {
-    if (!selectedCombo.value || !selectedCombo.value.items) return 0;
-    return selectedCombo.value.items.reduce((total, item) => {
-        return total + (getItemPrice(item) * item.quantity);
-    }, 0);
+  if (!selectedCombo.value || !selectedCombo.value.items) return 0;
+  return selectedCombo.value.items.reduce((total, item) => {
+    return total + (getItemPrice(item) * item.quantity);
+  }, 0);
 });
 
 const quickViewDiscountAmount = computed(() => {
-    if (!selectedCombo.value) return 0;
-    const discountVal = parseFloat(selectedCombo.value.discount_value) || 0;
-    if (selectedCombo.value.discount_type === 'percentage') {
-        return quickViewOriginalTotal.value * (Math.min(discountVal, 100) / 100);
-    }
-    return discountVal;
+  if (!selectedCombo.value) return 0;
+  const discountVal = parseFloat(selectedCombo.value.discount_value) || 0;
+  if (selectedCombo.value.discount_type === 'percentage') {
+    return quickViewOriginalTotal.value * (Math.min(discountVal, 100) / 100);
+  }
+  return discountVal;
 });
 
 const quickViewFinalPrice = computed(() => {
-    const final = quickViewOriginalTotal.value - quickViewDiscountAmount.value;
-    return final > 0 ? final : 0;
+  const final = quickViewOriginalTotal.value - quickViewDiscountAmount.value;
+  return final > 0 ? final : 0;
 });
 
 const switchTab = (tabId) => { activeTab.value = tabId; currentPage.value = 1; };
 
 const processedCombos = computed(() => {
   let result = combos.value;
-  if (activeTab.value === 'deleted') { result = result.filter(r => r.deleted_at); } 
+  if (activeTab.value === 'deleted') { result = result.filter(r => r.deleted_at); }
   else {
     result = result.filter(r => !r.deleted_at);
     if (activeTab.value !== 'all') result = result.filter(r => r.status === activeTab.value);
@@ -520,8 +561,8 @@ const confirmDelete = (id, name) => {
       try {
         await axios.delete(`${API_URL}/admin/combos/${id}`, { headers: getHeaders() });
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa Combo', showConfirmButton: false, timer: 1500 });
-        fetchData(true); 
-      } catch(e) { Swal.fire('Lỗi', 'Không thể xóa', 'error'); isSilentLoading.value = false; }
+        fetchData(true);
+      } catch (e) { Swal.fire('Lỗi', 'Không thể xóa', 'error'); isSilentLoading.value = false; }
     }
   });
 };
@@ -531,10 +572,10 @@ const restoreCombo = (id) => {
     if (result.isConfirmed) {
       isSilentLoading.value = true;
       try {
-          await axios.post(`${API_URL}/admin/combos/${id}/restore`, {}, { headers: getHeaders() });
-          Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Khôi phục thành công', showConfirmButton: false, timer: 1500 });
-          fetchData(true); 
-      } catch(e) { Swal.fire('Lỗi', 'Không thể khôi phục', 'error'); isSilentLoading.value = false; }
+        await axios.post(`${API_URL}/admin/combos/${id}/restore`, {}, { headers: getHeaders() });
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Khôi phục thành công', showConfirmButton: false, timer: 1500 });
+        fetchData(true);
+      } catch (e) { Swal.fire('Lỗi', 'Không thể khôi phục', 'error'); isSilentLoading.value = false; }
     }
   });
 };
@@ -550,31 +591,87 @@ onMounted(() => fetchData());
 </script>
 
 <style scoped>
-.bg-brand { background-color: #009981 !important; } 
-.text-brand { color: #009981 !important; } 
-.border-brand { border-color: #009981 !important; }
-.btn-brand { background-color: #009981; border: none; transition: 0.2s; } 
-.btn-brand:hover { background-color: #007a67; color: white; }
-.btn-outline-brand { color: #009981; border-color: #009981; transition: 0.2s; } 
-.btn-outline-brand:hover { background-color: #009981; color: white; }
-
-.custom-tab { font-weight: 600 !important; color: #6c757d; border-bottom: 2px solid transparent !important; margin-bottom: -1px; transition: color 0.2s ease; }
-.custom-tab:hover { color: #009981; }
-.custom-tab.active-tab { color: #009981 !important; border-bottom: 2px solid #009981 !important; }
-
-.tab-badge { font-size: 0.75rem; font-weight: 600; background-color: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6; transition: all 0.2s ease; }
-.active-badge { background-color: #e6f5f2 !important; color: #009981 !important; border-color: #009981 !important; }
-
-.logo-shimmer { 
-  font-size: 3.5rem; 
-  font-weight: 900; 
-  letter-spacing: -1.5px; 
-  background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%); 
-  background-size: 200% auto; 
-  color: transparent; 
-  -webkit-background-clip: text; 
-  background-clip: text; 
-  animation: shine 1.5s linear infinite; 
+.bg-brand {
+  background-color: #009981 !important;
 }
-@keyframes shine { to { background-position: 200% center; } }
+
+.text-brand {
+  color: #009981 !important;
+}
+
+.border-brand {
+  border-color: #009981 !important;
+}
+
+.btn-brand {
+  background-color: #009981;
+  border: none;
+  transition: 0.2s;
+}
+
+.btn-brand:hover {
+  background-color: #007a67;
+  color: white;
+}
+
+.btn-outline-brand {
+  color: #009981;
+  border-color: #009981;
+  transition: 0.2s;
+}
+
+.btn-outline-brand:hover {
+  background-color: #009981;
+  color: white;
+}
+
+.custom-tab {
+  font-weight: 600 !important;
+  color: #6c757d;
+  border-bottom: 2px solid transparent !important;
+  margin-bottom: -1px;
+  transition: color 0.2s ease;
+}
+
+.custom-tab:hover {
+  color: #009981;
+}
+
+.custom-tab.active-tab {
+  color: #009981 !important;
+  border-bottom: 2px solid #009981 !important;
+}
+
+.tab-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  background-color: #f8f9fa;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+  transition: all 0.2s ease;
+}
+
+.active-badge {
+  background-color: #e6f5f2 !important;
+  color: #009981 !important;
+  border-color: #009981 !important;
+}
+
+.logo-shimmer {
+  font-size: 3.5rem;
+  font-weight: 900;
+  letter-spacing: -1.5px;
+  background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: shine 1.5s linear infinite;
+}
+
+@keyframes shine {
+  to {
+    background-position: 200% center;
+  }
+}
 </style>
