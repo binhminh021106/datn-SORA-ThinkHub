@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
+// chức năng: ai chat, trả lời câu hỏi của khách hàng, phân tích intent và gợi ý sản phẩm dựa trên câu hỏi.
 class AiChatService
 {
     public function reply(string $message): string

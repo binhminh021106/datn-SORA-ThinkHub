@@ -18,7 +18,6 @@ class VerifyFaceRequest extends FormRequest
         return [
             'descriptor' => ['required', 'array', 'size:128'],
             'descriptor.*' => ['required', 'numeric', 'between:-10,10'],
-            'threshold' => ['nullable', 'numeric', 'min:0.3', 'max:0.8'],
         ];
     }
 
@@ -30,8 +29,6 @@ class VerifyFaceRequest extends FormRequest
             'descriptor.size' => 'Du lieu dinh danh khuon mat phai co dung 128 gia tri.',
             'descriptor.*.numeric' => 'Du lieu dinh danh khuon mat chi duoc chua so.',
             'descriptor.*.between' => 'Du lieu dinh danh khuon mat nam ngoai nguong cho phep.',
-            'threshold.min' => 'Nguong nhan dien khong duoc nho hon 0.3.',
-            'threshold.max' => 'Nguong nhan dien khong duoc lon hon 0.8.',
         ];
     }
 

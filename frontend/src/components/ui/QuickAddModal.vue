@@ -66,16 +66,43 @@
           </button>
         </div>
         
-        <div v-else class="p-4" style="min-height: 532px;">
+        <div v-else class="modal-body p-4 quick-add-skeleton">
            <div class="d-flex gap-3 mb-4 pb-4 border-bottom border-light-subtle">
-             <SoraSkeleton variant="image" width="80px" height="80px" radius="4px" class="flex-shrink-0" />
-             <div class="flex-grow-1 d-flex flex-column justify-content-center">
+             <img
+               v-if="quickAddPreviewImage"
+               :src="quickAddPreviewImage"
+               @error="handleImageError"
+               class="object-fit-cover border shadow-sm flex-shrink-0"
+               style="width: 80px; height: 80px; border-radius: 4px;"
+               alt=""
+             >
+             <SoraSkeleton v-else variant="image" width="80px" height="80px" radius="4px" class="flex-shrink-0" />
+             <div v-if="quickAddPreview" class="flex-grow-1 d-flex flex-column justify-content-center overflow-hidden">
+               <small class="text-uppercase font-oswald tracking-widest text-gold fw-bold text-truncate" style="font-size: 0.7rem;">
+                 {{ quickAddPreview.category?.name || 'Trang Sức SORA' }}
+               </small>
+               <h6 class="font-serif fw-bold mb-1 text-dark fs-5 text-truncate">{{ quickAddPreview.name }}</h6>
+               <span class="text-sora-primary fw-bold font-oswald fs-5">{{ formatCurrency(quickAddPreview.promotional_price || quickAddPreview.base_price) }}</span>
+             </div>
+             <div v-else class="flex-grow-1 d-flex flex-column justify-content-center">
                <SoraSkeleton width="38%" height="12px" class="mb-2" />
                <SoraSkeleton width="78%" height="20px" class="mb-2" />
                <SoraSkeleton width="44%" height="20px" />
              </div>
            </div>
-           <SoraListSkeleton :rows="2" :image="false" />
+
+           <div v-for="section in 2" :key="section" class="quick-add-skeleton-section mb-4">
+             <SoraSkeleton width="26%" height="14px" class="mb-3" />
+             <div class="d-flex flex-wrap gap-2">
+               <SoraSkeleton v-for="chip in section === 1 ? 3 : 2" :key="chip" :width="chip === 1 ? '118px' : '92px'" height="42px" radius="4px" />
+             </div>
+           </div>
+
+           <div class="d-flex align-items-center gap-3 mb-4">
+             <SoraSkeleton width="84px" height="14px" />
+             <SoraSkeleton width="164px" height="44px" radius="8px" />
+           </div>
+           <SoraSkeleton width="100%" height="72px" radius="8px" />
         </div>
       </div>
     </div>
@@ -89,12 +116,12 @@ import Swal from 'sweetalert2';
 import Toast from '@/utils/toastConfig';
 import { globalModalState } from '@/stores/modalState';
 import SoraSkeleton from '@/components/ui/SoraSkeleton.vue';
-import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
 import { API_BASE_URL, getStorageUrl } from '@/utils/env';
 import { createCartSessionId } from '@/composables/useUtilities';
 
 // CẬP NHẬT: Không dùng hàm replace() xóa /api nữa, khai báo tương tự Index.vue và Detail.vue
 const quickAddProduct = ref(null);
+const quickAddPreview = ref(null);
 const quickAddMatrix = ref({});
 const quickAddSelections = ref({});
 const quickAddError = ref(false);
@@ -102,6 +129,12 @@ const isAdding = ref(false);
 const quantity = ref(1);
 let quickAddModalInstance = null;
 let pendingSuccessToast = false;
+let activeQuickAddRequest = 0;
+
+const QUICK_ADD_CACHE_TTL = 45 * 1000;
+const QUICK_ADD_CACHE_LIMIT = 20;
+const quickAddCache = new Map();
+const pendingQuickAddRequests = new Map();
 
 const soraAlert = Swal.mixin({
   buttonsStyling: true,
@@ -272,6 +305,10 @@ const quickAddDisplayImage = computed(() => {
     return getImageUrl(quickAddProduct.value.fallback_image);
 });
 
+const quickAddPreviewImage = computed(() => (
+    quickAddPreview.value?.thumbnail_image ? getImageUrl(quickAddPreview.value.thumbnail_image) : null
+));
+
 const quickAddSelectedPrice = computed(() => {
     if (!quickAddProduct.value) return 0;
     const selectedVar = quickAddSelectedVariant.value;
@@ -279,8 +316,39 @@ const quickAddSelectedPrice = computed(() => {
     return quickAddProduct.value.promotional_price || quickAddProduct.value.base_price || quickAddProduct.value.fallback_price || 0;
 });
 
+const getQuickAddData = (slug) => {
+    const cached = quickAddCache.get(slug);
+    if (cached && Date.now() - cached.cachedAt < QUICK_ADD_CACHE_TTL) {
+        return Promise.resolve(cached.data);
+    }
+
+    if (pendingQuickAddRequests.has(slug)) {
+        return pendingQuickAddRequests.get(slug);
+    }
+
+    const request = axios.get(`${API_BASE_URL}/shop/all/products/${slug}/quick-add`)
+        .then((response) => {
+            if (!response.data?.data) {
+                throw new Error('Quick Add data is unavailable.');
+            }
+
+            quickAddCache.set(slug, { data: response.data.data, cachedAt: Date.now() });
+            if (quickAddCache.size > QUICK_ADD_CACHE_LIMIT) {
+                quickAddCache.delete(quickAddCache.keys().next().value);
+            }
+
+            return response.data.data;
+        })
+        .finally(() => pendingQuickAddRequests.delete(slug));
+
+    pendingQuickAddRequests.set(slug, request);
+    return request;
+};
+
 const openModal = async (prod) => {
+    const requestId = ++activeQuickAddRequest;
     quickAddProduct.value = null;
+    quickAddPreview.value = prod;
     quickAddError.value = false;
     quickAddSelections.value = {};
     quickAddMatrix.value = {};
@@ -289,10 +357,12 @@ const openModal = async (prod) => {
     quickAddModalInstance.show();
 
     try {
-        const res = await axios.get(`${API_BASE_URL}/shop/all/products/${prod.slug}`);
-        if (res.data && res.data.data) {
+        const productData = await getQuickAddData(prod.slug);
+        if (requestId !== activeQuickAddRequest) return;
+
+        if (productData) {
             quickAddProduct.value = {
-                ...res.data.data,
+                ...productData,
                 fallback_image: prod.thumbnail_image,
                 fallback_price: prod.base_price 
             };
@@ -337,6 +407,7 @@ const openModal = async (prod) => {
             }
         }
     } catch (e) {
+        if (requestId !== activeQuickAddRequest) return;
         quickAddModalInstance.hide();
         soraAlert.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể tải thông tin sản phẩm' });
     }
@@ -419,6 +490,10 @@ const confirmQuickAdd = async () => {
 .tracking-wide { letter-spacing: 0.1em; }
 .tracking-widest { letter-spacing: 2px; }
 .transition-all { transition: all 0.3s ease; }
+
+.quick-add-skeleton-section {
+  min-height: 72px;
+}
 
 .attr-chip { border-radius: 4px; overflow: hidden; min-width: 55px; }
 .attr-chip .chip-inner { border: 1px solid #dee2e6; background-color: #fff; color: #555; border-radius: 4px; transition: all 0.3s ease-in-out; padding: 6px 12px; }

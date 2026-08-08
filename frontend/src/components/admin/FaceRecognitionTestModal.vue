@@ -5,89 +5,185 @@
         <div class="face-id-wrapper w-100 h-100 d-flex align-items-center justify-content-center">
           
           <!-- SETUP STATE -->
-          <div v-if="uiState === 'setup'" class="face-id-setup bg-white rounded-4 shadow-lg overflow-hidden d-flex flex-column" style="width: min(800px, 95vw); max-height: 90vh;">
-            <div class="p-4 border-bottom d-flex justify-content-between align-items-center bg-brand text-white">
+          <div v-if="uiState === 'setup'" class="face-id-setup bg-white shadow-lg overflow-hidden d-flex flex-column">
+            <div class="face-manager-header px-3 py-2 px-md-4 py-md-3 border-bottom d-flex justify-content-between align-items-center bg-brand text-white">
               <div>
-                <h5 class="fw-bold mb-1">{{ modalTitle }}</h5>
+                <h6 class="fw-bold mb-0">{{ modalTitle }}</h6>
                 <p class="small mb-0 text-white-50">{{ modalSubtitle }}</p>
               </div>
-              <button type="button" class="btn-close btn-close-white" aria-label="Close" @click="closeModal"></button>
+              <div class="d-flex align-items-center gap-3">
+                <button
+                  v-if="isManageMode"
+                  type="button"
+                  class="btn btn-light text-brand fw-bold rounded-pill px-3"
+                  :disabled="isFetchingInitialData"
+                  @click="startScanningMode('verify')"
+                >
+                  <i class="bi bi-search me-2"></i>Đối chiếu thử
+                </button>
+                <button type="button" class="btn-close btn-close-white" aria-label="Close" @click="closeModal"></button>
+              </div>
             </div>
             
-            <div class="p-4 flex-grow-1 overflow-auto bg-light">
+            <div class="face-manager-content p-3 p-md-4 flex-grow-1 overflow-auto bg-light">
               <template v-if="isManageMode">
-                <div class="row g-4 h-100">
-                  <!-- Cột trái: Tìm kiếm và danh sách -->
-                  <div class="col-12 col-md-6 d-flex flex-column h-100">
-                    <label class="form-label fw-bold text-dark mb-2">Chọn nhân sự để quản lý</label>
-                    <input type="text" class="form-control form-control-lg rounded-3 mb-3" v-model="searchQuery" placeholder="Tìm kiếm tên hoặc email..." :disabled="isFetchingInitialData" />
-                    
-                    <div class="admin-list border rounded-3 bg-white overflow-auto shadow-sm flex-grow-1" style="max-height: 350px;">
-                      <!-- Skeleton Loading -->
-                      <template v-if="isFetchingInitialData">
-                        <div v-for="i in 4" :key="'skel-left-'+i" class="p-3 border-bottom d-flex align-items-center gap-3">
-                           <SoraSkeleton circle width="40px" height="40px" class="flex-shrink-0" />
-                           <div class="flex-grow-1">
-                              <SoraSkeleton width="60%" height="16px" class="mb-2" />
-                              <SoraSkeleton width="40%" height="12px" />
-                           </div>
-                           <SoraSkeleton width="50px" height="20px" radius="4px" />
+                <section class="face-manager-toolbar mb-3">
+                  <div>
+                    <h6 class="fw-bold text-dark mb-1">Hồ sơ nhân sự</h6>
+                    <p class="small text-muted mb-0">Tìm và chọn đúng nhân sự trước khi đăng ký khuôn mặt.</p>
+                  </div>
+                  <div class="input-group face-manager-search">
+                    <span class="input-group-text bg-white text-muted border-end-0"><i class="bi bi-search"></i></span>
+                    <input
+                      v-model="searchQuery"
+                      type="search"
+                      class="form-control border-start-0 ps-0"
+                      placeholder="Tìm tên, email hoặc số điện thoại..."
+                      @input="scheduleAdminSearch"
+                    />
+                  </div>
+                </section>
+
+                <div class="row g-3 face-manager-grid">
+                  <div class="col-12 col-xxl-8">
+                    <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden position-relative">
+                      <div v-if="isFetchingInitialData && hasLoadedAdmins" class="face-manager-refreshing">
+                        <AdminLoadingSpinner size="20" label="Đang cập nhật danh sách nhân sự" />
+                        <span>Đang cập nhật</span>
+                      </div>
+                      <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 face-manager-table">
+                          <thead>
+                            <tr>
+                              <th class="text-center" style="width: 56px;">Chọn</th>
+                              <th>Nhân sự</th>
+                              <th>Liên hệ</th>
+                              <th>Hồ sơ khuôn mặt</th>
+                            </tr>
+                          </thead>
+                          <tbody v-if="!hasLoadedAdmins">
+                            <tr>
+                              <td colspan="4" class="py-5 text-center">
+                                <AdminLoadingSpinner size="32" label="Đang tải danh sách nhân sự" />
+                                <div class="small text-muted mt-3">Đang tải danh sách nhân sự...</div>
+                              </td>
+                            </tr>
+                          </tbody>
+                          <tbody v-else :class="{ 'opacity-50': isFetchingInitialData }">
+                            <tr
+                              v-for="admin in admins"
+                              :key="admin.id"
+                              class="face-manager-row"
+                              :class="{ 'is-selected': String(selectedAdminId) === String(admin.id) }"
+                              @click="selectAdmin(admin.id)"
+                            >
+                              <td class="text-center">
+                                <input
+                                  class="form-check-input staff-select-control"
+                                  type="radio"
+                                  name="face-registration-admin"
+                                  :value="String(admin.id)"
+                                  :checked="String(selectedAdminId) === String(admin.id)"
+                                  :aria-label="`Chọn ${displayAdminName(admin)}`"
+                                  @click.stop
+                                  @change="selectAdmin(admin.id)"
+                                >
+                              </td>
+                              <td>
+                                <div class="d-flex align-items-center gap-3">
+                                  <SoraImage
+                                    :src="admin.avatar_url"
+                                    :placeholder="defaultAvatar"
+                                    imgClass="rounded-circle object-fit-cover border shadow-sm"
+                                    style="width:42px; height:42px;"
+                                    alt="Avatar nhân sự"
+                                  />
+                                  <div class="min-w-0">
+                                    <div class="fw-bold text-dark text-truncate">{{ displayAdminName(admin) }}</div>
+                                    <div class="small text-muted">Mã nhân sự #{{ admin.id }}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td>
+                                <div class="small text-muted"><i class="bi bi-envelope me-2"></i>{{ displayAdminEmail(admin) }}</div>
+                                <div class="small text-muted mt-1"><i class="bi bi-telephone me-2"></i>{{ displayAdminPhone(admin) }}</div>
+                              </td>
+                              <td>
+                                <span class="badge" :class="admin.face_profile?.requires_reset ? 'bg-warning text-dark' : (admin.face_profile ? 'bg-success' : 'bg-secondary')">
+                                  {{ faceProfileStatus(admin.face_profile) }}
+                                </span>
+                                <div v-if="admin.face_profile" class="small text-muted mt-1">{{ admin.face_profile.sample_count || 0 }}/5 mẫu</div>
+                              </td>
+                            </tr>
+                            <tr v-if="admins.length === 0">
+                              <td colspan="4" class="py-5 text-center text-muted">
+                                <i class="bi bi-people fs-3 d-block mb-2"></i>Không tìm thấy nhân sự phù hợp.
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="face-manager-pagination border-top px-3 py-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <span class="small text-muted">Hiển thị {{ pagination.from || 0 }}–{{ pagination.to || 0 }} / {{ pagination.total || 0 }} nhân sự</span>
+                        <div class="btn-group">
+                          <button type="button" class="btn btn-outline-secondary btn-sm" :disabled="isFetchingInitialData || pagination.currentPage <= 1" @click="changeAdminPage(pagination.currentPage - 1)">
+                            <i class="bi bi-chevron-left"></i>
+                          </button>
+                          <span class="btn btn-light btn-sm disabled">Trang {{ pagination.currentPage }} / {{ pagination.lastPage }}</span>
+                          <button type="button" class="btn btn-outline-secondary btn-sm" :disabled="isFetchingInitialData || pagination.currentPage >= pagination.lastPage" @click="changeAdminPage(pagination.currentPage + 1)">
+                            <i class="bi bi-chevron-right"></i>
+                          </button>
                         </div>
-                      </template>
-                      
-                      <template v-else>
-                        <div v-for="admin in filteredAdmins" :key="admin.id" class="p-3 border-bottom list-item-hover" style="cursor: pointer; transition: all 0.2s;" @click="selectAdmin(admin.id)" :class="{'bg-brand-soft': selectedAdminId === admin.id}">
-                          <div class="d-flex justify-content-between align-items-center mb-1">
-                            <div class="fw-bold" :class="selectedAdminId === admin.id ? 'text-brand' : 'text-dark'">{{ admin.fullname || 'Chưa có tên' }}</div>
-                            <span class="badge" :class="admin.face_profile?.requires_reset ? 'bg-warning text-dark' : (admin.face_profile ? 'bg-success' : 'bg-secondary')">{{ faceProfileStatus(admin.face_profile) }}</span>
-                          </div>
-                          <div class="small text-muted"><i class="bi bi-envelope me-1"></i>{{ admin.email }}</div>
-                        </div>
-                        <div v-if="filteredAdmins.length === 0" class="p-4 text-center text-muted">
-                          Không tìm thấy nhân sự nào
-                        </div>
-                      </template>
+                      </div>
                     </div>
                   </div>
 
-                  <!-- Cột phải: Hồ sơ và thao tác -->
-                  <div class="col-12 col-md-6 d-flex flex-column justify-content-center">
-                    <!-- Skeleton Loading -->
-                    <div class="card border-0 shadow-sm rounded-4 h-100" v-if="isFetchingInitialData">
-                      <div class="card-body p-4 text-center d-flex flex-column justify-content-center align-items-center">
-                        <SoraSkeleton circle width="72px" height="72px" class="mb-3" />
-                        <SoraSkeleton width="120px" height="24px" class="mb-2" radius="4px" />
-                        <SoraSkeleton width="150px" height="16px" class="mb-4" radius="4px" />
-                        <div class="w-100 px-3 d-flex flex-column gap-3">
-                           <SoraSkeleton width="100%" height="48px" radius="50rem" />
-                           <SoraSkeleton width="100%" height="40px" radius="50rem" />
-                           <SoraSkeleton width="100%" height="38px" radius="50rem" class="mt-2" />
+                  <aside class="col-12 col-xxl-4">
+                    <div v-if="selectedAdmin" class="card border-0 shadow-sm rounded-4 h-100">
+                      <div class="card-body p-4 d-flex flex-column">
+                        <div class="d-flex align-items-center gap-3 mb-4">
+                          <SoraImage
+                            :src="selectedAdmin.avatar_url"
+                            :placeholder="defaultAvatar"
+                            imgClass="rounded-circle object-fit-cover border shadow-sm flex-shrink-0"
+                            style="width:56px; height:56px;"
+                            alt="Avatar nhân sự"
+                          />
+                          <div class="min-w-0">
+                            <div class="small text-brand fw-semibold text-uppercase mb-1">Đã chọn để đăng ký</div>
+                            <h6 class="fw-bold text-dark mb-0 text-truncate">{{ selectedAdminLabel }}</h6>
+                          </div>
+                        </div>
+                        <div class="small text-muted text-break"><i class="bi bi-envelope me-2"></i>{{ displayAdminEmail(selectedAdmin) }}</div>
+                        <div class="small text-muted mt-2"><i class="bi bi-telephone me-2"></i>{{ displayAdminPhone(selectedAdmin) }}</div>
+                        <div class="profile-sample-status rounded-3 p-3 my-4">
+                          <div class="d-flex justify-content-between small text-muted mb-2"><span>Định danh đã lưu</span><strong class="text-dark">{{ profile.sample_count || 0 }}/5 mẫu</strong></div>
+                          <div class="progress" role="progressbar" :aria-valuenow="profile.sample_count || 0" aria-valuemin="0" aria-valuemax="5">
+                            <div class="progress-bar bg-brand" :style="{ width: `${Math.min((profile.sample_count || 0) * 20, 100)}%` }"></div>
+                          </div>
+                        </div>
+                        <div class="d-grid gap-2">
+                          <button v-if="canRegister" class="btn btn-brand fw-bold text-white" @click="confirmAndStartRegistration">
+                            <i class="bi bi-person-add me-2"></i>Bắt đầu đăng ký
+                          </button>
+                          <div v-else-if="isFetchingProfile" class="small text-center text-muted py-2"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Đang kiểm tra hồ sơ...</div>
+                          <div v-else class="alert alert-success small mb-0 py-2 text-center"><i class="bi bi-check-circle me-1"></i>Hồ sơ đã đủ 5 mẫu.</div>
+                          <button type="button" class="btn btn-outline-danger" @click="resetFaceProfile" :disabled="!canResetProfile">
+                            <i class="bi bi-trash3 me-2"></i>Xóa hồ sơ
+                          </button>
                         </div>
                       </div>
                     </div>
-                    
-                    <div class="card border-0 shadow-sm rounded-4 h-100" v-else-if="selectedAdminId">
-                      <div class="card-body p-4 text-center d-flex flex-column justify-content-center">
-                        <div class="avatar bg-brand-soft text-brand rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width:72px; height:72px; font-size:28px;">
-                          <i class="bi bi-person-bounding-box"></i>
+                    <div v-else class="card border-0 shadow-sm rounded-4 h-100">
+                      <div class="card-body d-flex flex-column align-items-center justify-content-center text-center p-4">
+                        <div class="avatar bg-light text-muted rounded-circle d-flex align-items-center justify-content-center mb-3" style="width:64px; height:64px; font-size:26px;">
+                          <i class="bi bi-person-check"></i>
                         </div>
-                        <h5 class="fw-bold text-dark">{{ selectedAdminLabel }}</h5>
-                        <p class="text-muted small mb-4">Định danh đã lưu: <strong class="text-dark">{{ profile.sample_count || 0 }}/5</strong></p>
-                        
-                        <div class="d-flex flex-column gap-3 justify-content-center px-3">
-                          <button class="btn btn-brand btn-lg fw-bold rounded-pill text-white shadow-sm" @click="startScanningMode('register')" :disabled="!canRegister">
-                            <i class="bi bi-person-add me-2"></i> Bắt đầu Đăng ký
-                          </button>
-                          <button class="btn btn-outline-brand fw-bold rounded-pill" @click="startScanningMode('verify')">
-                            <i class="bi bi-search me-2"></i> Đối chiếu Thử
-                          </button>
-                          <button class="btn btn-outline-danger fw-bold rounded-pill mt-2" @click="resetFaceProfile" :disabled="!canResetProfile">
-                            <i class="bi bi-trash3 me-1"></i> Xóa hồ sơ
-                          </button>
-                        </div>
+                        <h6 class="fw-bold text-dark">Chọn một nhân sự</h6>
+                        <p class="small text-muted mb-0">Tích chọn một dòng trong bảng để kiểm tra và đăng ký hồ sơ khuôn mặt.</p>
                       </div>
                     </div>
-                  </div>
+                  </aside>
                 </div>
               </template>
 
@@ -109,11 +205,51 @@
 
           <!-- SCANNING STATE (Face ID Style) -->
           <div v-if="uiState === 'scanning'" class="face-id-scanner w-100 h-100 d-flex flex-column align-items-center justify-content-center position-relative">
+            <button
+              type="button"
+              class="btn btn-outline-light rounded-pill px-3 py-2 scanner-retry-control position-absolute top-0 start-0 m-4 z-3"
+              :disabled="!canRetryCurrentScan"
+              @click="retryCurrentScan"
+            >
+              <i class="bi bi-arrow-clockwise me-2" aria-hidden="true"></i>Quét lại
+            </button>
             <button type="button" class="btn-close-scanner btn-close btn-close-white position-absolute top-0 end-0 m-4 z-3" aria-label="Close" @click="stopScanningMode"></button>
+
+            <aside v-if="scanningAction === 'verify' && resultType === 'success' && matchedAdmin" class="scanner-verification-result z-2">
+              <div class="scanner-identity-icon"><i class="bi bi-person-check" aria-hidden="true"></i></div>
+              <div class="min-w-0">
+                <div class="scanner-identity-label">Đối chiếu thành công</div>
+                <div class="scanner-identity-name text-truncate">{{ displayAdminName(matchedAdmin) }}</div>
+                <div class="scanner-identity-detail text-truncate"><i class="bi bi-envelope me-2"></i>{{ displayAdminEmail(matchedAdmin) }}</div>
+                <div class="scanner-identity-detail text-truncate"><i class="bi bi-telephone me-2"></i>{{ displayAdminPhone(matchedAdmin) }}</div>
+              </div>
+            </aside>
+
+            <aside v-if="scanningAction === 'register' && selectedAdmin" class="scanner-registration-identity d-none d-lg-flex z-2">
+              <div class="scanner-identity-icon"><i class="bi bi-person-bounding-box" aria-hidden="true"></i></div>
+              <div class="min-w-0">
+                <div class="scanner-identity-label">Đang đăng ký cho</div>
+                <div class="scanner-identity-name text-truncate">{{ selectedAdminLabel }}</div>
+                <div class="scanner-identity-detail text-truncate"><i class="bi bi-envelope me-2"></i>{{ displayAdminEmail(selectedAdmin) }}</div>
+                <div class="scanner-identity-detail text-truncate"><i class="bi bi-telephone me-2"></i>{{ displayAdminPhone(selectedAdmin) }}</div>
+              </div>
+            </aside>
             
             <div class="scanner-header text-center mb-4 z-2 position-relative">
               <h4 class="text-white fw-bold mb-1">{{ scanningTitle }}</h4>
               <p class="text-white-50 fs-6 mb-0">{{ scanningSubtitle }}</p>
+              <div v-if="scanningAction === 'register' && selectedAdmin" class="scanner-registration-identity-mobile d-lg-none mt-3">
+                <strong>{{ selectedAdminLabel }}</strong>
+                <span>{{ displayAdminEmail(selectedAdmin) }}</span>
+              </div>
+              <label v-if="videoInputDevices.length > 1" class="scanner-camera-picker mt-3">
+                <i class="bi bi-camera-video" aria-hidden="true"></i>
+                <select v-model="selectedCameraId" aria-label="Chọn thiết bị camera" :disabled="isSwitchingCamera" @change="switchCamera">
+                  <option v-for="(device, index) in videoInputDevices" :key="device.deviceId" :value="device.deviceId">
+                    {{ device.label || `Camera ${index + 1}` }}
+                  </option>
+                </select>
+              </label>
             </div>
 
             <div class="face-id-ring-container position-relative" :class="{'zoom-closer': isRegistering && currentRegStep === 4}">
@@ -134,7 +270,7 @@
               </div>
             </div>
 
-            <div class="scanner-footer text-center mt-5 z-2 position-relative" style="min-height: 100px;">
+            <div class="scanner-footer text-center mt-5 z-2 position-relative">
               <Transition name="fade" mode="out-in">
                 <div :key="resultMessage || errorMessage" class="fw-bold fs-6 px-3 lh-sm" :class="messageColorClass">
                   {{ errorMessage || resultMessage || 'Đang chuẩn bị camera...' }}
@@ -144,9 +280,6 @@
                 <div class="d-flex justify-content-center gap-3">
                   <div v-for="n in 5" :key="n" class="step-dot" :class="{'is-active': currentRegStep >= n - 1}"></div>
                 </div>
-              </div>
-              <div class="mt-4" v-if="!isRegistering && !isLoadingModels">
-                 <button class="btn btn-outline-light rounded-pill px-4" @click="stopScanningMode">Hủy bỏ</button>
               </div>
             </div>
 
@@ -162,33 +295,44 @@
 import { computed, nextTick, onUnmounted, ref } from 'vue';
 import apiClient from '@/utils/apiClient';
 import Swal from 'sweetalert2';
-import SoraSkeleton from '@/components/ui/SoraSkeleton.vue';
+import SoraImage from '@/components/ui/SoraImage.vue';
+import AdminLoadingSpinner from '@/components/admin/AdminLoadingSpinner.vue';
+import defaultAvatar from '@/assets/images/defaults/avatar1.png';
 
 const MODEL_URL = '/face-api-models';
 const MODEL_NAME = 'face-api.js';
 const MODEL_VERSION = '0.22.2';
-const THRESHOLD = 0.48;
 
 const isVisible = ref(false);
 const isFetchingInitialData = ref(false);
+const hasLoadedAdmins = ref(false);
 const isLoadingModels = ref(false);
 const isProcessing = ref(false);
 const isCameraActive = ref(false);
 const videoRef = ref(null);
 const streamRef = ref(null);
 const cameraAspectRatio = ref('4 / 3');
+const videoInputDevices = ref([]);
+const selectedCameraId = ref('');
+const isSwitchingCamera = ref(false);
 const admins = ref([]);
 const selectedAdminId = ref('');
 const searchQuery = ref('');
-const isDropdownOpen = ref(false);
+const isFetchingProfile = ref(false);
 const profile = ref({ has_profile: false, sample_count: 0, requires_reset: false });
+const pagination = ref({
+  currentPage: 1,
+  lastPage: 1,
+  perPage: 25,
+  total: 0,
+  from: 0,
+  to: 0,
+});
 const modalMode = ref('manage');
 const resultMessage = ref('');
 const resultType = ref('info');
 const errorMessage = ref('');
 const matchedAdmin = ref(null);
-const nearestAdmin = ref(null);
-const candidates = ref([]);
 const lastDistance = ref(null);
 const isAutoScanEnabled = ref(false);
 
@@ -226,6 +370,12 @@ const messageColorClass = computed(() => {
   if (resultType.value === 'warning') return 'text-warning';
   return 'text-white';
 });
+const canRetryCurrentScan = computed(() => (
+  !isProcessing.value
+  && !isLoadingModels.value
+  && !isRegistering.value
+  && !isSwitchingCamera.value
+));
 
 const startScanningMode = async (action) => {
   scanningAction.value = action;
@@ -250,32 +400,55 @@ const stopScanningMode = () => {
   scanProgress.value = 0;
 };
 
+const retryCurrentScan = async () => {
+  if (!canRetryCurrentScan.value) return;
+
+  clearMessages();
+  scanProgress.value = 0;
+
+  if (!isCameraActive.value) {
+    await startCamera();
+  }
+
+  if (!isCameraActive.value) return;
+
+  if (scanningAction.value === 'attendance') {
+    await attendanceByFace();
+    startAutoScan();
+  } else if (scanningAction.value === 'verify') {
+    await verifyFace();
+  } else if (scanningAction.value === 'register') {
+    await registerFace();
+  }
+};
+
 let modelLoadPromise = null;
 let faceApiModule = null;
 let autoScanTimer = null;
-
-const filteredAdmins = computed(() => {
-  if (!searchQuery.value) return admins.value;
-  const q = searchQuery.value.toLowerCase();
-  return admins.value.filter(a => 
-    (a.fullname && a.fullname.toLowerCase().includes(q)) || 
-    (a.email && a.email.toLowerCase().includes(q))
-  );
-});
+let adminSearchTimer = null;
+let adminsRequestVersion = 0;
 
 const selectAdmin = (id) => {
   selectedAdminId.value = id;
+  profile.value = { has_profile: false, sample_count: 0, requires_reset: false };
   fetchProfile();
 };
 
-const closeDropdownDelayed = () => {
-  setTimeout(() => {
-    isDropdownOpen.value = false;
-  }, 200);
+const clearSelectedAdmin = () => {
+  selectedAdminId.value = '';
+  isFetchingProfile.value = false;
+  profile.value = { has_profile: false, sample_count: 0, requires_reset: false };
 };
 
-const onSearchInput = () => {
-  isDropdownOpen.value = true;
+const scheduleAdminSearch = () => {
+  if (adminSearchTimer) {
+    window.clearTimeout(adminSearchTimer);
+  }
+
+  adminSearchTimer = window.setTimeout(() => {
+    clearSelectedAdmin();
+    fetchAdmins(1);
+  }, 300);
 };
 
 const openModal = async (mode = 'manage') => {
@@ -286,11 +459,9 @@ const openModal = async (mode = 'manage') => {
   clearMessages();
   await nextTick();
   if (isManageMode.value) {
-    if (admins.value.length === 0) {
-      isFetchingInitialData.value = true;
-    }
-    await fetchAdmins();
-    isFetchingInitialData.value = false;
+    clearSelectedAdmin();
+    searchQuery.value = '';
+    await fetchAdmins(1);
   }
 };
 
@@ -301,8 +472,8 @@ const isReady = computed(() => isCameraActive.value && !isLoadingModels.value &&
 const cameraPanelStyle = computed(() => ({
   aspectRatio: cameraAspectRatio.value,
 }));
-const canRegister = computed(() => !!selectedAdminId.value && (!profile.value?.has_profile || profile.value.requires_reset || profile.value.sample_count < 5) && !isProcessing.value);
-const canResetProfile = computed(() => !!selectedAdminId.value && !!profile.value?.has_profile && !isProcessing.value);
+const canRegister = computed(() => !!selectedAdminId.value && !isFetchingProfile.value && (!profile.value?.has_profile || profile.value.requires_reset || profile.value.sample_count < 5) && !isProcessing.value);
+const canResetProfile = computed(() => !!selectedAdminId.value && !isFetchingProfile.value && !!profile.value?.has_profile && !isProcessing.value);
 const selectedAdmin = computed(() => admins.value.find((admin) => String(admin.id) === String(selectedAdminId.value)));
 const selectedAdminLabel = computed(() => selectedAdmin.value ? displayAdminName(selectedAdmin.value) : 'Chưa chọn');
 const profileStatusLabel = computed(() => {
@@ -340,6 +511,10 @@ const helperText = computed(() => (
 
 
 const closeModal = () => {
+  if (adminSearchTimer) {
+    window.clearTimeout(adminSearchTimer);
+    adminSearchTimer = null;
+  }
   stopScanningMode();
   isVisible.value = false;
 };
@@ -348,28 +523,52 @@ const clearMessages = () => {
   resultMessage.value = '';
   errorMessage.value = '';
   matchedAdmin.value = null;
-  nearestAdmin.value = null;
-  candidates.value = [];
   lastDistance.value = null;
 };
 
-const fetchAdmins = async () => {
+const fetchAdmins = async (page = pagination.value.currentPage) => {
+  const requestVersion = ++adminsRequestVersion;
+  isFetchingInitialData.value = true;
   try {
-    const response = await apiClient.get('/admin/face-recognition/admins');
-    admins.value = response.data?.data || [];
+    const response = await apiClient.get('/admin/face-recognition/admins', {
+      params: {
+        page,
+        per_page: pagination.value.perPage,
+        search: searchQuery.value.trim() || undefined,
+      },
+    });
+    if (requestVersion !== adminsRequestVersion) return;
 
-    if (!selectedAdminId.value && admins.value.length) {
-      selectedAdminId.value = admins.value[0].id;
-    }
+    admins.value = response.data?.data || [];
+    const meta = response.data?.meta || {};
+    pagination.value = {
+      currentPage: Number(meta.current_page || page),
+      lastPage: Number(meta.last_page || 1),
+      perPage: Number(meta.per_page || pagination.value.perPage),
+      total: Number(meta.total || 0),
+      from: Number(meta.from || 0),
+      to: Number(meta.to || 0),
+    };
 
     if (selectedAdminId.value) {
-      // Do nothing to searchQuery
+      await fetchProfile();
     }
-
-    await fetchProfile();
   } catch (error) {
-    errorMessage.value = error.response?.data?.message || 'Không thể tải danh sách nhân sự.';
+    if (requestVersion === adminsRequestVersion) {
+      errorMessage.value = error.response?.data?.message || 'Không thể tải danh sách nhân sự.';
+    }
+  } finally {
+    if (requestVersion === adminsRequestVersion) {
+      hasLoadedAdmins.value = true;
+      isFetchingInitialData.value = false;
+    }
   }
+};
+
+const changeAdminPage = (page) => {
+  if (page < 1 || page > pagination.value.lastPage || page === pagination.value.currentPage) return;
+  clearSelectedAdmin();
+  fetchAdmins(page);
 };
 
 const fetchProfile = async () => {
@@ -378,13 +577,42 @@ const fetchProfile = async () => {
     return;
   }
 
+  const requestedAdminId = selectedAdminId.value;
+  isFetchingProfile.value = true;
   try {
     const response = await apiClient.get('/admin/face-recognition/profile', {
-      params: { admin_id: selectedAdminId.value },
+      params: { admin_id: requestedAdminId },
     });
-    profile.value = response.data?.data || { has_profile: false, sample_count: 0, requires_reset: false };
+    if (String(selectedAdminId.value) === String(requestedAdminId)) {
+      profile.value = response.data?.data || { has_profile: false, sample_count: 0, requires_reset: false };
+    }
   } catch (error) {
-    errorMessage.value = error.response?.data?.message || 'Không thể tải trạng thái mẫu khuôn mặt.';
+    if (String(selectedAdminId.value) === String(requestedAdminId)) {
+      errorMessage.value = error.response?.data?.message || 'Không thể tải trạng thái mẫu khuôn mặt.';
+    }
+  } finally {
+    if (String(selectedAdminId.value) === String(requestedAdminId)) {
+      isFetchingProfile.value = false;
+    }
+  }
+};
+
+const confirmAndStartRegistration = async () => {
+  if (!canRegister.value || !selectedAdmin.value) return;
+
+  const result = await Swal.fire({
+    title: 'Xác nhận đăng ký khuôn mặt',
+    html: identityConfirmHtml(selectedAdmin.value, 'Camera sẽ ghi các mẫu mới cho đúng tài khoản này.'),
+    icon: 'info',
+    showCancelButton: true,
+    confirmButtonColor: '#009981',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Bắt đầu đăng ký',
+    cancelButtonText: 'Kiểm tra lại',
+  });
+
+  if (result.isConfirmed) {
+    await startScanningMode('register');
   }
 };
 
@@ -421,17 +649,30 @@ const startCamera = async () => {
     if (streamRef.value) {
       isCameraActive.value = true;
       syncVideoAspect();
+      await refreshVideoInputs();
       return;
     }
 
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { 
-        facingMode: 'user',
+    const createStream = (deviceId = '') => navigator.mediaDevices.getUserMedia({
+      video: {
+        ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'user' }),
         width: { ideal: 1280 },
         height: { ideal: 720 }
       },
       audio: false,
     });
+
+    let stream;
+    try {
+      stream = await createStream(selectedCameraId.value);
+    } catch (error) {
+      if (!selectedCameraId.value || !['NotFoundError', 'OverconstrainedError'].includes(error?.name)) {
+        throw error;
+      }
+
+      selectedCameraId.value = '';
+      stream = await createStream();
+    }
 
     streamRef.value = stream;
     if (videoRef.value) {
@@ -440,9 +681,51 @@ const startCamera = async () => {
       syncVideoAspect();
     }
     isCameraActive.value = true;
+    await refreshVideoInputs();
   } catch (error) {
     isCameraActive.value = false;
     errorMessage.value = error.message || 'Không thể bật camera hoặc tải model nhận diện.';
+  }
+};
+
+const refreshVideoInputs = async () => {
+  if (!navigator.mediaDevices?.enumerateDevices) return;
+
+  let devices;
+  try {
+    devices = await navigator.mediaDevices.enumerateDevices();
+  } catch (error) {
+    console.warn('Không thể liệt kê thiết bị camera.', error);
+    return;
+  }
+
+  videoInputDevices.value = devices.filter((device) => device.kind === 'videoinput');
+
+  const activeCameraId = streamRef.value?.getVideoTracks?.()[0]?.getSettings?.().deviceId;
+  if (activeCameraId) {
+    selectedCameraId.value = activeCameraId;
+  } else if (!selectedCameraId.value && videoInputDevices.value.length > 0) {
+    selectedCameraId.value = videoInputDevices.value[0].deviceId;
+  }
+};
+
+const switchCamera = async () => {
+  if (isSwitchingCamera.value || !selectedCameraId.value) return;
+
+  isSwitchingCamera.value = true;
+  activeScanSession++;
+  stopAutoScan();
+  stopCamera();
+  clearMessages();
+  scanProgress.value = 0;
+
+  try {
+    await startCamera();
+    if (isAttendanceMode.value && isCameraActive.value) {
+      startAutoScan();
+    }
+  } finally {
+    isSwitchingCamera.value = false;
   }
 };
 
@@ -677,7 +960,6 @@ const verifyFace = async () => {
     if (activeScanSession !== currentSession) return;
     const response = await apiClient.post('/admin/face-recognition/verify', {
       descriptor,
-      threshold: THRESHOLD,
     });
     if (activeScanSession !== currentSession) return;
 
@@ -690,17 +972,9 @@ const verifyFace = async () => {
     
     if (data.is_matched && data.matched_admin) {
       selectedAdminId.value = data.matched_admin.id;
-      const admin = admins.value.find(a => a.id === data.matched_admin.id);
-      if (admin) {
-        searchQuery.value = admin.fullname || admin.email;
-      }
+      searchQuery.value = data.matched_admin.fullname || data.matched_admin.email || '';
       await fetchProfile();
 
-      await showRecognitionAlert(data.matched_admin, {
-        title: 'Định danh thành công',
-        message: resultMessage.value,
-        distance: data.distance,
-      });
     }
     await fetchAdmins();
   });
@@ -713,7 +987,6 @@ const attendanceByFace = async (confirmCheckout = false, options = {}) => {
     if (activeScanSession !== currentSession) return;
     const response = await apiClient.post('/admin/face-recognition/attendance', {
       descriptor,
-      threshold: THRESHOLD,
       confirm_checkout: confirmCheckout,
     });
     if (activeScanSession !== currentSession) return;
@@ -741,7 +1014,6 @@ const attendanceByFace = async (confirmCheckout = false, options = {}) => {
         if (activeScanSession !== currentSession) return;
         const confirmedResponse = await apiClient.post('/admin/face-recognition/attendance', {
           descriptor,
-          threshold: THRESHOLD,
           confirm_checkout: true,
         });
         if (activeScanSession !== currentSession) return;
@@ -816,8 +1088,6 @@ const resetFaceProfile = async () => {
 const applyRecognitionData = (data) => {
   lastDistance.value = data.distance;
   matchedAdmin.value = data.matched_admin;
-  nearestAdmin.value = data.nearest_admin;
-  candidates.value = data.candidates || [];
 };
 
 const runFaceAction = async (action) => {
@@ -829,7 +1099,6 @@ const runFaceAction = async (action) => {
     await action();
   } catch (error) {
     const data = error.response?.data?.data;
-    const statusCode = error.response?.status;
     const msg = error.response?.data?.message || error.message || 'Không thể xử lý khuôn mặt.';
     
     if (data) {
@@ -837,7 +1106,12 @@ const runFaceAction = async (action) => {
       resultType.value = 'warning';
     }
     
-    errorMessage.value = msg;
+    if (error.message === 'NO_FACE') {
+      resultType.value = 'warning';
+      resultMessage.value = 'Chưa phát hiện khuôn mặt rõ trong khung. Hãy điều chỉnh vị trí rồi quét lại.';
+    } else {
+      errorMessage.value = msg;
+    }
     
     if (data?.action === 'blocked') {
       stopAutoScan();
@@ -920,7 +1194,7 @@ const recognitionAlertHtml = (admin, options = {}) => `
         ${options.distance !== undefined && options.distance !== null ? `
           <div class="face-alert-line">
             <i class="bi bi-bullseye"></i>
-            <span>Khoảng cách ${escapeHtml(Number(options.distance).toFixed(4))} / ngưỡng ${escapeHtml(THRESHOLD)}</span>
+            <span>Khoảng cách đối chiếu: ${escapeHtml(Number(options.distance).toFixed(4))}</span>
           </div>
         ` : ''}
       </div>
@@ -952,6 +1226,9 @@ const formatDate = (value) => {
 defineExpose({ openModal, closeModal });
 
 onUnmounted(() => {
+  if (adminSearchTimer) {
+    window.clearTimeout(adminSearchTimer);
+  }
   stopCamera();
 });
 </script>
@@ -971,7 +1248,150 @@ onUnmounted(() => {
 }
 
 .face-id-setup {
+  width: 100vw;
+  height: 100dvh;
+  max-height: none;
   transition: all 0.3s ease;
+}
+
+.face-manager-header {
+  flex: 0 0 auto;
+}
+
+.face-manager-header h6 {
+  font-size: 1.05rem;
+}
+
+.face-manager-header p {
+  font-size: 0.78rem;
+}
+
+.face-manager-content {
+  min-height: 0;
+}
+
+.face-manager-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.face-manager-search {
+  width: min(100%, 440px);
+}
+
+.min-w-0 {
+  min-width: 0;
+}
+
+.staff-select-control {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #ced4da;
+  cursor: pointer;
+  margin: 0;
+  transition: all 0.2s ease;
+}
+
+.staff-select-control:checked {
+  border-color: #009981;
+  background: #009981;
+}
+
+.staff-select-control:focus-visible {
+  outline: 2px solid rgba(0, 153, 129, 0.35);
+  outline-offset: 2px;
+}
+
+.face-manager-table thead th {
+  padding: 0.9rem 1rem;
+  border-bottom-color: #e8ecef;
+  background: #f8fafb;
+  color: #6c757d;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.face-manager-table tbody td {
+  padding: 1rem;
+}
+
+.face-manager-row {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.face-manager-row:hover {
+  background: rgba(0, 153, 129, 0.05);
+}
+
+.face-manager-row.is-selected {
+  background: rgba(0, 153, 129, 0.1);
+  box-shadow: inset 3px 0 0 #009981;
+}
+
+.face-manager-pagination {
+  background: #fff;
+}
+
+.face-manager-refreshing {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid rgba(0, 153, 129, 0.16);
+  border-radius: 50rem;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 0.25rem 0.75rem rgba(33, 37, 41, 0.08);
+  color: #007a67;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.profile-sample-status {
+  background: #f2faf8;
+  border: 1px solid rgba(0, 153, 129, 0.16);
+}
+
+@media (min-width: 1400px) {
+  .face-manager-grid {
+    min-height: calc(100dvh - 176px);
+  }
+}
+
+@media (max-width: 575.98px) {
+  .face-manager-header {
+    align-items: flex-start !important;
+  }
+
+  .face-manager-header .btn {
+    font-size: 0;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+  }
+
+  .face-manager-header .btn i {
+    margin: 0 !important;
+    font-size: 1rem;
+  }
+
+  .face-manager-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .face-manager-search {
+    width: 100%;
+  }
 }
 
 .face-id-scanner {
@@ -1053,6 +1473,124 @@ onUnmounted(() => {
   background: rgba(0, 0, 0, 0.5);
 }
 
+.scanner-registration-identity {
+  position: absolute;
+  top: 50%;
+  left: clamp(1.25rem, 4vw, 4rem);
+  width: min(280px, 22vw);
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  transform: translateY(-50%);
+  backdrop-filter: blur(8px);
+}
+
+.scanner-verification-result {
+  position: absolute;
+  top: 6.25rem;
+  left: 1.5rem;
+  width: min(300px, calc(100vw - 3rem));
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 1rem;
+  border: 1px solid rgba(75, 224, 200, 0.4);
+  border-radius: 1rem;
+  background: rgba(0, 153, 129, 0.16);
+  color: #fff;
+  backdrop-filter: blur(8px);
+}
+
+.scanner-identity-icon {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0, 153, 129, 0.2);
+  color: #4be0c8;
+  font-size: 1.2rem;
+}
+
+.scanner-identity-label {
+  margin-bottom: 0.2rem;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.scanner-identity-name {
+  margin-bottom: 0.45rem;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.scanner-identity-detail {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.78rem;
+  line-height: 1.7;
+}
+
+.scanner-registration-identity-mobile {
+  width: min(88vw, 360px);
+  margin-right: auto;
+  margin-left: auto;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 0.78rem;
+}
+
+.scanner-registration-identity-mobile span {
+  display: block;
+  margin-top: 0.15rem;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.scanner-retry-control {
+  min-width: 116px;
+}
+
+.scanner-footer {
+  height: 100px;
+  flex: 0 0 100px;
+}
+
+.scanner-camera-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: min(88vw, 360px);
+  padding: 0.45rem 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.scanner-camera-picker select {
+  min-width: 0;
+  max-width: 280px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 0.85rem;
+}
+
+.scanner-camera-picker option {
+  color: #212529;
+}
+
 .step-dot {
   width: 12px;
   height: 12px;
@@ -1093,7 +1631,4 @@ onUnmounted(() => {
 .btn-outline-brand:hover:not(:disabled) { color: #fff; background-color: #009981; border-color: #009981; }
 .bg-brand-soft { background-color: rgba(0, 153, 129, 0.08); }
 
-.list-item-hover:hover {
-  background-color: #f8f9fa;
-}
 </style>

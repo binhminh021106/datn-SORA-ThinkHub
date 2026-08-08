@@ -16,9 +16,6 @@ use Illuminate\Validation\Rules;
 
 class AdminForgotPasswordController extends Controller
 {
-    /**
-     * BƯỚC 1: GỬI OTP CHO ADMIN
-     */
     public function sendOtp(Request $request)
     {
         $request->merge([
@@ -27,22 +24,22 @@ class AdminForgotPasswordController extends Controller
 
         $request->validate([
             'email' => 'required|string|max:255|email',
+            'g-recaptcha-response' => ['required', new \App\Rules\Recaptcha],
         ], [
             'email.required' => 'Vui lòng nhập email.',
             'email.email' => 'Email không hợp lệ.',
+            'g-recaptcha-response.required' => 'Vui lòng xác minh bạn không phải là robot.',
         ]);
 
         $email = $request->input('email');
         $rateLimitKey = 'admin-send-otp:' . hash('sha256', $email);
 
-        // Chống spam: Tối đa 1 lần / 2 phút cho hệ thống admin
         if (RateLimiter::tooManyAttempts($rateLimitKey, 1)) {
             $seconds = RateLimiter::availableIn($rateLimitKey);
             return response()->json(['message' => "Hệ thống đang xử lý. Vui lòng thử lại sau {$seconds} giây."], 429);
         }
         RateLimiter::hit($rateLimitKey, 120);
 
-        // Chỉ tạo và gửi OTP nếu Admin tồn tại trong hệ thống
         $admin = Admin::where('email', $email)->first();
         if ($admin) {
             $otp = sprintf("%06d", random_int(100000, 999999));
@@ -61,7 +58,6 @@ class AdminForgotPasswordController extends Controller
             } catch (\Exception $e) {
                 Cache::forget($this->otpCacheKey($email));
                 \Illuminate\Support\Facades\Log::error('Lỗi gửi mail SMTP (Admin OTP): ' . $e->getMessage());
-                // Không throw error ra ngoài để tránh lộ việc email có tồn tại hay không
             }
         }
 
@@ -69,9 +65,6 @@ class AdminForgotPasswordController extends Controller
         return response()->json(['success' => true, 'message' => 'Nếu tài khoản quản trị tồn tại, mã OTP sẽ được gửi đến email của bạn.']);
     }
 
-    /**
-     * BƯỚC 2: XÁC THỰC OTP ADMIN
-     */
     public function verifyOtp(Request $request)
     {
         $request->merge([
@@ -118,7 +111,6 @@ class AdminForgotPasswordController extends Controller
             return response()->json(['message' => 'Bạn đã nhập sai quá nhiều lần. Mã OTP đã bị hủy để bảo mật.'], 403);
         }
 
-        // 3. Lỗi: OTP Sai
         $storedOtpHash = (string) ($cacheData['otp_hash'] ?? '');
         $isValidOtp = $storedOtpHash !== ''
             ? hash_equals($storedOtpHash, $this->otpHash($otp))
@@ -136,12 +128,10 @@ class AdminForgotPasswordController extends Controller
             return response()->json(['message' => "Mã OTP không chính xác. Bạn còn {$attemptsLeft} lần thử."], 400);
         }
 
-        // 4. THÀNH CÔNG: Xóa OTP, sinh Token bảo mật để đi tiếp Bước 3
         Cache::forget($cacheKey);
         RateLimiter::clear($otpRateKey);
 
         $resetToken = Str::random(60);
-        // Token sống 15 phút
         Cache::put($this->resetTokenCacheKey($email), [
             'token_hash' => hash('sha256', $resetToken),
         ], now()->addMinutes(15));
@@ -156,9 +146,6 @@ class AdminForgotPasswordController extends Controller
         }
     }
 
-    /**
-     * BƯỚC 3: ĐẶT LẠI MẬT KHẨU ADMIN
-     */
     public function resetPassword(Request $request)
     {
         $request->merge([
@@ -205,11 +192,9 @@ class AdminForgotPasswordController extends Controller
 
         try {
             DB::transaction(function () use ($admin, $newPassword) {
-                // Cập nhật mật khẩu mới
                 $admin->password = Hash::make($newPassword);
                 $admin->save();
 
-                // Xóa tất cả các token hiện có (đăng xuất thiết bị khác)
                 $admin->tokens()->delete();
             });
         } catch (\Exception $e) {

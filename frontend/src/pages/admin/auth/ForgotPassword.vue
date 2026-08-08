@@ -24,7 +24,15 @@
             <label for="email">Địa chỉ Email</label>
           </div>
 
-          <button type="submit" class="btn btn-brand w-100 py-2 fw-bold text-white shadow-sm mb-3" :disabled="isLoading">
+          <div class="mb-4 d-flex flex-column align-items-center">
+            <div id="otp-recaptcha" v-show="!recaptchaError"></div>
+            <div v-if="recaptchaError" class="text-danger small text-center">
+               <p class="mb-2">{{ recaptchaErrorMessage }}</p>
+               <button type="button" @click="retryRecaptcha" class="btn btn-sm btn-outline-danger">Thử lại</button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-brand w-100 py-2 fw-bold text-white shadow-sm mb-3" :disabled="isLoading || !recaptchaToken">
             <span v-if="isLoading" class="spinner-border spinner-border-sm me-2"></span>
             {{ isLoading ? 'ĐANG XỬ LÝ...' : 'NHẬN MÃ OTP' }}
           </button>
@@ -66,7 +74,15 @@
           </button>
           
           <div class="text-center mt-3">
-             <button type="button" class="btn btn-link text-muted text-decoration-none small fw-semibold p-0" :disabled="countdown > 0 || isResending" @click="handleSendOtp">
+             <div class="mb-3 d-flex flex-column align-items-center">
+               <div id="otp-recaptcha-resend" v-show="!recaptchaError"></div>
+               <div v-if="recaptchaError" class="text-danger small">
+                 <p class="mb-2">{{ recaptchaErrorMessage }}</p>
+                 <button type="button" @click="retryRecaptcha" class="btn btn-sm btn-outline-danger">Thử lại</button>
+               </div>
+             </div>
+
+             <button type="button" class="btn btn-link text-muted text-decoration-none small fw-semibold p-0" :disabled="countdown > 0 || isResending || !recaptchaToken" @click="handleSendOtp">
                {{ isResending ? 'Đang gửi...' : 'Gửi lại mã ' + (countdown > 0 ? `(${countdown}s)` : '') }}
              </button>
           </div>
@@ -102,12 +118,102 @@
 </template>
 
 <script setup>
-import { ref, watch, onUnmounted, nextTick } from 'vue';
+import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 const router = useRouter();
+
+const recaptchaToken = ref('');
+const recaptchaError = ref(false);
+const recaptchaErrorMessage = ref('Không thể tải mã bảo vệ CAPTCHA. Vui lòng thử lại.');
+const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+
+const setRecaptchaError = (message) => {
+  recaptchaToken.value = '';
+  recaptchaErrorMessage.value = message;
+  recaptchaError.value = true;
+};
+
+const retryRecaptcha = () => {
+  recaptchaError.value = false;
+  recaptchaErrorMessage.value = 'Không thể tải mã bảo vệ CAPTCHA. Vui lòng thử lại.';
+  const el = document.getElementById(recaptchaElementId());
+  if (el) el.innerHTML = '';
+  recaptchaToken.value = '';
+  
+  const oldScript = document.getElementById('grecaptcha-script');
+  if (oldScript) oldScript.remove();
+  
+  maxRetries = 50;
+  initRecaptchaScript();
+};
+
+const renderRecaptcha = () => {
+  if (!recaptchaSiteKey) {
+    setRecaptchaError('CAPTCHA chưa được cấu hình. Vui lòng liên hệ quản trị viên.');
+    return;
+  }
+
+  if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
+    const el = document.getElementById(recaptchaElementId());
+    if (el) {
+      try {
+        el.innerHTML = '';
+        recaptchaWidgetId = window.grecaptcha.render(el, {
+          sitekey: recaptchaSiteKey,
+          callback: (token) => { recaptchaToken.value = token; },
+          'expired-callback': () => { recaptchaToken.value = ''; }
+        });
+      } catch (error) {
+        console.error('Failed to render reCAPTCHA', error);
+        setRecaptchaError('Không thể hiển thị CAPTCHA. Vui lòng thử lại.');
+      }
+    }
+  }
+};
+
+const recaptchaElementId = () => step.value === 2 ? 'otp-recaptcha-resend' : 'otp-recaptcha';
+
+let recaptchaInitTimeout = null;
+let maxRetries = 50;
+let recaptchaWidgetId = null;
+
+const initRecaptchaScript = () => {
+  if (!recaptchaSiteKey) {
+    setRecaptchaError('CAPTCHA chưa được cấu hình. Vui lòng liên hệ quản trị viên.');
+    return;
+  }
+
+  const init = () => {
+    if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
+      renderRecaptcha();
+    } else if (maxRetries > 0) {
+      maxRetries--;
+      recaptchaInitTimeout = setTimeout(init, 200);
+    } else {
+      setRecaptchaError('Không thể tải CAPTCHA do lỗi mạng. Vui lòng thử lại.');
+    }
+  };
+
+  const existingScript = document.getElementById('grecaptcha-script');
+  if (existingScript) {
+    init();
+  } else {
+    const script = document.createElement('script');
+    script.id = 'grecaptcha-script';
+    script.src = 'https://www.google.com/recaptcha/api.js?render=explicit';
+    script.async = true;
+    script.defer = true;
+    script.onload = init;
+    script.onerror = () => {
+        console.error('Failed to load reCAPTCHA script');
+        setRecaptchaError('Không thể tải CAPTCHA do lỗi mạng. Vui lòng thử lại.');
+    };
+    document.head.appendChild(script);
+  }
+};
 
 const step = ref(1);
 const isLoading = ref(false);
@@ -219,16 +325,29 @@ const handleSendOtp = async () => {
     const response = await fetch(`${API_URL}/admin/forgot-password/send-otp`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({ email: form.value.email.trim() })
+      body: JSON.stringify({ 
+        email: form.value.email.trim(),
+        'g-recaptcha-response': recaptchaToken.value 
+      })
     });
 
     if (response.ok) {
         Swal.fire({ icon: 'success', title: 'Hoàn tất', text: 'Nếu email hợp lệ, mã OTP sẽ được gửi đến bạn.', confirmButtonColor: '#009981', timer: 2000, showConfirmButton: false });
         step.value = 2;
-        nextTick(() => { if(otpInputs.value[0]) otpInputs.value[0].focus(); });
+        nextTick(() => {
+          if(otpInputs.value[0]) otpInputs.value[0].focus();
+          recaptchaToken.value = '';
+          recaptchaWidgetId = null;
+          recaptchaError.value = false;
+          renderRecaptcha();
+        });
         startCountdown();
     } else {
         await handleFetchErrors(response, 'Lỗi gửi OTP.');
+        if(window.grecaptcha && recaptchaWidgetId !== null) {
+          try { window.grecaptcha.reset(recaptchaWidgetId); } catch (e) {}
+        }
+        recaptchaToken.value = '';
     }
   } catch (error) {
     Swal.fire({ icon: 'error', title: 'Lỗi kết nối', text: 'Không thể kết nối đến máy chủ.', confirmButtonColor: '#009981' });
@@ -309,7 +428,18 @@ const handleResetPassword = async () => {
   }
 };
 
-onUnmounted(() => { if (timer) clearInterval(timer); });
+onMounted(() => {
+  initRecaptchaScript();
+});
+
+onUnmounted(() => {
+  if (recaptchaInitTimeout) {
+    clearTimeout(recaptchaInitTimeout);
+  }
+  if (timer) {
+    clearInterval(timer);
+  }
+});
 </script>
 
 <style scoped>

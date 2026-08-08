@@ -283,6 +283,7 @@ Route::prefix('shop/{shop_slug}')->middleware('throttle:public-read')->group(fun
     Route::get('/products', [ShopController::class, 'index']);
     Route::get('/products/featured', [ShopController::class, 'featured']);
 
+    Route::get('/products/{slug}/quick-add', [ProductDetailController::class, 'quickAdd']);
     Route::get('/products/{slug}', [ProductDetailController::class, 'show']);
     Route::post('/compare', [ClientCompareController::class, 'getCompareData']);
 });
@@ -456,6 +457,7 @@ Route::prefix('admin')->group(function () {
                 Route::post('/cooldown', 'updateConfig');
                 Route::post('/toggle-block-order/{id}', 'toggleBlockOrder');
                 Route::post('/toggle-lock-account/{id}', 'toggleLockAccount');
+                Route::post('/users/{id}/cleanup-spam-orders', 'cleanupSpamOrders');
             });
             Route::controller(AdminOrderController::class)->group(function () {
                 Route::get('orders', 'index');

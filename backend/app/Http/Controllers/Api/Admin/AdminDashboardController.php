@@ -39,37 +39,105 @@ class AdminDashboardController extends Controller
         return round((($current - $previous) / $previous) * 100, 1);
     }
 
-    public function index()
+    private function resolvePeriod(Request $request): array
+    {
+        $today = Carbon::today();
+        $todayString = $today->format('Y-m-d');
+
+        $request->validate([
+            'period' => 'nullable|in:today,last_7_days,last_30_days,this_month,last_month,custom,all',
+            'start_date' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:' . $todayString],
+            'end_date' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:' . $todayString],
+        ]);
+
+        $period = $request->input('period', 'this_month');
+
+        if ($period === 'custom') {
+            if (!$request->filled('start_date') || !$request->filled('end_date')) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'date_range' => ['Vui lòng chọn đầy đủ từ ngày và đến ngày.'],
+                ]);
+            }
+
+            $startDate = Carbon::createFromFormat('Y-m-d', $request->input('start_date'))->startOfDay();
+            $endDate = Carbon::createFromFormat('Y-m-d', $request->input('end_date'))->endOfDay();
+
+            if ($startDate->greaterThan($endDate)) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'end_date' => ['Đến ngày phải sau hoặc bằng từ ngày.'],
+                ]);
+            }
+
+            return ['key' => $period, 'start' => $startDate, 'end' => $endDate, 'label' => 'Tùy chỉnh'];
+        }
+
+        if ($period === 'today') {
+            $startDate = $today->copy()->startOfDay();
+            $label = 'Hôm nay';
+        } elseif ($period === 'last_7_days') {
+            $startDate = $today->copy()->subDays(6)->startOfDay();
+            $label = '7 ngày qua';
+        } elseif ($period === 'last_30_days') {
+            $startDate = $today->copy()->subDays(29)->startOfDay();
+            $label = '30 ngày qua';
+        } elseif ($period === 'last_month') {
+            $startDate = $today->copy()->subMonthNoOverflow()->startOfMonth();
+            return ['key' => $period, 'start' => $startDate, 'end' => $startDate->copy()->endOfMonth(), 'label' => 'Tháng trước'];
+        } elseif ($period === 'all') {
+            $firstOrderDate = Order::orderBy('created_at')->value('created_at');
+            $startDate = $firstOrderDate ? Carbon::parse($firstOrderDate)->startOfDay() : $today->copy()->startOfDay();
+            $label = 'Toàn thời gian';
+        } else {
+            $startDate = $today->copy()->startOfMonth();
+            $label = 'Tháng này';
+        }
+
+        return ['key' => $period, 'start' => $startDate, 'end' => $today->copy()->endOfDay(), 'label' => $label];
+    }
+
+    private function previousPeriod(array $period): array
+    {
+        $dayCount = $period['start']->diffInDays($period['end']);
+        $end = $period['start']->copy()->subSecond();
+
+        return [
+            'start' => $end->copy()->subDays($dayCount)->startOfDay(),
+            'end' => $end,
+        ];
+    }
+
+    public function index(Request $request)
     {
         try {
             // 1. TỔNG QUAN
-            $totalRevenue = $this->applyRevenueFilter(Order::query())->sum('total_amount') ?? 0; 
-            $newOrders = Order::whereDate('created_at', Carbon::today())->count();
-            $totalCustomers = User::count();
+            $period = $this->resolvePeriod($request);
+            $previousPeriod = $this->previousPeriod($period);
+            $periodOrders = Order::query()->whereBetween('created_at', [$period['start'], $period['end']]);
+            $totalRevenue = $this->applyRevenueFilter((clone $periodOrders))->sum('total_amount') ?? 0;
+            $newOrders = (clone $periodOrders)->count();
+            $totalCustomers = User::whereBetween('created_at', [$period['start'], $period['end']])->count();
+            $successfulOrders = $this->applyRevenueFilter((clone $periodOrders))->count();
+            $cancelledOrders = (clone $periodOrders)->whereIn('status', ['cancelled', 'returned', 'return_requested'])->count();
+            $averageOrderValue = $successfulOrders > 0 ? $totalRevenue / $successfulOrders : 0;
                 
             $inventory = Schema::hasTable('product_variants') && Schema::hasColumn('product_variants', 'stock_quantity') 
                 ? DB::table('product_variants')->whereNull('deleted_at')->sum('stock_quantity') 
                 : 0;
 
             // 2. TÍNH TOÁN % TĂNG/GIẢM SO VỚI KỲ TRƯỚC
-            $now = Carbon::now();
-            $thisMonthStart = $now->copy()->startOfMonth();
-            $lastMonthStart = $now->copy()->subMonth()->startOfMonth();
-            $lastMonthEnd = $now->copy()->subMonth()->endOfMonth();
-
-            $revenueThisMonth = $this->applyRevenueFilter(Order::query())->where('created_at', '>=', $thisMonthStart)->sum('total_amount') ?? 0;
-            $revenueLastMonth = $this->applyRevenueFilter(Order::query())->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])->sum('total_amount') ?? 0;
-            $revenueGrowth = $this->calculatePercentageChange($revenueThisMonth, $revenueLastMonth);
-
-            $ordersYesterday = Order::whereDate('created_at', Carbon::yesterday())->count();
-            $ordersGrowth = $this->calculatePercentageChange($newOrders, $ordersYesterday);
-
-            $customersThisMonth = User::where('created_at', '>=', $thisMonthStart)->count();
-            $customersLastMonth = User::whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])->count();
-            $customersGrowth = $this->calculatePercentageChange($customersThisMonth, $customersLastMonth);
+            $previousOrders = Order::query()->whereBetween('created_at', [$previousPeriod['start'], $previousPeriod['end']]);
+            $revenueGrowth = $this->calculatePercentageChange(
+                $totalRevenue,
+                $this->applyRevenueFilter((clone $previousOrders))->sum('total_amount') ?? 0
+            );
+            $ordersGrowth = $this->calculatePercentageChange($newOrders, (clone $previousOrders)->count());
+            $customersGrowth = $this->calculatePercentageChange(
+                $totalCustomers,
+                User::whereBetween('created_at', [$previousPeriod['start'], $previousPeriod['end']])->count()
+            );
 
             // 3. ĐƠN HÀNG GẦN ĐÂY
-            $recentOrders = Order::with('user:id,fullName')->orderBy('created_at', 'desc')->take(8)->get()->map(function($order) {
+            $recentOrders = (clone $periodOrders)->with('user:id,fullName')->orderBy('created_at', 'desc')->take(8)->get()->map(function($order) {
                 return [
                     'id' => $order->id,
                     'code' => $order->order_code ?? 'ORD-' . str_pad($order->id, 4, '0', STR_PAD_LEFT), 
@@ -84,7 +152,8 @@ class AdminDashboardController extends Controller
             $productsQuery = DB::table('order_items')
                 ->join('orders', 'order_items.order_id', '=', 'orders.id')
                 ->whereNull('orders.deleted_at') 
-                ->whereNotNull('order_items.product_id'); 
+                ->whereNotNull('order_items.product_id')
+                ->whereBetween('orders.created_at', [$period['start'], $period['end']]);
                 
             $topProductsRaw = $this->applyRevenueFilter($productsQuery, 'orders')
                 ->select('order_items.product_id', DB::raw('SUM(order_items.quantity) as total_sold'))
@@ -139,7 +208,11 @@ class AdminDashboardController extends Controller
             // 4.2. ĐÁNH GIÁ MỚI NHẤT (RECENT REVIEWS)
             $recentReviews = collect([]);
             if (Schema::hasTable('reviews')) {
-                $recentReviewsRaw = Review::with('user:id,fullName,avatar_url')->orderBy('created_at', 'desc')->take(5)->get();
+                $recentReviewsRaw = Review::with('user:id,fullName,avatar_url')
+                    ->whereBetween('created_at', [$period['start'], $period['end']])
+                    ->orderBy('created_at', 'desc')
+                    ->take(5)
+                    ->get();
                 $recentReviews = $recentReviewsRaw->map(function($review) {
                     return [
                         'id' => $review->id,
@@ -210,8 +283,7 @@ class AdminDashboardController extends Controller
             });
 
             // 6. BIỂU ĐỒ & PAYMENT STATS (Mặc định lấy từ đầu năm nay đến hiện tại)
-            $today = Carbon::today();
-            $chartData = $this->getDynamicChartData($today->copy()->startOfYear(), $today->copy()->endOfDay());
+            $chartData = $this->getDynamicChartData($period['start'], $period['end']);
 
             // 7. NHÂN SỰ (STAFF STATS)
             $totalStaff = Schema::hasTable('admins') ? DB::table('admins')->whereNull('deleted_at')->count() : User::where('role_id', '!=', 2)->count();
@@ -265,7 +337,16 @@ class AdminDashboardController extends Controller
                         'ordersGrowth' => $ordersGrowth,
                         'inventory' => (int) $inventory,
                         'totalCustomers' => $totalCustomers,
-                        'customersGrowth' => $customersGrowth
+                        'customersGrowth' => $customersGrowth,
+                        'averageOrderValue' => (float) $averageOrderValue,
+                        'successfulOrders' => $successfulOrders,
+                        'cancelledOrders' => $cancelledOrders,
+                    ],
+                    'period' => [
+                        'key' => $period['key'],
+                        'label' => $period['label'],
+                        'start_date' => $period['start']->format('Y-m-d'),
+                        'end_date' => $period['end']->format('Y-m-d'),
                     ],
                     'recentOrders' => $recentOrders,
                     'topProducts' => $topProducts,
@@ -276,7 +357,8 @@ class AdminDashboardController extends Controller
                     'staffStats' => $staffStats,
                     'chartData' => [
                         'labels' => $chartData['labels'],
-                        'values' => $chartData['values']
+                        'values' => $chartData['values'],
+                        'orderCounts' => $chartData['orderCounts'],
                     ],
                     'couponChart' => [
                         'labels' => $chartData['labels'],
@@ -289,6 +371,8 @@ class AdminDashboardController extends Controller
                 ]
             ], 200);
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -303,44 +387,15 @@ class AdminDashboardController extends Controller
     public function chart(Request $request)
     {
         try {
-            $isAll = $request->input('is_all') === 'true';
-            $startDateInput = $request->input('start_date');
-            $endDateInput = $request->input('end_date');
-            $today = Carbon::today();
-
-            if ($isAll) {
-                $firstOrder = Order::orderBy('created_at', 'asc')->first();
-                $startDate = $firstOrder ? $firstOrder->created_at->startOfDay() : Carbon::createFromDate(2026, 1, 1)->startOfDay();
-                $endDate = $today->copy()->endOfDay();
-            } else {
-                if ($startDateInput && $endDateInput) {
-                    $startDate = Carbon::parse($startDateInput)->startOfDay();
-                    $endDate = Carbon::parse($endDateInput)->endOfDay();
-                } elseif (!$startDateInput && $endDateInput) {
-                    $endDate = Carbon::parse($endDateInput)->endOfDay();
-                    $startDate = $endDate->copy()->startOfYear();
-                } elseif ($startDateInput && !$endDateInput) {
-                    $startDate = Carbon::parse($startDateInput)->startOfDay();
-                    $endDate = $today->copy()->endOfDay();
-                } else {
-                    $startDate = $today->copy()->startOfYear();
-                    $endDate = $today->copy()->endOfDay();
-                }
-            }
-
-            if ($endDate > $today->copy()->endOfDay()) { $endDate = $today->copy()->endOfDay(); }
-            if ($startDate > $today->copy()->endOfDay()) { $startDate = $today->copy()->endOfDay(); }
-            if ($startDate > $endDate) {
-                $temp = $startDate; $startDate = $endDate; $endDate = $temp;
-            }
-
-            $chartData = $this->getDynamicChartData($startDate, $endDate);
+            $period = $this->resolvePeriod($request);
+            $chartData = $this->getDynamicChartData($period['start'], $period['end']);
 
             return response()->json([
                 'success' => true,
                 'data' => [
                     'labels' => $chartData['labels'],
                     'values' => $chartData['values'],
+                    'orderCounts' => $chartData['orderCounts'],
                     'paymentStats' => $chartData['paymentStats'],
                     'couponChart' => [
                         'labels' => $chartData['labels'],
@@ -349,6 +404,8 @@ class AdminDashboardController extends Controller
                 ]
             ], 200);
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -358,42 +415,28 @@ class AdminDashboardController extends Controller
     }
 
     /**
-     * Tự động kéo dài thời gian (Auto-extend logic) nếu kỳ lọc rỗng
-     * & nhóm dữ liệu (Ngày/Tháng/Năm) để biểu đồ gọn gàng
+     * Nhóm dữ liệu theo ngày, tháng hoặc năm cho đúng kỳ đã chọn.
      */
     private function getDynamicChartData($startDate, $endDate)
     {
-        // LOGIC AUTO-EXTEND (Tự động kéo về quá khứ tối đa 6 tháng nếu không có đơn hàng)
-        $hasData = false;
-        $currentStartDate = $startDate->copy();
-        $maxTries = 6;
-        $tries = 0;
-
-        while ($tries < $maxTries) {
-            $exists = Order::where('created_at', '>=', $currentStartDate)
-                           ->where('created_at', '<=', $endDate)
-                           ->exists();
-            if ($exists) {
-                $hasData = true;
-                break;
-            }
-            // Nếu không có dữ liệu, lùi lại thêm 1 tháng
-            $currentStartDate->subMonths(1)->startOfMonth();
-            $tries++;
-        }
-
-        // Cập nhật lại startDate nếu quá trình lùi ngày tìm thấy dữ liệu
-        if ($hasData) {
-            $startDate = $currentStartDate;
-        }
-
         $ordersQuery = Order::where('created_at', '>=', $startDate)
                             ->where('created_at', '<=', $endDate);
 
         $hasCouponId = Schema::hasColumn('orders', 'coupon_id');
         $hasDiscountAmount = Schema::hasColumn('orders', 'discount_amount');
 
-        $orders = $this->applyRevenueFilter($ordersQuery)->get();
+        $orderColumns = ['created_at', 'total_amount', 'payment_method'];
+        if ($hasCouponId) {
+            $orderColumns[] = 'coupon_id';
+        }
+        if ($hasDiscountAmount) {
+            $orderColumns[] = 'discount_amount';
+        }
+
+        // Iterate lazily so a long dashboard period does not retain every order in memory.
+        $orders = $this->applyRevenueFilter($ordersQuery)
+            ->select($orderColumns)
+            ->cursor();
         $diffDays = $startDate->diffInDays($endDate);
 
         if ($diffDays <= 60) {
@@ -405,6 +448,7 @@ class AdminDashboardController extends Controller
         }
 
         $revenues = [];
+        $orderCounts = [];
         $couponUses = [];
         $paymentCounts = ['vnpay' => 0, 'momo' => 0, 'cod' => 0, 'bank' => 0];
         $totalPayments = 0;
@@ -416,6 +460,8 @@ class AdminDashboardController extends Controller
 
             if (!isset($revenues[$key])) { $revenues[$key] = 0; }
             $revenues[$key] += $order->total_amount;
+            if (!isset($orderCounts[$key])) { $orderCounts[$key] = 0; }
+            $orderCounts[$key]++;
 
             // Đếm số lượt sử dụng coupon theo ngày
             if (!isset($couponUses[$key])) { $couponUses[$key] = 0; }
@@ -457,6 +503,7 @@ class AdminDashboardController extends Controller
 
         $labels = [];
         $values = [];
+        $orderCountValues = [];
         $couponValues = [];
         $currentDate = $startDate->copy();
 
@@ -467,6 +514,7 @@ class AdminDashboardController extends Controller
                 $dateString = $currentDate->format('Y-m-d');
                 $labels[] = $currentDate->format('d/m');
                 $values[] = isset($revenues[$dateString]) ? (float) $revenues[$dateString] : 0;
+                $orderCountValues[] = isset($orderCounts[$dateString]) ? (int) $orderCounts[$dateString] : 0;
                 $couponValues[] = isset($couponUses[$dateString]) ? (int) $couponUses[$dateString] : 0;
                 $currentDate->addDay();
             }
@@ -477,6 +525,7 @@ class AdminDashboardController extends Controller
                 $dateString = $currentDate->format('Y-m');
                 $labels[] = $currentDate->format('m/Y');
                 $values[] = isset($revenues[$dateString]) ? (float) $revenues[$dateString] : 0;
+                $orderCountValues[] = isset($orderCounts[$dateString]) ? (int) $orderCounts[$dateString] : 0;
                 $couponValues[] = isset($couponUses[$dateString]) ? (int) $couponUses[$dateString] : 0;
                 $currentDate->addMonth();
             }
@@ -487,6 +536,7 @@ class AdminDashboardController extends Controller
                 $dateString = $currentDate->format('Y');
                 $labels[] = $dateString; 
                 $values[] = isset($revenues[$dateString]) ? (float) $revenues[$dateString] : 0;
+                $orderCountValues[] = isset($orderCounts[$dateString]) ? (int) $orderCounts[$dateString] : 0;
                 $couponValues[] = isset($couponUses[$dateString]) ? (int) $couponUses[$dateString] : 0;
                 $currentDate->addYear();
             }
@@ -495,6 +545,7 @@ class AdminDashboardController extends Controller
         return [
             'labels' => $labels,
             'values' => $values,
+            'orderCounts' => $orderCountValues,
             'couponValues' => $couponValues,
             'paymentStats' => $paymentStats
         ];

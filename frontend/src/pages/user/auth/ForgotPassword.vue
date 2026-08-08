@@ -4,22 +4,19 @@
       <!-- Cột trái: Hình ảnh Branding giống Login -->
       <div class="auth-banner">
         <div class="banner-overlay"></div>
+        <router-link to="/" class="auth-home-link">
+          <i class="bi bi-house-door" aria-hidden="true"></i>
+          <span>Trang chủ</span>
+        </router-link>
         <div class="banner-content">
           <img src="../../../assets/images/logo2.png" alt="SORA Jewelry Logo" class="brand-logo-img" />
           <p class="brand-slogan">Tôn Vinh Vẻ Đẹp Độc Bản</p>
         </div>
-        <router-link to="/login" class="back-link">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="19" y1="12" x2="5" y2="12"></line>
-            <polyline points="12 19 5 12 12 5"></polyline>
-          </svg>
-          Quay lại Đăng nhập
-        </router-link>
       </div>
 
       <!-- Cột phải: Form Quên mật khẩu -->
       <div class="auth-box">
-        <router-link to="/login" class="back-link-mobile">
+        <router-link to="/login" class="auth-back-link">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="19" y1="12" x2="5" y2="12"></line>
             <polyline points="12 19 5 12 12 5"></polyline>
@@ -46,7 +43,7 @@
           <div class="form-group">
             <div id="otp-recaptcha" v-show="!recaptchaError"></div>
             <div v-if="recaptchaError" class="recaptcha-error">
-               <p style="color: #cc1e2e; font-size: 14px; margin-bottom: 8px;">Không thể tải mã bảo vệ CAPTCHA do lỗi mạng.</p>
+               <p style="color: #cc1e2e; font-size: 14px; margin-bottom: 8px;">{{ recaptchaErrorMessage }}</p>
                <button type="button" @click="retryRecaptcha" class="btn-resend" style="width: auto; padding: 5px 15px; font-size: 13px;">Thử lại</button>
             </div>
           </div>
@@ -88,7 +85,7 @@
              <div class="form-group mb-2">
                <div id="otp-recaptcha-resend" v-show="!recaptchaError"></div>
                <div v-if="recaptchaError" class="recaptcha-error">
-                 <p style="color: #cc1e2e; font-size: 14px; margin-bottom: 8px;">Khong the tai CAPTCHA. Vui long thu lai.</p>
+                 <p style="color: #cc1e2e; font-size: 14px; margin-bottom: 8px;">{{ recaptchaErrorMessage }}</p>
                  <button type="button" @click="retryRecaptcha" class="btn-resend" style="width: auto; padding: 5px 15px; font-size: 13px;">Thu lai</button>
                </div>
              </div>
@@ -148,9 +145,18 @@ const showPass2 = ref(false);
 
 const recaptchaToken = ref('');
 const recaptchaError = ref(false);
+const recaptchaErrorMessage = ref('Không thể tải mã bảo vệ CAPTCHA. Vui lòng thử lại.');
+const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+
+const setRecaptchaError = (message) => {
+  recaptchaToken.value = '';
+  recaptchaErrorMessage.value = message;
+  recaptchaError.value = true;
+};
 
 const retryRecaptcha = () => {
   recaptchaError.value = false;
+  recaptchaErrorMessage.value = 'Không thể tải mã bảo vệ CAPTCHA. Vui lòng thử lại.';
   const el = document.getElementById(recaptchaElementId());
   if (el) el.innerHTML = '';
   recaptchaToken.value = '';
@@ -163,15 +169,25 @@ const retryRecaptcha = () => {
 };
 
 const renderRecaptcha = () => {
-  if (window.grecaptcha && window.grecaptcha.render) {
+  if (!recaptchaSiteKey) {
+    setRecaptchaError('CAPTCHA chưa được cấu hình. Vui lòng liên hệ quản trị viên.');
+    return;
+  }
+
+  if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
     const el = document.getElementById(recaptchaElementId());
     if (el) {
+      try {
       el.innerHTML = '';
       recaptchaWidgetId = window.grecaptcha.render(el, {
-        sitekey: import.meta.env.VITE_RECAPTCHA_SITE_KEY,
+        sitekey: recaptchaSiteKey,
         callback: (token) => { recaptchaToken.value = token; },
         'expired-callback': () => { recaptchaToken.value = ''; }
       });
+      } catch (error) {
+        console.error('Failed to render reCAPTCHA', error);
+        setRecaptchaError('Không thể hiển thị CAPTCHA. Vui lòng thử lại.');
+      }
     }
   }
 };
@@ -183,20 +199,24 @@ let maxRetries = 50;
 let recaptchaWidgetId = null;
 
 const initRecaptchaScript = () => {
+  if (!recaptchaSiteKey) {
+    setRecaptchaError('CAPTCHA chưa được cấu hình. Vui lòng liên hệ quản trị viên.');
+    return;
+  }
+
   const init = () => {
-    if (window.grecaptcha && window.grecaptcha.ready) {
-      window.grecaptcha.ready(() => {
-        renderRecaptcha();
-      });
+    if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
+      renderRecaptcha();
     } else if (maxRetries > 0) {
       maxRetries--;
       recaptchaInitTimeout = setTimeout(init, 200);
     } else {
-      recaptchaError.value = true;
+      setRecaptchaError('Không thể tải CAPTCHA do lỗi mạng. Vui lòng thử lại.');
     }
   };
 
-  if (window.grecaptcha) {
+  const existingScript = document.getElementById('grecaptcha-script');
+  if (existingScript) {
     init();
   } else {
     const script = document.createElement('script');
@@ -427,6 +447,8 @@ onUnmounted(() => { if (timer) clearInterval(timer); });
 /* Reset & Base - Dựa trên Login.vue của SORA */
 .auth-wrapper {
   min-height: 100vh;
+  min-height: 100dvh;
+  box-sizing: border-box;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -439,8 +461,8 @@ onUnmounted(() => { if (timer) clearInterval(timer); });
   display: flex;
   background: white;
   width: 100%;
-  max-width: 950px;
-  min-height: 600px;
+  max-width: 1120px;
+  min-height: 650px;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 20px 50px rgba(159, 39, 59, 0.15);
@@ -448,7 +470,7 @@ onUnmounted(() => { if (timer) clearInterval(timer); });
 
 /* Banner trái */
 .auth-banner {
-  flex: 1;
+  flex: 0 0 52%;
   position: relative;
   background: #1a060d;
   display: flex;
@@ -495,44 +517,116 @@ onUnmounted(() => { if (timer) clearInterval(timer); });
   font-family: 'Oswald', sans-serif;
 }
 
-.back-link {
+.auth-banner {
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(145deg, #7f2037 0%, #4a1426 48%, #171113 100%);
+}
+
+.auth-banner::before {
+  content: '';
   position: absolute;
-  top: 20px;
-  left: 20px;
-  color: white;
-  text-decoration: none;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 5px;
+  inset: 24px;
+  z-index: 0;
+  border: 1px solid rgba(231, 206, 125, 0.34);
+  border-radius: 18px;
+  box-shadow: inset 0 0 0 10px rgba(255, 255, 255, 0.018);
+}
+
+.banner-overlay {
+  z-index: 1;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(231, 206, 125, 0.2), transparent 31%),
+    linear-gradient(145deg, rgba(87, 18, 38, 0.78), rgba(20, 14, 16, 0.92));
+}
+
+.banner-overlay::before,
+.banner-overlay::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.banner-overlay::before {
+  width: min(58vw, 330px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(231, 206, 125, 0.34);
+  box-shadow: 0 0 0 24px rgba(231, 206, 125, 0.035);
+}
+
+.banner-overlay::after {
+  width: min(42vw, 240px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(231, 206, 125, 0.2);
+}
+
+.banner-content {
   z-index: 2;
-  opacity: 0.8;
-  transition: opacity 0.3s;
+  padding: 48px;
 }
 
-.back-link:hover {
-  opacity: 1;
+.brand-logo-img {
+  max-width: 205px;
+  margin-bottom: 30px;
+  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.38)) drop-shadow(0 0 8px rgba(231, 206, 125, 0.2));
 }
 
-.back-link-mobile {
-  display: none;
-  color: #666;
-  text-decoration: none;
-  font-weight: 500;
+.brand-slogan {
+  color: #f0d97f;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.42);
+}
+
+.auth-home-link {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  z-index: 3;
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
-  margin-bottom: 20px;
-  transition: color 0.3s;
+  gap: 0.45rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid rgba(231, 206, 125, 0.44);
+  border-radius: 8px;
+  background: rgba(24, 12, 16, 0.24);
+  color: rgba(255, 249, 236, 0.92);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.25s ease, color 0.25s ease, transform 0.25s ease;
 }
 
-.back-link-mobile:hover {
+.auth-home-link:hover {
+  background: rgba(231, 206, 125, 0.16);
+  color: #f0d97f;
+  transform: translateX(-2px);
+}
+
+.auth-back-link {
+  display: inline-flex;
+  color: #7e675f;
+  text-decoration: none;
+  font-weight: 600;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  transition: color 0.25s ease, transform 0.25s ease;
+}
+
+.auth-back-link:hover {
   color: #9f273b;
+  transform: translateX(-2px);
 }
 
 /* Box form phải */
 .auth-box {
   flex: 1;
-  padding: 50px 60px;
+  padding: 0 40px 10px 40px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -740,6 +834,12 @@ onUnmounted(() => { if (timer) clearInterval(timer); });
   to { opacity: 1; transform: translateX(0); }
 }
 
+@media (min-width: 769px) and (max-width: 991.98px) {
+  .auth-banner { flex-basis: 48%; }
+  .banner-overlay::before { width: 240px; }
+  .banner-overlay::after { width: 175px; }
+}
+
 @media (max-width: 768px) {
   .auth-container {
     flex-direction: column;
@@ -754,7 +854,7 @@ onUnmounted(() => { if (timer) clearInterval(timer); });
     padding: 40px 25px;
   }
   
-  .back-link-mobile {
+  .auth-back-link {
     display: flex;
   }
   

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 
+// chức năng: lọc đối tượng người dùng dựa trên các tiêu chí như giới tính, hạng thành viên, hoặc tất cả người dùng.
 class AudienceFilterService
 {
     /**

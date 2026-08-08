@@ -4,6 +4,10 @@
       <!-- Cột trái: Hình ảnh Branding -->
       <div class="auth-banner">
         <div class="banner-overlay"></div>
+        <router-link to="/" class="auth-home-link">
+          <i class="bi bi-house-door" aria-hidden="true"></i>
+          <span>Trang chủ</span>
+        </router-link>
         <div class="banner-content">
           <img src="../../../assets/images/logo2.png" alt="SORA Jewelry Logo" class="brand-logo-img" />
           <p class="brand-slogan">Tôn Vinh Vẻ Đẹp Độc Bản</p>
@@ -175,7 +179,12 @@ const handleLogin = async () => {
         router.push(redirectPath);
       }, 1000);
   } catch (error) {
-    if (error.response && error.response.data.errors) {
+    if (error.response?.status === 429) {
+      const retryAfter = Number(error.response.headers?.['retry-after']);
+      errorMessage.value = Number.isFinite(retryAfter) && retryAfter > 0
+        ? `Bạn đã thử đăng nhập quá nhiều lần. Vui lòng thử lại sau ${Math.ceil(retryAfter / 60)} phút.`
+        : 'Bạn đã thử đăng nhập quá nhiều lần. Vui lòng thử lại sau.';
+    } else if (error.response && error.response.data.errors) {
       errorMessage.value = Object.values(error.response.data.errors).flat().join('\n');
     } else {
       errorMessage.value = 'Email hoặc mật khẩu không chính xác.';
@@ -202,6 +211,8 @@ const handleSocialLogin = (platform) => {
 /* Reset & Base */
 .auth-wrapper {
   min-height: 100vh;
+  min-height: 100dvh;
+  box-sizing: border-box;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -214,15 +225,15 @@ const handleSocialLogin = (platform) => {
   display: flex;
   background: white;
   width: 100%;
-  max-width: 950px;
-  min-height: 600px;
+  max-width: 1120px;
+  min-height: 650px;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 20px 50px rgba(159, 39, 59, 0.15);
 }
 
 .auth-banner {
-  flex: 1;
+  flex: 0 0 52%;
   position: relative;
   background: url('https://images.unsplash.com/photo-1617117832890-a5f11e037000?q=80&w=1000&auto=format&fit=crop') center/cover no-repeat;
   display: flex;
@@ -271,9 +282,99 @@ const handleSocialLogin = (platform) => {
   font-family: 'Oswald', sans-serif;
 }
 
+.auth-banner {
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(145deg, #7f2037 0%, #4a1426 48%, #171113 100%);
+}
+
+.auth-banner::before {
+  content: '';
+  position: absolute;
+  inset: 24px;
+  z-index: 0;
+  border: 1px solid rgba(231, 206, 125, 0.34);
+  border-radius: 18px;
+  box-shadow: inset 0 0 0 10px rgba(255, 255, 255, 0.018);
+}
+
+.banner-overlay {
+  z-index: 1;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(231, 206, 125, 0.2), transparent 31%),
+    linear-gradient(145deg, rgba(87, 18, 38, 0.78), rgba(20, 14, 16, 0.92));
+}
+
+.banner-overlay::before,
+.banner-overlay::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.banner-overlay::before {
+  width: min(58vw, 330px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(231, 206, 125, 0.34);
+  box-shadow: 0 0 0 24px rgba(231, 206, 125, 0.035);
+}
+
+.banner-overlay::after {
+  width: min(42vw, 240px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(231, 206, 125, 0.2);
+}
+
+.banner-content {
+  z-index: 2;
+  padding: 48px;
+}
+
+.brand-logo-img {
+  max-width: 205px;
+  margin-bottom: 30px;
+  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.38)) drop-shadow(0 0 8px rgba(231, 206, 125, 0.2));
+}
+
+.brand-slogan {
+  color: #f0d97f;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.42);
+}
+
+.auth-home-link {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid rgba(231, 206, 125, 0.44);
+  border-radius: 8px;
+  background: rgba(24, 12, 16, 0.24);
+  color: rgba(255, 249, 236, 0.92);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.25s ease, color 0.25s ease, transform 0.25s ease;
+}
+
+.auth-home-link:hover {
+  background: rgba(231, 206, 125, 0.16);
+  color: #f0d97f;
+  transform: translateX(-2px);
+}
+
 .auth-box {
   flex: 1;
-  padding: 50px 60px;
+  padding: 40px 40px 10px 40px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -513,6 +614,12 @@ const handleSocialLogin = (platform) => {
   background-color: #f0fdf4;
   color: #166534;
   border-left: 4px solid #22c55e;
+}
+
+@media (min-width: 769px) and (max-width: 991.98px) {
+  .auth-banner { flex-basis: 48%; }
+  .banner-overlay::before { width: 240px; }
+  .banner-overlay::after { width: 175px; }
 }
 
 @media (max-width: 768px) {

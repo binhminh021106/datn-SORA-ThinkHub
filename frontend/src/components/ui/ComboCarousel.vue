@@ -293,7 +293,7 @@ const getComboCardStyle = (index) => {
   const shiftPercent = isMobile ? '12%' : '45%';
 
   if (diff === 0) {
-    return { left: '50%', top: '50%', transform: 'translate(-50%, -50%) scale(1)', zIndex: 30, opacity: 1, boxShadow: '0 25px 50px -12px rgba(var(--sora-primary-rgb), 0.2)' };
+    return { left: '50%', top: '50%', transform: 'translate(-50%, -50%) scale(1)', zIndex: 30, opacity: 1, boxShadow: '0 18px 34px -24px rgba(var(--sora-primary-rgb), 0.42)' };
   } else if (diff === 1 || (total === 2 && diff === 1)) {
     return { left: '50%', top: '50%', transform: `translate(calc(-50% + ${shiftPercent}), -50%) scale(0.88)`, zIndex: 20, opacity: 0.6, boxShadow: 'none' };
   } else if (diff === total - 1) {
@@ -715,12 +715,19 @@ onUnmounted(() => {
   transition: transform 0.7s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.7s ease, box-shadow 0.7s ease, z-index 0s;
   cursor: pointer;
   border-radius: 24px;
+  box-sizing: border-box;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(var(--sora-secondary-rgb), 0.9),
+    rgba(var(--sora-primary-rgb), 0.42) 48%,
+    rgba(var(--sora-secondary-rgb), 0.72)
+  );
 }
 
 .combo-card-inner {
   background-color: #ffffff;
   border-radius: 24px;
-  border: 1px solid rgba(var(--sora-secondary-rgb), 0.3);
   overflow: hidden;
   display: flex;
   flex-direction: row;
@@ -767,7 +774,7 @@ onUnmounted(() => {
 
 .combo-right-panel {
   width: 50%;
-  padding: 2.5rem 3.5rem;
+  padding: 2.5rem 2.25rem;
   background-color: #faf8f5;
   border-left: 1px solid rgba(var(--sora-secondary-rgb), 0.2);
   display: flex;

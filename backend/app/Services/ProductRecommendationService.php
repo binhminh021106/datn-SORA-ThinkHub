@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
+// chức năng: Gợi ý sản phẩm dựa trên giỏ hàng, sản phẩm yêu thích và đơn hàng gần đây của người dùng.
 class ProductRecommendationService
 {
     public function recommend(?User $user, int $limit = 10): array

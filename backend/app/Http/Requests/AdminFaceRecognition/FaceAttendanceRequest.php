@@ -18,7 +18,6 @@ class FaceAttendanceRequest extends FormRequest
         return [
             'descriptor' => ['required', 'array', 'size:128'],
             'descriptor.*' => ['required', 'numeric', 'between:-10,10'],
-            'threshold' => ['nullable', 'numeric', 'min:0.3', 'max:0.8'],
             'confirm_checkout' => ['nullable', 'boolean'],
         ];
     }
@@ -31,8 +30,6 @@ class FaceAttendanceRequest extends FormRequest
             'descriptor.size' => 'Du lieu khuon mat cham cong phai co dung 128 gia tri.',
             'descriptor.*.numeric' => 'Du lieu khuon mat cham cong chi duoc chua so.',
             'descriptor.*.between' => 'Du lieu khuon mat cham cong nam ngoai nguong cho phep.',
-            'threshold.min' => 'Nguong nhan dien khong duoc nho hon 0.3.',
-            'threshold.max' => 'Nguong nhan dien khong duoc lon hon 0.8.',
             'confirm_checkout.boolean' => 'Trang thai xac nhan tan ca khong hop le.',
         ];
     }

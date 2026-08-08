@@ -96,7 +96,7 @@
                   <div class="col-12 mt-3">
                     <div id="contact-recaptcha" v-show="!recaptchaError"></div>
                     <div v-if="recaptchaError" class="recaptcha-error">
-                       <p style="color: #cc1e2e; font-size: 14px; margin-bottom: 8px;">Không thể tải mã bảo vệ CAPTCHA do lỗi mạng.</p>
+                       <p style="color: #cc1e2e; font-size: 14px; margin-bottom: 8px;">{{ recaptchaErrorMessage }}</p>
                        <button type="button" @click="retryRecaptcha" class="btn-resend" style="width: auto; padding: 5px 15px; font-size: 13px;">Thử lại</button>
                     </div>
                   </div>
@@ -144,9 +144,18 @@ const form = ref({
 const isSubmitting = ref(false);
 const recaptchaToken = ref('');
 const recaptchaError = ref(false);
+const recaptchaErrorMessage = ref('Không thể tải mã bảo vệ CAPTCHA. Vui lòng thử lại.');
+const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+
+const setRecaptchaError = (message) => {
+  recaptchaToken.value = '';
+  recaptchaErrorMessage.value = message;
+  recaptchaError.value = true;
+};
 
 const retryRecaptcha = () => {
   recaptchaError.value = false;
+  recaptchaErrorMessage.value = 'Không thể tải mã bảo vệ CAPTCHA. Vui lòng thử lại.';
   const el = document.getElementById('contact-recaptcha');
   if (el) el.innerHTML = '';
   recaptchaToken.value = '';
@@ -160,15 +169,25 @@ const retryRecaptcha = () => {
 
 // Render CAPTCHA
 const renderRecaptcha = () => {
-  if (window.grecaptcha && window.grecaptcha.render) {
+  if (!recaptchaSiteKey) {
+    setRecaptchaError('CAPTCHA chưa được cấu hình. Vui lòng liên hệ quản trị viên.');
+    return;
+  }
+
+  if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
     const el = document.getElementById('contact-recaptcha');
     if (el) {
+      try {
       el.innerHTML = '';
       window.grecaptcha.render(el, {
-        sitekey: import.meta.env.VITE_RECAPTCHA_SITE_KEY,
+        sitekey: recaptchaSiteKey,
         callback: (token) => { recaptchaToken.value = token; },
         'expired-callback': () => { recaptchaToken.value = ''; }
       });
+      } catch (error) {
+        console.error('Failed to render reCAPTCHA', error);
+        setRecaptchaError('Không thể hiển thị CAPTCHA. Vui lòng thử lại.');
+      }
     }
   }
 };
@@ -177,20 +196,24 @@ let recaptchaInitTimeout = null;
 let maxRetries = 50;
 
 const initRecaptchaScript = () => {
+  if (!recaptchaSiteKey) {
+    setRecaptchaError('CAPTCHA chưa được cấu hình. Vui lòng liên hệ quản trị viên.');
+    return;
+  }
+
   const init = () => {
-    if (window.grecaptcha && window.grecaptcha.ready) {
-      window.grecaptcha.ready(() => {
-        renderRecaptcha();
-      });
+    if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
+      renderRecaptcha();
     } else if (maxRetries > 0) {
       maxRetries--;
       recaptchaInitTimeout = setTimeout(init, 200);
     } else {
-      recaptchaError.value = true;
+      setRecaptchaError('Không thể tải CAPTCHA do lỗi mạng. Vui lòng thử lại.');
     }
   };
 
-  if (window.grecaptcha) {
+  const existingScript = document.getElementById('grecaptcha-script');
+  if (existingScript) {
     init();
   } else {
     const script = document.createElement('script');
@@ -263,7 +286,7 @@ const submitContactForm = async () => {
     } else if (error.response && error.response.status === 429) {
       // Lỗi do gửi quá nhiều (Rate limit / Chống Spam)
       let msg = error.response.data.message || 'Bạn đã thao tác quá nhiều. Vui lòng thử lại sau!';
-      if (msg === 'Too Many Attempts.') {
+      if (msg === 'Chậm thôi bạn!') {
         msg = 'Bạn đã vượt quá số lần thử nghiệm (3 lần/giờ). Vui lòng quay lại sau!';
       }
       soraAlert.fire({ 

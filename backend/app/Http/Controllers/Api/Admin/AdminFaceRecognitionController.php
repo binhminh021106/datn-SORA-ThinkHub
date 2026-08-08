@@ -24,20 +24,37 @@ use Throwable;
 class AdminFaceRecognitionController extends Controller
 {
     private const DEFAULT_THRESHOLD = 0.48;
-    private const MIN_DESCRIPTOR_COUNT = 1;
+    private const MIN_DESCRIPTOR_COUNT = 5;
 
-    public function admins()
+    public function admins(Request $request)
     {
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:10', 'max:50'],
+        ]);
+
+        $search = trim((string) ($filters['search'] ?? ''));
+        $perPage = (int) ($filters['per_page'] ?? 25);
+
         $admins = Admin::query()
             ->with('role')
             ->with('faceProfile')
             ->whereNull('deleted_at')
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($searchQuery) use ($search) {
+                    $searchQuery
+                        ->where('fullname', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%");
+                });
+            })
             ->orderBy('fullname')
-            ->get(['id', 'fullname', 'email', 'phone', 'avatar_url', 'role_id']);
+            ->paginate($perPage, ['id', 'fullname', 'email', 'phone', 'avatar_url', 'role_id']);
 
         return response()->json([
             'success' => true,
-            'data' => $admins->map(fn ($admin) => [
+            'data' => $admins->getCollection()->map(fn ($admin) => [
                 'id' => $admin->id,
                 'fullname' => $admin->fullname,
                 'email' => $admin->email,
@@ -51,6 +68,14 @@ class AdminFaceRecognitionController extends Controller
                     'registered_at' => $admin->faceProfile->registered_at,
                 ] : null,
             ]),
+            'meta' => [
+                'current_page' => $admins->currentPage(),
+                'last_page' => $admins->lastPage(),
+                'per_page' => $admins->perPage(),
+                'total' => $admins->total(),
+                'from' => $admins->firstItem(),
+                'to' => $admins->lastItem(),
+            ],
         ]);
     }
 
@@ -135,9 +160,6 @@ class AdminFaceRecognitionController extends Controller
                                 'is_matched' => true,
                                 'distance' => $duplicateMatch['best_distance'],
                                 'threshold' => self::DEFAULT_THRESHOLD,
-                                'matched_admin' => $matchedAdmin,
-                                'nearest_admin' => $matchedAdmin,
-                                'candidates' => $duplicateMatch['candidates'],
                             ],
                         ], 409);
                     }
@@ -152,6 +174,7 @@ class AdminFaceRecognitionController extends Controller
                     $existingProfile->update([
                         'face_descriptors' => $mergedDescriptors,
                         'sample_count' => count($mergedDescriptors),
+                        'is_active' => count($mergedDescriptors) >= self::MIN_DESCRIPTOR_COUNT,
                         'model_name' => $data['model_name'] ?? 'face-api.js',
                         'model_version' => $data['model_version'] ?? null,
                     ]);
@@ -163,7 +186,7 @@ class AdminFaceRecognitionController extends Controller
                         'sample_count' => count($descriptors),
                         'model_name' => $data['model_name'] ?? 'face-api.js',
                         'model_version' => $data['model_version'] ?? null,
-                        'is_active' => true,
+                        'is_active' => count($descriptors) >= self::MIN_DESCRIPTOR_COUNT,
                         'registered_at' => Carbon::now(),
                     ]);
                 }
@@ -212,7 +235,7 @@ class AdminFaceRecognitionController extends Controller
         $data = $request->validated();
 
         $queryDescriptor = $this->normalizeDescriptor($data['descriptor']);
-        $threshold = isset($data['threshold']) ? (float) $data['threshold'] : self::DEFAULT_THRESHOLD;
+        $threshold = self::DEFAULT_THRESHOLD;
         $match = $this->matchDescriptor($queryDescriptor, $threshold);
         $bestProfile = $match['best_profile'];
         $bestDistance = $match['best_distance'];
@@ -241,8 +264,6 @@ class AdminFaceRecognitionController extends Controller
                 'distance' => $bestDistance,
                 'threshold' => $threshold,
                 'matched_admin' => $isMatched ? $bestProfile->admin : null,
-                'nearest_admin' => $bestProfile?->admin,
-                'candidates' => $match['candidates'],
             ],
         ]);
     }
@@ -279,7 +300,7 @@ class AdminFaceRecognitionController extends Controller
         $data = $request->validated();
 
         $queryDescriptor = $this->normalizeDescriptor($data['descriptor']);
-        $threshold = isset($data['threshold']) ? (float) $data['threshold'] : self::DEFAULT_THRESHOLD;
+        $threshold = self::DEFAULT_THRESHOLD;
         $match = $this->matchDescriptor($queryDescriptor, $threshold);
         $bestProfile = $match['best_profile'];
         $bestDistance = $match['best_distance'];
@@ -304,8 +325,6 @@ class AdminFaceRecognitionController extends Controller
                     'distance' => $bestDistance,
                     'threshold' => $threshold,
                     'matched_admin' => null,
-                    'nearest_admin' => $bestProfile?->admin,
-                    'candidates' => $match['candidates'],
                 ],
             ]);
         }
@@ -594,8 +613,6 @@ class AdminFaceRecognitionController extends Controller
             'distance' => $match['best_distance'],
             'threshold' => $match['threshold'],
             'matched_admin' => $match['is_matched'] ? $match['best_profile']->admin : null,
-            'nearest_admin' => $match['best_profile']?->admin,
-            'candidates' => $match['candidates'],
             'requires_confirmation' => false,
         ], $extra);
     }
@@ -673,8 +690,11 @@ class AdminFaceRecognitionController extends Controller
     ): array
     {
         $profilesQuery = AdminFaceProfile::with('admin:id,fullname,email,phone,avatar_url')
-            ->where('is_active', true)
             ->whereHas('admin', fn ($query) => $query->whereNull('deleted_at'));
+
+        if (!$includeLegacyProfiles) {
+            $profilesQuery->where('is_active', true);
+        }
 
         if ($excludeAdminId !== null) {
             $profilesQuery->where('admin_id', '!=', $excludeAdminId);
@@ -684,7 +704,6 @@ class AdminFaceRecognitionController extends Controller
 
         $bestProfile = null;
         $bestDistance = null;
-        $candidatesByAdmin = [];
 
         foreach ($profiles as $profile) {
             $knownDescriptors = $profile->face_descriptors ?? [];
@@ -705,25 +724,14 @@ class AdminFaceRecognitionController extends Controller
                     $bestProfile = $profile;
                 }
 
-                $candidateKey = (string) $profile->admin_id;
-                if (!isset($candidatesByAdmin[$candidateKey]) || $distance < $candidatesByAdmin[$candidateKey]['distance']) {
-                    $candidatesByAdmin[$candidateKey] = [
-                        'admin' => $profile->admin,
-                        'distance' => $distance,
-                    ];
-                }
             }
         }
-
-        $candidates = array_values($candidatesByAdmin);
-        usort($candidates, fn ($a, $b) => $a['distance'] <=> $b['distance']);
 
         return [
             'best_profile' => $bestProfile,
             'best_distance' => $bestDistance,
             'is_matched' => $bestProfile && $bestDistance !== null && $bestDistance <= $threshold,
             'threshold' => $threshold,
-            'candidates' => array_slice($candidates, 0, 5),
         ];
     }
 

@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
+// chức năng: gửi thông báo đẩy (push notification) đến người dùng thông qua Expo Push Notification Service, hỗ trợ gửi đến nhiều thiết bị của cùng một người dùng và xử lý các lỗi khi gửi.
 class ExpoPushNotificationService
 {
     private const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';

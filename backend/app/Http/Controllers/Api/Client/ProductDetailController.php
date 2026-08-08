@@ -133,12 +133,113 @@ class ProductDetailController extends Controller
                 ]
             ]);
             
-        } catch (\Exception $e) {
-            report($e);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Không tìm thấy sản phẩm hoặc có lỗi xảy ra'
             ], 404);
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể tải thông tin sản phẩm. Vui lòng thử lại sau.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Return only the data needed by the Quick Add modal.
+     */
+    public function quickAdd($shop_slug, $slug)
+    {
+        try {
+            $product = Product::query()
+                ->select(['id', 'category_id', 'name', 'slug', 'base_price', 'promotional_price', 'thumbnail_image'])
+                ->with([
+                    'category:id,name',
+                    'variants' => function ($query) {
+                        $query->select([
+                            'id',
+                            'product_id',
+                            'sku',
+                            'price',
+                            'promotional_price',
+                            'stock_quantity',
+                            'image_url',
+                        ])
+                            ->whereNull('deleted_at')
+                            ->with([
+                                'attributeValues:id,attribute_id,value',
+                                'attributeValues.attribute:id,name',
+                            ]);
+                    },
+                ])
+                ->where('slug', $slug)
+                ->where('status', 'published')
+                ->firstOrFail();
+
+            $groupedAttributes = [];
+            $variants = [];
+
+            foreach ($product->variants as $variant) {
+                $attributeIds = [];
+
+                foreach ($variant->attributeValues as $attributeValue) {
+                    $attributeName = mb_strtoupper($attributeValue->attribute->name ?? 'PHAN LOAI');
+
+                    if (! isset($groupedAttributes[$attributeName])) {
+                        $groupedAttributes[$attributeName] = [];
+                    }
+
+                    if (! collect($groupedAttributes[$attributeName])->contains('id', $attributeValue->id)) {
+                        $groupedAttributes[$attributeName][] = [
+                            'id' => $attributeValue->id,
+                            'name' => $attributeValue->value,
+                            'colorCode' => null,
+                        ];
+                    }
+
+                    $attributeIds[$attributeName] = $attributeValue->id;
+                }
+
+                $variants[] = [
+                    'id' => $variant->id,
+                    'sku' => $variant->sku,
+                    'price' => (float) $variant->price,
+                    'promotional_price' => $variant->promotional_price ? (float) $variant->promotional_price : null,
+                    'stock' => (int) $variant->stock_quantity,
+                    'image' => $variant->image_url
+                        ? asset('storage/' . $variant->image_url)
+                        : asset('storage/' . $product->thumbnail_image),
+                    'attributes' => $attributeIds,
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'category' => $product->category,
+                    'base_price' => (float) $product->base_price,
+                    'promotional_price' => $product->promotional_price ? (float) $product->promotional_price : null,
+                    'thumbnail_image' => $product->thumbnail_image,
+                    'attributes' => $groupedAttributes,
+                    'variants' => $variants,
+                ],
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $exception) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Không tìm thấy sản phẩm hoặc sản phẩm không còn khả dụng.',
+            ], 404);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Không thể tải tùy chọn sản phẩm. Vui lòng thử lại sau.',
+            ], 500);
         }
     }
 
