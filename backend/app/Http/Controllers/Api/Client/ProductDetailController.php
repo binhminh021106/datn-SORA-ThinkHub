@@ -169,7 +169,7 @@ class ProductDetailController extends Controller
                         ])
                             ->whereNull('deleted_at')
                             ->with([
-                                'attributeValues:id,attribute_id,value',
+                                'attributeValues:attribute_values.id,attribute_values.attribute_id,attribute_values.value',
                                 'attributeValues.attribute:id,name',
                             ]);
                     },

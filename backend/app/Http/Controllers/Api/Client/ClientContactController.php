@@ -28,10 +28,10 @@ class ClientContactController extends Controller
         $request->validate([
             'g-recaptcha-response' => ['required', new \App\Rules\Recaptcha],
             'fullname' => 'required|string|min:2|max:150',
-            'phone'    => ['required', 'string', 'regex:/^0[35789][0-9]{8}$/'], // Đúng chuẩn SĐT Việt Nam
+            'phone'    => ['required', 'string', 'regex:/^0[35789][0-9]{8}$/'],
             'email'    => [
                 'required',
-                'email:rfc,dns', // Phải đúng định dạng RFC và Tên miền phải có bản ghi MX/A
+                'email:rfc,dns',
                 'max:150',
                 function ($attribute, $value, $fail) {
                     $invalidPrefixes = ['abc@', 'test@', '123@', 'admin@', 'spam@', 'fake@'];
@@ -51,7 +51,7 @@ class ClientContactController extends Controller
             'message.min' => 'Nội dung lời nhắn quá ngắn, vui lòng nhập ít nhất 10 ký tự.'
         ]);
 
-        // 3. Khóa Spam (3 lần / giờ) CHỈ DÀNH CHO FORM ĐÃ PASS VALIDATE
+        // 3. Khóa Spam (3 lần / giờ) áp dụng cho pass
         $throttleKey = 'contact_valid_' . $request->ip();
         if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($throttleKey, 3)) {
             return response()->json([
@@ -59,21 +59,18 @@ class ClientContactController extends Controller
                 'message' => 'Bạn đã gửi liên hệ quá nhiều lần. Vui lòng thử lại sau 1 giờ.'
             ], 429);
         }
-        \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 3600); // Lưu lượt trong 1 giờ
+        \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 3600);
 
-        // 4. Lưu thông tin vào Database
         $contact = Contact::create([
             'fullname' => $request->fullname,
             'phone'    => $request->phone,
             'email'    => $request->email,
             'message'  => $request->message,
-            'status'   => 'pending', // Mặc định là chờ Admin xử lý
+            'status'   => 'pending', 
         ]);
 
-        // 👉 BẮN SỰ KIỆN REAL-TIME CHO ADMIN NGAY LẬP TỨC
         broadcast(new NewContactSubmitted($contact));
 
-        // 3. Khóa IP và Email trong 24 giờ sau khi GỬI THÀNH CÔNG
         Cache::put($lockKeyIp, true, now()->addDays(1));
         Cache::put($lockKeyEmail, true, now()->addDays(1));
 

@@ -34,15 +34,30 @@ return new class extends Migration
         });
 
         Schema::table('contacts', function (Blueprint $table) {
-            $table->foreign('replied_by')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('replied_by')->references('id')->on('admins')->nullOnDelete();
         });
     }
 
     public function down(): void
     {
         Schema::table('contacts', function (Blueprint $table) {
-            $table->dropConstrainedForeignId('replied_by');
-            $table->dropColumn(['reply_subject', 'reply_message', 'replied_at']);
+            $foreignKeys = array_map(function ($fk) {
+                return $fk['name'];
+            }, Schema::getForeignKeys('contacts'));
+
+            if (in_array('contacts_replied_by_foreign', $foreignKeys)) {
+                $table->dropForeign('contacts_replied_by_foreign');
+            }
+
+            $columnsToDrop = [];
+            if (Schema::hasColumn('contacts', 'reply_subject')) $columnsToDrop[] = 'reply_subject';
+            if (Schema::hasColumn('contacts', 'reply_message')) $columnsToDrop[] = 'reply_message';
+            if (Schema::hasColumn('contacts', 'replied_at')) $columnsToDrop[] = 'replied_at';
+            if (Schema::hasColumn('contacts', 'replied_by')) $columnsToDrop[] = 'replied_by';
+
+            if (!empty($columnsToDrop)) {
+                $table->dropColumn($columnsToDrop);
+            }
         });
     }
 };

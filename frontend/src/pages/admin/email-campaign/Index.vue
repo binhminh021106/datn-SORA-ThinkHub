@@ -562,7 +562,13 @@ async function runBirthdayCampaign() {
       Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: response.data.message || `Đã kiểm tra và gửi email sinh nhật.`, showConfirmButton: false, timer: 3000 });
       await fetchRecentLogs();
     } else { showToast(response.data.message || 'Lỗi khi gửi email sinh nhật.', 'error'); }
-  } catch (error) { showToast('Lỗi máy chủ! Không thể gửi email.', 'error'); } finally { sendingCampaign.value = null; }
+  } catch (error) { 
+    if (error.response?.status === 429) {
+      showToast(error.response?.data?.message || 'Thao tác quá nhanh! Vui lòng thử lại sau 1 phút.', 'error');
+    } else {
+      showToast('Lỗi máy chủ! Không thể gửi email.', 'error'); 
+    }
+  } finally { sendingCampaign.value = null; }
 }
 
 async function runHolidayCampaign() {
@@ -574,7 +580,13 @@ async function runHolidayCampaign() {
       Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: response.data.message || `Đã kiểm tra và gửi email sự kiện.`, showConfirmButton: false, timer: 3000 });
       await fetchRecentLogs();
     } else { showToast(response.data.message || 'Lỗi khi gửi email sự kiện.', 'error'); }
-  } catch (error) { showToast('Lỗi máy chủ! Không thể gửi email sự kiện.', 'error'); } finally { sendingCampaign.value = null; }
+  } catch (error) { 
+    if (error.response?.status === 429) {
+      showToast(error.response?.data?.message || 'Thao tác quá nhanh! Vui lòng thử lại sau 1 phút.', 'error');
+    } else {
+      showToast('Lỗi máy chủ! Không thể gửi email sự kiện.', 'error'); 
+    }
+  } finally { sendingCampaign.value = null; }
 }
 
 async function saveHolidayStatus(event) {

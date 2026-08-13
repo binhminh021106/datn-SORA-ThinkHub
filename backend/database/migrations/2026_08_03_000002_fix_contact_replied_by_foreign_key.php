@@ -8,16 +8,28 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('contacts', function (Blueprint $table) {
-            $table->dropForeign(['replied_by']);
+        $hasForeignKey = collect(Schema::getForeignKeys('contacts'))
+            ->contains(fn ($key) => in_array('replied_by', $key['columns'], true));
+
+        Schema::table('contacts', function (Blueprint $table) use ($hasForeignKey) {
+            if ($hasForeignKey) {
+                $table->dropForeign(['replied_by']);
+            }
+            $table->bigInteger('replied_by')->nullable()->change();
             $table->foreign('replied_by')->references('id')->on('admins')->nullOnDelete();
         });
     }
 
     public function down(): void
     {
-        Schema::table('contacts', function (Blueprint $table) {
-            $table->dropForeign(['replied_by']);
+        $hasForeignKey = collect(Schema::getForeignKeys('contacts'))
+            ->contains(fn ($key) => in_array('replied_by', $key['columns'], true));
+
+        Schema::table('contacts', function (Blueprint $table) use ($hasForeignKey) {
+            if ($hasForeignKey) {
+                $table->dropForeign(['replied_by']);
+            }
+            $table->bigInteger('replied_by')->nullable()->change();
             $table->foreign('replied_by')->references('id')->on('users')->nullOnDelete();
         });
     }

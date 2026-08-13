@@ -95,8 +95,12 @@ class AdminDashboardController extends Controller
         return ['key' => $period, 'start' => $startDate, 'end' => $today->copy()->endOfDay(), 'label' => $label];
     }
 
-    private function previousPeriod(array $period): array
+    private function previousPeriod(array $period): ?array
     {
+        if ($period['key'] === 'all') {
+            return null;
+        }
+
         $dayCount = $period['start']->diffInDays($period['end']);
         $end = $period['start']->copy()->subSecond();
 
@@ -125,16 +129,22 @@ class AdminDashboardController extends Controller
                 : 0;
 
             // 2. TÍNH TOÁN % TĂNG/GIẢM SO VỚI KỲ TRƯỚC
-            $previousOrders = Order::query()->whereBetween('created_at', [$previousPeriod['start'], $previousPeriod['end']]);
-            $revenueGrowth = $this->calculatePercentageChange(
-                $totalRevenue,
-                $this->applyRevenueFilter((clone $previousOrders))->sum('total_amount') ?? 0
-            );
-            $ordersGrowth = $this->calculatePercentageChange($newOrders, (clone $previousOrders)->count());
-            $customersGrowth = $this->calculatePercentageChange(
-                $totalCustomers,
-                User::whereBetween('created_at', [$previousPeriod['start'], $previousPeriod['end']])->count()
-            );
+            $revenueGrowth = null;
+            $ordersGrowth = null;
+            $customersGrowth = null;
+
+            if ($previousPeriod) {
+                $previousOrders = Order::query()->whereBetween('created_at', [$previousPeriod['start'], $previousPeriod['end']]);
+                $revenueGrowth = $this->calculatePercentageChange(
+                    $totalRevenue,
+                    $this->applyRevenueFilter((clone $previousOrders))->sum('total_amount') ?? 0
+                );
+                $ordersGrowth = $this->calculatePercentageChange($newOrders, (clone $previousOrders)->count());
+                $customersGrowth = $this->calculatePercentageChange(
+                    $totalCustomers,
+                    User::whereBetween('created_at', [$previousPeriod['start'], $previousPeriod['end']])->count()
+                );
+            }
 
             // 3. ĐƠN HÀNG GẦN ĐÂY
             $recentOrders = (clone $periodOrders)->with('user:id,fullName')->orderBy('created_at', 'desc')->take(8)->get()->map(function($order) {

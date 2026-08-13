@@ -373,8 +373,12 @@ const sendReplyEmail = async () => {
     const res = await axios.post(`${API_URL}/${selectedContact.value.id}/reply`, replyForm.value, axiosConfig.value);
     if (res.data.status) {
       Swal.fire({ icon: 'success', title: 'Đã Gửi!', text: 'Email phản hồi đã bay đi.' });
+      if (res.data.data) {
+        selectedContact.value = res.data.data;
+      } else {
+        selectedContact.value = contacts.value.find((contact) => contact.id === selectedContact.value?.id) || selectedContact.value;
+      }
       await refreshContacts();
-      selectedContact.value = contacts.value.find((contact) => contact.id === selectedContact.value?.id) || selectedContact.value;
       isReplyEditorOpen.value = false;
     }
   } catch (e) {
@@ -424,14 +428,20 @@ const handleSearchInput = () => {
 };
 
 const handleAvatarError = (event) => {
+  event.target.onerror = null;
   event.target.src = defaultAvatar;
 };
 
 const confirmDelete = (id) => {
   Swal.fire({ title: 'Xóa yêu cầu?', icon: 'warning', showCancelButton: true }).then(async (result) => {
     if (result.isConfirmed) {
-      await axios.delete(`${API_URL}/${id}`, axiosConfig.value);
-      await refreshContacts();
+      try {
+        await axios.delete(`${API_URL}/${id}`, axiosConfig.value);
+        await refreshContacts();
+      } catch (error) {
+        console.error(error);
+        Swal.fire('Lỗi', 'Không thể xóa', 'error');
+      }
     }
   });
 };
@@ -455,6 +465,9 @@ watch([filterStatus, sortOrder], () => {
 
 onUnmounted(() => {
   if (searchTimer) clearTimeout(searchTimer);
+  if (window.Echo) {
+    window.Echo.leave('admin-contacts');
+  }
 });
 </script>
 
@@ -587,8 +600,7 @@ onUnmounted(() => {
 .contact-status-tab.active span { color: var(--contact-brand); background: #ddf3ed; }
 
 .contact-search-wrap { position: relative; width: min(100%, 320px); }
-.contact-search-wrap > i { position: absolute; z-index: 1; top: 50%; left: 11px; color: #80909b; transform: translateY(-50%); }
-.contact-search-wrap > i { right: 13px; left: auto; }
+.contact-search-wrap > i { position: absolute; z-index: 1; top: 50%; right: 13px; color: #80909b; transform: translateY(-50%); }
 .contact-search-wrap input { min-height: 38px; padding-left: .9rem; border: 1px solid #dbe5e7; border-radius: 999px; font-size: .84rem; box-shadow: none; }
 .contact-search-wrap input:focus { border-color: #83cabb; box-shadow: 0 0 0 .18rem rgba(0, 154, 131, .1); }
 .contact-sort-filter { display: inline-flex; align-items: center; gap: .4rem; padding: .38rem .7rem; background: #fff; border: 1px solid #dbe8e5; border-radius: 999px; box-shadow: 0 2px 6px rgba(27, 50, 70, .05); }

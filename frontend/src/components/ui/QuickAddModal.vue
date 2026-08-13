@@ -319,7 +319,7 @@ const quickAddSelectedPrice = computed(() => {
 const getQuickAddData = (slug) => {
     const cached = quickAddCache.get(slug);
     if (cached && Date.now() - cached.cachedAt < QUICK_ADD_CACHE_TTL) {
-        return Promise.resolve(cached.data);
+        return Promise.resolve(JSON.parse(JSON.stringify(cached.data)));
     }
 
     if (pendingQuickAddRequests.has(slug)) {

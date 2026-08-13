@@ -274,6 +274,12 @@ const goBackToStep1 = () => {
   form.value.password = '';
   form.value.password_confirmation = '';
   if (timer) clearInterval(timer);
+
+  recaptchaToken.value = '';
+  recaptchaWidgetId = null;
+  nextTick(() => {
+    renderRecaptcha();
+  });
 };
 
 const countdown = ref(0);

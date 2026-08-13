@@ -27,7 +27,8 @@ class PendingOrderCancellationService
         string $changedByType = 'system'
     ): bool
     {
-        $updates = DB::transaction(function () use ($orderId, $paymentAttemptStatus, $note, $changedBy, $changedByType) {
+        try {
+            $updates = DB::transaction(function () use ($orderId, $paymentAttemptStatus, $note, $changedBy, $changedByType) {
             $order = Order::with('items')
                 ->whereKey($orderId)
                 ->where('status', 'pending')
@@ -124,8 +125,25 @@ class PendingOrderCancellationService
                 'combo_ids' => array_unique($comboIds),
             ];
         });
+        } catch (\Throwable $exception) {
+            \Illuminate\Support\Facades\Log::error('Order cancellation failed due to exception.', [
+                'order_id' => $orderId,
+                'exception' => $exception->getMessage(),
+            ]);
+            return false;
+        }
 
         if ($updates === null) {
+            $exists = Order::whereKey($orderId)->exists();
+            if ($exists) {
+                \Illuminate\Support\Facades\Log::warning("Order cancellation skipped: Order #{$orderId} is no longer pending/unpaid.", [
+                    'order_id' => $orderId,
+                ]);
+            } else {
+                \Illuminate\Support\Facades\Log::warning("Order cancellation skipped: Order #{$orderId} not found.", [
+                    'order_id' => $orderId,
+                ]);
+            }
             return false;
         }
 

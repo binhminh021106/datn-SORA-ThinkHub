@@ -747,7 +747,7 @@ const exportToExcel = () => {
       ws['!cols'] = widths.map((width) => ({ wch: width }));
       ws['!rows'] = [{ hpt: 28 }, { hpt: 18 }, { hpt: 8 }, { hpt: 22 }];
       ws['!autofilter'] = { ref: 'A4:' + XLSX.utils.encode_col(lastColumn) + String(lastRow + 1) };
-      ws['!sheetViews'] = [{ showGridLines: false }];
+      ws['!sheetViews'] = [{ showGridLines: '0' }];
 
       for (let row = 0; row <= lastRow; row += 1) {
         for (let column = 0; column <= lastColumn; column += 1) {
@@ -788,11 +788,11 @@ const exportToExcel = () => {
     };
 
     const overviewData = [
-      { "Chỉ số": "Tổng doanh thu", "Giá trị": formatMoney(stats.value.totalRevenue) },
+      { "Chỉ số": "Doanh thu kỳ lọc", "Giá trị": formatMoney(stats.value.totalRevenue) },
       { "Chỉ số": "Tăng trưởng doanh thu", "Giá trị": formatGrowth(stats.value.revenueGrowth) },
-      { "Chỉ số": "Đơn hàng mới", "Giá trị": formatNumber(stats.value.newOrders) },
+      { "Chỉ số": "Đơn hàng kỳ lọc", "Giá trị": formatNumber(stats.value.newOrders) },
       { "Chỉ số": "Tăng trưởng đơn hàng", "Giá trị": formatGrowth(stats.value.ordersGrowth) },
-      { "Chỉ số": "Tổng khách hàng", "Giá trị": formatNumber(stats.value.totalCustomers) },
+      { "Chỉ số": "Khách mới kỳ lọc", "Giá trị": formatNumber(stats.value.totalCustomers) },
       { "Chỉ số": "Tăng trưởng khách hàng", "Giá trị": formatGrowth(stats.value.customersGrowth) },
       { "Chỉ số": "Tổng tồn kho hệ thống", "Giá trị": formatNumber(stats.value.inventory) },
       { "Chỉ số": "Mã giảm giá đang hoạt động", "Giá trị": formatNumber(couponData.value?.summary?.active) },
@@ -952,7 +952,7 @@ const hasAccess = ref(Boolean(
 ) && storedLevel >= REQUIRED_ADMIN_LEVEL);
 
 const { data: dashboardData, isLoading, isFetching, refetch } = useQuery({
-  queryKey: ['admin-dashboard-main'],
+  queryKey: ['admin-dashboard-main', filterParams],
   queryFn: async () => {
     const res = await axios.get(`${apiUrl}/admin/dashboard`, {
       params: {

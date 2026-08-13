@@ -137,11 +137,15 @@ class AdminOrderConfigController extends Controller
 
         $user = User::findOrFail($id);
         $actorId = $request->user()?->id;
-        $orders = Order::where('user_id', $user->id)
+        $batchLimit = min(100, max(1, (int) config('orders.spam_cleanup_batch_size', 50)));
+        $pendingOrders = Order::query()
+            ->where('user_id', $user->id)
             ->where('status', 'pending')
-            ->where('payment_status', 'unpaid')
-            ->select('id')
-            ->lazyById(100);
+            ->where('payment_status', 'unpaid');
+        $orders = (clone $pendingOrders)
+            ->orderBy('id')
+            ->limit($batchLimit)
+            ->get(['id']);
 
         $cleanedCount = 0;
         foreach ($orders as $order) {
@@ -156,7 +160,7 @@ class AdminOrderConfigController extends Controller
                 continue;
             }
 
-            Order::whereKey($orderId)
+            Order::query()->whereKey($orderId)
                 ->where('user_id', $user->id)
                 ->where('status', 'cancelled')
                 ->where('payment_status', 'failed')
@@ -165,12 +169,16 @@ class AdminOrderConfigController extends Controller
             $cleanedCount++;
         }
 
+        $remainingCount = (clone $pendingOrders)->count();
+
         return response()->json([
             'success' => true,
             'message' => $cleanedCount > 0
-                ? "Đã dọn an toàn {$cleanedCount} đơn spam của {$user->email}."
+                ? "Đã dọn an toàn {$cleanedCount} đơn spam của {$user->email}." . ($remainingCount > 0 ? " Còn {$remainingCount} đơn cần dọn tiếp." : '')
                 : 'Không có đơn pending chưa thanh toán phù hợp để dọn.',
             'cleaned_count' => $cleanedCount,
+            'remaining_count' => $remainingCount,
+            'has_more' => $remainingCount > 0,
         ]);
     }
 }

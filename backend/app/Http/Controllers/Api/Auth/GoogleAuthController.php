@@ -44,12 +44,12 @@ class GoogleAuthController extends Controller
             Cache::put('google_auth_exchange_' . $exchangeCode, $user->id, now()->addMinutes(2));
 
             // Chuyển hướng người dùng về frontend với code
-            $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173') . '/auth/google/callback?code=' . $exchangeCode;
+            $frontendUrl = config('app.frontend_url') . '/auth/google/callback?code=' . $exchangeCode;
             return redirect($frontendUrl);
 
         } catch (Exception $e) {
             // dd($e->getMessage());
-            return redirect()->away(env('FRONTEND_URL') . '/login?error=google_auth_failed');
+            return redirect()->away(config('app.frontend_url') . '/login?error=google_auth_failed');
         }
     }
 

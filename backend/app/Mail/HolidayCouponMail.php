@@ -59,17 +59,16 @@ class HolidayCouponMail extends Mailable implements ShouldQueue
         }
     }
 
-    public function withSymfonyMessage(Email $message): void
-    {
-        if ($this->emailLogId) {
-            $message->getHeaders()->addTextHeader('X-SORA-Email-Log-ID', (string) $this->emailLogId);
-        }
-    }
-
     public function build()
     {
         $subject = $this->event->email_subject
             ?? "SORA ThinkHub - Uu dai dac biet dip {$this->holidayName}";
+
+        if ($this->emailLogId) {
+            $this->withSymfonyMessage(function (Email $message) {
+                $message->getHeaders()->addTextHeader('X-SORA-Email-Log-ID', (string) $this->emailLogId);
+            });
+        }
 
         return $this->subject($subject)
             ->view('emails.holiday_coupon');
