@@ -18,7 +18,7 @@ class CleanUpPendingOrders extends Command
 
         $expiredOrders = Order::where('status', 'pending')
             ->where('payment_status', 'unpaid')
-            ->whereIn('payment_method', ['momo', 'vnpay'])
+            ->whereIn('payment_method', config('payment.auto_cancel_methods', ['momo', 'vnpay']))
             ->where('created_at', '<', now()->subMinutes($attemptTtlMinutes))
             ->select('id', 'order_code')
             ->lazyById(100);

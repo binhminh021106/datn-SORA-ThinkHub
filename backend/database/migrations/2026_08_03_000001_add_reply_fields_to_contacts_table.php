@@ -34,7 +34,13 @@ return new class extends Migration
         });
 
         Schema::table('contacts', function (Blueprint $table) {
-            $table->foreign('replied_by')->references('id')->on('admins')->nullOnDelete();
+            $foreignKeys = array_map(function ($fk) {
+                return $fk['name'];
+            }, Schema::getForeignKeys('contacts'));
+
+            if (!in_array('contacts_replied_by_foreign', $foreignKeys)) {
+                $table->foreign('replied_by')->references('id')->on('admins')->nullOnDelete();
+            }
         });
     }
 

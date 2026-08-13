@@ -323,7 +323,7 @@ const getQuickAddData = (slug) => {
     }
 
     if (pendingQuickAddRequests.has(slug)) {
-        return pendingQuickAddRequests.get(slug);
+        return pendingQuickAddRequests.get(slug).then(data => JSON.parse(JSON.stringify(data)));
     }
 
     const request = axios.get(`${API_BASE_URL}/shop/all/products/${slug}/quick-add`)
@@ -332,17 +332,20 @@ const getQuickAddData = (slug) => {
                 throw new Error('Quick Add data is unavailable.');
             }
 
-            quickAddCache.set(slug, { data: response.data.data, cachedAt: Date.now() });
+            const data = response.data.data;
+            quickAddCache.set(slug, { data: data, cachedAt: Date.now() });
             if (quickAddCache.size > QUICK_ADD_CACHE_LIMIT) {
                 quickAddCache.delete(quickAddCache.keys().next().value);
             }
 
-            return response.data.data;
+            return data;
         })
-        .finally(() => pendingQuickAddRequests.delete(slug));
+        .finally(() => {
+            pendingQuickAddRequests.delete(slug);
+        });
 
     pendingQuickAddRequests.set(slug, request);
-    return request;
+    return request.then(data => JSON.parse(JSON.stringify(data)));
 };
 
 const openModal = async (prod) => {
@@ -469,6 +472,7 @@ const confirmQuickAdd = async () => {
         pendingSuccessToast = true;
         quickAddModalInstance.hide();
     } catch (error) {
+        quickAddModalInstance.hide();
         const msg = error.response?.data?.message || 'Không thể thêm vào giỏ hàng!';
         soraAlert.fire({icon: 'error', title: 'Lỗi', text: msg});
     } finally {

@@ -179,7 +179,7 @@ public function settings()
 
     public function triggerHoliday()
     {
-        // Giảm thời gian khoá từ 3600 giây (1 tiếng) xuống 60 giây
+        // thời gian khoá 60 giây
         $lock = Cache::lock('email_campaign:holiday', 60);
         if (!$lock->get()) {
             return response()->json(['success' => false, 'message' => 'Campaign ngày lễ đang được xử lý.'], 429);

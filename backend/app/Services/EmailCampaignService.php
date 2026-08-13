@@ -58,8 +58,8 @@ class EmailCampaignService
             if ($preventDuplicateSends) {
                 $alreadySent = EmailLog::where('user_id', $user->id)
                     ->where('event_type', 'birthday')
-                    ->whereIn('status', ['success', 'queued'])
-                    ->whereYear('sent_at', $today->year)
+                    ->whereIn('status', ['success', 'sent', 'queued'])
+                    ->whereYear('created_at', $today->year)
                     ->exists();
 
                 if ($alreadySent) {
@@ -155,8 +155,8 @@ class EmailCampaignService
             $sentUserIds = [];
             if ($preventDuplicateSends) {
                 $sentUserIds = EmailLog::where('event_type', $eventTypeKey)
-                    ->whereIn('status', ['success', 'queued'])
-                    ->whereYear('sent_at', $today->year)
+                    ->whereIn('status', ['success', 'sent', 'queued'])
+                    ->whereYear('created_at', $today->year)
                     ->pluck('user_id')
                     ->toArray();
             }

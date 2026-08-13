@@ -437,30 +437,35 @@ const setHeroVideoRef = (el, index) => {
   if (el) heroVideoRefs.value[index] = el;
 };
 
-watch(heroBanners, async (newVal) => {
-  if (newVal && newVal.length > 0) {
+watch(() => heroCarouselRef.value, async (el) => {
+  if (el && !isCarouselEventBound) {
     await nextTick();
-    if (heroCarouselRef.value && !isCarouselEventBound) {
-      heroCarouselRef.value.addEventListener('slid.bs.carousel', (event) => {
-        activeHeroIndex.value = event.to;
-        Object.keys(heroVideoRefs.value).forEach(key => {
-          const video = heroVideoRefs.value[key];
-          if (video && key != event.to) {
-            video.pause();
-          }
-        });
-        const activeVideo = heroVideoRefs.value[event.to];
-        if (activeVideo) {
-          activeVideo.play().catch(e => console.warn("Video play failed:", e));
+    
+    // Khởi tạo Bootstrap Carousel thủ công
+    new window.bootstrap.Carousel(el, {
+      interval: 6000,
+      ride: 'carousel'
+    });
+
+    el.addEventListener('slid.bs.carousel', (event) => {
+      activeHeroIndex.value = event.to;
+      Object.keys(heroVideoRefs.value).forEach(key => {
+        const video = heroVideoRefs.value[key];
+        if (video && key != event.to) {
+          video.pause();
         }
       });
-      isCarouselEventBound = true;
-      
-      // Auto play first video if exists
-      const firstVideo = heroVideoRefs.value[0];
-      if (firstVideo) {
-         firstVideo.play().catch(e => console.warn("Video play failed:", e));
+      const activeVideo = heroVideoRefs.value[event.to];
+      if (activeVideo) {
+        activeVideo.play().catch(e => console.warn("Video play failed:", e));
       }
+    });
+    isCarouselEventBound = true;
+    
+    // Auto play first video if exists
+    const firstVideo = heroVideoRefs.value[0];
+    if (firstVideo) {
+       firstVideo.play().catch(e => console.warn("Video play failed:", e));
     }
   }
 }, { immediate: true });

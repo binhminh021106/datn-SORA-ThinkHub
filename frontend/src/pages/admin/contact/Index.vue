@@ -601,7 +601,7 @@ onUnmounted(() => {
 
 .contact-search-wrap { position: relative; width: min(100%, 320px); }
 .contact-search-wrap > i { position: absolute; z-index: 1; top: 50%; right: 13px; color: #80909b; transform: translateY(-50%); }
-.contact-search-wrap input { min-height: 38px; padding-left: .9rem; border: 1px solid #dbe5e7; border-radius: 999px; font-size: .84rem; box-shadow: none; }
+.contact-search-wrap input { min-height: 38px; padding-left: .9rem; padding-right: 2.5rem; border: 1px solid #dbe5e7; border-radius: 999px; font-size: .84rem; box-shadow: none; }
 .contact-search-wrap input:focus { border-color: #83cabb; box-shadow: 0 0 0 .18rem rgba(0, 154, 131, .1); }
 .contact-sort-filter { display: inline-flex; align-items: center; gap: .4rem; padding: .38rem .7rem; background: #fff; border: 1px solid #dbe8e5; border-radius: 999px; box-shadow: 0 2px 6px rgba(27, 50, 70, .05); }
 .contact-sort-filter > span { color: #718391; font-size: .78rem; font-weight: 650; white-space: nowrap; }

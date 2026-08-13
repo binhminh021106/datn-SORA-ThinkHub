@@ -86,11 +86,11 @@ Route::middleware(['auth:sanctum', 'ability:access', 'admin.user', 'throttle:adm
         // Xử lý gửi & Lịch sử
         Route::prefix('email-campaign')->group(function () {
             Route::get('/settings', [EmailCampaignController::class, 'settings']);
-            Route::post('/settings', [EmailCampaignController::class, 'updateSettings'])->middleware('throttle:email-campaign');
-            Route::post('/trigger-birthday', [EmailCampaignController::class, 'triggerBirthday'])->middleware('throttle:email-campaign');
-            Route::post('/trigger-holiday', [EmailCampaignController::class, 'triggerHoliday'])->middleware('throttle:email-campaign');
+            Route::post('/settings', [EmailCampaignController::class, 'updateSettings']);
+            Route::post('/trigger-birthday', [EmailCampaignController::class, 'triggerBirthday'])->middleware('throttle:email-campaign-birthday');
+            Route::post('/trigger-holiday', [EmailCampaignController::class, 'triggerHoliday'])->middleware('throttle:email-campaign-holiday');
             Route::get('/recent-logs', [EmailCampaignController::class, 'recentLogs']);
-            Route::delete('/recent-logs', [EmailCampaignController::class, 'clearLogs'])->middleware('throttle:email-campaign');
+            Route::delete('/recent-logs', [EmailCampaignController::class, 'clearLogs']);
         });
         
     });

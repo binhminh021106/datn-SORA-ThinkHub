@@ -154,12 +154,16 @@ class AdminContactController extends Controller
                 'replyMessage' => $replyMessage,
                 'originalMessage' => e($contact->message),
             ];
+            
+            $contactEmail = $contact->email;
+            $subject = $request->subject;
+            $contactId = $contact->id;
 
             // Queue Gửi Email
-            dispatch(function () use ($contact, $request, $data) {
-                \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($contact, $request, $data) {
-                    $message->to($contact->email)
-                            ->subject($request->subject)
+            dispatch(function () use ($contactEmail, $subject, $data) {
+                \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($contactEmail, $subject, $data) {
+                    $message->to($contactEmail)
+                            ->subject($subject)
                             ->html("
                                 <div style='font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden;'>
                                     <div style='background-color: #9f273b; padding: 20px; text-align: center;'>
@@ -176,9 +180,9 @@ class AdminContactController extends Controller
                                 </div>
                             ");
                 });
-            })->catch(function (\Throwable $exception) use ($contact) {
+            })->catch(function (\Throwable $exception) use ($contactId) {
                 \Illuminate\Support\Facades\Log::error('Không thể gửi email phản hồi liên hệ (Queue).', [
-                    'contact_id' => $contact->id,
+                    'contact_id' => $contactId,
                     'error' => $exception->getMessage(),
                 ]);
             });
@@ -188,13 +192,18 @@ class AdminContactController extends Controller
                 'contact_id' => $contact->id,
                 'error' => $exception->getMessage(),
             ]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Lỗi khi đưa email vào hàng đợi gửi.',
+            ], 500);
         }
 
         $contact->load('repliedBy');
 
         return response()->json([
             'status' => true,
-            'message' => 'Đã gửi email phản hồi thành công!',
+            'message' => 'Đã đưa email vào hàng đợi!',
             'data' => $contact
         ]);
     }
@@ -204,13 +213,8 @@ class AdminContactController extends Controller
      */
     private function sanitizeReplyHtml(string $message): string
     {
-        if (class_exists(\Mews\Purifier\Facades\Purifier::class)) {
-            return \Mews\Purifier\Facades\Purifier::clean($message, [
-                'HTML.Allowed' => 'p,br,strong,b,em,i,u,s,ol,ul,li,blockquote',
-            ]);
-        }
-        
-        $allowedTags = '<p><br><strong><b><em><i><u><s><ol><ul><li><blockquote>';
-        return strip_tags($message, $allowedTags);
+        return \Mews\Purifier\Facades\Purifier::clean($message, [
+            'HTML.Allowed' => 'p,br,strong,b,em,i,u,s,ol,ul,li,blockquote',
+        ]);
     }
 }

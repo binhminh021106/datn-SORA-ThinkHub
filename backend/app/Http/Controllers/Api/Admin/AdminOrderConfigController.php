@@ -148,6 +148,7 @@ class AdminOrderConfigController extends Controller
             ->get(['id']);
 
         $cleanedCount = 0;
+        $failedCount = 0;
         foreach ($orders as $order) {
             $orderId = $order->id;
             if (! $cancellationService->cancel(
@@ -157,6 +158,7 @@ class AdminOrderConfigController extends Controller
                 $actorId,
                 'admin'
             )) {
+                $failedCount++;
                 continue;
             }
 
@@ -170,15 +172,30 @@ class AdminOrderConfigController extends Controller
         }
 
         $remainingCount = (clone $pendingOrders)->count();
+        $isOrdersEmpty = $orders->isEmpty();
+        
+        $message = '';
+        if ($isOrdersEmpty) {
+            $message = 'Không có đơn pending chưa thanh toán phù hợp để dọn.';
+        } else {
+            $message = "Đã dọn an toàn {$cleanedCount} đơn spam của {$user->email}.";
+            if ($failedCount > 0) {
+                $message .= " Thất bại {$failedCount} đơn.";
+            }
+            if ($remainingCount > 0) {
+                $message .= " Còn {$remainingCount} đơn cần dọn tiếp.";
+            }
+        }
+        
+        $statusCode = ($failedCount > 0 && $cleanedCount === 0) ? 400 : 200;
 
         return response()->json([
-            'success' => true,
-            'message' => $cleanedCount > 0
-                ? "Đã dọn an toàn {$cleanedCount} đơn spam của {$user->email}." . ($remainingCount > 0 ? " Còn {$remainingCount} đơn cần dọn tiếp." : '')
-                : 'Không có đơn pending chưa thanh toán phù hợp để dọn.',
+            'success' => $cleanedCount > 0 || $isOrdersEmpty,
+            'message' => $message,
             'cleaned_count' => $cleanedCount,
+            'failed_count' => $failedCount,
             'remaining_count' => $remainingCount,
             'has_more' => $remainingCount > 0,
-        ]);
+        ], $statusCode);
     }
 }

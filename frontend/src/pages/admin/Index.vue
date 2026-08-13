@@ -747,7 +747,7 @@ const exportToExcel = () => {
       ws['!cols'] = widths.map((width) => ({ wch: width }));
       ws['!rows'] = [{ hpt: 28 }, { hpt: 18 }, { hpt: 8 }, { hpt: 22 }];
       ws['!autofilter'] = { ref: 'A4:' + XLSX.utils.encode_col(lastColumn) + String(lastRow + 1) };
-      ws['!sheetViews'] = [{ showGridLines: '0' }];
+      ws['!views'] = [{ showGridLines: false }];
 
       for (let row = 0; row <= lastRow; row += 1) {
         for (let column = 0; column <= lastColumn; column += 1) {
@@ -918,6 +918,7 @@ const filterParams = ref({
   startDate: '',
   endDate: ''
 });
+const appliedFilterParams = ref({ ...filterParams.value });
 const filterError = ref('');
 const periodPresets = [
   { key: 'today', label: 'Hôm nay' },
@@ -952,13 +953,13 @@ const hasAccess = ref(Boolean(
 ) && storedLevel >= REQUIRED_ADMIN_LEVEL);
 
 const { data: dashboardData, isLoading, isFetching, refetch } = useQuery({
-  queryKey: ['admin-dashboard-main', filterParams],
+  queryKey: ['admin-dashboard-main', appliedFilterParams],
   queryFn: async () => {
     const res = await axios.get(`${apiUrl}/admin/dashboard`, {
       params: {
-        period: filterParams.value.period,
-        start_date: filterParams.value.startDate || undefined,
-        end_date: filterParams.value.endDate || undefined
+        period: appliedFilterParams.value.period,
+        start_date: appliedFilterParams.value.startDate || undefined,
+        end_date: appliedFilterParams.value.endDate || undefined
       },
       headers: getHeaders()
     });
@@ -1036,11 +1037,17 @@ const applyDashboardFilter = async () => {
     }
   }
 
-  const result = await refetch();
-  if (result.error) {
-    const errors = result.error?.response?.data?.errors;
-    filterError.value = errors ? Object.values(errors).flat().join(' ') : 'Không thể tải dữ liệu cho kỳ đã chọn.';
-  }
+  appliedFilterParams.value = { ...filterParams.value };
+  
+  // Vue Query sẽ tự động refetch khi appliedFilterParams thay đổi
+  // Nếu muốn ép fetch ngay lập tức:
+  setTimeout(async () => {
+    const result = await refetch();
+    if (result.error) {
+      const errors = result.error?.response?.data?.errors;
+      filterError.value = errors ? Object.values(errors).flat().join(' ') : 'Không thể tải dữ liệu cho kỳ đã chọn.';
+    }
+  }, 0);
 };
 
 // API: Kích hoạt / Dừng mã giảm giá (DÙNG PATCH DO ROUTE LÀ PATCH)
@@ -1206,9 +1213,18 @@ const initCouponChart = (labels, values) => {
 // ==========================================
 // 5. HELPER FORMAT CHUNG
 // ==========================================
-const getGrowthClass = (value) => value >= 0 ? 'bg-success-soft text-success' : 'bg-danger-soft text-danger';
-const getGrowthIcon = (value) => value >= 0 ? 'bi-graph-up-arrow' : 'bi-graph-down-arrow';
-const formatGrowth = (value) => `${value > 0 ? '+' : ''}${value || 0}%`;
+const getGrowthClass = (value) => {
+  if (value === null || value === undefined) return 'bg-secondary-soft text-secondary';
+  return value >= 0 ? 'bg-success-soft text-success' : 'bg-danger-soft text-danger';
+};
+const getGrowthIcon = (value) => {
+  if (value === null || value === undefined) return 'bi-dash';
+  return value >= 0 ? 'bi-graph-up-arrow' : 'bi-graph-down-arrow';
+};
+const formatGrowth = (value) => {
+  if (value === null || value === undefined) return 'N/A';
+  return `${value > 0 ? '+' : ''}${value}%`;
+};
 const formatCurrency = (value) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
 
 const translateStatus = (status) => {

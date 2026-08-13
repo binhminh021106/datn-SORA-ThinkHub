@@ -155,8 +155,13 @@ class AppServiceProvider extends ServiceProvider
                 : Limit::perHour(1)->by($request->ip());
         });
 
-        // Giới hạn Tính năng Gửi chiến dịch Email (Sinh nhật / Sự kiện)
-        RateLimiter::for('email-campaign', function (Request $request) {
+        // Giới hạn Tính năng Gửi chiến dịch Email Sinh nhật
+        RateLimiter::for('email-campaign-birthday', function (Request $request) {
+            return Limit::perMinute(1)->by($request->user()?->id ?: $request->ip());
+        });
+
+        // Giới hạn Tính năng Gửi chiến dịch Email Sự kiện
+        RateLimiter::for('email-campaign-holiday', function (Request $request) {
             return Limit::perMinute(1)->by($request->user()?->id ?: $request->ip());
         });
 

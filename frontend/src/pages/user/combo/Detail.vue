@@ -1373,7 +1373,7 @@ onUnmounted(() => {
 
 .attr-chip.error:not(.selected) .chip-inner {
   border-color: #ffb3b3;
-  color: #ffb3b3;
+  color: #dc3545;
   background-color: rgba(255, 179, 179, 0.15);
   animation: shake 0.4s;
 }
@@ -1393,13 +1393,13 @@ onUnmounted(() => {
   border: 1px solid #ffb3b3;
   border-radius: 10px;
   background-color: rgba(255, 179, 179, 0.15);
-  color: #ffffff;
+  color: #dc3545;
   font-size: 0.875rem;
   font-weight: 600;
 }
 
 .combo-selection-warning i {
-  color: #ffb3b3;
+  color: #dc3545;
   font-size: 1rem;
 }
 

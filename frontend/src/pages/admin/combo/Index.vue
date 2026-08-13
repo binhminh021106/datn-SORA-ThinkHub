@@ -355,7 +355,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
@@ -502,9 +502,13 @@ const openQuickView = async (id) => {
       }
     }
   } catch (e) {
-    Swal.fire('Lỗi', 'Không thể tải chi tiết Combo', 'error');
+    if (!isUnmounted && currentRequestId === activeQuickViewRequestId) {
+      Swal.fire('Lỗi', 'Không thể tải chi tiết Combo', 'error');
+    }
   } finally {
-    isFetchingDetail.value = false;
+    if (!isUnmounted && currentRequestId === activeQuickViewRequestId) {
+      isFetchingDetail.value = false;
+    }
   }
 };
 

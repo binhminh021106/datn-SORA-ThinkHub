@@ -42,27 +42,19 @@ class CrawlDojiGoldPrice extends Command
                 $goldPrices = $this->crawlDoji();
             }
 
-            // Luồng 4: Tuyệt lộ phùng sinh - Mock Data
-            if (empty($goldPrices)) {
-                $this->error('Tất cả các luồng cào đều thất bại! Bật chế độ Dữ liệu Dự phòng Động (Dynamic Mock).');
-                $goldPrices = $this->getDynamicMockData();
-            }
-
-            if (count($goldPrices) > 0) {
-                Cache::put('sora_gold_prices', $goldPrices, 300);
-                Cache::put('sora_gold_last_updated', now()->format('H:i d/m/Y'), 300);
+            if (!empty($goldPrices)) {
+                // Tăng thời gian sống của Cache lên 1 ngày (86400s) thay vì 300s để giữ lại dữ liệu cũ hợp lệ khi cào lỗi
+                Cache::put('sora_gold_prices', $goldPrices, 86400);
+                Cache::put('sora_gold_last_updated', now()->format('H:i d/m/Y'), 86400);
 
                 $this->info('Thành công! Đã lấy được ' . count($goldPrices) . ' mã vàng.');
             } else {
-                $this->warn('Không tìm thấy dữ liệu giá vàng!');
+                $this->warn('Không tìm thấy dữ liệu giá vàng! Giữ lại dữ liệu cũ trong Cache.');
             }
 
         } catch (\Exception $e) {
             $this->error('Lỗi kĩ thuật: ' . $e->getMessage());
-            $this->info('Sử dụng dữ liệu dự phòng do lỗi...');
-            $goldPrices = $this->getDynamicMockData();
-            Cache::put('sora_gold_prices', $goldPrices, 300);
-            Cache::put('sora_gold_last_updated', now()->format('H:i d/m/Y'), 300);
+            $this->warn('Tiến trình thất bại, dữ liệu cũ trong Cache sẽ được duy trì.');
         }
     }
 
@@ -121,10 +113,10 @@ class CrawlDojiGoldPrice extends Command
 
             $cleanAndFormatPrice = function($rawPrice) {
                 $rawPrice = trim($rawPrice);
-                if (empty($rawPrice) || $rawPrice === '-') return $rawPrice;
+                if (empty($rawPrice) || $rawPrice === '-') return null;
                 $pureNumber = str_replace([',', '.'], '', $rawPrice);
-                if (is_numeric($pureNumber)) return number_format($pureNumber);
-                return $rawPrice;
+                if (is_numeric($pureNumber) && floatval($pureNumber) > 0) return number_format($pureNumber);
+                return null;
             };
 
             foreach ($rows as $row) {
@@ -134,7 +126,7 @@ class CrawlDojiGoldPrice extends Command
                     $buy = $cleanAndFormatPrice($cols->item(1)->textContent);
                     $sell = $cleanAndFormatPrice($cols->item(2)->textContent);
 
-                    if ($name && $buy && $sell && !empty($name)) {
+                    if ($name && $buy !== null && $sell !== null) {
                         $goldPrices[] = [
                             'name' => $name,
                             'buy' => $buy,
@@ -164,7 +156,12 @@ class CrawlDojiGoldPrice extends Command
             $goldPrices = [];
             foreach ($data['prices'] as $key => $item) {
                 // Chỉ lấy giá VNĐ và tên hợp lệ
-                if (isset($item['currency']) && $item['currency'] === 'VND' && $item['buy'] > 0) {
+                if (
+                    isset($item['currency'], $item['name'], $item['buy'], $item['sell']) &&
+                    $item['currency'] === 'VND' &&
+                    is_numeric($item['buy']) && $item['buy'] > 0 &&
+                    is_numeric($item['sell']) && $item['sell'] > 0
+                ) {
                     // API trả về Giá Lượng (VD: 140,800,000). Frontend dùng Giá Chỉ / 1000 (VD: 14,080)
                     $buyPrice = $item['buy'] / 10000;
                     $sellPrice = $item['sell'] / 10000;

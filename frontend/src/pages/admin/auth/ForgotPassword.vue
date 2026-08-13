@@ -277,6 +277,8 @@ const goBackToStep1 = () => {
 
   recaptchaToken.value = '';
   recaptchaWidgetId = null;
+  recaptchaError.value = false;
+
   nextTick(() => {
     renderRecaptcha();
   });

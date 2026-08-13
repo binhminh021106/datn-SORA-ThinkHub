@@ -14,6 +14,8 @@ use App\Models\ProductVariant;
 use App\Models\TierServiceUsage;
 use Illuminate\Support\Facades\DB;
 
+use Illuminate\Support\Facades\Log;
+
 class PendingOrderCancellationService
 {
     /**
@@ -126,21 +128,21 @@ class PendingOrderCancellationService
             ];
         });
         } catch (\Throwable $exception) {
-            \Illuminate\Support\Facades\Log::error('Order cancellation failed due to exception.', [
+            Log::error('Order cancellation failed due to exception.', [
                 'order_id' => $orderId,
-                'exception' => $exception->getMessage(),
+                'exception' => $exception, // Pass exception directly to get stack trace
             ]);
             return false;
         }
 
         if ($updates === null) {
-            $exists = Order::whereKey($orderId)->exists();
+            $exists = Order::query()->whereKey($orderId)->exists();
             if ($exists) {
-                \Illuminate\Support\Facades\Log::warning("Order cancellation skipped: Order #{$orderId} is no longer pending/unpaid.", [
+                Log::warning("Order cancellation skipped: Order #{$orderId} is no longer pending/unpaid.", [
                     'order_id' => $orderId,
                 ]);
             } else {
-                \Illuminate\Support\Facades\Log::warning("Order cancellation skipped: Order #{$orderId} not found.", [
+                Log::warning("Order cancellation skipped: Order #{$orderId} not found.", [
                     'order_id' => $orderId,
                 ]);
             }
