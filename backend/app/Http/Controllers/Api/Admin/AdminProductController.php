@@ -62,7 +62,7 @@ class AdminProductController extends Controller
             foreach ($variant->attributeValues as $val) {
                 $attrMap[$val->attribute_id] = $val->id;
             }
-            $variant->attributes = $attrMap;
+            $variant->raw_attributes = $attrMap;
             unset($variant->attributeValues);
             return $variant;
         });

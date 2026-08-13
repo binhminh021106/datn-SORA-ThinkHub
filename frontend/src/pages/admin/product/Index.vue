@@ -349,7 +349,7 @@
                     </td>
                     <td class="px-3 font-monospace fw-bold text-secondary">{{ v.sku }}</td>
                     <td class="px-3">
-                      <span v-for="(val, key) in v.attributes" :key="key"
+                      <span v-for="(val, key) in v.raw_attributes" :key="key"
                         class="me-1 mb-1 badge bg-light text-dark border shadow-sm">
                         {{ getAttributeName(key) }}: <span class="text-brand">{{ getAttributeValueName(key, val)
                           }}</span>

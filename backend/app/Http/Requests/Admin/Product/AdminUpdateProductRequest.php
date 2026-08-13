@@ -74,7 +74,7 @@ class AdminUpdateProductRequest extends FormRequest
             'parsed_variants.*.promotional_price.lte' => 'Giá khuyến mãi không được lớn hơn Giá bán.',
             'parsed_variants.*.stock_quantity.min' => 'Tồn kho của biến thể phải lớn hơn 0.',
             'parsed_variants.*.image_file.required_without' => 'Vui lòng chọn ảnh cho biến thể mới thêm.',
-            'parsed_variants.*.image_file.max' => 'Ảnh của biến thể không được vượt quá 15MB.',
+            'parsed_variants.*.image_file.max' => 'Ảnh của biến thể không được vượt quá 2MB.',
         ];
     }
 }

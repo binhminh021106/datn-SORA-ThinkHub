@@ -205,8 +205,8 @@
                                     </div>
                                 </div>
 
-                                <div class="card-body p-0">
-                                    <div class="table-responsive" style="min-height: 350px;">
+                                <div class="card-body p-0" style="position: relative; z-index: 1040;">
+                                    <div class="table-responsive" style="min-height: 350px; overflow: visible;">
                                         <table class="table table-bordered mb-0 variant-table w-100">
                                             <thead>
                                                 <tr>
@@ -259,18 +259,63 @@
                                                             v-model="v.sku" placeholder="Tự động" required>
                                                     </td>
 
-                                                    <td v-for="attrId in activeAttributes" :key="attrId">
-                                                        <select class="form-select form-select-sm attr-select"
-                                                            v-model="v.attributes[attrId]"
-                                                            :class="{ 'is-invalid': v.attrError }"
-                                                            @change="handleAttributeChange($event, attrId, index)">
-                                                            <option value="">-- Chọn --</option>
-                                                            <option v-for="val in getAttributeValues(attrId)"
-                                                                :key="val.id" :value="val.id">{{ val.value
-                                                                }}</option>
-                                                            <option value="NEW" class="text-success fw-bold">+ Tạo
-                                                                mới...</option>
-                                                        </select>
+                                                    <td v-for="attrId in activeAttributes" :key="attrId" class="align-middle" style="min-width: 160px;">
+                                                        <div class="position-relative custom-vue-dropdown" @click.stop>
+                                                            <button
+                                                                class="btn btn-sm w-100 text-start d-flex justify-content-between align-items-center bg-white border shadow-sm"
+                                                                :class="{ 'is-invalid border-danger text-danger': v.attrError }" type="button"
+                                                                @click="toggleDropdown(index, attrId)">
+                                                                <span class="text-truncate pe-2 fw-bold" style="font-size: 0.85rem;">{{ getSelectedValueName(attrId, v.attributes[attrId]) }}</span>
+                                                                <i class="bi text-muted" style="font-size: 0.75rem;" :class="activeDropdown === `${index}-${attrId}` ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                                                            </button>
+
+                                                            <transition name="fade">
+                                                                <div v-show="activeDropdown === `${index}-${attrId}`"
+                                                                    class="position-absolute shadow-lg border rounded-4 p-3 bg-white"
+                                                                    style="width: 420px; z-index: 1050; top: 100%; left: 0; margin-top: 6px; cursor: default;">
+
+                                                                    <div class="input-group input-group-sm mb-3 shadow-sm">
+                                                                        <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                                                                        <input type="text"
+                                                                            class="form-control border-start-0 shadow-none bg-light border-secondary-subtle"
+                                                                            v-model="attrSearchQuery" placeholder="Lọc nhanh giá trị..." @click.stop>
+                                                                    </div>
+
+                                                                    <div class="row g-3">
+                                                                        <div class="col-6 border-end pe-3">
+                                                                            <h6 class="small text-muted fw-bold border-bottom pb-2 mb-2"><i class="bi bi-alphabet me-1"></i>Chữ / Ký tự (A-Z)</h6>
+                                                                            <div class="d-flex flex-wrap gap-2 custom-scrollbar-y pe-1" style="max-height: 200px; overflow-y: auto;">
+                                                                                <div v-for="val in getSortedValues(attrId).alpha" :key="val.id"
+                                                                                    class="badge border d-flex align-items-center p-0 shadow-sm transition-all rounded-pill overflow-hidden w-100"
+                                                                                    :class="v.attributes[attrId] == val.id ? 'bg-primary text-white border-primary' : 'bg-white text-dark hover-border-primary'">
+                                                                                    <span class="cursor-pointer px-3 py-2 flex-grow-1 text-center fw-bold text-truncate" style="font-size: 0.9rem;"
+                                                                                        @click="selectAttrValue(index, attrId, val.id)" :title="val.value">{{ val.value }}</span>
+                                                                                </div>
+                                                                                <span v-if="getSortedValues(attrId).alpha.length === 0" class="text-muted small fst-italic py-1 w-100 text-center">Trống</span>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="col-6 ps-2">
+                                                                            <h6 class="small text-muted fw-bold border-bottom pb-2 mb-2"><i class="bi bi-sort-numeric-down me-1"></i>Chữ Số (Tăng dần)</h6>
+                                                                            <div class="d-flex flex-wrap gap-2 custom-scrollbar-y pe-1" style="max-height: 200px; overflow-y: auto;">
+                                                                                <div v-for="val in getSortedValues(attrId).numeric" :key="val.id"
+                                                                                    class="badge border d-flex align-items-center p-0 shadow-sm transition-all rounded-pill overflow-hidden w-100"
+                                                                                    :class="v.attributes[attrId] == val.id ? 'bg-primary text-white border-primary' : 'bg-white text-dark hover-border-primary'">
+                                                                                    <span class="cursor-pointer px-3 py-2 flex-grow-1 text-center fw-bold text-truncate" style="font-size: 0.9rem;"
+                                                                                        @click="selectAttrValue(index, attrId, val.id)" :title="val.value">{{ val.value }}</span>
+                                                                                </div>
+                                                                                <span v-if="getSortedValues(attrId).numeric.length === 0" class="text-muted small fst-italic py-1 w-100 text-center">Trống</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <hr class="my-3">
+                                                                    <button type="button"
+                                                                        class="btn btn-sm btn-light text-success w-100 fw-bold border-dashed shadow-sm-hover py-2"
+                                                                        @click.stop="activeDropdown = null; handleAttributeChange({target: {value: 'NEW'}}, attrId, index)">
+                                                                        <i class="bi bi-plus-circle-fill me-1"></i> Bổ sung thêm giá trị vào hệ thống
+                                                                    </button>
+                                                                </div>
+                                                            </transition>
+                                                        </div>
                                                     </td>
 
                                                     <td>
@@ -293,10 +338,15 @@
                                                             :class="{ 'is-invalid': v.stockError }"
                                                             v-model="v.stock_quantity" min="1" required>
                                                     </td>
-                                                    <td class="text-center">
+                                                    <td class="text-center text-nowrap">
+                                                        <button type="button"
+                                                            class="btn btn-sm text-primary border-0 hover-primary"
+                                                            @click="duplicateVariant(index)" title="Nhân bản biến thể này">
+                                                            <i class="bi bi-copy fs-6"></i>
+                                                        </button>
                                                         <button type="button"
                                                             class="btn btn-sm text-secondary border-0 hover-danger"
-                                                            @click="removeVariantRow(index)">
+                                                            @click="removeVariantRow(index)" title="Xóa dòng">
                                                             <i class="bi bi-x-lg fs-6"></i>
                                                         </button>
                                                     </td>
@@ -426,6 +476,36 @@
                                     <i class="bi bi-save me-1"></i> Cập nhật
                                 </button>
                             </div>
+
+                            <div class="mb-3 mt-4 pt-4 border-top">
+                                <label class="form-label small fw-bold d-block"><i class="bi bi-list-task me-2"></i>Danh sách giá trị hiện có (Nhấn <i class="bi bi-x-circle-fill text-danger mx-1"></i> để xóa vĩnh viễn):</label>
+                                <div class="row g-3 p-3 bg-light rounded-4 border shadow-sm">
+                                    <div class="col-6">
+                                        <h6 class="small text-muted fw-bold text-center border-bottom pb-2 mb-3"><i class="bi bi-alphabet me-1"></i>Chữ cái / Ký tự</h6>
+                                        <div class="d-flex flex-column gap-2 pe-1 custom-scrollbar-y" style="max-height: 250px; overflow-y: auto;">
+                                            <div v-for="val in getSortedValues(selectedAttrToManage).alpha" :key="val.id"
+                                                class="d-flex justify-content-between align-items-center bg-white border rounded-3 px-3 py-2 shadow-sm transition-all hover-border-primary">
+                                                <span class="fw-bold text-dark text-truncate" :title="val.value">{{ val.value }}</span>
+                                                <button type="button" class="btn btn-sm text-danger p-0 border-0 ms-2 flex-shrink-0 hover-scale"
+                                                    @click="deleteAttributeValue(val.id)" title="Xóa rác"><i class="bi bi-x-circle-fill fs-5"></i></button>
+                                            </div>
+                                            <div v-if="getSortedValues(selectedAttrToManage).alpha.length === 0" class="text-center text-muted small fst-italic py-3 border border-dashed rounded-3">Trống</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 border-start ps-4">
+                                        <h6 class="small text-muted fw-bold text-center border-bottom pb-2 mb-3"><i class="bi bi-sort-numeric-down me-1"></i>Chữ Số (Tăng dần)</h6>
+                                        <div class="d-flex flex-column gap-2 pe-1 custom-scrollbar-y" style="max-height: 250px; overflow-y: auto;">
+                                            <div v-for="val in getSortedValues(selectedAttrToManage).numeric" :key="val.id"
+                                                class="d-flex justify-content-between align-items-center bg-white border rounded-3 px-3 py-2 shadow-sm transition-all hover-border-primary">
+                                                <span class="fw-bold text-dark text-truncate" :title="val.value">{{ val.value }}</span>
+                                                <button type="button" class="btn btn-sm text-danger p-0 border-0 ms-2 flex-shrink-0 hover-scale"
+                                                    @click="deleteAttributeValue(val.id)" title="Xóa rác"><i class="bi bi-x-circle-fill fs-5"></i></button>
+                                            </div>
+                                            <div v-if="getSortedValues(selectedAttrToManage).numeric.length === 0" class="text-center text-muted small fst-italic py-3 border border-dashed rounded-3">Trống</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -538,6 +618,61 @@ watch(attributesData, (newAttrs) => {
 const canProceedToStep2 = computed(() => {
     return form.value.name && form.value.name.trim().length >= 3 && form.value.category_id && form.value.base_price > 0 && (thumbnailFile.value || thumbnailPreview.value);
 });
+
+// Custom Vue Dropdown
+const activeDropdown = ref(null);
+const attrSearchQuery = ref('');
+
+const toggleDropdown = (rowIndex, attrId) => {
+    const key = `${rowIndex}-${attrId}`;
+    if (activeDropdown.value === key) {
+        activeDropdown.value = null;
+    } else {
+        activeDropdown.value = key;
+        attrSearchQuery.value = '';
+    }
+};
+
+const selectAttrValue = (rowIndex, attrId, valueId) => {
+    variants.value[rowIndex].attributes[attrId] = valueId;
+    activeDropdown.value = null;
+    validateDuplicates();
+};
+
+const getSelectedValueName = (attrId, valueId) => {
+    if (!valueId) return '-- Chọn --';
+    const attr = systemAttributes.value.find(a => a.id === parseInt(attrId));
+    if (!attr || !attr.values) return '-- Chọn --';
+    const valObj = attr.values.find(v => v.id === parseInt(valueId));
+    return valObj ? valObj.value : '-- Chọn --';
+};
+
+const getSortedValues = (attrId) => {
+    const attr = systemAttributes.value.find(a => a.id === parseInt(attrId));
+    if (!attr || !attr.values) return { alpha: [], numeric: [] };
+
+    let filtered = attr.values;
+    if (attrSearchQuery.value) {
+        const q = attrSearchQuery.value.toLowerCase();
+        filtered = filtered.filter(v => v.value.toLowerCase().includes(q));
+    }
+
+    const alpha = [];
+    const numeric = [];
+
+    filtered.forEach(v => {
+        if (!isNaN(parseFloat(v.value))) {
+            numeric.push(v);
+        } else {
+            alpha.push(v);
+        }
+    });
+
+    alpha.sort((a, b) => a.value.toString().localeCompare(b.value.toString(), 'vi', { sensitivity: 'base' }));
+    numeric.sort((a, b) => parseFloat(a.value) - parseFloat(b.value));
+
+    return { alpha, numeric };
+};
 
 const proceedIfValid = () => {
     if (canProceedToStep2.value) {
@@ -692,10 +827,31 @@ const addVariantRow = () => {
 };
 
 const removeVariantRow = (index) => {
-    if (variants.value.length <= 1) {
-        Swal.fire('Lưu ý', 'Sản phẩm phải có ít nhất 1 biến thể!', 'warning'); return;
-    }
     variants.value.splice(index, 1);
+    validateDuplicates();
+};
+
+const duplicateVariant = (index) => {
+    const v = variants.value[index];
+    const randomCode = Math.floor(1000 + Math.random() * 9000);
+    const prefix = form.value.slug ? form.value.slug.substring(0, 4).toUpperCase().replace(/-/g, '') : 'SKU';
+    const newSku = `${prefix}${randomCode}-V${variants.value.length + 1}`;
+
+    const newVariant = {
+        ...JSON.parse(JSON.stringify(v)),
+        id: null,
+        sku: newSku,
+        imageFile: null,
+        preview: null,
+        current_image: null,
+        hasDuplicateError: false,
+        attrError: false,
+        priceError: false,
+        saleError: false,
+        stockError: false
+    };
+
+    variants.value.splice(index + 1, 0, newVariant);
     validateDuplicates();
 };
 
@@ -828,6 +984,28 @@ const deleteAttribute = async (id) => {
                 Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa', showConfirmButton: false, timer: 2000 });
             } catch (e) {
                 if (e.response) Swal.fire('Lỗi', e.response.data.message || 'Không thể xóa', 'error');
+            }
+        }
+    });
+};
+
+const deleteAttributeValue = async (id) => {
+    if (!id) return;
+    Swal.fire({ title: 'Xóa giá trị?', text: "Hành động này không thể hoàn tác!", icon: 'warning', showCancelButton: true }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                await axios.delete(`${API_URL}/admin/attribute-values/${id}`, { headers: getHeaders() });
+                const attr = systemAttributes.value.find(a => a.id === selectedAttrToManage.value);
+                if (attr && attr.values) {
+                    attr.values = attr.values.filter(v => v.id !== id);
+                }
+                
+                // Cập nhật lại query cache
+                queryClient.setQueryData(['adminAttributes'], JSON.parse(JSON.stringify(systemAttributes.value)));
+                
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa giá trị', showConfirmButton: false, timer: 2000 });
+            } catch (e) {
+                if (e.response) Swal.fire('Lỗi', e.response.data.message || 'Không thể xóa giá trị này', 'error');
             }
         }
     });
@@ -1014,7 +1192,7 @@ const fetchData = async () => {
             let cols = new Set();
             variants.value = pData.variants.map(v => {
                 let attrs = {};
-                let parsedAttrs = typeof v.attributes === 'string' ? JSON.parse(v.attributes) : (v.attributes || {});
+                let parsedAttrs = typeof v.raw_attributes === 'string' ? JSON.parse(v.raw_attributes) : (v.raw_attributes || {});
 
                 for (let key in parsedAttrs) {
                     cols.add(key.toString());
@@ -1065,17 +1243,23 @@ const handleAdminCollision = (e) => {
     }
 };
 
+const closeDropdownListener = () => {
+    if (activeDropdown.value) activeDropdown.value = null;
+};
+
 onMounted(() => {
     fetchData();
     window.addEventListener('admin-product-updated', handleAdminCollision);
     window.addEventListener('admin-product-deleted', handleAdminCollision);
     window.addEventListener('admin-reconnected', fetchData);
+    window.addEventListener('click', closeDropdownListener);
 });
 
 onBeforeUnmount(() => {
     window.removeEventListener('admin-product-updated', handleAdminCollision);
     window.removeEventListener('admin-product-deleted', handleAdminCollision);
     window.removeEventListener('admin-reconnected', fetchData);
+    window.removeEventListener('click', closeDropdownListener);
     if (createAttrModalObj) createAttrModalObj.hide();
     if (createValueModalObj) createValueModalObj.hide();
     if (manageAttrModalObj) manageAttrModalObj.hide();

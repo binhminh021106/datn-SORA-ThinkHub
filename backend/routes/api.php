@@ -424,6 +424,7 @@ Route::prefix('admin')->group(function () {
 
             Route::apiResource('attributes', AdminAttributeController::class)->except(['show']);
             Route::post('attribute-values', [AdminAttributeValueController::class, 'store']);
+            Route::delete('attribute-values/{id}', [AdminAttributeValueController::class, 'destroy']);
         });
 
         // Quản lý Thương hiệu (Mã: admin_brands)
