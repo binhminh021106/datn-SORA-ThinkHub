@@ -47,6 +47,12 @@
             data-bs-target="#homeEditorialCarousel" data-bs-slide="prev">
             <i class="bi bi-chevron-left"></i>
           </button>
+          
+          <button v-if="heroBanners.length > 1" class="carousel-control-pause home-hero-control" type="button"
+            @click="toggleCarouselPause" :aria-pressed="isCarouselPaused" :title="isCarouselPaused ? 'Tiếp tục' : 'Tạm dừng'">
+            <i class="bi" :class="isCarouselPaused ? 'bi-play-fill' : 'bi-pause-fill'"></i>
+          </button>
+
           <button v-if="heroBanners.length > 1" class="carousel-control-next home-hero-control" type="button"
             data-bs-target="#homeEditorialCarousel" data-bs-slide="next">
             <i class="bi bi-chevron-right"></i>
@@ -432,9 +438,36 @@ const activeHeroIndex = ref(0);
 const heroCarouselRef = ref(null);
 const heroVideoRefs = ref({});
 let isCarouselEventBound = false;
+let carouselInstance = null;
+const isCarouselPaused = ref(false);
 
 const setHeroVideoRef = (el, index) => {
   if (el) heroVideoRefs.value[index] = el;
+};
+
+const handleCarouselSlide = (event) => {
+  activeHeroIndex.value = event.to;
+  Object.keys(heroVideoRefs.value).forEach(key => {
+    const video = heroVideoRefs.value[key];
+    if (video && key != event.to) {
+      video.pause();
+    }
+  });
+  const activeVideo = heroVideoRefs.value[event.to];
+  if (activeVideo) {
+    activeVideo.play().catch(e => console.warn("Video play failed:", e));
+  }
+};
+
+const toggleCarouselPause = () => {
+  if (!carouselInstance) return;
+  if (isCarouselPaused.value) {
+    carouselInstance.cycle();
+    isCarouselPaused.value = false;
+  } else {
+    carouselInstance.pause();
+    isCarouselPaused.value = true;
+  }
 };
 
 watch(() => heroCarouselRef.value, async (el) => {
@@ -442,24 +475,12 @@ watch(() => heroCarouselRef.value, async (el) => {
     await nextTick();
     
     // Khởi tạo Bootstrap Carousel thủ công
-    new window.bootstrap.Carousel(el, {
+    carouselInstance = new window.bootstrap.Carousel(el, {
       interval: 6000,
       ride: 'carousel'
     });
 
-    el.addEventListener('slid.bs.carousel', (event) => {
-      activeHeroIndex.value = event.to;
-      Object.keys(heroVideoRefs.value).forEach(key => {
-        const video = heroVideoRefs.value[key];
-        if (video && key != event.to) {
-          video.pause();
-        }
-      });
-      const activeVideo = heroVideoRefs.value[event.to];
-      if (activeVideo) {
-        activeVideo.play().catch(e => console.warn("Video play failed:", e));
-      }
-    });
+    el.addEventListener('slid.bs.carousel', handleCarouselSlide);
     isCarouselEventBound = true;
     
     // Auto play first video if exists
@@ -469,6 +490,16 @@ watch(() => heroCarouselRef.value, async (el) => {
     }
   }
 }, { immediate: true });
+
+onUnmounted(() => {
+  if (heroCarouselRef.value && isCarouselEventBound) {
+    heroCarouselRef.value.removeEventListener('slid.bs.carousel', handleCarouselSlide);
+  }
+  if (carouselInstance) {
+    carouselInstance.dispose();
+    carouselInstance = null;
+  }
+});
 
 const heroImage = computed(() => {
   const firstBanner = heroBanners.value[0];

@@ -157,12 +157,12 @@ class AppServiceProvider extends ServiceProvider
 
         // Giới hạn Tính năng Gửi chiến dịch Email Sinh nhật
         RateLimiter::for('email-campaign-birthday', function (Request $request) {
-            return Limit::perMinute(1)->by($request->user()?->id ?: $request->ip());
+            return Limit::perMinute(5)->by($request->user()?->id ?: $request->ip());
         });
 
         // Giới hạn Tính năng Gửi chiến dịch Email Sự kiện
         RateLimiter::for('email-campaign-holiday', function (Request $request) {
-            return Limit::perMinute(1)->by($request->user()?->id ?: $request->ip());
+            return Limit::perMinute(5)->by($request->user()?->id ?: $request->ip());
         });
 
         // Giới hạn Thử lại thanh toán (VNPay / MoMo)

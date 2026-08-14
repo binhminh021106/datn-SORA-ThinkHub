@@ -36,6 +36,7 @@ class AdminStoreProductRequest extends FormRequest
             'base_price'        => 'required|numeric|min:1',
             'thumbnail_image'   => 'required|image|mimes:jpeg,png,jpg,webp|max:2048', 
             'status'            => 'required|in:published,draft,hidden',
+            'description'       => 'nullable|string',
             'affiliate_commission_rate' => 'nullable|numeric|min:0|max:100',
             'parsed_variants'   => 'required|array|min:1',
             

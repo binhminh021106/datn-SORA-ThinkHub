@@ -660,7 +660,7 @@
 
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue';
-import { useQuery } from '@tanstack/vue-query';
+import { useQuery, keepPreviousData } from '@tanstack/vue-query';
 import Chart from 'chart.js/auto';
 import axios from 'axios';
 import Swal from 'sweetalert2';
@@ -952,7 +952,7 @@ const hasAccess = ref(Boolean(
   sessionStorage.getItem('adminToken')
 ) && storedLevel >= REQUIRED_ADMIN_LEVEL);
 
-const { data: dashboardData, isLoading, isFetching, refetch } = useQuery({
+const { data: dashboardData, isLoading, isFetching, refetch, error: queryError } = useQuery({
   queryKey: ['admin-dashboard-main', appliedFilterParams],
   queryFn: async () => {
     const res = await axios.get(`${apiUrl}/admin/dashboard`, {
@@ -966,7 +966,7 @@ const { data: dashboardData, isLoading, isFetching, refetch } = useQuery({
     return res.data.data;
   },
   staleTime: 5 * 60 * 1000,
-  keepPreviousData: true,
+  placeholderData: keepPreviousData,
   enabled: hasAccess
 });
 
@@ -1039,16 +1039,18 @@ const applyDashboardFilter = async () => {
 
   appliedFilterParams.value = { ...filterParams.value };
   
-  // Vue Query sẽ tự động refetch khi appliedFilterParams thay đổi
-  // Nếu muốn ép fetch ngay lập tức:
-  setTimeout(async () => {
-    const result = await refetch();
-    if (result.error) {
-      const errors = result.error?.response?.data?.errors;
-      filterError.value = errors ? Object.values(errors).flat().join(' ') : 'Không thể tải dữ liệu cho kỳ đã chọn.';
-    }
-  }, 0);
+  // Vue Query tự động refetch, nhưng ta gọi refetch() nếu muốn áp dụng lại bộ lọc không thay đổi
+  refetch();
 };
+
+watch(queryError, (newError) => {
+  if (newError) {
+    const errors = newError?.response?.data?.errors;
+    filterError.value = errors ? Object.values(errors).flat().join(' ') : 'Không thể tải dữ liệu cho kỳ đã chọn.';
+  } else {
+    filterError.value = '';
+  }
+});
 
 // API: Kích hoạt / Dừng mã giảm giá (DÙNG PATCH DO ROUTE LÀ PATCH)
 const toggleCouponStatus = async (coupon) => {

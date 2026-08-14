@@ -130,7 +130,6 @@ class AdminContactController extends Controller
 
         try {
             $contact->update([
-                'status' => 'resolved',
                 'reply_subject' => $request->subject,
                 'reply_message' => $replyMessage,
                 'replied_at' => now(),
@@ -160,7 +159,7 @@ class AdminContactController extends Controller
             $contactId = $contact->id;
 
             // Queue Gửi Email
-            dispatch(function () use ($contactEmail, $subject, $data) {
+            dispatch(function () use ($contactEmail, $subject, $data, $contactId) {
                 \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($contactEmail, $subject, $data) {
                     $message->to($contactEmail)
                             ->subject($subject)
@@ -180,6 +179,8 @@ class AdminContactController extends Controller
                                 </div>
                             ");
                 });
+                
+                \App\Models\Contact::whereKey($contactId)->update(['status' => 'resolved']);
             })->catch(function (\Throwable $exception) use ($contactId) {
                 \Illuminate\Support\Facades\Log::error('Không thể gửi email phản hồi liên hệ (Queue).', [
                     'contact_id' => $contactId,

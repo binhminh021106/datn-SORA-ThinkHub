@@ -48,13 +48,16 @@ class CrawlDojiGoldPrice extends Command
                 Cache::put('sora_gold_last_updated', now()->format('H:i d/m/Y'), 86400);
 
                 $this->info('Thành công! Đã lấy được ' . count($goldPrices) . ' mã vàng.');
+                return self::SUCCESS;
             } else {
                 $this->warn('Không tìm thấy dữ liệu giá vàng! Giữ lại dữ liệu cũ trong Cache.');
+                return self::FAILURE;
             }
 
         } catch (\Exception $e) {
             $this->error('Lỗi kĩ thuật: ' . $e->getMessage());
             $this->warn('Tiến trình thất bại, dữ liệu cũ trong Cache sẽ được duy trì.');
+            return self::FAILURE;
         }
     }
 

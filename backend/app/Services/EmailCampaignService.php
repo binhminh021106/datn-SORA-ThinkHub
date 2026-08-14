@@ -55,21 +55,8 @@ class EmailCampaignService
 
         foreach ($birthdayUsers as $user) {
             $emailLog = null;
-            if ($preventDuplicateSends) {
-                $alreadySent = EmailLog::where('user_id', $user->id)
-                    ->where('event_type', 'birthday')
-                    ->whereIn('status', ['success', 'sent', 'queued'])
-                    ->whereYear('created_at', $today->year)
-                    ->exists();
-
-                if ($alreadySent) {
-                    continue;
-                }
-            }
 
             try {
-                
-
                 // Lấy mã Coupon theo đúng cấu hình Admin đã cài đặt
                 $coupon = $this->createBirthdayCoupon($user, $today);
 
@@ -79,9 +66,11 @@ class EmailCampaignService
                     continue; 
                 }
 
+                // Chèn log nguyên tử (Atomic Insert). Unique constraint sẽ cản trùng lặp
                 $emailLog = EmailLog::create([
                     'user_id' => $user->id,
                     'event_type' => 'birthday',
+                    'campaign_year' => $preventDuplicateSends ? $today->year : null,
                     'queued_at' => now(),
                     'status' => 'queued',
                     'voucher_code' => $coupon->code,
@@ -90,13 +79,21 @@ class EmailCampaignService
 
                 Mail::to($user->email)->queue(new BirthdayVoucherMail($user, $coupon, $emailLog->id));
                 $queuedCount++;
+            } catch (\Illuminate\Database\QueryException $e) {
+                // 23000: Integrity constraint violation (Duplicate entry for unique key)
+                if ($e->getCode() == 23000) {
+                    continue;
+                }
+                Log::error("Birthday campaign mail failed for user {$user->id}: {$e->getMessage()}");
+                $failedCount++;
+                $this->logFailedEmail($user->id, 'birthday', $e->getMessage(), $preventDuplicateSends ? $today->year : null);
             } catch (\Throwable $e) {
                 Log::error("Birthday campaign mail failed for user {$user->id}: {$e->getMessage()}");
                 $failedCount++;
                 if (isset($emailLog)) {
                     $emailLog->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
                 } else {
-                    $this->logFailedEmail($user->id, 'birthday', $e->getMessage());
+                    $this->logFailedEmail($user->id, 'birthday', $e->getMessage(), $preventDuplicateSends ? $today->year : null);
                 }
             }
         }
@@ -151,27 +148,16 @@ class EmailCampaignService
                 continue; // Bỏ qua sự kiện này nếu đã bị tắt
             }
 
-            // 2. Pre-fetch toàn bộ ID của user đã được gửi email thành công trong năm nay
-            $sentUserIds = [];
-            if ($preventDuplicateSends) {
-                $sentUserIds = EmailLog::where('event_type', $eventTypeKey)
-                    ->whereIn('status', ['success', 'sent', 'queued'])
-                    ->whereYear('created_at', $today->year)
-                    ->pluck('user_id')
-                    ->toArray();
-            }
+            // Xóa pre-fetch ID bằng RAM để dựa hoàn toàn vào DB Unique Constraint
 
             foreach ($targetUsers as $user) {
                 $emailLog = null;
-                // Kiểm tra trùng lặp bằng array PHP trên RAM, thay vì gọi DB
-                if ($preventDuplicateSends && in_array($user->id, $sentUserIds, true)) {
-                    continue;
-                }
 
                 try {
                     $emailLog = EmailLog::create([
                         'user_id' => $user->id,
                         'event_type' => $eventTypeKey,
+                        'campaign_year' => $preventDuplicateSends ? $today->year : null,
                         'queued_at' => now(),
                         'status' => 'queued',
                         'voucher_code' => $event->voucher_code,
@@ -180,13 +166,20 @@ class EmailCampaignService
 
                     Mail::to($user->email)->queue(new HolidayCouponMail($user, $event, null, $emailLog->id));
                     $totalQueuedCount++;
+                } catch (\Illuminate\Database\QueryException $e) {
+                    if ($e->getCode() == 23000) {
+                        continue; // Đã gửi trong năm nay
+                    }
+                    Log::error("Holiday campaign mail failed for user {$user->id}, event {$event->id}: {$e->getMessage()}");
+                    $totalFailedCount++;
+                    $this->logFailedEmail($user->id, $eventTypeKey, $e->getMessage(), $preventDuplicateSends ? $today->year : null);
                 } catch (\Throwable $e) {
                     Log::error("Holiday campaign mail failed for user {$user->id}, event {$event->id}: {$e->getMessage()}");
                     $totalFailedCount++;
                     if (isset($emailLog)) {
                         $emailLog->update(['status' => 'failed', 'error_message' => $e->getMessage()]);
                     } else {
-                        $this->logFailedEmail($user->id, $eventTypeKey, $e->getMessage());
+                        $this->logFailedEmail($user->id, $eventTypeKey, $e->getMessage(), $preventDuplicateSends ? $today->year : null);
                     }
                 }
             }
@@ -214,11 +207,33 @@ class EmailCampaignService
         $setting = EmailCampaignSetting::current();
         $tiers = $setting->birthday_tiers ?? [];
         
-        if (!$user->tier_id) return null;  
+        if (!$user->tier_id) {
+            // Tự động lấy cấu hình của Hạng thấp nhất (min_spend nhỏ nhất) cho thành viên mới
+            $matchedTierConfig = collect($tiers)->sortBy('min_spend')->first();
+            
+            if (!$matchedTierConfig) {
+                \Illuminate\Support\Facades\Log::warning("EmailCampaignService: Skipped user {$user->id} because no tier config available for fallback.");
+                return null;  
+            }
+        } else {
+            $matchedTierConfig = collect($tiers)->first(function($t) use ($user) {
+                return isset($t['tier_id']) && (int) $t['tier_id'] === (int) $user->tier_id;
+            });
+        }
 
-        $matchedTierConfig = collect($tiers)->firstWhere('tier_id', $user->tier_id);
+        if (!$matchedTierConfig) {
+            \Illuminate\Support\Facades\Log::warning("EmailCampaignService: Skipped user {$user->id} because no tier config found for tier_id {$user->tier_id}", ['tiers' => $tiers]);
+            return null;
+        }
 
-        if (!$matchedTierConfig || empty($matchedTierConfig['voucherCode']) || $matchedTierConfig['status'] !== 'active') {
+        if (empty($matchedTierConfig['voucherCode'])) {
+            \Illuminate\Support\Facades\Log::warning("EmailCampaignService: Skipped user {$user->id} because voucherCode is empty for tier_id " . ($matchedTierConfig['tier_id'] ?? 'unknown'), ['config' => $matchedTierConfig]);
+            return null;
+        }
+
+        $tierStatus = $matchedTierConfig['status'] ?? 'active';
+        if ($tierStatus !== 'active') {
+            \Illuminate\Support\Facades\Log::warning("EmailCampaignService: Skipped user {$user->id} because tier status is not active for tier_id " . ($matchedTierConfig['tier_id'] ?? 'unknown'), ['config' => $matchedTierConfig]);
             return null; 
         }
 
@@ -233,14 +248,14 @@ class EmailCampaignService
             return Coupon::firstOrCreate(
                 ['code' => $couponCode],
                 [
-                    'type' => $matchedTierConfig['type'],
-                    'name' => 'Quà tặng sinh nhật hạng: ' . $matchedTierConfig['name'],
-                    'min_spend' => $matchedTierConfig['min_spend'],
-                    'value' => $matchedTierConfig['value'],
-                    'usage_limit' => $matchedTierConfig['usage_limit'],
-                    'usage_limit_per_user' => $matchedTierConfig['usage_limit_per_user'],
+                    'type' => $matchedTierConfig['type'] ?? 'fixed',
+                    'name' => 'Quà tặng sinh nhật hạng: ' . ($matchedTierConfig['name'] ?? 'Cơ bản'),
+                    'min_spend' => $matchedTierConfig['min_spend'] ?? 0,
+                    'value' => $matchedTierConfig['value'] ?? 0,
+                    'usage_limit' => $matchedTierConfig['usage_limit'] ?? null,
+                    'usage_limit_per_user' => $matchedTierConfig['usage_limit_per_user'] ?? 1,
                     'usage_count' => 0,
-                    'status' => $matchedTierConfig['status'],
+                    'status' => $tierStatus,
                     'expires_at' => $requiredExpiration, 
                     'user_id' => $user->id, 
                     'tier_id' => $user->tier_id,
@@ -320,11 +335,12 @@ class EmailCampaignService
         return $targets ?: ['all'];
     }
 
-    private function logFailedEmail(int $userId, string $eventType, ?string $errorMessage = null): void
+    private function logFailedEmail(int $userId, string $eventType, ?string $errorMessage = null, ?int $campaignYear = null): void
     {
         EmailLog::create([
             'user_id' => $userId,
             'event_type' => $eventType,
+            'campaign_year' => $campaignYear,
             'sent_at' => now(),
             'status' => 'failed',
             'error_message' => $errorMessage,

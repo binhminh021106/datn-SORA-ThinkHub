@@ -149,12 +149,19 @@ class PendingOrderCancellationService
             return false;
         }
 
-        foreach ($updates['product_ids'] as $productId) {
-            broadcast(new ProductUpdated($productId, ['action' => 'stock_updated']));
-        }
+        try {
+            foreach ($updates['product_ids'] as $productId) {
+                broadcast(new ProductUpdated($productId, ['action' => 'stock_updated']));
+            }
 
-        foreach ($updates['combo_ids'] as $comboId) {
-            broadcast(new ComboUpdated($comboId, ['action' => 'stock_updated']));
+            foreach ($updates['combo_ids'] as $comboId) {
+                broadcast(new ComboUpdated($comboId, ['action' => 'stock_updated']));
+            }
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to broadcast stock update after order cancellation.', [
+                'order_id' => $orderId,
+                'error' => $exception->getMessage(),
+            ]);
         }
 
         return true;

@@ -411,6 +411,14 @@ class ClientCheckoutController extends Controller
                 $shippingFee = $this->calculateShippingFee($subTotal);
                 $totalAmount = max($subTotal - $discountAmount - $tierDiscountAmount, 0) + $shippingFee;
 
+                if ($request->payment_method === 'momo' && ($totalAmount < 10000 || $totalAmount > 50000000)) {
+                    throw new \DomainException("Thanh toán qua ví MoMo chỉ hỗ trợ giao dịch từ 10.000đ đến 50.000.000đ.");
+                }
+                
+                if ($request->payment_method === 'vnpay' && ($totalAmount < 10000 || $totalAmount > 1000000000)) {
+                    throw new \DomainException("Thanh toán qua VNPay chỉ hỗ trợ giao dịch từ 10.000đ đến 1.000.000.000đ.");
+                }
+
                 // CÂN BẰNG TỈ LỆ HOA HỒNG THEO SỐ TIỀN THỰC TẾ
                 $actualCommission = 0;
                 if ($subTotal > 0 && $totalCommissionAmount > 0) {

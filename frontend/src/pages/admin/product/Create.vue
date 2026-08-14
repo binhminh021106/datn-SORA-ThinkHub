@@ -113,6 +113,21 @@
                                             </small>
                                         </div>
 
+                                        <!-- Trình soạn thảo Word (Quill Editor) cho mô tả sản phẩm -->
+                                        <div class="col-md-12 mt-3">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <label class="form-label fw-bold text-dark mb-0">Mô tả sản phẩm</label>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" @click="isHtmlMode = !isHtmlMode">
+                                                    <i class="bi bi-code-slash me-1"></i>
+                                                    {{ isHtmlMode ? 'Chuyển sang Trực quan (Visual)' : 'Chuyển sang HTML (Code)' }}
+                                                </button>
+                                            </div>
+                                            <div class="editor-container shadow-sm rounded-4 position-relative border bg-white">
+                                                <QuillEditor v-if="!isHtmlMode" theme="snow" toolbar="full" v-model:content="form.description" contentType="html" placeholder="Mô tả chi tiết sản phẩm..." />
+                                                <textarea v-else class="form-control font-monospace p-3" rows="10" v-model="form.description" placeholder="<p>Mô tả HTML...</p>" style="min-height: 250px; background-color: #2d2d2d; color: #f8f8f2; border: none;"></textarea>
+                                            </div>
+                                        </div>
+
                                         <div class="col-md-12 mt-3">
                                             <div
                                                 class="alert alert-info small border-0 bg-info bg-opacity-10 text-muted m-0">
@@ -162,7 +177,7 @@
 
                         <div v-show="currentStep === 2">
 
-                            <div class="card border shadow-sm rounded-3 overflow-hidden mb-4">
+                            <div class="card border shadow-sm rounded-3 overflow-visible mb-4">
                                 <div
                                     class="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center flex-wrap gap-3">
                                     <h6 class="fw-bold mb-0 text-brand d-flex align-items-center">
@@ -260,7 +275,7 @@
                                                             <button
                                                                 class="btn btn-sm w-100 text-start d-flex justify-content-between align-items-center bg-white border shadow-sm"
                                                                 :class="{ 'is-invalid border-danger text-danger': v.attrError }" type="button"
-                                                                @click="toggleDropdown(index, attrId)">
+                                                                @click="toggleDropdown($event, index, attrId)">
                                                                 <span class="text-truncate pe-2 fw-bold" style="font-size: 0.85rem;">{{ getSelectedValueName(attrId, v.attributes[attrId]) }}</span>
                                                                 <i class="bi text-muted" style="font-size: 0.75rem;" :class="activeDropdown === `${index}-${attrId}` ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
                                                             </button>
@@ -268,7 +283,10 @@
                                                             <transition name="fade">
                                                                 <div v-show="activeDropdown === `${index}-${attrId}`"
                                                                     class="position-absolute shadow-lg border rounded-4 p-3 bg-white"
-                                                                    style="width: 420px; z-index: 1050; top: 100%; left: 0; margin-top: 6px; cursor: default;">
+                                                                    :style="[
+                                                                        { width: '420px', zIndex: 1050, left: 0, cursor: 'default' },
+                                                                        dropdownPosition === 'top' ? { bottom: '100%', marginBottom: '6px' } : { top: '100%', marginTop: '6px' }
+                                                                    ]">
 
                                                                     <div class="input-group input-group-sm mb-3 shadow-sm">
                                                                         <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
@@ -517,6 +535,8 @@ import { useRouter } from 'vue-router';
 import { useQueryClient } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import { QuillEditor } from '@vueup/vue-quill';
+import '@vueup/vue-quill/dist/vue-quill.snow.css';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -526,13 +546,14 @@ const isPageLoading = ref(true);
 const isSaving = ref(false);
 const isProcessingSchema = ref(false);
 const currentStep = ref(1);
+const isHtmlMode = ref(false);
 
 const categories = ref([]);
 const systemAttributes = ref([]);
 const brands = ref([]);
 
 const form = ref({
-    category_id: '', brand_id: '', name: '', slug: '', base_price: 0, isPublished: true, affiliate_commission_rate: 0
+    category_id: '', brand_id: '', name: '', slug: '', base_price: 0, isPublished: true, affiliate_commission_rate: 0, description: ''
 });
 const thumbnailFile = ref(null);
 const thumbnailPreview = ref(null);
@@ -557,14 +578,27 @@ const manageAttrName = ref('');
 // Custom Vue Dropdown
 const activeDropdown = ref(null);
 const attrSearchQuery = ref('');
+const dropdownPosition = ref('bottom');
 
-const toggleDropdown = (rowIndex, attrId) => {
+const toggleDropdown = (event, rowIndex, attrId) => {
     const key = `${rowIndex}-${attrId}`;
     if (activeDropdown.value === key) {
         activeDropdown.value = null;
     } else {
         activeDropdown.value = key;
         attrSearchQuery.value = '';
+        
+        if (event && event.currentTarget) {
+            const rect = event.currentTarget.getBoundingClientRect();
+            const spaceBelow = window.innerHeight - rect.bottom;
+            const dropdownHeight = 350; // Ước lượng chiều cao dropdown
+            
+            if (spaceBelow < dropdownHeight && rect.top > dropdownHeight) {
+                dropdownPosition.value = 'top';
+            } else {
+                dropdownPosition.value = 'bottom';
+            }
+        }
     }
 };
 
@@ -1013,6 +1047,7 @@ const submitProduct = async () => {
         formData.append('slug', form.value.slug);
         formData.append('base_price', form.value.base_price);
         formData.append('status', form.value.isPublished ? 'published' : 'draft');
+        formData.append('description', form.value.description || '');
         
         // THÊM MỚI: Đẩy dữ liệu affiliate_commission_rate vào payload
         formData.append('affiliate_commission_rate', form.value.affiliate_commission_rate);
