@@ -16,10 +16,9 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
-// chức năng: gửi email chiến dịch sinh nhật và ngày lễ, bao gồm việc tạo mã giảm giá (coupon) dựa trên cấu hình của Admin, lọc đối tượng người dùng theo tiêu chí, và quản lý trạng thái gửi email.
 class EmailCampaignService
 {
-    private string $birthdayColumn = 'birthday'; // Nhớ đảm bảo cột này đúng với DB của bạn
+    private string $birthdayColumn = 'birthday'; 
     private string $genderColumn = 'gender';
 
     public function sendBirthdayCampaign(bool $respectAutoSetting = false, bool $preventDuplicateSends = false): array
@@ -57,36 +56,54 @@ class EmailCampaignService
             $emailLog = null;
 
             try {
-                // Lấy mã Coupon theo đúng cấu hình Admin đã cài đặt
                 $coupon = $this->createBirthdayCoupon($user, $today);
 
-                // Nếu hạng của User không được Admin cấu hình mã quà tặng thì bỏ qua
                 if (!$coupon) {
                     $skippedCount++;
                     continue; 
                 }
 
-                // Chèn log nguyên tử (Atomic Insert). Unique constraint sẽ cản trùng lặp
-                $emailLog = EmailLog::create([
-                    'user_id' => $user->id,
-                    'event_type' => 'birthday',
-                    'campaign_year' => $preventDuplicateSends ? $today->year : null,
-                    'queued_at' => now(),
-                    'status' => 'queued',
-                    'voucher_code' => $coupon->code,
-                    'action_url' => $this->shopCouponUrl($coupon->code),
-                ]);
+                try {
+                    $emailLog = EmailLog::create([
+                        'user_id' => $user->id,
+                        'event_type' => 'birthday',
+                        'campaign_year' => $preventDuplicateSends ? $today->year : null,
+                        'queued_at' => now(),
+                        'status' => 'queued',
+                        'voucher_code' => $coupon->code,
+                        'action_url' => $this->shopCouponUrl($coupon->code),
+                    ]);
+                } catch (\Illuminate\Database\QueryException $e) {
+                    if ($e->getCode() == 23000) {
+                        $existingLog = EmailLog::where('user_id', $user->id)
+                            ->where('event_type', 'birthday')
+                            ->where('campaign_year', $preventDuplicateSends ? $today->year : null)
+                            ->first();
+
+                        if ($existingLog && in_array($existingLog->status, ['queued', 'sent'])) {
+                            $skippedCount++;
+                            continue;
+                        }
+
+                        if ($existingLog) {
+                            $existingLog->update([
+                                'status' => 'queued',
+                                'voucher_code' => $coupon->code,
+                                'action_url' => $this->shopCouponUrl($coupon->code),
+                                'queued_at' => now(),
+                                'error_message' => null
+                            ]);
+                            $emailLog = $existingLog;
+                        } else {
+                            throw $e;
+                        }
+                    } else {
+                        throw $e;
+                    }
+                }
 
                 Mail::to($user->email)->queue(new BirthdayVoucherMail($user, $coupon, $emailLog->id));
                 $queuedCount++;
-            } catch (\Illuminate\Database\QueryException $e) {
-                // 23000: Integrity constraint violation (Duplicate entry for unique key)
-                if ($e->getCode() == 23000) {
-                    continue;
-                }
-                Log::error("Birthday campaign mail failed for user {$user->id}: {$e->getMessage()}");
-                $failedCount++;
-                $this->logFailedEmail($user->id, 'birthday', $e->getMessage(), $preventDuplicateSends ? $today->year : null);
             } catch (\Throwable $e) {
                 Log::error("Birthday campaign mail failed for user {$user->id}: {$e->getMessage()}");
                 $failedCount++;
@@ -137,43 +154,61 @@ class EmailCampaignService
 
             $eventTypeKey = 'holiday_' . $event->id;
 
-            // ĐƯA TRUY VẤN RA NGOÀI VÒNG LẶP USER:
-            // 1. Kiểm tra sự kiện 1 lần duy nhất cho mỗi event
+            // Tối ưu hiệu suất: Kiểm tra trạng thái sự kiện 1 lần duy nhất cho toàn bộ tập người dùng
             $eventStillSendable = HolidayEvent::whereKey($event->id)
                 ->where('status', 'active')
                 ->where('event_date', $todayStr)
                 ->exists();
 
             if (!$eventStillSendable) {
-                continue; // Bỏ qua sự kiện này nếu đã bị tắt
+                continue; // Bỏ qua sự kiện nếu đã bị tắt
             }
-
-            // Xóa pre-fetch ID bằng RAM để dựa hoàn toàn vào DB Unique Constraint
 
             foreach ($targetUsers as $user) {
                 $emailLog = null;
 
                 try {
-                    $emailLog = EmailLog::create([
-                        'user_id' => $user->id,
-                        'event_type' => $eventTypeKey,
-                        'campaign_year' => $preventDuplicateSends ? $today->year : null,
-                        'queued_at' => now(),
-                        'status' => 'queued',
-                        'voucher_code' => $event->voucher_code,
-                        'action_url' => $event->voucher_code ? $this->shopCouponUrl($event->voucher_code) : $this->shopUrl(),
-                    ]);
+                    try {
+                        $emailLog = EmailLog::create([
+                            'user_id' => $user->id,
+                            'event_type' => $eventTypeKey,
+                            'campaign_year' => $preventDuplicateSends ? $today->year : null,
+                            'queued_at' => now(),
+                            'status' => 'queued',
+                            'voucher_code' => $event->voucher_code,
+                            'action_url' => $event->voucher_code ? $this->shopCouponUrl($event->voucher_code) : $this->shopUrl(),
+                        ]);
+                    } catch (\Illuminate\Database\QueryException $e) {
+                        if ($e->getCode() == 23000) {
+                            $existingLog = EmailLog::where('user_id', $user->id)
+                                ->where('event_type', $eventTypeKey)
+                                ->where('campaign_year', $preventDuplicateSends ? $today->year : null)
+                                ->first();
+
+                            if ($existingLog && in_array($existingLog->status, ['queued', 'sent'])) {
+                                continue; // Đã gửi trong năm nay
+                            }
+
+                            if ($existingLog) {
+                                $existingLog->update([
+                                    'status' => 'queued',
+                                    'voucher_code' => $event->voucher_code,
+                                    'action_url' => $event->voucher_code ? $this->shopCouponUrl($event->voucher_code) : $this->shopUrl(),
+                                    'queued_at' => now(),
+                                    'error_message' => null
+                                ]);
+                                $emailLog = $existingLog;
+                            } else {
+                                throw $e;
+                            }
+                        } else {
+                            throw $e;
+                        }
+                    }
 
                     Mail::to($user->email)->queue(new HolidayCouponMail($user, $event, null, $emailLog->id));
                     $totalQueuedCount++;
-                } catch (\Illuminate\Database\QueryException $e) {
-                    if ($e->getCode() == 23000) {
-                        continue; // Đã gửi trong năm nay
-                    }
-                    Log::error("Holiday campaign mail failed for user {$user->id}, event {$event->id}: {$e->getMessage()}");
-                    $totalFailedCount++;
-                    $this->logFailedEmail($user->id, $eventTypeKey, $e->getMessage(), $preventDuplicateSends ? $today->year : null);
-                } catch (\Throwable $e) {
+            } catch (\Throwable $e) {
                     Log::error("Holiday campaign mail failed for user {$user->id}, event {$event->id}: {$e->getMessage()}");
                     $totalFailedCount++;
                     if (isset($emailLog)) {
@@ -194,21 +229,19 @@ class EmailCampaignService
         ];
     }
 
-    // ================= HELPER METHODS =================
-
-    /**
-     * Tạo hoặc lấy Voucher sinh nhật dựa trên cấu hình của Admin
-     */
-  /**
-     * Tạo hoặc lấy Voucher sinh nhật dựa trên cấu hình của Admin
-     */
   private function createBirthdayCoupon(User $user, Carbon $today): ?Coupon
     {
         $setting = EmailCampaignSetting::current();
         $tiers = $setting->birthday_tiers ?? [];
+
+        $tiers = array_map(function ($t) {
+            $t['tier_id'] = $t['tier_id'] ?? $t['id'] ?? null;
+            $t['type'] = $t['type'] ?? 'percentage';
+            $t['value'] = $t['value'] ?? $t['discount'] ?? 0;
+            return $t;
+        }, $tiers);
         
         if (!$user->tier_id) {
-            // Tự động lấy cấu hình của Hạng thấp nhất (min_spend nhỏ nhất) cho thành viên mới
             $matchedTierConfig = collect($tiers)->sortBy('min_spend')->first();
             
             if (!$matchedTierConfig) {
@@ -238,7 +271,7 @@ class EmailCampaignService
         }
 
         $baseCode = $matchedTierConfig['voucherCode'];
-        // Tạo mã độc nhất cho từng user theo năm (VD: TIERKC-U15-2026)
+        // Tạo mã độc nhất cho từng user theo năm
         $couponCode = $baseCode . '-U' . $user->id . '-' . $today->year;
 
         $validityDays = $matchedTierConfig['validity_days'] ?? 7;
@@ -263,7 +296,6 @@ class EmailCampaignService
                 ]
             );
         } catch (\Illuminate\Database\QueryException $e) {
-            // 23000 = Integrity constraint violation (Duplicate entry)
             if ($e->getCode() == 23000) {
                 $existing = Coupon::where('code', $couponCode)->first();
                 if ($existing) {
@@ -306,9 +338,8 @@ class EmailCampaignService
         $userTier = $user->relationLoaded('tier') ? $user->tier : MembershipTier::find($user->tier_id);
         if (!$userTier) return false;
 
-        // Bỏ qua hạng cơ bản nhất (index 0), lấy mốc cấu hình của hạng kế tiếp (Silver)
         $silverTier = MembershipTier::orderBy('min_spent', 'asc')->skip(1)->first();
-        if (!$silverTier) return false; // Nếu không có hạng thứ 2, không ai đạt hạng Silver
+        if (!$silverTier) return false;
 
         return (float) $userTier->min_spent >= (float) $silverTier->min_spent;
     }

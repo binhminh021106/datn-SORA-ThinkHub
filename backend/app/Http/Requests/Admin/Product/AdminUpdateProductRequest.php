@@ -36,7 +36,7 @@ class AdminUpdateProductRequest extends FormRequest
             'base_price'        => 'required|numeric|min:1',
             'thumbnail_image'   => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048', 
             'status'            => 'required|in:published,draft,hidden',
-            'description'       => 'nullable|string',
+            'description'       => 'nullable|string|max:65535',
             'affiliate_commission_rate' => 'nullable|numeric|min:0|max:100',
             'parsed_variants'   => 'required|array|min:1',
             

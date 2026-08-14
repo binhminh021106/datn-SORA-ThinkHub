@@ -415,8 +415,8 @@ class ClientCheckoutController extends Controller
                     throw new \DomainException("Thanh toán qua ví MoMo chỉ hỗ trợ giao dịch từ 10.000đ đến 50.000.000đ.");
                 }
                 
-                if ($request->payment_method === 'vnpay' && ($totalAmount < 10000 || $totalAmount > 1000000000)) {
-                    throw new \DomainException("Thanh toán qua VNPay chỉ hỗ trợ giao dịch từ 10.000đ đến 1.000.000.000đ.");
+                if ($request->payment_method === 'vnpay') {
+                    $this->validateVnpayAmount($totalAmount);
                 }
 
                 // CÂN BẰNG TỈ LỆ HOA HỒNG THEO SỐ TIỀN THỰC TẾ
@@ -1019,6 +1019,8 @@ class ClientCheckoutController extends Controller
         }
 
         try {
+            $this->validateVnpayAmount($order->total_amount);
+
             // tìm giỏ hàng của người dùng để giữ lại ID giỏ hàng trong các lần thử lại
             $attempt = DB::transaction(function () use ($order, $request) {
                 $lockedOrder = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();

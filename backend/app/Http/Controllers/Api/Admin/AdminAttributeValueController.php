@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AttributeValue;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AdminAttributeValueController extends Controller
 {
@@ -27,19 +28,26 @@ class AdminAttributeValueController extends Controller
     {
         $val = AttributeValue::findOrFail($id);
 
-        // Kiểm tra xem giá trị này có đang được sử dụng ở bất kỳ biến thể sản phẩm nào không
-        $isUsed = \Illuminate\Support\Facades\DB::table('product_variant_attributes')
-            ->where('attribute_value_id', $id)
-            ->exists();
+        try {
+            DB::transaction(function () use ($id, $val) {
+                // Kiểm tra xem giá trị này có đang được sử dụng ở bất kỳ biến thể sản phẩm nào không
+                $isUsed = \Illuminate\Support\Facades\DB::table('product_variant_attributes')
+                    ->where('attribute_value_id', $id)
+                    ->exists();
 
-        if ($isUsed) {
+                if ($isUsed) {
+                    throw new \DomainException('Không thể xóa giá trị này vì đang được sử dụng ở một hoặc nhiều biến thể sản phẩm.');
+                }
+
+                $val->delete();
+            });
+
+            return response()->json(['success' => true, 'message' => 'Đã xóa giá trị thuộc tính.']);
+        } catch (\DomainException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Không thể xóa giá trị này vì đang được sử dụng ở một hoặc nhiều biến thể sản phẩm.'
-            ], 400);
+                'message' => $e->getMessage()
+            ], 422);
         }
-
-        $val->delete();
-        return response()->json(['success' => true, 'message' => 'Đã xóa giá trị thuộc tính.']);
     }
 }

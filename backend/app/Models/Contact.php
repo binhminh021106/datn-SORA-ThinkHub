@@ -23,6 +23,7 @@ class Contact extends Model
         'reply_message',
         'replied_at',
         'replied_by',
+        'reply_delivery_status',
     ];
 
     protected function casts(): array

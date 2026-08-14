@@ -25,14 +25,18 @@ class CrawlDojiGoldPrice extends Command
             // Luồng 2: Dự phòng Chợ Giá
             if (empty($goldPrices)) {
                 $this->warn('API Vang.Today thất bại. Chuyển sang cào dự phòng từ Chợ Giá...');
-                $response = Http::withHeaders([
-                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
-                    'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                    'Accept-Language' => 'vi-VN,vi;q=0.9,fr-FR;q=0.8,fr;q=0.7,en-US;q=0.6,en;q=0.5',
-                ])->timeout(15)->get('https://chogia.vn/gia-vang/');
-                
-                if ($response->successful()) {
-                    $goldPrices = $this->parseChoGia($response->body());
+                try {
+                    $response = Http::withHeaders([
+                        'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+                        'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                        'Accept-Language' => 'vi-VN,vi;q=0.9,fr-FR;q=0.8,fr;q=0.7,en-US;q=0.6,en;q=0.5',
+                    ])->timeout(15)->get('https://chogia.vn/gia-vang/');
+                    
+                    if ($response->successful()) {
+                        $goldPrices = $this->parseChoGia($response->body());
+                    }
+                } catch (\Exception $e) {
+                    $this->warn('Cào Chợ Giá thất bại: ' . $e->getMessage());
                 }
             }
 

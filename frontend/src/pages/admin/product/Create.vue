@@ -281,7 +281,7 @@
                                                             </button>
 
                                                             <transition name="fade">
-                                                                <div v-show="activeDropdown === `${index}-${attrId}`"
+                                                                <div v-if="activeDropdown === `${index}-${attrId}`"
                                                                     class="position-absolute shadow-lg border rounded-4 p-3 bg-white"
                                                                     :style="[
                                                                         { width: '420px', zIndex: 1050, left: 0, cursor: 'default' },
@@ -810,6 +810,9 @@ const duplicateVariant = (index) => {
     const prefix = form.value.slug ? form.value.slug.substring(0, 4).toUpperCase().replace(/-/g, '') : 'SKU';
     const newSku = `${prefix}${randomCode}-V${variants.value.length + 1}`;
 
+    let emptyAttrs = {};
+    activeAttributes.value.forEach(id => emptyAttrs[id] = "");
+
     const newVariant = {
         ...JSON.parse(JSON.stringify(v)),
         id: null,
@@ -817,6 +820,7 @@ const duplicateVariant = (index) => {
         imageFile: null,
         preview: null,
         current_image: null,
+        attributes: emptyAttrs,
         hasDuplicateError: false,
         attrError: false,
         priceError: false,
@@ -958,6 +962,18 @@ const deleteAttributeValue = async (id) => {
                 if (attr && attr.values) {
                     attr.values = attr.values.filter(v => v.id !== id);
                 }
+
+                const parsedAttrId = parseInt(selectedAttrToManage.value, 10);
+                variants.value.forEach(v => {
+                    if (v.attributes && v.attributes[parsedAttrId] === id) {
+                        delete v.attributes[parsedAttrId];
+                    }
+                });
+
+                if (typeof queryClient !== 'undefined' && queryClient.setQueryData) {
+                    queryClient.setQueryData(['adminAttributes'], JSON.parse(JSON.stringify(systemAttributes.value)));
+                }
+
                 Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa giá trị', showConfirmButton: false, timer: 2000 });
             } catch (e) {
                 if (e.response) Swal.fire('Lỗi', e.response.data.message || 'Không thể xóa giá trị này', 'error');

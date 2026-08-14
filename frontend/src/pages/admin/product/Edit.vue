@@ -285,7 +285,7 @@
                                                             </button>
 
                                                             <transition name="fade">
-                                                                <div v-show="activeDropdown === `${index}-${attrId}`"
+                                                                <div v-if="activeDropdown === `${index}-${attrId}`"
                                                                     class="position-absolute shadow-lg border rounded-4 p-3 bg-white"
                                                                     :style="[
                                                                         { width: '420px', zIndex: 1050, left: 0, cursor: 'default' },
@@ -1033,6 +1033,13 @@ const deleteAttributeValue = async (id) => {
                 if (attr && attr.values) {
                     attr.values = attr.values.filter(v => v.id !== id);
                 }
+
+                const parsedAttrId = parseInt(selectedAttrToManage.value, 10);
+                variants.value.forEach(v => {
+                    if (v.attributes && v.attributes[parsedAttrId] === id) {
+                        delete v.attributes[parsedAttrId];
+                    }
+                });
                 
                 // Cập nhật lại query cache
                 queryClient.setQueryData(['adminAttributes'], JSON.parse(JSON.stringify(systemAttributes.value)));
