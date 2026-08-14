@@ -27,7 +27,12 @@ class Product extends Model
         'specifications',
         'is_featured',
         'status',
-        'affiliate_commission_rate'
+        'affiliate_commission_rate',
+        'cost_price'
+    ];
+
+    protected $hidden = [
+        'cost_price',
     ];
 
     protected function casts(): array

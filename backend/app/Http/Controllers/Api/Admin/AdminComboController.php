@@ -19,8 +19,14 @@ class AdminComboController extends Controller
     {
         // Tối ưu ORM: Chỉ select các trường thật sự cần thiết để hiển thị trên bảng
         $combos = Combo::withTrashed()
-            ->select('id', 'name', 'theme', 'thumbnail_image', 'target_gender', 'discount_type', 'discount_value', 'is_discount_stackable', 'status', 'deleted_at', 'start_date', 'end_date')
+            ->select('id', 'name', 'theme', 'thumbnail_image', 'target_gender', 'discount_type', 'discount_value', 'is_discount_stackable', 'status', 'deleted_at', 'start_date', 'end_date', 'usage_limit')
             ->withCount('items')
+            ->withSum(['orderItems as usage_count' => function ($query) {
+                $query->whereHas('order', function ($q) {
+                    $q->whereNull('deleted_at')
+                      ->whereNotIn('status', ['cancelled', 'returned']);
+                });
+            }], 'quantity')
             ->orderBy('id', 'desc')
             ->get();
 

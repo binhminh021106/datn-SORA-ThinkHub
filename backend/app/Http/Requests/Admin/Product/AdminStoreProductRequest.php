@@ -34,6 +34,7 @@ class AdminStoreProductRequest extends FormRequest
             'name'              => 'required|string|min:3|max:255',
             'slug'              => 'required|string|unique:products,slug|max:255',
             'base_price'        => 'required|numeric|min:1',
+            'cost_price'        => 'nullable|numeric|min:0',
             'thumbnail_image'   => 'required|image|mimes:jpeg,png,jpg,webp|max:2048', 
             'status'            => 'required|in:published,draft,hidden',
             'description'       => 'nullable|string|max:65535',
@@ -42,6 +43,7 @@ class AdminStoreProductRequest extends FormRequest
             
             'parsed_variants.*.sku'               => 'required|string|distinct|unique:product_variants,sku',
             'parsed_variants.*.price'             => 'required|numeric|min:1',
+            'parsed_variants.*.cost_price'        => 'nullable|numeric|min:0',
             'parsed_variants.*.promotional_price' => 'nullable|numeric|min:0|lte:parsed_variants.*.price', // Giá KM <= Giá gốc
             'parsed_variants.*.stock_quantity'    => 'required|integer|min:1',
             'parsed_variants.*.image_file'        => 'required|image|mimes:jpeg,png,jpg,webp|max:2048', // BẮT BUỘC PHẢI CÓ ẢNH

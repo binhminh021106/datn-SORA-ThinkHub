@@ -161,6 +161,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue';
+import adminApiClient from '@/utils/adminApiClient.js';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
@@ -188,9 +189,8 @@ const formatDate = (dateString) => {
 
 // --- TANSTACK QUERY: FETCH LIST ---
 const fetchBanners = async () => {
-  const res = await fetch(`${API_URL}/admin/banners`, { headers: getHeaders() });
-  if (!res.ok) throw new Error('Network error');
-  const result = await res.json();
+  const res = await adminApiClient.get(`/banners`);
+  const result = res.data;
   return Array.isArray(result.data) ? result.data.filter(Boolean) : [];
 };
 
@@ -226,9 +226,8 @@ const displayBanners = computed(() => {
 const statusMutation = useMutation({
   mutationFn: async ({ id, title, status }) => {
     const fd = new FormData(); fd.append('_method', 'PUT'); fd.append('title', title); fd.append('status', status);
-    const res = await fetch(`${API_URL}/admin/banners/${id}`, { method: 'POST', headers: getHeaders(), body: fd });
-    if (!res.ok) throw new Error('Error updating status');
-    return await res.json();
+    const res = await adminApiClient.post(`/banners/${id}`, fd);
+    return res.data;
   },
   onSuccess: (data, variables) => {
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã lưu trạng thái', showConfirmButton: false, timer: 1000 });
@@ -256,8 +255,7 @@ const saveBannerStatus = (banner) => {
 // --- MUTATIONS: XÓA ---
 const deleteMutation = useMutation({
   mutationFn: async (id) => {
-    const res = await fetch(`${API_URL}/admin/banners/${id}`, { method: 'DELETE', headers: getHeaders() });
-    if (!res.ok) throw new Error('Error deleting');
+    const res = await adminApiClient.delete(`/banners/${id}`);
     return id;
   },
   onMutate: async (id) => {
@@ -288,9 +286,8 @@ const confirmDelete = (id) => {
 // --- MUTATIONS: KHÔI PHỤC ---
 const restoreMutation = useMutation({
   mutationFn: async (id) => {
-    const res = await fetch(`${API_URL}/admin/banners/${id}/restore`, { method: 'POST', headers: getHeaders() });
-    if (!res.ok) throw new Error('Error restoring');
-    return (await res.json()).data;
+    const res = await adminApiClient.post(`/banners/${id}/restore`);
+    return res.data.data;
   },
   onMutate: () => { isMutating.value = true; },
   onSuccess: (data) => {
@@ -329,8 +326,8 @@ const saveReorder = async () => {
   isSavingOrder.value = true;
   const payload = reorderList.value.map((b, idx) => ({ id: b.id, sort_order: idx + 1 }));
   try {
-    const res = await fetch(`${API_URL}/admin/banners/reorder`, { method: 'POST', headers: { ...getHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ items: payload }) });
-    if(res.ok) {
+    const res = await adminApiClient.post(`/banners/reorder`, { items: payload });
+    if(res) {
         Swal.fire({icon: 'success', title: 'Đã lưu thứ tự!', timer: 1500, showConfirmButton: false});
         isReorderMode.value = false; 
         queryClient.invalidateQueries({ queryKey: ['admin', 'banners'] }); // Fetch lại lấy thứ tự chuẩn từ DB

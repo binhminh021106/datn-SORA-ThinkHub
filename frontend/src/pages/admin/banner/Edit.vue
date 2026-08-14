@@ -127,6 +127,7 @@
 
 <script setup>
 import { ref, watchEffect, computed, onMounted, onUnmounted } from 'vue';
+import adminApiClient from '@/utils/adminApiClient.js';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
@@ -179,8 +180,8 @@ const fileVideo = ref(null); const previewVideo = ref(null);
 const { data: rawBrands } = useQuery({
   queryKey: ['admin', 'brands'],
   queryFn: async () => {
-    const res = await fetch(`${API_URL}/admin/brands`, { headers: getHeaders() });
-    return (await res.json()).data;
+    const res = await adminApiClient.get(`/brands`);
+    return res.data.data;
   },
   staleTime: 5 * 60 * 1000
 });
@@ -188,9 +189,8 @@ const activeBrands = computed(() => (rawBrands.value || []).filter(b => b.status
 
 // 2. Fetch/Lấy Cache Banner Detail
 const fetchBannerDetail = async () => {
-  const res = await fetch(`${API_URL}/admin/banners/${bannerId}`, { headers: getHeaders() });
-  if (!res.ok) throw new Error('Failed to fetch banner');
-  return (await res.json()).data;
+  const res = await adminApiClient.get(`/banners/${bannerId}`);
+  return res.data.data;
 };
 
 const { data: bannerData, isLoading, isFetching } = useQuery({
@@ -244,9 +244,9 @@ const handleUpload = (e, type) => {
 // 3. Mutation Cập nhật API
 const { mutate: updateBanner, isPending: isUpdating } = useMutation({
   mutationFn: async (formData) => {
-    const res = await fetch(`${API_URL}/admin/banners/${bannerId}`, { method: 'POST', headers: getHeaders(), body: formData });
-    if (!res.ok) { const err = await res.json(); throw new Error(err.message || 'Lỗi dữ liệu'); }
-    return (await res.json()).data;
+    const res = await adminApiClient.post(`/banners/${bannerId}`, formData);
+    if (!res.ok) { const err = res.data; throw new Error(err.message || 'Lỗi dữ liệu'); }
+    return res.data.data;
   },
   onSuccess: async (updatedData) => {
     // Keep the detail cache current, then reload the list from the server.

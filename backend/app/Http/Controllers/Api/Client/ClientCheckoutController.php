@@ -1771,4 +1771,11 @@ class ClientCheckoutController extends Controller
 
         return null;
     }
+
+    private function validateVnpayAmount($amount)
+    {
+        if ($amount < 5000 || $amount > 1000000000) {
+            throw new \DomainException("Thanh toán qua VNPay chỉ hỗ trợ giao dịch từ 5.000đ đến 1.000.000.000đ.");
+        }
+    }
 }

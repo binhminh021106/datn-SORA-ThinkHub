@@ -160,6 +160,7 @@
 import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
+import adminApiClient from '@/utils/adminApiClient';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { QuillEditor } from '@vueup/vue-quill';
@@ -294,7 +295,7 @@ const removeImage = () => {
 // TANSTACK MUTATION: Thực thi lưu bài viết
 const { mutate: mutateUpdate, isPending: isSaving } = useMutation({
     mutationFn: async (submitData) => {
-        return axios.post(`${apiUrl}/admin/news/${formData.id}`, submitData, { headers: getHeaders(true) });
+        return adminApiClient.post(`/news/${formData.id}`, submitData);
     },
     onSuccess: () => {
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật bài viết thành công!', timer: 1500, showConfirmButton: false });

@@ -34,7 +34,7 @@
       </button>
 
       <!-- Hàng 1: Các thẻ thống kê tổng quan (Compact) -->
-      <div class="row row-cols-1 row-cols-md-3 row-cols-xl-5 g-3 g-xl-2 mb-3">
+      <div class="row row-cols-1 row-cols-md-3 row-cols-xl-6 g-3 g-xl-2 mb-3">
 
         <!-- Tổng doanh thu -->
         <div class="col">
@@ -54,6 +54,30 @@
                 <span class="badge fw-bold me-2 px-2 py-1 font-size-xs" :class="getGrowthClass(stats.revenueGrowth)">
                   <i class="me-1" :class="getGrowthIcon(stats.revenueGrowth)"></i> {{ formatGrowth(stats.revenueGrowth)
                   }}
+                </span>
+                <span class="text-muted font-size-xs fw-medium text-truncate">So với kỳ trước</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lợi nhuận ròng -->
+        <div class="col">
+          <div class="card custom-card h-100 border-0 shadow-sm rounded-4">
+            <div class="card-body p-3 d-flex flex-column justify-content-between">
+              <div class="d-flex align-items-start justify-content-between mb-2">
+                <div class="pe-2 min-w-0">
+                  <p class="text-muted fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate">Lợi nhuận ròng</p>
+                  <h4 class="fw-bolder mb-0 text-dark stat-number text-truncate"
+                    :title="formatCurrency(stats.netProfit || 0)">{{ formatCompactCurrency(stats.netProfit || 0) }}</h4>
+                </div>
+                <div class="icon-circle bg-success-soft text-success flex-shrink-0" style="width: 38px; height: 38px;">
+                  <i class="bi bi-wallet2 fs-5"></i>
+                </div>
+              </div>
+              <div class="d-flex align-items-center mt-auto">
+                <span class="badge fw-bold me-2 px-2 py-1 font-size-xs" :class="getGrowthClass(stats.netProfitGrowth || 0)">
+                  <i class="me-1" :class="getGrowthIcon(stats.netProfitGrowth || 0)"></i> {{ formatGrowth(stats.netProfitGrowth || 0) }}
                 </span>
                 <span class="text-muted font-size-xs fw-medium text-truncate">So với kỳ trước</span>
               </div>
@@ -159,7 +183,7 @@
 
       <!-- Hàng 2: Biểu đồ Doanh thu & Phương thức -->
       <div class="row g-3 g-xl-3 mb-3">
-        <div class="col-12 col-xl-8">
+        <div class="col-12 col-xl-9">
           <div class="card custom-card border-0 shadow-sm rounded-4 h-100">
             <div
               class="card-header bg-transparent border-0 pt-3 pb-0 px-3 px-xxl-4 d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
@@ -171,9 +195,10 @@
               <!-- Bộ lọc ngày thông minh -->
               <div class="d-flex flex-wrap align-items-center gap-2 dashboard-period-filter">
                 <button v-for="preset in periodPresets" :key="preset.key" @click="selectPeriod(preset.key)"
-                  class="btn btn-sm rounded-pill px-3 fw-semibold dashboard-period-button"
+                  class="btn btn-sm rounded-pill px-3 fw-semibold dashboard-period-button d-flex align-items-center gap-1"
                   :class="filterParams.period === preset.key ? 'btn-brand' : 'btn-light border-light text-secondary'"
                   :disabled="isFetching">
+                  <span v-if="isFetching && filterParams.period === preset.key" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                   {{ preset.label }}
                 </button>
 
@@ -240,7 +265,7 @@
           </div>
         </div>
 
-        <div class="col-12 col-xl-4">
+        <div class="col-12 col-xl-3">
           <div class="card custom-card border-0 shadow-sm rounded-4 h-100">
             <div class="card-header bg-transparent border-bottom pt-3 pb-2 px-3 px-xxl-4">
               <h5 class="fw-bold mb-0 text-dark">Phương thức thanh toán</h5>
@@ -254,17 +279,17 @@
               <div class="w-100 mt-2">
                 <div class="d-flex justify-content-between align-items-center mb-2 font-size-sm border-bottom pb-2">
                   <span class="d-flex align-items-center gap-2"><span
-                      class="badge rounded-circle p-1 bg-brand">&nbsp;</span> VNPay (Ví điện tử)</span>
+                      class="badge rounded-circle p-1" style="background-color: #005baa;">&nbsp;</span> VNPay (Ví điện tử)</span>
                   <span class="fw-bold text-dark">{{ paymentStats.vnpayPercent }}%</span>
                 </div>
                 <div class="d-flex justify-content-between align-items-center mb-2 font-size-sm border-bottom pb-2">
                   <span class="d-flex align-items-center gap-2"><span
-                      class="badge rounded-circle p-1 bg-warning">&nbsp;</span> MoMo (Ví điện tử)</span>
+                      class="badge rounded-circle p-1" style="background-color: #a50064;">&nbsp;</span> MoMo (Ví điện tử)</span>
                   <span class="fw-bold text-dark">{{ paymentStats.momoPercent }}%</span>
                 </div>
                 <div class="d-flex justify-content-between align-items-center mb-2 font-size-sm border-bottom pb-2">
                   <span class="d-flex align-items-center gap-2"><span
-                      class="badge rounded-circle p-1 bg-info">&nbsp;</span> COD (Tiền mặt)</span>
+                      class="badge rounded-circle p-1" style="background-color: #10b981;">&nbsp;</span> COD (Tiền mặt)</span>
                   <span class="fw-bold text-dark">{{ paymentStats.codPercent }}%</span>
                 </div>
                 <div class="d-flex justify-content-between align-items-center font-size-sm">
@@ -278,7 +303,151 @@
         </div>
       </div>
 
-      <!-- Hàng 3: Giao dịch & Tương tác -->
+      <!-- Hàng 3: Phân tích chuyên sâu (Insights) -->
+      <div class="row g-3 g-xl-3 mb-3">
+        <!-- Khách hàng mua nhiều nhất -->
+        <div class="col-12 col-md-4">
+          <div class="card custom-card h-100 border-0 shadow-sm rounded-4 bg-gradient-to-br from-primary-soft to-white">
+            <div class="card-body p-3 d-flex flex-column position-relative overflow-hidden">
+              <div class="position-absolute end-0 top-0 mt-3 me-3 opacity-25" style="font-size: 3rem; color: #005baa; pointer-events: none;">
+                <i class="bi bi-trophy-fill"></i>
+              </div>
+              <div class="d-flex align-items-start justify-content-between mb-3 z-index-1" style="position: relative; z-index: 2;">
+                <div class="pe-2 min-w-0">
+                  <p class="text-primary fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate">Top 5 Khách VIP (Trong kỳ)</p>
+                </div>
+              </div>
+              <div class="d-flex flex-column gap-2 z-index-1 position-relative custom-scrollbar" style="z-index: 2; overflow-y: auto; max-height: 220px; padding-right: 4px;">
+                <div v-if="!customerInsights?.topBuyers || customerInsights.topBuyers.length === 0" class="text-muted font-size-sm">Không có dữ liệu</div>
+                <div v-else v-for="(buyer, idx) in customerInsights.topBuyers" :key="idx" class="d-flex align-items-center rounded-3 p-2 shadow-sm border border-light transition-all table-row-hover" :style="{ backgroundColor: getRankBgStyle(idx) }">
+                   <div class="rank-badge fw-bolder shadow-sm flex-shrink-0 me-2" :class="getRankClass(idx)" style="width: 24px; height: 24px; font-size: 12px; display: flex; align-items: center; justify-content: center; border-radius: 6px;">{{ idx + 1 }}</div>
+                   <div class="position-relative me-2 flex-shrink-0" style="width: 36px; height: 36px;">
+                     <div class="avatar-circle bg-primary-soft text-primary fw-bolder shadow-sm d-flex align-items-center justify-content-center" 
+                          :style="{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', border: buyer.tierName ? `2px solid ${getTierColor(buyer.tierName)}` : '1px solid #dee2e6' }">
+                       <img v-if="buyer.avatar" :src="buyer.avatar" class="w-100 h-100 object-fit-cover" />
+                       <span v-else>{{ buyer.name?.charAt(0).toUpperCase() || 'K' }}</span>
+                     </div>
+                     <span v-if="buyer.tierName" class="position-absolute top-0 start-50 translate-middle badge rounded-pill" 
+                           :style="{ backgroundColor: getTierColor(buyer.tierName), fontSize: '8px', padding: '2px 4px', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }" :title="buyer.tierName">
+                       <i class="bi bi-star-fill text-white"></i>
+                     </span>
+                   </div>
+                   <div class="flex-grow-1 min-w-0">
+                      <p class="mb-0 fw-bold font-size-sm text-dark text-truncate" :title="buyer.name">{{ buyer.name }}</p>
+                      <span class="font-size-xs text-brand fw-bold">{{ formatCompactCurrency(buyer.spent) }}</span>
+                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Nhóm khách hàng chủ lực -->
+        <div class="col-12 col-md-4">
+          <div class="card custom-card h-100 border-0 shadow-sm rounded-4 bg-gradient-to-br from-pink-soft to-white" style="background: linear-gradient(to bottom right, rgba(165,0,100,0.1), #ffffff);">
+            <div class="card-body p-3 d-flex flex-column justify-content-between position-relative overflow-hidden">
+              <div class="position-absolute end-0 top-0 mt-3 me-3 opacity-25" style="font-size: 3rem; color: #a50064; pointer-events: none;">
+                <i class="bi bi-people-fill"></i>
+              </div>
+              <div class="d-flex align-items-start justify-content-between mb-2 z-index-1" style="position: relative; z-index: 2;">
+                <div class="pe-2 min-w-0">
+                  <p class="fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate" style="color: #a50064">Nhóm KH chủ lực</p>
+                  <h5 class="fw-bolder mb-1 text-dark text-truncate">{{ customerInsights?.topGender?.gender || 'Chưa xác định' }}</h5>
+                </div>
+              </div>
+              
+              <!-- Text gợi ý lấp đầy khoảng trống -->
+              <div class="mt-2 mb-4 z-index-1 flex-grow-1 d-flex align-items-center" style="position: relative; z-index: 2;">
+                <p class="text-secondary font-size-sm mb-0 lh-base" style="font-size: 0.85rem;">
+                  Nhóm khách hàng này mang lại doanh thu cao nhất. Hãy thiết kế các chiến dịch Marketing và ưu đãi nhắm mục tiêu để khai thác tối đa tiềm năng mua sắm.
+                </p>
+              </div>
+
+              <div class="d-flex align-items-center mt-auto font-size-sm fw-bold text-dark gap-2 text-truncate z-index-1" style="position: relative; z-index: 2;">
+                <span class="badge rounded-pill px-2 py-1" style="background-color: #a50064"><i class="bi bi-pie-chart-fill"></i> Đóng góp:</span> 
+                {{ formatCurrency(customerInsights?.topGender?.spent || 0) }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mùa bội thu -->
+        <div class="col-12 col-md-4">
+          <div class="card custom-card h-100 border-0 shadow-sm rounded-4 bg-gradient-to-br from-success-soft to-white">
+            <div class="card-body p-3 d-flex flex-column justify-content-between position-relative overflow-hidden">
+              <div class="position-absolute end-0 top-0 mt-3 me-3 opacity-25" style="font-size: 3rem; color: #10b981; pointer-events: none;">
+                <i class="bi bi-calendar2-heart-fill"></i>
+              </div>
+              <div class="d-flex align-items-start justify-content-between mb-2 z-index-1" style="position: relative; z-index: 2;">
+                <div class="pe-2 min-w-0">
+                  <p class="text-success fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate">Mùa bội thu (All-time)</p>
+                  <h5 class="fw-bolder mb-1 text-dark text-truncate">{{ customerInsights?.bestMonth?.label || 'Đang cập nhật' }}</h5>
+                </div>
+              </div>
+
+              <!-- Text gợi ý lấp đầy khoảng trống -->
+              <div class="mt-2 mb-4 z-index-1 flex-grow-1 d-flex align-items-center" style="position: relative; z-index: 2;">
+                <p class="text-secondary font-size-sm mb-0 lh-base" style="font-size: 0.85rem;">
+                  Tháng ghi nhận kỷ lục bán hàng kể từ khi khai trương. Phân tích lại các sự kiện và xu hướng mua sắm của tháng này để rút ra công thức thành công.
+                </p>
+              </div>
+
+              <div class="d-flex align-items-center mt-auto font-size-sm fw-bold text-dark gap-2 text-truncate z-index-1" style="position: relative; z-index: 2;">
+                <span class="badge bg-success rounded-pill px-2 py-1"><i class="bi bi-graph-up-arrow"></i> Kỷ lục:</span> 
+                {{ formatCurrency(customerInsights?.bestMonth?.spent || 0) }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hàng 3.5: Khu vực bán hàng & Danh mục -->
+      <div class="row g-3 g-xl-3 mb-3">
+        <!-- Doanh thu theo Danh mục -->
+        <div class="col-12 col-xl-6">
+          <div class="card custom-card h-100 border-0 shadow-sm rounded-4">
+            <div class="card-header bg-transparent border-bottom pt-3 pb-3 px-3 px-xxl-4 d-flex justify-content-between align-items-center">
+              <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                <span class="badge p-1 rounded" style="background-color: #8b5cf6">&nbsp;</span> Doanh thu theo Danh mục
+              </h5>
+            </div>
+            <div class="card-body p-3 p-xxl-4 position-relative d-flex justify-content-center align-items-center" style="min-height: 250px;">
+              <div v-if="!customerInsights?.categoryRevenue || customerInsights.categoryRevenue.length === 0" class="text-center text-muted">Không có dữ liệu</div>
+              <div v-else class="w-100 h-100" style="max-height: 250px;">
+                <canvas id="categoryChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Khu Vực -->
+        <div class="col-12 col-xl-6">
+          <div class="card custom-card h-100 border-0 shadow-sm rounded-4 border-top border-primary border-3">
+            <div class="card-header bg-transparent border-bottom pt-3 pb-3 px-3 px-xxl-4 d-flex justify-content-between align-items-center">
+              <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                <i class="bi bi-geo-alt-fill text-primary"></i> Phân bổ Khách hàng (Top 5 Khu vực)
+              </h5>
+            </div>
+            <div class="card-body p-3 p-xxl-4 custom-scrollbar" style="max-height: 290px; overflow-y: auto;">
+              <p v-if="!customerInsights?.topRegions || customerInsights.topRegions.length === 0" class="text-center text-muted py-3">Không có dữ liệu</p>
+              <ul v-else class="list-unstyled mb-0 d-flex flex-column gap-3">
+                <li v-for="(region, idx) in customerInsights.topRegions" :key="idx" class="d-flex align-items-center p-2 rounded-3 bg-light-soft border border-light">
+                  <div class="rank-badge shadow-sm me-3" :class="getRankClass(idx)" style="width: 28px; height: 28px; font-size: 13px; display: flex; align-items: center; justify-content: center; border-radius: 8px;">{{ idx + 1 }}</div>
+                  <div class="flex-grow-1 min-w-0">
+                    <h6 class="mb-1 fw-bold text-dark text-truncate">{{ region.region || 'Không xác định' }}</h6>
+                    <div class="d-flex justify-content-between font-size-xs text-secondary">
+                      <span><i class="bi bi-box-seam me-1"></i>{{ region.order_count }} đơn hàng</span>
+                      <span class="text-brand fw-bold">{{ formatCurrency(region.revenue) }}</span>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hàng 4: Giao dịch & Tương tác -->
       <div class="row g-3 g-xl-3 mb-3">
         <div class="col-12 col-xl-7">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4">
@@ -486,30 +655,43 @@
               <p v-if="activeCombos?.length === 0" class="text-center text-muted py-3">Không có combo nào đang hoạt
                 động.</p>
               <ul v-else class="list-unstyled mb-0 d-flex flex-column gap-3">
-                <li v-for="combo in activeCombos" :key="combo.id"
-                  class="d-flex align-items-center product-item pb-2 border-bottom border-light">
-                  <div
-                    class="product-img-box me-3 bg-light-soft position-relative d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm border border-info"
-                    style="width: 48px; height: 48px; border-radius: 8px;">
-                    <img v-if="combo.image" :src="combo.image" @load="handleImageLoad('combo-' + combo.id)" @error="handleImageError"
-                      class="img-fluid h-100 w-100 position-absolute top-0 start-0 img-fade-in" :class="{ 'img-loaded': isImageLoaded('combo-' + combo.id) }"
-                      style="object-fit: cover; border-radius: 8px;" />
-                    <i v-else class="bi bi-basket2 text-info fs-4"></i>
-                  </div>
-                  <div class="flex-grow-1 min-w-0">
-                    <h6 class="mb-1 fw-bold text-dark font-size-sm text-truncate" :title="combo.name">{{ combo.name }}
-                    </h6>
-                    <div class="d-flex justify-content-between align-items-center mt-1">
-                      <div class="d-flex align-items-center gap-2">
-                        <span class="text-secondary font-size-xs"><i class="bi bi-clock me-1"></i>{{ combo.end_date
-                          }}</span>
-                        <span v-if="isComboEndingSoon(combo.end_date)" class="badge bg-warning text-dark px-1 py-0"
-                          style="font-size: 10px;">Sắp kết thúc</span>
+                <li v-for="combo in activeCombos" :key="combo.id" class="combo-ticket position-relative">
+                  <div class="d-flex align-items-stretch bg-white border border-info border-opacity-25 rounded-3 shadow-sm overflow-hidden h-100">
+                    <!-- Hình ảnh bên trái -->
+                    <div class="position-relative bg-light flex-shrink-0" style="width: 85px;">
+                      <img v-if="combo.image" :src="combo.image" @load="handleImageLoad('combo-' + combo.id)" @error="handleImageError"
+                        class="img-fluid w-100 h-100 object-fit-cover img-fade-in" :class="{ 'img-loaded': isImageLoaded('combo-' + combo.id) }" />
+                      <div v-else class="w-100 h-100 d-flex align-items-center justify-content-center bg-info-soft text-info">
+                        <i class="bi bi-gift fs-3"></i>
                       </div>
-                      <span class="fw-bolder text-info font-size-sm whitespace-nowrap">
-                        -{{ combo.discount_type === 'percentage' ? combo.discount_value + '%' :
-                          formatCurrency(combo.discount_value) }}
-                      </span>
+                      
+                      <!-- Tag giảm giá đè lên ảnh -->
+                      <div class="position-absolute bottom-0 start-0 w-100 bg-info text-white text-center py-1 bg-opacity-75 backdrop-blur" style="font-size: 0.75rem; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
+                        -{{ combo.discount_type === 'percentage' ? combo.discount_value + '%' : formatCompactCurrency(combo.discount_value) }}
+                      </div>
+                    </div>
+                    
+                    <!-- Phần đường rọc xé (Dashed line) -->
+                    <div class="position-relative d-flex flex-column align-items-center bg-info-soft" style="width: 16px;">
+                      <!-- Vòng tròn khuyết trên -->
+                      <div class="position-absolute bg-white rounded-circle" style="width: 12px; height: 12px; top: -6px; border-bottom: 1px solid rgba(13, 202, 240, 0.25);"></div>
+                      
+                      <!-- Đường nét đứt -->
+                      <div class="h-100 border-start border-info border-opacity-25" style="border-left-style: dashed !important; border-left-width: 2px !important; margin-top: 6px; margin-bottom: 6px;"></div>
+                      
+                      <!-- Vòng tròn khuyết dưới -->
+                      <div class="position-absolute bg-white rounded-circle" style="width: 12px; height: 12px; bottom: -6px; border-top: 1px solid rgba(13, 202, 240, 0.25);"></div>
+                    </div>
+
+                    <!-- Nội dung bên phải -->
+                    <div class="p-3 flex-grow-1 d-flex flex-column justify-content-center min-w-0 bg-info-soft bg-opacity-10">
+                      <h6 class="fw-bold text-dark mb-2 font-size-sm text-truncate" :title="combo.name">{{ combo.name }}</h6>
+                      <div class="d-flex justify-content-between align-items-center mt-auto">
+                        <div class="d-flex align-items-center text-secondary" style="font-size: 0.75rem;">
+                          <i class="bi bi-calendar-event me-1 text-info"></i>HSD: <span class="ms-1 fw-bold text-dark">{{ combo.end_date }}</span>
+                        </div>
+                        <span v-if="isComboEndingSoon(combo.end_date)" class="badge bg-warning-soft text-warning px-2 py-1 border border-warning border-opacity-25" style="font-size: 0.7rem;">Sắp hết hạn</span>
+                      </div>
                     </div>
                   </div>
                 </li>
@@ -519,7 +701,84 @@
         </div>
       </div>
 
-      <!-- Hàng 4: Thống kê Khuyến mãi & Mã giảm giá -->
+      <!-- Hàng 5: Vận hành & Cảnh báo -->
+      <div class="row g-3 g-xl-3 mb-3">
+        <!-- Giá trị Kho & Hàng tồn đọng -->
+        <div class="col-12 col-xl-6">
+          <div class="card custom-card h-100 border-0 shadow-sm rounded-4 border-top border-warning border-3">
+            <div class="card-header bg-transparent border-bottom pt-3 pb-3 px-3 px-xxl-4 d-flex justify-content-between align-items-center">
+              <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                <i class="bi bi-boxes text-warning"></i> Giá trị Kho & Hàng Tồn đọng
+              </h5>
+            </div>
+            <div class="card-body p-3 p-xxl-4 custom-scrollbar" style="max-height: 420px; overflow-y: auto;">
+              <!-- Tổng Giá trị Kho -->
+              <div class="d-flex align-items-center justify-content-between p-3 rounded-4 mb-3 bg-gradient-to-r from-warning-soft to-white border border-light shadow-sm">
+                <div>
+                  <p class="text-secondary fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1">Tổng Vốn Tồn Kho</p>
+                  <h4 class="fw-bolder mb-0 text-dark">{{ formatCurrency(customerInsights?.inventoryValue || 0) }}</h4>
+                </div>
+                <div class="avatar-circle bg-warning text-white d-flex align-items-center justify-content-center shadow-sm" style="width: 48px; height: 48px; border-radius: 50%;">
+                  <i class="bi bi-safe2 fs-4"></i>
+                </div>
+              </div>
+
+              <!-- Danh sách Dead Stock -->
+              <div class="d-flex justify-content-between align-items-center mb-3 mt-4">
+                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-exclamation-circle text-danger me-1"></i> Top 5 Tồn đọng</h6>
+                <span class="badge bg-danger text-white rounded-pill px-2 py-1" v-if="customerInsights?.deadStockCount > 0" title="Tổng số mẫu mã tồn đọng (30 ngày chưa bán được)">
+                  Tổng: {{ customerInsights.deadStockCount }} mẫu mã
+                </span>
+              </div>
+              <p v-if="!customerInsights?.deadStock || customerInsights.deadStock.length === 0" class="text-center text-muted py-3">Kho hàng đang luân chuyển rất tốt, không có hàng tồn đọng.</p>
+              <ul v-else class="list-unstyled mb-0 d-flex flex-column gap-3">
+                <li v-for="(item, idx) in customerInsights.deadStock" :key="idx" class="d-flex align-items-center pb-2 border-bottom border-light">
+                  <div class="product-img-box me-3 bg-light-soft position-relative d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm border border-light" style="width: 48px; height: 48px; border-radius: 8px;">
+                    <img v-if="item.thumbnail_image" :src="item.thumbnail_image" @error="handleImageError" class="img-fluid rounded-2 h-100 w-100 object-fit-cover" />
+                    <i v-else class="bi bi-box-seam text-secondary"></i>
+                  </div>
+                  <div class="flex-grow-1 min-w-0">
+                    <h6 class="mb-1 fw-bold text-dark font-size-sm text-truncate" :title="item.name">{{ item.name }}</h6>
+                    <div class="d-flex justify-content-between align-items-center mt-1">
+                      <span class="badge bg-danger-soft text-danger fw-bolder px-2 py-1">Tồn: {{ item.total_stock }}</span>
+                      <span class="text-secondary font-size-xs fw-medium">Vốn đọng: <strong class="text-dark">{{ formatCompactCurrency(item.total_stock * item.cost_price) }}</strong></span>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lý do Hủy/Hoàn Đơn -->
+        <div class="col-12 col-xl-6">
+          <div class="card custom-card h-100 border-0 shadow-sm rounded-4 border-top border-danger border-3">
+            <div class="card-header bg-transparent border-bottom pt-3 pb-3 px-3 px-xxl-4 d-flex justify-content-between align-items-center">
+              <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                <i class="bi bi-clipboard-x-fill text-danger"></i> Phân tích Hủy/Hoàn Đơn
+              </h5>
+            </div>
+            <div class="card-body p-3 p-xxl-4 custom-scrollbar" style="max-height: 420px; overflow-y: auto;">
+              <p v-if="!customerInsights?.cancelReasons || customerInsights.cancelReasons.length === 0" class="text-center text-muted py-3">Không có dữ liệu hủy/hoàn đơn trong kỳ này.</p>
+              <ul v-else class="list-unstyled mb-0 d-flex flex-column gap-3">
+                <li v-for="(reason, idx) in customerInsights.cancelReasons" :key="idx" class="d-flex align-items-start gap-3 p-3 rounded-3 bg-light-soft border border-light">
+                  <div class="avatar-circle bg-danger-soft text-danger d-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width: 32px; height: 32px; border-radius: 50%;">
+                    <i class="bi bi-x-circle-fill"></i>
+                  </div>
+                  <div class="flex-grow-1 min-w-0">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                      <h6 class="mb-0 fw-bold text-dark font-size-sm lh-base pe-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">{{ reason.note }}</h6>
+                    </div>
+                    <span class="badge bg-secondary-soft text-secondary fw-bold px-2 py-1 mt-1"><i class="bi bi-hash"></i> Số lượng: {{ reason.count }}</span>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hàng 6: Thống kê Khuyến mãi & Mã giảm giá -->
       <div class="row g-3 g-xl-4 mt-1">
         <div class="col-12">
           <div class="d-flex justify-content-between align-items-center mb-2">
@@ -614,23 +873,64 @@
 
         <!-- Thanh tóm tắt thống kê -->
         <div class="col-12 mt-3">
-          <div class="card border-0 bg-light-purple rounded-4 shadow-sm">
-            <div class="card-body p-3 p-xxl-4 row text-center">
-              <div class="col-3 border-end border-light">
-                <h3 class="fw-bolder text-success mb-1">{{ couponData.summary.active || 0 }}</h3>
-                <span class="text-secondary font-size-sm">Hoạt động</span>
+          <div class="row g-3">
+            <!-- Hoạt động -->
+            <div class="col-6 col-md-3">
+              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 100%);">
+                <div class="card-body p-3 d-flex align-items-center gap-3">
+                  <div class="avatar-circle bg-success text-white flex-shrink-0 shadow-sm d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: 50%;">
+                    <i class="bi bi-check-circle-fill fs-4"></i>
+                  </div>
+                  <div>
+                    <h3 class="fw-bolder text-dark mb-0 lh-1">{{ couponData.summary.active || 0 }}</h3>
+                    <span class="text-secondary font-size-sm fw-medium">Hoạt động</span>
+                  </div>
+                </div>
               </div>
-              <div class="col-3 border-end border-light">
-                <h3 class="fw-bolder text-warning mb-1">{{ couponData.summary.upcoming || 0 }}</h3>
-                <span class="text-secondary font-size-sm">Sắp tới</span>
+            </div>
+            
+            <!-- Sắp tới -->
+            <div class="col-6 col-md-3">
+              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);">
+                <div class="card-body p-3 d-flex align-items-center gap-3">
+                  <div class="avatar-circle bg-warning text-white flex-shrink-0 shadow-sm d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: 50%;">
+                    <i class="bi bi-clock-fill fs-4"></i>
+                  </div>
+                  <div>
+                    <h3 class="fw-bolder text-dark mb-0 lh-1">{{ couponData.summary.upcoming || 0 }}</h3>
+                    <span class="text-secondary font-size-sm fw-medium">Sắp tới</span>
+                  </div>
+                </div>
               </div>
-              <div class="col-3 border-end border-light">
-                <h3 class="fw-bolder text-danger mb-1">{{ couponData.summary.expired || 0 }}</h3>
-                <span class="text-secondary font-size-sm">Đã hết hạn</span>
+            </div>
+
+            <!-- Đã hết hạn -->
+            <div class="col-6 col-md-3">
+              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);">
+                <div class="card-body p-3 d-flex align-items-center gap-3">
+                  <div class="avatar-circle bg-danger text-white flex-shrink-0 shadow-sm d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: 50%;">
+                    <i class="bi bi-x-circle-fill fs-4"></i>
+                  </div>
+                  <div>
+                    <h3 class="fw-bolder text-dark mb-0 lh-1">{{ couponData.summary.expired || 0 }}</h3>
+                    <span class="text-secondary font-size-sm fw-medium">Đã hết hạn</span>
+                  </div>
+                </div>
               </div>
-              <div class="col-3">
-                <h3 class="fw-bolder mb-1" style="color: #8b5cf6;">{{ couponData.summary.total_uses || 0 }}</h3>
-                <span class="text-secondary font-size-sm">Tổng lượt dùng</span>
+            </div>
+
+            <!-- Tổng lượt dùng -->
+            <div class="col-6 col-md-3">
+              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, #f3e8ff 0%, #ffffff 100%);">
+                <div class="card-body p-3 d-flex align-items-center gap-3">
+                  <div class="avatar-circle flex-shrink-0 shadow-sm d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: 50%; background-color: #8b5cf6; color: white;">
+                    <i class="bi bi-ticket-perforated-fill fs-4"></i>
+                  </div>
+                  <div>
+                    <h3 class="fw-bolder text-dark mb-0 lh-1">{{ couponData.summary.total_uses || 0 }}</h3>
+                    <span class="text-secondary font-size-sm fw-medium">Lượt sử dụng</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -732,13 +1032,8 @@ const exportToExcel = () => {
       const ws = XLSX.utils.aoa_to_sheet(data);
       const lastColumn = headers.length - 1;
       const lastRow = rows.length + 3;
-      const borderColor = 'D9E4E1';
-      const thinBorder = {
-        top: { style: 'thin', color: { rgb: borderColor } },
-        bottom: { style: 'thin', color: { rgb: borderColor } },
-        left: { style: 'thin', color: { rgb: borderColor } },
-        right: { style: 'thin', color: { rgb: borderColor } },
-      };
+      const borderColor = '000000'; // Đổi sang viền đen rõ nét
+
 
       ws['!merges'] = [
         { s: { r: 0, c: 0 }, e: { r: 0, c: lastColumn } },
@@ -759,10 +1054,10 @@ const exportToExcel = () => {
           const value = String(ws[address].v ?? '');
           const cellStyle = {
             font: {
-              name: 'Calibri',
-              sz: row === 0 ? 16 : (isHeader ? 11 : 10.5),
+              name: 'Times New Roman',
+              sz: row === 0 ? 16 : 12,
               bold: row === 0 || isHeader || (isDataRow && column === 0),
-              color: { rgb: row <= 1 || isHeader ? 'FFFFFF' : (value.startsWith('-') ? 'C0392B' : '1F2937') },
+              color: { rgb: row <= 1 || isHeader ? 'FFFFFF' : (value.startsWith('-') ? 'C0392B' : '000000') },
             },
             fill: {
               fgColor: {
@@ -778,7 +1073,12 @@ const exportToExcel = () => {
             },
           };
           if (isHeader || isDataRow) {
-            cellStyle.border = thinBorder;
+            cellStyle.border = {
+              top: { style: 'thin', color: { rgb: borderColor } },
+              bottom: { style: 'thin', color: { rgb: borderColor } },
+              left: { style: 'thin', color: { rgb: borderColor } },
+              right: { style: 'thin', color: { rgb: borderColor } },
+            };
           }
           ws[address].s = cellStyle;
         }
@@ -795,6 +1095,11 @@ const exportToExcel = () => {
       { "Chỉ số": "Khách mới kỳ lọc", "Giá trị": formatNumber(stats.value.totalCustomers) },
       { "Chỉ số": "Tăng trưởng khách hàng", "Giá trị": formatGrowth(stats.value.customersGrowth) },
       { "Chỉ số": "Tổng tồn kho hệ thống", "Giá trị": formatNumber(stats.value.inventory) },
+      { "Chỉ số": "Tổng vốn tồn kho", "Giá trị": formatMoney(customerInsights.value?.inventoryValue) },
+      { "Chỉ số": "Số lượng SP tồn đọng", "Giá trị": formatNumber(customerInsights.value?.deadStockCount) },
+      { "Chỉ số": "Số SP sắp hết hàng", "Giá trị": formatNumber(lowStockProducts.value?.length || 0) },
+      { "Chỉ số": "Combo đang hoạt động", "Giá trị": formatNumber(activeCombos.value?.length || 0) },
+      { "Chỉ số": "Số lý do hủy/hoàn đơn", "Giá trị": formatNumber(customerInsights.value?.cancelReasons?.reduce((sum, item) => sum + item.count, 0) || 0) },
       { "Chỉ số": "Mã giảm giá đang hoạt động", "Giá trị": formatNumber(couponData.value?.summary?.active) },
       { "Chỉ số": "Tổng lượt dùng mã giảm giá", "Giá trị": formatNumber(couponData.value?.summary?.total_uses) },
       { "Chỉ số": "Tổng nhân sự hôm nay", "Giá trị": formatNumber(staffStats.value.total) },
@@ -912,6 +1217,7 @@ const isUpdatingCoupon = ref(null);
 let chartInstance = null;
 let paymentChartInstance = null;
 let couponChartInstance = null;
+let categoryChartInstance = null;
 
 const filterParams = ref({
   period: 'this_month',
@@ -983,6 +1289,7 @@ const periodInfo = computed(() => dashboardData.value?.period || {
 const recentOrders = computed(() => dashboardData.value?.recentOrders || []);
 const topProducts = computed(() => dashboardData.value?.topProducts || []);
 const lowStockProducts = computed(() => dashboardData.value?.lowStockProducts || []);
+const customerInsights = computed(() => dashboardData.value?.customerInsights || {});
 const recentReviews = computed(() => dashboardData.value?.recentReviews || []);
 const activeCombos = computed(() => dashboardData.value?.activeCombos || []);
 const staffStats = computed(() => dashboardData.value?.staffStats || {
@@ -1002,10 +1309,11 @@ watch(dashboardData, (newData) => {
       paymentStats.value = newData.paymentStats;
     }
     nextTick(() => {
-      initOrUpdateChart(newData.chartData.labels, newData.chartData.values, newData.chartData.orderCounts || []);
+      initOrUpdateChart([...newData.chartData.labels], [...newData.chartData.values], [...(newData.chartData.netProfits || [])], [...(newData.chartData.orderCounts || [])]);
       initPaymentChart();
+      initCategoryChart();
       if (newData.couponChart) {
-        initCouponChart(newData.couponChart.labels, newData.couponChart.values);
+        initCouponChart([...newData.couponChart.labels], [...newData.couponChart.values]);
       }
     });
   }
@@ -1085,15 +1393,18 @@ const generateColors = (count) => {
   return colors;
 };
 
-const initOrUpdateChart = (labels, values, orderCounts = []) => {
+const initOrUpdateChart = (labels, values, netProfits = [], orderCounts = []) => {
   const ctx = document.getElementById('revenueChart');
   if (!ctx) return;
   if (chartInstance) {
     chartInstance.data.labels = labels;
     chartInstance.data.datasets[0].data = values;
-    chartInstance.data.datasets[1].data = orderCounts;
+    chartInstance.data.datasets[1].data = netProfits;
+    chartInstance.data.datasets[2].data = orderCounts;
     chartInstance.data.datasets[0].backgroundColor = generateColors(labels.length);
+    chartInstance.data.datasets[1].backgroundColor = '#8b5cf6'; // Tím (Purple) contrast
     chartInstance.data.datasets[0].barPercentage = labels.length > 15 ? 0.8 : 0.5;
+    chartInstance.data.datasets[1].barPercentage = labels.length > 15 ? 0.8 : 0.5;
     chartInstance.update();
   } else {
     chartInstance = new Chart(ctx, {
@@ -1108,6 +1419,14 @@ const initOrUpdateChart = (labels, values, orderCounts = []) => {
             borderRadius: 6,
             barPercentage: 0.5,
             yAxisID: 'yRevenue'
+          },
+          {
+            label: 'Lợi nhuận ròng',
+            data: netProfits,
+            backgroundColor: '#8b5cf6', // Tím contrast
+            borderRadius: 6,
+            barPercentage: 0.5,
+            yAxisID: 'yRevenue' // Dùng chung trục Y với doanh thu
           },
           {
             type: 'line',
@@ -1162,8 +1481,50 @@ const initPaymentChart = () => {
   if (paymentChartInstance) paymentChartInstance.destroy(); // Hủy chart cũ trước khi render dữ liệu lọc mới để mượt mà
   paymentChartInstance = new Chart(ctx, {
     type: 'doughnut',
-    data: { labels: ['VNPay', 'MoMo', 'COD', 'Chuyển khoản'], datasets: [{ data: [paymentStats.value.vnpayPercent, paymentStats.value.momoPercent, paymentStats.value.codPercent, paymentStats.value.bankPercent], backgroundColor: ['#009981', '#FF9F1C', '#2EC4B6', '#6c757d'], borderWidth: 2, borderColor: '#ffffff' }] },
-    options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { display: false } } }
+    data: { labels: ['VNPay', 'MoMo', 'COD', 'Chuyển khoản'], datasets: [{ data: [paymentStats.value.vnpayPercent, paymentStats.value.momoPercent, paymentStats.value.codPercent, paymentStats.value.bankPercent], backgroundColor: ['#005baa', '#a50064', '#10b981', '#6c757d'], borderWidth: 2, borderColor: '#ffffff' }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { display: false } } }
+  });
+};
+
+const initCategoryChart = () => {
+  const ctx = document.getElementById('categoryChart');
+  if (!ctx || !customerInsights.value?.categoryRevenue) return;
+  if (categoryChartInstance) categoryChartInstance.destroy();
+  
+  const labels = customerInsights.value.categoryRevenue.map(item => item.name);
+  const data = customerInsights.value.categoryRevenue.map(item => item.revenue);
+  const colors = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1'];
+  
+  categoryChartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: data,
+        backgroundColor: colors.slice(0, data.length),
+        borderWidth: 2,
+        borderColor: '#ffffff'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: {
+          display: true,
+          position: 'right',
+          labels: { usePointStyle: true, boxWidth: 8, font: { size: 12 } }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return ' ' + new Intl.NumberFormat('vi-VN').format(context.raw) + ' đ';
+            }
+          }
+        }
+      }
+    }
   });
 };
 
@@ -1267,6 +1628,23 @@ const getRankClass = (index) => {
   if (index === 1) return 'rank-2 bg-secondary text-white';
   if (index === 2) return 'rank-3 bg-orange text-white';
   return 'rank-normal bg-light text-secondary';
+};
+
+const getTierColor = (tierName) => {
+  if (!tierName) return 'transparent';
+  const name = tierName.toLowerCase();
+  if (name.includes('vàng')) return '#ffc107'; 
+  if (name.includes('bạc')) return '#adb5bd'; 
+  if (name.includes('kim cương')) return '#0dcaf0'; 
+  if (name.includes('đồng')) return '#cd7f32'; 
+  return '#6c757d'; 
+};
+
+const getRankBgStyle = (index) => {
+  if (index === 0) return 'rgba(255, 193, 7, 0.15)'; // Vàng
+  if (index === 1) return 'rgba(108, 117, 125, 0.1)'; // Bạc
+  if (index === 2) return 'rgba(253, 126, 20, 0.15)'; // Đồng
+  return '#ffffff';
 };
 
 // ==========================================

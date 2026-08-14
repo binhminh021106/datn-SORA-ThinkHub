@@ -337,6 +337,7 @@
                     <th class="px-3" style="width: 50px;">Ảnh</th>
                     <th class="px-3" style="width: 150px;">Mã SKU</th>
                     <th class="px-3">Thuộc tính (Phân loại)</th>
+                    <th class="px-3 text-end" style="width: 120px;">Giá vốn</th>
                     <th class="px-3 text-end" style="width: 120px;">Giá bán</th>
                     <th class="px-3 text-center" style="width: 100px;">Tồn kho</th>
                   </tr>
@@ -355,6 +356,7 @@
                           }}</span>
                       </span>
                     </td>
+                    <td class="px-3 text-end fw-bold text-secondary">{{ formatCurrency(v.cost_price) }}</td>
                     <td class="px-3 text-end fw-bold text-success">{{ formatCurrency(v.price) }}</td>
                     <td class="px-3 text-center">
                       <span class="badge w-100 py-2" :class="v.stock_quantity > 0 ? 'bg-success' : 'bg-danger'">

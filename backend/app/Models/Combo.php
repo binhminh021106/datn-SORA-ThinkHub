@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\OrderItem;
 
 class Combo extends Model
 {
@@ -42,6 +43,11 @@ class Combo extends Model
     public function items()
     {
         return $this->hasMany(ComboItem::class, 'combo_id');
+    }
+
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class, 'combo_id');
     }
 
     public function reviews()

@@ -57,7 +57,7 @@
                                                 v-model="form.slug" readonly>
                                         </div>
 
-                                        <div class="col-md-4">
+                                        <div class="col-md-6">
                                             <label class="form-label fw-bold">Danh mục <span
                                                     class="text-danger">*</span></label>
                                             <select class="form-select border-brand fw-semibold text-brand"
@@ -73,7 +73,7 @@
                                             </select>
                                         </div>
 
-                                        <div class="col-md-4">
+                                        <div class="col-md-6">
                                             <label class="form-label fw-bold">Thương hiệu</label>
                                             <select class="form-select fw-semibold" v-model="form.brand_id">
                                                 <option value="">-- Không có (No Brand) --</option>
@@ -83,7 +83,17 @@
                                             </select>
                                         </div>
 
-                                        <div class="col-md-4">
+                                        <div class="col-md-6 mt-3">
+                                            <label class="form-label fw-bold">Giá vốn (Tham khảo)</label>
+                                            <div class="input-group">
+                                                <input type="text" class="form-control"
+                                                    :value="formatCurrency(form.cost_price)"
+                                                    @input="updateCostPrice($event)">
+                                                <span class="input-group-text bg-light">VNĐ</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-6 mt-3">
                                             <label class="form-label fw-bold">Giá tham khảo <span
                                                     class="text-danger">*</span></label>
                                             <div class="input-group">
@@ -94,7 +104,7 @@
                                             </div>
                                         </div>
 
-                                        <div class="col-md-6 mt-3">
+                                        <div class="col-md-12 mt-3">
                                             <label class="form-label fw-bold text-dark">
                                                 <i class="bi bi-diagram-3-fill text-brand me-1"></i> Hoa hồng Affiliate
                                             </label>
@@ -125,15 +135,6 @@
                                             <div class="editor-container shadow-sm rounded-4 position-relative border bg-white">
                                                 <QuillEditor v-if="!isHtmlMode" theme="snow" toolbar="full" v-model:content="form.description" contentType="html" placeholder="Mô tả chi tiết sản phẩm..." />
                                                 <textarea v-else class="form-control font-monospace p-3" rows="10" v-model="form.description" placeholder="<p>Mô tả HTML...</p>" style="min-height: 250px; background-color: #2d2d2d; color: #f8f8f2; border: none;"></textarea>
-                                            </div>
-                                        </div>
-
-                                        <div class="col-md-12 mt-3">
-                                            <div
-                                                class="alert alert-info small border-0 bg-info bg-opacity-10 text-muted m-0">
-                                                <i class="bi bi-info-circle me-1 text-info"></i>
-                                                Sản phẩm mặc định sẽ ở trạng thái <strong>Nháp (Draft)</strong>. Bạn cần
-                                                cấu hình biến thể ở Bước 2 để xuất bản.
                                             </div>
                                         </div>
                                     </div>
@@ -234,6 +235,7 @@
                                                             title="Gỡ cột" @click="removeAttributeColumn(attrId)"></i>
                                                     </th>
 
+                                                    <th style="width: 140px;">Giá vốn</th>
                                                     <th style="width: 150px;" class="bg-light-brand text-dark">Giá bán
                                                         (VNĐ) <span class="text-danger">*</span></th>
                                                     <th style="width: 140px;">Khuyến mãi</th>
@@ -332,6 +334,12 @@
                                                         </div>
                                                     </td>
 
+                                                    <td>
+                                                        <input type="text"
+                                                            class="form-control form-control-sm text-end"
+                                                            :value="formatCurrency(v.cost_price)"
+                                                            @input="updateVariantPrice(index, 'cost_price', $event)">
+                                                    </td>
                                                     <td>
                                                         <input type="text"
                                                             class="form-control form-control-sm text-end fw-bold text-brand"
@@ -534,7 +542,7 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router';
 import { useQueryClient } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
-import axios from 'axios';
+import adminApiClient from '@/utils/adminApiClient';
 import { QuillEditor } from '@vueup/vue-quill';
 import '@vueup/vue-quill/dist/vue-quill.snow.css';
 
@@ -553,7 +561,7 @@ const systemAttributes = ref([]);
 const brands = ref([]);
 
 const form = ref({
-    category_id: '', brand_id: '', name: '', slug: '', base_price: 0, isPublished: true, affiliate_commission_rate: 0, description: ''
+    category_id: '', brand_id: '', name: '', slug: '', base_price: 0, cost_price: 0, isPublished: true, affiliate_commission_rate: 0, description: ''
 });
 const thumbnailFile = ref(null);
 const thumbnailPreview = ref(null);
@@ -643,8 +651,6 @@ const getSortedValues = (attrId) => {
     return { alpha, numeric };
 };
 
-const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
-
 const canProceedToStep2 = computed(() => {
     return form.value.name && form.value.name.trim().length >= 3 && form.value.category_id && form.value.base_price > 0 && thumbnailFile.value;
 });
@@ -677,6 +683,10 @@ const updateBasePrice = (event) => {
     let rawValue = event.target.value.replace(/\D/g, '');
     form.value.base_price = rawValue ? parseInt(rawValue, 10) : '';
     event.target.value = formatCurrency(rawValue);
+};
+const updateCostPrice = (event) => {
+    let rawValue = event.target.value.replace(/[^0-9]/g, '');
+    form.value.cost_price = rawValue ? parseInt(rawValue, 10) : '';
 };
 
 const updateVariantPrice = (index, field, event) => {
@@ -712,10 +722,7 @@ const proceedToStep2 = async () => {
                 attrIdToAdd = existingAttr.id.toString();
             } else {
                 try {
-                    const res = await axios.post(`${API_URL}/admin/attributes`,
-                        { name: schemaName },
-                        { headers: getHeaders() }
-                    );
+                    const res = await adminApiClient.post('/attributes', { name: schemaName });
                     res.data.data.values = [];
                     systemAttributes.value.push(res.data.data);
                     attrIdToAdd = res.data.data.id.toString();
@@ -793,7 +800,7 @@ const addVariantRow = () => {
     activeAttributes.value.forEach(id => rowAttrs[id] = "");
 
     variants.value.push({
-        sku: newSku, price: form.value.base_price, promotional_price: 0, stock_quantity: 10,
+        sku: newSku, price: form.value.base_price,  cost_price: form.value.cost_price || 0, promotional_price: 0, stock_quantity: 10,
         imageFile: null, preview: null, attributes: rowAttrs,
         hasDuplicateError: false, attrError: false, priceError: false, saleError: false, stockError: false
     });
@@ -857,10 +864,7 @@ const hideModals = () => {
 const submitCreateAttribute = async () => {
     if (!newAttrForm.value.name) return;
     try {
-        const res = await axios.post(`${API_URL}/admin/attributes`,
-            { name: newAttrForm.value.name },
-            { headers: getHeaders() }
-        );
+        const res = await adminApiClient.post('/attributes', { name: newAttrForm.value.name });
         res.data.data.values = [];
         systemAttributes.value.push(res.data.data);
         hideModals();
@@ -889,7 +893,7 @@ const submitCreateValue = async () => {
     if (!newValueForm.value.value || !currentOperatingAttr.value) return;
     try {
         const payload = { attribute_id: currentOperatingAttr.value.id, value: newValueForm.value.value };
-        const res = await axios.post(`${API_URL}/admin/attribute-values`, payload, { headers: getHeaders() });
+        const res = await adminApiClient.post('/attribute-values', payload);
 
         const attrObj = systemAttributes.value.find(x => x.id == currentOperatingAttr.value.id);
         if (attrObj) {
@@ -919,10 +923,7 @@ watch(selectedAttrToManage, (newId) => {
 const updateAttribute = async (id) => {
     if (!manageAttrName.value || !id) return;
     try {
-        await axios.put(`${API_URL}/admin/attributes/${id}`,
-            { name: manageAttrName.value },
-            { headers: getHeaders() }
-        );
+        await adminApiClient.put(`/attributes/${id}`, { name: manageAttrName.value });
         const attr = systemAttributes.value.find(a => a.id === parseInt(id));
         if (attr) attr.name = manageAttrName.value;
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật thành công', showConfirmButton: false, timer: 2000 });
@@ -936,7 +937,7 @@ const deleteAttribute = async (id) => {
     Swal.fire({ title: 'Xóa thuộc tính?', text: "Thuộc tính này và các giá trị của nó sẽ bị xóa!", icon: 'warning', showCancelButton: true }).then(async (result) => {
         if (result.isConfirmed) {
             try {
-                await axios.delete(`${API_URL}/admin/attributes/${id}`, { headers: getHeaders() });
+                await adminApiClient.delete(`/attributes/${id}`);
                 systemAttributes.value = systemAttributes.value.filter(a => a.id !== parseInt(id));
                 selectedAttrToManage.value = '';
                 if (manageAttrModalObj) manageAttrModalObj.hide();
@@ -957,7 +958,7 @@ const deleteAttributeValue = async (id) => {
     Swal.fire({ title: 'Xóa giá trị?', text: "Hành động này không thể hoàn tác!", icon: 'warning', showCancelButton: true }).then(async (result) => {
         if (result.isConfirmed) {
             try {
-                await axios.delete(`${API_URL}/admin/attribute-values/${id}`, { headers: getHeaders() });
+                await adminApiClient.delete(`/attribute-values/${id}`);
                 const attr = systemAttributes.value.find(a => a.id === selectedAttrToManage.value);
                 if (attr && attr.values) {
                     attr.values = attr.values.filter(v => v.id !== id);
@@ -1062,6 +1063,7 @@ const submitProduct = async () => {
         formData.append('name', form.value.name);
         formData.append('slug', form.value.slug);
         formData.append('base_price', form.value.base_price);
+        if (form.value.cost_price) formData.append('cost_price', form.value.cost_price);
         formData.append('status', form.value.isPublished ? 'published' : 'draft');
         formData.append('description', form.value.description || '');
         
@@ -1073,6 +1075,7 @@ const submitProduct = async () => {
         const variantsPayload = variants.value.map(v => ({
             sku: v.sku,
             price: v.price,
+            cost_price: v.cost_price || 0,
             promotional_price: v.promotional_price || 0,
             stock_quantity: v.stock_quantity,
             attributes: v.attributes
@@ -1083,9 +1086,7 @@ const submitProduct = async () => {
             if (v.imageFile) formData.append(`variant_image_${index}`, v.imageFile);
         });
 
-        const res = await axios.post(`${API_URL}/admin/products`, formData, {
-            headers: getHeaders()
-        });
+        const res = await adminApiClient.post('/products', formData);
 
         // Hủy bỏ cache của danh sách sản phẩm để ép tải lại dữ liệu mới nhất khi quay về màn Index
         queryClient.invalidateQueries({ queryKey: ['adminProducts'] });
@@ -1123,9 +1124,9 @@ const submitProduct = async () => {
 const fetchData = async () => {
     try {
         const [catRes, attrRes, brandRes] = await Promise.all([
-            axios.get(`${API_URL}/admin/categories?status=active`, { headers: getHeaders() }),
-            axios.get(`${API_URL}/admin/attributes`, { headers: getHeaders() }),
-            axios.get(`${API_URL}/admin/brands?status=active`, { headers: getHeaders() })
+            adminApiClient.get('/categories?status=active'),
+            adminApiClient.get('/attributes'),
+            adminApiClient.get('/brands?status=active')
         ]);
 
         const catData = catRes.data;

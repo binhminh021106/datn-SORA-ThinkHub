@@ -57,7 +57,7 @@
                                                 v-model="form.slug" readonly>
                                         </div>
 
-                                        <div class="col-md-4">
+                                        <div class="col-md-6">
                                             <label class="form-label fw-bold">Danh mục <span
                                                     class="text-danger">*</span></label>
                                             <div class="position-relative select-wrapper">
@@ -75,7 +75,7 @@
                                             </div>
                                         </div>
 
-                                        <div class="col-md-4">
+                                        <div class="col-md-6">
                                             <label class="form-label fw-bold">Thương hiệu</label>
                                             <div class="position-relative select-wrapper">
                                                 <select class="form-select border-secondary fw-semibold text-dark filter-select cursor-pointer py-2 ps-3 pe-4" v-model="form.brand_id">
@@ -87,7 +87,17 @@
                                             </div>
                                         </div>
 
-                                        <div class="col-md-4">
+                                        <div class="col-md-6 mt-3">
+                                            <label class="form-label fw-bold">Giá vốn (Tham khảo)</label>
+                                            <div class="input-group">
+                                                <input type="text" class="form-control py-2"
+                                                    :value="formatCurrency(form.cost_price)"
+                                                    @input="updateCostPrice($event)">
+                                                <span class="input-group-text bg-light">VNĐ</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-6 mt-3">
                                             <label class="form-label fw-bold">Giá tham khảo <span
                                                     class="text-danger">*</span></label>
                                             <div class="input-group">
@@ -98,7 +108,7 @@
                                             </div>
                                         </div>
 
-                                        <div class="col-md-6 mt-3">
+                                        <div class="col-md-12 mt-3">
                                             <label class="form-label fw-bold text-dark">
                                                 <i class="bi bi-diagram-3-fill text-brand me-1"></i> Hoa hồng Affiliate
                                             </label>
@@ -238,6 +248,7 @@
                                                             title="Gỡ cột" @click="removeAttributeColumn(attrId)"></i>
                                                     </th>
 
+                                                    <th style="width: 140px;">Giá vốn</th>
                                                     <th style="width: 150px;" class="bg-light-brand text-dark">Giá bán
                                                         (VNĐ) <span class="text-danger">*</span></th>
                                                     <th style="width: 140px;">Khuyến mãi</th>
@@ -336,6 +347,12 @@
                                                         </div>
                                                     </td>
 
+                                                    <td>
+                                                        <input type="text"
+                                                            class="form-control form-control-sm text-end"
+                                                            :value="formatCurrency(v.cost_price)"
+                                                            @input="updateVariantPrice(index, 'cost_price', $event)">
+                                                    </td>
                                                     <td>
                                                         <input type="text"
                                                             class="form-control form-control-sm text-end fw-bold text-brand"
@@ -537,7 +554,7 @@
 import { ref, computed, onMounted, nextTick, watch, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
-import axios from 'axios';
+import adminApiClient from '@/utils/adminApiClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 
 // IMPORT COMPONENT SORAIMAGE VÀ ẢNH PLACEHOLDER ĐỒNG BỘ
@@ -561,7 +578,7 @@ const isHtmlMode = ref(false);
 
 // THÊM MỚI: Khởi tạo giá trị mặc định cho affiliate_commission_rate
 const form = ref({
-    category_id: '', brand_id: '', name: '', slug: '', base_price: 0, isPublished: true, affiliate_commission_rate: 0, description: ''
+    category_id: '', brand_id: '', name: '', slug: '', base_price: 0, cost_price: 0, isPublished: true, affiliate_commission_rate: 0, description: ''
 });
 const thumbnailFile = ref(null);
 const thumbnailPreview = ref(null);
@@ -585,8 +602,6 @@ const manageAttrName = ref('');
 
 import { getFullImage } from '@/composables/useUtilities';
 
-const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
-
 const getImageUrl = (path) => {
     if (!path) return '';
     if (path.startsWith('http')) return path;
@@ -595,17 +610,17 @@ const getImageUrl = (path) => {
 
 // --- TANSTACK QUERY: TRUY VẤN SONG SONG TỐI ƯU SIÊU DỮ LIỆU ---
 const fetchCategories = async () => {
-    const res = await axios.get(`${API_URL}/admin/categories?status=active`, { headers: getHeaders() });
+    const res = await adminApiClient.get('/categories?status=active');
     return Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data.data?.data) ? res.data.data.data : []);
 };
 
 const fetchAttributes = async () => {
-    const res = await axios.get(`${API_URL}/admin/attributes`, { headers: getHeaders() });
+    const res = await adminApiClient.get('/attributes');
     return Array.isArray(res.data.data) ? res.data.data : [];
 };
 
 const fetchBrands = async () => {
-    const res = await axios.get(`${API_URL}/admin/brands?status=active`, { headers: getHeaders() });
+    const res = await adminApiClient.get('/brands?status=active');
     return Array.isArray(res.data.data) ? res.data.data : [];
 };
 
@@ -737,6 +752,10 @@ const updateBasePrice = (event) => {
     form.value.base_price = rawValue ? parseInt(rawValue, 10) : '';
     event.target.value = formatCurrency(rawValue);
 };
+const updateCostPrice = (event) => {
+    let rawValue = event.target.value.replace(/[^0-9]/g, '');
+    form.value.cost_price = rawValue ? parseInt(rawValue, 10) : '';
+};
 
 const updateVariantPrice = (index, field, event) => {
     let rawValue = event.target.value.replace(/\D/g, '');
@@ -769,10 +788,7 @@ const proceedToStep2 = async () => {
                 attrIdToAdd = existingAttr.id.toString();
             } else {
                 try {
-                    const res = await axios.post(`${API_URL}/admin/attributes`,
-                        { name: schemaName },
-                        { headers: getHeaders() }
-                    );
+                    const res = await adminApiClient.post('/attributes', { name: schemaName });
                     res.data.data.values = [];
                     systemAttributes.value.push(res.data.data);
                     attrIdToAdd = res.data.data.id.toString();
@@ -853,7 +869,7 @@ const addVariantRow = () => {
 
     variants.value.push({
         id: null, 
-        sku: newSku, price: form.value.base_price, promotional_price: 0, stock_quantity: 10,
+        sku: newSku, price: form.value.base_price,  cost_price: form.value.cost_price || 0, promotional_price: 0, stock_quantity: 10,
         imageFile: null, preview: null, attributes: rowAttrs,
         current_image: null,
         hasDuplicateError: false, attrError: false, priceError: false, saleError: false, stockError: false
@@ -914,10 +930,7 @@ const hideModals = () => {
 const submitCreateAttribute = async () => {
     if (!newAttrForm.value.name) return;
     try {
-        const res = await axios.post(`${API_URL}/admin/attributes`,
-            { name: newAttrForm.value.name },
-            { headers: getHeaders() }
-        );
+        const res = await adminApiClient.post('/attributes', { name: newAttrForm.value.name });
         res.data.data.values = [];
         systemAttributes.value.push(res.data.data);
         
@@ -950,7 +963,7 @@ const submitCreateValue = async () => {
     if (!newValueForm.value.value || !currentOperatingAttr.value) return;
     try {
         const payload = { attribute_id: currentOperatingAttr.value.id, value: newValueForm.value.value };
-        const res = await axios.post(`${API_URL}/admin/attribute-values`, payload, { headers: getHeaders() });
+        const res = await adminApiClient.post('/attribute-values', payload);
 
         const attrObj = systemAttributes.value.find(x => x.id == currentOperatingAttr.value.id);
         if (attrObj) {
@@ -984,10 +997,7 @@ watch(selectedAttrToManage, (newId) => {
 const updateAttribute = async (id) => {
     if (!manageAttrName.value || !id) return;
     try {
-        await axios.put(`${API_URL}/admin/attributes/${id}`,
-            { name: manageAttrName.value },
-            { headers: getHeaders() }
-        );
+        await adminApiClient.put(`/attributes/${id}`, { name: manageAttrName.value });
         const attr = systemAttributes.value.find(a => a.id === parseInt(id));
         if (attr) attr.name = manageAttrName.value;
         
@@ -1004,7 +1014,7 @@ const deleteAttribute = async (id) => {
     Swal.fire({ title: 'Xóa thuộc tính?', text: "Thuộc tính này và các giá trị của nó sẽ bị xóa!", icon: 'warning', showCancelButton: true }).then(async (result) => {
         if (result.isConfirmed) {
             try {
-                await axios.delete(`${API_URL}/admin/attributes/${id}`, { headers: getHeaders() });
+                await adminApiClient.delete(`/attributes/${id}`);
                 systemAttributes.value = systemAttributes.value.filter(a => a.id !== parseInt(id));
                 selectedAttrToManage.value = '';
                 if (manageAttrModalObj) manageAttrModalObj.hide();
@@ -1028,7 +1038,7 @@ const deleteAttributeValue = async (id) => {
     Swal.fire({ title: 'Xóa giá trị?', text: "Hành động này không thể hoàn tác!", icon: 'warning', showCancelButton: true }).then(async (result) => {
         if (result.isConfirmed) {
             try {
-                await axios.delete(`${API_URL}/admin/attribute-values/${id}`, { headers: getHeaders() });
+                await adminApiClient.delete(`/attribute-values/${id}`);
                 const attr = systemAttributes.value.find(a => a.id === selectedAttrToManage.value);
                 if (attr && attr.values) {
                     attr.values = attr.values.filter(v => v.id !== id);
@@ -1103,9 +1113,7 @@ const validateDuplicates = () => {
 // --- TANSTACK MUTATION: LƯU SẢN PHẨM NHANH CHÓNG & LÀM MỚI CACHING ---
 const updateProductMutation = useMutation({
     mutationFn: async (formData) => {
-        const res = await axios.post(`${API_URL}/admin/products/${productId}`, formData, {
-            headers: getHeaders()
-        });
+        const res = await adminApiClient.post(`/products/${productId}`, formData);
         return res.data;
     },
     onSuccess: () => {
@@ -1176,6 +1184,7 @@ const submitProduct = async () => {
     formData.append('name', form.value.name);
     formData.append('slug', form.value.slug);
     formData.append('base_price', form.value.base_price);
+        if (form.value.cost_price !== null && form.value.cost_price !== undefined) formData.append('cost_price', form.value.cost_price);
     formData.append('status', form.value.isPublished ? 'published' : 'draft');
     formData.append('description', form.value.description || '');
     
@@ -1189,6 +1198,7 @@ const submitProduct = async () => {
         id: v.id || null,
         sku: v.sku,
         price: v.price,
+        cost_price: v.cost_price || 0,
         promotional_price: v.promotional_price || 0,
         stock_quantity: v.stock_quantity,
         attributes: v.attributes,
@@ -1214,7 +1224,7 @@ const fetchData = async () => {
             queryClient.ensureQueryData({ queryKey: ['adminActiveBrands'], queryFn: fetchBrands })
         ]);
 
-        const prodRes = await axios.get(`${API_URL}/admin/products/${productId}`, { headers: getHeaders() });
+        const prodRes = await adminApiClient.get(`/products/${productId}`);
         const pData = prodRes.data.data;
         
         form.value.name = pData.name;
@@ -1222,6 +1232,7 @@ const fetchData = async () => {
         form.value.category_id = pData.category_id || '';
         form.value.brand_id = pData.brand_id || '';
         form.value.base_price = Math.round(pData.base_price || 0);
+        form.value.cost_price = Math.round(pData.cost_price || 0);
         form.value.isPublished = pData.status === 'published';
         form.value.description = pData.description || '';
 
@@ -1246,6 +1257,7 @@ const fetchData = async () => {
                     id: v.id,
                     sku: v.sku,
                     price: Math.round(v.price || 0),
+                    cost_price: Math.round(v.cost_price || 0),
                     promotional_price: Math.round(v.promotional_price || 0),
                     stock_quantity: v.stock_quantity,
                     current_image: v.image_url || v.image, 

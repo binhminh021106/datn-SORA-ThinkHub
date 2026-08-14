@@ -126,6 +126,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue';
+import adminApiClient from '@/utils/adminApiClient.js';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 
@@ -181,7 +182,7 @@ const handleUpload = (e, type) => {
 
 onMounted(async () => {
   try {
-    const res = await fetch(`${API_URL}/admin/brands`, { headers: getHeaders() });
+    const res = await adminApiClient.get(`/brands`);
     if (res.ok) {
         const data = await res.json();
         // Lọc lấy brand đang active thôi
@@ -223,7 +224,7 @@ const submitBanner = async () => {
   if(fileVideo.value) fd.append('video_url', fileVideo.value);
 
   try {
-    const res = await fetch(`${API_URL}/admin/banners`, { method: 'POST', headers: getHeaders(), body: fd });
+    const res = await adminApiClient.post(`/banners`, fd);
     const data = await res.json();
     if (res.ok) {
       Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã tạo banner', showConfirmButton: false, timer: 1500 });

@@ -103,43 +103,52 @@ class CrawlDojiGoldPrice extends Command
     private function crawlDoji()
     {
         try {
+            // Endpoint dữ liệu của DOJI
             $response = Http::withHeaders([
                 'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-            ])->timeout(15)->get('https://giavang.doji.vn/');
+                'Accept' => 'application/json, text/plain, */*',
+            ])->timeout(15)->get('https://giavang.doji.vn/api/gia-vang');
 
-            if (!$response->successful()) return [];
+            // Fixture chứa payload endpoint DOJI (dùng để tham khảo/ánh xạ)
+            /*
+            $fixturePayload = '{
+                "status": 1,
+                "data": [
+                    {
+                        "name": "DOJI HN",
+                        "buy": 74500000,
+                        "sell": 76500000
+                    },
+                    {
+                        "name": "DOJI HCM",
+                        "buy": 74500000,
+                        "sell": 76500000
+                    }
+                ]
+            }';
+            */
 
-            $html = $response->body();
-            $dom = new DOMDocument();
-            @$dom->loadHTML(mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8'));
-            $xpath = new DOMXPath($dom);
+            if (!$response->successful()) {
+                // Đảm bảo khi endpoint không trả dữ liệu thì không lưu dữ liệu mock vào cache
+                return [];
+            }
 
-            $rows = $xpath->query('//table//tbody//tr');
+            $data = $response->json();
+
+            if (empty($data['data']) || !is_array($data['data'])) {
+                return [];
+            }
+
             $goldPrices = [];
 
-            $cleanAndFormatPrice = function($rawPrice) {
-                $rawPrice = trim($rawPrice);
-                if (empty($rawPrice) || $rawPrice === '-') return null;
-                $pureNumber = str_replace([',', '.'], '', $rawPrice);
-                if (is_numeric($pureNumber) && floatval($pureNumber) > 0) return number_format($pureNumber);
-                return null;
-            };
-
-            foreach ($rows as $row) {
-                $cols = $xpath->query('td', $row);
-                if ($cols->length >= 3) {
-                    $name = trim(strip_tags($cols->item(0)->textContent));
-                    $buy = $cleanAndFormatPrice($cols->item(1)->textContent);
-                    $sell = $cleanAndFormatPrice($cols->item(2)->textContent);
-
-                    if ($name && $buy !== null && $sell !== null) {
-                        $goldPrices[] = [
-                            'name' => $name,
-                            'buy' => $buy,
-                            'sell' => $sell,
-                        ];
-                    }
+            foreach ($data['data'] as $item) {
+                if (isset($item['name'], $item['buy'], $item['sell']) && $item['buy'] > 0 && $item['sell'] > 0) {
+                    $goldPrices[] = [
+                        'name' => trim($item['name']),
+                        // Ánh xạ dữ liệu từ payload sang định dạng giá hiện tại (VD: chia 10000 để ra giá chỉ)
+                        'buy' => number_format($item['buy'] / 10000, 0, '.', ','),
+                        'sell' => number_format($item['sell'] / 10000, 0, '.', ','),
+                    ];
                 }
             }
 

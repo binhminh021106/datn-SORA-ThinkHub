@@ -6,13 +6,13 @@
       <!-- Khối chữ 1 -->
       <div class="marquee-content">
         <span class="marquee-item text-white mx-4 fw-bold">
-          ThinkHub <span class="text-light fw-normal opacity-75 mx-1">| DỰ ÁN TRANG SỨC SORA |</span> <span class="text-warning fw-bold">Version 2.0</span>
+          ThinkHub <span class="text-light fw-normal opacity-75 mx-1">| DỰ ÁN TRANG SỨC SORA |</span> <span class="text-warning fw-bold">Version 2.12</span>
         </span>
         <span class="marquee-item text-white mx-4 fw-bold">
-          ThinkHub <span class="text-light fw-normal opacity-75 mx-1">| DỰ ÁN TRANG SỨC SORA |</span> <span class="text-warning fw-bold">Version 2.0</span>
+          ThinkHub <span class="text-light fw-normal opacity-75 mx-1">| DỰ ÁN TRANG SỨC SORA |</span> <span class="text-warning fw-bold">Version 2.12</span>
         </span>
         <span class="marquee-item text-white mx-4 fw-bold">
-          ThinkHub <span class="text-light fw-normal opacity-75 mx-1">| DỰ ÁN TRANG SỨC SORA |</span> <span class="text-warning fw-bold">Version 2.0</span>
+          ThinkHub <span class="text-light fw-normal opacity-75 mx-1">| DỰ ÁN TRANG SỨC SORA |</span> <span class="text-warning fw-bold">Version 2.12</span>
         </span>
       </div>
       <!-- Khối chữ 2 (Nhân bản để tạo hiệu ứng nối đuôi vô cực) -->

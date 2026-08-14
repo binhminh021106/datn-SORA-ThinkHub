@@ -34,20 +34,20 @@ class AdminUpdateProductRequest extends FormRequest
             'name'              => 'required|string|min:3|max:255',
             'slug'              => 'required|string|max:255|unique:products,slug,' . $productId,
             'base_price'        => 'required|numeric|min:1',
+            'cost_price'        => 'nullable|numeric|min:0',
             'thumbnail_image'   => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048', 
             'status'            => 'required|in:published,draft,hidden',
             'description'       => 'nullable|string|max:65535',
             'affiliate_commission_rate' => 'nullable|numeric|min:0|max:100',
             'parsed_variants'   => 'required|array|min:1',
             
-            // Xử lý khó nhất: Bỏ qua check Unique SKU nếu ID của SKU đó là của chính nó
             'parsed_variants.*.sku' => ['required', 'string', 'distinct', function($attribute, $value, $fail) {
                 $index = explode('.', $attribute)[1];
                 $variantId = $this->input("parsed_variants.{$index}.id");
                 
                 $query = DB::table('product_variants')->where('sku', $value)->whereNull('deleted_at');
                 if ($variantId) {
-                    $query->where('id', '!=', $variantId); // Bỏ qua id hiện tại
+                    $query->where('id', '!=', $variantId); 
                 }
                 
                 if($query->exists()) {
@@ -56,10 +56,10 @@ class AdminUpdateProductRequest extends FormRequest
             }],
             
             'parsed_variants.*.price'             => 'required|numeric|min:1',
+            'parsed_variants.*.cost_price'        => 'nullable|numeric|min:0',
             'parsed_variants.*.promotional_price' => 'nullable|numeric|min:0|lte:parsed_variants.*.price',
             'parsed_variants.*.stock_quantity'    => 'required|integer|min:1',
             
-            // YÊU CẦU ẢNH: Chỉ bắt buộc nếu biến thể này chưa có ảnh cũ (current_image rỗng)
             'parsed_variants.*.image_file'        => 'required_without:parsed_variants.*.current_image|nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ];
     }
