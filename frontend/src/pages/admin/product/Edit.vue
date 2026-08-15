@@ -755,6 +755,7 @@ const updateBasePrice = (event) => {
 const updateCostPrice = (event) => {
     let rawValue = event.target.value.replace(/[^0-9]/g, '');
     form.value.cost_price = rawValue ? parseInt(rawValue, 10) : '';
+    event.target.value = formatCurrency(rawValue);
 };
 
 const updateVariantPrice = (index, field, event) => {
@@ -891,6 +892,7 @@ const duplicateVariant = (index) => {
         ...JSON.parse(JSON.stringify(v)),
         id: null,
         sku: newSku,
+        attributes: {},
         imageFile: null,
         preview: null,
         current_image: null,
@@ -1198,7 +1200,7 @@ const submitProduct = async () => {
         id: v.id || null,
         sku: v.sku,
         price: v.price,
-        cost_price: v.cost_price || 0,
+        cost_price: (v.cost_price === '' || v.cost_price == null) ? null : v.cost_price,
         promotional_price: v.promotional_price || 0,
         stock_quantity: v.stock_quantity,
         attributes: v.attributes,

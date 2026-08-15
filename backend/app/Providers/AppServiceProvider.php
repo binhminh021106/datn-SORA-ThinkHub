@@ -29,6 +29,9 @@ use App\Models\EmailLog;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use App\Events\OrderCreated;
+use App\Listeners\SendOrderConfirmationEmail;
+use App\Listeners\NotifyAdminsOnNewOrder;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -45,6 +48,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Event::listen(OrderCreated::class, SendOrderConfirmationEmail::class);
+        Event::listen(OrderCreated::class, NotifyAdminsOnNewOrder::class);
+
         Event::listen(MessageSent::class, function (MessageSent $event): void {
             $header = $event->message->getHeaders()->get('X-SORA-Email-Log-ID');
             $emailLogId = $header?->getBodyAsString();

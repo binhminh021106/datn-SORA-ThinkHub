@@ -77,7 +77,7 @@ class EmailCampaignService
                     if ($e->getCode() == 23000) {
                         $existingLog = EmailLog::where('user_id', $user->id)
                             ->where('event_type', 'birthday')
-                            ->where('campaign_year', $preventDuplicateSends ? $today->year : null)
+                            ->when($preventDuplicateSends, fn($q) => $q->where('campaign_year', $today->year), fn($q) => $q->whereNull('campaign_year'))
                             ->first();
 
                         if ($existingLog && in_array($existingLog->status, ['queued', 'sent'])) {
@@ -164,6 +164,14 @@ class EmailCampaignService
                 continue; // Bỏ qua sự kiện nếu đã bị tắt
             }
 
+            // AUTO-EXTEND VOUCHER VALIDITY (Gia hạn mã tự động cho năm nay)
+            if ($event->voucher_code && $event->validity_days) {
+                \App\Models\Coupon::where('code', $event->voucher_code)
+                    ->update([
+                        'expires_at' => \Carbon\Carbon::now()->addDays($event->validity_days)->endOfDay(),
+                    ]);
+            }
+
             foreach ($targetUsers as $user) {
                 $emailLog = null;
 
@@ -182,7 +190,7 @@ class EmailCampaignService
                         if ($e->getCode() == 23000) {
                             $existingLog = EmailLog::where('user_id', $user->id)
                                 ->where('event_type', $eventTypeKey)
-                                ->where('campaign_year', $preventDuplicateSends ? $today->year : null)
+                                ->when($preventDuplicateSends, fn($q) => $q->where('campaign_year', $today->year), fn($q) => $q->whereNull('campaign_year'))
                                 ->first();
 
                             if ($existingLog && in_array($existingLog->status, ['queued', 'sent'])) {
@@ -242,7 +250,10 @@ class EmailCampaignService
         }, $tiers);
         
         if (!$user->tier_id) {
-            $matchedTierConfig = collect($tiers)->sortBy('min_spend')->first();
+            // Lấy cấu hình của Khách thường (tier_id = 0)
+            $matchedTierConfig = collect($tiers)->first(function($t) {
+                return isset($t['tier_id']) && (int) $t['tier_id'] === 0;
+            });
             
             if (!$matchedTierConfig) {
                 \Illuminate\Support\Facades\Log::warning("EmailCampaignService: Skipped user {$user->id} because no tier config available for fallback.");
@@ -281,7 +292,7 @@ class EmailCampaignService
             return Coupon::firstOrCreate(
                 ['code' => $couponCode],
                 [
-                    'type' => $matchedTierConfig['type'] ?? 'fixed',
+                    'type' => $matchedTierConfig['type'] ?? 'percentage',
                     'name' => 'Quà tặng sinh nhật hạng: ' . ($matchedTierConfig['name'] ?? 'Cơ bản'),
                     'min_spend' => $matchedTierConfig['min_spend'] ?? 0,
                     'value' => $matchedTierConfig['value'] ?? 0,

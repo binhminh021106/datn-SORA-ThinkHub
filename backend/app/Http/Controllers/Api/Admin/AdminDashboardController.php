@@ -417,19 +417,21 @@ class AdminDashboardController extends Controller
                 ];
             }
 
-            // 3. Best Month (All-time)
             $bestMonthQuery = Order::query();
-            $bestMonthRaw = $this->applyRevenueFilter($bestMonthQuery)
+            // 3. Best Month (All-time)
+            $bestMonthsRaw = $this->applyRevenueFilter($bestMonthQuery)
                 ->select(DB::raw('MONTH(created_at) as month'), DB::raw('YEAR(created_at) as year'), DB::raw('SUM(total_amount) as total_spent'))
                 ->groupBy('year', 'month')
                 ->orderByDesc('total_spent')
-                ->first();
+                ->limit(3)
+                ->get();
             
             $bestMonth = null;
-            if ($bestMonthRaw) {
+            if ($bestMonthsRaw->isNotEmpty()) {
+                $labels = $bestMonthsRaw->map(function($m) { return $m->month . '/' . $m->year; })->toArray();
                 $bestMonth = [
-                    'label' => 'Tháng ' . $bestMonthRaw->month . '/' . $bestMonthRaw->year,
-                    'spent' => (float) $bestMonthRaw->total_spent,
+                    'label' => 'Tháng ' . implode(', ', $labels),
+                    'spent' => (float) $bestMonthsRaw->first()->total_spent,
                 ];
             }
 
@@ -637,15 +639,16 @@ class AdminDashboardController extends Controller
             $orderColumns[] = 'discount_amount';
         }
 
-        // Lấy danh sách ID để query cost
-        $validOrders = $this->applyRevenueFilter(clone $ordersQuery)->pluck('id');
-        
-        // Calculate costs grouped by date
-        $costsQuery = DB::table('order_items')
-            ->join('orders', 'order_items.order_id', '=', 'orders.id')
-            ->leftJoin('product_variants', 'order_items.product_variant_id', '=', 'product_variants.id')
-            ->leftJoin('products', 'order_items.product_id', '=', 'products.id')
-            ->whereIn('orders.id', $validOrders);
+        // Tính toán chi phí
+        $costsQuery = $this->applyRevenueFilter(
+            DB::table('order_items')
+                ->join('orders', 'order_items.order_id', '=', 'orders.id')
+                ->leftJoin('product_variants', 'order_items.product_variant_id', '=', 'product_variants.id')
+                ->leftJoin('products', 'order_items.product_id', '=', 'products.id')
+                ->where('orders.created_at', '>=', $startDate)
+                ->where('orders.created_at', '<=', $endDate),
+            'orders'
+        );
 
         $diffDays = $startDate->diffInDays($endDate);
 

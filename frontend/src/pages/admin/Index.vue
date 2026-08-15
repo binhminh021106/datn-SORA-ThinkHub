@@ -76,8 +76,8 @@
                 </div>
               </div>
               <div class="d-flex align-items-center mt-auto">
-                <span class="badge fw-bold me-2 px-2 py-1 font-size-xs" :class="getGrowthClass(stats.netProfitGrowth || 0)">
-                  <i class="me-1" :class="getGrowthIcon(stats.netProfitGrowth || 0)"></i> {{ formatGrowth(stats.netProfitGrowth || 0) }}
+                <span class="badge fw-bold me-2 px-2 py-1 font-size-xs" :class="getGrowthClass(stats.netProfitGrowth)">
+                  <i class="me-1" :class="getGrowthIcon(stats.netProfitGrowth)"></i> {{ formatGrowth(stats.netProfitGrowth) }}
                 </span>
                 <span class="text-muted font-size-xs fw-medium text-truncate">So với kỳ trước</span>
               </div>
@@ -324,8 +324,8 @@
                    <div class="position-relative me-2 flex-shrink-0" style="width: 36px; height: 36px;">
                      <div class="avatar-circle bg-primary-soft text-primary fw-bolder shadow-sm d-flex align-items-center justify-content-center" 
                           :style="{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', border: buyer.tierName ? `2px solid ${getTierColor(buyer.tierName)}` : '1px solid #dee2e6' }">
-                       <img v-if="buyer.avatar" :src="buyer.avatar" class="w-100 h-100 object-fit-cover" />
-                       <span v-else>{{ buyer.name?.charAt(0).toUpperCase() || 'K' }}</span>
+                       <img v-if="buyer.avatar && !buyerAvatarErrors[idx]" :src="buyer.avatar" class="w-100 h-100 object-fit-cover" @error="buyerAvatarErrors[idx] = true" />
+                       <span v-else>{{ getInitialName(buyer.name) }}</span>
                      </div>
                      <span v-if="buyer.tierName" class="position-absolute top-0 start-50 translate-middle badge rounded-pill" 
                            :style="{ backgroundColor: getTierColor(buyer.tierName), fontSize: '8px', padding: '2px 4px', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }" :title="buyer.tierName">
@@ -344,28 +344,33 @@
 
         <!-- Nhóm khách hàng chủ lực -->
         <div class="col-12 col-md-4">
-          <div class="card custom-card h-100 border-0 shadow-sm rounded-4 bg-gradient-to-br from-pink-soft to-white" style="background: linear-gradient(to bottom right, rgba(165,0,100,0.1), #ffffff);">
-            <div class="card-body p-3 d-flex flex-column justify-content-between position-relative overflow-hidden">
-              <div class="position-absolute end-0 top-0 mt-3 me-3 opacity-25" style="font-size: 3rem; color: #a50064; pointer-events: none;">
-                <i class="bi bi-people-fill"></i>
-              </div>
-              <div class="d-flex align-items-start justify-content-between mb-2 z-index-1" style="position: relative; z-index: 2;">
-                <div class="pe-2 min-w-0">
-                  <p class="fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate" style="color: #a50064">Nhóm KH chủ lực</p>
-                  <h5 class="fw-bolder mb-1 text-dark text-truncate">{{ customerInsights?.topGender?.gender || 'Chưa xác định' }}</h5>
-                </div>
+          <div class="card custom-card h-100 border-0 shadow-sm rounded-4 transition-all" 
+               :style="{ background: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'linear-gradient(to bottom right, rgba(13,202,240,0.05), #ffffff)' : 'linear-gradient(to bottom right, rgba(165,0,100,0.05), #ffffff)' }">
+            <div class="card-body p-4 d-flex flex-column position-relative overflow-hidden">
+              <div class="position-absolute" style="font-size: 8rem; right: -20px; bottom: -30px; pointer-events: none; z-index: 0; opacity: 0.06;"
+                   :class="customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'text-info' : (customerInsights?.topGender?.gender?.toLowerCase() === 'nữ' ? 'text-danger' : 'text-secondary')">
+                <i class="bi" :class="customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'bi-gender-male' : (customerInsights?.topGender?.gender?.toLowerCase() === 'nữ' ? 'bi-gender-female' : 'bi-people-fill')"></i>
               </div>
               
-              <!-- Text gợi ý lấp đầy khoảng trống -->
-              <div class="mt-2 mb-4 z-index-1 flex-grow-1 d-flex align-items-center" style="position: relative; z-index: 2;">
-                <p class="text-secondary font-size-sm mb-0 lh-base" style="font-size: 0.85rem;">
-                  Nhóm khách hàng này mang lại doanh thu cao nhất. Hãy thiết kế các chiến dịch Marketing và ưu đãi nhắm mục tiêu để khai thác tối đa tiềm năng mua sắm.
+              <div class="z-index-1" style="position: relative; z-index: 2;">
+                <p class="fw-bold font-size-xs mb-0 text-uppercase letter-spacing-1 text-truncate" 
+                   :style="{ color: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? '#0dcaf0' : '#a50064' }">
+                  Nhóm KH chủ lực
                 </p>
               </div>
 
-              <div class="d-flex align-items-center mt-auto font-size-sm fw-bold text-dark gap-2 text-truncate z-index-1" style="position: relative; z-index: 2;">
-                <span class="badge rounded-pill px-2 py-1" style="background-color: #a50064"><i class="bi bi-pie-chart-fill"></i> Đóng góp:</span> 
-                {{ formatCurrency(customerInsights?.topGender?.spent || 0) }}
+              <div class="z-index-1 my-auto" style="position: relative; z-index: 2;">
+                <h2 class="fw-bolder display-6 mb-0 text-dark" style="letter-spacing: -1px;">
+                  {{ customerInsights?.topGender?.gender ? 'Phái ' + customerInsights.topGender.gender : 'Chưa xác định' }}
+                </h2>
+              </div>
+
+              <div class="mt-4 pt-3 border-top border-light fw-bold text-dark text-truncate z-index-1 d-flex align-items-center gap-2" style="position: relative; z-index: 2;">
+                <span class="badge rounded-pill px-2 py-1 text-white font-size-sm" 
+                      :style="{ backgroundColor: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? '#0dcaf0' : '#a50064' }">
+                  <i class="bi bi-pie-chart-fill"></i> Đóng góp
+                </span> 
+                <span class="fs-5">{{ formatCurrency(customerInsights?.topGender?.spent || 0) }}</span>
               </div>
             </div>
           </div>
@@ -373,28 +378,29 @@
 
         <!-- Mùa bội thu -->
         <div class="col-12 col-md-4">
-          <div class="card custom-card h-100 border-0 shadow-sm rounded-4 bg-gradient-to-br from-success-soft to-white">
-            <div class="card-body p-3 d-flex flex-column justify-content-between position-relative overflow-hidden">
-              <div class="position-absolute end-0 top-0 mt-3 me-3 opacity-25" style="font-size: 3rem; color: #10b981; pointer-events: none;">
+          <div class="card custom-card h-100 border-0 shadow-sm rounded-4 bg-gradient-to-br from-success-soft to-white" style="background: linear-gradient(to bottom right, rgba(16,185,129,0.05), #ffffff);">
+            <div class="card-body p-4 d-flex flex-column position-relative overflow-hidden">
+              <div class="position-absolute text-success" style="font-size: 8rem; right: -20px; bottom: -30px; pointer-events: none; z-index: 0; opacity: 0.06;">
                 <i class="bi bi-calendar2-heart-fill"></i>
               </div>
-              <div class="d-flex align-items-start justify-content-between mb-2 z-index-1" style="position: relative; z-index: 2;">
-                <div class="pe-2 min-w-0">
-                  <p class="text-success fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate">Mùa bội thu (All-time)</p>
-                  <h5 class="fw-bolder mb-1 text-dark text-truncate">{{ customerInsights?.bestMonth?.label || 'Đang cập nhật' }}</h5>
-                </div>
-              </div>
-
-              <!-- Text gợi ý lấp đầy khoảng trống -->
-              <div class="mt-2 mb-4 z-index-1 flex-grow-1 d-flex align-items-center" style="position: relative; z-index: 2;">
-                <p class="text-secondary font-size-sm mb-0 lh-base" style="font-size: 0.85rem;">
-                  Tháng ghi nhận kỷ lục bán hàng kể từ khi khai trương. Phân tích lại các sự kiện và xu hướng mua sắm của tháng này để rút ra công thức thành công.
+              
+              <div class="z-index-1" style="position: relative; z-index: 2;">
+                <p class="text-success fw-bold font-size-xs mb-0 text-uppercase letter-spacing-1 text-truncate">
+                  Mùa bội thu (All-time)
                 </p>
               </div>
 
-              <div class="d-flex align-items-center mt-auto font-size-sm fw-bold text-dark gap-2 text-truncate z-index-1" style="position: relative; z-index: 2;">
-                <span class="badge bg-success rounded-pill px-2 py-1"><i class="bi bi-graph-up-arrow"></i> Kỷ lục:</span> 
-                {{ formatCurrency(customerInsights?.bestMonth?.spent || 0) }}
+              <div class="z-index-1 my-auto" style="position: relative; z-index: 2;">
+                <h2 class="fw-bolder fs-2 mb-0 text-dark" style="letter-spacing: -1px; line-height: 1.2;">
+                  {{ customerInsights?.bestMonth?.label || 'Đang cập nhật' }}
+                </h2>
+              </div>
+
+              <div class="mt-4 pt-3 border-top border-light fw-bold text-dark text-truncate z-index-1 d-flex align-items-center gap-2" style="position: relative; z-index: 2;">
+                <span class="badge bg-success rounded-pill px-2 py-1 text-white font-size-sm">
+                  <i class="bi bi-graph-up-arrow"></i> Kỷ lục
+                </span> 
+                <span class="fs-5">{{ formatCurrency(customerInsights?.bestMonth?.spent || 0) }}</span>
               </div>
             </div>
           </div>
@@ -526,7 +532,7 @@
                     style="width: 40px; height: 40px; border-radius: 50%; overflow: hidden;">
                     <img v-if="review.user_avatar && !reviewAvatarErrors[review.id]" :src="review.user_avatar"
                       @load="handleImageLoad('review-' + review.id)" @error="reviewAvatarErrors[review.id] = true" class="w-100 h-100 object-fit-cover img-fade-in" :class="{ 'img-loaded': isImageLoaded('review-' + review.id) }" />
-                    <span v-else>{{ review.user_name?.charAt(0).toUpperCase() || 'K' }}</span>
+                    <span v-else>{{ getInitialName(review.user_name) }}</span>
                   </div>
                   <div class="flex-grow-1 min-w-0">
                     <div class="d-flex justify-content-between align-items-center mb-1">
@@ -974,6 +980,12 @@ const toDateInputValue = (date) => {
 const maxDate = toDateInputValue(new Date());
 const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
+const getInitialName = (name) => {
+  if (!name) return 'K';
+  const parts = name.trim().split(' ');
+  return parts[parts.length - 1].charAt(0).toUpperCase();
+};
+
 const loadedImages = ref(new Set());
 
 const handleImageLoad = (id) => {
@@ -996,7 +1008,7 @@ const formatCompactCurrency = (value) => {
     return (num / 1000000000).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' Tỷ';
   }
   if (num >= 1000000) {
-    return (num / 1000000).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' Tr';
+    return (num / 1000000).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' Triệu';
   }
   return num.toLocaleString('vi-VN') + 'đ';
 };
@@ -1213,6 +1225,7 @@ const getHeaders = () => {
 
 const isExporting = ref(false);
 const reviewAvatarErrors = ref({});
+const buyerAvatarErrors = ref({});
 const isUpdatingCoupon = ref(null);
 let chartInstance = null;
 let paymentChartInstance = null;

@@ -217,7 +217,7 @@ class ProductImportController extends Controller
                         if ($basePrice === '' || !is_numeric($basePrice)) throw new \Exception("Dòng {$rowNumber}: Giá bán không hợp lệ.");
 
                         $baseCostPrice = trim($row['Giá Vốn'] ?? $row['Giá Vốn Sàn'] ?? '');
-                        if ($baseCostPrice !== '' && !is_numeric($baseCostPrice)) throw new \Exception("Dòng {$rowNumber}: Giá vốn không hợp lệ.");
+                        if ($baseCostPrice !== '' && (!is_numeric($baseCostPrice) || $baseCostPrice < 0)) throw new \Exception("Dòng {$rowNumber}: Giá vốn không hợp lệ.");
 
                         // Xử lý Danh Mục
                         $category = Category::where('name', $categoryName)->first();
@@ -304,7 +304,7 @@ class ProductImportController extends Controller
                     if ($variantPrice === '' || !is_numeric($variantPrice)) throw new \Exception("Dòng {$rowNumber}: Giá bán biến thể không hợp lệ.");
 
                     $variantCostPrice = trim($row['Giá Vốn Biến Thể'] ?? '');
-                    if ($variantCostPrice !== '' && !is_numeric($variantCostPrice)) throw new \Exception("Dòng {$rowNumber}: Giá vốn biến thể không hợp lệ.");
+                    if ($variantCostPrice !== '' && (!is_numeric($variantCostPrice) || $variantCostPrice < 0)) throw new \Exception("Dòng {$rowNumber}: Giá vốn biến thể không hợp lệ.");
 
                     $stock = trim($row['Kho (*)'] ?? $row['Tồn Kho (*)'] ?? '');
                     if ($stock === '' || !is_numeric($stock)) $stock = 0;

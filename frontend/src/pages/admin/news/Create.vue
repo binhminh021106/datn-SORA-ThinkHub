@@ -252,7 +252,7 @@ const checkAuthState = async () => {
 
     if (token) {
         try {
-            const response = await axios.get(`${apiUrl}/user`, { headers: getHeaders() });
+            const response = await adminApiClient.get('/me');
             let data = response.data.data && !response.data.id ? response.data.data : response.data;
             currentUser.value = { ...data, name: data.fullname || data.full_name || data.name || 'Admin' };
             localStorage.setItem('adminData', JSON.stringify(currentUser.value));

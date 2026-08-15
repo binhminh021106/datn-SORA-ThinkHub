@@ -130,10 +130,10 @@ class AdminContactController extends Controller
 
         try {
             $contact->update([
-                'reply_subject' => $contact->reply_subject ?? $request->subject,
-                'reply_message' => $contact->reply_message ?? $replyMessage,
-                'replied_at' => $contact->replied_at ?? now(),
-                'replied_by' => $contact->replied_by ?? $request->user()?->id,
+                'reply_subject' => $request->subject,
+                'reply_message' => $replyMessage,
+                'replied_at' => now(),
+                'replied_by' => $request->user()?->id,
                 'reply_delivery_status' => 'queued',
             ]);
         } catch (\Throwable $exception) {
@@ -181,10 +181,12 @@ class AdminContactController extends Controller
                             ");
                 });
                 
-                \App\Models\Contact::whereKey($contactId)->update([
-                    'status' => 'resolved',
-                    'reply_delivery_status' => 'sent'
-                ]);
+                \App\Models\Contact::whereKey($contactId)
+                    ->where('reply_delivery_status', 'queued')
+                    ->update([
+                        'status' => 'resolved',
+                        'reply_delivery_status' => 'sent'
+                    ]);
             })->catch(function (\Throwable $exception) use ($contactId) {
                 \App\Models\Contact::whereKey($contactId)->update(['reply_delivery_status' => 'failed']);
                 \Illuminate\Support\Facades\Log::error('Không thể gửi email phản hồi liên hệ (Queue).', [
