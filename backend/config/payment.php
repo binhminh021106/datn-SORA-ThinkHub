@@ -19,6 +19,8 @@ return [
         explode(',', env('MOBILE_APP_ALLOWED_SCHEMES', 'sora,exp,exps'))
     ))),
 
+    'auto_cancel_methods' => ['momo', 'vnpay'],
+
     'momo' => [
         'endpoint' => env('MOMO_ENDPOINT'),
         'partner_code' => env('MOMO_PARTNER_CODE'),

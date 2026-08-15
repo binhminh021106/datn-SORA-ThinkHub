@@ -12,6 +12,7 @@ class EmailLog extends Model
     protected $fillable = [
         'user_id',
         'event_type',
+        'campaign_year',
         'sent_at',
         'queued_at',
         'status',

@@ -8,9 +8,9 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Mail\Mailables\Headers;
 use App\Models\EmailLog;
 use Throwable;
-use Symfony\Component\Mime\Email;
 
 class HolidayCouponMail extends Mailable implements ShouldQueue
 {
@@ -59,13 +59,6 @@ class HolidayCouponMail extends Mailable implements ShouldQueue
         }
     }
 
-    public function withSymfonyMessage(Email $message): void
-    {
-        if ($this->emailLogId) {
-            $message->getHeaders()->addTextHeader('X-SORA-Email-Log-ID', (string) $this->emailLogId);
-        }
-    }
-
     public function build()
     {
         $subject = $this->event->email_subject
@@ -73,6 +66,19 @@ class HolidayCouponMail extends Mailable implements ShouldQueue
 
         return $this->subject($subject)
             ->view('emails.holiday_coupon');
+    }
+
+    public function headers(): Headers
+    {
+        $headers = new Headers();
+        
+        if ($this->emailLogId) {
+            $headers->text([
+                'X-SORA-Email-Log-ID' => (string) $this->emailLogId,
+            ]);
+        }
+        
+        return $headers;
     }
 
     private function prepareEmailContent(?string $content): string

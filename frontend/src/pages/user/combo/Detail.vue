@@ -1372,9 +1372,9 @@ onUnmounted(() => {
 }
 
 .attr-chip.error:not(.selected) .chip-inner {
-  border-color: rgba(255, 202, 207, 0.78);
-  color: #ffd9dc;
-  background-color: rgba(255, 255, 255, 0.08);
+  border-color: #ffb3b3;
+  color: #dc3545;
+  background-color: rgba(255, 179, 179, 0.15);
   animation: shake 0.4s;
 }
 
@@ -1390,16 +1390,16 @@ onUnmounted(() => {
   gap: 0.5rem;
   margin-top: 1rem;
   padding: 0.625rem 0.75rem;
-  border: 1px solid rgba(255, 221, 157, 0.52);
+  border: 1px solid #ffb3b3;
   border-radius: 10px;
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #fff6e8;
+  background-color: rgba(255, 179, 179, 0.15);
+  color: #dc3545;
   font-size: 0.875rem;
   font-weight: 600;
 }
 
 .combo-selection-warning i {
-  color: var(--sora-secondary);
+  color: #dc3545;
   font-size: 1rem;
 }
 

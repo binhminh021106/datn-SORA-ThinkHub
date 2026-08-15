@@ -1,5 +1,8 @@
 <template>
   <main class="auth-layout">
+    <router-link :to="{ name: 'home' }" class="auth-home-link-mobile">
+      <i class="bi bi-house-door-fill"></i> Trang chủ
+    </router-link>
     <router-view />
   </main>
 </template>

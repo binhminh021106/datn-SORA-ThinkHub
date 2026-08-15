@@ -973,8 +973,8 @@ const verifyFace = async () => {
     if (data.is_matched && data.matched_admin) {
       selectedAdminId.value = data.matched_admin.id;
       searchQuery.value = data.matched_admin.fullname || data.matched_admin.email || '';
+      pagination.value.currentPage = 1;
       await fetchProfile();
-
     }
     await fetchAdmins();
   });

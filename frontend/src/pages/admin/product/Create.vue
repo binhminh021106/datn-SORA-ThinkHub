@@ -57,7 +57,7 @@
                                                 v-model="form.slug" readonly>
                                         </div>
 
-                                        <div class="col-md-4">
+                                        <div class="col-md-6">
                                             <label class="form-label fw-bold">Danh mục <span
                                                     class="text-danger">*</span></label>
                                             <select class="form-select border-brand fw-semibold text-brand"
@@ -73,7 +73,7 @@
                                             </select>
                                         </div>
 
-                                        <div class="col-md-4">
+                                        <div class="col-md-6">
                                             <label class="form-label fw-bold">Thương hiệu</label>
                                             <select class="form-select fw-semibold" v-model="form.brand_id">
                                                 <option value="">-- Không có (No Brand) --</option>
@@ -83,7 +83,17 @@
                                             </select>
                                         </div>
 
-                                        <div class="col-md-4">
+                                        <div class="col-md-6 mt-3">
+                                            <label class="form-label fw-bold">Giá vốn (Tham khảo)</label>
+                                            <div class="input-group">
+                                                <input type="text" class="form-control"
+                                                    :value="formatCurrency(form.cost_price)"
+                                                    @input="updateCostPrice($event)">
+                                                <span class="input-group-text bg-light">VNĐ</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-6 mt-3">
                                             <label class="form-label fw-bold">Giá tham khảo <span
                                                     class="text-danger">*</span></label>
                                             <div class="input-group">
@@ -94,7 +104,7 @@
                                             </div>
                                         </div>
 
-                                        <div class="col-md-6 mt-3">
+                                        <div class="col-md-12 mt-3">
                                             <label class="form-label fw-bold text-dark">
                                                 <i class="bi bi-diagram-3-fill text-brand me-1"></i> Hoa hồng Affiliate
                                             </label>
@@ -113,12 +123,18 @@
                                             </small>
                                         </div>
 
+                                        <!-- Trình soạn thảo Word (Quill Editor) cho mô tả sản phẩm -->
                                         <div class="col-md-12 mt-3">
-                                            <div
-                                                class="alert alert-info small border-0 bg-info bg-opacity-10 text-muted m-0">
-                                                <i class="bi bi-info-circle me-1 text-info"></i>
-                                                Sản phẩm mặc định sẽ ở trạng thái <strong>Nháp (Draft)</strong>. Bạn cần
-                                                cấu hình biến thể ở Bước 2 để xuất bản.
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <label class="form-label fw-bold text-dark mb-0">Mô tả sản phẩm</label>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" @click="isHtmlMode = !isHtmlMode">
+                                                    <i class="bi bi-code-slash me-1"></i>
+                                                    {{ isHtmlMode ? 'Chuyển sang Trực quan (Visual)' : 'Chuyển sang HTML (Code)' }}
+                                                </button>
+                                            </div>
+                                            <div class="editor-container shadow-sm rounded-4 position-relative border bg-white">
+                                                <QuillEditor v-if="!isHtmlMode" theme="snow" toolbar="full" v-model:content="form.description" contentType="html" placeholder="Mô tả chi tiết sản phẩm..." />
+                                                <textarea v-else class="form-control font-monospace p-3" rows="10" v-model="form.description" placeholder="<p>Mô tả HTML...</p>" style="min-height: 250px; background-color: #2d2d2d; color: #f8f8f2; border: none;"></textarea>
                                             </div>
                                         </div>
                                     </div>
@@ -162,7 +178,7 @@
 
                         <div v-show="currentStep === 2">
 
-                            <div class="card border shadow-sm rounded-3 overflow-hidden mb-4">
+                            <div class="card border shadow-sm rounded-3 overflow-visible mb-4">
                                 <div
                                     class="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center flex-wrap gap-3">
                                     <h6 class="fw-bold mb-0 text-brand d-flex align-items-center">
@@ -201,8 +217,8 @@
                                     </div>
                                 </div>
 
-                                <div class="card-body p-0">
-                                    <div class="table-responsive" style="min-height: 350px;">
+                                <div class="card-body p-0" style="position: relative; z-index: 1040;">
+                                    <div class="table-responsive" style="min-height: 350px; overflow: visible;">
                                         <table class="table table-bordered mb-0 variant-table w-100">
                                             <thead>
                                                 <tr>
@@ -219,6 +235,7 @@
                                                             title="Gỡ cột" @click="removeAttributeColumn(attrId)"></i>
                                                     </th>
 
+                                                    <th style="width: 140px;">Giá vốn</th>
                                                     <th style="width: 150px;" class="bg-light-brand text-dark">Giá bán
                                                         (VNĐ) <span class="text-danger">*</span></th>
                                                     <th style="width: 140px;">Khuyến mãi</th>
@@ -255,20 +272,74 @@
                                                             v-model="v.sku" placeholder="Tự động" required>
                                                     </td>
 
-                                                    <td v-for="attrId in activeAttributes" :key="attrId">
-                                                        <select class="form-select form-select-sm attr-select"
-                                                            v-model="v.attributes[attrId]"
-                                                            :class="{ 'is-invalid': v.attrError }"
-                                                            @change="handleAttributeChange($event, attrId, index)">
-                                                            <option value="">-- Chọn --</option>
-                                                            <option v-for="val in getAttributeValues(attrId)"
-                                                                :key="val.id" :value="val.id">{{ val.value
-                                                                }}</option>
-                                                            <option value="NEW" class="text-success fw-bold">+ Tạo
-                                                                mới...</option>
-                                                        </select>
+                                                    <td v-for="attrId in activeAttributes" :key="attrId" class="align-middle" style="min-width: 160px;">
+                                                        <div class="position-relative custom-vue-dropdown" @click.stop>
+                                                            <button
+                                                                class="btn btn-sm w-100 text-start d-flex justify-content-between align-items-center bg-white border shadow-sm"
+                                                                :class="{ 'is-invalid border-danger text-danger': v.attrError }" type="button"
+                                                                @click="toggleDropdown($event, index, attrId)">
+                                                                <span class="text-truncate pe-2 fw-bold" style="font-size: 0.85rem;">{{ getSelectedValueName(attrId, v.attributes[attrId]) }}</span>
+                                                                <i class="bi text-muted" style="font-size: 0.75rem;" :class="activeDropdown === `${index}-${attrId}` ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                                                            </button>
+
+                                                            <transition name="fade">
+                                                                <div v-if="activeDropdown === `${index}-${attrId}`"
+                                                                    class="position-absolute shadow-lg border rounded-4 p-3 bg-white"
+                                                                    :style="[
+                                                                        { width: '420px', zIndex: 1050, left: 0, cursor: 'default' },
+                                                                        dropdownPosition === 'top' ? { bottom: '100%', marginBottom: '6px' } : { top: '100%', marginTop: '6px' }
+                                                                    ]">
+
+                                                                    <div class="input-group input-group-sm mb-3 shadow-sm">
+                                                                        <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                                                                        <input type="text"
+                                                                            class="form-control border-start-0 shadow-none bg-light border-secondary-subtle"
+                                                                            v-model="attrSearchQuery" placeholder="Lọc nhanh giá trị..." @click.stop>
+                                                                    </div>
+
+                                                                    <div class="row g-3">
+                                                                        <div class="col-6 border-end pe-3">
+                                                                            <h6 class="small text-muted fw-bold border-bottom pb-2 mb-2"><i class="bi bi-alphabet me-1"></i>Chữ / Ký tự (A-Z)</h6>
+                                                                            <div class="d-flex flex-wrap gap-2 custom-scrollbar-y pe-1" style="max-height: 200px; overflow-y: auto;">
+                                                                                <div v-for="val in getSortedValues(attrId).alpha" :key="val.id"
+                                                                                    class="badge border d-flex align-items-center p-0 shadow-sm transition-all rounded-pill overflow-hidden w-100"
+                                                                                    :class="v.attributes[attrId] == val.id ? 'bg-primary text-white border-primary' : 'bg-white text-dark hover-border-primary'">
+                                                                                    <span class="cursor-pointer px-3 py-2 flex-grow-1 text-center fw-bold text-truncate" style="font-size: 0.9rem;"
+                                                                                        @click="selectAttrValue(index, attrId, val.id)" :title="val.value">{{ val.value }}</span>
+                                                                                </div>
+                                                                                <span v-if="getSortedValues(attrId).alpha.length === 0" class="text-muted small fst-italic py-1 w-100 text-center">Trống</span>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="col-6 ps-2">
+                                                                            <h6 class="small text-muted fw-bold border-bottom pb-2 mb-2"><i class="bi bi-sort-numeric-down me-1"></i>Chữ Số (Tăng dần)</h6>
+                                                                            <div class="d-flex flex-wrap gap-2 custom-scrollbar-y pe-1" style="max-height: 200px; overflow-y: auto;">
+                                                                                <div v-for="val in getSortedValues(attrId).numeric" :key="val.id"
+                                                                                    class="badge border d-flex align-items-center p-0 shadow-sm transition-all rounded-pill overflow-hidden w-100"
+                                                                                    :class="v.attributes[attrId] == val.id ? 'bg-primary text-white border-primary' : 'bg-white text-dark hover-border-primary'">
+                                                                                    <span class="cursor-pointer px-3 py-2 flex-grow-1 text-center fw-bold text-truncate" style="font-size: 0.9rem;"
+                                                                                        @click="selectAttrValue(index, attrId, val.id)" :title="val.value">{{ val.value }}</span>
+                                                                                </div>
+                                                                                <span v-if="getSortedValues(attrId).numeric.length === 0" class="text-muted small fst-italic py-1 w-100 text-center">Trống</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <hr class="my-3">
+                                                                    <button type="button"
+                                                                        class="btn btn-sm btn-light text-success w-100 fw-bold border-dashed shadow-sm-hover py-2"
+                                                                        @click.stop="activeDropdown = null; handleAttributeChange({target: {value: 'NEW'}}, attrId, index)">
+                                                                        <i class="bi bi-plus-circle-fill me-1"></i> Bổ sung thêm giá trị vào hệ thống
+                                                                    </button>
+                                                                </div>
+                                                            </transition>
+                                                        </div>
                                                     </td>
 
+                                                    <td>
+                                                        <input type="text"
+                                                            class="form-control form-control-sm text-end"
+                                                            :value="formatCurrency(v.cost_price)"
+                                                            @input="updateVariantPrice(index, 'cost_price', $event)">
+                                                    </td>
                                                     <td>
                                                         <input type="text"
                                                             class="form-control form-control-sm text-end fw-bold text-brand"
@@ -289,10 +360,15 @@
                                                             :class="{ 'is-invalid': v.stockError }"
                                                             v-model="v.stock_quantity" min="1" required>
                                                     </td>
-                                                    <td class="text-center">
+                                                    <td class="text-center text-nowrap">
+                                                        <button type="button"
+                                                            class="btn btn-sm text-primary border-0 hover-primary"
+                                                            @click="duplicateVariant(index)" title="Nhân bản biến thể này">
+                                                            <i class="bi bi-copy fs-6"></i>
+                                                        </button>
                                                         <button type="button"
                                                             class="btn btn-sm text-secondary border-0 hover-danger"
-                                                            @click="removeVariantRow(index)">
+                                                            @click="removeVariantRow(index)" title="Xóa dòng">
                                                             <i class="bi bi-x-lg fs-6"></i>
                                                         </button>
                                                     </td>
@@ -422,6 +498,36 @@
                                     <i class="bi bi-save me-1"></i> Cập nhật
                                 </button>
                             </div>
+
+                            <div class="mb-3 mt-4 pt-4 border-top">
+                                <label class="form-label small fw-bold d-block"><i class="bi bi-list-task me-2"></i>Danh sách giá trị hiện có (Nhấn <i class="bi bi-x-circle-fill text-danger mx-1"></i> để xóa vĩnh viễn):</label>
+                                <div class="row g-3 p-3 bg-light rounded-4 border shadow-sm">
+                                    <div class="col-6">
+                                        <h6 class="small text-muted fw-bold text-center border-bottom pb-2 mb-3"><i class="bi bi-alphabet me-1"></i>Chữ cái / Ký tự</h6>
+                                        <div class="d-flex flex-column gap-2 pe-1 custom-scrollbar-y" style="max-height: 250px; overflow-y: auto;">
+                                            <div v-for="val in getSortedValues(selectedAttrToManage).alpha" :key="val.id"
+                                                class="d-flex justify-content-between align-items-center bg-white border rounded-3 px-3 py-2 shadow-sm transition-all hover-border-primary">
+                                                <span class="fw-bold text-dark text-truncate" :title="val.value">{{ val.value }}</span>
+                                                <button type="button" class="btn btn-sm text-danger p-0 border-0 ms-2 flex-shrink-0 hover-scale"
+                                                    @click="deleteAttributeValue(val.id)" title="Xóa rác"><i class="bi bi-x-circle-fill fs-5"></i></button>
+                                            </div>
+                                            <div v-if="getSortedValues(selectedAttrToManage).alpha.length === 0" class="text-center text-muted small fst-italic py-3 border border-dashed rounded-3">Trống</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 border-start ps-4">
+                                        <h6 class="small text-muted fw-bold text-center border-bottom pb-2 mb-3"><i class="bi bi-sort-numeric-down me-1"></i>Chữ Số (Tăng dần)</h6>
+                                        <div class="d-flex flex-column gap-2 pe-1 custom-scrollbar-y" style="max-height: 250px; overflow-y: auto;">
+                                            <div v-for="val in getSortedValues(selectedAttrToManage).numeric" :key="val.id"
+                                                class="d-flex justify-content-between align-items-center bg-white border rounded-3 px-3 py-2 shadow-sm transition-all hover-border-primary">
+                                                <span class="fw-bold text-dark text-truncate" :title="val.value">{{ val.value }}</span>
+                                                <button type="button" class="btn btn-sm text-danger p-0 border-0 ms-2 flex-shrink-0 hover-scale"
+                                                    @click="deleteAttributeValue(val.id)" title="Xóa rác"><i class="bi bi-x-circle-fill fs-5"></i></button>
+                                            </div>
+                                            <div v-if="getSortedValues(selectedAttrToManage).numeric.length === 0" class="text-center text-muted small fst-italic py-3 border border-dashed rounded-3">Trống</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -432,25 +538,30 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick, watch } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { useQueryClient } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
-import axios from 'axios';
+import adminApiClient from '@/utils/adminApiClient';
+import { QuillEditor } from '@vueup/vue-quill';
+import '@vueup/vue-quill/dist/vue-quill.snow.css';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 const router = useRouter();
+const queryClient = useQueryClient();
 const isPageLoading = ref(true);
 const isSaving = ref(false);
 const isProcessingSchema = ref(false);
 const currentStep = ref(1);
+const isHtmlMode = ref(false);
 
 const categories = ref([]);
 const systemAttributes = ref([]);
 const brands = ref([]);
 
 const form = ref({
-    category_id: '', brand_id: '', name: '', slug: '', base_price: 0, isPublished: true, affiliate_commission_rate: 0
+    category_id: '', brand_id: '', name: '', slug: '', base_price: 0, cost_price: 0, isPublished: true, affiliate_commission_rate: 0, description: ''
 });
 const thumbnailFile = ref(null);
 const thumbnailPreview = ref(null);
@@ -472,7 +583,73 @@ const newValueInputRef = ref(null);
 const selectedAttrToManage = ref('');
 const manageAttrName = ref('');
 
-const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
+// Custom Vue Dropdown
+const activeDropdown = ref(null);
+const attrSearchQuery = ref('');
+const dropdownPosition = ref('bottom');
+
+const toggleDropdown = (event, rowIndex, attrId) => {
+    const key = `${rowIndex}-${attrId}`;
+    if (activeDropdown.value === key) {
+        activeDropdown.value = null;
+    } else {
+        activeDropdown.value = key;
+        attrSearchQuery.value = '';
+        
+        if (event && event.currentTarget) {
+            const rect = event.currentTarget.getBoundingClientRect();
+            const spaceBelow = window.innerHeight - rect.bottom;
+            const dropdownHeight = 350; // Ước lượng chiều cao dropdown
+            
+            if (spaceBelow < dropdownHeight && rect.top > dropdownHeight) {
+                dropdownPosition.value = 'top';
+            } else {
+                dropdownPosition.value = 'bottom';
+            }
+        }
+    }
+};
+
+const selectAttrValue = (rowIndex, attrId, valueId) => {
+    variants.value[rowIndex].attributes[attrId] = valueId;
+    activeDropdown.value = null;
+    validateDuplicates();
+};
+
+const getSelectedValueName = (attrId, valueId) => {
+    if (!valueId) return '-- Chọn --';
+    const attr = systemAttributes.value.find(a => a.id === parseInt(attrId));
+    if (!attr || !attr.values) return '-- Chọn --';
+    const valObj = attr.values.find(v => v.id === parseInt(valueId));
+    return valObj ? valObj.value : '-- Chọn --';
+};
+
+const getSortedValues = (attrId) => {
+    const attr = systemAttributes.value.find(a => a.id === parseInt(attrId));
+    if (!attr || !attr.values) return { alpha: [], numeric: [] };
+
+    let filtered = attr.values;
+    if (attrSearchQuery.value) {
+        const q = attrSearchQuery.value.toLowerCase();
+        filtered = filtered.filter(v => v.value.toLowerCase().includes(q));
+    }
+
+    const alpha = [];
+    const numeric = [];
+
+    filtered.forEach(v => {
+        if (!isNaN(parseFloat(v.value))) {
+            numeric.push(v);
+        } else {
+            alpha.push(v);
+        }
+    });
+
+    alpha.sort((a, b) => a.value.toString().localeCompare(b.value.toString(), 'vi', { sensitivity: 'base' }));
+    numeric.sort((a, b) => parseFloat(a.value) - parseFloat(b.value));
+
+    return { alpha, numeric };
+};
 
 const canProceedToStep2 = computed(() => {
     return form.value.name && form.value.name.trim().length >= 3 && form.value.category_id && form.value.base_price > 0 && thumbnailFile.value;
@@ -506,6 +683,10 @@ const updateBasePrice = (event) => {
     let rawValue = event.target.value.replace(/\D/g, '');
     form.value.base_price = rawValue ? parseInt(rawValue, 10) : '';
     event.target.value = formatCurrency(rawValue);
+};
+const updateCostPrice = (event) => {
+    let rawValue = event.target.value.replace(/[^0-9]/g, '');
+    form.value.cost_price = rawValue ? parseInt(rawValue, 10) : '';
 };
 
 const updateVariantPrice = (index, field, event) => {
@@ -541,10 +722,7 @@ const proceedToStep2 = async () => {
                 attrIdToAdd = existingAttr.id.toString();
             } else {
                 try {
-                    const res = await axios.post(`${API_URL}/admin/attributes`,
-                        { name: schemaName },
-                        { headers: getHeaders() }
-                    );
+                    const res = await adminApiClient.post('/attributes', { name: schemaName });
                     res.data.data.values = [];
                     systemAttributes.value.push(res.data.data);
                     attrIdToAdd = res.data.data.id.toString();
@@ -622,17 +800,42 @@ const addVariantRow = () => {
     activeAttributes.value.forEach(id => rowAttrs[id] = "");
 
     variants.value.push({
-        sku: newSku, price: form.value.base_price, promotional_price: 0, stock_quantity: 10,
+        sku: newSku, price: form.value.base_price,  cost_price: form.value.cost_price || 0, promotional_price: 0, stock_quantity: 10,
         imageFile: null, preview: null, attributes: rowAttrs,
         hasDuplicateError: false, attrError: false, priceError: false, saleError: false, stockError: false
     });
 };
 
 const removeVariantRow = (index) => {
-    if (variants.value.length <= 1) {
-        Swal.fire('Lưu ý', 'Sản phẩm phải có ít nhất 1 biến thể!', 'warning'); return;
-    }
     variants.value.splice(index, 1);
+    validateDuplicates();
+};
+
+const duplicateVariant = (index) => {
+    const v = variants.value[index];
+    const randomCode = Math.floor(1000 + Math.random() * 9000);
+    const prefix = form.value.slug ? form.value.slug.substring(0, 4).toUpperCase().replace(/-/g, '') : 'SKU';
+    const newSku = `${prefix}${randomCode}-V${variants.value.length + 1}`;
+
+    let emptyAttrs = {};
+    activeAttributes.value.forEach(id => emptyAttrs[id] = "");
+
+    const newVariant = {
+        ...JSON.parse(JSON.stringify(v)),
+        id: null,
+        sku: newSku,
+        imageFile: null,
+        preview: null,
+        current_image: null,
+        attributes: emptyAttrs,
+        hasDuplicateError: false,
+        attrError: false,
+        priceError: false,
+        saleError: false,
+        stockError: false
+    };
+
+    variants.value.splice(index + 1, 0, newVariant);
     validateDuplicates();
 };
 
@@ -661,10 +864,7 @@ const hideModals = () => {
 const submitCreateAttribute = async () => {
     if (!newAttrForm.value.name) return;
     try {
-        const res = await axios.post(`${API_URL}/admin/attributes`,
-            { name: newAttrForm.value.name },
-            { headers: getHeaders() }
-        );
+        const res = await adminApiClient.post('/attributes', { name: newAttrForm.value.name });
         res.data.data.values = [];
         systemAttributes.value.push(res.data.data);
         hideModals();
@@ -693,7 +893,7 @@ const submitCreateValue = async () => {
     if (!newValueForm.value.value || !currentOperatingAttr.value) return;
     try {
         const payload = { attribute_id: currentOperatingAttr.value.id, value: newValueForm.value.value };
-        const res = await axios.post(`${API_URL}/admin/attribute-values`, payload, { headers: getHeaders() });
+        const res = await adminApiClient.post('/attribute-values', payload);
 
         const attrObj = systemAttributes.value.find(x => x.id == currentOperatingAttr.value.id);
         if (attrObj) {
@@ -723,10 +923,7 @@ watch(selectedAttrToManage, (newId) => {
 const updateAttribute = async (id) => {
     if (!manageAttrName.value || !id) return;
     try {
-        await axios.put(`${API_URL}/admin/attributes/${id}`,
-            { name: manageAttrName.value },
-            { headers: getHeaders() }
-        );
+        await adminApiClient.put(`/attributes/${id}`, { name: manageAttrName.value });
         const attr = systemAttributes.value.find(a => a.id === parseInt(id));
         if (attr) attr.name = manageAttrName.value;
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật thành công', showConfirmButton: false, timer: 2000 });
@@ -740,7 +937,7 @@ const deleteAttribute = async (id) => {
     Swal.fire({ title: 'Xóa thuộc tính?', text: "Thuộc tính này và các giá trị của nó sẽ bị xóa!", icon: 'warning', showCancelButton: true }).then(async (result) => {
         if (result.isConfirmed) {
             try {
-                await axios.delete(`${API_URL}/admin/attributes/${id}`, { headers: getHeaders() });
+                await adminApiClient.delete(`/attributes/${id}`);
                 systemAttributes.value = systemAttributes.value.filter(a => a.id !== parseInt(id));
                 selectedAttrToManage.value = '';
                 if (manageAttrModalObj) manageAttrModalObj.hide();
@@ -751,6 +948,36 @@ const deleteAttribute = async (id) => {
                 Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa', showConfirmButton: false, timer: 2000 });
             } catch (e) {
                 if (e.response) Swal.fire('Lỗi', e.response.data.message || 'Không thể xóa', 'error');
+            }
+        }
+    });
+};
+
+const deleteAttributeValue = async (id) => {
+    if (!id) return;
+    Swal.fire({ title: 'Xóa giá trị?', text: "Hành động này không thể hoàn tác!", icon: 'warning', showCancelButton: true }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                await adminApiClient.delete(`/attribute-values/${id}`);
+                const attr = systemAttributes.value.find(a => a.id === selectedAttrToManage.value);
+                if (attr && attr.values) {
+                    attr.values = attr.values.filter(v => v.id !== id);
+                }
+
+                const parsedAttrId = parseInt(selectedAttrToManage.value, 10);
+                variants.value.forEach(v => {
+                    if (v.attributes && v.attributes[parsedAttrId] === id) {
+                        delete v.attributes[parsedAttrId];
+                    }
+                });
+
+                if (typeof queryClient !== 'undefined' && queryClient.setQueryData) {
+                    queryClient.setQueryData(['adminAttributes'], JSON.parse(JSON.stringify(systemAttributes.value)));
+                }
+
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa giá trị', showConfirmButton: false, timer: 2000 });
+            } catch (e) {
+                if (e.response) Swal.fire('Lỗi', e.response.data.message || 'Không thể xóa giá trị này', 'error');
             }
         }
     });
@@ -836,7 +1063,9 @@ const submitProduct = async () => {
         formData.append('name', form.value.name);
         formData.append('slug', form.value.slug);
         formData.append('base_price', form.value.base_price);
+        if (form.value.cost_price) formData.append('cost_price', form.value.cost_price);
         formData.append('status', form.value.isPublished ? 'published' : 'draft');
+        formData.append('description', form.value.description || '');
         
         // THÊM MỚI: Đẩy dữ liệu affiliate_commission_rate vào payload
         formData.append('affiliate_commission_rate', form.value.affiliate_commission_rate);
@@ -846,6 +1075,7 @@ const submitProduct = async () => {
         const variantsPayload = variants.value.map(v => ({
             sku: v.sku,
             price: v.price,
+            cost_price: v.cost_price || 0,
             promotional_price: v.promotional_price || 0,
             stock_quantity: v.stock_quantity,
             attributes: v.attributes
@@ -856,9 +1086,10 @@ const submitProduct = async () => {
             if (v.imageFile) formData.append(`variant_image_${index}`, v.imageFile);
         });
 
-        const res = await axios.post(`${API_URL}/admin/products`, formData, {
-            headers: getHeaders()
-        });
+        const res = await adminApiClient.post('/products', formData);
+
+        // Hủy bỏ cache của danh sách sản phẩm để ép tải lại dữ liệu mới nhất khi quay về màn Index
+        queryClient.invalidateQueries({ queryKey: ['adminProducts'] });
 
         Swal.fire({ icon: 'success', title: 'Hoàn tất Xuất bản', text: res.data.message, timer: 2000, showConfirmButton: false }).then(() => {
             router.push({ name: 'admin-products' });
@@ -893,9 +1124,9 @@ const submitProduct = async () => {
 const fetchData = async () => {
     try {
         const [catRes, attrRes, brandRes] = await Promise.all([
-            axios.get(`${API_URL}/admin/categories?status=active`, { headers: getHeaders() }),
-            axios.get(`${API_URL}/admin/attributes`, { headers: getHeaders() }),
-            axios.get(`${API_URL}/admin/brands?status=active`, { headers: getHeaders() })
+            adminApiClient.get('/categories?status=active'),
+            adminApiClient.get('/attributes'),
+            adminApiClient.get('/brands?status=active')
         ]);
 
         const catData = catRes.data;
@@ -910,11 +1141,22 @@ const fetchData = async () => {
     } catch (e) {
         console.error('Lỗi khởi tạo dữ liệu trang Create Product:', e);
     } finally {
-        isPageLoading.value = false;
+        setTimeout(() => { isPageLoading.value = false; }, 500);
     }
 };
 
-onMounted(() => fetchData());
+const closeDropdownListener = () => {
+    if (activeDropdown.value) activeDropdown.value = null;
+};
+
+onMounted(() => {
+    fetchData();
+    window.addEventListener('click', closeDropdownListener);
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener('click', closeDropdownListener);
+});
 </script>
 
 <style scoped>

@@ -14,6 +14,8 @@ use App\Models\ProductVariant;
 use App\Models\TierServiceUsage;
 use Illuminate\Support\Facades\DB;
 
+use Illuminate\Support\Facades\Log;
+
 class PendingOrderCancellationService
 {
     /**
@@ -27,7 +29,8 @@ class PendingOrderCancellationService
         string $changedByType = 'system'
     ): bool
     {
-        $updates = DB::transaction(function () use ($orderId, $paymentAttemptStatus, $note, $changedBy, $changedByType) {
+        try {
+            $updates = DB::transaction(function () use ($orderId, $paymentAttemptStatus, $note, $changedBy, $changedByType) {
             $order = Order::with('items')
                 ->whereKey($orderId)
                 ->where('status', 'pending')
@@ -124,17 +127,41 @@ class PendingOrderCancellationService
                 'combo_ids' => array_unique($comboIds),
             ];
         });
-
-        if ($updates === null) {
+        } catch (\Throwable $exception) {
+            Log::error('Order cancellation failed due to exception.', [
+                'order_id' => $orderId,
+                'exception' => $exception, // Pass exception directly to get stack trace
+            ]);
             return false;
         }
 
-        foreach ($updates['product_ids'] as $productId) {
-            broadcast(new ProductUpdated($productId, ['action' => 'stock_updated']));
+        if ($updates === null) {
+            $exists = Order::query()->whereKey($orderId)->exists();
+            if ($exists) {
+                Log::warning("Order cancellation skipped: Order #{$orderId} is no longer pending/unpaid.", [
+                    'order_id' => $orderId,
+                ]);
+            } else {
+                Log::warning("Order cancellation skipped: Order #{$orderId} not found.", [
+                    'order_id' => $orderId,
+                ]);
+            }
+            return false;
         }
 
-        foreach ($updates['combo_ids'] as $comboId) {
-            broadcast(new ComboUpdated($comboId, ['action' => 'stock_updated']));
+        try {
+            foreach ($updates['product_ids'] as $productId) {
+                broadcast(new ProductUpdated($productId, ['action' => 'stock_updated']));
+            }
+
+            foreach ($updates['combo_ids'] as $comboId) {
+                broadcast(new ComboUpdated($comboId, ['action' => 'stock_updated']));
+            }
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to broadcast stock update after order cancellation.', [
+                'order_id' => $orderId,
+                'error' => $exception->getMessage(),
+            ]);
         }
 
         return true;

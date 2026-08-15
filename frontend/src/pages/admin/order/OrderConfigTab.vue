@@ -244,6 +244,10 @@ watch(configData, (newData) => {
 
 
 const updateConfig = async () => {
+  if (cooldownMinutes.value === '' || cooldownMinutes.value === null) {
+    Toast.fire({ icon: 'warning', title: 'Vui lòng nhập thời gian chờ' });
+    return;
+  }
   if (cooldownMinutes.value < 0 || cooldownMinutes.value > 60) {
     Toast.fire({ icon: 'warning', title: 'Thời gian delay phải từ 0 đến 60 phút' });
     return;
@@ -275,7 +279,7 @@ const toggleBlockOrder = async (user) => {
   if (result.isConfirmed) {
     try {
       const res = await adminApiClient.post(`/order-config/toggle-block-order/${user.id}`);
-      queryClient.invalidateQueries(['order-config']);
+      queryClient.invalidateQueries({ queryKey: ['order-config'] });
       Toast.fire({ icon: 'success', title: res.data.message });
     } catch (error) {
       Toast.fire({ icon: 'error', title: 'Lỗi thực thi' });
@@ -300,7 +304,7 @@ const toggleLockAccount = async (user) => {
   if (result.isConfirmed) {
     try {
       const res = await adminApiClient.post(`/order-config/toggle-lock-account/${user.id}`);
-      queryClient.invalidateQueries(['order-config']);
+      queryClient.invalidateQueries({ queryKey: ['order-config'] });
       Toast.fire({ icon: 'success', title: res.data.message });
     } catch (error) {
       Toast.fire({ icon: 'error', title: 'Lỗi thực thi' });
@@ -329,7 +333,7 @@ const cleanupSpamOrders = async (user) => {
   cleaningUserId.value = user.id;
   try {
     const res = await adminApiClient.post(`/order-config/users/${user.id}/cleanup-spam-orders`, { reason: result.value.trim() });
-    queryClient.invalidateQueries(['order-config']);
+    queryClient.invalidateQueries({ queryKey: ['order-config'] });
     Toast.fire({ icon: 'success', title: res.data.message });
   } catch (error) {
     Toast.fire({ icon: 'error', title: error.response?.data?.message || 'Không thể dọn đơn spam.' });

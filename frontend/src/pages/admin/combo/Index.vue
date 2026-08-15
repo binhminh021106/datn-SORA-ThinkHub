@@ -355,7 +355,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
@@ -477,7 +477,9 @@ const fetchData = async (silent = false) => {
 };
 
 // KỸ THUẬT: TÁI SỬ DỤNG CACHE CỤC BỘ TỪ DANH SÁCH (ZERO-LOADING)
+let activeQuickViewRequestId = 0;
 const openQuickView = async (id) => {
+  const currentRequestId = ++activeQuickViewRequestId;
   // 1. Chụp dữ liệu mồi từ danh sách có sẵn để Modal hiện ngay lập tức
   const cachedCombo = combos.value.find(c => c.id === id);
   if (cachedCombo) {
@@ -490,7 +492,7 @@ const openQuickView = async (id) => {
   isFetchingDetail.value = true;
   try {
     const res = await axios.get(`${API_URL}/admin/combos/${id}`, { headers: getHeaders() });
-    if (!isUnmounted) {
+    if (!isUnmounted && currentRequestId === activeQuickViewRequestId) {
       selectedCombo.value = res.data.data;
 
       // Nếu cực kỳ hiếm trường hợp mảng danh sách trống, Modal sẽ tự bật khi API gọi xong
@@ -500,9 +502,13 @@ const openQuickView = async (id) => {
       }
     }
   } catch (e) {
-    Swal.fire('Lỗi', 'Không thể tải chi tiết Combo', 'error');
+    if (!isUnmounted && currentRequestId === activeQuickViewRequestId) {
+      Swal.fire('Lỗi', 'Không thể tải chi tiết Combo', 'error');
+    }
   } finally {
-    isFetchingDetail.value = false;
+    if (!isUnmounted && currentRequestId === activeQuickViewRequestId) {
+      isFetchingDetail.value = false;
+    }
   }
 };
 
@@ -585,6 +591,10 @@ useAdminRefreshListener((payload) => {
   if (payload.module === 'combos' || payload.module === 'products' || payload.module === 'all') {
     fetchData(1, true);
   }
+});
+
+watch([searchQuery, selectedGenderFilter], () => {
+  currentPage.value = 1;
 });
 
 onMounted(() => fetchData());

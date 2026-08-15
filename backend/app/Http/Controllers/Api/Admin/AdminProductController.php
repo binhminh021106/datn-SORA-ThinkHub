@@ -29,12 +29,8 @@ class AdminProductController extends Controller
             $query->where('status', $request->status);
         }
 
-        // TỐI ƯU ORM ĐỂ KẾT HỢP TANSTACK QUERY:
-        // Thay vì SELECT * kéo theo các cột description, content (chứa HTML/Base64 nặng nề),
-        // Ta chỉ lấy đúng các trường cơ bản phục vụ cho Datatable List.
-        // Bắt buộc phải có category_id và brand_id để Eloquent có thể map dữ liệu với hàm with()
         $products = $query->select(
-                'id', 'name', 'slug', 'base_price', 'promotional_price', 
+                'id', 'name', 'slug', 'base_price', 'cost_price', 'promotional_price', 
                 'thumbnail_image', 'status', 'category_id', 'brand_id', 'affiliate_commission_rate',
                  'deleted_at', 'created_at'
             )
@@ -44,13 +40,13 @@ class AdminProductController extends Controller
             ->orderBy('id', 'desc')
             ->get();
 
+        $products->each->makeVisible('cost_price');
+
         return response()->json(['success' => true, 'data' => $products]);
     }
 
     public function show($id)
     {
-        // Ở hàm Show (dùng cho QuickView hoặc Form Edit), ta BẮT BUỘC phải lấy toàn bộ dữ liệu 
-        // (bao gồm description, specs...) nên giữ nguyên SELECT *.
         $product = Product::with([
             'category:id,name',
             'brand:id,name',
@@ -62,12 +58,17 @@ class AdminProductController extends Controller
             foreach ($variant->attributeValues as $val) {
                 $attrMap[$val->attribute_id] = $val->id;
             }
+            $variant->raw_attributes = $attrMap;
             $variant->attributes = $attrMap;
             unset($variant->attributeValues);
             return $variant;
         });
 
         $product->total_stock = $product->variants->sum('stock_quantity');
+        
+        $product->makeVisible('cost_price');
+        $product->variants->each->makeVisible('cost_price');
+        
         return response()->json(['success' => true, 'data' => $product]);
     }
 
@@ -100,6 +101,7 @@ class AdminProductController extends Controller
                     'product_id' => $product->id,
                     'sku' => $vData['sku'],
                     'price' => $vData['price'],
+                    'cost_price' => $vData['cost_price'] ?? null,
                     'promotional_price' => $vData['promotional_price'] ?: null,
                     'stock_quantity' => $vData['stock_quantity'],
                     'image_url' => $variantImagePath,
@@ -164,6 +166,7 @@ class AdminProductController extends Controller
                 $variantPayload = [
                     'sku' => $vData['sku'],
                     'price' => $vData['price'],
+                    'cost_price' => $vData['cost_price'] ?? null,
                     'promotional_price' => $vData['promotional_price'] ?: null,
                     'stock_quantity' => $vData['stock_quantity'],
                     'image_url' => $variantImagePath,
@@ -316,7 +319,6 @@ class AdminProductController extends Controller
 
             // XÓA FILE ẢNH VẬT LÝ
             if ($product->thumbnail_image && Storage::disk('public')->exists($product->thumbnail_image)) {
-                // Không xóa ảnh placeholder mặc định
                 if (!str_contains($product->thumbnail_image, 'products/defaults/')) {
                     Storage::disk('public')->delete($product->thumbnail_image);
                 }
@@ -413,9 +415,7 @@ class AdminProductController extends Controller
                     throw new \Exception("Sản phẩm đang nằm trong Giỏ hàng của khách.");
                 }
 
-                // XÓA FILE ẢNH VẬT LÝ
                 if ($product->thumbnail_image && Storage::disk('public')->exists($product->thumbnail_image)) {
-                    // Không xóa ảnh placeholder mặc định
                     if (!str_contains($product->thumbnail_image, 'products/defaults/')) {
                         Storage::disk('public')->delete($product->thumbnail_image);
                     }

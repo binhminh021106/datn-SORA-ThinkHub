@@ -153,7 +153,8 @@ public function settings()
 
     public function triggerBirthday()
     {
-        $lock = Cache::lock('email_campaign:birthday', 3600);
+        // Giảm thời gian khoá từ 3600 giây (1 tiếng) xuống 60 giây để lỡ có lỗi Fatal Error thì cũng tự nhả khoá nhanh chóng.
+        $lock = Cache::lock('email_campaign:birthday', 60);
         if (!$lock->get()) {
             return response()->json(['success' => false, 'message' => 'Campaign sinh nhật đang được xử lý.'], 429);
         }
@@ -178,7 +179,8 @@ public function settings()
 
     public function triggerHoliday()
     {
-        $lock = Cache::lock('email_campaign:holiday', 3600);
+        // thời gian khoá 60 giây
+        $lock = Cache::lock('email_campaign:holiday', 60);
         if (!$lock->get()) {
             return response()->json(['success' => false, 'message' => 'Campaign ngày lễ đang được xử lý.'], 429);
         }

@@ -8,6 +8,7 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Mail\Mailables\Headers;
 use Illuminate\Queue\SerializesModels;
 use App\Models\User;
 use App\Models\Coupon;
@@ -43,11 +44,14 @@ class BirthdayVoucherMail extends Mailable implements ShouldQueue
         }
     }
 
-    public function withSymfonyMessage(Email $message): void
+    public function headers(): Headers
     {
+        $text = [];
         if ($this->emailLogId) {
-            $message->getHeaders()->addTextHeader('X-SORA-Email-Log-ID', (string) $this->emailLogId);
+            $text['X-SORA-Email-Log-ID'] = (string) $this->emailLogId;
         }
+
+        return new Headers(text: $text);
     }
 
     /**

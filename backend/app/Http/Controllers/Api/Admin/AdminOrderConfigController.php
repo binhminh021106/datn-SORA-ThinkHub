@@ -137,13 +137,18 @@ class AdminOrderConfigController extends Controller
 
         $user = User::findOrFail($id);
         $actorId = $request->user()?->id;
-        $orders = Order::where('user_id', $user->id)
+        $batchLimit = min(100, max(1, (int) config('orders.spam_cleanup_batch_size', 50)));
+        $pendingOrders = Order::query()
+            ->where('user_id', $user->id)
             ->where('status', 'pending')
-            ->where('payment_status', 'unpaid')
-            ->select('id')
-            ->lazyById(100);
+            ->where('payment_status', 'unpaid');
+        $orders = (clone $pendingOrders)
+            ->orderBy('id')
+            ->limit($batchLimit)
+            ->get(['id']);
 
         $cleanedCount = 0;
+        $failedCount = 0;
         foreach ($orders as $order) {
             $orderId = $order->id;
             if (! $cancellationService->cancel(
@@ -153,10 +158,11 @@ class AdminOrderConfigController extends Controller
                 $actorId,
                 'admin'
             )) {
+                $failedCount++;
                 continue;
             }
 
-            Order::whereKey($orderId)
+            Order::query()->whereKey($orderId)
                 ->where('user_id', $user->id)
                 ->where('status', 'cancelled')
                 ->where('payment_status', 'failed')
@@ -165,12 +171,31 @@ class AdminOrderConfigController extends Controller
             $cleanedCount++;
         }
 
+        $remainingCount = (clone $pendingOrders)->count();
+        $isOrdersEmpty = $orders->isEmpty();
+        
+        $message = '';
+        if ($isOrdersEmpty) {
+            $message = 'Không có đơn pending chưa thanh toán phù hợp để dọn.';
+        } else {
+            $message = "Đã dọn an toàn {$cleanedCount} đơn spam của {$user->email}.";
+            if ($failedCount > 0) {
+                $message .= " Thất bại {$failedCount} đơn.";
+            }
+            if ($remainingCount > 0) {
+                $message .= " Còn {$remainingCount} đơn cần dọn tiếp.";
+            }
+        }
+        
+        $statusCode = ($failedCount > 0 && $cleanedCount === 0) ? 400 : 200;
+
         return response()->json([
-            'success' => true,
-            'message' => $cleanedCount > 0
-                ? "Đã dọn an toàn {$cleanedCount} đơn spam của {$user->email}."
-                : 'Không có đơn pending chưa thanh toán phù hợp để dọn.',
+            'success' => $cleanedCount > 0 || $isOrdersEmpty,
+            'message' => $message,
             'cleaned_count' => $cleanedCount,
-        ]);
+            'failed_count' => $failedCount,
+            'remaining_count' => $remainingCount,
+            'has_more' => $remainingCount > 0,
+        ], $statusCode);
     }
 }

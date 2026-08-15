@@ -293,7 +293,7 @@ const hasHoverImage = (product) => {
 
 .luxury-related-card {
   transition: all 0.4s ease;
-  border-color: rgba(231, 206, 125, 0.58) !important;
+  border: 1px solid rgba(231, 206, 125, 0.58) !important;
   border-radius: 18px !important;
   background-color: #fffdfa !important;
   box-shadow: 0 10px 24px rgba(88, 50, 38, 0.08) !important;

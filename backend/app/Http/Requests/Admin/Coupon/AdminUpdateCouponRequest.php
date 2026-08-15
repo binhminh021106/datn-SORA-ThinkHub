@@ -85,8 +85,8 @@ class AdminUpdateCouponRequest extends FormRequest
                 function ($attribute, $value, $fail) use ($couponId) {
                     $type = $this->input('type') ?? \App\Models\Coupon::withTrashed()->where('id', $couponId)->value('type');
                     if ($type === 'percentage') {
-                        if ($value < 1 || $value > 100) {
-                            $fail('Giá trị giảm theo phần trăm phải từ 1 đến 100.');
+                        if ($value < 1 || $value > 99) {
+                            $fail('Giá trị giảm theo phần trăm phải từ 1 đến 99.');
                         }
                     } else {
                         if ($value < 1000) {
@@ -103,14 +103,14 @@ class AdminUpdateCouponRequest extends FormRequest
             ],
             'usage_limit_per_user' => [
                 'sometimes',
-                'required',
+                'nullable',
                 'integer',
                 'min:1',
                 'lte:usage_limit'
             ],
             'expires_at' => [
                 'sometimes',
-                'required',
+                'nullable',
                 'date',
                 'after:now' 
             ],

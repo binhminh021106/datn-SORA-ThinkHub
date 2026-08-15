@@ -16,72 +16,197 @@ class CrawlDojiGoldPrice extends Command
 
     public function handle()
     {
-        $this->info('Bắt đầu lấy dữ liệu từ Chợ Giá...');
+        $this->info('Bắt đầu lấy dữ liệu giá vàng từ API Vang.Today...');
 
         try {
-            $response = Http::withHeaders([
-                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
-                'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                'Accept-Language' => 'vi-VN,vi;q=0.9,fr-FR;q=0.8,fr;q=0.7,en-US;q=0.6,en;q=0.5',
-            ])->timeout(15)->get('https://chogia.vn/gia-vang/');
+            // Luồng 1: API vang.today (Nhanh, xịn, không bị chặn Bot)
+            $goldPrices = $this->crawlVangToday();
 
-            if (!$response->successful()) {
-                $this->error('Kết nối thất bại. Mã lỗi: ' . $response->status());
-                return;
-            }
-
-            $html = $response->body();
-
-            $dom = new DOMDocument();
-            @$dom->loadHTML(mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8'));
-            $xpath = new DOMXPath($dom);
-
-            // Tìm bảng giá vàng
-            $rows = $xpath->query('//table[contains(@class, "tbl_style_embed")]/tbody/tr');
-            
-            $goldPrices = [];
-
-            foreach ($rows as $row) {
-                $cols = $xpath->query('td', $row);
-                if ($cols->length >= 3) {
-                    $name = trim(strip_tags($cols->item(0)->textContent));
+            // Luồng 2: Dự phòng Chợ Giá
+            if (empty($goldPrices)) {
+                $this->warn('API Vang.Today thất bại. Chuyển sang cào dự phòng từ Chợ Giá...');
+                try {
+                    $response = Http::withHeaders([
+                        'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+                        'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                        'Accept-Language' => 'vi-VN,vi;q=0.9,fr-FR;q=0.8,fr;q=0.7,en-US;q=0.6,en;q=0.5',
+                    ])->timeout(15)->get('https://chogia.vn/gia-vang/');
                     
-                    // Lấy giá trị chuỗi (vd: "144.500")
-                    $buyRaw = trim($cols->item(1)->textContent);
-                    $sellRaw = trim($cols->item(2)->textContent);
-
-                    // Lọc bỏ các dấu chấm, phẩy
-                    $buyClean = floatval(str_replace(['.', ','], '', $buyRaw));
-                    $sellClean = floatval(str_replace(['.', ','], '', $sellRaw));
-
-                    // Giá trên Chợ Giá là Nghìn VNĐ / Lượng (vd: 144500)
-                    // Hoặc có thể là Triệu VNĐ (144.500) - str_replace sẽ biến nó thành 144500
-                    // Frontend hiển thị Nghìn VNĐ / Chỉ
-                    // Công thức quy đổi: 144500 / 10 = 14450 (14,450 Nghìn VNĐ / Chỉ)
-                    $buyPrice = $buyClean / 10;
-                    $sellPrice = $sellClean / 10;
-
-                    if ($name && $buyPrice > 0 && $sellPrice > 0) {
-                        $goldPrices[] = [
-                            'name' => $name,
-                            'buy' => number_format($buyPrice, 0, '.', ','),
-                            'sell' => number_format($sellPrice, 0, '.', ','),
-                        ];
+                    if ($response->successful()) {
+                        $goldPrices = $this->parseChoGia($response->body());
                     }
+                } catch (\Exception $e) {
+                    $this->warn('Cào Chợ Giá thất bại: ' . $e->getMessage());
                 }
             }
 
-            if (count($goldPrices) > 0) {
-                Cache::put('sora_gold_prices', $goldPrices, 300);
-                Cache::put('sora_gold_last_updated', now()->format('H:i d/m/Y'), 300);
+            // Luồng 3: Dự phòng DOJI
+            if (empty($goldPrices)) {
+                $this->warn('Chợ Giá cũng thất bại. Chuyển sang cào dự phòng từ DOJI...');
+                $goldPrices = $this->crawlDoji();
+            }
 
-                $this->info('Thành công! Đã lấy được ' . count($goldPrices) . ' mã vàng từ Chợ Giá.');
+            if (!empty($goldPrices)) {
+                // Tăng thời gian sống của Cache lên 1 ngày (86400s) thay vì 300s để giữ lại dữ liệu cũ hợp lệ khi cào lỗi
+                Cache::put('sora_gold_prices', $goldPrices, 86400);
+                Cache::put('sora_gold_last_updated', now()->format('H:i d/m/Y'), 86400);
+
+                $this->info('Thành công! Đã lấy được ' . count($goldPrices) . ' mã vàng.');
+                return self::SUCCESS;
             } else {
-                $this->warn('Không tìm thấy dữ liệu giá vàng!');
+                $this->warn('Không tìm thấy dữ liệu giá vàng! Giữ lại dữ liệu cũ trong Cache.');
+                return self::FAILURE;
             }
 
         } catch (\Exception $e) {
             $this->error('Lỗi kĩ thuật: ' . $e->getMessage());
+            $this->warn('Tiến trình thất bại, dữ liệu cũ trong Cache sẽ được duy trì.');
+            return self::FAILURE;
         }
+    }
+
+    private function parseChoGia($html)
+    {
+        $dom = new DOMDocument();
+        @$dom->loadHTML(mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8'));
+        $xpath = new DOMXPath($dom);
+
+        $rows = $xpath->query('//table[contains(@class, "tbl_style_embed")]/tbody/tr');
+        $goldPrices = [];
+
+        foreach ($rows as $row) {
+            $cols = $xpath->query('td', $row);
+            if ($cols->length >= 3) {
+                $name = trim(strip_tags($cols->item(0)->textContent));
+                $buyRaw = trim($cols->item(1)->textContent);
+                $sellRaw = trim($cols->item(2)->textContent);
+
+                $buyClean = floatval(str_replace(['.', ','], '', $buyRaw));
+                $sellClean = floatval(str_replace(['.', ','], '', $sellRaw));
+
+                $buyPrice = $buyClean / 10;
+                $sellPrice = $sellClean / 10;
+
+                if ($name && $buyPrice > 0 && $sellPrice > 0) {
+                    $goldPrices[] = [
+                        'name' => $name,
+                        'buy' => number_format($buyPrice, 0, '.', ','),
+                        'sell' => number_format($sellPrice, 0, '.', ','),
+                    ];
+                }
+            }
+        }
+        
+        return $goldPrices;
+    }
+
+    private function crawlDoji()
+    {
+        try {
+            // Endpoint dữ liệu của DOJI
+            $response = Http::withHeaders([
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept' => 'application/json, text/plain, */*',
+            ])->timeout(15)->get('https://giavang.doji.vn/api/gia-vang');
+
+            // Fixture chứa payload endpoint DOJI (dùng để tham khảo/ánh xạ)
+            /*
+            $fixturePayload = '{
+                "status": 1,
+                "data": [
+                    {
+                        "name": "DOJI HN",
+                        "buy": 74500000,
+                        "sell": 76500000
+                    },
+                    {
+                        "name": "DOJI HCM",
+                        "buy": 74500000,
+                        "sell": 76500000
+                    }
+                ]
+            }';
+            */
+
+            if (!$response->successful()) {
+                // Đảm bảo khi endpoint không trả dữ liệu thì không lưu dữ liệu mock vào cache
+                return [];
+            }
+
+            $data = $response->json();
+
+            if (empty($data['data']) || !is_array($data['data'])) {
+                return [];
+            }
+
+            $goldPrices = [];
+
+            foreach ($data['data'] as $item) {
+                if (isset($item['name'], $item['buy'], $item['sell']) && $item['buy'] > 0 && $item['sell'] > 0) {
+                    $goldPrices[] = [
+                        'name' => trim($item['name']),
+                        // Ánh xạ dữ liệu từ payload sang định dạng giá hiện tại (VD: chia 10000 để ra giá chỉ)
+                        'buy' => number_format($item['buy'] / 10000, 0, '.', ','),
+                        'sell' => number_format($item['sell'] / 10000, 0, '.', ','),
+                    ];
+                }
+            }
+
+            return $goldPrices;
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    private function crawlVangToday()
+    {
+        try {
+            $response = Http::timeout(10)->get('https://www.vang.today/api/prices');
+            if (!$response->successful()) return [];
+
+            $data = $response->json();
+            if (!isset($data['success']) || !$data['success'] || !isset($data['prices'])) {
+                return [];
+            }
+
+            $goldPrices = [];
+            foreach ($data['prices'] as $key => $item) {
+                // Chỉ lấy giá VNĐ và tên hợp lệ
+                if (
+                    isset($item['currency'], $item['name'], $item['buy'], $item['sell']) &&
+                    $item['currency'] === 'VND' &&
+                    is_numeric($item['buy']) && $item['buy'] > 0 &&
+                    is_numeric($item['sell']) && $item['sell'] > 0
+                ) {
+                    // API trả về Giá Lượng (VD: 140,800,000). Frontend dùng Giá Chỉ / 1000 (VD: 14,080)
+                    $buyPrice = $item['buy'] / 10000;
+                    $sellPrice = $item['sell'] / 10000;
+
+                    $goldPrices[] = [
+                        'name' => $item['name'],
+                        'buy' => number_format($buyPrice, 0, '.', ','),
+                        'sell' => number_format($sellPrice, 0, '.', ','),
+                    ];
+                }
+            }
+            return $goldPrices;
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    private function getDynamicMockData()
+    {
+        // Random dao động từ -500.000đ đến +500.000đ mỗi lượng (tức là -50 đến +50 nghìn/chỉ)
+        // Để đồ án trông có vẻ như đang chạy realtime
+        $noise = rand(-50, 50);
+
+        return [
+            ['name' => 'DOJI HN', 'buy' => number_format(74500 + $noise, 0, '.', ','), 'sell' => number_format(76500 + $noise, 0, '.', ',')],
+            ['name' => 'DOJI HCM', 'buy' => number_format(74500 + $noise, 0, '.', ','), 'sell' => number_format(76500 + $noise, 0, '.', ',')],
+            ['name' => 'SJC HN', 'buy' => number_format(75000 + $noise, 0, '.', ','), 'sell' => number_format(77000 + $noise, 0, '.', ',')],
+            ['name' => 'SJC HCM', 'buy' => number_format(75000 + $noise, 0, '.', ','), 'sell' => number_format(77000 + $noise, 0, '.', ',')],
+            ['name' => 'Vàng nhẫn 9999', 'buy' => number_format(63500 + $noise, 0, '.', ','), 'sell' => number_format(64500 + $noise, 0, '.', ',')],
+        ];
     }
 }

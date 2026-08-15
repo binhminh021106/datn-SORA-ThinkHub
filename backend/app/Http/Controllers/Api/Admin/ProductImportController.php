@@ -32,7 +32,7 @@ class ProductImportController extends Controller
      */
     public function downloadTemplate()
     {
-        $fileName = 'Product_Import_Template.xlsx';
+        $fileName = 'Product_Import_Template_SORA.xlsx';
         $path = storage_path('app/public/' . $fileName);
 
         $options = new Options();
@@ -73,11 +73,13 @@ class ProductImportController extends Controller
             'Danh Mục (*)', 
             'Tên Thương Hiệu', 
             'Slug (Để trống sẽ tự tạo)', 
-            'Giá Sàn (*)', 
+            'Giá Vốn',
+            'Giá Bán (VNĐ) (*)', 
             'Link Ảnh Đại Diện', 
             'SKU (Để trống sẽ tự tạo)', 
-            'Giá Biến Thể (*)', 
-            'Tồn Kho (*)', 
+            'Giá Vốn Biến Thể',
+            'Giá Bán Biến Thể (VNĐ) (*)', 
+            'Kho (*)', 
             'Link Ảnh Biến Thể', 
             'Thuộc Tính 1 (Tên:Giá trị)',
             'Thuộc Tính 2 (Tùy chọn)'
@@ -85,17 +87,22 @@ class ProductImportController extends Controller
         $writer->addRow($headerRow);
 
         // Thêm dòng 1 (Sản phẩm gốc + Biến thể 1)
+        // Ký tự Zero Width Space (Khoảng trắng không chiều rộng) để ép Spout vẽ viền cho các ô "trống"
+        $zwsp = "\xE2\x80\x8B";
+
         $row1 = Row::fromValues([
             'Nhẫn Kim Cương Nam K18', 
             'Nhẫn Nam', 
             'SORA', 
-            '', // Bỏ trống slug để auto-generate
-            '5000000', 
-            '', // Ảnh đại diện
-            '', // Bỏ trống SKU để auto-generate
-            '5200000', 
+            $zwsp, // Bỏ trống slug để auto-generate
+            '4500000', // Giá Vốn
+            '5000000', // Giá Bán
+            $zwsp, // Ảnh đại diện
+            $zwsp, // Bỏ trống SKU để auto-generate
+            '4600000', // Giá Vốn Biến Thể
+            '5200000', // Giá Bán Biến Thể
             '100', 
-            '', 
+            $zwsp, 
             'Chất Liệu:Vàng 18K',
             'Kích Thước:Ni 10'
         ], $rowStyle);
@@ -103,16 +110,18 @@ class ProductImportController extends Controller
         
         // Thêm dòng 2 (Chỉ có biến thể 1)
         $row2 = Row::fromValues([
-            '', // Để trống tên sản phẩm sẽ tự động gộp vào sản phẩm phía trên
-            '', 
-            '', 
-            '', 
-            '', 
-            '', 
-            '', // Bỏ trống SKU
-            '5500000', 
+            $zwsp, // Để trống tên sản phẩm sẽ tự động gộp vào sản phẩm phía trên
+            $zwsp, 
+            $zwsp, 
+            $zwsp, 
+            $zwsp, // Giá Vốn trống
+            $zwsp, // Giá Bán trống
+            $zwsp, 
+            $zwsp, // Bỏ trống SKU
+            '4800000', // Giá Vốn Biến Thể
+            '5500000', // Giá Bán Biến Thể
             '50', 
-            '', 
+            $zwsp, 
             'Chất Liệu:Vàng trắng',
             'Kích Thước:Ni 12'
         ], $rowStyle);
@@ -120,20 +129,29 @@ class ProductImportController extends Controller
 
         // Thêm dòng 3 (Biến thể 2 với nhiều thuộc tính hơn)
         $row3 = Row::fromValues([
-            '', 
-            '', 
-            '', 
-            '', 
-            '', 
-            '', 
-            '', // Bỏ trống SKU
-            '5800000', 
+            $zwsp, 
+            $zwsp, 
+            $zwsp, 
+            $zwsp, 
+            $zwsp, // Giá Vốn trống
+            $zwsp, // Giá Bán trống
+            $zwsp, 
+            $zwsp, // Bỏ trống SKU
+            '5000000', // Giá Vốn Biến Thể
+            '5800000', // Giá Bán Biến Thể
             '20', 
-            '', 
+            $zwsp, 
             'Chất Liệu:Vàng hồng', 
             'Kích Thước:Ni 12, Đính Đá:Sapphire' // Cột 2 có thể chứa nhiều giá trị cách nhau bằng dấu phẩy
         ], $rowStyle);
         $writer->addRow($row3);
+
+        // Thêm 50 dòng trống có định dạng (border) để người dùng dễ nhìn và nhập liệu
+        // Dùng Zero-Width Space để ép Spout render cell và viền mà không tạo ra khoảng trắng thừa
+        $emptyRow = Row::fromValues(array_fill(0, 14, $zwsp), $rowStyle);
+        for ($i = 0; $i < 50; $i++) {
+            $writer->addRow($emptyRow);
+        }
 
         $writer->close();
 
@@ -167,6 +185,23 @@ class ProductImportController extends Controller
             $hasData = false;
 
             foreach ($rows as $index => $row) {
+                // Xóa Zero Width Space nếu có
+                $zwsp = "\xE2\x80\x8B";
+                $isEmptyRow = true;
+                foreach ($row as $key => $value) {
+                    if (is_string($value)) {
+                        $value = str_replace($zwsp, "", $value);
+                        $row[$key] = $value;
+                    }
+                    if (trim((string)$value) !== '') {
+                        $isEmptyRow = false;
+                    }
+                }
+
+                if ($isEmptyRow) {
+                    continue;
+                }
+
                 $hasData = true;
                 $rowNumber = $index + 2; // +2 vì index bắt đầu từ 0 và dòng 1 là header
 
@@ -178,8 +213,11 @@ class ProductImportController extends Controller
                         $categoryName = trim($row['Danh Mục (*)'] ?? $row['Tên Danh Mục (*)'] ?? '');
                         if (empty($categoryName)) throw new \Exception("Dòng {$rowNumber}: Thiếu Tên Danh Mục.");
                         
-                        $basePrice = trim($row['Giá Sàn (*)'] ?? '');
-                        if ($basePrice === '' || !is_numeric($basePrice)) throw new \Exception("Dòng {$rowNumber}: Giá sàn không hợp lệ.");
+                        $basePrice = trim($row['Giá Bán (VNĐ) (*)'] ?? $row['Giá Sàn (*)'] ?? '');
+                        if ($basePrice === '' || !is_numeric($basePrice)) throw new \Exception("Dòng {$rowNumber}: Giá bán không hợp lệ.");
+
+                        $baseCostPrice = trim($row['Giá Vốn'] ?? $row['Giá Vốn Sàn'] ?? '');
+                        if ($baseCostPrice !== '' && !is_numeric($baseCostPrice)) throw new \Exception("Dòng {$rowNumber}: Giá vốn không hợp lệ.");
 
                         // Xử lý Danh Mục
                         $category = Category::where('name', $categoryName)->first();
@@ -233,6 +271,7 @@ class ProductImportController extends Controller
                             'name' => $productName,
                             'slug' => $slug,
                             'base_price' => $basePrice,
+                            'cost_price' => $baseCostPrice !== '' ? $baseCostPrice : null,
                             'status' => 'draft',
                             'thumbnail_image' => $thumbnailUrl ?: 'products/defaults/placeholder.png', 
                         ]);
@@ -261,10 +300,13 @@ class ProductImportController extends Controller
                         $counter++;
                     }
 
-                    $variantPrice = trim($row['Giá Biến Thể (*)'] ?? '');
-                    if ($variantPrice === '' || !is_numeric($variantPrice)) throw new \Exception("Dòng {$rowNumber}: Giá biến thể không hợp lệ.");
+                    $variantPrice = trim($row['Giá Bán Biến Thể (VNĐ) (*)'] ?? $row['Giá Biến Thể (*)'] ?? '');
+                    if ($variantPrice === '' || !is_numeric($variantPrice)) throw new \Exception("Dòng {$rowNumber}: Giá bán biến thể không hợp lệ.");
 
-                    $stock = trim($row['Tồn Kho (*)'] ?? '');
+                    $variantCostPrice = trim($row['Giá Vốn Biến Thể'] ?? '');
+                    if ($variantCostPrice !== '' && !is_numeric($variantCostPrice)) throw new \Exception("Dòng {$rowNumber}: Giá vốn biến thể không hợp lệ.");
+
+                    $stock = trim($row['Kho (*)'] ?? $row['Tồn Kho (*)'] ?? '');
                     if ($stock === '' || !is_numeric($stock)) $stock = 0;
 
                     $variantImageUrl = trim($row['Link Ảnh Biến Thể'] ?? '');
@@ -275,6 +317,7 @@ class ProductImportController extends Controller
                         'product_id' => $currentProduct->id,
                         'sku' => $sku,
                         'price' => $variantPrice,
+                        'cost_price' => $variantCostPrice !== '' ? $variantCostPrice : null,
                         'stock_quantity' => $stock,
                         'is_default' => $isDefault,
                         'image_url' => $variantImageUrl,

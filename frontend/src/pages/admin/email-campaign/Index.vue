@@ -1,6 +1,22 @@
 <template>
   <div class="email-campaign-page pb-4">
-    <div class="container-fluid py-3">
+    <!-- MÀN HÌNH CHỜ ĐỘC LẬP (SHIMMER) CHỈ CHẠY 1 LẦN ĐẦU -->
+    <div v-if="isPageLoading" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
+      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
+      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ liệu chiến dịch...</p>
+    </div>
+
+    <!-- MÀN HÌNH LỖI KHI LOAD DATA THẤT BẠI -->
+    <div v-else-if="pageError" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
+      <i class="bi bi-exclamation-triangle-fill text-danger mb-3" style="font-size: 3rem;"></i>
+      <h4 class="fw-bold text-dark mb-2">Tải dữ liệu thất bại</h4>
+      <p class="text-muted mb-4">Không thể kết nối với máy chủ để lấy thông tin chiến dịch.</p>
+      <button class="btn btn-primary px-4 py-2 fw-bold rounded-3 shadow-sm hover-scale" @click="loadData">
+        <i class="bi bi-arrow-clockwise me-2"></i>Thử lại
+      </button>
+    </div>
+
+    <div class="container-fluid py-3" v-else>
       <!-- Page Header -->
       <div class="d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-2 mb-3">
         <div>
@@ -53,7 +69,8 @@
                 :disabled="!!sendingCampaign"
                 @click="runBirthdayCampaign"
               >
-                <i class="bi bi-cake2"></i>
+                <span v-if="sendingCampaign === 'birthday'" class="spinner-border spinner-border-sm d-flex align-items-center justify-content-center m-auto" style="width: 20px; height: 20px;"></span>
+                <i v-else class="bi bi-cake2"></i>
                 <span>
                   <strong>Kiểm tra & Gửi Sinh Nhật</strong>
                   <small>Quét khách có sinh nhật hôm nay</small>
@@ -65,7 +82,8 @@
                 :disabled="!!sendingCampaign"
                 @click="runHolidayCampaign"
               >
-                <i class="bi bi-calendar2-heart"></i>
+                <span v-if="sendingCampaign === 'holiday'" class="spinner-border spinner-border-sm d-flex align-items-center justify-content-center m-auto" style="width: 20px; height: 20px;"></span>
+                <i v-else class="bi bi-calendar2-heart"></i>
                 <span>
                   <strong>Kiểm tra & Gửi Sự Kiện</strong>
                   <small>Quét sự kiện đang bật hôm nay</small>
@@ -436,48 +454,60 @@ const birthdaySettings = ref({
 const sampleCustomers = ref([{ id: 1, name: 'Lê Thị Mỹ Duyên', email: 'myduyen@example.com', gender: 'female', tier: 'diamond' }]);
 const previewTierId = ref(null);
 const fetchRecentLogs = async () => {
-  try {
-    const res = await apiClient.get('/admin/email-campaign/recent-logs');
-    if (res.data?.success) emailLogs.value = res.data.data;
-  } catch (err) { console.error('Lỗi fetch log:', err); }
+  const res = await apiClient.get('/admin/email-campaign/recent-logs');
+  if (res.data?.success) emailLogs.value = res.data.data;
 };
 
 const fetchHolidayEvents = async () => {
-  try {
-    const res = await apiClient.get('/admin/holiday-events');
-    if (res.data?.success) {
-      holidays.value = res.data.data.map(h => ({
-        ...h,
-        localStatus: h.status,
-        isStatusChanged: false,
-        isUpdatingStatus: false
-      }));
-    }
-  } catch (err) { console.error('Lỗi fetch holiday:', err); }
+  const res = await apiClient.get('/admin/holiday-events');
+  if (res.data?.success) {
+    holidays.value = res.data.data.map(h => ({
+      ...h,
+      localStatus: h.status,
+      isStatusChanged: false,
+      isUpdatingStatus: false
+    }));
+  }
 };
 
 const fetchBirthdaySettings = async () => {
-  try {
-    const res = await apiClient.get('/admin/email-campaign/settings');
-    if (res.data?.success) {
-      birthdaySettings.value.enabled = !!res.data.data.is_auto_birthday;
-      birthdaySettings.value.subject = res.data.data.birthday_subject || '';
-      birthdaySettings.value.content = res.data.data.birthday_content || '';
-      
-      // Đổ dữ liệu THẬT TỪ DATABASE vào biến giao diện
-      if (res.data.data.tiers && res.data.data.tiers.length > 0) {
-        birthdaySettings.value.tiers = res.data.data.tiers;
-        // Gán hạng mặc định để hiển thị ở màn hình Preview bên phải
-        previewTierId.value = res.data.data.tiers[0].tier_id; 
-      }
+  const res = await apiClient.get('/admin/email-campaign/settings');
+  if (res.data?.success) {
+    birthdaySettings.value.enabled = !!res.data.data.is_auto_birthday;
+    birthdaySettings.value.subject = res.data.data.birthday_subject || '';
+    birthdaySettings.value.content = res.data.data.birthday_content || '';
+    
+    // Đổ dữ liệu THẬT TỪ DATABASE vào biến giao diện
+    if (res.data.data.tiers && res.data.data.tiers.length > 0) {
+      birthdaySettings.value.tiers = res.data.data.tiers;
+      // Gán hạng mặc định để hiển thị ở màn hình Preview bên phải
+      previewTierId.value = res.data.data.tiers[0].tier_id; 
     }
-  } catch (err) { console.error('Loi fetch birthday setting:', err); }
+  }
+};
+
+const isPageLoading = ref(true);
+const pageError = ref(false);
+
+const loadData = async () => {
+  isPageLoading.value = true;
+  pageError.value = false;
+  
+  const results = await Promise.allSettled([
+    fetchRecentLogs(),
+    fetchHolidayEvents(),
+    fetchBirthdaySettings()
+  ]);
+
+  if (results.some(result => result.status === 'rejected')) {
+    pageError.value = true;
+  }
+  
+  isPageLoading.value = false;
 };
 
 onMounted(() => {
-  fetchRecentLogs();
-  fetchHolidayEvents();
-  fetchBirthdaySettings();
+  loadData();
 });
 
 const filteredHolidays = computed(() => {
@@ -562,7 +592,14 @@ async function runBirthdayCampaign() {
       Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: response.data.message || `Đã kiểm tra và gửi email sinh nhật.`, showConfirmButton: false, timer: 3000 });
       await fetchRecentLogs();
     } else { showToast(response.data.message || 'Lỗi khi gửi email sinh nhật.', 'error'); }
-  } catch (error) { showToast('Lỗi máy chủ! Không thể gửi email.', 'error'); } finally { sendingCampaign.value = null; }
+  } catch (error) { 
+    if (error.response?.status === 429) {
+      const msg = error.response?.data?.message;
+      showToast(msg === 'Too Many Attempts.' ? 'Thao tác quá nhanh! Vui lòng thử lại sau 1 phút.' : (msg || 'Thao tác quá nhanh! Vui lòng thử lại sau 1 phút.'), 'error');
+    } else {
+      showToast('Lỗi máy chủ! Không thể gửi email.', 'error'); 
+    }
+  } finally { sendingCampaign.value = null; }
 }
 
 async function runHolidayCampaign() {
@@ -574,7 +611,14 @@ async function runHolidayCampaign() {
       Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: response.data.message || `Đã kiểm tra và gửi email sự kiện.`, showConfirmButton: false, timer: 3000 });
       await fetchRecentLogs();
     } else { showToast(response.data.message || 'Lỗi khi gửi email sự kiện.', 'error'); }
-  } catch (error) { showToast('Lỗi máy chủ! Không thể gửi email sự kiện.', 'error'); } finally { sendingCampaign.value = null; }
+  } catch (error) { 
+    if (error.response?.status === 429) {
+      const msg = error.response?.data?.message;
+      showToast(msg === 'Too Many Attempts.' ? 'Thao tác quá nhanh! Vui lòng thử lại sau 1 phút.' : (msg || 'Thao tác quá nhanh! Vui lòng thử lại sau 1 phút.'), 'error');
+    } else {
+      showToast('Lỗi máy chủ! Không thể gửi email sự kiện.', 'error'); 
+    }
+  } finally { sendingCampaign.value = null; }
 }
 
 async function saveHolidayStatus(event) {
@@ -797,5 +841,23 @@ function showToast(title, icon = 'success') { Swal.fire({ toast: true, position:
   .email-tabs-wrapper { overflow-x: auto; flex-wrap: nowrap; width: 100%; }
   .email-tabs-wrapper .btn { white-space: nowrap; }
   .sora-tp-body { padding: 16px; }
+}
+
+.logo-shimmer {
+  font-size: 3.5rem;
+  font-weight: 900;
+  letter-spacing: -1.5px;
+  background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: shine 1.5s linear infinite;
+}
+
+@keyframes shine {
+  to {
+    background-position: 200% center;
+  }
 }
 </style>

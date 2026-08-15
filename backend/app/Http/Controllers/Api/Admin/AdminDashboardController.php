@@ -95,8 +95,12 @@ class AdminDashboardController extends Controller
         return ['key' => $period, 'start' => $startDate, 'end' => $today->copy()->endOfDay(), 'label' => $label];
     }
 
-    private function previousPeriod(array $period): array
+    private function previousPeriod(array $period): ?array
     {
+        if ($period['key'] === 'all') {
+            return null;
+        }
+
         $dayCount = $period['start']->diffInDays($period['end']);
         $end = $period['start']->copy()->subSecond();
 
@@ -119,22 +123,62 @@ class AdminDashboardController extends Controller
             $successfulOrders = $this->applyRevenueFilter((clone $periodOrders))->count();
             $cancelledOrders = (clone $periodOrders)->whereIn('status', ['cancelled', 'returned', 'return_requested'])->count();
             $averageOrderValue = $successfulOrders > 0 ? $totalRevenue / $successfulOrders : 0;
+            
+            // Tính Lợi Nhuận Ròng (Net Profit)
+            $totalCostQuery = DB::table('order_items')
+                ->join('orders', 'order_items.order_id', '=', 'orders.id')
+                ->leftJoin('product_variants', 'order_items.product_variant_id', '=', 'product_variants.id')
+                ->leftJoin('products', 'order_items.product_id', '=', 'products.id')
+                ->whereBetween('orders.created_at', [$period['start'], $period['end']]);
+                
+            $totalCostRaw = $this->applyRevenueFilter($totalCostQuery, 'orders')
+                ->select(DB::raw('SUM(order_items.quantity * COALESCE(product_variants.cost_price, products.cost_price, 0)) as total_cost'))
+                ->value('total_cost');
+
+            $totalCost = $totalCostRaw ?? 0;
+            $netProfit = $totalRevenue - $totalCost;
                 
             $inventory = Schema::hasTable('product_variants') && Schema::hasColumn('product_variants', 'stock_quantity') 
                 ? DB::table('product_variants')->whereNull('deleted_at')->sum('stock_quantity') 
                 : 0;
 
             // 2. TÍNH TOÁN % TĂNG/GIẢM SO VỚI KỲ TRƯỚC
-            $previousOrders = Order::query()->whereBetween('created_at', [$previousPeriod['start'], $previousPeriod['end']]);
-            $revenueGrowth = $this->calculatePercentageChange(
-                $totalRevenue,
-                $this->applyRevenueFilter((clone $previousOrders))->sum('total_amount') ?? 0
-            );
-            $ordersGrowth = $this->calculatePercentageChange($newOrders, (clone $previousOrders)->count());
-            $customersGrowth = $this->calculatePercentageChange(
-                $totalCustomers,
-                User::whereBetween('created_at', [$previousPeriod['start'], $previousPeriod['end']])->count()
-            );
+            $revenueGrowth = null;
+            $netProfitGrowth = null;
+            $ordersGrowth = null;
+            $customersGrowth = null;
+
+            if ($previousPeriod) {
+                $previousOrders = Order::query()->whereBetween('created_at', [$previousPeriod['start'], $previousPeriod['end']]);
+                $previousTotalRevenue = $this->applyRevenueFilter((clone $previousOrders))->sum('total_amount') ?? 0;
+                
+                $revenueGrowth = $this->calculatePercentageChange(
+                    $totalRevenue,
+                    $previousTotalRevenue
+                );
+
+                // Tính Lợi Nhuận Ròng kỳ trước
+                $previousTotalCostQuery = DB::table('order_items')
+                    ->join('orders', 'order_items.order_id', '=', 'orders.id')
+                    ->leftJoin('product_variants', 'order_items.product_variant_id', '=', 'product_variants.id')
+                    ->leftJoin('products', 'order_items.product_id', '=', 'products.id')
+                    ->whereBetween('orders.created_at', [$previousPeriod['start'], $previousPeriod['end']]);
+                    
+                $previousTotalCostRaw = $this->applyRevenueFilter($previousTotalCostQuery, 'orders')
+                    ->select(DB::raw('SUM(order_items.quantity * COALESCE(product_variants.cost_price, products.cost_price, 0)) as total_cost'))
+                    ->value('total_cost');
+
+                $previousTotalCost = $previousTotalCostRaw ?? 0;
+                $previousNetProfit = $previousTotalRevenue - $previousTotalCost;
+
+                $netProfitGrowth = $this->calculatePercentageChange($netProfit, $previousNetProfit);
+
+                $ordersGrowth = $this->calculatePercentageChange($newOrders, (clone $previousOrders)->count());
+                $customersGrowth = $this->calculatePercentageChange(
+                    $totalCustomers,
+                    User::whereBetween('created_at', [$previousPeriod['start'], $previousPeriod['end']])->count()
+                );
+            }
 
             // 3. ĐƠN HÀNG GẦN ĐÂY
             $recentOrders = (clone $periodOrders)->with('user:id,fullName')->orderBy('created_at', 'desc')->take(8)->get()->map(function($order) {
@@ -326,6 +370,161 @@ class AdminDashboardController extends Controller
                 'current_shift' => $currentShiftInfo
             ];
 
+            // CUSTOMER INSIGHTS
+            // 1. Top Buyers (in filtered period)
+            $topBuyerQuery = Order::whereNotNull('user_id')
+                ->whereBetween('created_at', [$period['start'], $period['end']]);
+            $topBuyerRaw = $this->applyRevenueFilter($topBuyerQuery)
+                ->select('user_id', DB::raw('SUM(total_amount) as total_spent'))
+                ->groupBy('user_id')
+                ->orderByDesc('total_spent')
+                ->limit(5)
+                ->get();
+            
+            $topBuyers = [];
+            foreach ($topBuyerRaw as $tb) {
+                $user = User::find($tb->user_id);
+                $tierName = null;
+                if ($user && $user->tier_id) {
+                    $tier = DB::table('membership_tiers')->where('id', $user->tier_id)->first();
+                    if ($tier) $tierName = $tier->name;
+                }
+                $topBuyers[] = [
+                    'name' => $user ? $user->fullName : 'Khách hàng',
+                    'avatar' => $user ? $user->avatar_url : null,
+                    'spent' => (float) $tb->total_spent,
+                    'tierName' => $tierName,
+                ];
+            }
+
+            // 2. Top Gender (in filtered period)
+            $topGenderQuery = DB::table('orders')
+                ->join('users', 'orders.user_id', '=', 'users.id')
+                ->whereNotNull('orders.user_id')
+                ->whereBetween('orders.created_at', [$period['start'], $period['end']]);
+            $topGenderRaw = $this->applyRevenueFilter($topGenderQuery, 'orders')
+                ->select('users.gender', DB::raw('SUM(orders.total_amount) as total_spent'))
+                ->groupBy('users.gender')
+                ->orderByDesc('total_spent')
+                ->first();
+            
+            $topGender = null;
+            if ($topGenderRaw && $topGenderRaw->gender) {
+                $genderMap = ['male' => 'Nam', 'female' => 'Nữ', 'other' => 'Khác'];
+                $topGender = [
+                    'gender' => $genderMap[strtolower($topGenderRaw->gender)] ?? ucfirst($topGenderRaw->gender),
+                    'spent' => (float) $topGenderRaw->total_spent,
+                ];
+            }
+
+            // 3. Best Month (All-time)
+            $bestMonthQuery = Order::query();
+            $bestMonthRaw = $this->applyRevenueFilter($bestMonthQuery)
+                ->select(DB::raw('MONTH(created_at) as month'), DB::raw('YEAR(created_at) as year'), DB::raw('SUM(total_amount) as total_spent'))
+                ->groupBy('year', 'month')
+                ->orderByDesc('total_spent')
+                ->first();
+            
+            $bestMonth = null;
+            if ($bestMonthRaw) {
+                $bestMonth = [
+                    'label' => 'Tháng ' . $bestMonthRaw->month . '/' . $bestMonthRaw->year,
+                    'spent' => (float) $bestMonthRaw->total_spent,
+                ];
+            }
+
+            // 4. Revenue by Category (in filtered period)
+            $categoryRevenueQuery = DB::table('order_items')
+                ->join('orders', 'order_items.order_id', '=', 'orders.id')
+                ->join('products', 'order_items.product_id', '=', 'products.id')
+                ->join('categories', 'products.category_id', '=', 'categories.id')
+                ->whereBetween('orders.created_at', [$period['start'], $period['end']]);
+            
+            $categoryRevenueRaw = $this->applyRevenueFilter($categoryRevenueQuery, 'orders')
+                ->select('categories.name', DB::raw('SUM(order_items.quantity * order_items.price) as revenue'))
+                ->groupBy('categories.id', 'categories.name')
+                ->orderByDesc('revenue')
+                ->get();
+            
+            // 5. Top Regions
+            $topRegionsQuery = DB::table('orders')
+                ->whereBetween('created_at', [$period['start'], $period['end']])
+                ->whereNotNull('customer_address');
+            
+            // Using SUBSTRING_INDEX to get the last part of address (usually Province/City)
+            $topRegionsRaw = $this->applyRevenueFilter($topRegionsQuery)
+                ->select(DB::raw('TRIM(SUBSTRING_INDEX(customer_address, ",", -1)) as region'), DB::raw('COUNT(*) as order_count'), DB::raw('SUM(total_amount) as revenue'))
+                ->groupBy('region')
+                ->orderByDesc('revenue')
+                ->limit(5)
+                ->get();
+
+            // 6. Inventory Value & Dead Stock
+            $inventoryValue = DB::table('product_variants')
+                ->join('products', 'product_variants.product_id', '=', 'products.id')
+                ->select(DB::raw('SUM(product_variants.stock_quantity * COALESCE(NULLIF(products.cost_price, 0), products.base_price, 0)) as total_value'))
+                ->where('product_variants.stock_quantity', '>', 0)
+                ->first()->total_value ?? 0;
+
+            $thirtyDaysAgo = now()->subDays(30);
+            $deadStockQuery = DB::table('products')
+                ->join('product_variants', 'products.id', '=', 'product_variants.product_id')
+                ->where('products.status', 'published')
+                ->whereNull('products.deleted_at')
+                ->where('products.created_at', '<', $thirtyDaysAgo)
+                ->where('product_variants.stock_quantity', '>', 0)
+                ->whereNotIn('products.id', function($query) use ($thirtyDaysAgo) {
+                    $query->select('product_variants.product_id')
+                          ->from('order_items')
+                          ->join('product_variants', 'order_items.product_variant_id', '=', 'product_variants.id')
+                          ->join('orders', 'order_items.order_id', '=', 'orders.id')
+                          ->where('orders.created_at', '>=', $thirtyDaysAgo);
+                });
+
+            $deadStockCount = $deadStockQuery->distinct('products.id')->count('products.id');
+
+            $deadStock = (clone $deadStockQuery)
+                ->select(
+                    'products.id',
+                    'products.name',
+                    'products.thumbnail_image',
+                    DB::raw('COALESCE(NULLIF(products.cost_price, 0), products.base_price, 0) as cost_price'),
+                    DB::raw('SUM(product_variants.stock_quantity) as total_stock')
+                )
+                ->groupBy('products.id', 'products.name', 'products.thumbnail_image', 'products.cost_price', 'products.base_price')
+                ->orderByDesc('total_stock')
+                ->limit(5)
+                ->get()
+                ->map(function ($item) {
+                    if ($item->thumbnail_image) {
+                        $item->thumbnail_image = asset('storage/' . $item->thumbnail_image);
+                    }
+                    return $item;
+                });
+
+            // 7. Cancel/Return Insights
+            $cancelReasons = DB::table('order_status_histories')
+                ->whereIn('new_status', ['cancelled', 'return_requested', 'returned'])
+                ->whereBetween('created_at', [$period['start'], $period['end']])
+                ->whereNotNull('note')
+                ->select('note', DB::raw('COUNT(*) as count'))
+                ->groupBy('note')
+                ->orderByDesc('count')
+                ->limit(5)
+                ->get();
+
+            $customerInsights = [
+                'topBuyers' => $topBuyers,
+                'topGender' => $topGender,
+                'bestMonth' => $bestMonth,
+                'categoryRevenue' => $categoryRevenueRaw,
+                'topRegions' => $topRegionsRaw,
+                'inventoryValue' => (float) $inventoryValue,
+                'deadStockCount' => $deadStockCount,
+                'deadStock' => $deadStock,
+                'cancelReasons' => $cancelReasons,
+            ];
+
             return response()->json([
                 'success' => true,
                 'message' => 'Lấy dữ liệu Dashboard thành công',
@@ -333,6 +532,8 @@ class AdminDashboardController extends Controller
                     'stats' => [
                         'totalRevenue' => (float) $totalRevenue,
                         'revenueGrowth' => $revenueGrowth,
+                        'netProfit' => (float) $netProfit,
+                        'netProfitGrowth' => $netProfitGrowth,
                         'newOrders' => $newOrders,
                         'ordersGrowth' => $ordersGrowth,
                         'inventory' => (int) $inventory,
@@ -351,6 +552,7 @@ class AdminDashboardController extends Controller
                     'recentOrders' => $recentOrders,
                     'topProducts' => $topProducts,
                     'lowStockProducts' => $lowStockProducts,
+                    'customerInsights' => $customerInsights,
                     'recentReviews' => $recentReviews,
                     'activeCombos' => $activeCombos,
                     'paymentStats' => $chartData['paymentStats'],
@@ -358,6 +560,7 @@ class AdminDashboardController extends Controller
                     'chartData' => [
                         'labels' => $chartData['labels'],
                         'values' => $chartData['values'],
+                        'netProfits' => $chartData['netProfits'],
                         'orderCounts' => $chartData['orderCounts'],
                     ],
                     'couponChart' => [
@@ -395,6 +598,7 @@ class AdminDashboardController extends Controller
                 'data' => [
                     'labels' => $chartData['labels'],
                     'values' => $chartData['values'],
+                    'netProfits' => $chartData['netProfits'],
                     'orderCounts' => $chartData['orderCounts'],
                     'paymentStats' => $chartData['paymentStats'],
                     'couponChart' => [
@@ -425,7 +629,7 @@ class AdminDashboardController extends Controller
         $hasCouponId = Schema::hasColumn('orders', 'coupon_id');
         $hasDiscountAmount = Schema::hasColumn('orders', 'discount_amount');
 
-        $orderColumns = ['created_at', 'total_amount', 'payment_method'];
+        $orderColumns = ['id', 'created_at', 'total_amount', 'payment_method'];
         if ($hasCouponId) {
             $orderColumns[] = 'coupon_id';
         }
@@ -433,8 +637,32 @@ class AdminDashboardController extends Controller
             $orderColumns[] = 'discount_amount';
         }
 
+        // Lấy danh sách ID để query cost
+        $validOrders = $this->applyRevenueFilter(clone $ordersQuery)->pluck('id');
+        
+        // Calculate costs grouped by date
+        $costsQuery = DB::table('order_items')
+            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->leftJoin('product_variants', 'order_items.product_variant_id', '=', 'product_variants.id')
+            ->leftJoin('products', 'order_items.product_id', '=', 'products.id')
+            ->whereIn('orders.id', $validOrders);
+
+        $diffDays = $startDate->diffInDays($endDate);
+
+        if ($diffDays <= 60) {
+            $groupBy = 'day';
+            $costsRaw = $costsQuery->select(DB::raw('DATE(orders.created_at) as date_key'), DB::raw('SUM(order_items.quantity * COALESCE(product_variants.cost_price, products.cost_price, 0)) as total_cost'))->groupBy('date_key')->get()->pluck('total_cost', 'date_key');
+        } elseif ($diffDays <= 730) { 
+            $groupBy = 'month';
+            $costsRaw = $costsQuery->select(DB::raw('DATE_FORMAT(orders.created_at, "%Y-%m") as date_key'), DB::raw('SUM(order_items.quantity * COALESCE(product_variants.cost_price, products.cost_price, 0)) as total_cost'))->groupBy('date_key')->get()->pluck('total_cost', 'date_key');
+        } else { 
+            $groupBy = 'year';
+            $costsRaw = $costsQuery->select(DB::raw('YEAR(orders.created_at) as date_key'), DB::raw('SUM(order_items.quantity * COALESCE(product_variants.cost_price, products.cost_price, 0)) as total_cost'))->groupBy('date_key')->get()->pluck('total_cost', 'date_key');
+        }
+
         // Iterate lazily so a long dashboard period does not retain every order in memory.
-        $orders = $this->applyRevenueFilter($ordersQuery)
+        $orders = clone $ordersQuery;
+        $orders = $this->applyRevenueFilter($orders)
             ->select($orderColumns)
             ->cursor();
         $diffDays = $startDate->diffInDays($endDate);
@@ -503,6 +731,7 @@ class AdminDashboardController extends Controller
 
         $labels = [];
         $values = [];
+        $netProfits = [];
         $orderCountValues = [];
         $couponValues = [];
         $currentDate = $startDate->copy();
@@ -513,7 +742,10 @@ class AdminDashboardController extends Controller
             while ($currentDate <= $end) {
                 $dateString = $currentDate->format('Y-m-d');
                 $labels[] = $currentDate->format('d/m');
-                $values[] = isset($revenues[$dateString]) ? (float) $revenues[$dateString] : 0;
+                $rev = isset($revenues[$dateString]) ? (float) $revenues[$dateString] : 0;
+                $cost = isset($costsRaw[$dateString]) ? (float) $costsRaw[$dateString] : 0;
+                $values[] = $rev;
+                $netProfits[] = $rev - $cost;
                 $orderCountValues[] = isset($orderCounts[$dateString]) ? (int) $orderCounts[$dateString] : 0;
                 $couponValues[] = isset($couponUses[$dateString]) ? (int) $couponUses[$dateString] : 0;
                 $currentDate->addDay();
@@ -524,7 +756,10 @@ class AdminDashboardController extends Controller
             while ($currentDate <= $end) {
                 $dateString = $currentDate->format('Y-m');
                 $labels[] = $currentDate->format('m/Y');
-                $values[] = isset($revenues[$dateString]) ? (float) $revenues[$dateString] : 0;
+                $rev = isset($revenues[$dateString]) ? (float) $revenues[$dateString] : 0;
+                $cost = isset($costsRaw[$dateString]) ? (float) $costsRaw[$dateString] : 0;
+                $values[] = $rev;
+                $netProfits[] = $rev - $cost;
                 $orderCountValues[] = isset($orderCounts[$dateString]) ? (int) $orderCounts[$dateString] : 0;
                 $couponValues[] = isset($couponUses[$dateString]) ? (int) $couponUses[$dateString] : 0;
                 $currentDate->addMonth();
@@ -535,7 +770,10 @@ class AdminDashboardController extends Controller
             while ($currentDate <= $end) {
                 $dateString = $currentDate->format('Y');
                 $labels[] = $dateString; 
-                $values[] = isset($revenues[$dateString]) ? (float) $revenues[$dateString] : 0;
+                $rev = isset($revenues[$dateString]) ? (float) $revenues[$dateString] : 0;
+                $cost = isset($costsRaw[$dateString]) ? (float) $costsRaw[$dateString] : 0;
+                $values[] = $rev;
+                $netProfits[] = $rev - $cost;
                 $orderCountValues[] = isset($orderCounts[$dateString]) ? (int) $orderCounts[$dateString] : 0;
                 $couponValues[] = isset($couponUses[$dateString]) ? (int) $couponUses[$dateString] : 0;
                 $currentDate->addYear();
@@ -545,6 +783,7 @@ class AdminDashboardController extends Controller
         return [
             'labels' => $labels,
             'values' => $values,
+            'netProfits' => $netProfits,
             'orderCounts' => $orderCountValues,
             'couponValues' => $couponValues,
             'paymentStats' => $paymentStats

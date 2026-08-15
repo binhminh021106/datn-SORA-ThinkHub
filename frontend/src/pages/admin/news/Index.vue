@@ -3,7 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
-import axios from 'axios';
+import adminApiClient from '@/utils/adminApiClient.js';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { getFullImage } from '@/composables/useUtilities';
 import defaultImage from '@/assets/images/defaults/placeholder.png';
@@ -66,7 +66,7 @@ const checkAuthState = async () => {
     }
 
     try {
-        const response = await axios.get(`${apiUrl}/user`, { headers: getHeaders() });
+        const response = await adminApiClient.get(`/me`);
         let data = response.data?.data && !response.data?.id ? response.data.data : response.data;
         currentUser.value = { 
             ...data, 
@@ -102,7 +102,7 @@ const itemsPerPage = ref(10);
 const { data: newsData, isLoading, isFetching, isError, error, refetch } = useQuery({
     queryKey: ['admin-news-all'],
     queryFn: async () => {
-        const response = await axios.get(`${apiUrl}/admin/news`, { headers: getHeaders() });
+        const response = await adminApiClient.get(`/news`);
         return response.data?.data || response.data || [];
     },
     staleTime: 5 * 60 * 1000, // Cache dữ liệu trong 5 phút
@@ -140,7 +140,7 @@ const newsLoadError = computed(() => (
 // Mutation cập nhật nhanh trạng thái
 const toggleStatusMutation = useMutation({
     mutationFn: async ({ id, status }) => {
-        return axios.patch(`${apiUrl}/admin/news/${id}`, { status }, { headers: getHeaders() });
+        return adminApiClient.patch(`/news/${id}`, { status });
     },
     onSuccess: (data, variables) => {
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
@@ -177,7 +177,7 @@ const saveNewsStatus = (item) => {
 // Mutation xóa mềm bài viết
 const deleteMutation = useMutation({
     mutationFn: async (id) => {
-        return axios.delete(`${apiUrl}/admin/news/${id}`, { headers: getHeaders() });
+        return adminApiClient.delete(`/news/${id}`);
     },
     onSuccess: () => {
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã đưa vào thùng rác', showConfirmButton: false, timer: 1500 });
@@ -191,7 +191,7 @@ const deleteMutation = useMutation({
 // Mutation khôi phục bài viết
 const restoreMutation = useMutation({
     mutationFn: async (id) => {
-        return axios.post(`${apiUrl}/admin/news/${id}/restore`, {}, { headers: getHeaders() });
+        return adminApiClient.post(`/news/${id}/restore`, {});
     },
     onSuccess: () => {
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã khôi phục thành công', showConfirmButton: false, timer: 1500 });

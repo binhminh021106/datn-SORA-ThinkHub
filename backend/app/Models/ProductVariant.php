@@ -18,12 +18,18 @@ class ProductVariant extends Model
         'promotional_price', 
         'stock_quantity', 
         'image_url', 
-        'is_default'
+        'is_default',
+        'cost_price'
+    ];
+
+    protected $hidden = [
+        'cost_price',
     ];
 
     protected $casts = [
         'price' => 'decimal:2', 
-        'promotional_price' => 'decimal:2'
+        'promotional_price' => 'decimal:2',
+        'cost_price' => 'decimal:2'
     ];
 
     protected $appends = ['attributes'];

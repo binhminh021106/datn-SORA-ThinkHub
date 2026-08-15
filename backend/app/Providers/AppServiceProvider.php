@@ -92,6 +92,7 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function configureRateLimiting(): void
     {
+        // Giới hạn Đăng nhập (Client)
         RateLimiter::for('auth', function (Request $request) {
             $email = mb_strtolower(trim((string) $request->input('email', '')));
 
@@ -101,10 +102,12 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        // Giới hạn Quên mật khẩu (Client)
         RateLimiter::for('forgot-password', function (Request $request) {
             return Limit::perDay(3)->by($request->ip());
         });
 
+        // Giới hạn Quên mật khẩu (Admin)
         RateLimiter::for('admin-forgot-password', function (Request $request) {
             $email = mb_strtolower(trim((string) $request->input('email', '')));
 
@@ -114,12 +117,12 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        // Giới hạn Gửi form liên hệ (Contact)
         RateLimiter::for('contact', function (Request $request) {
-            // Nới lỏng vòng ngoài để cho phép submit sai validate (không bị block)
-            // Giới hạn thực sự (3 lần/giờ đối với form đúng) sẽ nằm trong Controller.
             return Limit::perHour(60)->by($request->ip());
         });
 
+        // Giới hạn Thanh toán đơn hàng (Checkout)
         RateLimiter::for('checkout', function (Request $request) {
             $actor = $request->user()?->id ?: 'guest';
 
@@ -130,12 +133,14 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        // Giới hạn Đánh giá sản phẩm (Review)
         RateLimiter::for('review', function (Request $request) {
             return $request->user()
                 ? Limit::perMinutes(10, 5)->by($request->user()->id)
                 : Limit::perMinutes(10, 5)->by($request->ip());
         });
 
+        // Giới hạn Gửi tin nhắn Chatbot
         RateLimiter::for('chatbot', function (Request $request) {
             return [
                 Limit::perMinute(10)->by('chatbot-ip:' . $request->ip()),
@@ -143,20 +148,29 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        // Giới hạn Tiếp thị liên kết (Affiliate)
         RateLimiter::for('affiliate', function (Request $request) {
             return $request->user()
                 ? Limit::perHour(1)->by($request->user()->id)
                 : Limit::perHour(1)->by($request->ip());
         });
 
-        RateLimiter::for('email-campaign', function (Request $request) {
-            return Limit::perMinutes(10, 2)->by($request->user()?->id ?: $request->ip());
+        // Giới hạn Tính năng Gửi chiến dịch Email Sinh nhật
+        RateLimiter::for('email-campaign-birthday', function (Request $request) {
+            return Limit::perMinute(5)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Giới hạn Tính năng Gửi chiến dịch Email Sự kiện
+        RateLimiter::for('email-campaign-holiday', function (Request $request) {
+            return Limit::perMinute(5)->by($request->user()?->id ?: $request->ip());
+        });
+
+        // Giới hạn Thử lại thanh toán (VNPay / MoMo)
         RateLimiter::for('payment-retry', function (Request $request) {
             return Limit::perMinutes(10, 3)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Giới hạn Thêm/Sửa/Xoá Giỏ hàng (Cart)
         RateLimiter::for('cart-mutation', function (Request $request) {
             $owner = $request->user()?->id ?: ($request->header('X-Cart-Session-Id') ?: 'guest');
 
@@ -167,10 +181,12 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        // Giới hạn Xem Giỏ hàng (Cart)
         RateLimiter::for('cart-read', function (Request $request) {
             return Limit::perMinute(60)->by('cart-read:' . ($request->user()?->id ?: $request->ip()));
         });
 
+        // Giới hạn Tính năng địa lý / API Tỉnh thành
         RateLimiter::for('geo', function (Request $request) {
             return [
                 Limit::perMinute(30)->by('geo-ip:' . $request->ip()),
@@ -178,10 +194,12 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        // Giới hạn Đọc dữ liệu công khai chung (Bài viết, Sản phẩm, vv)
         RateLimiter::for('public-read', function (Request $request) {
             return Limit::perMinute(120)->by('public-read:' . $request->ip());
         });
 
+        // Giới hạn Đọc tin nhắn (Chat)
         RateLimiter::for('direct-chat-read', function (Request $request) {
             return [
                 Limit::perMinute(30)->by('chat-read-user:' . ($request->user()?->id ?: 'guest')),
@@ -189,6 +207,7 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        // Giới hạn Gửi tin nhắn (Chat)
         RateLimiter::for('direct-chat-write', function (Request $request) {
             return [
                 Limit::perMinute(10)->by('chat-write-user:' . ($request->user()?->id ?: 'guest')),
@@ -196,6 +215,7 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        // Giới hạn Thay đổi dữ liệu chung của Client
         RateLimiter::for('client-mutation', function (Request $request) {
             $actor = $request->user()?->id ?: $request->ip();
 
@@ -205,6 +225,7 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        // Giới hạn Thay đổi dữ liệu nhạy cảm (Đổi mật khẩu, Email)
         RateLimiter::for('sensitive-mutation', function (Request $request) {
             return [
                 Limit::perMinutes(10, 5)->by('sensitive-user:' . ($request->user()?->id ?: 'guest')),
@@ -212,14 +233,17 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        // Giới hạn Rút tiền (Ví / Affiliate)
         RateLimiter::for('withdrawal', function (Request $request) {
             return Limit::perHour(2)->by('withdrawal-user:' . ($request->user()?->id ?: $request->ip()));
         });
 
+        // Giới hạn Yêu cầu Hoàn trả đơn hàng
         RateLimiter::for('return-request', function (Request $request) {
             return Limit::perMinutes(10, 5)->by('return-user:' . ($request->user()?->id ?: $request->ip()));
         });
 
+        // Giới hạn Đăng nhập bằng Google
         RateLimiter::for('google-auth', function (Request $request) {
             return [
                 Limit::perMinutes(15, 10)->by('google-auth-ip:' . $request->ip()),
@@ -227,6 +251,7 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        // Giới hạn Làm mới Token (JWT Refresh)
         RateLimiter::for('refresh-token', function (Request $request) {
             return [
                 Limit::perMinute(10)->by('refresh-user:' . ($request->user()?->id ?: 'guest')),
@@ -234,6 +259,7 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        // Giới hạn Xác thực OTP (Client)
         RateLimiter::for('otp-verify', function (Request $request) {
             $email = mb_strtolower(trim((string) $request->input('email', '')));
 
@@ -243,6 +269,7 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        // Giới hạn Xác thực OTP (Admin)
         RateLimiter::for('admin-otp-verify', function (Request $request) {
             $email = mb_strtolower(trim((string) $request->input('email', '')));
 
@@ -252,12 +279,12 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
-        // Broad safety nets for authenticated APIs. Sensitive and write routes
-        // keep their stricter, route-specific limiters above.
+        // Lớp bảo vệ chung (Mạng lưới an toàn) cho toàn bộ API Admin
         RateLimiter::for('admin-api', function (Request $request) {
             return Limit::perMinute(120)->by('admin-api:' . ($request->user()?->id ?: $request->ip()));
         });
 
+        // Lớp bảo vệ chung (Mạng lưới an toàn) cho toàn bộ API Client
         RateLimiter::for('client-api', function (Request $request) {
             return Limit::perMinute(120)->by('client-api:' . ($request->user()?->id ?: $request->ip()));
         });

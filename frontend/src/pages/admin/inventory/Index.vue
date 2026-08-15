@@ -94,10 +94,17 @@
             <i class="bi bi-layers-fill me-2"></i>{{ tableTitle }}
             <div v-if="isSilentLoading" class="spinner-border spinner-border-sm text-brand ms-2" role="status"></div>
           </h6>
-          <div class="search-box position-relative" style="width: 300px; max-width: 100%;">
-            <input type="text" class="form-control rounded-pill pe-5 shadow-sm bg-light border-0" v-model="searchQuery"
-              placeholder="Tìm tên, SKU...">
-            <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-3 text-muted"></i>
+          <div class="d-flex align-items-center gap-2">
+            <select class="form-select rounded-pill bg-light border-0 shadow-sm text-secondary font-size-sm" v-model="sortOrder" style="width: auto; min-width: 170px;">
+              <option value="product_stock_asc">Mặc định: Gom theo SP</option>
+              <option value="stock_asc">SL Tồn: Tăng dần</option>
+              <option value="stock_desc">SL Tồn: Giảm dần</option>
+            </select>
+            <div class="search-box position-relative" style="width: 220px; max-width: 100%;">
+              <input type="text" class="form-control rounded-pill pe-4 shadow-sm bg-light border-0" v-model="searchQuery"
+                placeholder="Tìm tên, SKU...">
+              <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-3 text-muted font-size-sm"></i>
+            </div>
           </div>
         </div>
 
@@ -341,6 +348,7 @@ const getInitialLowStockThreshold = () => {
 };
 const lowStockThreshold = ref(getInitialLowStockThreshold());
 const filters = ref({ product_status: 'all' });
+const sortOrder = ref('product_stock_asc');
 
 const currentPage = ref(1);
 const itemsPerPage = 10;
@@ -575,6 +583,31 @@ const filteredVariants = computed(() => {
       v.product_name.toLowerCase().includes(q)
     );
   }
+
+  // Sort variants
+  if (sortOrder.value === 'product_stock_asc') {
+    const minStockMap = {};
+    result.forEach(v => {
+      if (!(v.product_id in minStockMap) || v.stock_quantity < minStockMap[v.product_id]) {
+        minStockMap[v.product_id] = v.stock_quantity;
+      }
+    });
+    result.sort((a, b) => {
+      const minA = minStockMap[a.product_id];
+      const minB = minStockMap[b.product_id];
+      if (minA !== minB) return minA - minB;
+      if (a.product_id !== b.product_id) return b.product_id - a.product_id;
+      return a.stock_quantity - b.stock_quantity;
+    });
+
+    // Group tracking removed
+
+  } else if (sortOrder.value === 'stock_asc') {
+    result.sort((a, b) => a.stock_quantity - b.stock_quantity);
+  } else if (sortOrder.value === 'stock_desc') {
+    result.sort((a, b) => b.stock_quantity - a.stock_quantity);
+  }
+
   return result;
 });
 

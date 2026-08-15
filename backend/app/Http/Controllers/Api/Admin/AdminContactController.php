@@ -15,6 +15,9 @@ class AdminContactController extends Controller
      */
     public function index(Request $request)
     {
+        $validated = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+        ]);
         $sortDirection = $request->string('sort')->toString() === 'oldest' ? 'asc' : 'desc';
         $statusCounts = Contact::query()
             ->selectRaw("COUNT(*) as total_count")
@@ -26,12 +29,13 @@ class AdminContactController extends Controller
             'customerAccount:id,email,fullName,avatar_url',
             'repliedBy:id,fullname,avatar_url',
         ])->orderBy('created_at', $sortDirection)
+            ->orderBy('id', $sortDirection)
             ->when(
                 $request->filled('status') && in_array($request->string('status')->toString(), ['pending', 'resolved'], true),
                 fn ($contacts) => $contacts->where('status', $request->string('status')->toString())
             )
-            ->when($request->filled('search'), function ($contacts) use ($request) {
-                $search = trim($request->string('search')->toString());
+            ->when(! empty($validated['search']), function ($contacts) use ($validated) {
+                $search = addcslashes(trim($validated['search']), '\\%_');
 
                 $contacts->where(function ($query) use ($search) {
                     $query->where('fullname', 'like', "%{$search}%")
@@ -125,63 +129,90 @@ class AdminContactController extends Controller
         }
 
         try {
-            $data = [
-                'customerName' => e($contact->fullname),
-                'replyMessage' => $replyMessage,
-                'originalMessage' => e($contact->message),
-            ];
-
-            // Gửi Email
-            Mail::send([], [], function ($message) use ($contact, $request, $data) {
-                $message->to($contact->email)
-                        ->subject($request->subject)
-                        ->html("
-                            <div style='font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden;'>
-                                <div style='background-color: #9f273b; padding: 20px; text-align: center;'>
-                                    <h2 style='color: white; margin: 0;'>SORA JEWELRY</h2>
-                                </div>
-                                <div style='padding: 20px;'>
-                                    <p>Chào <strong>{$data['customerName']}</strong>,</p>
-                                    <p>SORA xin phản hồi thắc mắc của bạn:</p>
-                                    <div style='background: #f9f9f9; padding: 15px; border-left: 4px solid #e7ce7d; margin: 15px 0;'>
-                                        {$data['replyMessage']}
-                                    </div>
-                                    <p style='font-size: 12px; color: #999;'>Tin nhắn gốc của bạn: \"{$data['originalMessage']}\"</p>
-                                </div>
-                            </div>
-                        ");
-            });
-
-        } catch (\Throwable $exception) {
-            Log::error('Không thể gửi email phản hồi liên hệ.', [
-                'contact_id' => $contact->id,
-                'error' => $exception->getMessage(),
-            ]);
-
-            return response()->json(['status' => false, 'message' => 'Gửi email phản hồi thất bại.'], 500);
-        }
-
-        try {
             $contact->update([
-                'status' => 'resolved',
-                'reply_subject' => $request->subject,
-                'reply_message' => $replyMessage,
-                'replied_at' => now(),
-                'replied_by' => $request->user()?->id,
+                'reply_subject' => $contact->reply_subject ?? $request->subject,
+                'reply_message' => $contact->reply_message ?? $replyMessage,
+                'replied_at' => $contact->replied_at ?? now(),
+                'replied_by' => $contact->replied_by ?? $request->user()?->id,
+                'reply_delivery_status' => 'queued',
             ]);
         } catch (\Throwable $exception) {
-            Log::error('Email phản hồi đã gửi nhưng không thể lưu lịch sử liên hệ.', [
+            \Illuminate\Support\Facades\Log::error('Không thể lưu lịch sử liên hệ.', [
                 'contact_id' => $contact->id,
                 'error' => $exception->getMessage(),
             ]);
 
             return response()->json([
                 'status' => false,
-                'message' => 'Email đã gửi nhưng chưa thể lưu lịch sử phản hồi. Vui lòng kiểm tra lại trước khi gửi lại.',
+                'message' => 'Lỗi: Không thể lưu lịch sử phản hồi.',
             ], 500);
         }
 
-        return response()->json(['status' => true, 'message' => 'Đã gửi email phản hồi thành công!']);
+        try {
+            $data = [
+                'customerName' => e($contact->fullname),
+                'replyMessage' => $replyMessage,
+                'originalMessage' => e($contact->message),
+            ];
+            
+            $contactEmail = $contact->email;
+            $subject = $request->subject;
+            $contactId = $contact->id;
+
+            // Queue Gửi Email
+            dispatch(function () use ($contactEmail, $subject, $data, $contactId) {
+                \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($contactEmail, $subject, $data) {
+                    $message->to($contactEmail)
+                            ->subject($subject)
+                            ->html("
+                                <div style='font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden;'>
+                                    <div style='background-color: #9f273b; padding: 20px; text-align: center;'>
+                                        <h2 style='color: white; margin: 0;'>SORA JEWELRY</h2>
+                                    </div>
+                                    <div style='padding: 20px;'>
+                                        <p>Chào <strong>{$data['customerName']}</strong>,</p>
+                                        <p>SORA xin phản hồi thắc mắc của bạn:</p>
+                                        <div style='background: #f9f9f9; padding: 15px; border-left: 4px solid #e7ce7d; margin: 15px 0;'>
+                                            {$data['replyMessage']}
+                                        </div>
+                                        <p style='font-size: 12px; color: #999;'>Tin nhắn gốc của bạn: \"{$data['originalMessage']}\"</p>
+                                    </div>
+                                </div>
+                            ");
+                });
+                
+                \App\Models\Contact::whereKey($contactId)->update([
+                    'status' => 'resolved',
+                    'reply_delivery_status' => 'sent'
+                ]);
+            })->catch(function (\Throwable $exception) use ($contactId) {
+                \App\Models\Contact::whereKey($contactId)->update(['reply_delivery_status' => 'failed']);
+                \Illuminate\Support\Facades\Log::error('Không thể gửi email phản hồi liên hệ (Queue).', [
+                    'contact_id' => $contactId,
+                    'error' => $exception->getMessage(),
+                ]);
+            });
+
+        } catch (\Throwable $exception) {
+            \App\Models\Contact::whereKey($contact->id)->update(['reply_delivery_status' => 'failed']);
+            \Illuminate\Support\Facades\Log::error('Lỗi dispatch queue gửi email liên hệ.', [
+                'contact_id' => $contact->id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Lỗi khi đưa email vào hàng đợi gửi.',
+            ], 500);
+        }
+
+        $contact->load('repliedBy');
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Đã đưa email vào hàng đợi!',
+            'data' => $contact
+        ]);
     }
 
     /**
@@ -189,9 +220,8 @@ class AdminContactController extends Controller
      */
     private function sanitizeReplyHtml(string $message): string
     {
-        $allowedTags = '<p><br><strong><b><em><i><u><s><ol><ul><li><blockquote>';
-        $sanitized = strip_tags($message, $allowedTags);
-
-        return preg_replace('/<([a-z][a-z0-9]*)\\b[^>]*>/i', '<$1>', $sanitized) ?? '';
+        return \Mews\Purifier\Facades\Purifier::clean($message, [
+            'HTML.Allowed' => 'p,br,strong,b,em,i,u,s,ol,ul,li,blockquote',
+        ]);
     }
 }

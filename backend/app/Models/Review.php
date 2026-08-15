@@ -29,6 +29,7 @@ class Review extends Model
     {
         return [
             'images' => 'array',
+            'rating' => 'float',
         ];
     }
 

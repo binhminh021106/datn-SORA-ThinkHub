@@ -86,11 +86,11 @@ Route::middleware(['auth:sanctum', 'ability:access', 'admin.user', 'throttle:adm
         // Xử lý gửi & Lịch sử
         Route::prefix('email-campaign')->group(function () {
             Route::get('/settings', [EmailCampaignController::class, 'settings']);
-            Route::post('/settings', [EmailCampaignController::class, 'updateSettings'])->middleware('throttle:email-campaign');
-            Route::post('/trigger-birthday', [EmailCampaignController::class, 'triggerBirthday'])->middleware('throttle:email-campaign');
-            Route::post('/trigger-holiday', [EmailCampaignController::class, 'triggerHoliday'])->middleware('throttle:email-campaign');
+            Route::post('/settings', [EmailCampaignController::class, 'updateSettings']);
+            Route::post('/trigger-birthday', [EmailCampaignController::class, 'triggerBirthday'])->middleware('throttle:email-campaign-birthday');
+            Route::post('/trigger-holiday', [EmailCampaignController::class, 'triggerHoliday'])->middleware('throttle:email-campaign-holiday');
             Route::get('/recent-logs', [EmailCampaignController::class, 'recentLogs']);
-            Route::delete('/recent-logs', [EmailCampaignController::class, 'clearLogs'])->middleware('throttle:email-campaign');
+            Route::delete('/recent-logs', [EmailCampaignController::class, 'clearLogs']);
         });
         
     });
@@ -424,6 +424,7 @@ Route::prefix('admin')->group(function () {
 
             Route::apiResource('attributes', AdminAttributeController::class)->except(['show']);
             Route::post('attribute-values', [AdminAttributeValueController::class, 'store']);
+            Route::delete('attribute-values/{id}', [AdminAttributeValueController::class, 'destroy']);
         });
 
         // Quản lý Thương hiệu (Mã: admin_brands)
@@ -438,6 +439,7 @@ Route::prefix('admin')->group(function () {
         Route::middleware(['check.module:admin_banners'])->group(function () {
             Route::apiResource('banners', AdminBannerController::class);
             Route::post('banners/{id}/restore', [AdminBannerController::class, 'restore']);
+            Route::delete('banners/{id}/force', [AdminBannerController::class, 'forceDelete']);
             Route::post('banners/reorder', [AdminBannerController::class, 'reorder']);
         });
 
