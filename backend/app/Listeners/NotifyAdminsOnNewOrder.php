@@ -25,7 +25,20 @@ class NotifyAdminsOnNewOrder implements ShouldQueue
     {
         $order = $event->order;
 
-        // TODO: Gửi Broadcast Notification hoặc lưu vào bảng Notifications cho Admin
-        Log::info("🔔 [Job Queue] Thông báo cho Admin: Có đơn hàng mới {$order->order_code} trị giá " . number_format($order->total_amount) . " VNĐ");
+        try {
+            $admins = \App\Models\Admin::where('status', 'active')->get();
+            if ($admins->isNotEmpty()) {
+                \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\AdminAlertNotification(
+                    'Đơn hàng mới',
+                    "Có đơn hàng mới {$order->order_code} trị giá " . number_format($order->total_amount) . " VNĐ",
+                    'info',
+                    "/admin/order/{$order->order_code}"
+                ));
+            }
+            Log::info("🔔 [Job Queue] Đã thông báo cho Admin: Có đơn hàng mới {$order->order_code} trị giá " . number_format($order->total_amount) . " VNĐ");
+        } catch (\Exception $e) {
+            Log::error("❌ [Job Queue] Lỗi thông báo Admin đơn hàng mới {$order->order_code}: " . $e->getMessage());
+            throw $e;
+        }
     }
 }

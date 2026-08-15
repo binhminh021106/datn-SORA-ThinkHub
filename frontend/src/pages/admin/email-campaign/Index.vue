@@ -434,11 +434,12 @@
 <script setup>
 import { QuillEditor } from '@vueup/vue-quill';
 import '@vueup/vue-quill/dist/vue-quill.snow.css';
-import { computed, ref, onMounted, watch } from 'vue'; // THÊM IMPORT watch
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'; // THÊM IMPORT watch
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import apiClient from '@/utils/apiClient';
 import StatusConfirmSelect from '@/components/admin/StatusConfirmSelect.vue';
+import { sanitizeRichHtml } from '@/utils/sanitizeHtml';
 
 const router = useRouter();
 const showPreviewModal = ref(false);
@@ -533,7 +534,10 @@ const fetchBirthdaySettings = async () => {
     
     // Đổ dữ liệu THẬT TỪ DATABASE vào biến giao diện
     if (res.data.data.tiers && res.data.data.tiers.length > 0) {
-      birthdaySettings.value.tiers = res.data.data.tiers;
+      birthdaySettings.value.tiers = res.data.data.tiers.map(tier => ({
+        ...tier,
+        type: tier.type ?? 'fixed',
+      }));
       // Gán hạng mặc định để hiển thị ở màn hình Preview bên phải
       previewTierId.value = res.data.data.tiers[0].tier_id; 
     }
@@ -560,8 +564,19 @@ const loadData = async () => {
   isPageLoading.value = false;
 };
 
+const handleKeydown = (e) => {
+  if (e.key === 'Escape' && showPreviewModal.value) {
+    showPreviewModal.value = false;
+  }
+};
+
 onMounted(() => {
   loadData();
+  window.addEventListener('keydown', handleKeydown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown);
 });
 
 const filteredHolidays = computed(() => {
@@ -594,12 +609,7 @@ const previewBirthdaySubject = computed(() => {
 const previewBirthdayContent = computed(() => {
   let text = birthdaySettings.value.content || '[Nhập nội dung...]';
   
-  // Sanitize to prevent XSS
-  text = text.replace(/&/g, '&amp;')
-             .replace(/</g, '&lt;')
-             .replace(/>/g, '&gt;')
-             .replace(/"/g, '&quot;')
-             .replace(/'/g, '&#039;');
+  text = sanitizeRichHtml(text);
              
   text = text.replace(/\[Tên_Khách_Hàng\]/g, '<strong>Lê Thị Mỹ Duyên</strong>');
   
@@ -611,7 +621,7 @@ const previewBirthdayContent = computed(() => {
                  .replace(/'/g, '&#039;');
   text = text.replace(/\[Voucher_Code\]/g, () => `<strong>${vCode}</strong>`);
   
-  return text.replace(/\n/g, '<br>');
+  return text;
 });
 
 // Chuyển đổi định dạng tiền tệ hoặc % cho màn hình preview

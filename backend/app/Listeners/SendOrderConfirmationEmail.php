@@ -27,8 +27,12 @@ class SendOrderConfirmationEmail implements ShouldQueue
     {
         $order = $event->order;
 
-        // TODO: Thực tế sẽ gọi Mail::to($order->customer_email)->send(new OrderConfirmationMail($order));
-        // Hiện tại chỉ log lại để minh họa
-        Log::info("📨 [Job Queue] Đã gửi Email xác nhận cho đơn hàng: {$order->order_code} tới {$order->customer_email}");
+        try {
+            \Illuminate\Support\Facades\Mail::to($order->customer_email)->send(new \App\Mail\OrderPlacedMail($order));
+            Log::info("📨 [Job Queue] Đã gửi Email xác nhận cho đơn hàng: {$order->order_code} tới {$order->customer_email}");
+        } catch (\Exception $e) {
+            Log::error("❌ [Job Queue] Lỗi gửi Email xác nhận cho đơn hàng {$order->order_code}: " . $e->getMessage());
+            throw $e;
+        }
     }
 }

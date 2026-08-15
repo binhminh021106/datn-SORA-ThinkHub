@@ -129,7 +129,16 @@ public function settings()
             'birthday_subject' => 'required|string|max:255',
             'birthday_content' => 'nullable|string',
             'tiers' => 'required|array',
-            'tiers.*.tier_id' => 'required|integer|distinct',
+            'tiers.*.tier_id' => [
+                'required',
+                'integer',
+                'distinct',
+                function ($attribute, $value, $fail) {
+                    if ($value > 0 && !\Illuminate\Support\Facades\DB::table('membership_tiers')->where('id', $value)->exists()) {
+                        $fail('Hạng thành viên không tồn tại.');
+                    }
+                },
+            ],
             'tiers.*.name' => 'required|string',
             'tiers.*.voucherCode' => 'nullable|string|distinct',
             'tiers.*.type' => 'required|in:fixed,percentage',

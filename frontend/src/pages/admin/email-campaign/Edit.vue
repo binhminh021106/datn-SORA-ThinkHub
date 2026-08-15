@@ -387,7 +387,7 @@ const expireDateDisplay = computed(() => {
   let yyyy = new Date().getFullYear()
   let d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
 
-  const validity = holidayForm.validityDays || 7
+  const validity = holidayForm.validityDays ?? 7
   d.setDate(d.getDate() + validity)
 
   const today = new Date()
@@ -461,13 +461,13 @@ const fetchEventDetail = async () => {
       holidayForm.hasVoucher = !!data.voucher_code
       holidayForm.voucherCode = data.voucher_code || ''
       
-      holidayForm.discountType = data.discount_type || 'percentage'
-      holidayForm.discountValue = data.discount_value !== null ? data.discount_value : ''
-      holidayForm.minSpend = data.min_spend !== null ? data.min_spend : 0
-      holidayForm.usageLimitPerUser = data.usage_limit_per_user !== null ? data.usage_limit_per_user : 1
-      holidayForm.validityDays = data.validity_days !== null ? data.validity_days : 7
+      holidayForm.discountType = data.discount_type ?? 'percentage'
+      holidayForm.discountValue = data.discount_value ?? ''
+      holidayForm.minSpend = data.min_spend ?? 0
+      holidayForm.usageLimitPerUser = data.usage_limit_per_user ?? 1
+      holidayForm.validityDays = data.validity_days ?? 7
       
-      holidayForm.status = data.status || 'active'
+      holidayForm.status = data.status ?? 'active'
     } else {
       toast.error('Không tìm thấy thông tin sự kiện.')
       router.push({ path: '/admin/email-campaigns' })
@@ -487,8 +487,8 @@ const updateHoliday = async () => {
   if (!holidayForm.name) {
     errors.value.name = ['Vui lòng nhập tên sự kiện.']
     isValid = false
-  } else if (!/^[a-zA-Z0-9\sÀ-ỹ\-\/\&\.]+$/.test(holidayForm.name)) {
-    errors.value.name = ['Tên sự kiện không được chứa ký tự đặc biệt (chỉ cho phép dấu -, /, &, .).']
+  } else if (!/^[a-zA-Z0-9\sÀ-ỹ\-\/\&\.\_(),]+$/.test(holidayForm.name)) {
+    errors.value.name = ['Tên sự kiện không được chứa ký tự đặc biệt (chỉ cho phép dấu -, /, &, ., _, (, ), ,).']
     isValid = false
   }
   

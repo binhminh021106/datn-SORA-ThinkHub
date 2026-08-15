@@ -21,20 +21,24 @@ class HolidayEventController extends Controller
         return response()->json(['success' => true, 'data' => $events]);
     }
 
-  public function store(StoreHolidayEventRequest $request)
+    public function store(StoreHolidayEventRequest $request)
     {
         // Validation and merging already handled by HolidayEventRequest
         $validated = $request->validated();
 
-        // 3. Lưu vào Database
-        $event = HolidayEvent::create($validated);
+        if (empty($validated['discount_value'])) {
+            $validated['voucher_code'] = null;
+        }
 
-        // 4. Đồng bộ Voucher
-        $this->syncVoucherDiscount([
-            'voucher_code' => $request->input('voucher_code'),
-            'name' => $validated['name'],
-            'event_date' => $validated['event_date']
-        ], $event);
+        // 3. Lưu vào Database
+        $event = \Illuminate\Support\Facades\DB::transaction(function () use ($validated) {
+            $event = HolidayEvent::create($validated);
+
+            // 4. Đồng bộ Voucher
+            $this->syncVoucherDiscount($event);
+
+            return $event;
+        });
 
         // 6. Trả về thành công
         return response()->json([
@@ -74,13 +78,15 @@ class HolidayEventController extends Controller
 
         $validated = $request->validated();
 
-        $event->update($validated);
+        if (empty($validated['discount_value'])) {
+            $validated['voucher_code'] = null;
+        }
 
-        $this->syncVoucherDiscount([
-            'voucher_code' => $request->input('voucher_code'),
-            'name' => $validated['name'],
-            'event_date' => $validated['event_date']
-        ], $event);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($event, $validated) {
+            $oldVoucherCode = $event->voucher_code;
+            $event->update($validated);
+            $this->syncVoucherDiscount($event, $oldVoucherCode);
+        });
 
         return response()->json(['success' => true, 'message' => 'Cập nhật thành công']);
     }
@@ -106,15 +112,23 @@ class HolidayEventController extends Controller
 
 
 
-  private function syncVoucherDiscount(array $eventData, HolidayEvent $event): void
+  private function syncVoucherDiscount(HolidayEvent $event, ?string $oldVoucherCode = null): void
     {
-        if (empty($eventData['voucher_code']) || empty($event->discount_value)) {
+        if ($oldVoucherCode && $oldVoucherCode !== $event->voucher_code) {
+            $oldCoupon = Coupon::where('code', $oldVoucherCode)->first();
+            if ($oldCoupon) {
+                $oldCoupon->status = 'inactive';
+                $oldCoupon->save();
+            }
+        }
+
+        if (empty($event->voucher_code) || empty($event->discount_value)) {
             return;
         }
 
-        $coupon = Coupon::firstOrNew(['code' => $eventData['voucher_code']]);
+        $coupon = Coupon::firstOrNew(['code' => $event->voucher_code]);
         
-        $coupon->name = 'Qua tang le: ' . $eventData['name'];
+        $coupon->name = 'Qua tang le: ' . $event->name;
         $coupon->type = $event->discount_type ?? 'percentage';
         $coupon->value = $event->discount_value;
         $coupon->min_spend = $event->min_spend ?? 0;
@@ -126,9 +140,9 @@ class HolidayEventController extends Controller
             $coupon->is_used = false; 
         }
         
-        if (!empty($eventData['event_date'])) {
+        if (!empty($event->event_date)) {
             try {
-                $eventDateObj = Carbon::createFromFormat('d/m/Y', $eventData['event_date'] . '/' . now()->year)->startOfDay();
+                $eventDateObj = Carbon::createFromFormat('d/m/Y', $event->event_date . '/' . now()->year)->startOfDay();
                 $validityDays = $event->validity_days ?? 7;
                 
                 if ($eventDateObj->copy()->addDays($validityDays)->endOfDay()->isPast()) {

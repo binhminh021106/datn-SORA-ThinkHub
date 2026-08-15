@@ -15,10 +15,13 @@
             <div v-for="(banner, index) in heroBanners" :key="banner.id || index" class="carousel-item h-100"
               :class="{ active: index === 0 }">
               <video v-if="banner.video_url" :src="getImageUrl(banner.video_url)" 
+                :poster="getImageUrl(banner.image_desktop || banner.image_mobile)"
                 class="w-100 h-100 object-fit-cover" 
                 :preload="index === activeHeroIndex ? 'auto' : 'metadata'"
                 :autoplay="index === activeHeroIndex"
                 loop muted playsinline 
+                @loadeddata="markHeroImageReady(index)"
+                @error="markHeroImageReady(index)"
                 :ref="el => setHeroVideoRef(el, index)"></video>
               <picture v-else>
                 <source v-if="banner.image_mobile" media="(max-width: 767px)"

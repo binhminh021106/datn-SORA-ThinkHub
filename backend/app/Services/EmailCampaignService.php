@@ -165,10 +165,20 @@ class EmailCampaignService
             }
 
             // AUTO-EXTEND VOUCHER VALIDITY (Gia hạn mã tự động cho năm nay)
-            if ($event->voucher_code && $event->validity_days) {
+            if ($targetUsers->isNotEmpty() && $event->voucher_code && $event->validity_days && $event->event_date) {
+                try {
+                    $eventDateObj = Carbon::createFromFormat('d/m/Y', $event->event_date . '/' . now()->year)->startOfDay();
+                    if ($eventDateObj->copy()->addDays($event->validity_days)->endOfDay()->isPast()) {
+                        $eventDateObj->addYear();
+                    }
+                    $expiresAt = $eventDateObj->addDays($event->validity_days)->endOfDay();
+                } catch (\Exception $e) {
+                    $expiresAt = null;
+                }
+
                 \App\Models\Coupon::where('code', $event->voucher_code)
                     ->update([
-                        'expires_at' => \Carbon\Carbon::now()->addDays($event->validity_days)->endOfDay(),
+                        'expires_at' => $expiresAt,
                     ]);
             }
 
@@ -244,7 +254,7 @@ class EmailCampaignService
 
         $tiers = array_map(function ($t) {
             $t['tier_id'] = $t['tier_id'] ?? $t['id'] ?? null;
-            $t['type'] = $t['type'] ?? 'percentage';
+            $t['type'] = $t['type'] ?? 'fixed';
             $t['value'] = $t['value'] ?? $t['discount'] ?? 0;
             return $t;
         }, $tiers);
@@ -292,7 +302,7 @@ class EmailCampaignService
             return Coupon::firstOrCreate(
                 ['code' => $couponCode],
                 [
-                    'type' => $matchedTierConfig['type'] ?? 'percentage',
+                    'type' => $matchedTierConfig['type'] ?? 'fixed',
                     'name' => 'Quà tặng sinh nhật hạng: ' . ($matchedTierConfig['name'] ?? 'Cơ bản'),
                     'min_spend' => $matchedTierConfig['min_spend'] ?? 0,
                     'value' => $matchedTierConfig['value'] ?? 0,

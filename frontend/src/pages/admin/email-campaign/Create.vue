@@ -95,6 +95,7 @@
                 <div class="form-floating mb-3">
                   <input v-model.trim="holidayForm.subject" type="text" id="holidaySubject" class="form-control bg-light border-0" :class="{'is-invalid': errors.email_subject}" placeholder="Tiêu đề email" >
                   <label for="holidaySubject" class="fw-semibold text-dark">Tiêu đề email <span class="text-danger">*</span></label>
+                  <div class="invalid-feedback d-block" v-if="errors.email_subject">{{ errors.email_subject[0] }}</div>
                 </div>
 
                 <div class="mb-3">
@@ -116,7 +117,7 @@
                         <i class="bi bi-ticket-perforated text-brand me-1"></i> [Voucher_Code]
                       </button>
                     </div>
-                    <QuillEditor v-model:content="holidayForm.content" contentType="html" toolbar="full" theme="snow" class="bg-white" style="min-height: 200px;"/>
+                    <QuillEditor ref="quillEditorRef" v-model:content="holidayForm.content" contentType="html" toolbar="full" theme="snow" class="bg-white" style="min-height: 200px;"/>
                   </div>
                   <div class="invalid-feedback d-block mt-2" v-if="errors.email_content">{{ errors.email_content[0] }}</div>
                 </div>
@@ -206,7 +207,7 @@
                     <span class="dot bg-success"></span>
                   </div>
                   <div class="window-title mx-auto text-muted fw-semibold" style="font-size: 0.7rem;">
-                    Thư mời - {{ holidaySubject }}
+                    Thư mời - {{ holidayForm.subject || (holidayForm.name ? `${holidayForm.name} - Ưu đãi đặc biệt từ SORA ThinkHub` : 'Ưu đãi đặc biệt từ SORA ThinkHub') }}
                   </div>
                 </div>
                 <div class="mail-window-body p-3 bg-white">
@@ -286,6 +287,7 @@ const holidayForm = reactive({
   day: today.getDate(),         
   month: today.getMonth() + 1,
   target: ['all'], 
+  subject: '',
   content: '',
   hasVoucher: false,
   voucherCode: '',
@@ -343,6 +345,9 @@ const applySuggestion = (holiday) => {
   holidayForm.name = holiday.name
   holidayForm.day = holiday.day
   holidayForm.month = holiday.month
+  if (!holidayForm.subject || holidayForm.subject.includes('Ưu đãi đặc biệt từ SORA ThinkHub')) {
+    holidayForm.subject = `${holidayForm.name} - Ưu đãi đặc biệt từ SORA ThinkHub`
+  }
 }
 
 const currentDateDisplay = computed(() => {
@@ -358,7 +363,7 @@ const expireDateDisplay = computed(() => {
   let yyyy = new Date().getFullYear()
   let d = new Date(yyyy, holidayForm.month - 1, holidayForm.day)
 
-  const validity = holidayForm.validityDays || 7
+  const validity = holidayForm.validityDays ?? 7
   d.setDate(d.getDate() + validity)
 
   const today = new Date()
@@ -400,10 +405,6 @@ const previewHolidayContent = computed(() => {
   return textWithLineBreaks(replaceTokens(holidayForm.content || ''))
 })
 
-const holidaySubject = computed(() => {
-  return holidayForm.name ? `${holidayForm.name} - Ưu đãi đặc biệt từ SORA ThinkHub` : 'Ưu đãi đặc biệt từ SORA ThinkHub'
-})
-
 const formattedMinSpend = computed({
   get() {
     return holidayForm.minSpend ? new Intl.NumberFormat('vi-VN').format(holidayForm.minSpend) : ''
@@ -421,13 +422,21 @@ const saveHoliday = async () => {
   if (!holidayForm.name) {
     errors.value.name = ['Vui lòng nhập tên sự kiện.']
     isValid = false
-  } else if (!/^[a-zA-Z0-9\sÀ-ỹ\-\/\&\.]+$/.test(holidayForm.name)) {
-    errors.value.name = ['Tên sự kiện không được chứa ký tự đặc biệt (chỉ cho phép dấu -, /, &, .).']
+  } else if (!/^[a-zA-Z0-9\sÀ-ỹ\-\/\&\.\_(),]+$/.test(holidayForm.name)) {
+    errors.value.name = ['Tên sự kiện không được chứa ký tự đặc biệt (chỉ cho phép dấu -, /, &, ., _, (, ), ,).']
     isValid = false
   }
   
   if (!holidayForm.day || !holidayForm.month) {
     errors.value.event_date = ['Vui lòng chọn ngày diễn ra.']
+    isValid = false
+  }
+
+  if (!holidayForm.subject) {
+    errors.value.email_subject = ['Vui lòng nhập tiêu đề email.']
+    isValid = false
+  } else if (holidayForm.subject.length < 3) {
+    errors.value.email_subject = ['Tiêu đề email quá ngắn.']
     isValid = false
   }
 
@@ -490,7 +499,7 @@ function buildPayload() {
     day: holidayForm.day,
     month: holidayForm.month,
     target_audience: holidayForm.target.length > 0 ? holidayForm.target.join(',') : 'all',
-    email_subject: holidaySubject.value,
+    email_subject: holidayForm.subject,
     email_content: holidayForm.content,
     voucher_code: holidayForm.hasVoucher ? holidayForm.voucherCode : null,
     discount_type: holidayForm.hasVoucher ? holidayForm.discountType : null,    
@@ -503,11 +512,18 @@ function buildPayload() {
 }
 
 function insertToken(token) {
-  const content = holidayForm.content || '';
-  if (content.endsWith('</p>')) {
-     holidayForm.content = content.slice(0, -4) + ' ' + token + '</p>';
+  if (quillEditorRef.value) {
+    const quill = quillEditorRef.value.getQuill();
+    const range = quill.getSelection(true);
+    quill.insertText(range.index, token);
+    quill.setSelection(range.index + token.length);
   } else {
-     holidayForm.content = `${content}${content ? ' ' : ''}${token}`;
+    const content = holidayForm.content || '';
+    if (content.endsWith('</p>')) {
+       holidayForm.content = content.slice(0, -4) + ' ' + token + '</p>';
+    } else {
+       holidayForm.content = `${content}${content ? ' ' : ''}${token}`;
+    }
   }
 }
 

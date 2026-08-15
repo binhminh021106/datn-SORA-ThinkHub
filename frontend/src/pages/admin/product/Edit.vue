@@ -578,7 +578,7 @@ const isHtmlMode = ref(false);
 
 // THÊM MỚI: Khởi tạo giá trị mặc định cho affiliate_commission_rate
 const form = ref({
-    category_id: '', brand_id: '', name: '', slug: '', base_price: 0, cost_price: 0, isPublished: true, affiliate_commission_rate: 0, description: ''
+    category_id: '', brand_id: '', name: '', slug: '', base_price: 0, cost_price: null, isPublished: true, affiliate_commission_rate: 0, description: ''
 });
 const thumbnailFile = ref(null);
 const thumbnailPreview = ref(null);
@@ -754,13 +754,13 @@ const updateBasePrice = (event) => {
 };
 const updateCostPrice = (event) => {
     let rawValue = event.target.value.replace(/[^0-9]/g, '');
-    form.value.cost_price = rawValue ? parseInt(rawValue, 10) : '';
+    form.value.cost_price = rawValue ? parseInt(rawValue, 10) : null;
     event.target.value = formatCurrency(rawValue);
 };
 
 const updateVariantPrice = (index, field, event) => {
     let rawValue = event.target.value.replace(/\D/g, '');
-    variants.value[index][field] = rawValue ? parseInt(rawValue, 10) : '';
+    variants.value[index][field] = rawValue ? parseInt(rawValue, 10) : null;
     event.target.value = formatCurrency(rawValue);
     validateRow(index);
 };
@@ -1234,7 +1234,7 @@ const fetchData = async () => {
         form.value.category_id = pData.category_id || '';
         form.value.brand_id = pData.brand_id || '';
         form.value.base_price = Math.round(pData.base_price || 0);
-        form.value.cost_price = Math.round(pData.cost_price || 0);
+        form.value.cost_price = pData.cost_price != null ? Math.round(pData.cost_price) : null;
         form.value.isPublished = pData.status === 'published';
         form.value.description = pData.description || '';
 
@@ -1259,7 +1259,7 @@ const fetchData = async () => {
                     id: v.id,
                     sku: v.sku,
                     price: Math.round(v.price || 0),
-                    cost_price: Math.round(v.cost_price || 0),
+                    cost_price: v.cost_price != null ? Math.round(v.cost_price) : null,
                     promotional_price: Math.round(v.promotional_price || 0),
                     stock_quantity: v.stock_quantity,
                     current_image: v.image_url || v.image, 
