@@ -245,7 +245,6 @@ const handleUpload = (e, type) => {
 const { mutate: updateBanner, isPending: isUpdating } = useMutation({
   mutationFn: async (formData) => {
     const res = await adminApiClient.post(`/banners/${bannerId}`, formData);
-    if (!res.ok) { const err = res.data; throw new Error(err.message || 'Lỗi dữ liệu'); }
     return res.data.data;
   },
   onSuccess: async (updatedData) => {

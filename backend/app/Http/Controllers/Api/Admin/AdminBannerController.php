@@ -158,6 +158,26 @@ class AdminBannerController extends Controller
     }
 
     /**
+     * Xóa vĩnh viễn
+     */
+    public function forceDelete($id)
+    {
+        $banner = Banner::withTrashed()->findOrFail($id);
+
+        // Xóa ảnh và video thực tế trên ổ cứng
+        if ($banner->image_desktop) Storage::disk('public')->delete($banner->image_desktop);
+        if ($banner->image_mobile) Storage::disk('public')->delete($banner->image_mobile);
+        if ($banner->video_url) Storage::disk('public')->delete($banner->video_url);
+
+        $banner->forceDelete();
+
+        // Clear homepage cache just in case
+        Cache::forget('sora_home_data_v4');
+
+        return response()->json(['success' => true, 'message' => 'Đã xóa vĩnh viễn banner cùng các file đính kèm']);
+    }
+
+    /**
      * Kéo thả Reorder
      */
     public function reorder(Request $request)
@@ -167,7 +187,6 @@ class AdminBannerController extends Controller
             Banner::where('id', $item['id'])->update(['sort_order' => $item['sort_order']]);
         }
 
-        // Clear homepage cache when banners are reordered
         Cache::forget('sora_home_data_v2');
 
         return response()->json(['success' => true, 'message' => 'Đã cập nhật thứ tự']);

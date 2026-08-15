@@ -50,7 +50,7 @@ class AdminStoreCouponRequest extends FormRequest
                 'required',
                 'integer',
                 $this->type === 'percentage' ? 'min:1' : 'min:1000',
-                $this->type === 'percentage' ? 'max:100' : '',
+                $this->type === 'percentage' ? 'max:99' : '',
             ],
             'usage_limit' => [
                 'required',
@@ -58,13 +58,13 @@ class AdminStoreCouponRequest extends FormRequest
                 'min:1'
             ],
             'usage_limit_per_user' => [
-                'required',
+                'nullable',
                 'integer',
                 'min:1',
                 'lte:usage_limit'
             ],
             'expires_at' => [
-                'required',
+                'nullable',
                 'date',
                 'after:now'
             ],

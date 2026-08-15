@@ -14,10 +14,28 @@
           <h3 class="fw-bold text-dark mb-0">Banner Quảng Cáo</h3>
         </div>
         <div class="col-md-6 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end align-items-center gap-3 flex-wrap">
-<router-link :to="{ name: 'admin-banners-create' }" class="btn btn-brand px-4 py-2 fw-bold shadow-sm text-white rounded-pill" v-if="!isReorderMode">
+          <router-link :to="{ name: 'admin-banners-create' }" class="btn btn-brand px-4 py-2 fw-bold shadow-sm text-white rounded-pill" v-if="!isReorderMode">
             <i class="bi bi-plus-circle me-1"></i> Thêm Banner
           </router-link>
         </div>
+      </div>
+
+      <!-- TABS RESPONSIVE -->
+      <div class="mb-4" :class="{'opacity-50 pe-none': isReorderMode}">
+        <ul class="nav nav-underline border-bottom mb-2 pb-1" style="flex-wrap: wrap !important; gap: 8px;">
+          <li class="nav-item">
+            <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#" :class="{ 'active-tab': activeTab === 'all' }" @click.prevent="activeTab = 'all'">
+              <i class="bi bi-grid-fill me-2"></i> Tất cả
+              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'all'}">{{ allCount }}</span>
+            </a>
+          </li>
+          <li class="nav-item ms-auto">
+            <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab text-danger" href="#" :class="{ 'active-tab': activeTab === 'trashed' }" @click.prevent="activeTab = 'trashed'">
+              <i class="bi bi-trash3-fill me-2 text-danger"></i> Đã xóa
+              <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': activeTab === 'trashed'}">{{ trashedCount }}</span>
+            </a>
+          </li>
+        </ul>
       </div>
 
       <div class="card border-0 shadow-sm rounded-4 mb-4" :class="{'border-warning border-2': isReorderMode}">
@@ -30,7 +48,15 @@
             <span v-if="isFetching && !isLoading" class="spinner-border spinner-border-sm text-brand ms-2" title="Đang đồng bộ dữ liệu..."></span>
           </h6>
           
-          <div class="d-flex align-items-center gap-2">
+          <div class="d-flex align-items-center flex-wrap gap-2">
+            <select v-if="!isReorderMode" class="form-select form-select-sm" v-model="positionFilter" style="width: 200px;">
+              <option value="">Lọc vị trí trang</option>
+              <option value="home_slider">Slider Trang chủ</option>
+              <option value="home_story">Giữa trang: Di sản SORA</option>
+              <option value="category_top">Đầu trang Danh mục</option>
+              <option value="popup">Popup Sale</option>
+            </select>
+
             <button class="btn btn-sm px-3 py-2 fw-bold shadow-sm transition-all" 
                     :class="isReorderMode ? 'btn-warning text-dark' : 'btn-light border text-dark'"
                     @click="toggleReorderMode" :disabled="isFetching || isMutating">
@@ -91,15 +117,15 @@
                   <td class="px-4 py-3">
                     <div class="d-flex gap-2 align-items-center">
                       <!-- Tích hợp @error fallback image -->
-                      <div class="position-relative shadow-sm border rounded overflow-hidden bg-white" style="width: 80px; height: 45px;">
+                      <div class="position-relative shadow-sm border rounded overflow-hidden bg-white cursor-pointer" style="width: 80px; height: 45px;" @click="openPreview(banner.image_desktop, 'image')">
                         <img :src="getImageUrl(banner.image_desktop)" @error="handleImageError" class="w-100 h-100 object-fit-cover">
                         <span class="position-absolute bottom-0 start-0 bg-dark text-white opacity-75 fw-bold" style="font-size: 0.55rem; padding: 1px 4px;">PC</span>
                       </div>
-                      <div class="position-relative shadow-sm border rounded overflow-hidden bg-white" style="width: 30px; height: 45px;">
+                      <div class="position-relative shadow-sm border rounded overflow-hidden bg-white cursor-pointer" style="width: 30px; height: 45px;" @click="openPreview(banner.image_mobile, 'image')">
                         <img :src="getImageUrl(banner.image_mobile)" @error="handleImageError" class="w-100 h-100 object-fit-cover">
                         <span class="position-absolute bottom-0 start-0 bg-dark text-white opacity-75 fw-bold" style="font-size: 0.55rem; padding: 1px 2px;">MB</span>
                       </div>
-                      <div v-if="banner.video_url" class="position-relative shadow-sm border rounded overflow-hidden bg-dark d-flex align-items-center justify-content-center" style="width: 60px; height: 45px;" title="Video Banner">
+                      <div v-if="banner.video_url" class="position-relative shadow-sm border rounded overflow-hidden bg-dark d-flex align-items-center justify-content-center cursor-pointer" style="width: 60px; height: 45px;" title="Video Banner" @click="openPreview(banner.video_url, 'video')">
                         <video :src="getImageUrl(banner.video_url)" class="w-100 h-100 object-fit-cover opacity-75" autoplay loop muted></video>
                         <i class="bi bi-play-circle-fill text-white position-absolute fs-6 shadow-sm"></i>
                       </div>
@@ -109,9 +135,10 @@
                   <td class="px-4">
                     <div class="fw-bold text-dark mb-1 text-truncate" :title="banner.title">{{ banner.title }}</div>
                     <div class="text-muted small">
+                      <span class="badge bg-secondary bg-opacity-10 text-secondary border me-1"><i class="bi bi-pin-map me-1"></i>{{ getPositionName(banner.position) }}</span>
                       <i class="bi bi-building text-brand me-1"></i> 
                       <span v-if="banner.brand" class="badge bg-light text-dark border">{{ banner.brand.name }}</span>
-                      <span v-else class="badge bg-secondary text-white">Toàn hệ thống</span>
+                      <span v-else class="badge bg-secondary text-white border">Toàn hệ thống</span>
                     </div>
                   </td>
 
@@ -146,12 +173,28 @@
                       <button class="btn btn-sm btn-light text-danger shadow-sm border" @click="confirmDelete(banner.id)" title="Xóa" :disabled="isMutating"><i class="bi bi-trash"></i></button>
                     </template>
                     <template v-else>
-                      <button class="btn btn-sm btn-light text-success shadow-sm border" @click="handleRestore(banner.id)" title="Khôi phục" :disabled="isMutating"><i class="bi bi-arrow-counterclockwise"></i></button>
+                      <button class="btn btn-sm btn-light text-success shadow-sm border me-2" @click="handleRestore(banner.id)" title="Khôi phục" :disabled="isMutating"><i class="bi bi-arrow-counterclockwise"></i></button>
+                      <button class="btn btn-sm btn-light text-danger shadow-sm border" @click="handleForceDelete(banner.id)" title="Xóa vĩnh viễn" :disabled="isMutating"><i class="bi bi-trash3-fill"></i></button>
                     </template>
                   </td>
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL XEM NHANH ẢNH/VIDEO -->
+    <div v-if="previewMedia.show" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.8); z-index: 1055" @click="closePreview">
+      <div class="modal-dialog modal-dialog-centered modal-lg" @click.stop>
+        <div class="modal-content bg-transparent border-0">
+          <div class="modal-header border-0 pb-0 justify-content-end">
+            <button type="button" class="btn-close btn-close-white" @click="closePreview"></button>
+          </div>
+          <div class="modal-body text-center pt-0">
+            <img v-if="previewMedia.type === 'image'" :src="previewMedia.url" class="img-fluid rounded shadow" style="max-height: 80vh" />
+            <video v-if="previewMedia.type === 'video'" :src="previewMedia.url" class="w-100 rounded shadow" style="max-height: 80vh" controls autoplay></video>
           </div>
         </div>
       </div>
@@ -173,6 +216,8 @@ const API_URL = import.meta.env.VITE_API_BASE_URL;
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
 
 const isReorderMode = ref(false);
+const activeTab = ref('all');
+const positionFilter = ref('');
 const isSavingOrder = ref(false);
 const draggedIndex = ref(null);
 const dragOverIndex = ref(null);
@@ -186,6 +231,21 @@ const formatDate = (dateString) => {
   const d = new Date(dateString);
   return d.toLocaleString('vi-VN', {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit'});
 };
+
+const positionMap = {
+  'home_slider': 'Slider Trang chủ',
+  'home_story': 'Giữa trang: Di sản SORA',
+  'category_top': 'Đầu trang Danh mục',
+  'popup': 'Popup Sale'
+};
+const getPositionName = (val) => positionMap[val] || val;
+
+const previewMedia = ref({ url: '', type: '', show: false });
+const openPreview = (url, type) => {
+  if (!url) return;
+  previewMedia.value = { url: getImageUrl(url), type, show: true };
+};
+const closePreview = () => { previewMedia.value.show = false; };
 
 // --- TANSTACK QUERY: FETCH LIST ---
 const fetchBanners = async () => {
@@ -217,9 +277,24 @@ watch(rawBanners, (newList) => {
 }, { immediate: true });
 
 // Sync data thô ra view, tách riêng logic Reorder
+const allCount = computed(() => localBanners.value.filter(b => !b.deleted_at).length);
+const trashedCount = computed(() => localBanners.value.filter(b => b.deleted_at).length);
+
 const displayBanners = computed(() => {
   if (isReorderMode.value) return reorderList.value.filter(Boolean);
-  return localBanners.value.filter(Boolean);
+  
+  let list = localBanners.value.filter(Boolean);
+  if (activeTab.value === 'trashed') {
+    list = list.filter(b => b.deleted_at);
+  } else {
+    list = list.filter(b => !b.deleted_at);
+  }
+
+  if (positionFilter.value) {
+    list = list.filter(b => b.position === positionFilter.value);
+  }
+
+  return list;
 });
 
 // --- MUTATIONS: CẬP NHẬT TRẠNG THÁI (OPTIMISTIC UPDATE) ---
@@ -274,13 +349,58 @@ const deleteMutation = useMutation({
   onSettled: () => { isMutating.value = false; queryClient.invalidateQueries({ queryKey: ['admin', 'banners'] }); }
 });
 
-const confirmDelete = (id) => {
-  Swal.fire({ title: 'Xóa Banner?', text: 'Banner sẽ được đưa vào thùng rác.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Xóa', confirmButtonColor: '#d33' }).then((res) => {
-    if (res.isConfirmed) {
-      deleteMutation.mutate(id);
-      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã đưa vào thùng rác', showConfirmButton: false, timer: 1500 });
-    }
+const confirmDelete = async (id) => {
+  const result = await Swal.fire({
+    title: 'Xóa tạm thời?',
+    text: "Bạn có thể khôi phục lại trong tab Đã xóa.",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc3545',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Có, chuyển vào thùng rác!',
+    cancelButtonText: 'Hủy'
   });
+  if (result.isConfirmed) { 
+    deleteMutation.mutate(id);
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã đưa vào thùng rác', showConfirmButton: false, timer: 1500 });
+  }
+};
+
+// --- MUTATIONS: XÓA VĨNH VIỄN ---
+const { mutate: forceDeleteBanner } = useMutation({
+  mutationFn: async (id) => {
+    const res = await adminApiClient.delete(`/banners/${id}/force`);
+    return id;
+  },
+  onMutate: async (id) => {
+    isMutating.value = true;
+    await queryClient.cancelQueries({ queryKey: ['admin', 'banners'] });
+    const prev = queryClient.getQueryData(['admin', 'banners']);
+    queryClient.setQueryData(['admin', 'banners'], old => old?.filter(b => b.id !== id));
+    return { prev };
+  },
+  onError: (err, id, context) => {
+    if(context?.prev) queryClient.setQueryData(['admin', 'banners'], context.prev);
+    Swal.fire('Lỗi', err.response?.data?.message || 'Xóa vĩnh viễn thất bại', 'error');
+  },
+  onSettled: () => { isMutating.value = false; }
+});
+
+const handleForceDelete = async (id) => {
+  const result = await Swal.fire({
+    title: 'Xóa vĩnh viễn?',
+    text: "Banner và tệp đính kèm sẽ bị xóa sạch khỏi ổ cứng. Hành động này không thể hoàn tác!",
+    icon: 'error',
+    showCancelButton: true,
+    confirmButtonColor: '#dc3545',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Xóa vĩnh viễn',
+    cancelButtonText: 'Hủy'
+  });
+  if (result.isConfirmed) { 
+    forceDeleteBanner(id); 
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa vĩnh viễn', showConfirmButton: false, timer: 1500 });
+  }
 };
 
 // --- MUTATIONS: KHÔI PHỤC ---
@@ -356,6 +476,12 @@ useAdminRefreshListener((payload) => {
 .btn-brand:hover { background-color: #007a67; color: white; }
 .btn-outline-brand { color: #009981; border-color: #009981; transition: 0.2s; } 
 .btn-outline-brand:hover { background-color: #009981; color: white; }
+
+.custom-tab { font-weight: 600 !important; color: #6c757d; border-bottom: 2px solid transparent !important; margin-bottom: -1px; transition: color 0.2s ease; }
+.custom-tab:hover { color: #009981; }
+.custom-tab.active-tab { color: #009981 !important; border-bottom: 2px solid #009981 !important; }
+.tab-badge { font-size: 0.75rem; font-weight: 600; background-color: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6; transition: all 0.2s ease; }
+.active-badge { background-color: #e6f5f2 !important; color: #009981 !important; border-color: #009981 !important; }
 
 .cursor-move { cursor: grab; }
 .drag-over { border-top: 3px solid #ffc107 !important; background-color: #fff9e6 !important; }

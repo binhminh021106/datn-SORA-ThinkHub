@@ -265,6 +265,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 import StatusConfirmSelect from '@/components/admin/StatusConfirmSelect.vue';
+import adminApiClient from '@/utils/adminApiClient.js';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 const queryClient = useQueryClient();
@@ -283,13 +284,9 @@ const isMutating = ref(false);
 const selectedCoupon = ref(null);
 let quickViewModalInstance = null;
 
-const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
-
 const fetchCoupons = async () => {
-  const res = await fetch(`${API_URL}/admin/coupons`, { headers: getHeaders() });
-  if (!res.ok) throw new Error('Network error');
-  const json = await res.json();
-  return json.data || json; 
+  const res = await adminApiClient.get(`/coupons`);
+  return res.data.data; 
 };
 
 // --- TANSTACK QUERY ---

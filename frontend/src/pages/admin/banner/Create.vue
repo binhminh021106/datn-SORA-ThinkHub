@@ -129,10 +129,12 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 import adminApiClient from '@/utils/adminApiClient.js';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
+import { useQueryClient } from '@tanstack/vue-query';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 const router = useRouter();
+const queryClient = useQueryClient();
 const isSaving = ref(false);
 const form = ref({ title: '', brand_id: '', target_url: '', position: 'home_slider', start_date: '', end_date: '', isActive: true });
 const brands = ref([]);
@@ -183,11 +185,9 @@ const handleUpload = (e, type) => {
 onMounted(async () => {
   try {
     const res = await adminApiClient.get(`/brands`);
-    if (res.ok) {
-        const data = await res.json();
-        // Lọc lấy brand đang active thôi
-        brands.value = data.data.filter(b => b.status === 'active' && !b.deleted_at);
-    }
+    const data = res.data;
+    // Lọc lấy brand đang active thôi
+    brands.value = data.data.filter(b => b.status === 'active' && !b.deleted_at);
   } catch(e) {}
 });
 
@@ -225,15 +225,18 @@ const submitBanner = async () => {
 
   try {
     const res = await adminApiClient.post(`/banners`, fd);
-    const data = await res.json();
-    if (res.ok) {
-      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã tạo banner', showConfirmButton: false, timer: 1500 });
-      router.push({ name: 'admin-banners' });
-    } else {
-      Swal.fire('Lỗi', data.message || 'Dữ liệu không hợp lệ', 'error');
-    }
+    const data = res.data;
+    
+    await queryClient.invalidateQueries({
+      queryKey: ['admin', 'banners'],
+      refetchType: 'all'
+    });
+    
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã tạo banner', showConfirmButton: false, timer: 1500 });
+    router.push({ name: 'admin-banners' });
   } catch(e) { 
-    Swal.fire('Lỗi', 'Mất kết nối', 'error'); 
+    const errData = e.response?.data;
+    Swal.fire('Lỗi', errData?.message || 'Mất kết nối', 'error'); 
   } finally { 
     isSaving.value = false; 
   }

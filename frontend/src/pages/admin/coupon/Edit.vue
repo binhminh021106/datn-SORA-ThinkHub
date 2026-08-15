@@ -51,13 +51,8 @@
                                 <h4 class="fw-bold mb-0">{{ usage_count }} <span class="fs-6 text-muted fw-normal">/ {{ form.usage_limit }} lượt</span></h4>
                             </div>
 
-                            <div class="text-start border-top pt-3 mt-auto">
-                                <label class="form-label fw-bold">Cập nhật trạng thái</label>
-                                <select class="form-select fw-bold shadow-sm" v-model="form.status" :class="form.status === 'active' ? 'text-success border-success bg-success bg-opacity-10' : 'text-danger border-danger bg-danger bg-opacity-10'">
-                                    <option value="active" class="text-success fw-bold">Hoạt động (Active)</option>
-                                    <option value="inactive" class="text-danger fw-bold">Tạm dừng (Inactive)</option>
-                                </select>
-                                <div class="invalid-feedback d-block" v-if="errors.status">{{ errors.status?.[0] }}</div>
+                            <div class="mb-3 text-start mt-auto">
+                                <p class="small text-muted mb-0"><i class="bi bi-clock me-1"></i>Hết hạn: {{ form.expires_at ? formatDate(form.expires_at) : 'Không có' }}</p>
                             </div>
                         </div>
                     </div>
@@ -74,24 +69,28 @@
                                 </div>
 
                                 <div class="row">
-                                    <div class="col-md-12 mb-3">
-                                        <label class="form-label fw-bold">Tên chương trình giảm giá <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" v-model="form.name" :class="{'is-invalid': errors.name}">
-                                        <div class="invalid-feedback">{{ errors.name?.[0] }}</div>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="form-floating">
+                                            <input type="text" class="form-control" id="nameInput" v-model="form.name" :class="{'is-invalid': errors.name}" placeholder="Tên chương trình">
+                                            <label for="nameInput" class="fw-bold">Tên chương trình giảm giá <span class="text-danger">*</span></label>
+                                        </div>
+                                        <div class="invalid-feedback d-block" v-if="errors.name">{{ errors.name?.[0] }}</div>
                                     </div>
                                     
-                                    <div class="col-md-12 mb-4">
-                                        <label class="form-label fw-bold">Mã Code <span class="text-danger">*</span></label>
+                                    <div class="col-md-6 mb-4">
                                         <div class="input-group">
-                                            <input type="text" class="form-control font-monospace fw-bold text-uppercase text-brand" v-model="form.code" :class="{'is-invalid': errors.code}"
-                                                style="letter-spacing: 1px;" @input="form.code = form.code.toUpperCase()">
+                                            <div class="form-floating">
+                                                <input type="text" class="form-control font-monospace fw-bold text-uppercase text-brand" id="codeInput" v-model="form.code" :class="{'is-invalid': errors.code}"
+                                                    style="letter-spacing: 1px;" placeholder="Mã giảm giá" @input="form.code = form.code.toUpperCase()">
+                                                <label for="codeInput" class="fw-bold">Mã Code <span class="text-danger">*</span></label>
+                                            </div>
                                         </div>
                                         <div class="invalid-feedback d-block" v-if="errors.code">{{ errors.code?.[0] }}</div>
                                     </div>
 
                                     <h6 class="fw-bold mb-3 border-bottom pb-2">Thiết lập Giá trị</h6>
 
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-md-4 mb-3">
                                         <label class="form-label fw-bold">Loại giảm giá <span class="text-danger">*</span></label>
                                         <select class="form-select" v-model="form.type" :class="{'is-invalid': errors.type}">
                                             <option value="fixed">Số tiền cố định (VNĐ)</option>
@@ -100,39 +99,55 @@
                                         <div class="invalid-feedback">{{ errors.type?.[0] }}</div>
                                     </div>
 
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-md-4 mb-3">
                                         <label class="form-label fw-bold">Giá trị giảm <span class="text-danger">*</span></label>
                                         <div class="input-group">
                                             <input type="number" class="form-control" v-model.number="form.value" :class="{'is-invalid': errors.value}" min="1">
                                             <span class="input-group-text bg-light fw-bold">{{ form.type === 'percentage' ? '%' : 'VNĐ' }}</span>
                                         </div>
+                                        <small class="text-brand fw-bold mt-1 d-block" v-if="form.type === 'fixed' && form.value">{{ formatCurrency(form.value) }}</small>
                                         <div class="invalid-feedback d-block" v-if="errors.value">{{ errors.value?.[0] }}</div>
                                     </div>
 
-                                    <div class="col-md-12 mb-4">
-                                        <label class="form-label fw-bold">Mức chi tiêu tối thiểu (VNĐ) <span class="text-danger">*</span></label>
+                                    <div class="col-md-4 mb-4">
+                                        <label class="form-label fw-bold">Chi tiêu tối thiểu (VNĐ) <span class="text-danger">*</span></label>
                                         <input type="number" class="form-control" v-model.number="form.min_spend" :class="{'is-invalid': errors.min_spend}" min="0">
+                                        <small class="text-brand fw-bold mt-1 d-block" v-if="form.min_spend">{{ formatCurrency(form.min_spend) }}</small>
                                         <div class="invalid-feedback">{{ errors.min_spend?.[0] }}</div>
+                                        <small class="text-muted fst-italic d-block mt-1">Đơn tối thiểu</small>
                                     </div>
 
                                     <h6 class="fw-bold mb-3 border-bottom pb-2">Thiết lập Giới hạn & Thời gian</h6>
 
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label fw-bold">Tổng lượt sử dụng <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control" v-model.number="form.usage_limit" :class="{'is-invalid': errors.usage_limit}" min="1">
-                                        <div class="invalid-feedback">{{ errors.usage_limit?.[0] }}</div>
+                                        <div class="form-floating">
+                                            <input type="number" class="form-control" id="usageLimitInput" v-model.number="form.usage_limit" :class="{'is-invalid': errors.usage_limit}" min="1" placeholder="100">
+                                            <label for="usageLimitInput" class="fw-bold">Tổng lượt sử dụng <span class="text-danger">*</span></label>
+                                        </div>
+                                        <div class="invalid-feedback d-block" v-if="errors.usage_limit">{{ errors.usage_limit?.[0] }}</div>
                                     </div>
 
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label fw-bold">Lượt dùng mỗi khách hàng <span class="text-danger">*</span></label>
-                                        <input type="number" class="form-control" v-model.number="form.usage_limit_per_user" :class="{'is-invalid': errors.usage_limit_per_user}" min="1">
-                                        <div class="invalid-feedback">{{ errors.usage_limit_per_user?.[0] }}</div>
+                                        <div class="form-floating">
+                                            <input type="number" class="form-control" id="usageLimitPerUserInput" v-model.number="form.usage_limit_per_user" :class="{'is-invalid': errors.usage_limit_per_user}" min="1" placeholder="Không giới hạn">
+                                            <label for="usageLimitPerUserInput" class="fw-bold">Lượt dùng mỗi khách hàng <span class="text-muted fw-normal fst-italic">(Tùy chọn)</span></label>
+                                        </div>
+                                        <div class="invalid-feedback d-block" v-if="errors.usage_limit_per_user">{{ errors.usage_limit_per_user?.[0] }}</div>
                                     </div>
 
-                                    <div class="col-md-12 mb-3">
-                                        <label class="form-label fw-bold">Ngày hết hạn <span class="text-danger">*</span></label>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label fw-bold">Ngày hết hạn <span class="text-muted fw-normal fst-italic">(Tùy chọn)</span></label>
                                         <input type="datetime-local" class="form-control" v-model="form.expires_at" :class="{'is-invalid': errors.expires_at}">
                                         <div class="invalid-feedback">{{ errors.expires_at?.[0] }}</div>
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label fw-bold">Trạng thái <span class="text-danger">*</span></label>
+                                        <select class="form-select" v-model="form.status" :class="{'is-invalid': errors.status}">
+                                            <option value="active">Hoạt động (Active)</option>
+                                            <option value="inactive">Tạm dừng (Inactive)</option>
+                                        </select>
+                                        <div class="invalid-feedback">{{ errors.status?.[0] }}</div>
                                     </div>
 
                                 </div>
@@ -162,6 +177,7 @@ import { ref, watchEffect } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
+import adminApiClient from '@/utils/adminApiClient.js';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 const queryClient = useQueryClient();
@@ -177,16 +193,20 @@ const form = ref({
     name: '', code: '', type: '', value: 0, min_spend: 0, usage_limit: 0, usage_limit_per_user: 0, expires_at: '', status: ''
 });
 
-const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}`, 'Content-Type': 'application/json' });
-
 const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
 
 const formatForInput = (dateString) => {
   if (!dateString) return '';
   const d = new Date(dateString);
-  if (isNaN(d.getTime())) return '';
+  if (isNaN(d.getTime())) return null;
   const pad = (n) => n.toString().padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+const formatDate = (dateString) => {
+    if (!dateString) return 'Không có';
+    const d = new Date(dateString);
+    return d.toLocaleString('vi-VN', {day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit'});
 };
 
 const formatForPayload = (dateLocal) => {
@@ -196,10 +216,8 @@ const formatForPayload = (dateLocal) => {
 
 // 1. Fetch/Lấy Cache Coupon Detail (Triệt tiêu mồ côi)
 const fetchCouponDetail = async () => {
-  const res = await fetch(`${API_URL}/admin/coupons/${couponId}`, { headers: getHeaders() });
-  if (!res.ok) throw new Error('Không thể tải coupon');
-  const json = await res.json();
-  return json.data;
+  const res = await adminApiClient.get(`/coupons/${couponId}`);
+  return res.data.data;
 };
 
 const { data: couponData, isLoading, isFetching, refetch } = useQuery({
@@ -237,18 +255,15 @@ const handleRestore = async () => {
 // 2. Mutation Cập nhật API (Cập nhật Cache danh sách khi thành công)
 const { mutate: updateCoupon, isLoading: isUpdating } = useMutation({
   mutationFn: async (payload) => {
-    const res = await fetch(`${API_URL}/admin/coupons/${couponId}`, { 
-        method: 'PATCH', // Route AdminUpdateCouponRequest map vào PATCH theo api.php
-        headers: getHeaders(), 
-        body: JSON.stringify(payload) 
-    });
-    
-    const json = await res.json();
-    if (!res.ok) {
-        if (res.status === 422) throw { isValidation: true, errors: json.errors };
-        throw new Error(json.message || 'Lỗi hệ thống');
+    try {
+        const res = await adminApiClient.patch(`/coupons/${couponId}`, payload);
+        return res.data.data;
+    } catch (err) {
+        if (err.response && err.response.status === 422) {
+            throw { isValidation: true, errors: err.response.data.errors };
+        }
+        throw new Error(err.response?.data?.message || 'Lỗi hệ thống');
     }
-    return json.data;
   },
   onSuccess: (updatedData) => {
     queryClient.setQueryData(['admin', 'coupon', couponId], updatedData);
@@ -274,10 +289,14 @@ const submitForm = () => {
     if (!form.value.name || form.value.name.trim().length < 3) { Swal.fire('Lỗi', 'Tên chương trình phải có ít nhất 3 ký tự.', 'warning'); return; }
     if (!form.value.code || form.value.code.trim().length < 5 || !/^[A-Z0-9]+$/.test(form.value.code)) { Swal.fire('Lỗi', 'Mã code phải có ít nhất 5 ký tự và chỉ chứa chữ in hoa, số.', 'warning'); return; }
     if (form.value.type === 'fixed' && form.value.value < 1000) { Swal.fire('Lỗi', 'Mức giảm giá tiền mặt phải từ 1.000 VNĐ trở lên.', 'warning'); return; }
-    if (form.value.type === 'percentage' && (form.value.value < 1 || form.value.value > 100)) { Swal.fire('Lỗi', 'Mức giảm giá phần trăm phải từ 1% đến 100%.', 'warning'); return; }
-    if (form.value.usage_limit_per_user > form.value.usage_limit) { Swal.fire('Lỗi', 'Giới hạn mỗi user không được vượt quá tổng số lượng mã.', 'warning'); return; }
+    if (form.value.type === 'percentage' && (form.value.value < 1 || form.value.value >= 100)) { Swal.fire('Lỗi', 'Mức giảm giá phần trăm phải từ 1% đến 99%.', 'warning'); return; }
+    if (form.value.usage_limit_per_user && form.value.usage_limit_per_user > form.value.usage_limit) { Swal.fire('Lỗi', 'Giới hạn mỗi user không được vượt quá tổng số lượng mã.', 'warning'); return; }
     errors.value = {}; 
     const payload = { ...form.value, expires_at: formatForPayload(form.value.expires_at) };
+    if (payload.usage_limit_per_user === '' || payload.usage_limit_per_user === null) {
+        payload.usage_limit_per_user = null;
+    }
+
     updateCoupon(payload);
 };
 </script>
@@ -293,4 +312,5 @@ const submitForm = () => {
 .form-control:focus, .form-select:focus { border-color: #009981; box-shadow: 0 0 0 0.25rem rgba(0, 153, 129, 0.25); }
 .border-dashed { border-style: dashed !important; border-width: 2px !important; }
 .invalid-feedback { font-size: 0.8rem; font-weight: 500; }
+.form-floating > label { transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important; }
 </style>

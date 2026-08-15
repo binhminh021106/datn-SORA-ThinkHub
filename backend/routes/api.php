@@ -439,6 +439,7 @@ Route::prefix('admin')->group(function () {
         Route::middleware(['check.module:admin_banners'])->group(function () {
             Route::apiResource('banners', AdminBannerController::class);
             Route::post('banners/{id}/restore', [AdminBannerController::class, 'restore']);
+            Route::delete('banners/{id}/force', [AdminBannerController::class, 'forceDelete']);
             Route::post('banners/reorder', [AdminBannerController::class, 'reorder']);
         });
 
