@@ -14,23 +14,46 @@
         </div>
       </div>
 
-      <!-- LOGO CONFIGURATION -->
+      <!-- SETTINGS TABS CONTAINER -->
       <div class="card custom-card border-0 shadow-sm rounded-4 mb-3">
-        <div class="card-header bg-primary-soft border-bottom pt-3 pb-3 px-3 d-flex align-items-center gap-2">
-          <div class="icon-circle bg-white text-primary flex-shrink-0 border" style="width: 32px; height: 32px;">
-            <i class="bi bi-images"></i>
-          </div>
-          <h5 class="fw-bold mb-0 text-dark">1. Cấu hình Thư viện Logo & Header</h5>
+        <!-- Tabs Header -->
+        <div class="card-header bg-white border-bottom-0 pt-3 pb-0 px-3 rounded-top-4">
+          <ul class="nav nav-tabs-custom mb-3">
+            <li class="nav-item">
+              <a class="nav-link d-flex align-items-center" :class="{ 'active': activeTab === 'logo' }" href="#" @click.prevent="activeTab = 'logo'">
+                <i class="bi bi-images me-2 fs-5"></i> Logo & Header
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link d-flex align-items-center" :class="{ 'active': activeTab === 'stats' }" href="#" @click.prevent="activeTab = 'stats'">
+                <i class="bi bi-bar-chart-line me-2 fs-5"></i> Thống kê Trang chủ
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link d-flex align-items-center" :class="{ 'active': activeTab === 'footer' }" href="#" @click.prevent="activeTab = 'footer'">
+                <i class="bi bi-layout-text-window-reverse me-2 fs-5"></i> Nội dung Footer
+              </a>
+            </li>
+          </ul>
         </div>
-        <div class="card-body p-3">
-          <div class="row g-3">
-            <!-- Logo Gallery -->
-            <div class="col-lg-7">
-              <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
-                Thư viện Logo 
-                <span v-if="isFetchingGallery && !isLoadingGallery" class="spinner-border spinner-border-sm text-primary"></span>
-              </h6>
-              <div class="row g-3 pb-2" style="max-height: 400px; overflow-y: auto; overflow-x: hidden; padding-top: 5px; padding-right: 5px;">
+
+        <div class="card-body p-0 d-grid">
+          
+          <!-- ================= TAB 1: LOGO & HEADER ================= -->
+          <div :class="activeTab === 'logo' ? 'tab-pane-active' : 'tab-pane-inactive'" style="grid-area: 1 / 1;">
+            <div class="p-4">
+              <div class="row g-4">
+                <!-- Logo Gallery -->
+                <div class="col-lg-7">
+                  <div class="card border shadow-none h-100 rounded-4">
+                    <div class="card-header bg-transparent border-bottom-0 pt-3 pb-0">
+                      <h6 class="fw-bold mb-0 d-flex align-items-center gap-2 text-dark">
+                        <i class="bi bi-collection text-primary"></i> Thư viện Logo 
+                        <span v-if="isFetchingGallery && !isLoadingGallery" class="spinner-border spinner-border-sm text-primary"></span>
+                      </h6>
+                    </div>
+                    <div class="card-body">
+                      <div class="row g-3 pb-2" style="max-height: 380px; overflow-y: auto; overflow-x: hidden;">
                 <!-- Default Logo Card -->
                 <div class="col-6 col-md-4">
                    <div class="border border-2 rounded-3 p-2 text-center cursor-pointer transition-all position-relative"
@@ -64,19 +87,26 @@
                       </button>
                    </div>
                 </div>
-              </div>
-              
-              <div class="alert alert-info mt-3 py-2 px-3 small mb-0 d-flex align-items-center gap-2">
-                 <i class="bi bi-lightbulb-fill text-warning fs-5"></i>
-                 <span><strong>Mẹo:</strong> Hãy sử dụng file PNG có <strong>nền trong suốt (transparent)</strong>. Tránh dùng JPG có nền trắng để logo hiển thị đẹp nhất trên các nền màu tối.</span>
-              </div>
-            </div>
+                      </div>
+                      
+                      <div class="alert alert-info mt-3 py-2 px-3 small mb-0 d-flex align-items-center gap-2 border-0 bg-info-soft">
+                         <i class="bi bi-lightbulb-fill text-warning fs-5 flex-shrink-0"></i>
+                         <span><strong>Mẹo:</strong> Sử dụng file PNG <strong>nền trong suốt</strong> để logo hiển thị đẹp nhất trên các nền màu tối.</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-            <!-- Upload New Logo -->
-            <div class="col-lg-5">
-               <h6 class="fw-bold mb-3">Tải lên / Chỉnh sửa Logo</h6>
-               
-               <!-- Tải ảnh mới lên -->
+                <!-- Upload New Logo -->
+                <div class="col-lg-5">
+                  <div class="card border shadow-none h-100 rounded-4">
+                    <div class="card-header bg-transparent border-bottom-0 pt-3 pb-0">
+                       <h6 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                         <i class="bi bi-cloud-upload text-primary"></i> Tải lên & Áp dụng
+                       </h6>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                       <!-- Tải ảnh mới lên -->
                <div v-if="!hasImageToCrop" class="position-relative border border-dashed border-2 rounded-4 p-3 text-center bg-light-soft hover-bg-light transition-all cursor-pointer d-flex flex-column justify-content-center align-items-center" style="min-height: 150px;">
                   <div class="bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center mb-3" style="width: 50px; height: 50px;">
                      <i class="bi bi-cloud-arrow-up fs-4 text-primary"></i>
@@ -106,26 +136,28 @@
                    </div>
                </div>
                
-               <!-- Cấu hình Mục tiêu Áp dụng -->
-               <div class="mt-3 border rounded-4 p-3 bg-white shadow-sm border-primary">
-                   <h6 class="fw-bold mb-3 text-dark"><i class="bi bi-sliders me-2 text-primary"></i>Phạm vi Áp dụng Logo:</h6>
-                   <div class="d-flex flex-column gap-2 ps-2">
-                      <div class="form-check">
-                         <input class="form-check-input" type="radio" name="logoApply" id="applyBoth" value="both" v-model="logoApplyTarget">
-                         <label class="form-check-label fw-semibold" for="applyBoth">Áp dụng cho Cả Header & Footer</label>
-                      </div>
-                      <div class="form-check">
-                         <input class="form-check-input" type="radio" name="logoApply" id="applyHeader" value="header" v-model="logoApplyTarget">
-                         <label class="form-check-label fw-semibold" for="applyHeader">Chỉ áp dụng Header (Footer giữ nguyên)</label>
-                      </div>
-                      <div class="form-check">
-                         <input class="form-check-input" type="radio" name="logoApply" id="applyFooter" value="footer" v-model="logoApplyTarget">
-                         <label class="form-check-label fw-semibold text-danger" for="applyFooter">Chỉ áp dụng Footer (Nền tối)</label>
-                      </div>
-                   </div>
-               </div>
-            </div>
-          </div>
+                       <!-- Cấu hình Mục tiêu Áp dụng -->
+                       <div class="mt-auto border rounded-4 p-3 bg-light-soft border-primary-subtle">
+                           <h6 class="fw-bold mb-3 text-dark font-size-sm"><i class="bi bi-sliders me-2 text-primary"></i>Phạm vi Áp dụng Logo:</h6>
+                           <div class="d-flex flex-column gap-2 ps-2">
+                              <div class="form-check">
+                                 <input class="form-check-input" type="radio" name="logoApply" id="applyBoth" value="both" v-model="logoApplyTarget">
+                                 <label class="form-check-label fw-semibold font-size-sm text-dark" for="applyBoth">Áp dụng cho Cả Header & Footer</label>
+                              </div>
+                              <div class="form-check">
+                                 <input class="form-check-input" type="radio" name="logoApply" id="applyHeader" value="header" v-model="logoApplyTarget">
+                                 <label class="form-check-label fw-semibold font-size-sm text-dark" for="applyHeader">Chỉ áp dụng Header (Footer giữ nguyên)</label>
+                              </div>
+                              <div class="form-check">
+                                 <input class="form-check-input" type="radio" name="logoApply" id="applyFooter" value="footer" v-model="logoApplyTarget">
+                                 <label class="form-check-label fw-semibold font-size-sm text-danger" for="applyFooter">Chỉ áp dụng Footer (Nền tối)</label>
+                              </div>
+                           </div>
+                       </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
           <!-- Live Header Preview -->
           <div class="mt-3 border rounded-4 overflow-hidden shadow-sm">
@@ -139,94 +171,96 @@
                 </div>
              </div>
           </div>
-        </div>
-        <div class="card-footer bg-white p-3 text-end">
-            <button @click="saveLogoSettings" type="button" class="btn btn-primary rounded-pill px-3 py-2 fw-bold shadow-sm" :disabled="isSavingHeader || !isInitialized">
-               <span v-if="isSavingHeader" class="spinner-border spinner-border-sm me-2"></span>
-               <i v-else class="bi bi-save me-2"></i> LƯU CẤU HÌNH LOGO
-            </button>
-        </div>
-      </div>
-
-
-      <!-- HOME STATS BUILDER -->
-      <div class="card custom-card border-0 shadow-sm rounded-4 mb-3">
-        <div class="card-header bg-warning-soft border-bottom pt-3 pb-3 px-3 d-flex align-items-center gap-2">
-          <div class="icon-circle bg-white text-warning flex-shrink-0 border" style="width: 32px; height: 32px;">
-            <i class="bi bi-bar-chart-line"></i>
+            </div>
+            <div class="bg-light p-3 text-end border-top">
+                <button @click="saveLogoSettings" type="button" class="btn btn-primary rounded-pill px-3 py-2 fw-bold shadow-sm" :disabled="isSavingHeader || !isInitialized">
+                   <span v-if="isSavingHeader" class="spinner-border spinner-border-sm me-2"></span>
+                   <i v-else class="bi bi-save me-2"></i> LƯU CẤU HÌNH LOGO
+                </button>
+            </div>
           </div>
-          <h5 class="fw-bold mb-0 text-dark">Thống kê Trang chủ (Home Stats)</h5>
-        </div>
-        <div class="card-body p-3">
+
+          <!-- ================= TAB 2: THỐNG KÊ TRANG CHỦ ================= -->
+          <div :class="activeTab === 'stats' ? 'tab-pane-active' : 'tab-pane-inactive'" style="grid-area: 1 / 1;">
+            <div class="p-4">
            <div class="row g-3 mb-3">
              <div class="col-lg-4 col-md-6" v-for="(stat, index) in homeStats" :key="'stat-'+index">
                 <div class="border rounded-3 p-3 bg-light-soft h-100 border-top border-3 border-warning">
                    <div class="d-flex align-items-center gap-2 mb-3">
                      <span class="badge bg-warning text-dark rounded-circle p-2">{{ index + 1 }}</span>
                    </div>
-                   <div class="row g-2 mb-2">
+                   <div class="row g-2 mb-3">
                        <div class="col-6">
-                           <label :for="'stat-value-' + index" class="form-label fw-semibold font-size-sm mb-1">Số đếm</label>
-                           <input :id="'stat-value-' + index" type="number" v-model.number="stat.value" class="form-control form-control-sm fw-bold text-dark" placeholder="Vd: 90">
+                           <div class="form-floating">
+                             <input :id="'stat-value-' + index" type="number" v-model.number="stat.value" class="form-control fw-bold text-dark" placeholder="Vd: 90">
+                             <label :for="'stat-value-' + index" class="text-muted">Số đếm</label>
+                           </div>
                        </div>
                        <div class="col-6">
-                           <label :for="'stat-suffix-' + index" class="form-label fw-semibold font-size-sm mb-1">Hậu tố</label>
-                           <input :id="'stat-suffix-' + index" type="text" v-model="stat.suffix" class="form-control form-control-sm font-monospace text-primary" placeholder="Vd: %">
+                           <div class="form-floating">
+                             <input :id="'stat-suffix-' + index" type="text" v-model="stat.suffix" class="form-control font-monospace text-primary" placeholder="Vd: %">
+                             <label :for="'stat-suffix-' + index" class="text-muted">Hậu tố</label>
+                           </div>
                        </div>
                    </div>
-                   <label :for="'stat-label-' + index" class="form-label fw-semibold font-size-sm mb-1">Tiêu đề (Nhãn)</label>
-                   <input :id="'stat-label-' + index" type="text" v-model="stat.label" class="form-control form-control-sm text-muted" placeholder="Vd: KHÁCH HÀNG HÀI LÒNG">
+                   <div class="form-floating">
+                     <input :id="'stat-label-' + index" type="text" v-model="stat.label" class="form-control text-muted fw-semibold" placeholder="Vd: KHÁCH HÀNG HÀI LÒNG">
+                     <label :for="'stat-label-' + index" class="text-muted">Tiêu đề (Nhãn)</label>
+                   </div>
                 </div>
              </div>
            </div>
-        </div>
-        <div class="card-footer bg-white p-3 text-end">
-            <button @click="saveHomeStatsSettings" type="button" class="btn btn-warning text-dark rounded-pill px-3 py-2 fw-bold shadow-sm" :disabled="isSavingHomeStats || !isInitialized">
-               <span v-if="isSavingHomeStats" class="spinner-border spinner-border-sm me-2"></span>
-               <i v-else class="bi bi-save me-2"></i> LƯU THỐNG KÊ
-            </button>
-        </div>
-      </div>
+            </div>
 
-      <!-- Live Home Stats Preview -->
-      <div class="mt-3 mb-3 border rounded-4 overflow-hidden shadow-sm">
-          <div class="bg-dark text-white pt-2 pb-2 px-3 d-flex justify-content-between align-items-center">
-            <span class="fw-bold font-size-xs text-uppercase letter-spacing-1"><i class="bi bi-display me-2"></i>Live Preview Home Stats</span>
-            <span class="badge bg-success">Real-time</span>
-          </div>
-          <div class="w-100 overflow-x-auto bg-light border-bottom">
-            <div class="min-w-100 pointer-events-none" style="pointer-events: none;">
-                <HomeStatsBand :stats="homeStats" />
+            <!-- Live Home Stats Preview (inside Tab 2) -->
+            <div class="mx-4 mb-4 border rounded-4 overflow-hidden shadow-sm">
+                <div class="bg-dark text-white pt-2 pb-2 px-3 d-flex justify-content-between align-items-center">
+                  <span class="fw-bold font-size-xs text-uppercase letter-spacing-1"><i class="bi bi-display me-2"></i>Live Preview Home Stats</span>
+                  <span class="badge bg-success">Real-time</span>
+                </div>
+                <div class="w-100 overflow-x-auto bg-light">
+                  <div class="min-w-100 pointer-events-none" style="pointer-events: none;">
+                      <HomeStatsBand :stats="homeStats" />
+                  </div>
+                </div>
+            </div>
+            
+            <div class="bg-light p-3 text-end border-top">
+                <button @click="saveHomeStatsSettings" type="button" class="btn btn-warning text-dark rounded-pill px-3 py-2 fw-bold shadow-sm" :disabled="isSavingHomeStats || !isInitialized">
+                   <span v-if="isSavingHomeStats" class="spinner-border spinner-border-sm me-2"></span>
+                   <i v-else class="bi bi-save me-2"></i> LƯU THỐNG KÊ
+                </button>
             </div>
           </div>
-      </div>
 
-      <!-- FOOTER BUILDER -->
-      <div class="card custom-card border-0 shadow-sm rounded-4 mb-3">
-        <div class="card-header bg-info-soft border-bottom pt-3 pb-3 px-3 d-flex align-items-center gap-2">
-          <div class="icon-circle bg-white text-info flex-shrink-0 border" style="width: 32px; height: 32px;">
-            <i class="bi bi-layout-text-window-reverse"></i>
-          </div>
-          <h5 class="fw-bold mb-0 text-dark">2. Xây dựng Nội dung Footer</h5>
-        </div>
-        <div class="card-body p-3">
+          <!-- ================= TAB 3: FOOTER BUILDER ================= -->
+          <div :class="activeTab === 'footer' ? 'tab-pane-active' : 'tab-pane-inactive'" style="grid-area: 1 / 1;">
+            <div class="p-4">
            
-           <div class="row g-3 mb-3">
+           <div class="row g-4 mb-3">
              <div class="col-lg-12">
-               <label class="form-label fw-semibold font-size-sm">Slogan (Dưới Logo Footer)</label>
-               <textarea v-model="footerBrandDesc" rows="2" class="form-control bg-light" placeholder="Nhập đoạn giới thiệu ngắn..."></textarea>
+               <div class="form-floating">
+                 <textarea id="footerBrandDesc" v-model="footerBrandDesc" class="form-control bg-light" placeholder="Nhập đoạn giới thiệu ngắn..." style="height: 80px"></textarea>
+                 <label for="footerBrandDesc" class="text-muted">Slogan (Dưới Logo Footer)</label>
+               </div>
              </div>
              <div class="col-lg-4">
-               <label class="form-label fw-semibold font-size-sm">Địa chỉ hiển thị</label>
-               <input type="text" v-model="footerAddress" class="form-control bg-light" placeholder="123 Đường Ngọc Hồi, Hà Nội">
+               <div class="form-floating">
+                 <input id="footerAddress" type="text" v-model="footerAddress" class="form-control bg-light" placeholder="123 Đường Ngọc Hồi, Hà Nội">
+                 <label for="footerAddress" class="text-muted">Địa chỉ hiển thị</label>
+               </div>
              </div>
              <div class="col-lg-4">
-               <label class="form-label fw-semibold font-size-sm">Email hiển thị</label>
-               <input type="text" v-model="footerEmail" class="form-control bg-light" placeholder="SORA@GMAIL.COM">
+               <div class="form-floating">
+                 <input id="footerEmail" type="text" v-model="footerEmail" class="form-control bg-light" placeholder="SORA@GMAIL.COM">
+                 <label for="footerEmail" class="text-muted">Email hiển thị</label>
+               </div>
              </div>
              <div class="col-lg-4">
-               <label class="form-label fw-semibold font-size-sm">Nội dung Bản quyền (Copyright)</label>
-               <input type="text" v-model="footerCopyright" class="form-control bg-light" placeholder="© 2026 SORA JEWELRY...">
+               <div class="form-floating">
+                 <input id="footerCopyright" type="text" v-model="footerCopyright" class="form-control bg-light" placeholder="© 2026 SORA JEWELRY...">
+                 <label for="footerCopyright" class="text-muted">Nội dung Bản quyền (Copyright)</label>
+               </div>
              </div>
            </div>
 
@@ -238,13 +272,22 @@
                 <div class="border rounded-3 p-3 bg-light-soft h-100 border-top border-3 border-warning">
                    <div class="d-flex align-items-center gap-2 mb-3">
                      <span class="badge bg-warning text-dark rounded-circle p-2">{{ index + 1 }}</span>
-                     <div class="input-group input-group-sm">
-                         <span class="input-group-text bg-white"><i :class="item.icon" class="text-primary"></i></span>
-                         <input type="text" v-model="item.icon" class="form-control font-monospace text-primary" placeholder="Icon class (vd: bi-truck)">
+                     <div class="input-group">
+                         <span class="input-group-text bg-white"><i :class="item.icon" class="text-primary fs-5"></i></span>
+                         <div class="form-floating flex-grow-1">
+                           <input :id="'trust-icon-' + index" type="text" v-model="item.icon" class="form-control font-monospace text-primary" placeholder="Icon class (vd: bi-truck)">
+                           <label :for="'trust-icon-' + index" class="text-muted">Icon class</label>
+                         </div>
                      </div>
                    </div>
-                   <input type="text" v-model="item.title" class="form-control form-control-sm fw-bold mb-2 text-uppercase" placeholder="Tiêu đề (Vd: GIAO HÀNG)">
-                   <input type="text" v-model="item.subtitle" class="form-control form-control-sm text-muted" placeholder="Mô tả phụ...">
+                   <div class="form-floating mb-2">
+                     <input :id="'trust-title-' + index" type="text" v-model="item.title" class="form-control fw-bold text-uppercase" placeholder="Tiêu đề">
+                     <label :for="'trust-title-' + index" class="text-muted">Tiêu đề (Vd: GIAO HÀNG)</label>
+                   </div>
+                   <div class="form-floating">
+                     <input :id="'trust-sub-' + index" type="text" v-model="item.subtitle" class="form-control text-muted" placeholder="Mô tả phụ">
+                     <label :for="'trust-sub-' + index" class="text-muted">Mô tả phụ</label>
+                   </div>
                 </div>
              </div>
            </div>
@@ -254,25 +297,35 @@
            <h6 class="fw-bold mb-3">Mạng xã hội (Cột phải cùng)</h6>
            <div class="row g-3">
              <div class="col-lg-3 col-md-6" v-for="(social, sIndex) in footerSocials" :key="'soc-'+sIndex">
-                <div class="border rounded-3 p-3 bg-light-soft d-flex flex-column gap-2">
+                <div class="border rounded-3 p-3 bg-light-soft d-flex flex-column gap-3">
                   <div class="d-flex gap-2">
-                     <div class="bg-white border rounded d-flex align-items-center justify-content-center flex-shrink-0" style="width: 38px; height: 38px;">
-                        <i :class="social.icon" class="text-primary fs-5"></i>
+                     <div class="bg-white border rounded d-flex align-items-center justify-content-center flex-shrink-0" style="width: 58px; height: 58px;">
+                        <i :class="social.icon" class="text-primary fs-4"></i>
                      </div>
-                     <select v-model="social.icon" class="form-select form-select-sm fw-semibold font-monospace">
-                       <option value="bi bi-facebook">Facebook</option>
-                       <option value="bi bi-youtube">YouTube</option>
-                       <option value="bi bi-instagram">Instagram</option>
-                       <option value="bi bi-tiktok">TikTok</option>
-                       <option value="bi bi-twitter-x">Twitter (X)</option>
-                       <option value="bi bi-globe">Website</option>
-                     </select>
+                     <div class="form-floating flex-grow-1">
+                       <select :id="'social-icon-' + sIndex" v-model="social.icon" class="form-select fw-semibold font-monospace">
+                         <option value="bi bi-facebook">Facebook</option>
+                         <option value="bi bi-youtube">YouTube</option>
+                         <option value="bi bi-instagram">Instagram</option>
+                         <option value="bi bi-tiktok">TikTok</option>
+                         <option value="bi bi-twitter-x">Twitter (X)</option>
+                         <option value="bi bi-globe">Website</option>
+                       </select>
+                       <label :for="'social-icon-' + sIndex">Biểu tượng</label>
+                     </div>
                   </div>
-                  <input type="text" v-model="social.title" class="form-control form-control-sm" placeholder="Tiêu đề (Vd: Theo dõi Facebook)">
-                  <input type="text" v-model="social.url" class="form-control form-control-sm font-monospace text-primary" placeholder="https://...">
+                  <div class="form-floating">
+                    <input :id="'social-title-' + sIndex" type="text" v-model="social.title" class="form-control fw-semibold" placeholder="Tiêu đề">
+                    <label :for="'social-title-' + sIndex" class="text-muted">Tiêu đề hiển thị</label>
+                  </div>
+                  <div class="form-floating">
+                    <input :id="'social-url-' + sIndex" type="text" v-model="social.url" class="form-control font-monospace text-primary" placeholder="https://...">
+                    <label :for="'social-url-' + sIndex" class="text-muted">Đường link</label>
+                  </div>
                 </div>
              </div>
            </div>
+
 
            <!-- LIVE PREVIEW FOOTER -->
            <div class="mt-3 border rounded-4 overflow-hidden shadow-sm">
@@ -286,14 +339,17 @@
                  </div>
               </div>
            </div>
-        </div>
-        <div class="card-footer bg-white p-3 text-end">
-            <button @click="saveFooterSettings" type="button" class="btn btn-info text-white rounded-pill px-3 py-2 fw-bold shadow-sm" :disabled="isSavingFooter || !isInitialized">
-               <span v-if="isSavingFooter" class="spinner-border spinner-border-sm me-2"></span>
-               <i v-else class="bi bi-save me-2"></i> LƯU CẤU HÌNH FOOTER
-            </button>
-        </div>
-      </div>
+            </div>
+            <div class="bg-light p-3 text-end border-top">
+                <button @click="saveFooterSettings" type="button" class="btn btn-info text-white rounded-pill px-3 py-2 fw-bold shadow-sm" :disabled="isSavingFooter || !isInitialized">
+                   <span v-if="isSavingFooter" class="spinner-border spinner-border-sm me-2"></span>
+                   <i v-else class="bi bi-save me-2"></i> LƯU CẤU HÌNH FOOTER
+                </button>
+            </div>
+          </div>
+
+        </div> <!-- /card-body -->
+      </div> <!-- /card container -->
       
       <!-- Modal Cropper (Full Screen) -->
       <div class="modal fade" id="cropperModal" tabindex="-1" aria-labelledby="cropperModalLabel" aria-hidden="true">
@@ -358,6 +414,7 @@ const BACKEND_URL = import.meta.env.VITE_API_BASE_URL;
 
 // --- GLOBAL STATE ---
 const isInitialized = ref(false);
+const activeTab = ref('logo');
 
 const getHeaders = () => {
   const token = localStorage.getItem('admin_token') || sessionStorage.getItem('adminToken') || localStorage.getItem('auth_token');
@@ -691,7 +748,8 @@ const saveLogoSettings = async () => {
         }
     } catch (error) {
         console.error(error);
-        Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Đã có lỗi xảy ra khi lưu Logo!' });
+        const errorMsg = error.response?.data?.message || 'Đã có lỗi xảy ra khi lưu Logo!';
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: errorMsg });
     } finally {
         isSavingHeader.value = false;
     }
@@ -719,7 +777,8 @@ const saveFooterSettings = async () => {
         }
     } catch (error) {
         console.error(error);
-        Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Đã có lỗi xảy ra khi lưu Footer!' });
+        const errorMsg = error.response?.data?.message || 'Đã có lỗi xảy ra khi lưu Footer!';
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: errorMsg });
     } finally {
         isSavingFooter.value = false;
     }
@@ -742,7 +801,8 @@ const saveHomeStatsSettings = async () => {
         }
     } catch (error) {
         console.error(error);
-        Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Đã có lỗi xảy ra khi lưu Thống kê!' });
+        const errorMsg = error.response?.data?.message || 'Đã có lỗi xảy ra khi lưu Thống kê!';
+        Swal.fire({ icon: 'error', title: 'Lỗi', text: errorMsg });
     } finally {
         isSavingHomeStats.value = false;
     }
@@ -781,6 +841,33 @@ const saveHomeStatsSettings = async () => {
 
 .border-transparent { border-color: transparent !important; }
 
+.nav-tabs-custom {
+  border-bottom: 2px solid #dee2e6;
+  display: flex;
+  gap: 10px;
+  padding-left: 0;
+  list-style: none;
+}
+.nav-tabs-custom .nav-link {
+  color: #6c757d;
+  border: none;
+  border-bottom: 3px solid transparent;
+  padding: 12px 20px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 0;
+  text-decoration: none;
+}
+.nav-tabs-custom .nav-link:hover {
+  color: #009981;
+}
+.nav-tabs-custom .nav-link.active {
+  color: #009981;
+  border-bottom: 3px solid #009981;
+}
+
 /* Pointer events none for preview to avoid clicking links */
 .pointer-events-none {
     pointer-events: none;
@@ -792,5 +879,29 @@ const saveHomeStatsSettings = async () => {
 }
 :deep(.modal-backdrop) {
     z-index: 10590 !important;
+}
+
+/* Grid-based Tabs (No Height Jump) */
+.tab-pane-active {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out, visibility 0s 0s;
+  z-index: 2;
+  position: relative;
+}
+
+.tab-pane-inactive {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(10px);
+  transition: opacity 0.3s ease-in, transform 0.3s ease-in, visibility 0s 0.3s;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Smooth floating label transition */
+.form-floating > label {
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
 }
 </style>

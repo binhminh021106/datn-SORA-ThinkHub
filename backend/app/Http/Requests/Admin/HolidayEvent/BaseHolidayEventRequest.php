@@ -40,7 +40,18 @@ abstract class BaseHolidayEventRequest extends FormRequest
     {
         return [
             'name' => 'required|string|min:2|max:255',
-            'event_date' => ['required', 'string', 'max:5', 'regex:/^\d{2}\/\d{2}$/'],
+            'event_date' => [
+                'required',
+                'string',
+                'max:5',
+                'regex:/^\d{2}\/\d{2}$/',
+                function ($attribute, $value, $fail) {
+                    [$day, $month] = explode('/', $value);
+                    if (!checkdate((int)$month, (int)$day, 2024)) {
+                        $fail('Ngày diễn ra không hợp lệ (không tồn tại trong năm).');
+                    }
+                }
+            ],
             'target_audience' => 'required|string',
             'email_subject' => 'required|string|min:3|max:255',
             'email_content' => [

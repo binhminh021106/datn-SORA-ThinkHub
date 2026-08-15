@@ -200,8 +200,7 @@
             <div class="card-body p-3 d-flex flex-column justify-content-between">
               <div class="d-flex align-items-start justify-content-between mb-2">
                 <div class="pe-2 min-w-0">
-                  <p class="text-muted fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate">Nhân sự
-                    (Hôm nay)</p>
+                  <p class="text-muted fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate">Nhân sự (Hôm nay)</p>
                   <h4 class="fw-bolder mb-0 text-dark stat-number text-truncate">
                     {{ staffStats.total }} <span class="text-muted font-size-xs fw-medium">Tổng</span>
                   </h4>
@@ -210,10 +209,11 @@
                   <i class="bi bi-person-badge fs-5"></i>
                 </div>
               </div>
-              <div class="d-flex align-items-center mt-auto font-size-xs fw-medium text-muted gap-2 text-truncate">
-                <span class="text-primary">
-                  <i class="bi bi-calendar2-check"></i> {{ staffStats.current_shift || 'Đang cập nhật...' }}
-                </span>
+              <div class="d-flex gap-2 font-size-xs">
+                <span class="text-success fw-bold"><i class="bi bi-dot fs-5 align-middle me-n1"></i>{{ staffStats.online
+                  }} On</span>
+                <span class="text-secondary fw-bold"><i class="bi bi-dot fs-5 align-middle me-n1"></i>{{
+                  staffStats.offline }} Off</span>
               </div>
             </div>
           </div>
@@ -359,7 +359,7 @@
               </div>
               <div class="d-flex flex-column gap-2 z-index-1 position-relative custom-scrollbar" style="z-index: 2; overflow-y: auto; max-height: 220px; padding-right: 4px;">
                 <div v-if="!customerInsights?.topBuyers || customerInsights.topBuyers.length === 0" class="text-muted font-size-sm">Không có dữ liệu</div>
-                <div v-else v-for="(buyer, idx) in customerInsights.topBuyers" :key="idx" class="d-flex align-items-center rounded-3 p-2 shadow-sm border border-light transition-all table-row-hover position-relative overflow-hidden" :style="{ backgroundColor: getRankBgStyle(idx) }">
+                <div v-else v-for="(buyer, idx) in customerInsights.topBuyers" :key="buyer.name || idx" class="d-flex align-items-center rounded-3 p-2 shadow-sm border border-light transition-all table-row-hover position-relative overflow-hidden" :style="{ backgroundColor: getRankBgStyle(idx) }">
                    <!-- Watermark Icon Giới tính -->
                    <div class="position-absolute d-flex align-items-center justify-content-center" style="font-size: 2.8rem; right: 10px; top: 0; bottom: 0; pointer-events: none; z-index: 0; opacity: 0.1;"
                         :class="{'text-info': buyer.gender?.toLowerCase() === 'male' || buyer.gender?.toLowerCase() === 'nam', 
@@ -374,7 +374,7 @@
                    <div class="position-relative me-2 flex-shrink-0 z-index-1" style="width: 36px; height: 36px;">
                      <div class="avatar-circle bg-primary-soft text-primary fw-bolder shadow-sm d-flex align-items-center justify-content-center" 
                           :style="{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', border: buyer.tierName ? `2px solid ${getTierColor(buyer.tierName)}` : '1px solid #dee2e6' }">
-                       <img v-if="buyer.avatar && !buyerAvatarErrors[idx]" :src="buyer.avatar" class="w-100 h-100 object-fit-cover" @error="buyerAvatarErrors[idx] = true" />
+                       <img v-if="buyer.avatar && !buyerAvatarErrors[buyer.name || idx]" :src="buyer.avatar" class="w-100 h-100 object-fit-cover" @error="buyerAvatarErrors[buyer.name || idx] = true" />
                        <span v-else>{{ getInitialName(buyer.name) }}</span>
                      </div>
                      <span v-if="buyer.tierName" class="position-absolute top-0 start-50 translate-middle badge rounded-pill" 
@@ -1075,7 +1075,7 @@ const formatCompactCurrency = (value) => {
     return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(num / 1000000000) + ' Tỷ';
   }
   if (num >= 1000000) {
-    return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(num / 1000000) + ' Triệu';
+    return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(num / 1000000) + ' Tr';
   }
   return formatCurrency(num);
 };
@@ -1131,32 +1131,32 @@ const exportWithPeriod = async (period) => {
 };
 
 const showCustomExportModal = async () => {
-  // Load flatpickr dynamically if not exist
+  // Load flatpickr dynamically from bundle if not exist
   if (!window.flatpickrLoaded) {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css';
-    document.head.appendChild(link);
-    
-    // Thêm style cho flatpickr hợp với brand
-    const style = document.createElement('style');
-    style.innerHTML = '.flatpickr-calendar { font-family: inherit; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: none; border-radius: 12px; padding: 5px; } .flatpickr-day.selected { background: #00B171 !important; border-color: #00B171 !important; }';
-    document.head.appendChild(style);
-
-    await new Promise((resolve) => {
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/flatpickr';
-      script.onload = () => {
-        const langScript = document.createElement('script');
-        langScript.src = 'https://npmcdn.com/flatpickr/dist/l10n/vn.js';
-        langScript.onload = () => {
-          window.flatpickrLoaded = true;
-          resolve();
-        };
-        document.head.appendChild(langScript);
-      };
-      document.head.appendChild(script);
-    });
+    try {
+      await Promise.race([
+        (async () => {
+          await import('flatpickr/dist/flatpickr.min.css');
+          const flatpickrMod = await import('flatpickr');
+          const vnLocaleMod = await import('flatpickr/dist/l10n/vn.js');
+          
+          window.flatpickr = flatpickrMod.default || flatpickrMod;
+          
+          if (!document.getElementById('flatpickr-custom-style')) {
+            const style = document.createElement('style');
+            style.id = 'flatpickr-custom-style';
+            style.innerHTML = '.flatpickr-calendar { font-family: inherit; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: none; border-radius: 12px; padding: 5px; } .flatpickr-day.selected { background: #00B171 !important; border-color: #00B171 !important; }';
+            document.head.appendChild(style);
+          }
+        })(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Flatpickr load timeout')), 10000))
+      ]);
+      window.flatpickrLoaded = true;
+    } catch (error) {
+      console.error('Failed to load Flatpickr:', error);
+      Swal.fire('Lỗi', 'Không thể tải thư viện chọn ngày. Vui lòng thử lại sau.', 'error');
+      return;
+    }
   }
 
   const { value: formValues } = await Swal.fire({
@@ -2071,7 +2071,7 @@ const formatCouponDate = (dateStr) => {
 }
 
 .stat-number {
-  font-size: clamp(1.4rem, 2.5vw, 1.75rem);
+  font-size: clamp(1.2rem, 1.8vw, 1.5rem);
   letter-spacing: -0.5px;
   white-space: nowrap;
 }

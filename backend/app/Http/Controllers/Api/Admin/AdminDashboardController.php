@@ -419,7 +419,7 @@ class AdminDashboardController extends Controller
                     ->whereBetween('orders.created_at', [$period['start'], $period['end']]);
                     
                 $topGenderAges = $this->applyRevenueFilter($topGenderAgeQuery, 'orders')
-                    ->select(DB::raw('TIMESTAMPDIFF(YEAR, users.birthday, CURDATE()) as age'), DB::raw('COUNT(*) as count'))
+                    ->select(DB::raw('TIMESTAMPDIFF(YEAR, users.birthday, CURDATE()) as age'), DB::raw('COUNT(DISTINCT users.id) as count'))
                     ->groupBy('age')
                     ->get();
                 

@@ -49,16 +49,20 @@ class UpdateSettingRequest extends FormRequest
                             if (!empty($url)) {
                                 $isValid = false;
                                 if (is_string($url)) {
-                                    $scheme = parse_url($url, PHP_URL_SCHEME);
-                                    $host = parse_url($url, PHP_URL_HOST);
-                                    if (filter_var($url, FILTER_VALIDATE_URL) !== false && !empty($host) && in_array(strtolower((string)$scheme), ['http', 'https'])) {
+                                    if (trim($url) === '#') {
                                         $isValid = true;
+                                    } else {
+                                        $scheme = parse_url($url, PHP_URL_SCHEME);
+                                        $host = parse_url($url, PHP_URL_HOST);
+                                        if (filter_var($url, FILTER_VALIDATE_URL) !== false && !empty($host) && in_array(strtolower((string)$scheme), ['http', 'https'])) {
+                                            $isValid = true;
+                                        }
                                     }
                                 }
                                 if (!$isValid) {
                                     $validator->errors()->add(
                                         "settings.{$index}.value.{$socialIndex}.url",
-                                        'The social URL must be a valid http or https URL.'
+                                        'Đường link Mạng xã hội phải là link hợp lệ (bắt đầu bằng http/https) hoặc dùng dấu "#" nếu chưa có.'
                                     );
                                 }
                             }

@@ -91,46 +91,55 @@
               <!-- ================= TAB 1: THÔNG TIN CHUNG ================= -->
               <form v-if="activeTab === 'info'" class="account-edit-form" @submit.prevent="updateUser">
                 <div class="row">
-                  <div class="col-md-6 mb-4">
-                    <label class="form-label fw-bold text-dark">Họ và tên <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control form-control-lg bg-white border-secondary-subtle"
-                      v-model="form.fullName" :class="{ 'is-invalid': errors.fullName }">
-                    <div class="invalid-feedback">{{ errors.fullName?.[0] }}</div>
+                  <div class="col-md-6 mb-3">
+                    <div class="form-floating">
+                      <input type="text" id="fullName" class="form-control bg-white border-secondary-subtle"
+                        v-model="form.fullName" :class="{ 'is-invalid': errors.fullName }" placeholder="Họ và tên">
+                      <label for="fullName" class="fw-bold text-dark">Họ và tên <span class="text-danger">*</span></label>
+                    </div>
+                    <div class="invalid-feedback d-block" v-if="errors.fullName">{{ errors.fullName?.[0] }}</div>
                   </div>
 
-                  <div class="col-md-6 mb-4">
-                    <label class="form-label fw-bold text-dark">Số điện thoại</label>
-                    <input type="text" class="form-control form-control-lg bg-white border-secondary-subtle"
-                      v-model="form.phone" :class="{ 'is-invalid': errors.phone }" @input="validatePhone">
-                    <div class="invalid-feedback">{{ errors.phone?.[0] }}</div>
+                  <div class="col-md-6 mb-3">
+                    <div class="form-floating">
+                      <input type="text" id="phone" class="form-control bg-white border-secondary-subtle"
+                        v-model="form.phone" :class="{ 'is-invalid': errors.phone }" @input="validatePhone" placeholder="Số điện thoại">
+                      <label for="phone" class="fw-bold text-dark">Số điện thoại</label>
+                    </div>
+                    <div class="invalid-feedback d-block" v-if="errors.phone">{{ errors.phone?.[0] }}</div>
                   </div>
 
-                  <div class="col-md-12 mb-4">
-                    <label class="form-label fw-bold text-dark">Email đăng nhập <span
-                        class="text-danger">*</span></label>
-                    <div class="input-group input-group-lg shadow-sm">
-                      <span class="input-group-text bg-light text-muted border-secondary-subtle"><i
-                          class="bi bi-envelope"></i></span>
-                      <input type="email" class="form-control bg-white border-secondary-subtle " v-model="form.email"
-                        :class="{ 'is-invalid': errors.email }" autocomplete="off" readonly
-                        onfocus="this.removeAttribute('readonly');" disabled>
-                      <div class="invalid-feedback d-block" v-if="errors.email">{{ errors.email?.[0] }}</div>
+                  <div class="col-md-12 mb-3">
+                    <div class="input-group shadow-sm">
+                      <span class="input-group-text bg-light text-muted border-secondary-subtle"><i class="bi bi-envelope"></i></span>
+                      <div class="form-floating flex-grow-1">
+                        <input type="email" id="email" class="form-control bg-white border-secondary-subtle" v-model="form.email"
+                          :class="{ 'is-invalid': errors.email }" autocomplete="off" readonly
+                          onfocus="this.removeAttribute('readonly');" disabled placeholder="Email đăng nhập">
+                        <label for="email" class="fw-bold text-dark">Email đăng nhập <span class="text-danger">*</span></label>
+                      </div>
+                    </div>
+                    <div class="invalid-feedback d-block" v-if="errors.email">{{ errors.email?.[0] }}</div>
+                  </div>
+
+                  <div class="col-md-6 mb-3">
+                    <div class="form-floating">
+                      <select id="gender" class="form-select bg-white border-secondary-subtle" v-model="form.gender">
+                        <option value="">-- N/A --</option>
+                        <option value="Nam">Nam</option>
+                        <option value="Nữ">Nữ</option>
+                        <option value="Khác">Khác</option>
+                      </select>
+                      <label for="gender" class="fw-bold text-dark">Giới tính</label>
                     </div>
                   </div>
-
-                  <div class="col-md-6 mb-4">
-                    <label class="form-label fw-bold text-dark">Giới tính</label>
-                    <select class="form-select form-select-lg bg-white border-secondary-subtle" v-model="form.gender">
-                      <option value="">-- N/A --</option>
-                      <option value="Nam">Nam</option>
-                      <option value="Nữ">Nữ</option>
-                      <option value="Khác">Khác</option>
-                    </select>
-                  </div>
-                  <div class="col-md-6 mb-4">
-                    <label class="form-label fw-bold text-dark">Ngày sinh</label>
-                    <input type="date" class="form-control form-control-lg bg-white border-secondary-subtle"
-                      v-model="form.birthday">
+                  
+                  <div class="col-md-6 mb-3">
+                    <div class="form-floating">
+                      <input type="date" id="birthday" class="form-control bg-white border-secondary-subtle"
+                        v-model="form.birthday" placeholder="Ngày sinh">
+                      <label for="birthday" class="fw-bold text-dark">Ngày sinh</label>
+                    </div>
                   </div>
 
                   <div class="col-12 mt-2 mb-3">
@@ -138,32 +147,36 @@
                       <span class="text-muted fw-normal small">(Bỏ trống nếu không đổi)</span></h6>
                   </div>
 
-                  <div class="col-md-6 mb-4">
-                    <label class="form-label fw-bold text-dark">Mật khẩu mới</label>
+                  <div class="col-md-6 mb-3">
                     <div class="position-relative">
-                      <input :type="showPassword ? 'text' : 'password'"
-                        class="form-control form-control-lg bg-white border-secondary-subtle pe-5"
-                        v-model="form.password" placeholder="Tối thiểu 8 ký tự" :class="{ 'is-invalid': errors.password }"
-                        autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');">
+                      <div class="form-floating">
+                        <input :type="showPassword ? 'text' : 'password'" id="password"
+                          class="form-control bg-white border-secondary-subtle pe-5"
+                          v-model="form.password" placeholder="Tối thiểu 8 ký tự" :class="{ 'is-invalid': errors.password }"
+                          autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');">
+                        <label for="password" class="fw-bold text-dark">Mật khẩu mới</label>
+                      </div>
                       <button type="button"
                         class="btn border-0 position-absolute top-50 end-0 translate-middle-y text-muted me-1"
-                        @click="showPassword = !showPassword">
+                        @click="showPassword = !showPassword" style="z-index: 5;">
                         <i class="bi" :class="showPassword ? 'bi-eye-slash' : 'bi-eye'"></i>
                       </button>
                     </div>
                     <div class="invalid-feedback d-block" v-if="errors.password">{{ errors.password?.[0] }}</div>
                   </div>
 
-                  <div class="col-md-6 mb-4">
-                    <label class="form-label fw-bold text-dark">Xác nhận mật khẩu</label>
+                  <div class="col-md-6 mb-3">
                     <div class="position-relative">
-                      <input :type="showConfirmPassword ? 'text' : 'password'"
-                        class="form-control form-control-lg bg-white border-secondary-subtle pe-5"
-                        v-model="form.password_confirmation" placeholder="Nhập lại mật khẩu mới"
-                        autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');">
+                      <div class="form-floating">
+                        <input :type="showConfirmPassword ? 'text' : 'password'" id="confirmPassword"
+                          class="form-control bg-white border-secondary-subtle pe-5"
+                          v-model="form.password_confirmation" placeholder="Nhập lại mật khẩu mới"
+                          autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');">
+                        <label for="confirmPassword" class="fw-bold text-dark">Xác nhận mật khẩu</label>
+                      </div>
                       <button type="button"
                         class="btn border-0 position-absolute top-50 end-0 translate-middle-y text-muted me-1"
-                        @click="showConfirmPassword = !showConfirmPassword">
+                        @click="showConfirmPassword = !showConfirmPassword" style="z-index: 5;">
                         <i class="bi" :class="showConfirmPassword ? 'bi-eye-slash' : 'bi-eye'"></i>
                       </button>
                     </div>
@@ -270,16 +283,18 @@
             <form @submit.prevent="saveAddress">
               <div class="row g-3">
                 <div class="col-md-6 mb-2">
-                  <label class="form-label fw-bold text-dark small">Tên người nhận <span
-                      class="text-danger">*</span></label>
-                  <input type="text" class="form-control bg-white border-secondary-subtle shadow-none"
-                    v-model="addrForm.customer_name" required>
+                  <div class="form-floating">
+                    <input type="text" id="customerName" class="form-control bg-white border-secondary-subtle shadow-none"
+                      v-model="addrForm.customer_name" placeholder="Tên người nhận" required>
+                    <label for="customerName" class="fw-bold text-dark">Tên người nhận <span class="text-danger">*</span></label>
+                  </div>
                 </div>
                 <div class="col-md-6 mb-2">
-                  <label class="form-label fw-bold text-dark small">Số điện thoại <span
-                      class="text-danger">*</span></label>
-                  <input type="text" class="form-control bg-white border-secondary-subtle shadow-none"
-                    v-model="addrForm.customer_phone" required>
+                  <div class="form-floating">
+                    <input type="text" id="customerPhone" class="form-control bg-white border-secondary-subtle shadow-none"
+                      v-model="addrForm.customer_phone" placeholder="Số điện thoại" required>
+                    <label for="customerPhone" class="fw-bold text-dark">Số điện thoại <span class="text-danger">*</span></label>
+                  </div>
                 </div>
 
                 <div class="col-12 mb-2">
@@ -290,10 +305,11 @@
                 </div>
 
                 <div class="col-md-12 mb-2">
-                  <label class="form-label fw-bold text-dark small">Địa chỉ cụ thể (Số nhà, đường) <span
-                      class="text-danger">*</span></label>
-                  <input type="text" class="form-control bg-white border-secondary-subtle shadow-none"
-                    v-model="addrForm.shipping_address" placeholder="VD: Số 12, Đường ABCD" required>
+                  <div class="form-floating">
+                    <input type="text" id="addrShippingAddress" class="form-control bg-white border-secondary-subtle shadow-none"
+                      v-model="addrForm.shipping_address" placeholder="VD: Số 12, Đường ABCD" required>
+                    <label for="addrShippingAddress" class="fw-bold text-dark">Địa chỉ cụ thể (Số nhà, đường) <span class="text-danger">*</span></label>
+                  </div>
                 </div>
 
                 <div class="col-12 mt-3" v-if="!addrForm.is_default">
@@ -560,6 +576,11 @@ const setDefaultAddress = (id) => { setDefaultAddressMutation.mutate(id); };
 </script>
 
 <style scoped>
+/* Smooth floating label transition */
+.form-floating > label {
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
 .logo-shimmer {
   font-size: 3.5rem;
   font-weight: 900;
@@ -655,20 +676,4 @@ const setDefaultAddress = (id) => { setDefaultAddressMutation.mutate(id); };
   font-size: 0.875rem;
 }
 
-.account-edit-form .form-control,
-.account-edit-form .form-select,
-.account-edit-form .input-group-text {
-  min-height: 38px;
-  padding: 0.4rem 0.7rem;
-  font-size: 0.95rem;
-}
-
-.account-edit-form .form-control-lg,
-.account-edit-form .form-select-lg,
-.account-edit-form .input-group-lg > .form-control,
-.account-edit-form .input-group-lg > .input-group-text {
-  min-height: 38px;
-  padding: 0.4rem 0.7rem;
-  font-size: 0.95rem;
-}
 </style>

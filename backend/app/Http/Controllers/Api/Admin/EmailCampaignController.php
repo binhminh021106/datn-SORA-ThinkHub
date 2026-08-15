@@ -132,6 +132,7 @@ public function settings()
             'tiers.*.tier_id' => [
                 'required',
                 'integer',
+                'min:0',
                 'distinct',
                 function ($attribute, $value, $fail) {
                     if ($value > 0 && !\Illuminate\Support\Facades\DB::table('membership_tiers')->where('id', $value)->exists()) {
