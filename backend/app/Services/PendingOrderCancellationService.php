@@ -44,9 +44,9 @@ class PendingOrderCancellationService
 
             $order->update(['status' => 'cancelled', 'payment_status' => 'failed']);
 
-            PaymentAttempt::where('order_id', $order->id)
-                ->where('status', 'pending')
-                ->update(['status' => $paymentAttemptStatus]);
+            // PaymentAttempt::where('order_id', $order->id)
+            //     ->where('status', 'pending')
+            //     ->update(['status' => $paymentAttemptStatus]);
 
             OrderStatusHistory::create([
                 'order_id' => $order->id,

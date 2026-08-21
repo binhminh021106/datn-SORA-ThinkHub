@@ -204,8 +204,15 @@ const menuItems = ref([
       { name: 'Email tự động', path: '/admin/email-campaigns', moduleCode: 'admin_coupons' },
       { name: 'Chân dung SORA', path: '/admin/gallery', moduleCode: 'admin_gallery' },
       { name: 'Đánh giá', path: '/admin/reviews', moduleCode: 'admin_reviews' },
-      { name: 'Tin tức', path: '/admin/news', moduleCode: 'admin_news' },
-      { name: 'Đối tác Affiliate', path: '/admin/affiliates', moduleCode: 'admin_affiliates' }
+      { name: 'Tin tức', path: '/admin/news', moduleCode: 'admin_news' }
+    ]
+  },
+
+  {
+    name: 'Đối tác Affiliate', icon: 'bi-share-fill', stateKey: 'affiliate',
+    children: [
+      { name: 'Danh sách Đối tác', path: '/admin/affiliates', moduleCode: 'admin_affiliates' },
+      { name: 'Yêu cầu rút tiền', path: '/admin/affiliates/withdrawals', moduleCode: 'admin_affiliates' }
     ]
   },
   {
@@ -219,7 +226,13 @@ const menuItems = ref([
 ]);
 
 const menuState = reactive({
-  users: false, products: false, orders: false, marketing: false, services: false, attendance: false
+  users: false, 
+  products: false, 
+  orders: false, 
+  marketing: false, 
+  services: false, 
+  attendance: false,
+  affiliate: false
 });
 
 const normalizeSearchText = (value) => {

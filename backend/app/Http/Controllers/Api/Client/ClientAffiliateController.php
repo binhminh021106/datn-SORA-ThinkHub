@@ -29,13 +29,13 @@ class ClientAffiliateController extends Controller
             ];
 
             if ($user->is_affiliate) {
-                // 1. Tiền chờ duyệt (Đơn đang giao dịch)
+                // chờ duyệt tiền hh
                 $pendingBalance = CommissionHistory::where('user_id', $user->id)
                     ->where('type', 'earn')
                     ->where('status', 'pending')
                     ->sum('amount');
 
-                // 2. Tổng tiền đã rút (Lệnh rút thành công)
+                // tổng tiền hh đã rút
                 $totalWithdrawn = CommissionHistory::where('user_id', $user->id)
                     ->where('type', 'withdraw')
                     ->whereIn('status', ['approved', 'withdrawn'])
@@ -47,7 +47,7 @@ class ClientAffiliateController extends Controller
                     'total_withdrawn'   => (float) $totalWithdrawn
                 ];
 
-                // 3. Lịch sử biến động số dư (20 giao dịch gần nhất)
+                // lịch sử giao dịch hh gần đây (lấy 20)
                 $data['histories'] = CommissionHistory::with('order:id,order_code')
                     ->where('user_id', $user->id)
                     ->orderBy('created_at', 'desc')
@@ -151,7 +151,6 @@ class ClientAffiliateController extends Controller
             $user = \App\Models\User::where('id', $currentUser->id)->lockForUpdate()->first();
 
             if ((float)$user->commission_balance < (float)$request->amount) {
-                // Nhớ RollBack nếu không đủ tiền nhé
                 DB::rollBack();
                 return response()->json(['success' => false, 'message' => 'Số dư khả dụng trong ví không đủ để thực hiện lệnh này.'], 400);
             }
