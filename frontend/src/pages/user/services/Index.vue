@@ -135,7 +135,7 @@
           <div class="col-lg-6 pe-lg-5">
             <h2 class="display-6 font-serif text-accent mb-4">Chuẩn Mực SORA</h2>
             <div class="divider bg-accent mb-4"></div>
-            <p class="fw-light mb-5" style="line-height: 1.8; color: rgba(255,255,255,0.85);">
+            <p class="fw-normal mb-5 fs-5" style="line-height: 1.7; color: rgba(255,255,255,0.9);">
               Vượt qua chuẩn mực thông thường, chúng tôi thiết lập nên những quy chuẩn khắt khe nhất trong cả khâu chế tác lẫn dịch vụ.
             </p>
             
@@ -144,8 +144,8 @@
                 <div class="d-flex align-items-start">
                   <svg class="text-accent me-3 flex-shrink-0 mt-1" width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                   <div>
-                    <h4 class="h6 font-serif text-accent mb-1">Thủ công tinh xảo</h4>
-                    <p class="small text-white-50 fw-light">Chi tiết được trau chuốt bởi bàn tay nghệ nhân.</p>
+                    <h4 class="h6 font-serif text-accent mb-1 fw-bold">Thủ công tinh xảo</h4>
+                    <p class="text-light fw-normal" style="font-size: 0.95rem; opacity: 0.9;">Chi tiết được trau chuốt bởi bàn tay nghệ nhân.</p>
                   </div>
                 </div>
               </div>
@@ -153,8 +153,8 @@
                 <div class="d-flex align-items-start">
                   <svg class="text-accent me-3 flex-shrink-0 mt-1" width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                   <div>
-                    <h4 class="h6 font-serif text-accent mb-1">Chất liệu cao cấp</h4>
-                    <p class="small text-white-50 fw-light">Tuyển chọn nghiêm ngặt từ nguồn uy tín.</p>
+                    <h4 class="h6 font-serif text-accent mb-1 fw-bold">Chất liệu cao cấp</h4>
+                    <p class="text-light fw-normal" style="font-size: 0.95rem; opacity: 0.9;">Tuyển chọn nghiêm ngặt từ nguồn uy tín.</p>
                   </div>
                 </div>
               </div>
@@ -162,8 +162,8 @@
                 <div class="d-flex align-items-start">
                   <svg class="text-accent me-3 flex-shrink-0 mt-1" width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                   <div>
-                    <h4 class="h6 font-serif text-accent mb-1">Cá nhân hóa</h4>
-                    <p class="small text-white-50 fw-light">Lắng nghe và tạo ra dấu ấn của riêng bạn.</p>
+                    <h4 class="h6 font-serif text-accent mb-1 fw-bold">Cá nhân hóa</h4>
+                    <p class="text-light fw-normal" style="font-size: 0.95rem; opacity: 0.9;">Lắng nghe và tạo ra dấu ấn của riêng bạn.</p>
                   </div>
                 </div>
               </div>
@@ -171,8 +171,8 @@
                 <div class="d-flex align-items-start">
                   <svg class="text-accent me-3 flex-shrink-0 mt-1" width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                   <div>
-                    <h4 class="h6 font-serif text-accent mb-1">Chăm sóc tận tâm</h4>
-                    <p class="small text-white-50 fw-light">Hỗ trợ nhanh chóng, thấu hiểu khách hàng.</p>
+                    <h4 class="h6 font-serif text-accent mb-1 fw-bold">Chăm sóc tận tâm</h4>
+                    <p class="text-light fw-normal" style="font-size: 0.95rem; opacity: 0.9;">Hỗ trợ nhanh chóng, thấu hiểu khách hàng.</p>
                   </div>
                 </div>
               </div>
@@ -180,28 +180,28 @@
           </div>
           
           <div class="col-lg-6">
-            <div class="bg-white text-dark p-5 position-relative shadow-lg">
-              <div class="position-absolute top-0 start-0 w-100 h-100 border border-accent m-2 pointer-events-none" style="transform: translate(-10px, -10px); z-index: 0;"></div>
+            <div class="p-5 position-relative" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(231, 206, 125, 0.2); backdrop-filter: blur(10px); box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+              <div class="position-absolute top-0 start-0 w-100 h-100 border border-accent pointer-events-none" style="transform: translate(-12px, -12px); opacity: 0.4; z-index: 0;"></div>
               <div class="position-relative z-1 text-center">
-                <h3 class="h4 font-serif text-main mb-4">Cam Kết Từ SORA</h3>
-                <ul class="list-unstyled mb-0 text-start d-inline-block text-secondary fw-light">
-                  <li class="mb-3 d-flex align-items-center">
-                    <span class="bg-light-custom rounded-circle p-2 me-3 text-main">
-                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <h3 class="h4 font-serif text-accent mb-4" style="letter-spacing: 1px;">Cam Kết Từ SORA</h3>
+                <ul class="list-unstyled mb-0 text-start d-inline-block text-white fw-medium">
+                  <li class="mb-4 d-flex align-items-center">
+                    <span class="rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="background: rgba(231, 206, 125, 0.15); color: #e7ce7d; width: 42px; height: 42px;">
+                      <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     </span>
-                    Thời gian xử lý dịch vụ nhanh chóng, đúng hẹn.
+                    <span style="font-size: 1.05rem; letter-spacing: 0.01em;">Thời gian xử lý dịch vụ nhanh chóng, đúng hẹn.</span>
                   </li>
-                  <li class="mb-3 d-flex align-items-center">
-                    <span class="bg-light-custom rounded-circle p-2 me-3 text-main">
-                       <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                  <li class="mb-4 d-flex align-items-center">
+                    <span class="rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="background: rgba(231, 206, 125, 0.15); color: #e7ce7d; width: 42px; height: 42px;">
+                       <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
                     </span>
-                    Chính sách bảo hành minh bạch, rõ ràng.
+                    <span style="font-size: 1.05rem; letter-spacing: 0.01em;">Chính sách bảo hành minh bạch, rõ ràng.</span>
                   </li>
                   <li class="d-flex align-items-center">
-                    <span class="bg-light-custom rounded-circle p-2 me-3 text-main">
-                      <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"></path></svg>
+                    <span class="rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="background: rgba(231, 206, 125, 0.15); color: #e7ce7d; width: 42px; height: 42px;">
+                      <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"></path></svg>
                     </span>
-                    Đội ngũ hỗ trợ nhiệt tình 24/7.
+                    <span style="font-size: 1.05rem; letter-spacing: 0.01em;">Đội ngũ hỗ trợ nhiệt tình 24/7.</span>
                   </li>
                 </ul>
               </div>
@@ -215,18 +215,18 @@
     <section class="py-5 text-center px-3">
       <div class="container d-flex flex-column align-items-center py-4">
         <h2 class="display-6 font-serif text-main mb-4">Để Lại Dấu Ấn Của Riêng Bạn</h2>
-        <p class="lead fw-light text-secondary mb-5" style="max-width: 600px;">
+        <p class="lead fw-normal text-muted mb-5" style="max-width: 650px; line-height: 1.7;">
           Hãy kể cho chúng tôi nghe câu chuyện bạn muốn truyền tải qua trang sức. Đặt lịch tư vấn hoặc trải nghiệm dịch vụ chăm sóc đặc quyền ngay hôm nay.
         </p>
         <div class="d-flex flex-column flex-sm-row gap-3">
           <router-link 
             to="/contact" 
-            class="editorial-btn text-uppercase px-5 py-3" style="letter-spacing: 0.1em;">
+            class="editorial-btn text-uppercase px-5 py-3 d-flex align-items-center justify-content-center" style="letter-spacing: 0.1em; font-size: 0.9rem; font-weight: 600;">
             Liên Hệ Tư Vấn
           </router-link>
           <router-link 
             to="/combos" 
-            class="btn btn-outline-main btn-lg text-uppercase fw-medium px-5 py-3 rounded-0" style="letter-spacing: 0.1em;">
+            class="btn btn-outline-main text-uppercase px-5 py-3 d-flex align-items-center justify-content-center" style="letter-spacing: 0.1em; font-size: 0.9rem; font-weight: 600; border-radius: 10px;">
             Xem Bộ Sưu Tập
           </router-link>
         </div>

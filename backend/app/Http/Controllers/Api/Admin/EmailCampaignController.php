@@ -95,6 +95,21 @@ public function settings()
             ];
         });
 
+        // Bổ sung hạng ảo cho Khách thường (tier_id = 0)
+        $savedRegular = $savedTiers->firstWhere('tier_id', 0) ?? [];
+        $tiersData->prepend([
+            'tier_id' => 0,
+            'name' => 'Khách thường (Không có hạng)',
+            'voucherCode' => $savedRegular['voucherCode'] ?? '',
+            'type' => $savedRegular['type'] ?? 'fixed',
+            'value' => $savedRegular['value'] ?? 0,
+            'min_spend' => $savedRegular['min_spend'] ?? 0,
+            'usage_limit' => $savedRegular['usage_limit'] ?? null,
+            'usage_limit_per_user' => $savedRegular['usage_limit_per_user'] ?? 1,
+            'validity_days' => $savedRegular['validity_days'] ?? 7,
+            'status' => $savedRegular['status'] ?? 'active',
+        ]);
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -114,7 +129,17 @@ public function settings()
             'birthday_subject' => 'required|string|max:255',
             'birthday_content' => 'nullable|string',
             'tiers' => 'required|array',
-            'tiers.*.tier_id' => 'required|integer|exists:membership_tiers,id|distinct',
+            'tiers.*.tier_id' => [
+                'required',
+                'integer',
+                'min:0',
+                'distinct',
+                function ($attribute, $value, $fail) {
+                    if ($value > 0 && !\Illuminate\Support\Facades\DB::table('membership_tiers')->where('id', $value)->exists()) {
+                        $fail('Hạng thành viên không tồn tại.');
+                    }
+                },
+            ],
             'tiers.*.name' => 'required|string',
             'tiers.*.voucherCode' => 'nullable|string|distinct',
             'tiers.*.type' => 'required|in:fixed,percentage',

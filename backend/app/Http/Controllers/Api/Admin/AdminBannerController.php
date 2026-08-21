@@ -164,12 +164,12 @@ class AdminBannerController extends Controller
     {
         $banner = Banner::withTrashed()->findOrFail($id);
 
+        $banner->forceDelete();
+
         // Xóa ảnh và video thực tế trên ổ cứng
         if ($banner->image_desktop) Storage::disk('public')->delete($banner->image_desktop);
         if ($banner->image_mobile) Storage::disk('public')->delete($banner->image_mobile);
         if ($banner->video_url) Storage::disk('public')->delete($banner->video_url);
-
-        $banner->forceDelete();
 
         // Clear homepage cache just in case
         Cache::forget('sora_home_data_v4');

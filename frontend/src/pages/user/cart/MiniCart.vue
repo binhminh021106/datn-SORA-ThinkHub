@@ -81,7 +81,7 @@
             <div v-else-if="cartItems.length === 0" class="text-center text-muted mt-5 py-5 d-flex flex-column align-items-center">
               <i class="bi bi-bag-x mb-3" style="font-size: 3.5rem; color: #ddd;"></i>
               <p class="mt-2 font-oswald tracking-wide fs-5">GIỎ HÀNG TRỐNG</p>
-              <button @click="closeCart" class="editorial-btn-outline px-4 py-2 mt-3">Tiếp tục mua sắm</button>
+              <button @click="closeCart" class="btn btn-outline-brand font-oswald text-uppercase fw-bold px-4 py-2 mt-3">Tiếp tục mua sắm</button>
             </div>
 
             <div v-else class="d-flex flex-column gap-4">
@@ -168,10 +168,10 @@
             </div>
             
             <div class="d-flex flex-column gap-2">
-              <button @click="goToCheckout" class="editorial-btn w-100 py-3" :disabled="cartItems.length === 0">
+              <button @click="goToCheckout" class="btn btn-brand font-oswald text-uppercase fw-bold w-100 py-3" :disabled="cartItems.length === 0">
                 Thanh toán ngay
               </button>
-              <button @click="goToCart" class="editorial-btn-outline w-100 py-2 mt-2">
+              <button @click="goToCart" class="btn btn-outline-brand font-oswald text-uppercase fw-bold w-100 py-2 mt-2">
                 Xem giỏ hàng
               </button>
             </div>

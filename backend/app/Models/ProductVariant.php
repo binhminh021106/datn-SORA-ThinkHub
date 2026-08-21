@@ -32,7 +32,7 @@ class ProductVariant extends Model
         'cost_price' => 'decimal:2'
     ];
 
-    protected $appends = ['attributes'];
+    protected $appends = ['variant_attributes'];
 
     public function product()
     {
@@ -44,7 +44,7 @@ class ProductVariant extends Model
         return $this->belongsToMany(AttributeValue::class, 'product_variant_attributes', 'variant_id', 'attribute_value_id');
     }
 
-    public function getAttributesAttribute()
+    public function getVariantAttributesAttribute()
     {
         if (!$this->relationLoaded('attributeValues')) {
             return null; // Return null so frontend doesn't get confused if not loaded

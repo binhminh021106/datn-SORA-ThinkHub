@@ -47,7 +47,7 @@
                 <div class="premium-circle-img position-relative overflow-hidden">
                   <SoraSkeleton v-show="!categoryImagesLoaded[cat.id]" variant="image" width="100%" height="100%" circle
                     class="position-absolute top-0 start-0" />
-                  <img :src="getImageUrl(cat.thumbnail)" loading="lazy" :alt="cat.name"
+                  <img :src="getImageUrl(cat.thumbnail)" loading="eager" fetchpriority="high" :alt="cat.name"
                     @load="categoryImagesLoaded[cat.id] = true" @error="handleImageError"
                     class="w-100 h-100 object-fit-contain rounded-circle transition-transform duration-500 group-hover-scale-img"
                     :style="{ opacity: categoryImagesLoaded[cat.id] ? 1 : 0, transition: 'opacity 0.4s ease' }">

@@ -13,7 +13,9 @@ use App\Models\Combo;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Coupon;
-use App\Models\Review; // BẮT BUỘC: Đảm bảo bạn đã thêm dòng này
+use App\Models\Review;
+use App\Models\User;
+use App\Events\OrderCreated;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -341,6 +343,9 @@ class ClientOrderController extends Controller
                 // 7. XÓA GIỎ HÀNG
                 $cart->items()->delete();
                 $cart->delete();
+
+                // 8. BẮN EVENT (PUB/SUB)
+                event(new OrderCreated($order));
 
                 return response()->json([
                     'success' => true,

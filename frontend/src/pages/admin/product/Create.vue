@@ -561,7 +561,7 @@ const systemAttributes = ref([]);
 const brands = ref([]);
 
 const form = ref({
-    category_id: '', brand_id: '', name: '', slug: '', base_price: 0, cost_price: 0, isPublished: true, affiliate_commission_rate: 0, description: ''
+    category_id: '', brand_id: '', name: '', slug: '', base_price: 0, cost_price: null, isPublished: true, affiliate_commission_rate: 0, description: ''
 });
 const thumbnailFile = ref(null);
 const thumbnailPreview = ref(null);
@@ -686,12 +686,13 @@ const updateBasePrice = (event) => {
 };
 const updateCostPrice = (event) => {
     let rawValue = event.target.value.replace(/[^0-9]/g, '');
-    form.value.cost_price = rawValue ? parseInt(rawValue, 10) : '';
+    form.value.cost_price = rawValue ? parseInt(rawValue, 10) : null;
+    event.target.value = formatCurrency(rawValue);
 };
 
 const updateVariantPrice = (index, field, event) => {
     let rawValue = event.target.value.replace(/\D/g, '');
-    variants.value[index][field] = rawValue ? parseInt(rawValue, 10) : '';
+    variants.value[index][field] = rawValue ? parseInt(rawValue, 10) : null;
     event.target.value = formatCurrency(rawValue);
     validateRow(index);
 };
@@ -1063,7 +1064,11 @@ const submitProduct = async () => {
         formData.append('name', form.value.name);
         formData.append('slug', form.value.slug);
         formData.append('base_price', form.value.base_price);
-        if (form.value.cost_price) formData.append('cost_price', form.value.cost_price);
+        if (form.value.cost_price !== null && form.value.cost_price !== '') {
+            formData.append('cost_price', form.value.cost_price);
+        } else {
+            formData.append('cost_price', '');
+        }
         formData.append('status', form.value.isPublished ? 'published' : 'draft');
         formData.append('description', form.value.description || '');
         
@@ -1075,7 +1080,7 @@ const submitProduct = async () => {
         const variantsPayload = variants.value.map(v => ({
             sku: v.sku,
             price: v.price,
-            cost_price: v.cost_price || 0,
+            cost_price: (v.cost_price === '' || v.cost_price == null) ? null : v.cost_price,
             promotional_price: v.promotional_price || 0,
             stock_quantity: v.stock_quantity,
             attributes: v.attributes
