@@ -47,6 +47,8 @@
           <img
             :src="getImageUrl(product.thumbnail_image)"
             :alt="product.name"
+            loading="lazy"
+            decoding="async"
             class="sora-main-img object-fit-cover w-100 h-100 bg-white"
             :class="{ 'opacity-75': isOutOfStock }"
             style="object-position: center;"
@@ -56,6 +58,8 @@
             v-if="showHoverImage && hasHoverImage(product) && !isOutOfStock"
             :src="getImageUrl(product.hover_image)"
             :alt="product.name + ' hover'"
+            loading="lazy"
+            decoding="async"
             class="sora-hover-img position-absolute top-0 start-0 w-100 h-100 object-fit-cover"
             style="object-position: center;"
           >

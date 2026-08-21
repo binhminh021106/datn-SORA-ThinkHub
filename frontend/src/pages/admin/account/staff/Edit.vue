@@ -94,38 +94,37 @@
               <div class="card-body p-3 pt-2">
                 <div class="row">
                   <div class="col-md-6 mb-4">
-                    <label class="form-label fw-bold text-dark">Họ và tên <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control bg-white border-secondary-subtle shadow-none"
-                      v-model="form.fullname" required>
+                    <div class="form-floating">
+                      <input type="text" id="staffName" class="form-control bg-white border-secondary-subtle shadow-none" v-model="form.fullname" placeholder="Nhập họ tên" required>
+                      <label for="staffName" class="fw-bold text-dark">Họ và tên <span class="text-danger">*</span></label>
+                    </div>
                   </div>
                   <div class="col-md-6 mb-4">
-                    <label class="form-label fw-bold text-dark">Số điện thoại</label>
-                    <input type="text" class="form-control bg-white border-secondary-subtle shadow-none"
-                      v-model="form.phone">
+                    <div class="form-floating">
+                      <input type="text" id="staffPhone" class="form-control bg-white border-secondary-subtle shadow-none" v-model="form.phone" placeholder="Nhập SĐT">
+                      <label for="staffPhone" class="fw-bold text-dark">Số điện thoại</label>
+                    </div>
                   </div>
 
                   <div class="col-md-6 mb-4">
-                    <label class="form-label fw-bold text-muted">Email đăng nhập <span
-                        class="text-danger">*</span></label>
                     <div class="input-group shadow-sm">
-                      <span class="input-group-text bg-light text-muted border-secondary-subtle"><i
-                          class="bi bi-envelope"></i></span>
-                      <input type="email"
-                        class="form-control bg-light text-muted cursor-not-allowed border-secondary-subtle shadow-none"
-                        v-model="form.email" required readonly disabled>
+                      <span class="input-group-text bg-light text-muted border-secondary-subtle"><i class="bi bi-envelope"></i></span>
+                      <div class="form-floating flex-grow-1">
+                        <input type="email" id="staffEmail" class="form-control bg-light text-muted cursor-not-allowed border-secondary-subtle shadow-none" v-model="form.email" placeholder="name@domain.com" required readonly disabled>
+                        <label for="staffEmail" class="fw-bold text-muted" style="z-index: 4;">Email đăng nhập <span class="text-danger">*</span></label>
+                      </div>
                     </div>
                     <small class="text-danger mt-1 d-block" style="font-size: 0.75rem;">Không được phép thay đổi
                       email.</small>
                   </div>
 
                   <div class="col-md-6 mb-4">
-                    <label class="form-label fw-bold text-dark">Đổi mật khẩu <span
-                        class="text-muted fw-normal small">(Tùy chọn)</span></label>
                     <div class="input-group shadow-sm">
-                      <span class="input-group-text bg-white text-muted border-secondary-subtle"><i
-                          class="bi bi-key"></i></span>
-                      <input type="text" class="form-control bg-white border-secondary-subtle shadow-none"
-                        v-model="form.password" placeholder="Bỏ trống nếu không đổi">
+                      <span class="input-group-text bg-white text-muted border-secondary-subtle"><i class="bi bi-key"></i></span>
+                      <div class="form-floating flex-grow-1">
+                        <input type="text" id="staffPassword" class="form-control bg-white border-secondary-subtle shadow-none" v-model="form.password" placeholder="Bỏ trống nếu không đổi">
+                        <label for="staffPassword" class="fw-bold text-dark" style="z-index: 4;">Đổi mật khẩu <span class="text-muted fw-normal small">(Tùy chọn)</span></label>
+                      </div>
                     </div>
                   </div>
 
@@ -142,19 +141,23 @@
                       label-class="fw-semibold text-dark small" />
                   </div>
                   <div class="col-md-12 mb-4">
-                    <label class="form-label fw-semibold text-dark small">Địa chỉ cụ thể (Số nhà, đường)</label>
-                    <input type="text" class="form-control bg-white border-secondary-subtle shadow-none"
-                      v-model="specificAddress" placeholder="VD: Số 12, Đường ABCD">
+                    <div class="form-floating">
+                      <input type="text" id="staffAddress" class="form-control bg-white border-secondary-subtle shadow-none" v-model="specificAddress" placeholder="VD: Số 12, Đường ABCD">
+                      <label for="staffAddress" class="fw-semibold text-dark">Địa chỉ cụ thể (Số nhà, đường)</label>
+                    </div>
                   </div>
                   <!-- ================= KẾT THÚC ĐỊA CHỈ ================= -->
 
                   <div class="col-12 mb-4 mt-2">
-                    <label class="form-label fw-bold text-dark">Cấp quyền Chức vụ (Role) <span
-                        class="text-danger">*</span></label>
-                    <select class="form-select form-select-lg bg-light border-secondary-subtle fw-bold text-dark"
-                      v-model="form.role_id" required :disabled="isCurrentUser || route.params.id == 1">
-                      <option v-for="r in roles" :key="r.id" :value="r.id">Cấp {{ r.level }}: {{ r.label }}</option>
-                    </select>
+                    <div class="form-floating">
+                      <select class="form-select bg-light border-secondary-subtle fw-bold text-dark" id="staffRole" v-model="form.role_id" required :disabled="isCurrentUser || route.params.id == 1">
+                        <option value="" disabled>-- Hãy chọn một Chức vụ --</option>
+                        <option v-for="r in roles" :key="r.id" :value="r.id">
+                          Cấp {{ r.level }}: {{ r.label }}
+                        </option>
+                      </select>
+                      <label for="staffRole" class="fw-bold text-dark">Cấp quyền Chức vụ (Role) <span class="text-danger">*</span></label>
+                    </div>
                   </div>
                 </div>
 
@@ -501,17 +504,14 @@ const updateStaff = async () => {
   font-size: 0.875rem;
 }
 
-.account-edit-form .form-control,
-.account-edit-form .form-select,
-.account-edit-form .input-group-text {
-  min-height: 38px;
-  padding: 0.4rem 0.7rem;
-  font-size: 0.95rem;
+.account-edit-form .form-label {
+  margin-bottom: 0.35rem;
+  font-size: 0.875rem;
 }
 
-.account-edit-form .form-select-lg {
-  min-height: 38px;
-  padding: 0.4rem 0.7rem;
-  font-size: 0.95rem;
+
+/* Smooth floating label transition */
+.form-floating > label {
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
 }
 </style>

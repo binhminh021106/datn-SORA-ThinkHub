@@ -24,6 +24,7 @@ class Contact extends Model
         'replied_at',
         'replied_by',
         'reply_delivery_status',
+        'reply_delivery_token',
     ];
 
     protected function casts(): array

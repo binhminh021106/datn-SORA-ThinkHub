@@ -394,6 +394,7 @@ class AdminDashboardController extends Controller
                     'avatar' => $user ? $user->avatar_url : null,
                     'spent' => (float) $tb->total_spent,
                     'tierName' => $tierName,
+                    'gender' => $user ? $user->gender : null,
                 ];
             }
 
@@ -410,26 +411,66 @@ class AdminDashboardController extends Controller
             
             $topGender = null;
             if ($topGenderRaw && $topGenderRaw->gender) {
+                // Determine top age range
+                $topGenderAgeQuery = DB::table('orders')
+                    ->join('users', 'orders.user_id', '=', 'users.id')
+                    ->whereNotNull('users.birthday')
+                    ->where('users.gender', $topGenderRaw->gender)
+                    ->whereBetween('orders.created_at', [$period['start'], $period['end']]);
+                    
+                $topGenderAges = $this->applyRevenueFilter($topGenderAgeQuery, 'orders')
+                    ->select(DB::raw('TIMESTAMPDIFF(YEAR, users.birthday, CURDATE()) as age'), DB::raw('COUNT(DISTINCT users.id) as count'))
+                    ->groupBy('age')
+                    ->get();
+                
+                $ageGroups = ['Dưới 18' => 0, '18-25' => 0, '26-35' => 0, '36-45' => 0, '46-55' => 0, 'Trên 55' => 0];
+                foreach ($topGenderAges as $row) {
+                    if ($row->age < 18) $ageGroups['Dưới 18'] += $row->count;
+                    elseif ($row->age <= 25) $ageGroups['18-25'] += $row->count;
+                    elseif ($row->age <= 35) $ageGroups['26-35'] += $row->count;
+                    elseif ($row->age <= 45) $ageGroups['36-45'] += $row->count;
+                    elseif ($row->age <= 55) $ageGroups['46-55'] += $row->count;
+                    else $ageGroups['Trên 55'] += $row->count;
+                }
+                arsort($ageGroups);
+                $topAgeGroup = array_key_first($ageGroups);
+                if ($ageGroups[$topAgeGroup] == 0) $topAgeGroup = null;
+
                 $genderMap = ['male' => 'Nam', 'female' => 'Nữ', 'other' => 'Khác'];
                 $topGender = [
                     'gender' => $genderMap[strtolower($topGenderRaw->gender)] ?? ucfirst($topGenderRaw->gender),
                     'spent' => (float) $topGenderRaw->total_spent,
+                    'age_range' => $topAgeGroup,
                 ];
             }
 
-            // 3. Best Month (All-time)
             $bestMonthQuery = Order::query();
-            $bestMonthRaw = $this->applyRevenueFilter($bestMonthQuery)
+            // 3. Best Month (All-time)
+            $bestMonthsRaw = $this->applyRevenueFilter($bestMonthQuery)
                 ->select(DB::raw('MONTH(created_at) as month'), DB::raw('YEAR(created_at) as year'), DB::raw('SUM(total_amount) as total_spent'))
                 ->groupBy('year', 'month')
                 ->orderByDesc('total_spent')
-                ->first();
+                ->limit(3)
+                ->get();
             
             $bestMonth = null;
-            if ($bestMonthRaw) {
+            if ($bestMonthsRaw->isNotEmpty()) {
+                $first = $bestMonthsRaw->first();
+
+                // Find best day in that month
+                $bestDayRaw = $this->applyRevenueFilter(Order::query())
+                    ->whereYear('created_at', $first->year)
+                    ->whereMonth('created_at', $first->month)
+                    ->select(DB::raw('DATE(created_at) as date'), DB::raw('SUM(total_amount) as daily_spent'))
+                    ->groupBy('date')
+                    ->orderByDesc('daily_spent')
+                    ->first();
+
                 $bestMonth = [
-                    'label' => 'Tháng ' . $bestMonthRaw->month . '/' . $bestMonthRaw->year,
-                    'spent' => (float) $bestMonthRaw->total_spent,
+                    'label' => 'Tháng ' . $first->month . '/' . $first->year,
+                    'spent' => (float) $first->total_spent,
+                    'best_day' => $bestDayRaw ? Carbon::parse($bestDayRaw->date)->format('d/m/Y') : null,
+                    'best_day_spent' => $bestDayRaw ? (float) $bestDayRaw->daily_spent : 0,
                 ];
             }
 
@@ -637,15 +678,16 @@ class AdminDashboardController extends Controller
             $orderColumns[] = 'discount_amount';
         }
 
-        // Lấy danh sách ID để query cost
-        $validOrders = $this->applyRevenueFilter(clone $ordersQuery)->pluck('id');
-        
-        // Calculate costs grouped by date
-        $costsQuery = DB::table('order_items')
-            ->join('orders', 'order_items.order_id', '=', 'orders.id')
-            ->leftJoin('product_variants', 'order_items.product_variant_id', '=', 'product_variants.id')
-            ->leftJoin('products', 'order_items.product_id', '=', 'products.id')
-            ->whereIn('orders.id', $validOrders);
+        // Tính toán chi phí
+        $costsQuery = $this->applyRevenueFilter(
+            DB::table('order_items')
+                ->join('orders', 'order_items.order_id', '=', 'orders.id')
+                ->leftJoin('product_variants', 'order_items.product_variant_id', '=', 'product_variants.id')
+                ->leftJoin('products', 'order_items.product_id', '=', 'products.id')
+                ->where('orders.created_at', '>=', $startDate)
+                ->where('orders.created_at', '<=', $endDate),
+            'orders'
+        );
 
         $diffDays = $startDate->diffInDays($endDate);
 

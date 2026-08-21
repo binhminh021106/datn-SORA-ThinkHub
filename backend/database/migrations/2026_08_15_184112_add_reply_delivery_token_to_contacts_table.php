@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('contacts', function (Blueprint $table) {
-            $table->enum('reply_delivery_status', ['queued', 'sent', 'failed'])->nullable()->after('replied_by');
+            $table->string('reply_delivery_token')->nullable()->after('reply_delivery_status');
         });
     }
 
@@ -22,7 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('contacts', function (Blueprint $table) {
-            $table->dropColumn('reply_delivery_status');
+            $table->dropColumn('reply_delivery_token');
         });
     }
 };

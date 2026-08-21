@@ -293,7 +293,7 @@ const submitForm = () => {
     if (form.value.usage_limit_per_user && form.value.usage_limit_per_user > form.value.usage_limit) { Swal.fire('Lỗi', 'Giới hạn mỗi user không được vượt quá tổng số lượng mã.', 'warning'); return; }
     errors.value = {}; 
     const payload = { ...form.value, expires_at: formatForPayload(form.value.expires_at) };
-    if (payload.usage_limit_per_user === '' || payload.usage_limit_per_user === null) {
+    if (payload.usage_limit_per_user === '' || payload.usage_limit_per_user === null || Number(payload.usage_limit_per_user) === 0) {
         payload.usage_limit_per_user = null;
     }
 

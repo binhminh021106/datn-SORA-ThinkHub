@@ -128,13 +128,16 @@ class AdminContactController extends Controller
             ], 422);
         }
 
+        $replyDeliveryToken = \Illuminate\Support\Str::uuid()->toString();
+
         try {
             $contact->update([
-                'reply_subject' => $contact->reply_subject ?? $request->subject,
-                'reply_message' => $contact->reply_message ?? $replyMessage,
-                'replied_at' => $contact->replied_at ?? now(),
-                'replied_by' => $contact->replied_by ?? $request->user()?->id,
+                'reply_subject' => $request->subject,
+                'reply_message' => $replyMessage,
+                'replied_at' => now(),
+                'replied_by' => $request->user()?->id,
                 'reply_delivery_status' => 'queued',
+                'reply_delivery_token' => $replyDeliveryToken,
             ]);
         } catch (\Throwable $exception) {
             \Illuminate\Support\Facades\Log::error('Không thể lưu lịch sử liên hệ.', [
@@ -160,7 +163,7 @@ class AdminContactController extends Controller
             $contactId = $contact->id;
 
             // Queue Gửi Email
-            dispatch(function () use ($contactEmail, $subject, $data, $contactId) {
+            dispatch(function () use ($contactEmail, $subject, $data, $contactId, $replyDeliveryToken) {
                 \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($contactEmail, $subject, $data) {
                     $message->to($contactEmail)
                             ->subject($subject)
@@ -181,12 +184,18 @@ class AdminContactController extends Controller
                             ");
                 });
                 
-                \App\Models\Contact::whereKey($contactId)->update([
-                    'status' => 'resolved',
-                    'reply_delivery_status' => 'sent'
-                ]);
-            })->catch(function (\Throwable $exception) use ($contactId) {
-                \App\Models\Contact::whereKey($contactId)->update(['reply_delivery_status' => 'failed']);
+                \App\Models\Contact::whereKey($contactId)
+                    ->where('reply_delivery_status', 'queued')
+                    ->where('reply_delivery_token', $replyDeliveryToken)
+                    ->update([
+                        'status' => 'resolved',
+                        'reply_delivery_status' => 'sent'
+                    ]);
+            })->catch(function (\Throwable $exception) use ($contactId, $replyDeliveryToken) {
+                \App\Models\Contact::whereKey($contactId)
+                    ->where('reply_delivery_status', 'queued')
+                    ->where('reply_delivery_token', $replyDeliveryToken)
+                    ->update(['reply_delivery_status' => 'failed']);
                 \Illuminate\Support\Facades\Log::error('Không thể gửi email phản hồi liên hệ (Queue).', [
                     'contact_id' => $contactId,
                     'error' => $exception->getMessage(),

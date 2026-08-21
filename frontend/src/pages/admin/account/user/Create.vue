@@ -52,40 +52,49 @@
                                 
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label fw-bold">Họ và tên <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" v-model="form.fullName" :class="{'is-invalid': errors.fullName}"
-                                            placeholder="Nhập họ tên" autocomplete="off">
-                                        <div class="invalid-feedback">{{ errors.fullName?.[0] }}</div>
+                                        <div class="form-floating">
+                                            <input type="text" id="fullName" class="form-control" v-model="form.fullName" :class="{'is-invalid': errors.fullName}"
+                                                placeholder="Nhập họ tên" autocomplete="off">
+                                            <label for="fullName" class="fw-bold text-dark">Họ và tên <span class="text-danger">*</span></label>
+                                        </div>
+                                        <div class="invalid-feedback d-block" v-if="errors.fullName">{{ errors.fullName?.[0] }}</div>
                                     </div>
                                     
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label fw-bold">Số điện thoại</label>
-                                        <input type="text" class="form-control" v-model="form.phone" :class="{'is-invalid': errors.phone}"
-                                            placeholder="Nhập SĐT" autocomplete="off" @input="validatePhone">
-                                        <div class="invalid-feedback">{{ errors.phone?.[0] }}</div>
+                                        <div class="form-floating">
+                                            <input type="text" id="phone" class="form-control" v-model="form.phone" :class="{'is-invalid': errors.phone}"
+                                                placeholder="Nhập SĐT" autocomplete="off" @input="validatePhone">
+                                            <label for="phone" class="fw-bold text-dark">Số điện thoại</label>
+                                        </div>
+                                        <div class="invalid-feedback d-block" v-if="errors.phone">{{ errors.phone?.[0] }}</div>
                                     </div>
 
                                     <div class="col-md-12 mb-3">
-                                        <label class="form-label fw-bold">Email đăng nhập <span class="text-danger">*</span></label>
-                                        <!-- Hack readonly để lừa trình duyệt không auto-fill -->
-                                        <input type="email" class="form-control bg-white" v-model="form.email" :class="{'is-invalid': errors.email}"
-                                            placeholder="name@domain.com" autocomplete="off" readonly onfocus="this.removeAttribute('readonly');">
-                                        <div class="invalid-feedback">{{ errors.email?.[0] }}</div>
+                                        <div class="form-floating">
+                                            <input type="email" id="email" class="form-control bg-white" v-model="form.email" :class="{'is-invalid': errors.email}"
+                                                placeholder="name@domain.com" autocomplete="off" readonly onfocus="this.removeAttribute('readonly');">
+                                            <label for="email" class="fw-bold text-dark">Email đăng nhập <span class="text-danger">*</span></label>
+                                        </div>
+                                        <div class="invalid-feedback d-block" v-if="errors.email">{{ errors.email?.[0] }}</div>
                                     </div>
                                     
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label fw-bold">Giới tính</label>
-                                        <select class="form-select" v-model="form.gender">
-                                            <option value="">-- Chưa cập nhật --</option>
-                                            <option value="Nam">Nam</option>
-                                            <option value="Nữ">Nữ</option>
-                                            <option value="Khác">Khác</option>
-                                        </select>
+                                        <div class="form-floating">
+                                            <select id="gender" class="form-select" v-model="form.gender">
+                                                <option value="">-- Chưa cập nhật --</option>
+                                                <option value="Nam">Nam</option>
+                                                <option value="Nữ">Nữ</option>
+                                                <option value="Khác">Khác</option>
+                                            </select>
+                                            <label for="gender" class="fw-bold text-dark">Giới tính</label>
+                                        </div>
                                     </div>
                                     
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label fw-bold">Ngày sinh</label>
-                                        <input type="date" class="form-control" v-model="form.birthday">
+                                        <div class="form-floating">
+                                            <input type="date" id="birthday" class="form-control" v-model="form.birthday" placeholder="Ngày sinh">
+                                            <label for="birthday" class="fw-bold text-dark">Ngày sinh</label>
+                                        </div>
                                     </div>
                                     
                                     <!-- Phân cách phần Mật khẩu cho rõ ràng -->
@@ -94,11 +103,13 @@
                                     </div>
 
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label fw-bold">Mật khẩu khởi tạo <span class="text-danger">*</span></label>
                                         <div class="position-relative">
-                                            <input :type="showPassword ? 'text' : 'password'" class="form-control bg-white pe-5" v-model="form.password" :class="{'is-invalid': errors.password}"
-                                                placeholder="Tối thiểu 8 ký tự" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');">
-                                            <button type="button" class="btn border-0 position-absolute top-50 end-0 translate-middle-y text-muted me-1" @click="showPassword = !showPassword">
+                                            <div class="form-floating">
+                                                <input :type="showPassword ? 'text' : 'password'" id="password" class="form-control bg-white pe-5" v-model="form.password" :class="{'is-invalid': errors.password}"
+                                                    placeholder="Tối thiểu 8 ký tự" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');">
+                                                <label for="password" class="fw-bold text-dark">Mật khẩu khởi tạo <span class="text-danger">*</span></label>
+                                            </div>
+                                            <button type="button" class="btn border-0 position-absolute top-50 end-0 translate-middle-y text-muted me-1" @click="showPassword = !showPassword" style="z-index: 5;">
                                                 <i class="bi" :class="showPassword ? 'bi-eye-slash' : 'bi-eye'"></i>
                                             </button>
                                         </div>
@@ -106,11 +117,13 @@
                                     </div>
                                     
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label fw-bold">Xác nhận mật khẩu <span class="text-danger">*</span></label>
                                         <div class="position-relative">
-                                            <input :type="showConfirmPassword ? 'text' : 'password'" class="form-control bg-white pe-5" v-model="form.password_confirmation" 
-                                                placeholder="Nhập lại mật khẩu" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');">
-                                            <button type="button" class="btn border-0 position-absolute top-50 end-0 translate-middle-y text-muted me-1" @click="showConfirmPassword = !showConfirmPassword">
+                                            <div class="form-floating">
+                                                <input :type="showConfirmPassword ? 'text' : 'password'" id="confirmPassword" class="form-control bg-white pe-5" v-model="form.password_confirmation" 
+                                                    placeholder="Nhập lại mật khẩu" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');">
+                                                <label for="confirmPassword" class="fw-bold text-dark">Xác nhận mật khẩu <span class="text-danger">*</span></label>
+                                            </div>
+                                            <button type="button" class="btn border-0 position-absolute top-50 end-0 translate-middle-y text-muted me-1" @click="showConfirmPassword = !showConfirmPassword" style="z-index: 5;">
                                                 <i class="bi" :class="showConfirmPassword ? 'bi-eye-slash' : 'bi-eye'"></i>
                                             </button>
                                         </div>
@@ -134,8 +147,10 @@
                                         />
                                     </div>
                                     <div class="col-md-12 mb-3">
-                                        <label class="form-label fw-bold">Địa chỉ chi tiết (Số nhà, đường)</label>
-                                        <input type="text" class="form-control" v-model="form.shipping_address" placeholder="Ví dụ: Số 12, Đường ABCD">
+                                        <div class="form-floating">
+                                            <input type="text" id="shippingAddress" class="form-control" v-model="form.shipping_address" placeholder="Ví dụ: Số 12, Đường ABCD">
+                                            <label for="shippingAddress" class="fw-bold text-dark">Địa chỉ chi tiết (Số nhà, đường)</label>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -265,6 +280,11 @@ const saveUser = async () => {
 </script>
 
 <style scoped>
+/* Smooth floating label transition */
+.form-floating > label {
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
 .btn-brand, .bg-brand { background-color: #009981; transition: 0.2s; border: none; }
 .btn-brand:hover { background-color: #007a67; }
 .btn-brand:disabled { background-color: #a5d6cd; }
@@ -281,11 +301,4 @@ const saveUser = async () => {
     font-size: 0.875rem;
 }
 
-.account-create-form .form-control,
-.account-create-form .form-select,
-.account-create-form .input-group-text {
-    min-height: 38px;
-    padding: 0.4rem 0.7rem;
-    font-size: 0.95rem;
-}
 </style>

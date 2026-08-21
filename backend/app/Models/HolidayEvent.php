@@ -16,6 +16,11 @@ class HolidayEvent extends Model
         'email_subject',
         'email_content',
         'voucher_code',
+        'discount_type',
+        'discount_value',
+        'min_spend',
+        'usage_limit_per_user',
+        'validity_days',
         'status'
     ];
 }

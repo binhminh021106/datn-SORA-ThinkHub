@@ -51,10 +51,7 @@
           <div class="d-flex align-items-center flex-wrap gap-2">
             <select v-if="!isReorderMode" class="form-select form-select-sm" v-model="positionFilter" style="width: 200px;">
               <option value="">Lọc vị trí trang</option>
-              <option value="home_slider">Slider Trang chủ</option>
-              <option value="home_story">Giữa trang: Di sản SORA</option>
-              <option value="category_top">Đầu trang Danh mục</option>
-              <option value="popup">Popup Sale</option>
+              <option v-for="(label, key) in positionMap" :key="key" :value="key">{{ label }}</option>
             </select>
 
             <button class="btn btn-sm px-3 py-2 fw-bold shadow-sm transition-all" 
@@ -186,7 +183,7 @@
     </div>
 
     <!-- MODAL XEM NHANH ẢNH/VIDEO -->
-    <div v-if="previewMedia.show" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.8); z-index: 1055" @click="closePreview">
+    <div v-if="previewMedia.show" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.8); z-index: 1055" @click="closePreview" @vue:mounted="el => el.focus()" @keydown.esc="closePreview">
       <div class="modal-dialog modal-dialog-centered modal-lg" @click.stop>
         <div class="modal-content bg-transparent border-0">
           <div class="modal-header border-0 pb-0 justify-content-end">
@@ -224,8 +221,8 @@ const dragOverIndex = ref(null);
 const reorderList = ref([]);
 const isMutating = ref(false); // Khóa UI khi có mutation đang chạy
 
-const getImageUrl = (path) => path ? getFullImage(path) : '/placeholder.png';
-const handleImageError = (e) => { e.target.src = '/placeholder.png'; };
+const getImageUrl = (path) => path ? getFullImage(path) : '/Sora-placeholder.png';
+const handleImageError = (e) => { e.target.src = '/Sora-placeholder.png'; };
 const formatDate = (dateString) => {
   if (!dateString) return null;
   const d = new Date(dateString);
@@ -346,6 +343,7 @@ const deleteMutation = useMutation({
     return { prev };
   },
   onError: (err, id, ctx) => { if (ctx?.prev) queryClient.setQueryData(['admin', 'banners'], ctx.prev); Swal.fire('Lỗi', 'Xóa thất bại', 'error'); },
+  onSuccess: () => { Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã đưa vào thùng rác', showConfirmButton: false, timer: 1500 }); },
   onSettled: () => { isMutating.value = false; queryClient.invalidateQueries({ queryKey: ['admin', 'banners'] }); }
 });
 
@@ -362,7 +360,6 @@ const confirmDelete = async (id) => {
   });
   if (result.isConfirmed) { 
     deleteMutation.mutate(id);
-    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã đưa vào thùng rác', showConfirmButton: false, timer: 1500 });
   }
 };
 
@@ -383,7 +380,8 @@ const { mutate: forceDeleteBanner } = useMutation({
     if(context?.prev) queryClient.setQueryData(['admin', 'banners'], context.prev);
     Swal.fire('Lỗi', err.response?.data?.message || 'Xóa vĩnh viễn thất bại', 'error');
   },
-  onSettled: () => { isMutating.value = false; }
+  onSuccess: () => { Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa vĩnh viễn', showConfirmButton: false, timer: 1500 }); },
+  onSettled: () => { isMutating.value = false; queryClient.invalidateQueries({ queryKey: ['admin', 'banners'] }); }
 });
 
 const handleForceDelete = async (id) => {
@@ -399,7 +397,6 @@ const handleForceDelete = async (id) => {
   });
   if (result.isConfirmed) { 
     forceDeleteBanner(id); 
-    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa vĩnh viễn', showConfirmButton: false, timer: 1500 });
   }
 };
 

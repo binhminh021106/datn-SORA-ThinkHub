@@ -231,7 +231,7 @@
 
       <!-- TAB 3: CẤU HÌNH SINH NHẬT -->
       <section v-else-if="activeTab === 'birthday'" class="row g-3 fade-in">
-        <div class="col-xl-6">
+        <div class="col-xl-12">
           <div class="card border-0 shadow-sm form-card h-100">
             <div class="card-header bg-white border-0 pt-3 px-3 pb-0 d-flex justify-content-between align-items-start gap-2">
               <div>
@@ -243,17 +243,17 @@
               </div>
             </div>
             <div class="card-body p-3">
-              <div class="mb-3">
-                <label class="form-label fw-semibold text-dark small mb-1">Tiêu đề mẫu email</label>
-                <input v-model.trim="birthdaySettings.subject" type="text" class="form-control form-control-sm bg-light border-0">
+              <div class="form-floating mb-3">
+                <input v-model.trim="birthdaySettings.subject" type="text" class="form-control bg-light border-0" id="bdaySubject" placeholder="Tiêu đề mẫu email">
+                <label for="bdaySubject" class="fw-semibold text-dark">Tiêu đề mẫu email <span class="text-danger">*</span></label>
               </div>
               
               <!-- SECTION MỚI: QUÀ TẶNG THEO HẠNG THÀNH VIÊN -->
               <div class="mb-3">
                 <label class="form-label fw-semibold text-dark small mb-2">Quà tặng theo hạng thành viên</label>
-               <div class="border rounded-2 p-3 bg-light mb-3" v-for="(tier, index) in birthdaySettings.tiers" :key="tier.tier_id">
-                <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
-                  <span class="fw-bold text-dark"><i class="bi bi-star-fill text-warning me-1"></i> Hạng: {{ tier.name }}</span>
+               <div :class="getTierClass(tier.name)" class="rounded-2 p-3 mb-3 shadow-sm border" v-for="(tier, index) in birthdaySettings.tiers" :key="tier.tier_id">
+                <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-secondary-subtle">
+                  <span class="fw-bold text-dark"><i :class="getTierIcon(tier.name)" class="me-1"></i> {{ tier.name }}</span>
                   
                   <!-- Công tắc Trạng thái (Active/Inactive) -->
                   <div class="form-check form-switch m-0">
@@ -264,33 +264,45 @@
                 <div class="row g-2" v-if="tier.status === 'active'">
                   <!-- Dữ liệu cơ bản -->
                   <div class="col-md-6">
-                    <label class="small text-muted fw-semibold mb-1">Mã Voucher</label>
-                    <input v-model.trim="tier.voucherCode" type="text" class="form-control form-control-sm text-uppercase fw-bold border-brand-focus" placeholder="VD: BDAY2024">
+                    <div class="form-floating">
+                      <input v-model.trim="tier.voucherCode" type="text" class="form-control text-uppercase fw-bold border-brand-focus" :id="'vc_' + tier.tier_id" placeholder="VD: BDAY2024">
+                      <label :for="'vc_' + tier.tier_id" class="text-muted fw-semibold">Mã Voucher <span class="text-danger">*</span></label>
+                    </div>
                   </div>
                   <div class="col-md-3">
-                    <label class="small text-muted fw-semibold mb-1">Loại giảm</label>
-                    <select v-model="tier.type" class="form-select form-select-sm border-brand-focus">
-                      <option value="fixed">VNĐ</option>
-                      <option value="percentage">%</option>
-                    </select>
+                    <div class="form-floating">
+                      <select v-model="tier.type" class="form-select border-brand-focus" :id="'type_' + tier.tier_id">
+                        <option value="fixed">VNĐ</option>
+                        <option value="percentage">%</option>
+                      </select>
+                      <label :for="'type_' + tier.tier_id" class="text-muted fw-semibold">Loại giảm</label>
+                    </div>
                   </div>
                   <div class="col-md-3">
-                    <label class="small text-muted fw-semibold mb-1">Mức giảm</label>
-                    <input v-model.number="tier.value" type="number" class="form-control form-control-sm border-brand-focus">
+                    <div class="form-floating">
+                      <input v-model.number="tier.value" type="number" class="form-control border-brand-focus" :id="'val_' + tier.tier_id" placeholder="0">
+                      <label :for="'val_' + tier.tier_id" class="text-muted fw-semibold">Mức giảm <span class="text-danger">*</span></label>
+                    </div>
                   </div>
 
                   <!-- Hạn mức và Hạn sử dụng -->
                   <div class="col-md-4 mt-2">
-                    <label class="small text-muted fw-semibold mb-1">Đơn tối thiểu</label>
-                    <input v-model.number="tier.min_spend" type="number" class="form-control form-control-sm border-brand-focus">
+                    <div class="form-floating">
+                      <input :value="formatCurrency(tier.min_spend)" @input="handleMinSpendInput($event, tier)" type="text" class="form-control border-brand-focus" :id="'min_' + tier.tier_id" placeholder="0">
+                      <label :for="'min_' + tier.tier_id" class="text-muted fw-semibold">Đơn tối thiểu</label>
+                    </div>
                   </div>
                   <div class="col-md-4 mt-2">
-                    <label class="small text-muted fw-semibold mb-1">Lượt dùng/Khách</label>
-                    <input v-model.number="tier.usage_limit_per_user" type="number" class="form-control form-control-sm border-brand-focus">
+                    <div class="form-floating">
+                      <input v-model.number="tier.usage_limit_per_user" type="number" class="form-control border-brand-focus" :id="'use_' + tier.tier_id" placeholder="1">
+                      <label :for="'use_' + tier.tier_id" class="text-muted fw-semibold">Lượt dùng/Khách</label>
+                    </div>
                   </div>
                   <div class="col-md-4 mt-2">
-                    <label class="small text-muted fw-semibold mb-1">Hạn sử dụng (Ngày)</label>
-                    <input v-model.number="tier.validity_days" type="number" class="form-control form-control-sm border-brand-focus" placeholder="Tính từ ngày gửi">
+                    <div class="form-floating">
+                      <input v-model.number="tier.validity_days" type="number" class="form-control border-brand-focus" :id="'valdays_' + tier.tier_id" placeholder="Tính từ ngày gửi">
+                      <label :for="'valdays_' + tier.tier_id" class="text-muted fw-semibold">Hạn sử dụng (Ngày)</label>
+                    </div>
                   </div>
                   <div class="col-md-12 mt-2 d-none">
                      <!-- Ẩn trường này đi vì sinh nhật thường không giới hạn tổng lượt phát -->
@@ -305,22 +317,19 @@
 
               <div class="mb-3">
                 <div class="d-flex justify-content-between align-items-end mb-1">
-                  <label class="form-label fw-semibold text-dark small mb-0">Nội dung email chung</label>
+                  <label class="form-label fw-semibold text-dark small mb-0">Nội dung email chung <span class="text-danger">*</span></label>
                   <div class="text-brand fw-semibold cursor-pointer" style="font-size: 0.75rem;" @click="insertToken('birthday', '[Tên_Khách_Hàng]')">
                     <i class="bi bi-plus-circle me-1"></i>Chèn Tên
                   </div>
                 </div>
                 
-                <div class="custom-editor-wrapper border rounded-2 overflow-hidden">
-                  <div class="editor-toolbar bg-white border-bottom px-2 py-1 d-flex gap-1">
-                    <button type="button" class="btn btn-sm btn-light border-0 py-0 px-2" title="Đậm"><i class="bi bi-type-bold"></i></button>
-                    <button type="button" class="btn btn-sm btn-light border-0 py-0 px-2" title="Nghiêng"><i class="bi bi-type-italic"></i></button>
-                    <div class="vr mx-1"></div>
-                    <button type="button" class="btn btn-sm btn-light border fw-semibold text-dark py-0 px-2" style="font-size: 0.75rem;" title="Chèn mã voucher" @click="insertToken('birthday', '[Voucher_Code]')">
+                <div class="custom-editor-wrapper border rounded-2 overflow-hidden bg-white">
+                  <div class="editor-toolbar bg-light border-bottom px-2 py-1 d-flex gap-1">
+                    <button type="button" class="btn btn-sm btn-white border fw-semibold text-dark py-0 px-2" style="font-size: 0.75rem;" title="Chèn mã voucher" @click="insertToken('birthday', '[Voucher_Code]')">
                       <i class="bi bi-ticket-perforated text-brand me-1"></i> [Voucher_Code]
                     </button>
                   </div>
-                  <textarea v-model="birthdaySettings.content" class="form-control border-0 rounded-0 bg-light small" rows="8" style="resize: none; font-size: 0.85rem;"></textarea>
+                  <QuillEditor v-model:content="birthdaySettings.content" contentType="html" toolbar="full" theme="snow" class="bg-white" style="min-height: 200px;"/>
                 </div>
               </div>
 
@@ -329,16 +338,29 @@
                   <i class="bi" :class="birthdaySettings.enabled ? 'bi-check-circle-fill' : 'bi-pause-circle-fill'"></i>
                   <span class="fw-semibold" style="font-size: 0.8rem;">{{ birthdaySettings.enabled ? 'Hệ thống Đang bật tự động' : 'Hệ thống Đang tắt' }}</span>
                 </div>
-                <button class="btn btn-sm btn-brand text-white fw-bold px-3 shadow-sm" @click="saveBirthdaySettings">
-                  <i class="bi bi-floppy me-1"></i> Lưu cấu hình
-                </button>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-sm btn-light border fw-bold px-3 shadow-sm" @click="showPreviewModal = true">
+                    <i class="bi bi-eye me-1"></i> Xem trước
+                  </button>
+                  <button class="btn btn-sm btn-brand text-white fw-bold px-3 shadow-sm" @click="saveBirthdaySettings">
+                    <i class="bi bi-floppy me-1"></i> Lưu cấu hình
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
+      </section>
 
-        <div class="col-xl-6">
-          <div class="card border-0 shadow-sm h-100 preview-card-bg">
+      <!-- MODAL XEM TRƯỚC EMAIL -->
+      <div v-if="showPreviewModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.8); z-index: 1055" @click="showPreviewModal = false" @keydown.esc="showPreviewModal = false">
+        <div class="modal-dialog modal-dialog-centered modal-lg" @click.stop>
+          <div class="modal-content bg-transparent border-0">
+            <div class="modal-header border-0 pb-0 justify-content-end">
+              <button type="button" class="btn-close btn-close-white" @click="showPreviewModal = false"></button>
+            </div>
+            <div class="modal-body pt-0">
+              <div class="card border-0 shadow-sm preview-card-bg w-100">
             <div class="card-header bg-transparent border-0 pt-3 px-3 pb-0 d-flex justify-content-between align-items-end">
               <div>
                 <h6 class="fw-bold mb-1 text-dark">Xem trước email hiển thị</h6>
@@ -398,32 +420,65 @@
                     <button class="sora-tp-btn mt-3 w-100 shadow-sm">CHỌN MÓN TRANG SỨC NGAY</button>
                   </div>
                 </div>
-              </div>
-
             </div>
           </div>
         </div>
-      </section>
-
+      </div>
     </div>
+  </div>
+  </div>
+  </div>
   </div>
 </template>
 
 <script setup>
-import { computed, ref, onMounted, watch } from 'vue'; // THÊM IMPORT watch
+import { QuillEditor } from '@vueup/vue-quill';
+import '@vueup/vue-quill/dist/vue-quill.snow.css';
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'; // THÊM IMPORT watch
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import apiClient from '@/utils/apiClient';
 import StatusConfirmSelect from '@/components/admin/StatusConfirmSelect.vue';
+import { sanitizeRichHtml } from '@/utils/sanitizeHtml';
 
 const router = useRouter();
+const showPreviewModal = ref(false);
 
 
 const allowedTabs = new Set(['dashboard', 'holidays', 'birthday']);
 
+// HÀM TIỆN ÍCH UI
+function getTierClass(name) {
+  const n = name.toLowerCase();
+  if (n.includes('bạc') || n.includes('silver')) return 'bg-light border-secondary';
+  if (n.includes('vàng') || n.includes('gold')) return 'bg-warning-subtle border-warning';
+  if (n.includes('kim cương') || n.includes('diamond')) return 'bg-info-subtle border-info';
+  // Khách thường
+  return 'bg-white border-light-subtle';
+}
+
+function getTierIcon(name) {
+  const n = name.toLowerCase();
+  if (n.includes('bạc') || n.includes('silver')) return 'bi bi-star text-secondary';
+  if (n.includes('vàng') || n.includes('gold')) return 'bi bi-star-fill text-warning';
+  if (n.includes('kim cương') || n.includes('diamond')) return 'bi bi-gem text-info';
+  return 'bi bi-person-fill text-muted';
+}
+
 // DÙNG SESSION STORAGE để lưu giữ tab và VALIDATE dữ liệu
 const savedTab = sessionStorage.getItem('activeCampaignTab');
 const activeTab = ref(allowedTabs.has(savedTab) ? savedTab : 'dashboard');
+
+function formatCurrency(val) {
+  if (!val && val !== 0) return '';
+  return new Intl.NumberFormat('vi-VN').format(val);
+}
+
+function handleMinSpendInput(e, tier) {
+  const rawValue = e.target.value.toString().replace(/\D/g, '');
+  tier.min_spend = rawValue ? parseInt(rawValue, 10) : 0;
+  e.target.value = formatCurrency(tier.min_spend);
+}
 
 // Bất cứ khi nào bạn đổi tab, nó lưu vào bộ nhớ (kèm theo kiểm tra an toàn)
 watch(activeTab, (newVal) => {
@@ -479,7 +534,10 @@ const fetchBirthdaySettings = async () => {
     
     // Đổ dữ liệu THẬT TỪ DATABASE vào biến giao diện
     if (res.data.data.tiers && res.data.data.tiers.length > 0) {
-      birthdaySettings.value.tiers = res.data.data.tiers;
+      birthdaySettings.value.tiers = res.data.data.tiers.map(tier => ({
+        ...tier,
+        type: tier.type ?? 'fixed',
+      }));
       // Gán hạng mặc định để hiển thị ở màn hình Preview bên phải
       previewTierId.value = res.data.data.tiers[0].tier_id; 
     }
@@ -506,8 +564,19 @@ const loadData = async () => {
   isPageLoading.value = false;
 };
 
+const handleKeydown = (e) => {
+  if (e.key === 'Escape' && showPreviewModal.value) {
+    showPreviewModal.value = false;
+  }
+};
+
 onMounted(() => {
   loadData();
+  window.addEventListener('keydown', handleKeydown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown);
 });
 
 const filteredHolidays = computed(() => {
@@ -540,12 +609,7 @@ const previewBirthdaySubject = computed(() => {
 const previewBirthdayContent = computed(() => {
   let text = birthdaySettings.value.content || '[Nhập nội dung...]';
   
-  // Sanitize to prevent XSS
-  text = text.replace(/&/g, '&amp;')
-             .replace(/</g, '&lt;')
-             .replace(/>/g, '&gt;')
-             .replace(/"/g, '&quot;')
-             .replace(/'/g, '&#039;');
+  text = sanitizeRichHtml(text);
              
   text = text.replace(/\[Tên_Khách_Hàng\]/g, '<strong>Lê Thị Mỹ Duyên</strong>');
   
@@ -557,7 +621,7 @@ const previewBirthdayContent = computed(() => {
                  .replace(/'/g, '&#039;');
   text = text.replace(/\[Voucher_Code\]/g, () => `<strong>${vCode}</strong>`);
   
-  return text.replace(/\n/g, '<br>');
+  return text;
 });
 
 // Chuyển đổi định dạng tiền tệ hoặc % cho màn hình preview
@@ -859,5 +923,19 @@ function showToast(title, icon = 'success') { Swal.fire({ toast: true, position:
   to {
     background-position: 200% center;
   }
+}
+
+.form-check-input:checked {
+  background-color: #009981;
+  border-color: #009981;
+}
+
+.form-switch .form-check-input:focus {
+  --bs-form-switch-bg: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23009981'/%3e%3c/svg%3e");
+}
+
+/* Smooth floating label transition */
+.form-floating > label {
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
 }
 </style>

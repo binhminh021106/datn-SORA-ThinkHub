@@ -24,14 +24,54 @@
     <div v-else class="dashboard-wrapper min-vh-100 p-1">
 
       <!-- Nút xuất báo cáo fixed -->
-      <button @click="exportToExcel" :disabled="isExporting"
-        class="btn btn-brand position-fixed shadow-lg d-flex align-items-center justify-content-center transition-all"
-        style="bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; z-index: 1050; padding: 0;"
-        title="Xuất báo cáo Excel">
-        <span v-if="isExporting" class="spinner-border spinner-border-sm text-white" role="status"
-          aria-hidden="true"></span>
-        <i v-else class="bi bi-file-earmark-arrow-down-fill fs-4 text-white"></i>
-      </button>
+      <div class="dropdown position-fixed" style="bottom: 30px; right: 30px; z-index: 1050;">
+        <button class="btn btn-brand shadow-lg d-flex align-items-center justify-content-center transition-all"
+          type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false"
+          :disabled="isExporting"
+          style="width: 60px; height: 60px; border-radius: 50%; padding: 0;"
+          title="Xuất báo cáo Excel">
+          <span v-if="isExporting" class="spinner-border spinner-border-sm text-white" role="status" aria-hidden="true"></span>
+          <i v-else class="bi bi-file-earmark-arrow-down-fill fs-4 text-white"></i>
+        </button>
+        <div class="dropdown-menu dropdown-menu-end shadow border mb-3 p-3" aria-labelledby="exportDropdown" style="border-radius: 20px; min-width: 260px; border-color: rgba(0,0,0,0.08) !important;">
+          <h6 class="dropdown-header text-uppercase fw-bold text-muted font-size-xs px-1 mb-3" style="letter-spacing: 1px;">Chọn kỳ xuất dữ liệu</h6>
+          <div class="d-flex flex-column gap-2">
+            <button type="button" class="btn btn-light border-0 text-start d-flex align-items-center gap-3 py-2 px-3 fw-semibold rounded-4 transition-all hover-shadow-sm" @click="exportWithPeriod('today')">
+              <div class="d-flex align-items-center justify-content-center bg-primary-soft text-primary rounded-circle" style="width: 32px; height: 32px;"><i class="bi bi-calendar-day"></i></div>
+              Hôm nay
+            </button>
+            <button type="button" class="btn btn-light border-0 text-start d-flex align-items-center gap-3 py-2 px-3 fw-semibold rounded-4 transition-all hover-shadow-sm" @click="exportWithPeriod('last_7_days')">
+              <div class="d-flex align-items-center justify-content-center bg-info-soft text-info rounded-circle" style="width: 32px; height: 32px;"><i class="bi bi-calendar-week"></i></div>
+              7 ngày qua
+            </button>
+            <button type="button" class="btn btn-light border-0 text-start d-flex align-items-center gap-3 py-2 px-3 fw-semibold rounded-4 transition-all hover-shadow-sm" @click="exportWithPeriod('last_30_days')">
+              <div class="d-flex align-items-center justify-content-center bg-warning-soft text-warning rounded-circle" style="width: 32px; height: 32px;"><i class="bi bi-calendar-month"></i></div>
+              30 ngày qua
+            </button>
+            <button type="button" class="btn btn-light border-0 text-start d-flex align-items-center gap-3 py-2 px-3 fw-semibold rounded-4 transition-all hover-shadow-sm" @click="exportWithPeriod('this_month')">
+              <div class="d-flex align-items-center justify-content-center bg-brand-soft text-brand rounded-circle" style="width: 32px; height: 32px;"><i class="bi bi-calendar-event"></i></div>
+              Tháng này
+            </button>
+            <button type="button" class="btn btn-light border-0 text-start d-flex align-items-center gap-3 py-2 px-3 fw-semibold rounded-4 transition-all hover-shadow-sm" @click="exportWithPeriod('last_month')">
+              <div class="d-flex align-items-center justify-content-center bg-secondary-soft text-secondary rounded-circle" style="width: 32px; height: 32px;"><i class="bi bi-calendar-minus"></i></div>
+              Tháng trước
+            </button>
+            <button type="button" class="btn btn-light border-0 text-start d-flex align-items-center gap-3 py-2 px-3 fw-semibold rounded-4 transition-all hover-shadow-sm" @click="exportWithPeriod('all')">
+              <div class="d-flex align-items-center justify-content-center bg-success-soft text-success rounded-circle" style="width: 32px; height: 32px;"><i class="bi bi-infinity"></i></div>
+              Toàn thời gian
+            </button>
+            <hr class="my-1">
+            <button type="button" class="btn btn-light border-0 text-start d-flex align-items-center gap-3 py-2 px-3 fw-bold rounded-4 transition-all hover-shadow-sm text-primary" @click="showCustomExportModal">
+              <div class="d-flex align-items-center justify-content-center bg-primary-soft text-primary rounded-circle" style="width: 32px; height: 32px;"><i class="bi bi-calendar-check"></i></div>
+              Tùy chọn thời gian...
+            </button>
+            <button type="button" class="btn btn-brand-soft border-0 text-start d-flex align-items-center gap-3 py-2 px-3 fw-bold rounded-4 transition-all hover-shadow-sm" @click="exportWithPeriod('current')">
+              <div class="d-flex align-items-center justify-content-center bg-brand text-white rounded-circle" style="width: 32px; height: 32px;"><i class="bi bi-funnel"></i></div>
+              Kỳ đang lọc (Mặc định)
+            </button>
+          </div>
+        </div>
+      </div>
 
       <!-- Hàng 1: Các thẻ thống kê tổng quan (Compact) -->
       <div class="row row-cols-1 row-cols-md-3 row-cols-xl-6 g-3 g-xl-2 mb-3">
@@ -76,8 +116,8 @@
                 </div>
               </div>
               <div class="d-flex align-items-center mt-auto">
-                <span class="badge fw-bold me-2 px-2 py-1 font-size-xs" :class="getGrowthClass(stats.netProfitGrowth || 0)">
-                  <i class="me-1" :class="getGrowthIcon(stats.netProfitGrowth || 0)"></i> {{ formatGrowth(stats.netProfitGrowth || 0) }}
+                <span class="badge fw-bold me-2 px-2 py-1 font-size-xs" :class="getGrowthClass(stats.netProfitGrowth)">
+                  <i class="me-1" :class="getGrowthIcon(stats.netProfitGrowth)"></i> {{ formatGrowth(stats.netProfitGrowth) }}
                 </span>
                 <span class="text-muted font-size-xs fw-medium text-truncate">So với kỳ trước</span>
               </div>
@@ -160,8 +200,7 @@
             <div class="card-body p-3 d-flex flex-column justify-content-between">
               <div class="d-flex align-items-start justify-content-between mb-2">
                 <div class="pe-2 min-w-0">
-                  <p class="text-muted fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate">Nhân sự
-                    (Hôm nay)</p>
+                  <p class="text-muted fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate">Nhân sự (Hôm nay)</p>
                   <h4 class="fw-bolder mb-0 text-dark stat-number text-truncate">
                     {{ staffStats.total }} <span class="text-muted font-size-xs fw-medium">Tổng</span>
                   </h4>
@@ -170,10 +209,11 @@
                   <i class="bi bi-person-badge fs-5"></i>
                 </div>
               </div>
-              <div class="d-flex align-items-center mt-auto font-size-xs fw-medium text-muted gap-2 text-truncate">
-                <span class="text-primary">
-                  <i class="bi bi-calendar2-check"></i> {{ staffStats.current_shift || 'Đang cập nhật...' }}
-                </span>
+              <div class="d-flex gap-2 font-size-xs">
+                <span class="text-success fw-bold"><i class="bi bi-dot fs-5 align-middle me-n1"></i>{{ staffStats.online
+                  }} On</span>
+                <span class="text-secondary fw-bold"><i class="bi bi-dot fs-5 align-middle me-n1"></i>{{
+                  staffStats.offline }} Off</span>
               </div>
             </div>
           </div>
@@ -319,20 +359,30 @@
               </div>
               <div class="d-flex flex-column gap-2 z-index-1 position-relative custom-scrollbar" style="z-index: 2; overflow-y: auto; max-height: 220px; padding-right: 4px;">
                 <div v-if="!customerInsights?.topBuyers || customerInsights.topBuyers.length === 0" class="text-muted font-size-sm">Không có dữ liệu</div>
-                <div v-else v-for="(buyer, idx) in customerInsights.topBuyers" :key="idx" class="d-flex align-items-center rounded-3 p-2 shadow-sm border border-light transition-all table-row-hover" :style="{ backgroundColor: getRankBgStyle(idx) }">
-                   <div class="rank-badge fw-bolder shadow-sm flex-shrink-0 me-2" :class="getRankClass(idx)" style="width: 24px; height: 24px; font-size: 12px; display: flex; align-items: center; justify-content: center; border-radius: 6px;">{{ idx + 1 }}</div>
-                   <div class="position-relative me-2 flex-shrink-0" style="width: 36px; height: 36px;">
+                <div v-else v-for="(buyer, idx) in customerInsights.topBuyers" :key="buyer.name || idx" class="d-flex align-items-center rounded-3 p-2 shadow-sm border border-light transition-all table-row-hover position-relative overflow-hidden" :style="{ backgroundColor: getRankBgStyle(idx) }">
+                   <!-- Watermark Icon Giới tính -->
+                   <div class="position-absolute d-flex align-items-center justify-content-center" style="font-size: 2.8rem; right: 10px; top: 0; bottom: 0; pointer-events: none; z-index: 0; opacity: 0.1;"
+                        :class="{'text-info': buyer.gender?.toLowerCase() === 'male' || buyer.gender?.toLowerCase() === 'nam', 
+                                 'text-danger': buyer.gender?.toLowerCase() === 'female' || buyer.gender?.toLowerCase() === 'nữ',
+                                 'text-secondary': buyer.gender?.toLowerCase() === 'other' || buyer.gender?.toLowerCase() === 'khác'}">
+                     <i v-if="buyer.gender?.toLowerCase() === 'male' || buyer.gender?.toLowerCase() === 'nam'" class="bi bi-gender-male"></i>
+                     <i v-else-if="buyer.gender?.toLowerCase() === 'female' || buyer.gender?.toLowerCase() === 'nữ'" class="bi bi-gender-female"></i>
+                     <i v-else-if="buyer.gender?.toLowerCase() === 'other' || buyer.gender?.toLowerCase() === 'khác'" class="bi bi-gender-ambiguous"></i>
+                   </div>
+
+                   <div class="rank-badge fw-bolder shadow-sm flex-shrink-0 me-2 position-relative z-index-1" :class="getRankClass(idx)" style="width: 24px; height: 24px; font-size: 12px; display: flex; align-items: center; justify-content: center; border-radius: 6px;">{{ idx + 1 }}</div>
+                   <div class="position-relative me-2 flex-shrink-0 z-index-1" style="width: 36px; height: 36px;">
                      <div class="avatar-circle bg-primary-soft text-primary fw-bolder shadow-sm d-flex align-items-center justify-content-center" 
                           :style="{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', border: buyer.tierName ? `2px solid ${getTierColor(buyer.tierName)}` : '1px solid #dee2e6' }">
-                       <img v-if="buyer.avatar" :src="buyer.avatar" class="w-100 h-100 object-fit-cover" />
-                       <span v-else>{{ buyer.name?.charAt(0).toUpperCase() || 'K' }}</span>
+                       <img v-if="buyer.avatar && !buyerAvatarErrors[buyer.name || idx]" :src="buyer.avatar" class="w-100 h-100 object-fit-cover" @error="buyerAvatarErrors[buyer.name || idx] = true" />
+                       <span v-else>{{ getInitialName(buyer.name) }}</span>
                      </div>
                      <span v-if="buyer.tierName" class="position-absolute top-0 start-50 translate-middle badge rounded-pill" 
                            :style="{ backgroundColor: getTierColor(buyer.tierName), fontSize: '8px', padding: '2px 4px', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }" :title="buyer.tierName">
                        <i class="bi bi-star-fill text-white"></i>
                      </span>
                    </div>
-                   <div class="flex-grow-1 min-w-0">
+                   <div class="flex-grow-1 min-w-0 position-relative z-index-1">
                       <p class="mb-0 fw-bold font-size-sm text-dark text-truncate" :title="buyer.name">{{ buyer.name }}</p>
                       <span class="font-size-xs text-brand fw-bold">{{ formatCompactCurrency(buyer.spent) }}</span>
                    </div>
@@ -344,28 +394,42 @@
 
         <!-- Nhóm khách hàng chủ lực -->
         <div class="col-12 col-md-4">
-          <div class="card custom-card h-100 border-0 shadow-sm rounded-4 bg-gradient-to-br from-pink-soft to-white" style="background: linear-gradient(to bottom right, rgba(165,0,100,0.1), #ffffff);">
-            <div class="card-body p-3 d-flex flex-column justify-content-between position-relative overflow-hidden">
-              <div class="position-absolute end-0 top-0 mt-3 me-3 opacity-25" style="font-size: 3rem; color: #a50064; pointer-events: none;">
-                <i class="bi bi-people-fill"></i>
-              </div>
-              <div class="d-flex align-items-start justify-content-between mb-2 z-index-1" style="position: relative; z-index: 2;">
-                <div class="pe-2 min-w-0">
-                  <p class="fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate" style="color: #a50064">Nhóm KH chủ lực</p>
-                  <h5 class="fw-bolder mb-1 text-dark text-truncate">{{ customerInsights?.topGender?.gender || 'Chưa xác định' }}</h5>
-                </div>
+          <div class="card custom-card h-100 border-0 shadow-sm rounded-4 transition-all" 
+               :style="{ background: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'linear-gradient(to bottom right, rgba(13,202,240,0.05), #ffffff)' : 'linear-gradient(to bottom right, rgba(165,0,100,0.05), #ffffff)' }">
+            <div class="card-body p-4 d-flex flex-column position-relative overflow-hidden">
+              <div class="position-absolute" style="font-size: 8rem; right: -20px; bottom: -30px; pointer-events: none; z-index: 0; opacity: 0.06;"
+                   :class="customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'text-info' : (customerInsights?.topGender?.gender?.toLowerCase() === 'nữ' ? 'text-danger' : 'text-secondary')">
+                <i class="bi" :class="customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'bi-gender-male' : (customerInsights?.topGender?.gender?.toLowerCase() === 'nữ' ? 'bi-gender-female' : 'bi-people-fill')"></i>
               </div>
               
-              <!-- Text gợi ý lấp đầy khoảng trống -->
-              <div class="mt-2 mb-4 z-index-1 flex-grow-1 d-flex align-items-center" style="position: relative; z-index: 2;">
-                <p class="text-secondary font-size-sm mb-0 lh-base" style="font-size: 0.85rem;">
-                  Nhóm khách hàng này mang lại doanh thu cao nhất. Hãy thiết kế các chiến dịch Marketing và ưu đãi nhắm mục tiêu để khai thác tối đa tiềm năng mua sắm.
+              <div class="z-index-1" style="position: relative; z-index: 2;">
+                <p class="fw-bold font-size-xs mb-0 text-uppercase letter-spacing-1 text-truncate" 
+                   :style="{ color: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? '#0dcaf0' : '#a50064' }">
+                  Nhóm KH chủ lực
                 </p>
               </div>
 
-              <div class="d-flex align-items-center mt-auto font-size-sm fw-bold text-dark gap-2 text-truncate z-index-1" style="position: relative; z-index: 2;">
-                <span class="badge rounded-pill px-2 py-1" style="background-color: #a50064"><i class="bi bi-pie-chart-fill"></i> Đóng góp:</span> 
-                {{ formatCurrency(customerInsights?.topGender?.spent || 0) }}
+              <div class="z-index-1 my-auto py-2" style="position: relative; z-index: 2;">
+                <h2 class="fw-bolder display-6 mb-2" style="letter-spacing: -1px;"
+                    :style="{ 
+                      color: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? '#005baa' : '#a50064',
+                      textShadow: '0 2px 10px rgba(0,0,0,0.05)'
+                    }">
+                  {{ customerInsights?.topGender?.gender ? 'Phái ' + customerInsights.topGender.gender : 'Chưa xác định' }}
+                </h2>
+                <div v-if="customerInsights?.topGender?.age_range" class="d-inline-flex align-items-center gap-1 bg-white border rounded-pill px-3 py-1 shadow-sm mt-1">
+                  <i class="bi bi-person-hearts" :style="{ color: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? '#0dcaf0' : '#a50064' }"></i>
+                  <span class="font-size-xs text-secondary fw-semibold">Độ tuổi phổ biến:</span>
+                  <span class="font-size-sm fw-bold text-dark">{{ customerInsights.topGender.age_range }}</span>
+                </div>
+              </div>
+
+              <div class="mt-4 pt-3 border-top border-light fw-bold text-dark text-truncate z-index-1 d-flex align-items-center gap-2" style="position: relative; z-index: 2;">
+                <span class="badge rounded-pill px-2 py-1 text-white font-size-sm" 
+                      :style="{ backgroundColor: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? '#0dcaf0' : '#a50064' }">
+                  <i class="bi bi-pie-chart-fill"></i> Đóng góp
+                </span> 
+                <span class="fs-5">{{ formatCurrency(customerInsights?.topGender?.spent || 0) }}</span>
               </div>
             </div>
           </div>
@@ -373,28 +437,37 @@
 
         <!-- Mùa bội thu -->
         <div class="col-12 col-md-4">
-          <div class="card custom-card h-100 border-0 shadow-sm rounded-4 bg-gradient-to-br from-success-soft to-white">
-            <div class="card-body p-3 d-flex flex-column justify-content-between position-relative overflow-hidden">
-              <div class="position-absolute end-0 top-0 mt-3 me-3 opacity-25" style="font-size: 3rem; color: #10b981; pointer-events: none;">
+          <div class="card custom-card h-100 border-0 shadow-sm rounded-4 bg-gradient-to-br from-success-soft to-white" style="background: linear-gradient(to bottom right, rgba(16,185,129,0.05), #ffffff);">
+            <div class="card-body p-4 d-flex flex-column position-relative overflow-hidden">
+              <div class="position-absolute text-success" style="font-size: 8rem; right: -20px; bottom: -30px; pointer-events: none; z-index: 0; opacity: 0.06;">
                 <i class="bi bi-calendar2-heart-fill"></i>
               </div>
-              <div class="d-flex align-items-start justify-content-between mb-2 z-index-1" style="position: relative; z-index: 2;">
-                <div class="pe-2 min-w-0">
-                  <p class="text-success fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate">Mùa bội thu (All-time)</p>
-                  <h5 class="fw-bolder mb-1 text-dark text-truncate">{{ customerInsights?.bestMonth?.label || 'Đang cập nhật' }}</h5>
-                </div>
-              </div>
-
-              <!-- Text gợi ý lấp đầy khoảng trống -->
-              <div class="mt-2 mb-4 z-index-1 flex-grow-1 d-flex align-items-center" style="position: relative; z-index: 2;">
-                <p class="text-secondary font-size-sm mb-0 lh-base" style="font-size: 0.85rem;">
-                  Tháng ghi nhận kỷ lục bán hàng kể từ khi khai trương. Phân tích lại các sự kiện và xu hướng mua sắm của tháng này để rút ra công thức thành công.
+              
+              <div class="z-index-1" style="position: relative; z-index: 2;">
+                <p class="text-success fw-bold font-size-xs mb-0 text-uppercase letter-spacing-1 text-truncate">
+                  Mùa bội thu (All-time)
                 </p>
               </div>
 
-              <div class="d-flex align-items-center mt-auto font-size-sm fw-bold text-dark gap-2 text-truncate z-index-1" style="position: relative; z-index: 2;">
-                <span class="badge bg-success rounded-pill px-2 py-1"><i class="bi bi-graph-up-arrow"></i> Kỷ lục:</span> 
-                {{ formatCurrency(customerInsights?.bestMonth?.spent || 0) }}
+              <div class="z-index-1 my-auto py-2" style="position: relative; z-index: 2;">
+                <h2 class="fw-bolder fs-2 mb-2 text-success" style="letter-spacing: -1px; line-height: 1.2; text-shadow: 0 2px 10px rgba(16,185,129,0.1);">
+                  {{ customerInsights?.bestMonth?.label || 'Đang cập nhật' }}
+                </h2>
+                <div v-if="customerInsights?.bestMonth?.best_day" class="d-inline-flex align-items-center gap-1 bg-white border border-success border-opacity-25 rounded-pill px-3 py-1 shadow-sm mt-1">
+                  <i class="bi bi-calendar-star-fill text-success"></i>
+                  <span class="font-size-xs text-secondary fw-semibold">Ngày bùng nổ:</span>
+                  <span class="font-size-sm fw-bold text-dark">{{ customerInsights.bestMonth.best_day }}</span>
+                </div>
+                <div v-if="customerInsights?.bestMonth?.best_day" class="font-size-xs text-muted mt-2 ps-2">
+                  <i class="bi bi-arrow-return-right me-1"></i>Đạt doanh thu: <span class="fw-bold text-success">{{ formatCompactCurrency(customerInsights.bestMonth.best_day_spent) }}</span>
+                </div>
+              </div>
+
+              <div class="mt-4 pt-3 border-top border-light fw-bold text-dark text-truncate z-index-1 d-flex align-items-center gap-2" style="position: relative; z-index: 2;">
+                <span class="badge bg-success rounded-pill px-2 py-1 text-white font-size-sm">
+                  <i class="bi bi-graph-up-arrow"></i> Kỷ lục
+                </span> 
+                <span class="fs-5">{{ formatCurrency(customerInsights?.bestMonth?.spent || 0) }}</span>
               </div>
             </div>
           </div>
@@ -526,7 +599,7 @@
                     style="width: 40px; height: 40px; border-radius: 50%; overflow: hidden;">
                     <img v-if="review.user_avatar && !reviewAvatarErrors[review.id]" :src="review.user_avatar"
                       @load="handleImageLoad('review-' + review.id)" @error="reviewAvatarErrors[review.id] = true" class="w-100 h-100 object-fit-cover img-fade-in" :class="{ 'img-loaded': isImageLoaded('review-' + review.id) }" />
-                    <span v-else>{{ review.user_name?.charAt(0).toUpperCase() || 'K' }}</span>
+                    <span v-else>{{ getInitialName(review.user_name) }}</span>
                   </div>
                   <div class="flex-grow-1 min-w-0">
                     <div class="d-flex justify-content-between align-items-center mb-1">
@@ -974,6 +1047,12 @@ const toDateInputValue = (date) => {
 const maxDate = toDateInputValue(new Date());
 const apiUrl = import.meta.env.VITE_API_BASE_URL;
 
+const getInitialName = (name) => {
+  if (!name) return 'K';
+  const parts = name.trim().split(' ');
+  return parts[parts.length - 1].charAt(0).toUpperCase();
+};
+
 const loadedImages = ref(new Set());
 
 const handleImageLoad = (id) => {
@@ -993,12 +1072,12 @@ const formatCompactCurrency = (value) => {
   if (isNaN(num)) return '0đ';
 
   if (num >= 1000000000) {
-    return (num / 1000000000).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' Tỷ';
+    return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(num / 1000000000) + ' Tỷ';
   }
   if (num >= 1000000) {
-    return (num / 1000000).toLocaleString('vi-VN', { maximumFractionDigits: 1 }) + ' Tr';
+    return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(num / 1000000) + ' Tr';
   }
-  return num.toLocaleString('vi-VN') + 'đ';
+  return formatCurrency(num);
 };
 
 const isComboEndingSoon = (endDateStr) => {
@@ -1012,6 +1091,162 @@ const isComboEndingSoon = (endDateStr) => {
   return false;
 };
 
+const exportWithPeriod = async (period) => {
+  if (period === 'current') {
+    exportToExcel();
+    return;
+  }
+  
+  isExporting.value = true;
+  
+  // Backup state
+  const prevFilter = { ...filterParams.value };
+  const prevApplied = { ...appliedFilterParams.value };
+  
+  // Apply new period temp
+  filterParams.value.period = period;
+  if (period !== 'custom') {
+    filterParams.value.startDate = '';
+    filterParams.value.endDate = '';
+  }
+  appliedFilterParams.value = { ...filterParams.value };
+  
+  try {
+    const { isError } = await refetch();
+    if (isError) throw new Error("Fetch failed");
+    
+    // Process and download Excel
+    exportToExcel(); 
+    // exportToExcel will toggle isExporting.value = false at the end
+  } catch (err) {
+    console.error("Lỗi lấy dữ liệu xuất Excel:", err);
+    Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể tải dữ liệu báo cáo.' });
+    isExporting.value = false;
+  } finally {
+    // Restore quietly without blocking UI
+    filterParams.value = prevFilter;
+    appliedFilterParams.value = prevApplied;
+    refetch();
+  }
+};
+
+const showCustomExportModal = async () => {
+  // Load flatpickr dynamically from bundle if not exist
+  if (!window.flatpickrLoaded) {
+    try {
+      await Promise.race([
+        (async () => {
+          await import('flatpickr/dist/flatpickr.min.css');
+          const flatpickrMod = await import('flatpickr');
+          const vnLocaleMod = await import('flatpickr/dist/l10n/vn.js');
+          
+          window.flatpickr = flatpickrMod.default || flatpickrMod;
+          
+          if (!document.getElementById('flatpickr-custom-style')) {
+            const style = document.createElement('style');
+            style.id = 'flatpickr-custom-style';
+            style.innerHTML = '.flatpickr-calendar { font-family: inherit; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: none; border-radius: 12px; padding: 5px; } .flatpickr-day.selected { background: #00B171 !important; border-color: #00B171 !important; }';
+            document.head.appendChild(style);
+          }
+        })(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Flatpickr load timeout')), 10000))
+      ]);
+      window.flatpickrLoaded = true;
+    } catch (error) {
+      console.error('Failed to load Flatpickr:', error);
+      Swal.fire('Lỗi', 'Không thể tải thư viện chọn ngày. Vui lòng thử lại sau.', 'error');
+      return;
+    }
+  }
+
+  const { value: formValues } = await Swal.fire({
+    title: 'Chọn thời gian xuất báo cáo',
+    didOpen: () => {
+      const flatpickrConfig = { 
+        maxDate: "today", 
+        dateFormat: "Y-m-d", 
+        locale: "vn", 
+        altInput: true, 
+        altFormat: "d/m/Y", 
+        allowInput: true,
+        onReady: function(selectedDates, dateStr, instance) {
+          instance.altInput.addEventListener('input', function(e) {
+            // Ngăn việc format lại khi đang nhấn phím Backspace để xóa
+            if (e.inputType === 'deleteContentBackward') return;
+            
+            let v = this.value.replace(/\D/g, '');
+            if (v.length > 8) v = v.substring(0, 8);
+            
+            if (v.length >= 5) {
+              this.value = `${v.substring(0,2)}/${v.substring(2,4)}/${v.substring(4,8)}`;
+            } else if (v.length >= 3) {
+              this.value = `${v.substring(0,2)}/${v.substring(2)}`;
+            }
+          });
+        }
+      };
+      window.flatpickr("#swal-input1", flatpickrConfig);
+      window.flatpickr("#swal-input2", flatpickrConfig);
+    },
+    html:
+      '<div class="mb-3 text-start"><label class="form-label fw-bold text-dark">Từ ngày</label>' +
+      '<input id="swal-input1" type="text" class="form-control px-3 py-2 bg-light border-0 shadow-sm transition-all" style="cursor: pointer; border-radius: 10px;" placeholder="dd/mm/yyyy"></div>' +
+      '<div class="mb-3 text-start"><label class="form-label fw-bold text-dark">Đến ngày</label>' +
+      '<input id="swal-input2" type="text" class="form-control px-3 py-2 bg-light border-0 shadow-sm transition-all" style="cursor: pointer; border-radius: 10px;" placeholder="dd/mm/yyyy"></div>' +
+      '<div class="alert alert-info mt-3 mb-0 text-start d-flex gap-2 align-items-center" style="border-radius: 10px; font-size: 0.85rem;"><i class="bi bi-info-circle-fill fs-5"></i> <span>Để xuất dữ liệu của <b>1 ngày</b>, hãy chọn Từ ngày và Đến ngày giống nhau.</span></div>',
+    focusConfirm: false,
+    showCancelButton: true,
+    confirmButtonText: 'Xuất Excel',
+    confirmButtonColor: '#00B171',
+    cancelButtonText: 'Hủy',
+    preConfirm: () => {
+      const start = document.getElementById('swal-input1').value;
+      const end = document.getElementById('swal-input2').value;
+      if (!start || !end) {
+        Swal.showValidationMessage('Vui lòng chọn đầy đủ Từ ngày và Đến ngày');
+        return false;
+      }
+      if (start > end) {
+        Swal.showValidationMessage('Đến ngày phải sau hoặc bằng Từ ngày');
+        return false;
+      }
+      return { start, end };
+    }
+  });
+
+  if (formValues) {
+    exportWithCustomDates(formValues.start, formValues.end);
+  }
+};
+
+const exportWithCustomDates = async (start, end) => {
+  isExporting.value = true;
+  
+  const prevFilter = { ...filterParams.value };
+  const prevApplied = { ...appliedFilterParams.value };
+  
+  filterParams.value.period = 'custom';
+  filterParams.value.startDate = start;
+  filterParams.value.endDate = end;
+  
+  appliedFilterParams.value = { ...filterParams.value };
+  
+  try {
+    const { isError } = await refetch();
+    if (isError) throw new Error("Fetch failed");
+    
+    exportToExcel(); 
+  } catch (err) {
+    console.error("Lỗi lấy dữ liệu xuất Excel:", err);
+    Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể tải dữ liệu báo cáo.' });
+    isExporting.value = false;
+  } finally {
+    filterParams.value = prevFilter;
+    appliedFilterParams.value = prevApplied;
+    refetch();
+  }
+};
+
 const exportToExcel = () => {
   isExporting.value = true;
   try {
@@ -1020,7 +1255,7 @@ const exportToExcel = () => {
     const formatMoney = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
     const formatNumber = (val) => new Intl.NumberFormat('vi-VN').format(val || 0);
 
-    const exportedAt = new Date().toLocaleString('vi-VN');
+    const exportedAt = new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(new Date());
     const createReportSheet = ({ title, headers, rows, widths, rightAligned = [] }) => {
       const data = [
         [title],
@@ -1213,6 +1448,7 @@ const getHeaders = () => {
 
 const isExporting = ref(false);
 const reviewAvatarErrors = ref({});
+const buyerAvatarErrors = ref({});
 const isUpdatingCoupon = ref(null);
 let chartInstance = null;
 let paymentChartInstance = null;
@@ -1835,7 +2071,7 @@ const formatCouponDate = (dateStr) => {
 }
 
 .stat-number {
-  font-size: clamp(1.4rem, 2.5vw, 1.75rem);
+  font-size: clamp(1.2rem, 1.8vw, 1.5rem);
   letter-spacing: -0.5px;
   white-space: nowrap;
 }
