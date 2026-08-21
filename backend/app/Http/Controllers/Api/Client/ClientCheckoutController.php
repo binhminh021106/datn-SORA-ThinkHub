@@ -179,8 +179,11 @@ class ClientCheckoutController extends Controller
         }
 
         // CHỐNG GĂM HÀNG: Kiểm tra khoảng cách thời gian đặt đơn (Cooldown)
-        $cooldownSetting = \App\Models\Setting::where('key', 'order_cooldown_minutes')->first();
-        $cooldownMinutes = $cooldownSetting ? (int)$cooldownSetting->value : 0;
+        // Tạm ẩn truy vấn do Database chưa có bảng settings
+        // $cooldownSetting = \App\Models\Setting::where('key', 'order_cooldown_minutes')->first();
+        // $cooldownMinutes = $cooldownSetting ? (int)$cooldownSetting->value : 0;
+        
+        $cooldownMinutes = 0; // Ép thời gian chờ về 0 để bỏ qua lỗi
 
         if ($cooldownMinutes > 0) {
             $latestOrder = \App\Models\Order::where('user_id', $user->id)

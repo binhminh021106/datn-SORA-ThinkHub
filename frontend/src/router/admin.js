@@ -363,6 +363,12 @@ const admin = [
         component: () => import('@/pages/admin/affiliate/Index.vue'),
         meta: { title: 'Quản lý Đối tác' }
       },
+      {
+        path: 'affiliates/withdrawals',
+        name: 'AdminAffiliateWithdrawals',
+        component: () => import('@/pages/admin/affiliate/WithdrawalManagement.vue'),
+        meta: { title: 'Yêu cầu rút tiền' }
+      },
     ],
   },
 ]
