@@ -179,6 +179,7 @@
       </div>
     </div>
 
+    <!-- MODAL RÚT TIỀN -->
     <div class="modal fade" id="withdrawModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 rounded-0 shadow">
@@ -191,10 +192,11 @@
           <form @submit.prevent="submitWithdraw">
             <div class="modal-body p-4 font-luxury">
               <div class="p-3 bg-light rounded-0 mb-4 d-flex align-items-center justify-content-between border">
-                <span class="small text-muted fw-medium font-oswald text-uppercase tracking-wide">Số dư khả dụng hiện tại:</span>
+                <span class="small text-muted fw-medium font-oswald text-uppercase tracking-wide">Số dư khả dụng:</span>
                 <span class="fw-bold text-primary-luxury fs-4 font-oswald">{{ formatCurrency(dashboardStats.available_balance) }}</span>
               </div>
 
+              <!-- SỐ TIỀN MUỐN RÚT -->
               <div class="mb-3">
                 <label class="form-label font-oswald tracking-wide small text-dark fw-bold text-uppercase">Số tiền muốn rút (VND) <span class="text-danger">*</span></label>
                 <div class="input-group">
@@ -204,25 +206,82 @@
                 <div class="form-text text-muted small mt-1 font-serif fst-italic">Hạn mức rút tối thiểu là 200.000đ mỗi giao dịch.</div>
               </div>
 
-              <div class="mb-3">
-                <label class="form-label font-oswald tracking-wide small text-dark fw-bold text-uppercase">Tên Ngân Hàng <span class="text-danger">*</span></label>
-                <input type="text" v-model="withdrawForm.bank_name" class="form-control rounded-0 font-luxury sora-input" placeholder="VD: Vietcombank, Techcombank, MB Bank..." required>
+              <!-- CHỌN NGÂN HÀNG -->
+              <div class="mb-3 position-relative">
+                <label class="form-label font-oswald tracking-wide small text-dark fw-bold text-uppercase">Ngân Hàng Nhận Tiền <span class="text-danger">*</span></label>
+                
+                <div v-if="isBankDropdownOpen" @click="isBankDropdownOpen = false" class="position-fixed top-0 start-0 w-100 h-100" style="z-index: 1056;"></div>
+
+                <div class="position-relative" style="z-index: 1057;">
+                  <button class="btn bg-white w-100 text-start d-flex justify-content-between align-items-center sora-input shadow-none rounded-0" 
+                          type="button" @click="isBankDropdownOpen = !isBankDropdownOpen" style="height: 50px;">
+                    <div v-if="selectedBank" class="d-flex align-items-center gap-3">
+                      <div class="border border-secondary border-opacity-25 rounded px-1 bg-white d-flex align-items-center justify-content-center" style="width: 45px; height: 30px;">
+                        <img :src="selectedBank.logo" alt="logo" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                      </div>
+                      <span class="font-luxury text-dark fw-bold">{{ selectedBank.name }} {{ selectedBank.code !== 'OTHER' ? `(${selectedBank.code})` : '' }}</span>
+                    </div>
+                    <span v-else class="text-muted font-luxury">-- Vui lòng chọn Ngân Hàng --</span>
+                    <i class="bi bi-chevron-down text-muted small transition-all" :class="{'rotate-180': isBankDropdownOpen}"></i>
+                  </button>
+                  
+                  <ul v-show="isBankDropdownOpen" class="dropdown-menu show w-100 rounded-0 shadow-lg border-0 mt-1 p-0 custom-scrollbar-y position-absolute" style="max-height: 280px; overflow-y: auto; top: 100%; left: 0;">
+                    <li v-for="bank in banks" :key="bank.code">
+                      <a class="dropdown-item d-flex align-items-center gap-3 py-2 border-bottom border-light sora-dropdown-item" href="#" @click.prevent="selectBank(bank.name)">
+                        <div class="border border-secondary border-opacity-25 rounded px-1 bg-white d-flex align-items-center justify-content-center" style="width: 50px; height: 35px;">
+                          <img :src="bank.logo" alt="logo" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                        </div>
+                        <span class="font-luxury small text-dark fw-semibold">{{ bank.name }} {{ bank.code !== 'OTHER' ? `(${bank.code})` : '' }}</span>
+                      </a>
+                    </li>
+                  </ul>
+                </div>
               </div>
 
-              <div class="mb-3">
-                <label class="form-label font-oswald tracking-wide small text-dark fw-bold text-uppercase">Số Tài Khoản Ngân Hàng <span class="text-danger">*</span></label>
-                <input type="text" v-model="withdrawForm.account_number" class="form-control rounded-0 font-monospace sora-input" placeholder="Nhập số tài khoản..." required>
+              <!-- Ô NHẬP TÊN NGÂN HÀNG CUSTOM -->
+              <div v-if="selectedBank && selectedBank.code === 'OTHER'" class="mb-3 fade-in">
+                <label class="form-label font-oswald tracking-wide small text-dark fw-bold text-uppercase">Tên Ngân Hàng Của Bạn <span class="text-danger">*</span></label>
+                <input type="text" 
+                  v-model="withdrawForm.custom_bank_name" 
+                  class="form-control rounded-0 font-luxury sora-input" 
+                  placeholder="VD: OceanBank, Kienlongbank, Shinhan Bank..." 
+                  required>
               </div>
 
+              <!-- SỐ TÀI KHOẢN -->
+              <div class="mb-3">
+                <label class="form-label font-oswald tracking-wide small text-dark fw-bold text-uppercase">Số Tài Khoản <span class="text-danger">*</span></label>
+                <input type="text" 
+                  v-model="withdrawForm.account_number" 
+                  class="form-control rounded-0 font-monospace sora-input fw-bold tracking-wide" 
+                  :placeholder="selectedBank ? 'Nhập số tài khoản...' : 'Vui lòng chọn ngân hàng trước'" 
+                  :disabled="!withdrawForm.bank_name"
+                  :minlength="selectedBank?.min" 
+                  :maxlength="selectedBank?.max"
+                  @input="withdrawForm.account_number = withdrawForm.account_number.replace(/[^0-9A-Za-z]/g, '').toUpperCase()"
+                  required>
+                
+                <div class="form-text small mt-1 font-serif fst-italic" 
+                  :class="{'text-danger fw-bold': withdrawForm.account_number && (withdrawForm.account_number.length < selectedBank?.min || withdrawForm.account_number.length > selectedBank?.max), 'text-muted': !withdrawForm.account_number}">
+                  <i class="bi bi-info-circle me-1"></i> {{ accountLengthText }}
+                </div>
+              </div>
+
+              <!-- TÊN CHỦ TÀI KHOẢN -->
               <div class="mb-3">
                 <label class="form-label font-oswald tracking-wide small text-dark fw-bold text-uppercase">Tên Chủ Tài Khoản (Viết hoa không dấu) <span class="text-danger">*</span></label>
-                <input type="text" v-model="withdrawForm.account_holder_name" class="form-control rounded-0 font-luxury text-uppercase sora-input" placeholder="VD: NGUYEN VAN A" required>
+                <input type="text" 
+                  v-model="withdrawForm.account_holder_name" 
+                  class="form-control rounded-0 font-luxury text-uppercase sora-input tracking-wide" 
+                  placeholder="VD: NGUYEN VAN A" 
+                  @input="withdrawForm.account_holder_name = withdrawForm.account_holder_name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z\s]/g, '').toUpperCase()"
+                  required>
               </div>
             </div>
             
             <div class="modal-footer border-top p-3 bg-white justify-content-center">
               <button type="button" class="editorial-btn-outline px-4 py-2" data-bs-dismiss="modal">Hủy Bỏ</button>
-              <button type="submit" class="editorial-btn px-5 py-2" :disabled="isWithdrawing || dashboardStats.available_balance < 200000">
+              <button type="submit" class="editorial-btn px-5 py-2" :disabled="isWithdrawing || dashboardStats.available_balance < 200000 || !selectedBank">
                 <span v-if="isWithdrawing" class="spinner-border spinner-border-sm me-2"></span>
                 Xác Nhận Rút Tiền
               </button>
@@ -236,7 +295,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, computed } from 'vue';
 import Toast from '@/utils/toastConfig';
 import soraAlert from '@/utils/soraAlertConfig';
 import AffiliateTabSkeleton from './AffiliateTabSkeleton.vue';
@@ -245,6 +304,8 @@ import clientApiClient from '@/utils/clientApiClient';
 const isLoading = ref(true);
 const isSubmitting = ref(false);
 const isWithdrawing = ref(false);
+
+const isBankDropdownOpen = ref(false);
 
 const affiliateData = reactive({
   is_affiliate: false,
@@ -267,17 +328,48 @@ const form = reactive({
   introduce_message: ''
 });
 
-// Form dữ liệu rút tiền
 const withdrawForm = reactive({
   amount: '',
   bank_name: '',
+  custom_bank_name: '', 
   account_number: '',
   account_holder_name: ''
 });
 
-// ==========================================
-// 1. TẢI TRẠNG THÁI & THỐNG KÊ TỪ API
-// ==========================================
+const banks = ref([
+  { code: 'VCB', name: 'Vietcombank', min: 10, max: 13, logo: 'https://api.vietqr.io/img/VCB.png' },
+  { code: 'TCB', name: 'Techcombank', min: 14, max: 14, logo: 'https://api.vietqr.io/img/TCB.png' },
+  { code: 'MB', name: 'MB Bank', min: 9, max: 14, logo: 'https://api.vietqr.io/img/MB.png' },
+  { code: 'CTG', name: 'VietinBank', min: 12, max: 12, logo: 'https://api.vietqr.io/img/ICB.png' },
+  { code: 'BIDV', name: 'BIDV', min: 14, max: 14, logo: 'https://api.vietqr.io/img/BIDV.png' },
+  { code: 'ACB', name: 'ACB', min: 8, max: 9, logo: 'https://api.vietqr.io/img/ACB.png' },
+  { code: 'VBA', name: 'Agribank', min: 13, max: 13, logo: 'https://api.vietqr.io/img/VBA.png' },
+  { code: 'VPB', name: 'VPBank', min: 8, max: 15, logo: 'https://api.vietqr.io/img/VPB.png' },
+  { code: 'STB', name: 'Sacombank', min: 10, max: 10, logo: 'https://api.vietqr.io/img/STB.png' },
+  { code: 'TPB', name: 'TPBank', min: 8, max: 11, logo: 'https://api.vietqr.io/img/TPB.png' },
+  { code: 'VIB', name: 'VIB', min: 15, max: 15, logo: 'https://api.vietqr.io/img/VIB.png' },
+  { code: 'HDB', name: 'HDBank', min: 15, max: 15, logo: 'https://api.vietqr.io/img/HDB.png' },
+  { code: 'OTHER', name: 'Ngân hàng khác', min: 6, max: 20, logo: 'https://cdn-icons-png.flaticon.com/512/2830/2830284.png' },
+]);
+
+const selectedBank = computed(() => {
+  return banks.value.find(b => b.name === withdrawForm.bank_name) || null;
+});
+
+const accountLengthText = computed(() => {
+  if (!selectedBank.value) return 'Vui lòng chọn ngân hàng trước';
+  if (selectedBank.value.min === selectedBank.value.max) {
+    return `Yêu cầu nhập đúng ${selectedBank.value.min} ký tự`;
+  }
+  return `Yêu cầu từ ${selectedBank.value.min} đến ${selectedBank.value.max} ký tự`;
+});
+
+const selectBank = (bankName) => {
+  withdrawForm.bank_name = bankName;
+  isBankDropdownOpen.value = false; 
+};
+
+// load trạng thái affiliate khi vào tab
 const fetchStatus = async () => {
   isLoading.value = true;
   try {
@@ -309,9 +401,7 @@ const fetchStatus = async () => {
   }
 };
 
-// ==========================================
-// 2. GỬI ĐƠN ĐĂNG KÝ LÀM ĐỐI TÁC
-// ==========================================
+// gửi đơn đk để thành đối tác
 const submitApplication = async () => {
   if (!form.social_links.trim() || !form.introduce_message.trim()) return;
   
@@ -335,9 +425,7 @@ const submitApplication = async () => {
   }
 };
 
-// ==========================================
-// 3. GỬI YÊU CẦU ĐẶT LỆNH RÚT TIỀN THẬT
-// ==========================================
+// gửi yêu cầu rút tiền
 const submitWithdraw = async () => {
   if (withdrawForm.amount < 200000) {
     soraAlert.fire('Chú ý', 'Số tiền rút tối thiểu phải từ 200.000đ trở lên.', 'warning');
@@ -348,25 +436,45 @@ const submitWithdraw = async () => {
     return;
   }
 
+  if (selectedBank.value) {
+    const accLen = withdrawForm.account_number.length;
+    if (accLen < selectedBank.value.min || accLen > selectedBank.value.max) {
+      soraAlert.fire('Sai thông tin', `Số tài khoản ${selectedBank.value.name} phải có từ ${selectedBank.value.min} - ${selectedBank.value.max} ký tự!`, 'error');
+      return;
+    }
+  }
+
+  // nhập tên BANK khác nếu chọn OTHER
+  if (selectedBank.value && selectedBank.value.code === 'OTHER' && !withdrawForm.custom_bank_name.trim()) {
+    soraAlert.fire('Bổ sung thông tin', 'Vui lòng nhập tên ngân hàng của bạn!', 'warning');
+    return;
+  }
+
   isWithdrawing.value = true;
   try {
-    const { data: result } = await clientApiClient.post('/client/affiliate/withdraw', withdrawForm);
+    const payload = {
+      amount: withdrawForm.amount,
+      bank_name: selectedBank.value.code === 'OTHER' ? withdrawForm.custom_bank_name.trim() : withdrawForm.bank_name,
+      account_number: withdrawForm.account_number,
+      account_holder_name: withdrawForm.account_holder_name
+    };
+
+    const { data: result } = await clientApiClient.post('/client/affiliate/withdraw', payload);
     
     if (result.success) {
-      // Ẩn modal rút tiền bằng Bootstrap API
       const modalEl = document.getElementById('withdrawModal');
       const modalInstance = window.bootstrap.Modal.getInstance(modalEl);
       if (modalInstance) modalInstance.hide();
 
       soraAlert.fire({ icon: 'success', title: 'Đã gửi yêu cầu!', text: result.message });
       
-      // Reset form rút tiền
       withdrawForm.amount = '';
       withdrawForm.bank_name = '';
+      withdrawForm.custom_bank_name = '';
       withdrawForm.account_number = '';
       withdrawForm.account_holder_name = '';
+      isBankDropdownOpen.value = false;
 
-      // Tải lại bảng thống kê số dư mới sau khi đã bị đóng băng trừ tiền
       fetchStatus(); 
     } else {
       soraAlert.fire({ icon: 'error', title: 'Lỗi', text: result.message });
@@ -378,7 +486,6 @@ const submitWithdraw = async () => {
   }
 };
 
-// Tiện ích
 const resetForm = () => {
   applicationStatus.value = null;
   form.social_links = '';
@@ -397,7 +504,6 @@ const copyLink = () => {
   Toast.fire({ icon: 'success', title: 'Đã copy link!', timer: 1500 });
 };
 
-// Mở modal rút tiền bằng Bootstrap
 const openWithdrawModal = () => {
   if (dashboardStats.value.available_balance < 200000) {
     soraAlert.fire('Hạn mức không đủ', 'Số dư ví khả dụng phải có tối thiểu từ 200.000đ trở lên để làm lệnh rút tiền.', 'warning');
@@ -413,11 +519,31 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.form-control:focus {
+.form-control:focus, .form-select:focus {
   border-color: #9f273b;
   box-shadow: none;
   outline: none;
 }
+
+.sora-dropdown-item {
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+.sora-dropdown-item:hover {
+  background-color: #f8f9fa;
+  transform: translateX(3px);
+}
+.transition-all {
+  transition: all 0.3s ease;
+}
+.rotate-180 {
+  transform: rotate(180deg);
+}
+
+.custom-scrollbar-y::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar-y::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar-y::-webkit-scrollbar-thumb { background: #e0e0e0; border-radius: 10px; }
+.custom-scrollbar-y::-webkit-scrollbar-thumb:hover { background: #c0c0c0; }
 
 .sora-input {
   border: 1px solid #e0e0e0;
@@ -453,8 +579,6 @@ onMounted(() => {
 .tracking-widest { letter-spacing: 0.15em; }
 .tracking-wide { letter-spacing: 0.1em; }
 
-
-
-.fade-in { animation: fadeIn 0.5s ease-in; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.fade-in { animation: fadeIn 0.4s ease-in-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 </style>
