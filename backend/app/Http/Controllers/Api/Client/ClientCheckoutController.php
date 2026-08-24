@@ -183,7 +183,7 @@ class ClientCheckoutController extends Controller
         // $cooldownSetting = \App\Models\Setting::where('key', 'order_cooldown_minutes')->first();
         // $cooldownMinutes = $cooldownSetting ? (int)$cooldownSetting->value : 0;
         
-        $cooldownMinutes = 0; // Ép thời gian chờ về 0 để bỏ qua lỗi
+        $cooldownMinutes = 0;
 
         if ($cooldownMinutes > 0) {
             $latestOrder = \App\Models\Order::where('user_id', $user->id)
