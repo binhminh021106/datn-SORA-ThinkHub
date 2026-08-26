@@ -107,7 +107,7 @@ class AdminProductController extends Controller
                     'is_default' => $index === 0 ? 1 : 0
                 ]);
 
-                if (!empty($vData['attributes']) && is_array($vData['attributes'])) {
+                if (isset($vData['attributes']) && is_array($vData['attributes'])) {
                     $validAttributes = array_filter(array_values($vData['attributes']));
                     $variant->attributeValues()->sync($validAttributes);
                 }
@@ -181,7 +181,7 @@ class AdminProductController extends Controller
                     $variant = ProductVariant::create($variantPayload);
                 }
 
-                if ($variant && !empty($vData['attributes']) && is_array($vData['attributes'])) {
+                if ($variant && isset($vData['attributes']) && is_array($vData['attributes'])) {
                     $validAttributes = array_filter(array_values($vData['attributes']));
                     $variant->attributeValues()->sync($validAttributes);
                 }
