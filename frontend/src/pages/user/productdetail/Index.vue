@@ -109,30 +109,8 @@
                   </button>
                 </div>
                 
-                <!-- Color Options -->
-                <div v-if="isColorAttribute(attrName)" class="variant-options color-options d-flex gap-2 flex-wrap">
-                  <button 
-                    v-for="option in options" 
-                    :key="option.id"
-                    @click="selectAttribute(attrName, option.id)"
-                    class="color-swatch-btn d-flex justify-content-center align-items-center transition-all"
-                    :class="{ 
-                      'active': selectedAttributes[attrName] === option.id,
-                      'disabled-option': isOptionDisabled(attrName, option.id) && selectedAttributes[attrName] !== option.id
-                    }"
-                    :title="option.name"
-                    :style="{ 
-                      width: '36px', height: '36px', borderRadius: '50%', 
-                      border: selectedAttributes[attrName] === option.id ? '2px solid #9f273b' : '1px solid #ddd',
-                      backgroundColor: getColorCode(option.name)
-                    }"
-                  >
-                    <i v-if="selectedAttributes[attrName] === option.id" class="bi bi-check fw-bold" :class="isLightColor(option.name) ? 'text-dark' : 'text-white'" style="font-size: 1.3rem;"></i>
-                  </button>
-                </div>
-                
-                <!-- Text/Size Options -->
-                <div v-else class="variant-options d-flex gap-2 flex-wrap">
+                <!-- Options -->
+                <div class="variant-options d-flex gap-2 flex-wrap">
                   <button 
                     v-for="option in options" 
                     :key="option.id"
@@ -513,7 +491,7 @@ import ComboCarousel from '@/components/ui/ComboCarousel.vue';
 // Composables
 import { useWishlist } from '@/composables/useWishlist';
 import { useProductVariants } from '@/composables/useProductVariants';
-import { isColorAttribute, isSizeAttribute, getColorCode, isLightColor } from '@/composables/useColorMapping';
+import { isSizeAttribute } from '@/composables/useColorMapping';
 import { getToken, getHeaders, getFullImage, formatMoney, getProtectedRating } from '@/composables/useUtilities';
 import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener.js';
 import { API_BASE_URL } from '@/utils/env';
