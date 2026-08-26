@@ -1250,9 +1250,9 @@ watch(() => route.params.slug, (newSlug, oldSlug) => {
 .color-swatch-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #dcdcdc; cursor: pointer; position: relative; transition: all 0.2s ease; padding: 0; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05); }
 .color-swatch-btn:hover { transform: scale(1.05); border-color: #999; }
 .color-swatch-btn.active { border: 2px solid #222; box-shadow: inset 0 0 0 3px #fff; transform: scale(1.1); }
-.variant-btn { background: #f8f9fa; border: 1px solid #e9ecef; color: #6c757d; padding: 10px 18px; cursor: pointer; font-size: 13px; transition: all 0.3s ease; min-width: 60px; text-align: center; border-radius: 6px; }
-.variant-btn:hover { border-color: rgba(159,39,59, 0.5); color: rgb(159,39,59); background-color: #ffffff; }
-.variant-btn.active { background: rgb(159,39,59); border-color: rgb(159,39,59); color: #ffffff; box-shadow: 0 4px 10px rgba(159,39,59,0.2); }
+.variant-btn { background: #ffffff; border: 1px solid #dcdcdc; color: #333333; padding: 10px 20px; cursor: pointer; font-size: 14.5px; font-weight: 500; transition: all 0.25s ease-in-out; min-width: 65px; text-align: center; border-radius: 4px; letter-spacing: 0.3px; }
+.variant-btn:hover { border-color: #9f273b; color: #9f273b; background-color: #fffafa; transform: translateY(-1px); box-shadow: 0 2px 5px rgba(159,39,59,0.1); }
+.variant-btn.active { background: #9f273b; border-color: #9f273b; color: #ffffff; font-weight: 600; box-shadow: 0 4px 12px rgba(159,39,59,0.25); transform: translateY(-1px); }
 
 /* ACTIONS */
 .action-area { display: flex; gap: 15px; margin-bottom: 15px; }
