@@ -240,11 +240,11 @@
                                                             title="Gỡ cột" @click="removeAttributeColumn(attrId)"></i>
                                                     </th>
 
-                                                    <th style="width: 140px;">Giá vốn</th>
-                                                    <th style="width: 150px;" class="bg-light-brand text-dark">Giá bán
+                                                    <th style="min-width: 140px;">Giá vốn</th>
+                                                    <th style="min-width: 150px;" class="bg-light-brand text-dark">Giá bán
                                                         (VNĐ) <span class="text-danger">*</span></th>
-                                                    <th style="width: 140px;">Khuyến mãi</th>
-                                                    <th style="width: 100px;">Kho <span class="text-danger">*</span>
+                                                    <th style="min-width: 140px;">Khuyến mãi</th>
+                                                    <th style="min-width: 100px;">Kho <span class="text-danger">*</span>
                                                     </th>
                                                     <th style="width: 50px;"></th>
                                                 </tr>
