@@ -46,7 +46,7 @@ class AdminAccountController extends Controller
         }
 
         $accessAbilities = $admin->role ? ['level:' . $admin->role->level, 'access'] : ['level:5', 'access'];
-        $accessToken = $admin->createToken('admin_token', $accessAbilities, now()->addMinutes(60))->plainTextToken;
+        $accessToken = $admin->createToken('admin_token', $accessAbilities, now()->addHours(4))->plainTextToken;
         $refreshToken = $admin->createToken('admin_refresh_token', ['refresh'], now()->addDays(7))->plainTextToken;
 
         return response()->json([
@@ -54,7 +54,7 @@ class AdminAccountController extends Controller
             'message'       => 'Đăng nhập thành công',
             'token'         => $accessToken,
             'access_token'  => $accessToken,
-            'expires_in'    => 3600,
+            'expires_in'    => 14400,
             'admin'         => $admin 
         ])->cookie('admin_refresh_token', $refreshToken, 60 * 24 * 7, '/', config('session.domain'), config('session.secure') ?? app()->environment('production'), true, false, 'Strict');
     }
@@ -81,14 +81,14 @@ class AdminAccountController extends Controller
         $admin->currentAccessToken()->delete();
 
         $accessAbilities = $admin->role ? ['level:' . $admin->role->level, 'access'] : ['level:5', 'access'];
-        $accessToken = $admin->createToken('admin_token', $accessAbilities, now()->addMinutes(60))->plainTextToken;
+        $accessToken = $admin->createToken('admin_token', $accessAbilities, now()->addHours(4))->plainTextToken;
         $refreshToken = $admin->createToken('admin_refresh_token', ['refresh'], now()->addDays(7))->plainTextToken;
 
         return response()->json([
             'success'       => true,
             'token'         => $accessToken,
             'access_token'  => $accessToken,
-            'expires_in'    => 3600
+            'expires_in'    => 14400
         ])->cookie('admin_refresh_token', $refreshToken, 60 * 24 * 7, '/', config('session.domain'), config('session.secure') ?? app()->environment('production'), true, false, 'Strict');
     }
 

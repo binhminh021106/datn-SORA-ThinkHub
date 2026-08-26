@@ -623,7 +623,7 @@ const loadModels = async () => {
     isLoadingModels.value = true;
     faceApiModule = faceApiModule || await import('face-api.js');
     await Promise.all([
-      faceApiModule.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+      faceApiModule.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
       faceApiModule.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
       faceApiModule.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
     ]);
@@ -849,7 +849,7 @@ const getDescriptor = async (timeout = 8000, actionType = 'none') => {
 
     try {
       detection = await faceapi
-        .detectSingleFace(videoRef.value, new faceapi.TinyFaceDetectorOptions())
+        .detectSingleFace(videoRef.value, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.7 }))
         .withFaceLandmarks()
         .withFaceDescriptor();
 

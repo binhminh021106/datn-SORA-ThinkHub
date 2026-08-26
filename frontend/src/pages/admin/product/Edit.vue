@@ -193,37 +193,42 @@
 
                             <div class="card border shadow-sm rounded-3 overflow-visible mb-4">
                                 <div
-                                    class="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center flex-wrap gap-3">
+                                    class="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center flex-wrap gap-3 position-relative" style="z-index: 1050;">
                                     <h6 class="fw-bold mb-0 text-brand d-flex align-items-center">
                                         <i class="bi bi-grid-3x3-gap-fill me-2"></i> CẤU HÌNH LƯỚI SẢN PHẨM
                                     </h6>
 
                                     <div class="attr-toolbar d-flex align-items-center gap-2">
-                                        <div class="input-group input-group-sm">
-                                            <select class="form-select border-secondary fw-bold text-secondary"
-                                                v-model="selectedAttrToAdd" style="min-width: 150px;">
-                                                <option value="">+ Chọn thuộc tính</option>
-                                                <template v-if="systemAttributes.length > 0">
-                                                    <option v-for="attr in systemAttributes" :key="attr.id"
-                                                        :value="attr.id"
-                                                        :disabled="activeAttributes.includes(attr.id.toString())">
-                                                        {{ attr.name }}
-                                                    </option>
-                                                </template>
-                                            </select>
-                                            <button type="button" class="btn btn-success px-3 fw-bold"
-                                                title="Thêm cột vào bảng" @click="addAttributeColumn">
-                                                <i class="bi bi-plus-lg"></i>
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-brand fw-bold dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Bật / Tắt thuộc tính">
+                                                <i class="bi bi-list-check me-1"></i> Chọn thuộc tính
                                             </button>
+                                            <ul class="dropdown-menu shadow border-0" style="min-width: 220px; max-height: 300px; overflow-y: auto;">
+                                                <li v-for="attr in systemAttributes" :key="attr.id">
+                                                    <div class="dropdown-item d-flex justify-content-between align-items-center py-2 pe-2" 
+                                                       :class="{'bg-light': activeAttributes.includes(attr.id.toString())}">
+                                                        <span class="fw-semibold" :class="activeAttributes.includes(attr.id.toString()) ? 'text-brand' : 'text-dark'">{{ attr.name }}</span>
+                                                        <button type="button" class="btn btn-sm p-0 border-0 ms-3 d-flex align-items-center justify-content-center hover-scale" 
+                                                                style="width: 24px; height: 24px;"
+                                                                @click.stop="toggleAttributeColumn(attr.id.toString())">
+                                                            <i v-if="activeAttributes.includes(attr.id.toString())" class="bi bi-dash-circle-fill text-danger fs-5" title="Gỡ thuộc tính"></i>
+                                                            <i v-else class="bi bi-plus-circle-fill text-success fs-5" title="Thêm thuộc tính"></i>
+                                                        </button>
+                                                    </div>
+                                                </li>
+                                                <li v-if="systemAttributes.length === 0">
+                                                    <span class="dropdown-item text-muted small fst-italic">Chưa có thuộc tính nào</span>
+                                                </li>
+                                            </ul>
                                         </div>
 
                                         <div class="vr mx-1 text-secondary opacity-25"></div>
 
-                                        <button type="button" class="btn btn-sm btn-outline-primary border-0 fw-bold"
+                                        <button type="button" class="btn btn-sm btn-brand fw-bold shadow-sm"
                                             @click="openModal('createAttrModal')">
                                             <i class="bi bi-plus-circle me-1"></i> Thuộc tính mới
                                         </button>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary border-0 fw-bold"
+                                        <button type="button" class="btn btn-sm btn-outline-brand fw-bold shadow-sm"
                                             @click="openModal('manageAttrModal')">
                                             <i class="bi bi-gear-fill me-1"></i> Quản lý
                                         </button>
@@ -231,7 +236,7 @@
                                 </div>
 
                                 <div class="card-body p-0" style="position: relative; z-index: 1040;">
-                                    <div class="table-responsive" style="min-height: 350px; overflow: visible;">
+                                    <div class="table-responsive" style="min-height: 350px; overflow-x: auto; padding-bottom: 120px;">
                                         <table class="table table-bordered mb-0 variant-table w-100">
                                             <thead>
                                                 <tr>
@@ -836,16 +841,17 @@ const getAttributeValues = (attrId) => {
     return a ? (a.values || []) : [];
 };
 
-const addAttributeColumn = () => {
-    if (!selectedAttrToAdd.value) return;
-    if (!activeAttributes.value.includes(selectedAttrToAdd.value.toString())) {
-        activeAttributes.value.push(selectedAttrToAdd.value.toString());
+const toggleAttributeColumn = (attrId) => {
+    const idStr = attrId.toString();
+    if (activeAttributes.value.includes(idStr)) {
+        removeAttributeColumn(idStr);
+    } else {
+        activeAttributes.value.push(idStr);
         variants.value.forEach(v => {
             if (!v.attributes) v.attributes = {};
-            v.attributes[selectedAttrToAdd.value.toString()] = "";
+            v.attributes[idStr] = "";
         });
     }
-    selectedAttrToAdd.value = '';
 };
 
 const removeAttributeColumn = (attrId) => {
@@ -1080,31 +1086,25 @@ const validateDuplicates = () => {
         v.attrError = false;
         v.hasDuplicateError = false;
 
-        let isFullSelected = true;
         let sigArray = [];
 
         activeAttributes.value.forEach(attrId => {
-            const val = v.attributes[attrId];
-            if (!val) isFullSelected = false;
+            const val = v.attributes[attrId] || 'NULL';
             sigArray.push(val);
         });
 
-        if (!isFullSelected) {
-            v.attrError = true;
+        const signature = sigArray.join('-');
+        if (seen.has(signature)) {
+            v.hasDuplicateError = true;
+            hasDuplicate = true;
+            const firstDupIdx = variants.value.findIndex(x => {
+                let sArray = [];
+                activeAttributes.value.forEach(a => sArray.push(x.attributes[a] || 'NULL'));
+                return sArray.join('-') === signature;
+            });
+            if (firstDupIdx !== -1) variants.value[firstDupIdx].hasDuplicateError = true;
         } else {
-            const signature = sigArray.join('-');
-            if (seen.has(signature)) {
-                v.hasDuplicateError = true;
-                hasDuplicate = true;
-                const firstDupIdx = variants.value.findIndex(x => {
-                    let sArray = [];
-                    activeAttributes.value.forEach(a => sArray.push(x.attributes[a]));
-                    return sArray.join('-') === signature;
-                });
-                if (firstDupIdx !== -1) variants.value[firstDupIdx].hasDuplicateError = true;
-            } else {
-                seen.add(signature);
-            }
+            seen.add(signature);
         }
     });
 

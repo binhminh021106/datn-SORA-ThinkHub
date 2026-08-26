@@ -23,7 +23,7 @@ use Throwable;
 
 class AdminFaceRecognitionController extends Controller
 {
-    private const DEFAULT_THRESHOLD = 0.48;
+    private const DEFAULT_THRESHOLD = 0.38;
     private const MIN_DESCRIPTOR_COUNT = 5;
 
     public function admins(Request $request)

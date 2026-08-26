@@ -108,7 +108,8 @@ class AdminProductController extends Controller
                 ]);
 
                 if (!empty($vData['attributes']) && is_array($vData['attributes'])) {
-                    $variant->attributeValues()->sync(array_values($vData['attributes']));
+                    $validAttributes = array_filter(array_values($vData['attributes']));
+                    $variant->attributeValues()->sync($validAttributes);
                 }
             }
 
@@ -181,7 +182,8 @@ class AdminProductController extends Controller
                 }
 
                 if ($variant && !empty($vData['attributes']) && is_array($vData['attributes'])) {
-                    $variant->attributeValues()->sync(array_values($vData['attributes']));
+                    $validAttributes = array_filter(array_values($vData['attributes']));
+                    $variant->attributeValues()->sync($validAttributes);
                 }
             }
 
