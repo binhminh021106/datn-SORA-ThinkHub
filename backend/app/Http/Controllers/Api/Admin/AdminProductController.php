@@ -107,8 +107,11 @@ class AdminProductController extends Controller
                     'is_default' => $index === 0 ? 1 : 0
                 ]);
 
-                if (isset($vData['attributes']) && is_array($vData['attributes'])) {
-                    $validAttributes = array_filter(array_values($vData['attributes']));
+                if (is_array($vData['attributes'] ?? null)) {
+                    $validAttributes = array_values(array_filter(
+                        $vData['attributes'],
+                        static fn ($value) => $value !== '' && $value !== null
+                    ));
                     $variant->attributeValues()->sync($validAttributes);
                 }
             }
@@ -181,8 +184,11 @@ class AdminProductController extends Controller
                     $variant = ProductVariant::create($variantPayload);
                 }
 
-                if ($variant && isset($vData['attributes']) && is_array($vData['attributes'])) {
-                    $validAttributes = array_filter(array_values($vData['attributes']));
+                if ($variant && is_array($vData['attributes'] ?? null)) {
+                    $validAttributes = array_values(array_filter(
+                        $vData['attributes'],
+                        static fn ($value) => $value !== '' && $value !== null
+                    ));
                     $variant->attributeValues()->sync($validAttributes);
                 }
             }
