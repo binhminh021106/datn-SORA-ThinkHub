@@ -848,12 +848,19 @@ const getDescriptor = async (timeout = 8000, actionType = 'none') => {
     }
 
     try {
-      detection = await faceapi
-        .detectSingleFace(videoRef.value, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.7 }))
+      const detections = await faceapi
+        .detectAllFaces(videoRef.value, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
         .withFaceLandmarks()
-        .withFaceDescriptor();
+        .withFaceDescriptors();
 
-      if (detection) {
+      if (detections && detections.length > 0) {
+        // Find the largest face by bounding box area to ensure we scan the person in front
+        detection = detections.reduce((largest, current) => {
+          const largestArea = largest.detection.box.width * largest.detection.box.height;
+          const currentArea = current.detection.box.width * current.detection.box.height;
+          return currentArea > largestArea ? current : largest;
+        });
+
         if (actionType === 'none' || validateFaceAction(detection.landmarks, actionType)) {
           break;
         } else {
