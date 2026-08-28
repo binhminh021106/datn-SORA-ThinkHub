@@ -120,20 +120,22 @@ const isOptionDisabled = (attrName, optionId) => {
 .color-swatch-btn.disabled { box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1), 0 0 0 1px #ccc; }
 
 .variant-btn { 
-  background: #f8f9fa; 
-  border: 1px solid #e9ecef; 
-  color: #6c757d; 
-  padding: 10px 18px; 
+  background: #ffffff; 
+  border: 1px solid #dcdcdc; 
+  color: #333333; 
+  padding: 10px 20px; 
   cursor: pointer; 
-  font-size: 13px; 
-  transition: all 0.3s ease; 
-  min-width: 60px; 
+  font-size: 14.5px; 
+  font-weight: 500; 
+  transition: all 0.25s ease-in-out; 
+  min-width: 65px; 
   text-align: center; 
-  border-radius: 6px; 
+  border-radius: 4px; 
+  letter-spacing: 0.3px; 
 }
-.variant-btn:hover:not(.disabled) { border-color: rgba(159,39,59, 0.5); color: rgb(159,39,59); background-color: #ffffff; }
-.variant-btn.active { background: rgb(159,39,59); border-color: rgb(159,39,59); color: #ffffff; box-shadow: 0 4px 10px rgba(159,39,59,0.2); }
-.variant-btn.disabled { background: #f0f0f0; border-color: #ddd; color: #999; box-shadow: none; }
+.variant-btn:hover:not(.disabled) { border-color: #9f273b; color: #9f273b; background-color: #fffafa; transform: translateY(-1px); box-shadow: 0 2px 5px rgba(159,39,59,0.1); }
+.variant-btn.active { background: #9f273b; border-color: #9f273b; color: #ffffff; font-weight: 600; box-shadow: 0 4px 12px rgba(159,39,59,0.25); transform: translateY(-1px); }
+.variant-btn.disabled { background: #f0f0f0; border-color: #ddd; color: #999; box-shadow: none; opacity: 0.6; cursor: not-allowed; text-decoration: line-through; }
 
 .variant-label-wrapper { position: relative; }
 

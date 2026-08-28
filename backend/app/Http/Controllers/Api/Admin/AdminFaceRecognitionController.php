@@ -23,7 +23,8 @@ use Throwable;
 
 class AdminFaceRecognitionController extends Controller
 {
-    private const DEFAULT_THRESHOLD = 0.48;
+    private const AUTHENTICATION_THRESHOLD = 0.38;
+    private const REGISTER_DUPLICATE_THRESHOLD = 0.48;
     private const MIN_DESCRIPTOR_COUNT = 5;
 
     public function admins(Request $request)
@@ -134,7 +135,7 @@ class AdminFaceRecognitionController extends Controller
                 foreach ($descriptors as $desc) {
                     $duplicateMatch = $this->matchDescriptor(
                         $desc,
-                        self::DEFAULT_THRESHOLD,
+                        self::REGISTER_DUPLICATE_THRESHOLD,
                         $targetAdmin->id,
                         true
                     );
@@ -147,7 +148,7 @@ class AdminFaceRecognitionController extends Controller
                             'action' => 'register',
                             'is_matched' => false,
                             'face_distance' => $duplicateMatch['best_distance'],
-                            'threshold' => self::DEFAULT_THRESHOLD,
+                            'threshold' => self::REGISTER_DUPLICATE_THRESHOLD,
                             'ip_address' => $request->ip(),
                             'user_agent' => $request->userAgent(),
                             'note' => 'Face registration rejected: descriptor already belongs to admin #' . $matchedAdmin->id,
@@ -159,7 +160,7 @@ class AdminFaceRecognitionController extends Controller
                             'data' => [
                                 'is_matched' => true,
                                 'distance' => $duplicateMatch['best_distance'],
-                                'threshold' => self::DEFAULT_THRESHOLD,
+                                'threshold' => self::REGISTER_DUPLICATE_THRESHOLD,
                             ],
                         ], 409);
                     }
@@ -195,7 +196,7 @@ class AdminFaceRecognitionController extends Controller
                     'admin_id' => $targetAdmin->id,
                     'action' => 'register',
                     'is_matched' => true,
-                    'threshold' => self::DEFAULT_THRESHOLD,
+                    'threshold' => self::REGISTER_DUPLICATE_THRESHOLD,
                     'ip_address' => $request->ip(),
                     'user_agent' => $request->userAgent(),
                     'note' => 'Face identity registered by admin #' . $request->user()->id,
@@ -235,7 +236,7 @@ class AdminFaceRecognitionController extends Controller
         $data = $request->validated();
 
         $queryDescriptor = $this->normalizeDescriptor($data['descriptor']);
-        $threshold = self::DEFAULT_THRESHOLD;
+        $threshold = self::AUTHENTICATION_THRESHOLD;
         $match = $this->matchDescriptor($queryDescriptor, $threshold);
         $bestProfile = $match['best_profile'];
         $bestDistance = $match['best_distance'];
@@ -277,7 +278,7 @@ class AdminFaceRecognitionController extends Controller
             'admin_id' => $targetAdmin->id,
             'action' => 'reset',
             'is_matched' => false,
-            'threshold' => self::DEFAULT_THRESHOLD,
+            'threshold' => self::AUTHENTICATION_THRESHOLD,
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
             'note' => 'Face profile reset by admin #' . $request->user()->id,
@@ -300,7 +301,7 @@ class AdminFaceRecognitionController extends Controller
         $data = $request->validated();
 
         $queryDescriptor = $this->normalizeDescriptor($data['descriptor']);
-        $threshold = self::DEFAULT_THRESHOLD;
+        $threshold = self::AUTHENTICATION_THRESHOLD;
         $match = $this->matchDescriptor($queryDescriptor, $threshold);
         $bestProfile = $match['best_profile'];
         $bestDistance = $match['best_distance'];
