@@ -92,13 +92,17 @@ class ClientProfileController extends Controller
             'avatar.max' => 'Dung lượng ảnh không được vượt quá 5MB'
         ]);
 
-        if ($user->avatar_url && Storage::disk('public')->exists($user->avatar_url)) {
-            Storage::disk('public')->delete($user->avatar_url);
-        }
-        
+        $oldAvatar = $user->avatar_url;
         $path = $request->file('avatar')->store('avatars', 'public');
-        $user->avatar_url = $path;
-        $user->save();
+
+        if ($path) {
+            $user->avatar_url = $path;
+            if ($user->save()) {
+                if ($oldAvatar && Storage::disk('public')->exists($oldAvatar)) {
+                    Storage::disk('public')->delete($oldAvatar);
+                }
+            }
+        }
 
         $userData = $user->toArray();
         if ($user->avatar_url && !str_starts_with($user->avatar_url, 'http')) {

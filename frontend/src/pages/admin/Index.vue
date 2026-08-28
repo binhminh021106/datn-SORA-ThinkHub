@@ -354,7 +354,7 @@
               </div>
               <div class="d-flex align-items-start justify-content-between mb-3 z-index-1" style="position: relative; z-index: 2;">
                 <div class="pe-2 min-w-0">
-                  <p class="text-primary fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate">Top 5 Khách VIP (Trong kỳ)</p>
+                  <p class="text-primary fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate">Top 5 mua nhiều nhất (Trong kỳ)</p>
                 </div>
               </div>
               <div class="d-flex flex-column gap-2 z-index-1 position-relative custom-scrollbar" style="z-index: 2; overflow-y: auto; max-height: 220px; padding-right: 4px;">
@@ -404,21 +404,21 @@
               
               <div class="z-index-1" style="position: relative; z-index: 2;">
                 <p class="fw-bold font-size-xs mb-0 text-uppercase letter-spacing-1 text-truncate" 
-                   :style="{ color: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? '#0dcaf0' : '#a50064' }">
+                   :class="customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'text-info' : 'text-gender-female'">
                   Nhóm KH chủ lực
                 </p>
               </div>
 
               <div class="z-index-1 my-auto py-2" style="position: relative; z-index: 2;">
                 <h2 class="fw-bolder display-6 mb-2" style="letter-spacing: -1px;"
+                    :class="customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'text-gender-male' : 'text-gender-female'"
                     :style="{ 
-                      color: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? '#005baa' : '#a50064',
                       textShadow: '0 2px 10px rgba(0,0,0,0.05)'
                     }">
                   {{ customerInsights?.topGender?.gender ? 'Phái ' + customerInsights.topGender.gender : 'Chưa xác định' }}
                 </h2>
                 <div v-if="customerInsights?.topGender?.age_range" class="d-inline-flex align-items-center gap-1 bg-white border rounded-pill px-3 py-1 shadow-sm mt-1">
-                  <i class="bi bi-person-hearts" :style="{ color: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? '#0dcaf0' : '#a50064' }"></i>
+                  <i class="bi bi-person-hearts" :class="customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'text-info' : 'text-gender-female'"></i>
                   <span class="font-size-xs text-secondary fw-semibold">Độ tuổi phổ biến:</span>
                   <span class="font-size-sm fw-bold text-dark">{{ customerInsights.topGender.age_range }}</span>
                 </div>
@@ -426,7 +426,7 @@
 
               <div class="mt-4 pt-3 border-top border-light fw-bold text-dark text-truncate z-index-1 d-flex align-items-center gap-2" style="position: relative; z-index: 2;">
                 <span class="badge rounded-pill px-2 py-1 text-white font-size-sm" 
-                      :style="{ backgroundColor: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? '#0dcaf0' : '#a50064' }">
+                      :class="customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'bg-info' : 'bg-gender-female'">
                   <i class="bi bi-pie-chart-fill"></i> Đóng góp
                 </span> 
                 <span class="fs-5">{{ formatCurrency(customerInsights?.topGender?.spent || 0) }}</span>
@@ -2404,7 +2404,7 @@ button:focus {
 }
 
 [data-bs-theme="dark"] .dashboard-wrapper .rank-normal {
-  background-color: #2b3035 !important;
+  background-color: transparent !important;
   color: #adb5bd !important;
 }
 
@@ -2421,5 +2421,41 @@ button:focus {
 
 [data-bs-theme="dark"] .dashboard-wrapper .table-hover>tbody>tr:hover>* {
   color: #f8f9fa !important;
+}
+
+/* Gender theme classes */
+.text-gender-male { color: #005baa !important; }
+.text-gender-female { color: #a50064 !important; }
+.bg-gender-female { background-color: #a50064 !important; }
+
+[data-bs-theme="dark"] .dashboard-wrapper .text-gender-male { color: #66b2ff !important; }
+[data-bs-theme="dark"] .dashboard-wrapper .text-gender-female { color: #ff77c2 !important; }
+[data-bs-theme="dark"] .dashboard-wrapper .bg-gender-female { background-color: #d84596 !important; }
+
+/* SweetAlert Dark Mode Overrides */
+[data-bs-theme="dark"] .swal2-popup {
+  background-color: #2b3035 !important;
+  color: #f8f9fa !important;
+}
+[data-bs-theme="dark"] .swal2-title {
+  color: #f8f9fa !important;
+}
+[data-bs-theme="dark"] .swal2-popup .text-dark {
+  color: #f8f9fa !important;
+}
+[data-bs-theme="dark"] .swal2-popup .bg-light {
+  background-color: #1e2125 !important;
+}
+[data-bs-theme="dark"] .swal2-popup .form-control {
+  background-color: #1e2125 !important;
+  color: #f8f9fa !important;
+}
+[data-bs-theme="dark"] .swal2-popup .form-control::placeholder {
+  color: #6c757d !important;
+}
+[data-bs-theme="dark"] .swal2-popup .alert-info {
+  background-color: rgba(13, 202, 240, 0.1) !important;
+  color: #9eeaf9 !important;
+  border-color: rgba(13, 202, 240, 0.2) !important;
 }
 </style>

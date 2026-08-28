@@ -59,7 +59,7 @@
               <i class="bi bi-camera-fill text-white fs-4 mb-1"></i>
               <span class="text-white fw-medium" style="font-size: 0.65rem;">Thay đổi</span>
             </template>
-            <input type="file" accept="image/*" class="d-none" @change="uploadAvatar" :disabled="isUploadingAvatar">
+            <input type="file" accept="image/*" class="visually-hidden" @change="uploadAvatar" :disabled="isUploadingAvatar" aria-label="Thay đổi ảnh đại diện">
           </label>
         </div>
       </div>
@@ -283,7 +283,7 @@ const tierName = computed(() => {
 
 const avatarSrc = computed(() => {
   if (previewAvatar.value) return previewAvatar.value;
-  const url = props.user?.avatar_url || userData.value.avatar_url;
+  const url = userData.value.avatar_url || props.user?.avatar_url;
   if (!url) return `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName.value || 'User')}&background=9f273b&color=fff`;
   return getStorageUrl(url);
 });
@@ -522,7 +522,8 @@ onMounted(() => {
   visibility: hidden;
 }
 
-.avatar-hover-container:hover .avatar-hover-overlay {
+.avatar-hover-container:hover .avatar-hover-overlay,
+.avatar-hover-container:focus-within .avatar-hover-overlay {
   opacity: 1;
   visibility: visible;
 }

@@ -9,7 +9,10 @@
           <div class="form-floating position-relative">
             <input :type="showCurrentPassword ? 'text' : 'password'" class="form-control fw-medium profile-floating-input pe-5" id="currentPassword" v-model="passwordForm.current_password" required placeholder="Mật khẩu hiện tại">
             <label for="currentPassword" class="text-secondary"><i class="bi bi-lock me-1"></i>Mật Khẩu Hiện Tại</label>
-            <button type="button" class="password-toggle" @click="showCurrentPassword = !showCurrentPassword">
+            <button type="button" class="password-toggle" 
+              :aria-label="showCurrentPassword ? 'Ẩn mật khẩu hiện tại' : 'Hiện mật khẩu hiện tại'" 
+              :aria-pressed="showCurrentPassword" 
+              @click="showCurrentPassword = !showCurrentPassword">
               <i :class="showCurrentPassword ? 'bi bi-eye-slash text-secondary' : 'bi bi-eye text-secondary'"></i>
             </button>
           </div>
@@ -19,7 +22,10 @@
           <div class="form-floating position-relative">
             <input :type="showNewPassword ? 'text' : 'password'" class="form-control fw-medium profile-floating-input pe-5" id="newPassword" v-model="passwordForm.password" required minlength="8" placeholder="Mật khẩu mới (ít nhất 8 ký tự)">
             <label for="newPassword" class="text-secondary"><i class="bi bi-key me-1"></i>Mật Khẩu Mới</label>
-            <button type="button" class="password-toggle" @click="showNewPassword = !showNewPassword">
+            <button type="button" class="password-toggle" 
+              :aria-label="showNewPassword ? 'Ẩn mật khẩu mới' : 'Hiện mật khẩu mới'" 
+              :aria-pressed="showNewPassword" 
+              @click="showNewPassword = !showNewPassword">
               <i :class="showNewPassword ? 'bi bi-eye-slash text-secondary' : 'bi bi-eye text-secondary'"></i>
             </button>
           </div>
@@ -29,7 +35,10 @@
           <div class="form-floating position-relative">
             <input :type="showConfirmPassword ? 'text' : 'password'" class="form-control fw-medium profile-floating-input pe-5" id="confirmPassword" v-model="passwordForm.password_confirmation" required placeholder="Nhập lại mật khẩu mới">
             <label for="confirmPassword" class="text-secondary"><i class="bi bi-check-circle me-1"></i>Xác Nhận Mật Khẩu</label>
-            <button type="button" class="password-toggle" @click="showConfirmPassword = !showConfirmPassword">
+            <button type="button" class="password-toggle" 
+              :aria-label="showConfirmPassword ? 'Ẩn xác nhận mật khẩu' : 'Hiện xác nhận mật khẩu'" 
+              :aria-pressed="showConfirmPassword" 
+              @click="showConfirmPassword = !showConfirmPassword">
               <i :class="showConfirmPassword ? 'bi bi-eye-slash text-secondary' : 'bi bi-eye text-secondary'"></i>
             </button>
           </div>

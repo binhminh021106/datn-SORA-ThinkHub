@@ -140,7 +140,7 @@ class AdminOrderController extends Controller
         $sortCol = $request->boolean('is_return_page') ? 'updated_at' : 'id';
 
         // [TỐI ƯU ORM 3] Eager Loading Pagination
-        $orders = $baseQuery->with(['user:id,fullName,email'])
+        $orders = $baseQuery->with(['user:id,fullName,email', 'items'])
             ->withCount('items')
             ->orderBy($sortCol, 'desc')
             ->paginate(10);
@@ -519,7 +519,7 @@ class AdminOrderController extends Controller
         
         if (empty($variantIds)) return;
         
-        $variants = \App\Models\ProductVariant::with('product')->whereIn('id', array_unique($variantIds))->get()->keyBy('id');
+        $variants = \App\Models\ProductVariant::with(['product', 'attributeValues.attribute'])->whereIn('id', array_unique($variantIds))->get()->keyBy('id');
         
         foreach ($orderList as $order) {
             if (!$order->items) continue;
@@ -528,13 +528,21 @@ class AdminOrderController extends Controller
                     $selections = $item->combo_selections;
                     $changed = false;
                     foreach ($selections as &$sel) {
-                        if (empty($sel['product_name']) && isset($sel['selected_variant_id'])) {
+                        if (isset($sel['selected_variant_id'])) {
                             $variant = $variants->get($sel['selected_variant_id']);
                             if ($variant && $variant->product) {
-                                $sel['product_name'] = $variant->product->name;
-                                $sel['attributes'] = $variant->attributes;
-                                $sel['price'] = $variant->promotional_price ?: $variant->price;
-                                $changed = true;
+                                if (empty($sel['product_name'])) {
+                                    $sel['product_name'] = $variant->product->name;
+                                    $changed = true;
+                                }
+                                if (empty($sel['attributes'])) {
+                                    $sel['attributes'] = $variant->variant_attributes;
+                                    $changed = true;
+                                }
+                                if (empty($sel['price'])) {
+                                    $sel['price'] = $variant->promotional_price ?: $variant->price;
+                                    $changed = true;
+                                }
                             }
                         }
                     }

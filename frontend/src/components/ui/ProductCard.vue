@@ -3,7 +3,6 @@
     
     <div class="position-relative bg-white text-center border-bottom sora-img-container" style="border-color: #f8f9fa !important;" :class="{'has-hover-image': showHoverImage && hasHoverImage(product)}">
       
-      <!-- Compare Button -->
       <button
         type="button"
         v-if="showCompare"
@@ -16,7 +15,6 @@
         <i class="bi bi-arrow-left-right fs-6 transition-colors" style="margin-top: 2px;"></i>
       </button>
 
-      <!-- Wishlist Button -->
       <button
         type="button"
         v-if="showWishlist"

@@ -29,7 +29,22 @@
 
     <div class="mb-5">
       <SoraSkeleton width="120px" height="16px" radius="4px" class="mb-3" />
-      <SoraSkeleton width="100%" height="180px" radius="16px" />
+      <div class="border border-light p-4 rounded-4" style="background: rgba(255,255,255,0.4);">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <SoraSkeleton width="40%" height="24px" radius="5px" />
+          <SoraSkeleton width="15%" height="18px" radius="4px" />
+        </div>
+        <div class="d-flex align-items-start gap-2 mb-3">
+          <SoraSkeleton width="18px" height="18px" circle class="mt-1" />
+          <div class="flex-grow-1">
+            <SoraSkeleton width="70%" height="16px" radius="4px" class="mb-2" />
+            <SoraSkeleton width="50%" height="14px" radius="4px" />
+          </div>
+        </div>
+        <div class="mt-3 pt-3 border-top border-light">
+          <SoraSkeleton width="90px" height="28px" radius="20px" />
+        </div>
+      </div>
     </div>
   </div>
 </template>
