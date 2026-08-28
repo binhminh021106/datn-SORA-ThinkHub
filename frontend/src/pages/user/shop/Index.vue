@@ -145,13 +145,22 @@
               </div>
 
               <div v-if="filterCollapses.colors !== false" class="d-flex flex-wrap gap-2 mt-3">
-                <div v-for="(color, index) in colorOptions" :key="index"
-                  class="color-filter-circle cursor-pointer position-relative shadow-sm"
-                  :class="{ 'selected': selectedColors.includes(color) }"
-                  :style="{ backgroundColor: getColorCode(color) }" @click="toggleColor(color)" :title="color">
-                  <i v-if="selectedColors.includes(color)" class="bi bi-check position-absolute text-white"
-                    style="top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.2rem; text-shadow: 0px 0px 2px rgba(0,0,0,0.5);"></i>
-                </div>
+                <template v-for="(color, index) in colorOptions" :key="index">
+                  <div v-if="getColorCode(color) !== null"
+                    class="color-filter-circle cursor-pointer position-relative shadow-sm"
+                    :class="{ 'selected': selectedColors.includes(color) }"
+                    :style="{ backgroundColor: getColorCode(color) }" @click="toggleColor(color)" :title="color">
+                    <i v-if="selectedColors.includes(color)" class="bi bi-check position-absolute"
+                      :class="isLightColor(color) ? 'text-dark' : 'text-white'"
+                      style="top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.2rem; text-shadow: 0px 0px 2px rgba(0,0,0,0.5);"></i>
+                  </div>
+                  <button v-else
+                    class="variant-select-btn transition-all"
+                    :class="{ 'selected': selectedColors.includes(color) }"
+                    @click="toggleColor(color)">
+                    {{ color }}
+                  </button>
+                </template>
               </div>
             </div>
 
@@ -406,6 +415,9 @@ import Toast from '@/utils/toastConfig';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
 import { getStorageUrl } from '@/utils/env';
 import clientApiClient from '@/utils/clientApiClient';
+import { isColorAttribute, getColorCode, isLightColor, fetchColorDictionary } from '@/composables/useColorMapping';
+
+fetchColorDictionary();
 
 const route = useRoute();
 const router = useRouter();
@@ -549,27 +561,9 @@ const handleToggleWishlist = (product) => {
   toggleFavourite(product, Toast, soraAlert, router);
 };
 
-const isColorAttribute = (attrName) => {
-  const name = attrName.toLowerCase();
-  return name.includes('màu') || name.includes('color');
-};
-
 const isMaterialAttribute = (attrName) => {
   const name = attrName.toLowerCase();
   return name.includes('chất liệu') || name.includes('material');
-};
-
-const getColorCode = (colorName) => {
-  const map = {
-    'đỏ': '#cc1e2e', 'red': '#cc1e2e',
-    'xanh': '#2e5b9f', 'blue': '#2e5b9f', 'xanh dương': '#2e5b9f',
-    'vàng': '#e7ce7d', 'gold': '#e7ce7d', 'vàng 18k': '#d4af37',
-    'trắng': '#fcfcfc', 'white': '#fcfcfc', 'vàng trắng': '#f4f4f4',
-    'đen': '#2c2c2c', 'black': '#2c2c2c',
-    'hồng': '#f4a4b4', 'pink': '#f4a4b4', 'vàng hồng': '#b76e79',
-    'bạc': '#c0c0c0', 'silver': '#c0c0c0'
-  };
-  return map[colorName.toLowerCase().trim()] || '#e0e0e0';
 };
 
 const buildFilterOptionParams = () => {
@@ -1393,7 +1387,7 @@ onMounted(() => {
 }
 
 .color-filter-circle.selected {
-  border: 2px solid #111;
+  border: 2px solid #9f273b;
   transform: scale(1.1);
 }
 

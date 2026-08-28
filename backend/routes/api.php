@@ -215,6 +215,7 @@ Route::prefix('client')->group(function () {
     Route::prefix('profile')->middleware(['auth:sanctum', 'ability:access', 'client.user', 'throttle:client-api'])->group(function () {
         Route::get('/', [ClientProfileController::class, 'show']);
         Route::post('/', [ClientProfileController::class, 'update'])->middleware('throttle:client-mutation');
+        Route::post('/avatar', [ClientProfileController::class, 'updateAvatar'])->middleware('throttle:client-mutation');
         Route::post('/password', [ClientProfileController::class, 'updatePassword'])->middleware('throttle:sensitive-mutation');
 
         // Sổ Địa Chỉ (Address Book)
@@ -290,6 +291,8 @@ Route::prefix('shop/{shop_slug}')->middleware('throttle:public-read')->group(fun
 Route::get('shop/{shop_slug}/categories', [ShopController::class, 'categories'])->middleware('throttle:public-read');
 Route::get('shop/{shop_slug}/colors', [ShopController::class, 'colors'])->middleware('throttle:public-read');
 Route::get('shop/{shop_slug}/attributes', [ShopController::class, 'attributes'])->middleware('throttle:public-read');
+
+Route::get('/color-dictionaries', [App\Http\Controllers\Api\Admin\AdminColorDictionaryController::class, 'index'])->middleware('throttle:public-read');
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -425,6 +428,8 @@ Route::prefix('admin')->group(function () {
             Route::apiResource('attributes', AdminAttributeController::class)->except(['show']);
             Route::post('attribute-values', [AdminAttributeValueController::class, 'store']);
             Route::delete('attribute-values/{id}', [AdminAttributeValueController::class, 'destroy']);
+            
+            Route::apiResource('color-dictionaries', App\Http\Controllers\Api\Admin\AdminColorDictionaryController::class)->except(['show']);
         });
 
         // Quản lý Thương hiệu (Mã: admin_brands)

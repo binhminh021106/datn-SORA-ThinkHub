@@ -347,7 +347,7 @@
       <div class="row g-3 g-xl-3 mb-3">
         <!-- Khách hàng mua nhiều nhất -->
         <div class="col-12 col-md-4">
-          <div class="card custom-card h-100 border-0 shadow-sm rounded-4 bg-gradient-to-br from-primary-soft to-white">
+          <div class="card custom-card h-100 border-0 shadow-sm rounded-4" style="background: linear-gradient(to bottom right, rgba(13,110,253,0.05), var(--bs-card-bg));">
             <div class="card-body p-3 d-flex flex-column position-relative overflow-hidden">
               <div class="position-absolute end-0 top-0 mt-3 me-3 opacity-25" style="font-size: 3rem; color: #005baa; pointer-events: none;">
                 <i class="bi bi-trophy-fill"></i>
@@ -395,7 +395,7 @@
         <!-- Nhóm khách hàng chủ lực -->
         <div class="col-12 col-md-4">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4 transition-all" 
-               :style="{ background: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'linear-gradient(to bottom right, rgba(13,202,240,0.05), #ffffff)' : 'linear-gradient(to bottom right, rgba(165,0,100,0.05), #ffffff)' }">
+               :style="{ background: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'linear-gradient(to bottom right, rgba(13,202,240,0.05), var(--bs-card-bg))' : 'linear-gradient(to bottom right, rgba(165,0,100,0.05), var(--bs-card-bg))' }">
             <div class="card-body p-4 d-flex flex-column position-relative overflow-hidden">
               <div class="position-absolute" style="font-size: 8rem; right: -20px; bottom: -30px; pointer-events: none; z-index: 0; opacity: 0.06;"
                    :class="customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'text-info' : (customerInsights?.topGender?.gender?.toLowerCase() === 'nữ' ? 'text-danger' : 'text-secondary')">
@@ -949,7 +949,7 @@
           <div class="row g-3">
             <!-- Hoạt động -->
             <div class="col-6 col-md-3">
-              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 100%);">
+              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, var(--bs-card-bg) 100%);">
                 <div class="card-body p-3 d-flex align-items-center gap-3">
                   <div class="avatar-circle bg-success text-white flex-shrink-0 shadow-sm d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: 50%;">
                     <i class="bi bi-check-circle-fill fs-4"></i>
@@ -964,7 +964,7 @@
             
             <!-- Sắp tới -->
             <div class="col-6 col-md-3">
-              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);">
+              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, var(--bs-card-bg) 100%);">
                 <div class="card-body p-3 d-flex align-items-center gap-3">
                   <div class="avatar-circle bg-warning text-white flex-shrink-0 shadow-sm d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: 50%;">
                     <i class="bi bi-clock-fill fs-4"></i>
@@ -979,7 +979,7 @@
 
             <!-- Đã hết hạn -->
             <div class="col-6 col-md-3">
-              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);">
+              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, var(--bs-card-bg) 100%);">
                 <div class="card-body p-3 d-flex align-items-center gap-3">
                   <div class="avatar-circle bg-danger text-white flex-shrink-0 shadow-sm d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: 50%;">
                     <i class="bi bi-x-circle-fill fs-4"></i>
@@ -994,7 +994,7 @@
 
             <!-- Tổng lượt dùng -->
             <div class="col-6 col-md-3">
-              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, #f3e8ff 0%, #ffffff 100%);">
+              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, var(--bs-card-bg) 100%);">
                 <div class="card-body p-3 d-flex align-items-center gap-3">
                   <div class="avatar-circle flex-shrink-0 shadow-sm d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: 50%; background-color: #8b5cf6; color: white;">
                     <i class="bi bi-ticket-perforated-fill fs-4"></i>
@@ -1880,7 +1880,7 @@ const getRankBgStyle = (index) => {
   if (index === 0) return 'rgba(255, 193, 7, 0.15)'; // Vàng
   if (index === 1) return 'rgba(108, 117, 125, 0.1)'; // Bạc
   if (index === 2) return 'rgba(253, 126, 20, 0.15)'; // Đồng
-  return '#ffffff';
+  return 'transparent';
 };
 
 // ==========================================

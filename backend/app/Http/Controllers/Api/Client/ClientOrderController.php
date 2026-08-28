@@ -104,6 +104,7 @@ class ClientOrderController extends Controller
         }
 
         $orders = $query->paginate($perPage);
+        $this->enrichComboSelections($orders->getCollection());
 
         // Lấy thống kê số lượng đơn hàng theo trạng thái
         $countsQuery = \Illuminate\Support\Facades\DB::table('orders')
@@ -426,6 +427,10 @@ class ClientOrderController extends Controller
         // Bảo mật: Nếu có User_id, phải check xem đúng chính chủ không
         if (!$this->canAccessOrder($request, $order, $user)) {
             return response()->json(['success' => false, 'message' => 'Bạn không có quyền xem đơn hàng này'], 403);
+        }
+
+        if ($order) {
+            $this->enrichComboSelections($order);
         }
 
         return response()->json(['success' => true, 'data' => $order]);
@@ -1166,6 +1171,53 @@ class ClientOrderController extends Controller
         } catch (\Throwable $e) {
             report($e);
             return response()->json(['success' => false, 'message' => 'Không thể xác nhận phương án hoàn trả lúc này. Vui lòng thử lại sau.'], 500);
+        }
+    }
+
+    private function enrichComboSelections($orders)
+    {
+        $orderList = $orders instanceof \Illuminate\Database\Eloquent\Collection ? $orders : collect([$orders]);
+        $variantIds = [];
+        
+        foreach ($orderList as $order) {
+            if (!$order->items) continue;
+            foreach ($order->items as $item) {
+                if ($item->combo_id && is_array($item->combo_selections)) {
+                    foreach ($item->combo_selections as $sel) {
+                        if (isset($sel['selected_variant_id'])) {
+                            $variantIds[] = $sel['selected_variant_id'];
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (empty($variantIds)) return;
+        
+        $variants = \App\Models\ProductVariant::with('product')->whereIn('id', array_unique($variantIds))->get()->keyBy('id');
+        
+        foreach ($orderList as $order) {
+            if (!$order->items) continue;
+            foreach ($order->items as $item) {
+                if ($item->combo_id && is_array($item->combo_selections)) {
+                    $selections = $item->combo_selections;
+                    $changed = false;
+                    foreach ($selections as &$sel) {
+                        if (empty($sel['product_name']) && isset($sel['selected_variant_id'])) {
+                            $variant = $variants->get($sel['selected_variant_id']);
+                            if ($variant && $variant->product) {
+                                $sel['product_name'] = $variant->product->name;
+                                $sel['attributes'] = $variant->attributes;
+                                $sel['price'] = $variant->promotional_price ?: $variant->price;
+                                $changed = true;
+                            }
+                        }
+                    }
+                    if ($changed) {
+                        $item->combo_selections = $selections;
+                    }
+                }
+            }
         }
     }
 }

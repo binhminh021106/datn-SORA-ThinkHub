@@ -14,13 +14,22 @@
       </div>
     </div>
 
-    <div v-for="row in 5" :key="row" class="row mb-4 align-items-center">
-      <div class="col-sm-3 d-flex justify-content-sm-end">
-        <SoraSkeleton width="72%" height="14px" radius="4px" />
+    <div class="row gx-3 gy-4 mb-5">
+      <div v-for="i in 4" :key="i" class="col-md-6">
+        <SoraSkeleton width="100%" height="58px" radius="8px" />
       </div>
-      <div class="col-sm-9 col-md-7 mt-2 mt-sm-0">
-        <SoraSkeleton width="100%" height="42px" radius="9px" />
+    </div>
+
+    <div class="mb-5">
+      <SoraSkeleton width="120px" height="16px" radius="4px" class="mb-3" />
+      <div class="d-flex flex-wrap gap-3">
+        <SoraSkeleton v-for="i in 3" :key="'gender-'+i" width="100px" height="42px" radius="6px" />
       </div>
+    </div>
+
+    <div class="mb-5">
+      <SoraSkeleton width="120px" height="16px" radius="4px" class="mb-3" />
+      <SoraSkeleton width="100%" height="180px" radius="16px" />
     </div>
   </div>
 </template>

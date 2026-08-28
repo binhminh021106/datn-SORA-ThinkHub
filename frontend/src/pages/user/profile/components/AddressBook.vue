@@ -54,18 +54,22 @@
 
     <!-- FORM THÊM / SỬA ĐỊA CHỈ -->
     <div v-if="showAddressForm" class="address-form-panel">
-      <h4 class="font-serif text-main mb-4">{{ isEditing ? 'Cập Nhật Địa Chỉ' : 'Thêm Địa Chỉ Mới' }}</h4>
+      <h4 class="font-serif text-main mb-4"><i class="bi bi-geo-alt-fill me-2"></i>{{ isEditing ? 'Cập Nhật Địa Chỉ' : 'Thêm Địa Chỉ Mới' }}</h4>
       <form @submit.prevent="saveAddress">
         <div class="row g-4 mb-4">
           <div class="col-md-6">
-            <label class="form-label text-secondary small fw-medium">Họ và tên người nhận <span class="text-danger">*</span></label>
-            <input type="text" class="form-control custom-input bg-white" :class="{'is-invalid': errs.customer_name}" v-model="addrForm.customer_name" @blur="validateField('customer_name')" required placeholder="Nhập họ tên">
-            <div v-if="errs.customer_name" class="invalid-feedback">{{ errs.customer_name }}</div>
+            <div class="form-floating position-relative">
+              <input type="text" class="form-control fw-medium profile-floating-input" :class="{'is-invalid': errs.customer_name}" id="addrName" v-model="addrForm.customer_name" @blur="validateField('customer_name')" required placeholder="Họ và tên">
+              <label for="addrName" class="text-secondary"><i class="bi bi-person me-1"></i>Họ và tên người nhận</label>
+            </div>
+            <div v-if="errs.customer_name" class="invalid-feedback d-block ms-1 mt-1">{{ errs.customer_name }}</div>
           </div>
           <div class="col-md-6">
-            <label class="form-label text-secondary small fw-medium">Số điện thoại <span class="text-danger">*</span></label>
-            <input type="tel" class="form-control custom-input bg-white" :class="{'is-invalid': errs.customer_phone}" v-model="addrForm.customer_phone" @input="addrForm.customer_phone = addrForm.customer_phone.replace(/\D/g, '')" @blur="validateField('customer_phone')" required placeholder="Nhập số điện thoại">
-            <div v-if="errs.customer_phone" class="invalid-feedback">{{ errs.customer_phone }}</div>
+            <div class="form-floating position-relative">
+              <input type="tel" class="form-control fw-medium profile-floating-input" :class="{'is-invalid': errs.customer_phone}" id="addrPhone" v-model="addrForm.customer_phone" @input="addrForm.customer_phone = addrForm.customer_phone.replace(/\D/g, '')" @blur="validateField('customer_phone')" required placeholder="Số điện thoại">
+              <label for="addrPhone" class="text-secondary"><i class="bi bi-telephone me-1"></i>Số điện thoại</label>
+            </div>
+            <div v-if="errs.customer_phone" class="invalid-feedback d-block ms-1 mt-1">{{ errs.customer_phone }}</div>
           </div>
         </div>
 
@@ -78,31 +82,33 @@
               v-model:ward="addrForm.ward"
               :address-text="addrForm.shipping_address"
               :required="true"
-              input-class="custom-input bg-white"
-              label-class="text-secondary small fw-medium"
+              input-class="custom-input fw-medium py-3 bg-white"
+              label-class="text-secondary fw-medium mb-2"
               :invalid-province="Boolean(errs.city)"
               :invalid-district="Boolean(errs.district)"
               :invalid-ward="Boolean(errs.ward)"
               @change="handleAddressPickerChange"
             />
-            <div v-if="errs.city || errs.district || errs.ward" class="invalid-feedback d-block mt-2">
+            <div v-if="errs.city || errs.district || errs.ward" class="invalid-feedback d-block mt-2 ms-1">
               {{ errs.city || errs.district || errs.ward }}
             </div>
           </div>
         </div>
 
         <div class="mb-4">
-          <div class="d-flex justify-content-between align-items-end mb-2">
-            <label class="form-label text-secondary small fw-medium mb-0">Địa chỉ cụ thể <span class="text-danger">*</span></label>
-            <button type="button" class="address-secondary-btn d-flex align-items-center gap-2" @click="getCurrentLocation" :disabled="isLocating">
+          <div class="d-flex justify-content-end mb-2">
+            <button type="button" class="btn btn-sm btn-outline-main d-flex align-items-center gap-1 rounded-pill px-3" @click="getCurrentLocation" :disabled="isLocating">
               <span v-if="isLocating" class="spinner-border spinner-border-sm"></span>
               <i v-else class="bi bi-geo-alt"></i> Lấy định vị hiện tại
             </button>
           </div>
-          <input type="text" class="form-control custom-input bg-white" :class="{'is-invalid': errs.shipping_address}" v-model="addrForm.shipping_address" @blur="validateField('shipping_address')" required placeholder="Số nhà, tên tòa nhà, tên đường...">
-          <div v-if="errs.shipping_address" class="invalid-feedback">{{ errs.shipping_address }}</div>
+          <div class="form-floating position-relative">
+            <input type="text" class="form-control fw-medium profile-floating-input" :class="{'is-invalid': errs.shipping_address}" id="addrSpecific" v-model="addrForm.shipping_address" @blur="validateField('shipping_address')" required placeholder="Số nhà, tên tòa nhà, tên đường...">
+            <label for="addrSpecific" class="text-secondary"><i class="bi bi-house me-1"></i>Địa chỉ cụ thể</label>
+          </div>
+          <div v-if="errs.shipping_address" class="invalid-feedback d-block ms-1 mt-1">{{ errs.shipping_address }}</div>
           
-          <div v-if="mapUrl" class="mt-3 rounded overflow-hidden border shadow-sm">
+          <div v-if="mapUrl" class="mt-3 rounded-4 overflow-hidden border border-light shadow-sm">
             <iframe :src="mapUrl" width="100%" height="250" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
           </div>
         </div>
@@ -541,6 +547,31 @@ select.custom-input { padding-right: 2.5rem; }
   border-color: #9f273b;
   transform: translateY(-2px);
   box-shadow: 0 8px 18px rgba(159, 39, 59, 0.16);
+}
+
+.custom-checkbox .form-check-input:checked {
+  background-color: #9f273b;
+  border-color: #9f273b;
+}
+
+.profile-floating-input:focus {
+  border-color: #9f273b;
+  box-shadow: 0 0 0 0.2rem rgba(159, 39, 59, 0.15);
+}
+
+.form-floating > label {
+  transition: opacity 0.25s ease-in-out, transform 0.25s ease-in-out !important;
+}
+
+.btn-outline-main {
+  color: #9f273b;
+  border-color: #9f273b;
+  background-color: transparent;
+  transition: all 0.2s;
+}
+.btn-outline-main:hover {
+  background-color: rgba(159, 39, 59, 0.05);
+  color: #9f273b;
 }
 
 .address-secondary-btn {

@@ -40,7 +40,7 @@
         </div>
 
         <div
-          class="avatar-wrapper mx-auto position-relative rounded-circle overflow-hidden bg-light"
+          class="avatar-wrapper mx-auto position-relative rounded-circle overflow-hidden bg-light avatar-hover-container"
           style="width: 110px; height: 110px; border: 4px solid #fff;"
           :style="{ boxShadow: `0 0 0 3px ${tierBorderColor}, 0 8px 16px rgba(0,0,0,0.1)` }"
         >
@@ -49,7 +49,18 @@
             alt="Avatar"
             class="w-100 h-100"
             style="object-fit: cover; object-position: center;"
+            :style="isUploadingAvatar ? 'filter: blur(2px);' : ''"
           >
+          <label class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center m-0 avatar-hover-overlay" 
+                 style="background: rgba(0,0,0,0.5); cursor: pointer; transition: all 0.3s;"
+                 :style="isUploadingAvatar ? 'opacity: 1 !important; pointer-events: none;' : ''">
+            <span v-if="isUploadingAvatar" class="spinner-border text-white" role="status"></span>
+            <template v-else>
+              <i class="bi bi-camera-fill text-white fs-4 mb-1"></i>
+              <span class="text-white fw-medium" style="font-size: 0.65rem;">Thay đổi</span>
+            </template>
+            <input type="file" accept="image/*" class="d-none" @change="uploadAvatar" :disabled="isUploadingAvatar">
+          </label>
         </div>
       </div>
 
@@ -271,12 +282,66 @@ const tierName = computed(() => {
 });
 
 const avatarSrc = computed(() => {
+  if (previewAvatar.value) return previewAvatar.value;
   const url = props.user?.avatar_url || userData.value.avatar_url;
   if (!url) return `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName.value || 'User')}&background=9f273b&color=fff`;
   return getStorageUrl(url);
 });
 
-// ===== TIER STYLES =====
+// Upload Avatar Logic
+const isUploadingAvatar = ref(false);
+const previewAvatar = ref(null);
+
+const uploadAvatar = async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (file.size > 5 * 1024 * 1024) {
+    Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Dung lượng ảnh không được vượt quá 5MB.' });
+    return;
+  }
+
+  isUploadingAvatar.value = true;
+  previewAvatar.value = URL.createObjectURL(file);
+
+  try {
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    const response = await clientApiClient.post('/client/profile/avatar', formData);
+    if (response.data.status) {
+      const updatedUser = response.data.data;
+      
+      let authState = JSON.parse(localStorage.getItem('auth') || '{}');
+      if (authState.user) {
+        authState.user.avatar_url = updatedUser.avatar_url;
+        localStorage.setItem('auth', JSON.stringify(authState));
+      }
+      
+      userData.value.avatar_url = updatedUser.avatar_url;
+      previewAvatar.value = null;
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Thành công!',
+        text: 'Cập nhật ảnh đại diện thành công.',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    }
+  } catch (error) {
+    previewAvatar.value = null;
+    let msg = 'Lỗi cập nhật ảnh đại diện.';
+    if (error.response && error.response.status === 422) {
+      msg = Object.values(error.response.data.errors)[0][0];
+    }
+    Swal.fire({ icon: 'error', title: 'Lỗi', text: msg });
+  } finally {
+    isUploadingAvatar.value = false;
+    event.target.value = '';
+  }
+};
+
 const tierBadgeClass = computed(() => {
   const name = tierName.value.toLowerCase();
   if (name.includes('diamond') || name.includes('kim cương')) return 'tier-diamond';
@@ -446,15 +511,25 @@ onMounted(() => {
   font-size: 0.93rem;
   font-weight: 500;
 }
+.profile-menu .active-menu {
+  background-color: rgba(159, 39, 59, 0.05);
+  color: #9f273b !important;
+  border-left: 3px solid #9f273b;
+}
+
+.avatar-hover-container .avatar-hover-overlay {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.avatar-hover-container:hover .avatar-hover-overlay {
+  opacity: 1;
+  visibility: visible;
+}
+
 .profile-menu a:hover {
   background-color: #faf9f8;
   color: #9f273b !important;
-}
-.active-menu {
-  color: #9f273b !important;
-  background-color: #f8eaec;
-  font-weight: 600;
-  border-left: 3px solid #9f273b;
 }
 .text-danger-custom {
   color: #cc1e2e !important;

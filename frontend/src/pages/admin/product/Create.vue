@@ -219,6 +219,10 @@
                                             @click="openModal('manageAttrModal')">
                                             <i class="bi bi-gear-fill me-1"></i> Quản lý
                                         </button>
+                                        <button type="button" class="btn btn-sm btn-outline-info fw-bold shadow-sm"
+                                            @click="openModal('colorDictionaryModal')">
+                                            <i class="bi bi-palette-fill me-1"></i> Từ điển màu
+                                        </button>
                                     </div>
                                 </div>
 
@@ -539,6 +543,8 @@
             </div>
         </div>
 
+        <ColorDictionaryModal />
+
     </div>
 </template>
 
@@ -550,6 +556,7 @@ import Swal from 'sweetalert2';
 import adminApiClient from '@/utils/adminApiClient';
 import { QuillEditor } from '@vueup/vue-quill';
 import '@vueup/vue-quill/dist/vue-quill.snow.css';
+import ColorDictionaryModal from '@/components/admin/ColorDictionaryModal.vue';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -858,6 +865,7 @@ const openModal = (id) => {
     if (id === 'createAttrModal') createAttrModalObj = m;
     if (id === 'createValueModal') createValueModalObj = m;
     if (id === 'manageAttrModal') manageAttrModalObj = m;
+    if (id === 'colorDictionaryModal' && window.fetchColorDictionaries) window.fetchColorDictionaries();
     m.show();
 };
 

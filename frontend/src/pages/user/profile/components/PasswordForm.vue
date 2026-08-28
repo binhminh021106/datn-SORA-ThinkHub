@@ -4,43 +4,44 @@
     <p class="text-secondary fw-light mb-4 border-bottom pb-3">Để bảo mật tài khoản, vui lòng không chia sẻ mật khẩu cho người khác</p>
     
     <form @submit.prevent="changePassword">
-      <div class="row mb-4 align-items-center">
-        <label for="currentPassword" class="col-sm-3 col-form-label text-sm-end text-secondary fw-medium">Mật Khẩu Hiện Tại</label>
-        <div class="col-sm-9 col-md-7 position-relative">
-          <input :type="showCurrentPassword ? 'text' : 'password'" class="form-control custom-input pe-5" id="currentPassword" v-model="passwordForm.current_password" required placeholder="Nhập mật khẩu hiện tại">
-          <button type="button" class="password-toggle" @click="showCurrentPassword = !showCurrentPassword">
-            <i :class="showCurrentPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
-          </button>
+      <div class="row gx-3 gy-4 mb-5">
+        <div class="col-md-12">
+          <div class="form-floating position-relative">
+            <input :type="showCurrentPassword ? 'text' : 'password'" class="form-control fw-medium profile-floating-input pe-5" id="currentPassword" v-model="passwordForm.current_password" required placeholder="Mật khẩu hiện tại">
+            <label for="currentPassword" class="text-secondary"><i class="bi bi-lock me-1"></i>Mật Khẩu Hiện Tại</label>
+            <button type="button" class="password-toggle" @click="showCurrentPassword = !showCurrentPassword">
+              <i :class="showCurrentPassword ? 'bi bi-eye-slash text-secondary' : 'bi bi-eye text-secondary'"></i>
+            </button>
+          </div>
         </div>
-      </div>
-      
-      <div class="row mb-4 align-items-center">
-        <label for="newPassword" class="col-sm-3 col-form-label text-sm-end text-secondary fw-medium">Mật Khẩu Mới</label>
-        <div class="col-sm-9 col-md-7 position-relative">
-          <input :type="showNewPassword ? 'text' : 'password'" class="form-control custom-input pe-5" id="newPassword" v-model="passwordForm.password" required minlength="8" placeholder="Nhập mật khẩu mới (ít nhất 8 ký tự)">
-          <button type="button" class="password-toggle" @click="showNewPassword = !showNewPassword">
-            <i :class="showNewPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
-          </button>
+        
+        <div class="col-md-6">
+          <div class="form-floating position-relative">
+            <input :type="showNewPassword ? 'text' : 'password'" class="form-control fw-medium profile-floating-input pe-5" id="newPassword" v-model="passwordForm.password" required minlength="8" placeholder="Mật khẩu mới (ít nhất 8 ký tự)">
+            <label for="newPassword" class="text-secondary"><i class="bi bi-key me-1"></i>Mật Khẩu Mới</label>
+            <button type="button" class="password-toggle" @click="showNewPassword = !showNewPassword">
+              <i :class="showNewPassword ? 'bi bi-eye-slash text-secondary' : 'bi bi-eye text-secondary'"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="form-floating position-relative">
+            <input :type="showConfirmPassword ? 'text' : 'password'" class="form-control fw-medium profile-floating-input pe-5" id="confirmPassword" v-model="passwordForm.password_confirmation" required placeholder="Nhập lại mật khẩu mới">
+            <label for="confirmPassword" class="text-secondary"><i class="bi bi-check-circle me-1"></i>Xác Nhận Mật Khẩu</label>
+            <button type="button" class="password-toggle" @click="showConfirmPassword = !showConfirmPassword">
+              <i :class="showConfirmPassword ? 'bi bi-eye-slash text-secondary' : 'bi bi-eye text-secondary'"></i>
+            </button>
+          </div>
         </div>
       </div>
 
-      <div class="row mb-4 align-items-center">
-        <label for="confirmPassword" class="col-sm-3 col-form-label text-sm-end text-secondary fw-medium">Xác Nhận Mật Khẩu</label>
-        <div class="col-sm-9 col-md-7 position-relative">
-          <input :type="showConfirmPassword ? 'text' : 'password'" class="form-control custom-input pe-5" id="confirmPassword" v-model="passwordForm.password_confirmation" required placeholder="Nhập lại mật khẩu mới">
-          <button type="button" class="password-toggle" @click="showConfirmPassword = !showConfirmPassword">
-            <i :class="showConfirmPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
-          </button>
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="col-sm-9 offset-sm-3">
-          <button type="submit" class="editorial-btn px-5 py-2" :disabled="isChangingPassword">
-            <span v-if="isChangingPassword" class="spinner-border spinner-border-sm me-2" role="status"></span>
-            Đổi Mật Khẩu
-          </button>
-        </div>
+      <div class="d-flex justify-content-end border-top pt-4">
+        <button type="submit" class="editorial-btn px-5 py-2 rounded-pill shadow-sm" style="min-width: 200px;" :disabled="isChangingPassword">
+          <span v-if="isChangingPassword" class="spinner-border spinner-border-sm me-2" role="status"></span>
+          <i v-else class="bi bi-shield-lock me-2"></i>
+          Đổi Mật Khẩu
+        </button>
       </div>
     </form>
   </div>
@@ -112,8 +113,6 @@ const changePassword = async () => {
 </script>
 
 <style scoped>
-
-
 .tracking-wide { letter-spacing: 0.1em; }
 
 .custom-input {
@@ -122,18 +121,21 @@ const changePassword = async () => {
   padding: 0.6rem 1rem;
   transition: all 0.3s ease;
 }
-.custom-input:focus {
+.profile-floating-input:focus {
   border-color: #9f273b;
   box-shadow: 0 0 0 0.2rem rgba(159, 39, 59, 0.15);
-  outline: none;
+}
+
+.form-floating > label {
+  transition: opacity 0.25s ease-in-out, transform 0.25s ease-in-out !important;
 }
 
 .password-toggle {
   position: absolute;
-  right: 20px;
+  right: 15px;
   top: 50%;
   transform: translateY(-50%);
-  background: transparent;
+  background: none;
   border: none;
   color: #666;
   cursor: pointer;

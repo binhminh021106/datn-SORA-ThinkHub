@@ -601,6 +601,8 @@ public function applyBirthdayCoupon(Request $request)
                 'combo_item_id' => (int) $comboItemId,
                 'selected_variant_id' => (int) $variant->id,
                 'price' => $variant->promotional_price ?: $variant->price,
+                'product_name' => $variant->product->name,
+                'attributes' => $variant->attributes,
             ];
         }
 

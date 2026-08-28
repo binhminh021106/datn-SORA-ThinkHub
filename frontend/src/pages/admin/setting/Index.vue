@@ -165,7 +165,7 @@
                 <span class="fw-bold font-size-xs text-uppercase letter-spacing-1"><i class="bi bi-display me-2"></i>Live Preview Header</span>
                 <span class="badge bg-success">Real-time</span>
              </div>
-             <div class="w-100 overflow-x-auto bg-light border-bottom">
+             <div class="w-100 overflow-x-auto bg-light border-bottom" data-bs-theme="light">
                 <div class="min-w-100 pointer-events-none" style="pointer-events: none;">
                     <SoraHeader :preview-data="liveHeaderData" />
                 </div>
@@ -218,7 +218,7 @@
                   <span class="fw-bold font-size-xs text-uppercase letter-spacing-1"><i class="bi bi-display me-2"></i>Live Preview Home Stats</span>
                   <span class="badge bg-success">Real-time</span>
                 </div>
-                <div class="w-100 overflow-x-auto bg-light">
+                <div class="w-100 overflow-x-auto bg-light" data-bs-theme="light">
                   <div class="min-w-100 pointer-events-none" style="pointer-events: none;">
                       <HomeStatsBand :stats="homeStats" />
                   </div>
@@ -254,6 +254,12 @@
                <div class="form-floating">
                  <input id="footerEmail" type="text" v-model="footerEmail" class="form-control bg-light" placeholder="SORA@GMAIL.COM">
                  <label for="footerEmail" class="text-muted">Email hiển thị</label>
+               </div>
+             </div>
+             <div class="col-lg-4">
+               <div class="form-floating">
+                 <input id="footerOpeningHours" type="text" v-model="footerOpeningHours" class="form-control bg-light" placeholder="09:00 - 21:00 (Từ Thứ 2 đến Chủ Nhật)">
+                 <label for="footerOpeningHours" class="text-muted">Giờ mở cửa</label>
                </div>
              </div>
              <div class="col-lg-4">
@@ -333,7 +339,7 @@
                  <span class="fw-bold font-size-xs text-uppercase letter-spacing-1"><i class="bi bi-display me-2"></i>Live Preview Footer</span>
                  <span class="badge bg-success">Real-time</span>
               </div>
-              <div class="w-100 overflow-x-auto bg-white">
+              <div class="w-100 overflow-x-auto bg-white" data-bs-theme="light">
                  <div class="min-w-100 pointer-events-none" style="pointer-events: none;">
                      <SoraFooter :preview-data="liveFooterData" />
                  </div>
@@ -469,6 +475,7 @@ const footerBrandDesc = ref('');
 const footerCopyright = ref('');
 const footerAddress = ref('');
 const footerEmail = ref('');
+const footerOpeningHours = ref('');
 const footerTrustItems = ref([]);
 const footerSocials = ref([]);
 const isSavingFooter = ref(false);
@@ -513,6 +520,7 @@ onMounted(async () => {
     footerCopyright.value = s.footer_copyright;
     footerAddress.value = s.footer_address;
     footerEmail.value = s.footer_email;
+    footerOpeningHours.value = s.footer_opening_hours || '09:00 - 21:00 (Từ Thứ 2 đến Chủ Nhật)';
     
     footerTrustItems.value = Array.isArray(s.footer_trust_items) && s.footer_trust_items.length > 0 ? JSON.parse(JSON.stringify(s.footer_trust_items)) : [];
     while(footerTrustItems.value.length < 4) footerTrustItems.value.push({icon: '', title: '', subtitle: ''});
@@ -764,6 +772,7 @@ const saveFooterSettings = async () => {
                 { key: 'footer_copyright', value: footerCopyright.value, type: 'string' },
                 { key: 'footer_address', value: footerAddress.value, type: 'string' },
                 { key: 'footer_email', value: footerEmail.value, type: 'string' },
+                { key: 'footer_opening_hours', value: footerOpeningHours.value, type: 'string' },
                 { key: 'footer_trust_items', value: footerTrustItems.value, type: 'json' },
                 { key: 'footer_socials', value: footerSocials.value, type: 'json' }
             ]
@@ -903,5 +912,92 @@ const saveHomeStatsSettings = async () => {
 /* Smooth floating label transition */
 .form-floating > label {
   transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+/* ========================================================= */
+/* TỐI ƯU DARK MODE CHO TRANG CẤU HÌNH (SETTINGS-WRAPPER)    */
+/* ========================================================= */
+[data-bs-theme="dark"] .settings-wrapper .bg-white,
+[data-bs-theme="dark"] .settings-wrapper .card,
+[data-bs-theme="dark"] .settings-wrapper .custom-card {
+  background-color: #1e2125 !important;
+  border-color: #373b3e !important;
+}
+
+[data-bs-theme="dark"] .settings-wrapper .text-dark {
+  color: #f8f9fa !important;
+}
+
+[data-bs-theme="dark"] .settings-wrapper .text-secondary,
+[data-bs-theme="dark"] .settings-wrapper .text-muted {
+  color: #adb5bd !important;
+}
+
+[data-bs-theme="dark"] .settings-wrapper .bg-light,
+[data-bs-theme="dark"] .settings-wrapper .bg-light-soft {
+  background-color: #2b3035 !important;
+  color: #f8f9fa !important;
+  border-color: #373b3e !important;
+}
+
+[data-bs-theme="dark"] .settings-wrapper .border-light,
+[data-bs-theme="dark"] .settings-wrapper .border-bottom {
+  border-color: #373b3e !important;
+}
+
+[data-bs-theme="dark"] .settings-wrapper input.form-control,
+[data-bs-theme="dark"] .settings-wrapper textarea.form-control,
+[data-bs-theme="dark"] .settings-wrapper select.form-select,
+[data-bs-theme="dark"] .settings-wrapper .input-group-text {
+  background-color: #2b3035 !important;
+  color: #f8f9fa !important;
+  border-color: #373b3e !important;
+}
+
+[data-bs-theme="dark"] .settings-wrapper input.form-control::placeholder,
+[data-bs-theme="dark"] .settings-wrapper textarea.form-control::placeholder {
+  color: #6c757d !important;
+}
+
+[data-bs-theme="dark"] .settings-wrapper .nav-tabs-custom .card-header {
+  border-bottom: 1px solid #373b3e !important;
+}
+
+/* Fix text for the "Chỉ áp dụng Footer" red text when dark mode */
+[data-bs-theme="dark"] .settings-wrapper .text-danger {
+  color: #e57373 !important;
+}
+
+/* Fix Mẹo (Tips) info block */
+[data-bs-theme="dark"] .settings-wrapper .alert-info,
+[data-bs-theme="dark"] .settings-wrapper .bg-info-soft {
+  background-color: rgba(13, 202, 240, 0.1) !important;
+  color: #9eeaf9 !important;
+}
+[data-bs-theme="dark"] .settings-wrapper .alert-info .text-warning {
+  color: #ffda6a !important;
+}
+
+/* ========================================================= */
+/* KHÔI PHỤC LIGHT MODE CHO CÁC KHUNG PREVIEW ĐỂ NHÌN RÕ    */
+/* ========================================================= */
+[data-bs-theme="dark"] .settings-wrapper [data-bs-theme="light"],
+[data-bs-theme="dark"] .settings-wrapper [data-bs-theme="light"] .bg-light,
+[data-bs-theme="dark"] .settings-wrapper [data-bs-theme="light"] .bg-white {
+  background-color: #ffffff !important;
+  color: #212529 !important;
+}
+
+[data-bs-theme="dark"] .settings-wrapper [data-bs-theme="light"] .text-dark {
+  color: #212529 !important;
+}
+
+[data-bs-theme="dark"] .settings-wrapper [data-bs-theme="light"] .text-muted,
+[data-bs-theme="dark"] .settings-wrapper [data-bs-theme="light"] .text-secondary {
+  color: #6c757d !important;
+}
+
+[data-bs-theme="dark"] .settings-wrapper [data-bs-theme="light"] .border-bottom {
+  border-color: #dee2e6 !important;
 }
 </style>

@@ -46,6 +46,7 @@ class AdminSettingController extends Controller
             'footer_copyright',
             'footer_address',
             'footer_email',
+            'footer_opening_hours',
             'footer_socials',
             'footer_trust_items',
             'home_stats',
