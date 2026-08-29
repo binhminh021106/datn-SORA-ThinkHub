@@ -445,6 +445,7 @@ Route::prefix('admin')->group(function () {
             Route::apiResource('banners', AdminBannerController::class);
             Route::post('banners/{id}/restore', [AdminBannerController::class, 'restore']);
             Route::delete('banners/{id}/force', [AdminBannerController::class, 'forceDelete']);
+            Route::delete('banners/{id}/delete-media', [AdminBannerController::class, 'deleteMedia']);
             Route::post('banners/reorder', [AdminBannerController::class, 'reorder']);
         });
 

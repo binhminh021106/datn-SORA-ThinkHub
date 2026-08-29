@@ -49,9 +49,15 @@ class ColorDictionarySeeder extends Seeder
         ];
 
         foreach ($colors as $color) {
+            $slug = \Illuminate\Support\Str::slug($color['name'], ' ');
+            $normalizedName = str_replace('-', ' ', $slug);
+
             ColorDictionary::firstOrCreate(
-                ['name' => $color['name']],
-                ['color_code' => $color['color_code']]
+                ['normalized_name' => $normalizedName],
+                [
+                    'name' => $color['name'],
+                    'color_code' => $color['color_code']
+                ]
             );
         }
     }

@@ -93,15 +93,28 @@ class ClientProfileController extends Controller
         ]);
 
         $oldAvatar = $user->avatar_url;
-        $path = $request->file('avatar')->store('avatars', 'public');
+        $path = false;
 
-        if ($path) {
-            $user->avatar_url = $path;
-            if ($user->save()) {
-                if ($oldAvatar && Storage::disk('public')->exists($oldAvatar)) {
-                    Storage::disk('public')->delete($oldAvatar);
-                }
+        try {
+            $path = $request->file('avatar')->store('avatars', 'public');
+            if (!$path) {
+                return response()->json(['status' => false, 'message' => 'Không thể lưu file ảnh'], 500);
             }
+
+            $user->avatar_url = $path;
+            if (!$user->save()) {
+                throw new \Exception('Lưu thay đổi thất bại');
+            }
+
+            if ($oldAvatar && Storage::disk('public')->exists($oldAvatar)) {
+                Storage::disk('public')->delete($oldAvatar);
+            }
+        } catch (\Exception $e) {
+            if ($path && Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
+            $user->avatar_url = $oldAvatar;
+            return response()->json(['status' => false, 'message' => 'Lỗi cập nhật ảnh đại diện'], 500);
         }
 
         $userData = $user->toArray();

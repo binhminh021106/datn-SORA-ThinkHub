@@ -16,7 +16,7 @@ class AdminColorDictionaryController extends Controller
 
     public function store(Request $request)
     {
-        if ($request->has('name')) {
+        if ($request->has('name') && is_string($request->name)) {
             $slug = Str::slug($request->name, ' ');
             $request->merge(['normalized_name' => str_replace('-', ' ', $slug)]);
         }
@@ -37,7 +37,7 @@ class AdminColorDictionaryController extends Controller
     {
         $color = ColorDictionary::findOrFail($id);
 
-        if ($request->has('name')) {
+        if ($request->has('name') && is_string($request->name)) {
             $slug = Str::slug($request->name, ' ');
             $request->merge(['normalized_name' => str_replace('-', ' ', $slug)]);
         }

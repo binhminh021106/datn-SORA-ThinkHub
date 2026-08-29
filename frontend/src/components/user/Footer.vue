@@ -142,7 +142,7 @@ const safeSocials = computed(() => {
 const hotlineDisplay = computed(() => {
     if (props.previewData && Array.isArray(props.previewData.footer_trust_items)) {
         const item = props.previewData.footer_trust_items.find(i => i.icon === 'bi-headset');
-        if (item && item.subtitle) {
+        if (item && typeof item.subtitle === 'string') {
             return item.subtitle.replace(/Hotline:\s*/i, '').trim();
         }
     }

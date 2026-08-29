@@ -319,7 +319,7 @@ const uploadAvatar = async (event) => {
       }
       
       userData.value.avatar_url = updatedUser.avatar_url;
-      previewAvatar.value = null;
+
 
       Swal.fire({
         icon: 'success',
@@ -330,13 +330,16 @@ const uploadAvatar = async (event) => {
       });
     }
   } catch (error) {
-    previewAvatar.value = null;
     let msg = 'Lỗi cập nhật ảnh đại diện.';
     if (error.response && error.response.status === 422) {
       msg = Object.values(error.response.data.errors)[0][0];
     }
     Swal.fire({ icon: 'error', title: 'Lỗi', text: msg });
   } finally {
+    if (previewAvatar.value) {
+      URL.revokeObjectURL(previewAvatar.value);
+      previewAvatar.value = null;
+    }
     isUploadingAvatar.value = false;
     event.target.value = '';
   }

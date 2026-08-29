@@ -82,7 +82,10 @@
                   </div>
                 </div>
                 <input type="file" class="d-none" id="deskUpload" accept="image/*" @change="(e) => handleUpload(e, 'desk')">
-                <label for="deskUpload" class="btn btn-sm btn-outline-brand rounded-pill w-100 fw-semibold cursor-pointer"><i class="bi bi-upload"></i> Chọn ảnh PC</label>
+                <div class="d-flex gap-2">
+                  <label for="deskUpload" class="btn btn-sm btn-outline-brand rounded-pill flex-fill fw-semibold cursor-pointer mb-0"><i class="bi bi-upload"></i> Chọn ảnh</label>
+                  <button v-if="previewDesk" type="button" class="btn btn-sm btn-outline-danger rounded-pill fw-semibold cursor-pointer" @click="clearMedia('desk')"><i class="bi bi-trash"></i> Xóa</button>
+                </div>
               </div>
 
               <div class="p-4 bg-light rounded-4 border text-center flex-fill">
@@ -95,7 +98,10 @@
                   </div>
                 </div>
                 <input type="file" class="d-none" id="mobUpload" accept="image/*" @change="(e) => handleUpload(e, 'mob')">
-                <label for="mobUpload" class="btn btn-sm btn-outline-brand rounded-pill w-100 fw-semibold cursor-pointer"><i class="bi bi-upload"></i> Chọn ảnh Mobile</label>
+                <div class="d-flex gap-2">
+                  <label for="mobUpload" class="btn btn-sm btn-outline-brand rounded-pill flex-fill fw-semibold cursor-pointer mb-0"><i class="bi bi-upload"></i> Chọn ảnh</label>
+                  <button v-if="previewMob" type="button" class="btn btn-sm btn-outline-danger rounded-pill fw-semibold cursor-pointer" @click="clearMedia('mob')"><i class="bi bi-trash"></i> Xóa</button>
+                </div>
               </div>
 
               <div class="p-4 bg-light rounded-4 border text-center flex-fill">
@@ -108,7 +114,10 @@
                   </div>
                 </div>
                 <input type="file" class="d-none" id="videoUpload" accept="video/mp4,video/webm" @change="(e) => handleUpload(e, 'video')">
-                <label for="videoUpload" class="btn btn-sm btn-outline-brand rounded-pill w-100 fw-semibold cursor-pointer"><i class="bi bi-upload"></i> Chọn Video</label>
+                <div class="d-flex gap-2">
+                  <label for="videoUpload" class="btn btn-sm btn-outline-brand rounded-pill flex-fill fw-semibold cursor-pointer mb-0"><i class="bi bi-upload"></i> Chọn Video</label>
+                  <button v-if="previewVideo" type="button" class="btn btn-sm btn-outline-danger rounded-pill fw-semibold cursor-pointer" @click="clearMedia('video')"><i class="bi bi-trash"></i> Xóa</button>
+                </div>
               </div>
             </div>
             
@@ -180,6 +189,12 @@ const handleUpload = (e, type) => {
       previewVideo.value = URL.createObjectURL(f); 
     }
   }
+};
+
+const clearMedia = (type) => {
+  if (type === 'desk') { fileDesk.value = null; previewDesk.value = null; document.getElementById('deskUpload').value = ''; }
+  else if (type === 'mob') { fileMob.value = null; previewMob.value = null; document.getElementById('mobUpload').value = ''; }
+  else if (type === 'video') { fileVideo.value = null; previewVideo.value = null; document.getElementById('videoUpload').value = ''; }
 };
 
 onMounted(async () => {

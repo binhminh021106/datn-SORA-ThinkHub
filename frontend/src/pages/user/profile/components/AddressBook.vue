@@ -1,5 +1,5 @@
 <template>
-  <div class="address-book-shell p-4 p-md-5 rounded-4">
+  <div class="bg-white p-4 p-md-5 shadow-sm border border-light rounded-3">
     
     <div class="address-book-header d-flex justify-content-between align-items-end mb-4 pb-3">
       <div>
@@ -26,26 +26,24 @@
 
       <div v-else class="row g-3">
         <div v-for="addr in addresses" :key="addr.id" class="col-12">
-          <div class="address-card p-4 position-relative rounded-4 transition-all hover-shadow" :class="{ 'is-default': addr.is_default }">
-            <div class="row align-items-center">
-              <div class="col-md-8 col-lg-9">
-                <h5 class="font-serif text-dark mb-2 d-flex align-items-center fw-bold">
+          <div class="address-card position-relative rounded-4 transition-all hover-shadow border bg-white" :class="addr.is_default ? 'border-main' : 'border-light'">
+            <div class="p-4 pb-3">
+              <div class="d-flex align-items-center mb-2">
+                <h5 class="font-serif text-dark mb-0 fw-bold">
                   {{ addr.customer_name }} 
                   <span class="text-muted mx-2 fw-light fw-normal">|</span> 
                   <span class="text-secondary fw-normal fs-6">{{ addr.customer_phone }}</span>
                 </h5>
-                <p class="text-secondary mb-1">{{ addr.shipping_address }}</p>
-                <p class="text-secondary mb-0 fw-light">{{ [addr.ward, addr.district, addr.city].filter(Boolean).join(', ') }}</p>
+                <span v-if="addr.is_default" class="badge bg-main text-white ms-3 px-2 py-1 fw-normal" style="font-size: 0.75rem;">Mặc Định</span>
               </div>
-              
-              <div class="address-card-actions col-md-4 col-lg-3 d-flex flex-column justify-content-center align-items-md-end mt-3 mt-md-0 border-md-start ps-md-4">
-                <span v-if="addr.is_default" class="address-default-badge align-self-md-end mb-3 px-3 py-2 fw-medium tracking-wide">Mặc Định</span>
-                <div class="d-flex flex-wrap gap-2 mb-2">
-                  <button type="button" @click="openEditForm(addr)" class="address-text-btn address-text-btn--edit">Cập nhật</button>
-                  <button type="button" @click="confirmDelete(addr.id)" class="address-text-btn address-text-btn--delete">Xóa</button>
-                </div>
-                <button v-if="!addr.is_default" @click="setDefault(addr.id)" class="address-outline-btn mt-2 w-100">Làm mặc định</button>
-              </div>
+              <p class="text-secondary mb-1">{{ addr.shipping_address }}</p>
+              <p class="text-secondary mb-0 fw-light">{{ [addr.ward, addr.district, addr.city].filter(Boolean).join(', ') }}</p>
+            </div>
+            
+            <div class="border-top px-4 py-3 d-flex justify-content-end gap-2 bg-light bg-opacity-25 rounded-bottom-4">
+              <button type="button" @click="openEditForm(addr)" class="address-outline-btn address-card-action-btn">Cập nhật</button>
+              <button type="button" @click="confirmDelete(addr.id)" class="address-outline-btn address-card-action-btn">Xóa</button>
+              <button v-if="!addr.is_default" @click="setDefault(addr.id)" class="address-primary-btn ms-2 address-card-action-btn">Thiết lập mặc định</button>
             </div>
           </div>
         </div>
@@ -454,11 +452,7 @@ onMounted(() => {
 .custom-input:focus { border-color: #9f273b; box-shadow: 0 0 0 0.2rem rgba(159,39,59,0.15); outline: none; }
 select.custom-input { padding-right: 2.5rem; }
 
-.address-book-shell {
-  background: linear-gradient(145deg, #fffdf9 0%, #faf4ed 100%);
-  border: 1px solid rgba(159, 39, 59, 0.16);
-  box-shadow: 0 18px 45px rgba(77, 39, 28, 0.08);
-}
+
 
 .address-book-header {
   border-bottom: 1px solid rgba(159, 39, 59, 0.14);
@@ -575,17 +569,9 @@ select.custom-input { padding-right: 2.5rem; }
 }
 
 .address-secondary-btn {
-  min-height: 36px;
-  padding: 0.55rem 0.9rem;
-  color: #6f5b42;
-  background: #fffaf0;
-  border: 1px solid rgba(231, 206, 125, 0.9);
-}
-
-.address-secondary-btn:hover:not(:disabled) {
-  color: #7b1d2d;
-  background: #f9efd4;
-  border-color: #d4af37;
+  padding: 0.4rem 0.8rem;
+  min-height: 32px;
+  font-size: 0.7rem;
 }
 
 .address-primary-btn:disabled,
@@ -598,17 +584,6 @@ select.custom-input { padding-right: 2.5rem; }
 }
 
 .address-text-btn {
-  min-height: 40px;
-  padding: 0.55rem 0.9rem;
-  border: 1px solid;
-  border-radius: 7px;
-  background: #fffaf0;
-  font-family: 'Oswald', sans-serif;
-  font-size: 0.74rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  line-height: 1.2;
-  text-transform: uppercase;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -659,11 +634,15 @@ select.custom-input { padding-right: 2.5rem; }
   padding: 0.7rem 1rem;
 }
 
-@media (max-width: 767.98px) {
-  .address-book-shell {
-    padding: 1.25rem !important;
-  }
+.address-card-action-btn {
+  padding: 0.4rem 1.25rem !important;
+  font-size: 0.75rem !important;
+  min-height: 32px !important;
+  border-radius: 6px !important;
+  font-weight: 500 !important;
+}
 
+@media (max-width: 767.98px) {
   .address-book-header {
     align-items: flex-start !important;
     flex-direction: column;
@@ -685,13 +664,7 @@ select.custom-input { padding-right: 2.5rem; }
     margin-bottom: 0.85rem !important;
   }
 
-  .address-card-actions {
-    align-items: stretch !important;
-    border-top: 1px solid rgba(159, 39, 59, 0.13);
-    border-left: 0 !important;
-    margin-top: 1.25rem !important;
-    padding: 1rem 0 0 !important;
-  }
+
 
   .address-form-actions > button {
     flex: 1 1 100%;
