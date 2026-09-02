@@ -36,8 +36,17 @@
                   </div>
 
                   <div class="col-md-12">
-                    <label class="form-label fw-bold text-muted small">Mô tả ngắn</label>
-                    <textarea class="form-control" v-model="form.description" rows="3"></textarea>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <label class="form-label fw-bold text-muted small mb-0">Mô tả ngắn</label>
+                      <button type="button" class="btn btn-sm btn-outline-secondary" @click="isHtmlMode = !isHtmlMode">
+                        <i class="bi bi-code-slash me-1"></i>
+                        {{ isHtmlMode ? 'Chuyển sang Trực quan (Visual)' : 'Chuyển sang HTML (Code)' }}
+                      </button>
+                    </div>
+                    <div class="editor-container shadow-sm rounded-4 position-relative border bg-white">
+                      <QuillEditor v-if="!isHtmlMode" theme="snow" toolbar="full" v-model:content="form.description" contentType="html" placeholder="Mô tả chi tiết combo..." />
+                      <textarea v-else class="form-control font-monospace p-3" rows="5" v-model="form.description" placeholder="<p>Mô tả HTML...</p>" style="min-height: 150px; background-color: #2d2d2d; color: #f8f8f2; border: none;"></textarea>
+                    </div>
                   </div>
 
                   <div class="col-md-4">
@@ -318,7 +327,7 @@
           <!-- Sử dụng trạng thái isPending của TanStack Query -->
           <button type="submit" class="btn btn-brand px-5 py-2 fw-bold shadow-sm rounded-pill" :disabled="updateMutation.isPending.value || comboItems.length < 2">
             <span v-if="updateMutation.isPending.value" class="spinner-border spinner-border-sm me-2"></span> 
-            LƯU THAY ĐỔI COMBO
+            LƯU THAY ĐỔI
           </button>
         </div>
       </form>
@@ -338,6 +347,11 @@ import { useRoute, useRouter } from 'vue-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'; 
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import { QuillEditor } from '@vueup/vue-quill';
+import '@vueup/vue-quill/dist/vue-quill.snow.css';
+
+// State cho trình soạn thảo
+const isHtmlMode = ref(false);
 
 // Import Component SoraImage và Ảnh Placeholder
 import SoraImage from '@/components/ui/SoraImage.vue';

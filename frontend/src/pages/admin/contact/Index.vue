@@ -760,4 +760,50 @@ onUnmounted(() => {
   .contact-selection-bar > div, .contact-selection-delete { width: 100%; }
   .contact-selection-bar > div { justify-content: center; }
 }
+
+/* TỐI ƯU DARK MODE CHO DANH SÁCH LIÊN HỆ */
+[data-bs-theme="dark"] .custom-table .contact-table-head th {
+  background: #1e2125;
+  color: #adb5bd;
+  border-bottom-color: #373b3e;
+}
+[data-bs-theme="dark"] .contact-row-pending { 
+  background: rgba(0, 154, 131, 0.1); 
+}
+[data-bs-theme="dark"] .contact-row-pending:hover, 
+[data-bs-theme="dark"] .custom-table tbody tr:hover { 
+  background: rgba(255, 255, 255, 0.05); 
+}
+[data-bs-theme="dark"] .custom-table tbody td {
+  border-bottom-color: #373b3e;
+}
+[data-bs-theme="dark"] .contact-inbox-card {
+  background-color: #1e2125;
+  border-color: #373b3e;
+}
+[data-bs-theme="dark"] .contact-list-toolbar {
+  background: #1e2125;
+  border-bottom: 1px solid #373b3e;
+}
+[data-bs-theme="dark"] .contact-list-toolbar .text-dark {
+  color: #f8f9fa !important;
+}
+[data-bs-theme="dark"] .contact-sort-filter {
+  background: #2b3035;
+  border-color: #373b3e;
+}
+[data-bs-theme="dark"] .contact-sort-filter > span {
+  color: #adb5bd;
+}
+[data-bs-theme="dark"] .contact-sort-filter .form-select {
+  color: #f8f9fa;
+}
+[data-bs-theme="dark"] .contact-search-wrap input {
+  background-color: #2b3035 !important;
+  color: #f8f9fa;
+  border: 1px solid #373b3e !important;
+}
+[data-bs-theme="dark"] .contact-search-wrap input::placeholder {
+  color: #adb5bd;
+}
 </style>

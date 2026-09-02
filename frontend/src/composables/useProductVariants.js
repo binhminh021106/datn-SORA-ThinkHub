@@ -33,7 +33,11 @@ export const useProductVariants = (productRef) => {
   const isOptionAvailable = (attrName, optionId) => {
     if (!productRef.value?.variants) return true;
     
-    const tempSelection = { ...selectedAttributes.value, [attrName]: optionId };
+    const activeSelections = Object.fromEntries(
+        Object.entries(selectedAttributes.value).filter(([_, v]) => v !== undefined && v !== null && v !== '')
+    );
+    
+    const tempSelection = { ...activeSelections, [attrName]: optionId };
     
     return productRef.value.variants.some(v => {
       const variantAttrs = v.formatted_attributes || v.attributes || {};
@@ -46,20 +50,36 @@ export const useProductVariants = (productRef) => {
     });
   };
 
-  const isAllAttributesSelected = computed(() => {
-    if (!productRef.value?.attributes) return false;
-    const requiredAttrs = Object.keys(productRef.value.attributes);
-    if (requiredAttrs.length === 0) return true;
-    return requiredAttrs.every(attr => selectedAttributes.value[attr] !== undefined);
+  const currentVariant = computed(() => {
+    if (!productRef.value?.variants) return null;
+    
+    const activeSelections = Object.fromEntries(
+        Object.entries(selectedAttributes.value).filter(([_, v]) => v !== undefined && v !== null && v !== '')
+    );
+    const activeKeys = Object.keys(activeSelections);
+
+    if (activeKeys.length === 0 && (!productRef.value.variants[0].formatted_attributes || Object.keys(productRef.value.variants[0].formatted_attributes).length === 0)) {
+        return productRef.value.variants[0];
+    }
+
+    const matchedVariant = productRef.value.variants.find(v => {
+        const vAttrs = v.formatted_attributes || v.attributes || {};
+        const vKeys = Object.keys(vAttrs);
+        
+        if (vKeys.length !== activeKeys.length) return false;
+        
+        return vKeys.every(k => String(vAttrs[k]) === String(activeSelections[k]));
+    });
+
+    return matchedVariant || null;
   });
 
-  const currentVariant = computed(() => {
-    if (!productRef.value?.variants || !isAllAttributesSelected.value) return null;
-    return getAvailableVariants()[0];
+  const isAllAttributesSelected = computed(() => {
+    return currentVariant.value !== null;
   });
 
   const currentStock = computed(() => {
-    if (!isAllAttributesSelected.value || !currentVariant.value) return null;
+    if (!currentVariant.value) return null;
     return getStock(currentVariant.value);
   });
 
@@ -73,8 +93,29 @@ export const useProductVariants = (productRef) => {
   const selectAttribute = (attrName, optionId) => {
     if (selectedAttributes.value[attrName] === optionId) {
       delete selectedAttributes.value[attrName];
-    } else {
+    } else if (isOptionAvailable(attrName, optionId)) {
       selectedAttributes.value[attrName] = optionId;
+    } else {
+        const newSelections = { [attrName]: optionId };
+        
+        const requiredAttrs = Object.keys(productRef.value?.attributes || {});
+        requiredAttrs.forEach(key => {
+            if (key !== attrName && selectedAttributes.value[key]) {
+                const testValid = productRef.value.variants.some(variant => {
+                    const vAttrs = variant.formatted_attributes || variant.attributes || {};
+                    return String(vAttrs[attrName]) === String(optionId) && 
+                           String(vAttrs[key]) === String(selectedAttributes.value[key]);
+                });
+                
+                if (testValid) {
+                    newSelections[key] = selectedAttributes.value[key];
+                } else {
+                    delete newSelections[key];
+                }
+            }
+        });
+        
+        selectedAttributes.value = newSelections;
     }
     selectedQuantity.value = 1;
   };

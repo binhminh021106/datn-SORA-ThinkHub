@@ -1,6 +1,5 @@
 <template>
   <div class="settings-page">
-    <!-- Lần tải đầu tiên và dữ liệu hoàn toàn trống trong cache -->
     <div v-if="(isLoadingGallery || settingsStore.isLoading) && !isInitialized" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
       <h1 class="logo-shimmer mb-3">ThinkHub</h1>
       <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải cấu hình...</p>
@@ -14,9 +13,7 @@
         </div>
       </div>
 
-      <!-- SETTINGS TABS CONTAINER -->
       <div class="card custom-card border-0 shadow-sm rounded-4 mb-3">
-        <!-- Tabs Header -->
         <div class="card-header bg-white border-bottom-0 pt-3 pb-0 px-3 rounded-top-4">
           <ul class="nav nav-tabs-custom mb-3">
             <li class="nav-item">
@@ -39,7 +36,6 @@
 
         <div class="card-body p-0 d-grid">
           
-          <!-- ================= TAB 1: LOGO & HEADER ================= -->
           <div :class="activeTab === 'logo' ? 'tab-pane-active' : 'tab-pane-inactive'" style="grid-area: 1 / 1;">
             <div class="p-4">
               <div class="row g-4">
@@ -165,7 +161,7 @@
                 <span class="fw-bold font-size-xs text-uppercase letter-spacing-1"><i class="bi bi-display me-2"></i>Live Preview Header</span>
                 <span class="badge bg-success">Real-time</span>
              </div>
-             <div class="w-100 overflow-x-auto bg-light border-bottom">
+             <div class="w-100 overflow-x-auto bg-light border-bottom" data-bs-theme="light">
                 <div class="min-w-100 pointer-events-none" style="pointer-events: none;">
                     <SoraHeader :preview-data="liveHeaderData" />
                 </div>
@@ -180,7 +176,6 @@
             </div>
           </div>
 
-          <!-- ================= TAB 2: THỐNG KÊ TRANG CHỦ ================= -->
           <div :class="activeTab === 'stats' ? 'tab-pane-active' : 'tab-pane-inactive'" style="grid-area: 1 / 1;">
             <div class="p-4">
            <div class="row g-3 mb-3">
@@ -218,7 +213,7 @@
                   <span class="fw-bold font-size-xs text-uppercase letter-spacing-1"><i class="bi bi-display me-2"></i>Live Preview Home Stats</span>
                   <span class="badge bg-success">Real-time</span>
                 </div>
-                <div class="w-100 overflow-x-auto bg-light">
+                <div class="w-100 overflow-x-auto bg-light" data-bs-theme="light">
                   <div class="min-w-100 pointer-events-none" style="pointer-events: none;">
                       <HomeStatsBand :stats="homeStats" />
                   </div>
@@ -233,7 +228,6 @@
             </div>
           </div>
 
-          <!-- ================= TAB 3: FOOTER BUILDER ================= -->
           <div :class="activeTab === 'footer' ? 'tab-pane-active' : 'tab-pane-inactive'" style="grid-area: 1 / 1;">
             <div class="p-4">
            
@@ -254,6 +248,12 @@
                <div class="form-floating">
                  <input id="footerEmail" type="text" v-model="footerEmail" class="form-control bg-light" placeholder="SORA@GMAIL.COM">
                  <label for="footerEmail" class="text-muted">Email hiển thị</label>
+               </div>
+             </div>
+             <div class="col-lg-4">
+               <div class="form-floating">
+                 <input id="footerOpeningHours" type="text" v-model="footerOpeningHours" class="form-control bg-light" placeholder="09:00 - 21:00 (Từ Thứ 2 đến Chủ Nhật)">
+                 <label for="footerOpeningHours" class="text-muted">Giờ mở cửa</label>
                </div>
              </div>
              <div class="col-lg-4">
@@ -333,7 +333,7 @@
                  <span class="fw-bold font-size-xs text-uppercase letter-spacing-1"><i class="bi bi-display me-2"></i>Live Preview Footer</span>
                  <span class="badge bg-success">Real-time</span>
               </div>
-              <div class="w-100 overflow-x-auto bg-white">
+              <div class="w-100 overflow-x-auto bg-white" data-bs-theme="light">
                  <div class="min-w-100 pointer-events-none" style="pointer-events: none;">
                      <SoraFooter :preview-data="liveFooterData" />
                  </div>
@@ -347,9 +347,8 @@
                 </button>
             </div>
           </div>
-
-        </div> <!-- /card-body -->
-      </div> <!-- /card container -->
+        </div>
+      </div>
       
       <!-- Modal Cropper (Full Screen) -->
       <div class="modal fade" id="cropperModal" tabindex="-1" aria-labelledby="cropperModalLabel" aria-hidden="true">
@@ -423,21 +422,19 @@ const getHeaders = () => {
 
 const defaultLogo = settingsStore.defaultLogo;
 
-// TANSTACK QUERY: Đọc thư viện Logo
 const { data: galleryData, isLoading: isLoadingGallery, isFetching: isFetchingGallery } = useQuery({
   queryKey: ['admin-gallery-logos'],
   queryFn: async () => {
     const res = await axios.get(`${BACKEND_URL}/admin/settings/logos`, { headers: getHeaders() });
     return res.data.data || [];
   },
-  staleTime: 5 * 60 * 1000, // Cache trong 5 phút
+  staleTime: 5 * 60 * 1000, // 5 phút
 });
 
-// --- HEADER & LOGO GALLERY STATE ---
 const galleryImages = ref([]);
 const headerLogoUrl = ref('');
 const footerLogoUrl = ref('');
-const logoApplyTarget = ref('header'); // 'both', 'header', 'footer'
+const logoApplyTarget = ref('header');
 
 const activeLogoUrl = computed(() => {
     if (logoApplyTarget.value === 'both') return headerLogoUrl.value;
@@ -469,6 +466,7 @@ const footerBrandDesc = ref('');
 const footerCopyright = ref('');
 const footerAddress = ref('');
 const footerEmail = ref('');
+const footerOpeningHours = ref('');
 const footerTrustItems = ref([]);
 const footerSocials = ref([]);
 const isSavingFooter = ref(false);
@@ -484,6 +482,7 @@ const liveFooterData = computed(() => {
         footer_copyright: footerCopyright.value,
         footer_address: footerAddress.value,
         footer_email: footerEmail.value,
+        footer_opening_hours: footerOpeningHours.value,
         footer_trust_items: footerTrustItems.value,
         footer_socials: footerSocials.value
     };
@@ -503,16 +502,15 @@ onMounted(async () => {
     await settingsStore.fetchSettings();
     const s = settingsStore.settings;
 
-    // Load active logo (prefer footer logo if it exists, otherwise header logo)
     headerLogoUrl.value = s.site_logo || defaultLogo;
     footerLogoUrl.value = s.logo_footer || s.site_logo || defaultLogo;
     isInitialized.value = true;
 
-    // Load Footer Form
     footerBrandDesc.value = s.footer_brand_desc;
     footerCopyright.value = s.footer_copyright;
     footerAddress.value = s.footer_address;
     footerEmail.value = s.footer_email;
+    footerOpeningHours.value = s.footer_opening_hours || '09:00 - 21:00 (Từ Thứ 2 đến Chủ Nhật)';
     
     footerTrustItems.value = Array.isArray(s.footer_trust_items) && s.footer_trust_items.length > 0 ? JSON.parse(JSON.stringify(s.footer_trust_items)) : [];
     while(footerTrustItems.value.length < 4) footerTrustItems.value.push({icon: '', title: '', subtitle: ''});
@@ -531,7 +529,6 @@ onMounted(async () => {
 
     modalEl.addEventListener('shown.bs.modal', () => {
         if (cropImageRef.value && cropImageRef.value.src) {
-            // Đảm bảo Cropper init đúng cách khi modal đã hoàn toàn hiện ra
             if (cropperInstance) cropperInstance.destroy();
             cropperInstance = new Cropper(cropImageRef.value, {
                 viewMode: 1,
@@ -567,7 +564,6 @@ onMounted(async () => {
     }
 });
 
-// --- METHODS: LOGO GALLERY & HEADER ---
 const selectLogo = (url) => {
     if (logoApplyTarget.value === 'both') {
        headerLogoUrl.value = url;
@@ -617,7 +613,6 @@ const cropGalleryImage = async (url) => {
     isFromGallery.value = true;
     
     try {
-        // Lấy ảnh dạng base64 từ server để bypass lỗi CORS của CropperJS
         const res = await axios.post(`${BACKEND_URL}/admin/settings/logos/base64`, { url: url }, { headers: getHeaders() });
         if(res.data.status === 'success') {
             rawImageBase64.value = res.data.base64;
@@ -667,7 +662,6 @@ const cancelImageSelection = () => {
 
 const openCropperModal = async () => {
     if (cropImageRef.value) {
-        // Gán src trước khi hiện modal để ảnh load xong
         cropImageRef.value.src = rawImageBase64.value;
     }
     cropperModalInstance.show();
@@ -764,6 +758,7 @@ const saveFooterSettings = async () => {
                 { key: 'footer_copyright', value: footerCopyright.value, type: 'string' },
                 { key: 'footer_address', value: footerAddress.value, type: 'string' },
                 { key: 'footer_email', value: footerEmail.value, type: 'string' },
+                { key: 'footer_opening_hours', value: footerOpeningHours.value, type: 'string' },
                 { key: 'footer_trust_items', value: footerTrustItems.value, type: 'json' },
                 { key: 'footer_socials', value: footerSocials.value, type: 'json' }
             ]
@@ -868,12 +863,10 @@ const saveHomeStatsSettings = async () => {
   border-bottom: 3px solid #009981;
 }
 
-/* Pointer events none for preview to avoid clicking links */
 .pointer-events-none {
     pointer-events: none;
 }
 
-/* Fix z-index for Modal to always be above Sidebar */
 :deep(.modal) {
     z-index: 10600 !important;
 }
@@ -881,7 +874,6 @@ const saveHomeStatsSettings = async () => {
     z-index: 10590 !important;
 }
 
-/* Grid-based Tabs (No Height Jump) */
 .tab-pane-active {
   opacity: 1;
   visibility: visible;
@@ -900,8 +892,88 @@ const saveHomeStatsSettings = async () => {
   pointer-events: none;
 }
 
-/* Smooth floating label transition */
 .form-floating > label {
   transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+</style>
+
+<style>
+[data-bs-theme="dark"] .settings-wrapper .bg-white,
+[data-bs-theme="dark"] .settings-wrapper .card,
+[data-bs-theme="dark"] .settings-wrapper .custom-card {
+  background-color: #1e2125 !important;
+  border-color: #373b3e !important;
+}
+
+[data-bs-theme="dark"] .settings-wrapper .text-dark {
+  color: #f8f9fa !important;
+}
+
+[data-bs-theme="dark"] .settings-wrapper .text-secondary,
+[data-bs-theme="dark"] .settings-wrapper .text-muted {
+  color: #adb5bd !important;
+}
+
+[data-bs-theme="dark"] .settings-wrapper .bg-light,
+[data-bs-theme="dark"] .settings-wrapper .bg-light-soft {
+  background-color: #2b3035 !important;
+  color: #f8f9fa !important;
+  border-color: #373b3e !important;
+}
+
+[data-bs-theme="dark"] .settings-wrapper .border-light,
+[data-bs-theme="dark"] .settings-wrapper .border-bottom {
+  border-color: #373b3e !important;
+}
+
+[data-bs-theme="dark"] .settings-wrapper input.form-control,
+[data-bs-theme="dark"] .settings-wrapper textarea.form-control,
+[data-bs-theme="dark"] .settings-wrapper select.form-select,
+[data-bs-theme="dark"] .settings-wrapper .input-group-text {
+  background-color: #2b3035 !important;
+  color: #f8f9fa !important;
+  border-color: #373b3e !important;
+}
+
+[data-bs-theme="dark"] .settings-wrapper input.form-control::placeholder,
+[data-bs-theme="dark"] .settings-wrapper textarea.form-control::placeholder {
+  color: #6c757d !important;
+}
+
+[data-bs-theme="dark"] .settings-wrapper .nav-tabs-custom .card-header {
+  border-bottom: 1px solid #373b3e !important;
+}
+
+[data-bs-theme="dark"] .settings-wrapper .text-danger {
+  color: #e57373 !important;
+}
+[data-bs-theme="dark"] .settings-wrapper .alert-info,
+[data-bs-theme="dark"] .settings-wrapper .bg-info-soft {
+  background-color: rgba(13, 202, 240, 0.1) !important;
+  color: #9eeaf9 !important;
+}
+[data-bs-theme="dark"] .settings-wrapper .alert-info .text-warning {
+  color: #ffda6a !important;
+}
+
+[data-bs-theme="dark"] .settings-wrapper [data-bs-theme="light"],
+[data-bs-theme="dark"] .settings-wrapper [data-bs-theme="light"] .bg-light,
+[data-bs-theme="dark"] .settings-wrapper [data-bs-theme="light"] .bg-white {
+  background-color: #ffffff !important;
+  color: #212529 !important;
+}
+
+[data-bs-theme="dark"] .settings-wrapper [data-bs-theme="light"] .text-dark {
+  color: #212529 !important;
+}
+
+[data-bs-theme="dark"] .settings-wrapper [data-bs-theme="light"] .text-muted,
+[data-bs-theme="dark"] .settings-wrapper [data-bs-theme="light"] .text-secondary {
+  color: #6c757d !important;
+}
+
+[data-bs-theme="dark"] .settings-wrapper [data-bs-theme="light"] .border-bottom {
+  border-color: #dee2e6 !important;
 }
 </style>

@@ -347,14 +347,14 @@
       <div class="row g-3 g-xl-3 mb-3">
         <!-- Khách hàng mua nhiều nhất -->
         <div class="col-12 col-md-4">
-          <div class="card custom-card h-100 border-0 shadow-sm rounded-4 bg-gradient-to-br from-primary-soft to-white">
+          <div class="card custom-card h-100 border-0 shadow-sm rounded-4" style="background: linear-gradient(to bottom right, rgba(13,110,253,0.05), var(--bs-card-bg));">
             <div class="card-body p-3 d-flex flex-column position-relative overflow-hidden">
               <div class="position-absolute end-0 top-0 mt-3 me-3 opacity-25" style="font-size: 3rem; color: #005baa; pointer-events: none;">
                 <i class="bi bi-trophy-fill"></i>
               </div>
               <div class="d-flex align-items-start justify-content-between mb-3 z-index-1" style="position: relative; z-index: 2;">
                 <div class="pe-2 min-w-0">
-                  <p class="text-primary fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate">Top 5 Khách VIP (Trong kỳ)</p>
+                  <p class="text-primary fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate">Top 5 mua nhiều nhất (Trong kỳ)</p>
                 </div>
               </div>
               <div class="d-flex flex-column gap-2 z-index-1 position-relative custom-scrollbar" style="z-index: 2; overflow-y: auto; max-height: 220px; padding-right: 4px;">
@@ -395,7 +395,7 @@
         <!-- Nhóm khách hàng chủ lực -->
         <div class="col-12 col-md-4">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4 transition-all" 
-               :style="{ background: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'linear-gradient(to bottom right, rgba(13,202,240,0.05), #ffffff)' : 'linear-gradient(to bottom right, rgba(165,0,100,0.05), #ffffff)' }">
+               :style="{ background: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'linear-gradient(to bottom right, rgba(13,202,240,0.05), var(--bs-card-bg))' : 'linear-gradient(to bottom right, rgba(165,0,100,0.05), var(--bs-card-bg))' }">
             <div class="card-body p-4 d-flex flex-column position-relative overflow-hidden">
               <div class="position-absolute" style="font-size: 8rem; right: -20px; bottom: -30px; pointer-events: none; z-index: 0; opacity: 0.06;"
                    :class="customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'text-info' : (customerInsights?.topGender?.gender?.toLowerCase() === 'nữ' ? 'text-danger' : 'text-secondary')">
@@ -404,21 +404,21 @@
               
               <div class="z-index-1" style="position: relative; z-index: 2;">
                 <p class="fw-bold font-size-xs mb-0 text-uppercase letter-spacing-1 text-truncate" 
-                   :style="{ color: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? '#0dcaf0' : '#a50064' }">
+                   :class="customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'text-info' : 'text-gender-female'">
                   Nhóm KH chủ lực
                 </p>
               </div>
 
               <div class="z-index-1 my-auto py-2" style="position: relative; z-index: 2;">
                 <h2 class="fw-bolder display-6 mb-2" style="letter-spacing: -1px;"
+                    :class="customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'text-gender-male' : 'text-gender-female'"
                     :style="{ 
-                      color: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? '#005baa' : '#a50064',
                       textShadow: '0 2px 10px rgba(0,0,0,0.05)'
                     }">
                   {{ customerInsights?.topGender?.gender ? 'Phái ' + customerInsights.topGender.gender : 'Chưa xác định' }}
                 </h2>
                 <div v-if="customerInsights?.topGender?.age_range" class="d-inline-flex align-items-center gap-1 bg-white border rounded-pill px-3 py-1 shadow-sm mt-1">
-                  <i class="bi bi-person-hearts" :style="{ color: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? '#0dcaf0' : '#a50064' }"></i>
+                  <i class="bi bi-person-hearts" :class="customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'text-info' : 'text-gender-female'"></i>
                   <span class="font-size-xs text-secondary fw-semibold">Độ tuổi phổ biến:</span>
                   <span class="font-size-sm fw-bold text-dark">{{ customerInsights.topGender.age_range }}</span>
                 </div>
@@ -426,7 +426,7 @@
 
               <div class="mt-4 pt-3 border-top border-light fw-bold text-dark text-truncate z-index-1 d-flex align-items-center gap-2" style="position: relative; z-index: 2;">
                 <span class="badge rounded-pill px-2 py-1 text-white font-size-sm" 
-                      :style="{ backgroundColor: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? '#0dcaf0' : '#a50064' }">
+                      :class="customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'bg-info' : 'bg-gender-female'">
                   <i class="bi bi-pie-chart-fill"></i> Đóng góp
                 </span> 
                 <span class="fs-5">{{ formatCurrency(customerInsights?.topGender?.spent || 0) }}</span>
@@ -949,7 +949,7 @@
           <div class="row g-3">
             <!-- Hoạt động -->
             <div class="col-6 col-md-3">
-              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 100%);">
+              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, var(--bs-card-bg) 100%);">
                 <div class="card-body p-3 d-flex align-items-center gap-3">
                   <div class="avatar-circle bg-success text-white flex-shrink-0 shadow-sm d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: 50%;">
                     <i class="bi bi-check-circle-fill fs-4"></i>
@@ -964,7 +964,7 @@
             
             <!-- Sắp tới -->
             <div class="col-6 col-md-3">
-              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);">
+              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, var(--bs-card-bg) 100%);">
                 <div class="card-body p-3 d-flex align-items-center gap-3">
                   <div class="avatar-circle bg-warning text-white flex-shrink-0 shadow-sm d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: 50%;">
                     <i class="bi bi-clock-fill fs-4"></i>
@@ -979,7 +979,7 @@
 
             <!-- Đã hết hạn -->
             <div class="col-6 col-md-3">
-              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);">
+              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, var(--bs-card-bg) 100%);">
                 <div class="card-body p-3 d-flex align-items-center gap-3">
                   <div class="avatar-circle bg-danger text-white flex-shrink-0 shadow-sm d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: 50%;">
                     <i class="bi bi-x-circle-fill fs-4"></i>
@@ -994,7 +994,7 @@
 
             <!-- Tổng lượt dùng -->
             <div class="col-6 col-md-3">
-              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, #f3e8ff 0%, #ffffff 100%);">
+              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, var(--bs-card-bg) 100%);">
                 <div class="card-body p-3 d-flex align-items-center gap-3">
                   <div class="avatar-circle flex-shrink-0 shadow-sm d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: 50%; background-color: #8b5cf6; color: white;">
                     <i class="bi bi-ticket-perforated-fill fs-4"></i>
@@ -1880,7 +1880,7 @@ const getRankBgStyle = (index) => {
   if (index === 0) return 'rgba(255, 193, 7, 0.15)'; // Vàng
   if (index === 1) return 'rgba(108, 117, 125, 0.1)'; // Bạc
   if (index === 2) return 'rgba(253, 126, 20, 0.15)'; // Đồng
-  return '#ffffff';
+  return 'transparent';
 };
 
 // ==========================================
@@ -2404,7 +2404,7 @@ button:focus {
 }
 
 [data-bs-theme="dark"] .dashboard-wrapper .rank-normal {
-  background-color: #2b3035 !important;
+  background-color: transparent !important;
   color: #adb5bd !important;
 }
 
@@ -2421,5 +2421,41 @@ button:focus {
 
 [data-bs-theme="dark"] .dashboard-wrapper .table-hover>tbody>tr:hover>* {
   color: #f8f9fa !important;
+}
+
+/* Gender theme classes */
+.text-gender-male { color: #005baa !important; }
+.text-gender-female { color: #a50064 !important; }
+.bg-gender-female { background-color: #a50064 !important; }
+
+[data-bs-theme="dark"] .dashboard-wrapper .text-gender-male { color: #66b2ff !important; }
+[data-bs-theme="dark"] .dashboard-wrapper .text-gender-female { color: #ff77c2 !important; }
+[data-bs-theme="dark"] .dashboard-wrapper .bg-gender-female { background-color: #d84596 !important; }
+
+/* SweetAlert Dark Mode Overrides */
+[data-bs-theme="dark"] .swal2-popup {
+  background-color: #2b3035 !important;
+  color: #f8f9fa !important;
+}
+[data-bs-theme="dark"] .swal2-title {
+  color: #f8f9fa !important;
+}
+[data-bs-theme="dark"] .swal2-popup .text-dark {
+  color: #f8f9fa !important;
+}
+[data-bs-theme="dark"] .swal2-popup .bg-light {
+  background-color: #1e2125 !important;
+}
+[data-bs-theme="dark"] .swal2-popup .form-control {
+  background-color: #1e2125 !important;
+  color: #f8f9fa !important;
+}
+[data-bs-theme="dark"] .swal2-popup .form-control::placeholder {
+  color: #6c757d !important;
+}
+[data-bs-theme="dark"] .swal2-popup .alert-info {
+  background-color: rgba(13, 202, 240, 0.1) !important;
+  color: #9eeaf9 !important;
+  border-color: rgba(13, 202, 240, 0.2) !important;
 }
 </style>

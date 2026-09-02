@@ -159,18 +159,22 @@
 
         <form @submit.prevent="submitApplication" class="w-100">
           <div class="mb-4">
-            <label class="form-label font-oswald tracking-wide small text-dark fw-bold text-uppercase">Liên kết Mạng xã hội / Website <span class="text-danger">*</span></label>
-            <textarea v-model="form.social_links" class="form-control rounded-0 font-luxury sora-textarea" rows="3" placeholder="Ví dụ: Link Facebook, Tiktok, Instagram hoặc Website cá nhân của bạn..." required></textarea>
+            <div class="form-floating position-relative">
+              <textarea v-model="form.social_links" class="form-control profile-floating-input rounded-4 font-luxury sora-textarea" id="socialLinks" placeholder="Ví dụ: Link Facebook, Tiktok, Instagram hoặc Website cá nhân của bạn..." style="height: 100px" required></textarea>
+              <label for="socialLinks" class="text-secondary"><i class="bi bi-link-45deg me-1"></i>Liên kết Mạng xã hội / Website <span class="text-danger">*</span></label>
+            </div>
             <div class="form-text small text-muted mt-2 fst-italic font-serif"><i class="bi bi-info-circle me-1"></i>Những nền tảng bạn dự định sử dụng để chia sẻ sản phẩm SORA.</div>
           </div>
 
           <div class="mb-4">
-            <label class="form-label font-oswald tracking-wide small text-dark fw-bold text-uppercase">Giới thiệu ngắn về bạn <span class="text-danger">*</span></label>
-            <textarea v-model="form.introduce_message" class="form-control rounded-0 font-luxury sora-textarea" rows="4" placeholder="Chia sẻ lý do bạn muốn hợp tác và tệp khách hàng bạn đang hướng tới..." required></textarea>
+            <div class="form-floating position-relative">
+              <textarea v-model="form.introduce_message" class="form-control profile-floating-input rounded-4 font-luxury sora-textarea" id="introduceMessage" placeholder="Chia sẻ lý do bạn muốn hợp tác và tệp khách hàng bạn đang hướng tới..." style="height: 120px" required></textarea>
+              <label for="introduceMessage" class="text-secondary"><i class="bi bi-person-lines-fill me-1"></i>Giới thiệu ngắn về bạn <span class="text-danger">*</span></label>
+            </div>
           </div>
 
           <div class="mt-5">
-            <button type="submit" class="editorial-btn px-5 py-3 sora-btn-submit" :disabled="isSubmitting">
+            <button type="submit" class="editorial-btn px-5 py-3 rounded-pill sora-btn-submit" :disabled="isSubmitting">
               <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>
               {{ isSubmitting ? 'ĐANG GỬI...' : 'GỬI ĐƠN ĐĂNG KÝ TỚI SORA' }}
             </button>
@@ -581,4 +585,13 @@ onMounted(() => {
 
 .fade-in { animation: fadeIn 0.4s ease-in-out; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+.profile-floating-input:focus {
+  border-color: #9f273b;
+  box-shadow: 0 0 0 0.2rem rgba(159, 39, 59, 0.15);
+}
+
+.form-floating > label {
+  transition: opacity 0.25s ease-in-out, transform 0.25s ease-in-out !important;
+}
 </style>

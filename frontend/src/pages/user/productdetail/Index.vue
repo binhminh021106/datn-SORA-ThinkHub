@@ -93,7 +93,7 @@
                 <div class="variant-label-wrapper d-flex justify-content-between align-items-center gap-2 mb-2">
                   <h3 class="variant-label mb-0" style="font-size: 16px; font-weight: 600; color: #333;">
                     {{ attrName }}
-                    <span v-if="selectedAttributes[attrName]" style="color: #666; font-weight: 500; text-transform: none; font-size: 14px;">
+                    <span v-if="selectedAttributes[attrName]" style="color: #333; font-weight: 700; text-transform: none; font-size: 15px;">
                       : {{ getOptionName(attrName, selectedAttributes[attrName]) }}
                     </span>
                   </h3>
@@ -111,18 +111,32 @@
                 
                 <!-- Options -->
                 <div class="variant-options d-flex gap-2 flex-wrap">
-                  <button 
-                    v-for="option in options" 
-                    :key="option.id"
-                    @click="selectAttribute(attrName, option.id)"
-                    class="variant-btn transition-all"
-                    :class="{ 
-                      'active': selectedAttributes[attrName] === option.id,
-                      'disabled-option': isOptionDisabled(attrName, option.id) && selectedAttributes[attrName] !== option.id
-                    }"
-                  >
-                    {{ option.name }}
-                  </button>
+                  <template v-for="option in options" :key="option.id">
+                    <button 
+                      v-if="isColorAttribute(attrName) && getColorCode(option.name) !== null"
+                      @click="selectAttribute(attrName, option.id)"
+                      class="color-swatch-btn shadow-sm"
+                      :class="{ 
+                        'active': selectedAttributes[attrName] === option.id,
+                        'disabled': isOptionDisabled(attrName, option.id) && selectedAttributes[attrName] !== option.id
+                      }"
+                      :style="{ backgroundColor: getColorCode(option.name) }"
+                      :title="option.name"
+                    >
+                      <i v-if="selectedAttributes[attrName] === option.id" class="bi bi-check" :style="{ color: isLightColor(option.name) ? '#000' : '#fff', fontSize: '20px', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }"></i>
+                    </button>
+                    <button 
+                      v-else
+                      @click="selectAttribute(attrName, option.id)"
+                      class="variant-btn transition-all"
+                      :class="{ 
+                        'active': selectedAttributes[attrName] === option.id,
+                        'disabled-option': isOptionDisabled(attrName, option.id) && selectedAttributes[attrName] !== option.id
+                      }"
+                    >
+                      {{ option.name }}
+                    </button>
+                  </template>
                 </div>
               </div>
             </div>
@@ -180,7 +194,6 @@
                   <i v-if="isCurrentSelectionOutOfStock" class="bi bi-x-circle me-2 fs-5"></i>
                   {{ isCompletelyOutOfStock ? 'ĐÃ BÁN HẾT' : (isCurrentSelectionOutOfStock ? 'HẾT HÀNG' : 'THÊM VÀO GIỎ') }}
                 </button>
-                <button class="btn-consult">TƯ VẤN NGAY</button>
               </div>
             </div>
 
@@ -491,7 +504,7 @@ import ComboCarousel from '@/components/ui/ComboCarousel.vue';
 // Composables
 import { useWishlist } from '@/composables/useWishlist';
 import { useProductVariants } from '@/composables/useProductVariants';
-import { isSizeAttribute } from '@/composables/useColorMapping';
+import { isSizeAttribute, isColorAttribute, getColorCode, isLightColor, fetchColorDictionary } from '@/composables/useColorMapping';
 import { getToken, getHeaders, getFullImage, formatMoney, getProtectedRating } from '@/composables/useUtilities';
 import { usePublicRefreshListener } from '@/composables/usePublicRefreshListener.js';
 import { API_BASE_URL } from '@/utils/env';
@@ -951,6 +964,23 @@ const viewFullImage = (url) => {
 };
 
 // API & Data functions
+// Fetch dictionaries early
+fetchColorDictionary();
+
+const checkFavoriteStatus = async () => {
+  const productSlug = currentProductSlug.value;
+  if (!productSlug) return null;
+
+  const response = await axios.get(`${API_BASE_URL}/shop/${shopSlug.value}/products/${productSlug}`);
+  const result = response.data;
+  
+  if (result.success && result.data) {
+    return result.data;
+  } else {
+    throw new Error('Not found');
+  }
+};
+
 const fetchProductData = async () => {
   const productSlug = currentProductSlug.value;
   if (!productSlug) return null;
@@ -1124,7 +1154,7 @@ const addToCart = async () => {
 
   try {
     const payload = { product_variant_id: currentVariant.value.id, quantity: selectedQuantity.value };
-    const response = await axios.post(`${API_BASE_URL}/client/cart`, payload, { headers: getHeaders() });
+    const response = await clientApiClient.post('/client/cart', payload, { ensureCartSession: true });
 
     if (response.data.success) {
       Toast.fire({ icon: 'success', title: 'Thêm vào giỏ thành công' });
@@ -1249,7 +1279,7 @@ watch(() => route.params.slug, (newSlug, oldSlug) => {
 .color-options { gap: 15px; }
 .color-swatch-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid #dcdcdc; cursor: pointer; position: relative; transition: all 0.2s ease; padding: 0; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05); }
 .color-swatch-btn:hover { transform: scale(1.05); border-color: #999; }
-.color-swatch-btn.active { border: 2px solid #222; box-shadow: inset 0 0 0 3px #fff; transform: scale(1.1); }
+.color-swatch-btn.active { border: 2px solid #9f273b; box-shadow: inset 0 0 0 3px #fff; transform: scale(1.1); }
 .variant-btn { background: #ffffff; border: 1px solid #dcdcdc; color: #333333; padding: 10px 20px; cursor: pointer; font-size: 14.5px; font-weight: 500; transition: all 0.25s ease-in-out; min-width: 65px; text-align: center; border-radius: 4px; letter-spacing: 0.3px; }
 .variant-btn:hover { border-color: #9f273b; color: #9f273b; background-color: #fffafa; transform: translateY(-1px); box-shadow: 0 2px 5px rgba(159,39,59,0.1); }
 .variant-btn.active { background: #9f273b; border-color: #9f273b; color: #ffffff; font-weight: 600; box-shadow: 0 4px 12px rgba(159,39,59,0.25); transform: translateY(-1px); }

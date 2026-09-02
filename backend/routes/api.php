@@ -35,6 +35,7 @@ use App\Http\Controllers\Api\Admin\AdminAffiliateController;
 use App\Http\Controllers\Api\Admin\AdminFaceRecognitionController;
 use App\Http\Controllers\Api\Admin\AdminWorkShiftController;
 use App\Http\Controllers\Api\Admin\AdminNotificationController;
+use App\Http\Controllers\Api\Admin\AdminChatbotController;
 // Controllers Client
 use App\Http\Controllers\Api\Client\ProductDetailController;
 use App\Http\Controllers\Api\Client\ClientCartController;
@@ -75,6 +76,11 @@ Route::middleware(['auth:sanctum', 'ability:access', 'admin.user', 'throttle:adm
         Route::delete('/settings/logos', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'deleteLogo']);
         Route::get('/settings', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'index']);
         Route::post('/settings', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'update']);
+    });
+    
+    // QUẢN LÝ CHATBOT
+    Route::middleware(['check.module:admin_chat'])->group(function () {
+        Route::apiResource('chatbot', AdminChatbotController::class)->except(['create', 'edit']);
     });
     
     // THÊM: Bọc middleware check.module để kiểm tra quyền phân hệ
@@ -142,6 +148,9 @@ Route::prefix('client')->group(function () {
         Route::post('/verify-otp', [\App\Http\Controllers\Api\Auth\UserForgotPasswordController::class, 'verifyOtp'])->middleware('throttle:otp-verify');
         Route::post('/reset', [\App\Http\Controllers\Api\Auth\UserForgotPasswordController::class, 'resetPassword'])->middleware('throttle:otp-verify');
     });
+
+    // CHATBOT CLIENT
+    Route::post('/chatbot', [\App\Http\Controllers\Api\Client\ChatbotController::class, 'chat'])->middleware('throttle:public-read');
 
 
     // THÊM VÀO ĐÂY (trước hoặc sau các route khác đều được)
@@ -215,6 +224,7 @@ Route::prefix('client')->group(function () {
     Route::prefix('profile')->middleware(['auth:sanctum', 'ability:access', 'client.user', 'throttle:client-api'])->group(function () {
         Route::get('/', [ClientProfileController::class, 'show']);
         Route::post('/', [ClientProfileController::class, 'update'])->middleware('throttle:client-mutation');
+        Route::post('/avatar', [ClientProfileController::class, 'updateAvatar'])->middleware('throttle:client-mutation');
         Route::post('/password', [ClientProfileController::class, 'updatePassword'])->middleware('throttle:sensitive-mutation');
 
         // Sổ Địa Chỉ (Address Book)
@@ -290,6 +300,8 @@ Route::prefix('shop/{shop_slug}')->middleware('throttle:public-read')->group(fun
 Route::get('shop/{shop_slug}/categories', [ShopController::class, 'categories'])->middleware('throttle:public-read');
 Route::get('shop/{shop_slug}/colors', [ShopController::class, 'colors'])->middleware('throttle:public-read');
 Route::get('shop/{shop_slug}/attributes', [ShopController::class, 'attributes'])->middleware('throttle:public-read');
+
+Route::get('/color-dictionaries', [App\Http\Controllers\Api\Admin\AdminColorDictionaryController::class, 'index'])->middleware('throttle:public-read');
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -425,6 +437,8 @@ Route::prefix('admin')->group(function () {
             Route::apiResource('attributes', AdminAttributeController::class)->except(['show']);
             Route::post('attribute-values', [AdminAttributeValueController::class, 'store']);
             Route::delete('attribute-values/{id}', [AdminAttributeValueController::class, 'destroy']);
+            
+            Route::apiResource('color-dictionaries', App\Http\Controllers\Api\Admin\AdminColorDictionaryController::class)->except(['show']);
         });
 
         // Quản lý Thương hiệu (Mã: admin_brands)
@@ -440,6 +454,7 @@ Route::prefix('admin')->group(function () {
             Route::apiResource('banners', AdminBannerController::class);
             Route::post('banners/{id}/restore', [AdminBannerController::class, 'restore']);
             Route::delete('banners/{id}/force', [AdminBannerController::class, 'forceDelete']);
+            Route::delete('banners/{id}/delete-media', [AdminBannerController::class, 'deleteMedia']);
             Route::post('banners/reorder', [AdminBannerController::class, 'reorder']);
         });
 

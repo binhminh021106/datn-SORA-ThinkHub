@@ -140,10 +140,12 @@ class AdminOrderController extends Controller
         $sortCol = $request->boolean('is_return_page') ? 'updated_at' : 'id';
 
         // [TỐI ƯU ORM 3] Eager Loading Pagination
-        $orders = $baseQuery->with(['user:id,fullName,email'])
+        $orders = $baseQuery->with(['user:id,fullName,email', 'items'])
             ->withCount('items')
             ->orderBy($sortCol, 'desc')
             ->paginate(10);
+
+        $this->enrichComboSelections($orders->getCollection());
 
         return response()->json([
             'success' => true,
@@ -159,6 +161,8 @@ class AdminOrderController extends Controller
             'items.product:id,slug',
             'histories.changer:id,fullName'
         ])->findOrFail($id);
+
+        $this->enrichComboSelections($order);
 
         return response()->json(['success' => true, 'data' => $order]);
     }
@@ -493,5 +497,60 @@ class AdminOrderController extends Controller
         }
         
         $user->save();
+    }
+
+    private function enrichComboSelections($orders)
+    {
+        $orderList = $orders instanceof \Illuminate\Database\Eloquent\Collection ? $orders : collect([$orders]);
+        $variantIds = [];
+        
+        foreach ($orderList as $order) {
+            if (!$order->items) continue;
+            foreach ($order->items as $item) {
+                if ($item->combo_id && is_array($item->combo_selections)) {
+                    foreach ($item->combo_selections as $sel) {
+                        if (isset($sel['selected_variant_id'])) {
+                            $variantIds[] = $sel['selected_variant_id'];
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (empty($variantIds)) return;
+        
+        $variants = \App\Models\ProductVariant::with(['product', 'attributeValues.attribute'])->whereIn('id', array_unique($variantIds))->get()->keyBy('id');
+        
+        foreach ($orderList as $order) {
+            if (!$order->items) continue;
+            foreach ($order->items as $item) {
+                if ($item->combo_id && is_array($item->combo_selections)) {
+                    $selections = $item->combo_selections;
+                    $changed = false;
+                    foreach ($selections as &$sel) {
+                        if (isset($sel['selected_variant_id'])) {
+                            $variant = $variants->get($sel['selected_variant_id']);
+                            if ($variant && $variant->product) {
+                                if (empty($sel['product_name'])) {
+                                    $sel['product_name'] = $variant->product->name;
+                                    $changed = true;
+                                }
+                                if (empty($sel['attributes'])) {
+                                    $sel['attributes'] = $variant->variant_attributes;
+                                    $changed = true;
+                                }
+                                if (empty($sel['price'])) {
+                                    $sel['price'] = $variant->promotional_price ?: $variant->price;
+                                    $changed = true;
+                                }
+                            }
+                        }
+                    }
+                    if ($changed) {
+                        $item->combo_selections = $selections;
+                    }
+                }
+            }
+        }
     }
 }

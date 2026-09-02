@@ -232,6 +232,10 @@
                                             @click="openModal('manageAttrModal')">
                                             <i class="bi bi-gear-fill me-1"></i> Quản lý
                                         </button>
+                                        <button type="button" class="btn btn-sm btn-outline-info fw-bold shadow-sm"
+                                            @click="openModal('colorDictionaryModal')">
+                                            <i class="bi bi-palette-fill me-1"></i> Từ điển màu
+                                        </button>
                                     </div>
                                 </div>
 
@@ -552,6 +556,8 @@
             </div>
         </div>
 
+        <ColorDictionaryModal />
+
     </div>
 </template>
 
@@ -561,6 +567,7 @@ import { useRouter, useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import adminApiClient from '@/utils/adminApiClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
+import ColorDictionaryModal from '@/components/admin/ColorDictionaryModal.vue';
 
 // IMPORT COMPONENT SORAIMAGE VÀ ẢNH PLACEHOLDER ĐỒNG BỘ
 import SoraImage from '@/components/ui/SoraImage.vue';
@@ -926,6 +933,7 @@ const openModal = (id) => {
     if (id === 'createAttrModal') createAttrModalObj = m;
     if (id === 'createValueModal') createValueModalObj = m;
     if (id === 'manageAttrModal') manageAttrModalObj = m;
+    if (id === 'colorDictionaryModal' && window.fetchColorDictionaries) window.fetchColorDictionaries();
     m.show();
 };
 

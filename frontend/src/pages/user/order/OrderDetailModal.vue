@@ -176,6 +176,9 @@
                                                                     </template>)
                                                                 </span>
                                                             </div>
+                                                            <div v-if="selection.price" class="text-sora-primary fw-bold small ms-auto text-nowrap">
+                                                                {{ formatPrice(selection.price) }}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -245,11 +248,16 @@
                                     </span>
                                 </div>
                                 <div v-if="order?.discount_amount > 0"
-                                    class="d-flex justify-content-between mb-3 small text-success fw-bold">
-                                    <span>Giảm giá <span
+                                    class="d-flex justify-content-between mb-2 small text-success fw-bold">
+                                    <span>Giảm giá <span v-if="order?.coupon_code"
                                             class="badge bg-success-subtle text-success ms-1 border border-success-subtle">{{
                                             order?.coupon_code }}</span>:</span>
                                     <span>- {{ formatPrice(order?.discount_amount) }}</span>
+                                </div>
+                                <div v-if="order?.tier_discount_amount > 0"
+                                    class="d-flex justify-content-between mb-3 small text-success fw-bold">
+                                    <span>Ưu đãi hạng thành viên:</span>
+                                    <span>- {{ formatPrice(order?.tier_discount_amount) }}</span>
                                 </div>
 
                                 <div

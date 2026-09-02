@@ -103,10 +103,18 @@
                                                         <div class="text-brand mt-1" style="font-size: 0.7rem;"
                                                             v-if="item.combo_id">
                                                             <span
-                                                                class="badge bg-light text-brand border border-brand-subtle">
+                                                                class="badge bg-light text-brand border border-brand-subtle d-inline-block mb-1">
                                                                 <i class="bi bi-stars text-brand me-1"></i> Combo ({{
                                                                 parseCombo(item.combo_selections).length }} món)
                                                             </span>
+                                                            <div class="mt-1 ps-2 border-start border-2 border-brand-subtle">
+                                                                <div v-for="(selection, idx) in parseCombo(item.combo_selections)" :key="idx" class="mb-1 text-muted" style="font-size: 0.65rem;">
+                                                                    <div class="fw-bold text-dark">{{ selection.product_name || `Lựa chọn ${idx + 1}` }}</div>
+                                                                    <div v-if="selection.attributes" class="text-secondary">
+                                                                        <span v-for="(val, key) in parseAttributes(selection.attributes)" :key="key" class="me-1">[{{ key }}: {{ val }}]</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                         <div class="mt-1 text-secondary fw-medium"
                                                             style="font-size: 0.7rem;"

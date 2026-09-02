@@ -80,7 +80,9 @@
             
             <div class="contact-info mt-4">
               <p class="text-white small mb-2 fw-medium"><i class="bi bi-geo-alt text-secondary-custom me-2 fs-6"></i> {{ s.footer_address || '123 Đường Ngọc Hồi, Hà Nội' }}</p>
-              <p class="text-white small mb-0 fw-medium"><i class="bi bi-envelope text-secondary-custom me-2 fs-6"></i> {{ s.footer_email || 'SORA@GMAIL.COM' }}</p>
+              <p class="text-white small mb-2 fw-medium"><i class="bi bi-telephone text-secondary-custom me-2 fs-6"></i> {{ hotlineDisplay }}</p>
+              <p class="text-white small mb-2 fw-medium"><i class="bi bi-envelope text-secondary-custom me-2 fs-6"></i> {{ s.footer_email || 'SORA@GMAIL.COM' }}</p>
+              <p class="text-white small mb-0 fw-medium"><i class="bi bi-clock text-secondary-custom me-2 fs-6"></i> {{ s.footer_opening_hours || '09:00 - 21:00 (Từ Thứ 2 đến Chủ Nhật)' }}</p>
             </div>
           </div>
 
@@ -135,6 +137,16 @@ const safeSocials = computed(() => {
   return socials
     .map((social) => ({ ...social, url: safeNavigationUrl(social?.url) }))
     .filter((social) => social.url);
+});
+
+const hotlineDisplay = computed(() => {
+    if (props.previewData && Array.isArray(props.previewData.footer_trust_items)) {
+        const item = props.previewData.footer_trust_items.find(i => i.icon === 'bi-headset');
+        if (item && typeof item.subtitle === 'string') {
+            return item.subtitle.replace(/Hotline:\s*/i, '').trim();
+        }
+    }
+    return settingsStore.hotlinePhone;
 });
 
 const router = useRouter();

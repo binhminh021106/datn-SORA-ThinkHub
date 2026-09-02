@@ -242,8 +242,8 @@
 
               <div class="shop-feature-row d-flex justify-content-between mt-2 pt-2">
                 <div v-for="(feat, index) in shopFeatures" :key="index" class="feature-pill text-center">
-                  <i :class="['bi', feat.icon, 'fs-4 text-dark mb-1 d-block']"></i>
-                  <span class="font-oswald text-uppercase" style="font-size: 0.65rem; letter-spacing: 1px;">{{ feat.text }}</span>
+                  <i :class="['bi', feat.icon, 'fs-4 text-sora-primary mb-1 d-block']"></i>
+                  <span class="font-oswald text-uppercase text-sora-primary fw-medium" style="font-size: 0.65rem; letter-spacing: 1px;" v-html="feat.text"></span>
                 </div>
               </div>
 

@@ -191,4 +191,26 @@ class AdminBannerController extends Controller
 
         return response()->json(['success' => true, 'message' => 'Đã cập nhật thứ tự']);
     }
+
+    /**
+     * Delete specific media from banner
+     */
+    public function deleteMedia(Request $request, $id)
+    {
+        $banner = Banner::withTrashed()->findOrFail($id);
+        $type = $request->input('type');
+
+        if (!in_array($type, ['image_desktop', 'image_mobile', 'video_url'])) {
+            return response()->json(['success' => false, 'message' => 'Loại file không hợp lệ'], 400);
+        }
+
+        if ($banner->$type) {
+            Storage::disk('public')->delete($banner->$type);
+            $banner->update([$type => null]);
+            Cache::forget('sora_home_data_v4');
+            return response()->json(['success' => true, 'message' => 'Xóa file thành công']);
+        }
+
+        return response()->json(['success' => true, 'message' => 'File không tồn tại']);
+    }
 }

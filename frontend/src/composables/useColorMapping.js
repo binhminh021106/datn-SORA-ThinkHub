@@ -1,28 +1,85 @@
+import clientApiClient from '@/utils/clientApiClient';
+
+let colorDictionary = null;
+let isFetching = false;
+let fetchPromise = null;
+
+export const fetchColorDictionary = async () => {
+    if (colorDictionary !== null) return colorDictionary;
+    if (isFetching) return fetchPromise;
+
+    isFetching = true;
+    fetchPromise = (async () => {
+        try {
+            // Dùng clientApiClient để gọi public route
+            const res = await clientApiClient.get('/color-dictionaries');
+            colorDictionary = res.data || [];
+            return colorDictionary;
+        } catch (e) {
+            console.error("Failed to load color dictionary", e);
+            colorDictionary = []; // Fallback empty array
+            return [];
+        } finally {
+            isFetching = false;
+        }
+    })();
+    return fetchPromise;
+};
+
+// Normalize name (lowercase, no accents)
+export const normalizeAttributeName = (name) => String(name || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .replace(/-/g, ' ')
+  .trim();
+
 export const getColorCode = (colorName) => {
-  if (!colorName) return '#e0e0e0';
-  const map = {
-    'đỏ': '#cc1e2e', 'red': '#cc1e2e', 'đỏ đô': '#8b0000', 'đỏ mận': '#800000', 'đỏ tươi': '#ff0000', 'ruby': '#e0115f',
-    'xanh': '#2e5b9f', 'blue': '#2e5b9f', 'xanh dương': '#007bff', 'xanh biển': '#1e90ff', 'xanh ngọc': '#009981', 'xanh lá': '#28a745', 'green': '#28a745', 'xanh lục': '#228b22', 'emerald': '#50c878',
-    'vàng': '#e7ce7d', 'gold': '#e7ce7d', 'vàng 18k': '#d4af37', 'vàng 24k': '#ffd700', 'vàng chanh': '#fada5e', 'vàng kem': '#fdfd96',
-    'trắng': '#ffffff', 'white': '#ffffff', 'vàng trắng': '#f4f4f4', 'bạch kim': '#e5e4e2', 'bạc': '#c0c0c0', 'silver': '#c0c0c0', 'trong suốt': '#f0f8ff',
-    'đen': '#2c2c2c', 'black': '#2c2c2c', 'xám': '#808080', 'gray': '#808080', 'ghi': '#808080',
-    'hồng': '#f4a4b4', 'pink': '#f4a4b4', 'vàng hồng': '#b76e79', 'rose gold': '#b76e79', 'tím': '#800080', 'purple': '#800080', 'thạch anh tím': '#9966cc',
-    'nâu': '#8b4513', 'brown': '#8b4513', 'cam': '#fd7e14', 'orange': '#fd7e14'
-  };
-  return map[colorName.toLowerCase().trim()] || '#e0e0e0';
+  if (!colorName || !colorDictionary) return null;
+  
+  const normalizedSearch = normalizeAttributeName(colorName);
+  
+  // Tìm trong DB map
+  const found = colorDictionary.find(c => 
+      c.normalized_name === normalizedSearch || 
+      normalizeAttributeName(c.name) === normalizedSearch
+  );
+  
+  if (found) return found.color_code;
+  
+  // Fallback support for English names or direct HEX if user types hex directly
+  if (colorName.startsWith('#')) return colorName;
+  
+  return null; // Return null to trigger Text Label fallback
 };
 
 export const isLightColor = (colorName) => {
   const code = getColorCode(colorName);
+  if (!code) return false;
+  
   const lightCodes = ['#ffffff', '#fcfcfc', '#f4f4f4', '#e5e4e2', '#c0c0c0', '#e0e0e0', '#fada5e', '#fdfd96', '#f0f8ff', '#ffb6c1', '#f4a4b4'];
-  return lightCodes.includes(code);
+  
+  // If it's explicitly one of our known light colors
+  if (lightCodes.includes(code.toLowerCase())) return true;
+  
+  // Basic Hex brightness calculation fallback
+  if (code.startsWith('#') && (code.length === 7 || code.length === 4)) {
+      let r, g, b;
+      if (code.length === 4) {
+          r = parseInt(code[1]+code[1], 16);
+          g = parseInt(code[2]+code[2], 16);
+          b = parseInt(code[3]+code[3], 16);
+      } else {
+          r = parseInt(code.substring(1,3), 16);
+          g = parseInt(code.substring(3,5), 16);
+          b = parseInt(code.substring(5,7), 16);
+      }
+      const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+      return brightness > 200; 
+  }
+  
+  return false;
 };
-
-const normalizeAttributeName = (name) => String(name || '')
-  .normalize('NFD')
-  .replace(/[\u0300-\u036f]/g, '')
-  .toLowerCase()
-  .trim();
 
 export const isColorAttribute = (name) => {
   const lowerName = normalizeAttributeName(name);

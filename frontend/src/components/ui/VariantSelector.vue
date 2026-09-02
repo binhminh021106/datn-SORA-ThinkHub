@@ -4,7 +4,7 @@
       <div class="variant-label-wrapper d-flex justify-content-between align-items-center gap-2">
         <h3 class="variant-label mb-0">
           {{ attrName }}
-          <span v-if="selectedAttributes[attrName]" style="color: #333; font-weight: 600; text-transform: none; font-size: 15px;">
+          <span v-if="selectedAttributes[attrName]" style="color: #333; font-weight: 700; text-transform: none; font-size: 15px;">
             : {{ getOptionName(attrName, selectedAttributes[attrName]) }}
           </span>
         </h3>
@@ -18,58 +18,55 @@
           <i class="bi bi-rulers"></i>
         </button>
       </div>
-      
-      <!-- Color Options -->
-      <div v-if="isColorAttribute(attrName)" class="variant-options color-options">
-        <button 
-          v-for="option in options" 
-          :key="option.id"
-          @click="!isOptionDisabled(attrName, option.id) && emit('select', attrName, option.id)"
-          class="color-swatch-btn d-flex justify-content-center align-items-center"
-          :class="{ 
-            'active': selectedAttributes[attrName] === option.id,
-            'disabled': isOptionDisabled(attrName, option.id)
-          }"
-          :title="option.name"
-          :style="{ 
-            backgroundColor: getColorCode(option.name),
-            opacity: isOptionDisabled(attrName, option.id) ? 0.4 : 1,
-            cursor: isOptionDisabled(attrName, option.id) ? 'not-allowed' : 'pointer'
-          }"
-          :disabled="isOptionDisabled(attrName, option.id)"
-        >
-          <i v-if="selectedAttributes[attrName] === option.id" class="bi bi-check fw-bold" :class="isLightColor(option.name) ? 'text-dark' : 'text-white'" style="font-size: 1.3rem;"></i>
-          <i v-else-if="isOptionDisabled(attrName, option.id)" class="bi bi-slash-circle text-secondary" style="font-size: 1rem;"></i>
-        </button>
-      </div>
-      
-      <!-- Text/Size Options -->
-      <div v-else class="variant-options">
-        <button 
-          v-for="option in options" 
-          :key="option.id"
-          @click="!isOptionDisabled(attrName, option.id) && emit('select', attrName, option.id)"
-          class="variant-btn"
-          :class="{ 
-            'active': selectedAttributes[attrName] === option.id,
-            'disabled': isOptionDisabled(attrName, option.id)
-          }"
-          :disabled="isOptionDisabled(attrName, option.id)"
-          :style="{ 
-            opacity: isOptionDisabled(attrName, option.id) ? 0.4 : 1,
-            cursor: isOptionDisabled(attrName, option.id) ? 'not-allowed' : 'pointer'
-          }"
-        >
-          {{ option.name }}
-          <i v-if="isOptionDisabled(attrName, option.id)" class="bi bi-slash-circle ms-1" style="font-size: 0.8rem;"></i>
-        </button>
+      <!-- Options -->
+      <div class="variant-options d-flex gap-2 flex-wrap mt-2">
+        <template v-for="option in options" :key="option.id">
+            <button 
+              v-if="isColorAttribute(attrName) && getColorCode(option.name) !== null"
+              @click="!isOptionDisabled(attrName, option.id) && emit('select', attrName, option.id)"
+              class="color-swatch-btn d-flex justify-content-center align-items-center"
+              :class="{ 
+                'active': selectedAttributes[attrName] === option.id,
+                'disabled': isOptionDisabled(attrName, option.id)
+              }"
+              :title="option.name"
+              :style="{ 
+                backgroundColor: getColorCode(option.name),
+                opacity: isOptionDisabled(attrName, option.id) ? 0.4 : 1,
+                cursor: isOptionDisabled(attrName, option.id) ? 'not-allowed' : 'pointer'
+              }"
+              :disabled="isOptionDisabled(attrName, option.id)"
+            >
+              <i v-if="selectedAttributes[attrName] === option.id" class="bi bi-check fw-bold" :class="isLightColor(option.name) ? 'text-dark' : 'text-white'" style="font-size: 1.3rem;"></i>
+              <i v-else-if="isOptionDisabled(attrName, option.id)" class="bi bi-slash-circle text-secondary" style="font-size: 1rem;"></i>
+            </button>
+            <button 
+              v-else
+              @click="!isOptionDisabled(attrName, option.id) && emit('select', attrName, option.id)"
+              class="variant-btn"
+              :class="{ 
+                'active': selectedAttributes[attrName] === option.id,
+                'disabled': isOptionDisabled(attrName, option.id)
+              }"
+              :disabled="isOptionDisabled(attrName, option.id)"
+              :style="{ 
+                opacity: isOptionDisabled(attrName, option.id) ? 0.4 : 1,
+                cursor: isOptionDisabled(attrName, option.id) ? 'not-allowed' : 'pointer'
+              }"
+            >
+              {{ option.name }}
+              <i v-if="isOptionDisabled(attrName, option.id)" class="bi bi-slash-circle ms-1" style="font-size: 0.8rem;"></i>
+            </button>
+        </template>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { getColorCode, isLightColor, isColorAttribute, isSizeAttribute } from '@/composables/useColorMapping';
+import { getColorCode, isLightColor, isColorAttribute, isSizeAttribute, fetchColorDictionary } from '@/composables/useColorMapping';
+
+fetchColorDictionary();
 
 const props = defineProps({
   attributes: {
@@ -116,7 +113,7 @@ const isOptionDisabled = (attrName, optionId) => {
   box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05); 
 }
 .color-swatch-btn:hover:not(.disabled) { transform: scale(1.05); border-color: #999; }
-.color-swatch-btn.active { border: 2px solid #222; box-shadow: inset 0 0 0 3px #fff; transform: scale(1.1); }
+.color-swatch-btn.active { border: 2px solid #9f273b; box-shadow: inset 0 0 0 3px #fff; transform: scale(1.1); }
 .color-swatch-btn.disabled { box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1), 0 0 0 1px #ccc; }
 
 .variant-btn { 

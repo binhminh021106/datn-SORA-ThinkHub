@@ -79,6 +79,56 @@ class ClientProfileController extends Controller
         ]);
     }
 
+    public function updateAvatar(Request $request)
+    {
+        $user = User::find(Auth::guard('sanctum')->id());
+        if (!$user) return response()->json(['status' => false, 'message' => 'Vui lòng đăng nhập'], 401);
+
+        $request->validate([
+            'avatar' => ['required', 'image', 'max:5120']
+        ], [
+            'avatar.required' => 'Vui lòng chọn ảnh',
+            'avatar.image' => 'File phải là định dạng hình ảnh',
+            'avatar.max' => 'Dung lượng ảnh không được vượt quá 5MB'
+        ]);
+
+        $oldAvatar = $user->avatar_url;
+        $path = false;
+
+        try {
+            $path = $request->file('avatar')->store('avatars', 'public');
+            if (!$path) {
+                return response()->json(['status' => false, 'message' => 'Không thể lưu file ảnh'], 500);
+            }
+
+            $user->avatar_url = $path;
+            if (!$user->save()) {
+                throw new \Exception('Lưu thay đổi thất bại');
+            }
+
+            if ($oldAvatar && Storage::disk('public')->exists($oldAvatar)) {
+                Storage::disk('public')->delete($oldAvatar);
+            }
+        } catch (\Exception $e) {
+            if ($path && Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
+            $user->avatar_url = $oldAvatar;
+            return response()->json(['status' => false, 'message' => 'Lỗi cập nhật ảnh đại diện'], 500);
+        }
+
+        $userData = $user->toArray();
+        if ($user->avatar_url && !str_starts_with($user->avatar_url, 'http')) {
+            $userData['avatar_url'] = url('storage/' . $user->avatar_url);
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Cập nhật ảnh đại diện thành công!',
+            'data' => $userData
+        ]);
+    }
+
     public function updatePassword(ClientPasswordUpdateRequest $request)
     {
         $user = User::find(Auth::guard('sanctum')->id());

@@ -32,8 +32,17 @@
                     <input type="text" class="form-control bg-light text-muted font-monospace" v-model="form.slug" readonly>
                   </div>
                   <div class="col-md-12">
-                    <label class="form-label fw-bold">Mô tả hấp dẫn</label>
-                    <textarea class="form-control" v-model="form.description" rows="3" placeholder="Viết vài dòng kêu gọi mua hàng..."></textarea>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <label class="form-label fw-bold mb-0">Mô tả hấp dẫn</label>
+                      <button type="button" class="btn btn-sm btn-outline-secondary" @click="isHtmlMode = !isHtmlMode">
+                        <i class="bi bi-code-slash me-1"></i>
+                        {{ isHtmlMode ? 'Chuyển sang Trực quan (Visual)' : 'Chuyển sang HTML (Code)' }}
+                      </button>
+                    </div>
+                    <div class="editor-container shadow-sm rounded-4 position-relative border bg-white">
+                      <QuillEditor v-if="!isHtmlMode" theme="snow" toolbar="full" v-model:content="form.description" contentType="html" placeholder="Viết vài dòng kêu gọi mua hàng..." />
+                      <textarea v-else class="form-control font-monospace p-3" rows="5" v-model="form.description" placeholder="<p>Mô tả HTML...</p>" style="min-height: 150px; background-color: #2d2d2d; color: #f8f8f2; border: none;"></textarea>
+                    </div>
                   </div>
 
                   <div class="col-md-4">
@@ -318,6 +327,11 @@ import { useRouter } from 'vue-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'; 
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import { QuillEditor } from '@vueup/vue-quill';
+import '@vueup/vue-quill/dist/vue-quill.snow.css';
+
+// State cho trình soạn thảo
+const isHtmlMode = ref(false);
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 

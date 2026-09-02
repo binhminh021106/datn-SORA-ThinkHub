@@ -578,7 +578,7 @@ public function applyBirthdayCoupon(Request $request)
             $selectionMap[$comboItemId] = $variantId;
         }
 
-        $variants = ProductVariant::with('product')
+        $variants = ProductVariant::with(['product', 'attributeValues.attribute'])
             ->whereIn('id', array_values($selectionMap))
             ->lockForUpdate()
             ->get()
@@ -601,6 +601,8 @@ public function applyBirthdayCoupon(Request $request)
                 'combo_item_id' => (int) $comboItemId,
                 'selected_variant_id' => (int) $variant->id,
                 'price' => $variant->promotional_price ?: $variant->price,
+                'product_name' => $variant->product->name,
+                'attributes' => $variant->variant_attributes,
             ];
         }
 
