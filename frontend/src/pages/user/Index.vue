@@ -36,7 +36,7 @@
               <div
                 class="w-100 h-100 position-absolute top-0 start-0 d-flex flex-column align-items-center justify-content-center z-index-2">
                 <div class="home-hero-copy text-center">
-                  <span class="kicker-base hero-kicker">Trang Sức Cao Cấp SORA</span>
+                  <span class="kicker-base hero-kicker">Trang Sức SORA</span>
                   <h1 class="font-serif" v-html="formatBannerTitle(banner.title)"></h1>
                   <a v-if="safeNavigationUrl(banner.target_url)" :href="safeNavigationUrl(banner.target_url)" class="editorial-btn text-decoration-none">Khám
                     phá ngay</a>

@@ -148,8 +148,6 @@ class ClientCheckoutController extends Controller
         }
 
         $lockKey = 'checkout_lock_' . ($user ? $user->id : $sessionId);
-        // This covers the longest gateway request timeout plus database work.
-        // The route also holds the shared cart mutation lock.
         $lock = Cache::lock($lockKey, 60);
 
         if (!$lock->get()) {
@@ -169,7 +167,6 @@ class ClientCheckoutController extends Controller
             return $this->buildIdempotentCheckoutResponse($existingOrder);
         }
 
-        // CHỐNG SPAM: Kiểm tra tài khoản có bị cấm đặt hàng không
         if ($user->is_order_blocked) {
             $lock->release();
             return response()->json([
@@ -178,7 +175,6 @@ class ClientCheckoutController extends Controller
             ], 403);
         }
 
-        // CHỐNG GĂM HÀNG: Kiểm tra khoảng cách thời gian đặt đơn (Cooldown)
         // Tạm ẩn truy vấn do Database chưa có bảng settings
         // $cooldownSetting = \App\Models\Setting::where('key', 'order_cooldown_minutes')->first();
         // $cooldownMinutes = $cooldownSetting ? (int)$cooldownSetting->value : 0;
@@ -265,7 +261,7 @@ class ClientCheckoutController extends Controller
                             throw new \DomainException('Sản phẩm này không còn kinh doanh.');
                         }
                         if ($variant->stock_quantity < $item->quantity) {
-                            throw new \DomainException("Sản phẩm SKU {$variant->sku} không đủ số lượng.");
+                            throw new \DomainException("Sản phẩm tên {$variant->product->name} không đủ số lượng.");
                         }
 
                         $variant->stock_quantity -= $item->quantity;

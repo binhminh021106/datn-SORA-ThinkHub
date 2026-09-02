@@ -194,7 +194,6 @@
                   <i v-if="isCurrentSelectionOutOfStock" class="bi bi-x-circle me-2 fs-5"></i>
                   {{ isCompletelyOutOfStock ? 'ĐÃ BÁN HẾT' : (isCurrentSelectionOutOfStock ? 'HẾT HÀNG' : 'THÊM VÀO GIỎ') }}
                 </button>
-                <button class="btn-consult">TƯ VẤN NGAY</button>
               </div>
             </div>
 
@@ -1155,7 +1154,7 @@ const addToCart = async () => {
 
   try {
     const payload = { product_variant_id: currentVariant.value.id, quantity: selectedQuantity.value };
-    const response = await axios.post(`${API_BASE_URL}/client/cart`, payload, { headers: getHeaders() });
+    const response = await clientApiClient.post('/client/cart', payload, { ensureCartSession: true });
 
     if (response.data.success) {
       Toast.fire({ icon: 'success', title: 'Thêm vào giỏ thành công' });

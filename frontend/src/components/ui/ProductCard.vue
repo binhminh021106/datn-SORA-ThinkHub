@@ -60,6 +60,7 @@
             decoding="async"
             class="sora-hover-img position-absolute top-0 start-0 w-100 h-100 object-fit-cover"
             style="object-position: center;"
+            @error="handleHoverImageError"
           >
         </div>
       </router-link>
@@ -304,6 +305,11 @@ const handleImageError = (e) => {
   } else if (!target.src.includes('Sora-placeholder.png')) {
     target.src = '/Sora-placeholder.png';
   }
+};
+
+const handleHoverImageError = (e) => {
+  // Ẩn luôn ảnh hover nếu bị lỗi, để hiện ảnh chính thay vì chữ xanh dương lỗi
+  e.target.style.display = 'none';
 };
 
 const hasHoverImage = (product) => {

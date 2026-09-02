@@ -41,17 +41,28 @@
         </div>
       </div>
 
-      <!-- Custom Tabs Segmented Control -->
-      <div class="d-inline-flex bg-white border rounded-3 shadow-sm p-1 mb-3 email-tabs-wrapper">
-        <button class="btn btn-sm fw-semibold" :class="{ 'active-tab': activeTab === 'dashboard' }" @click="activeTab = 'dashboard'">
-          <i class="bi bi-activity me-1"></i> Bảng điều khiển gửi
-        </button>
-        <button class="btn btn-sm fw-semibold" :class="{ 'active-tab': activeTab === 'holidays' }" @click="activeTab = 'holidays'">
-          <i class="bi bi-calendar-heart me-1"></i> Quản lý ngày lễ
-        </button>
-        <button class="btn btn-sm fw-semibold" :class="{ 'active-tab': activeTab === 'birthday' }" @click="activeTab = 'birthday'">
-          <i class="bi bi-balloon-heart me-1"></i> Cấu hình sinh nhật
-        </button>
+      <!-- Sub-tabs (Phong cách WorkShifts) -->
+      <div class="mb-3">
+        <ul class="nav nav-underline border-bottom flex-nowrap overflow-hidden pb-1">
+          <li class="nav-item">
+            <a class="nav-link py-2 px-3 d-flex align-items-center custom-sub-tab" href="#" 
+               :class="{ 'active-tab': activeTab === 'dashboard' }" @click.prevent="activeTab = 'dashboard'">
+              <i class="bi bi-activity me-2"></i> Bảng điều khiển gửi
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link py-2 px-3 d-flex align-items-center custom-sub-tab" href="#" 
+               :class="{ 'active-tab': activeTab === 'holidays' }" @click.prevent="activeTab = 'holidays'">
+              <i class="bi bi-calendar-heart me-2"></i> Quản lý ngày lễ
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link py-2 px-3 d-flex align-items-center custom-sub-tab" href="#" 
+               :class="{ 'active-tab': activeTab === 'birthday' }" @click.prevent="activeTab = 'birthday'">
+              <i class="bi bi-balloon-heart me-2"></i> Cấu hình sinh nhật
+            </a>
+          </li>
+        </ul>
       </div>
 
       <!-- TAB 1: BẢNG ĐIỀU KHIỂN GỬI -->
@@ -123,7 +134,7 @@
                     <tr v-if="emailLogs.length === 0">
                       <td colspan="5" class="text-center text-muted py-4 small">Chưa có log gửi email.</td>
                     </tr>
-                    <tr v-for="log in emailLogs" :key="log.id">
+                    <tr v-for="log in paginatedEmailLogs" :key="log.id">
                       <td class="px-3 py-2 small fw-semibold">{{ formatDateTime(log.sent_at || log.queued_at) }}</td>
                       <td class="px-3 py-2">
                         <span class="event-type-badge badge bg-secondary bg-opacity-10 text-secondary border">
@@ -148,6 +159,32 @@
                     </tr>
                   </tbody>
                 </table>
+              </div>
+              
+              <!-- Pagination -->
+              <div v-if="totalPages > 1" class="d-flex justify-content-between align-items-center p-3 border-top bg-white">
+                <div class="small text-muted">
+                  Trang {{ currentPage }} / {{ totalPages }}
+                </div>
+                <nav>
+                  <ul class="pagination pagination-sm mb-0 shadow-sm">
+                    <!-- Nút Lùi -->
+                    <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                      <button class="page-link text-dark" @click="currentPage--"><i class="bi bi-chevron-left"></i></button>
+                    </li>
+                    
+                    <!-- Các trang -->
+                    <li v-for="(page, index) in visiblePages" :key="'page-' + index" class="page-item" :class="{ active: currentPage === page, disabled: page === '...' }">
+                      <button v-if="page !== '...'" class="page-link" :class="{ 'bg-brand text-white border-brand': currentPage === page, 'text-dark': currentPage !== page }" @click="currentPage = page">{{ page }}</button>
+                      <span v-else class="page-link text-muted">...</span>
+                    </li>
+                    
+                    <!-- Nút Tới -->
+                    <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+                      <button class="page-link text-dark" @click="currentPage++"><i class="bi bi-chevron-right"></i></button>
+                    </li>
+                  </ul>
+                </nav>
               </div>
             </div>
           </div>
@@ -499,6 +536,40 @@ const targetLabels = {
 const holidays = ref([]);
 const emailLogs = ref([]);
 
+// Pagination logic
+const currentPage = ref(1);
+const itemsPerPage = 5;
+
+const totalPages = computed(() => Math.ceil(emailLogs.value.length / itemsPerPage));
+
+const paginatedEmailLogs = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  return emailLogs.value.slice(start, start + itemsPerPage);
+});
+
+const visiblePages = computed(() => {
+  const total = totalPages.value;
+  const current = currentPage.value;
+  const delta = 1; 
+  const range = [];
+  
+  for (let i = Math.max(2, current - delta); i <= Math.min(total - 1, current + delta); i++) {
+    range.push(i);
+  }
+  
+  if (current - delta > 2) range.unshift('...');
+  if (current + delta < total - 1) range.push('...');
+  
+  range.unshift(1);
+  if (total > 1) range.push(total);
+  
+  return range;
+});
+
+watch(emailLogs, () => {
+  currentPage.value = 1;
+});
+
 const birthdaySettings = ref({
   enabled: true,
   subject: '',
@@ -782,6 +853,13 @@ function showToast(title, icon = 'success') { Swal.fire({ toast: true, position:
 </script>
 
 <style scoped>
+.custom-sub-tab { font-weight: 600 !important; color: #6c757d; border-bottom: 2px solid transparent !important; margin-bottom: -1px; transition: color 0.2s ease; text-decoration: none; }
+.custom-sub-tab:hover { color: #009981; }
+.custom-sub-tab.active-tab { color: #009981 !important; border-bottom: 2.5px solid #009981 !important; }
+.bg-brand { background-color: #009981 !important; }
+.border-brand { border-color: #009981 !important; }
+.text-brand { color: #009981 !important; }
+
 /* Base Colors & Utilities */
 .text-brand { color: #9F273B; }
 .bg-brand { background-color: #009981; }

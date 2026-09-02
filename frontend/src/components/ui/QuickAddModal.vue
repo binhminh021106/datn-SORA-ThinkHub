@@ -112,6 +112,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
 import axios from 'axios';
+import clientApiClient from '@/utils/clientApiClient';
 import Swal from 'sweetalert2';
 import Toast from '@/utils/toastConfig';
 import { globalModalState } from '@/stores/modalState';
@@ -229,23 +230,18 @@ const validateQuantity = () => {
     }
 };
 
-const isQuickAddAllSelected = computed(() => {
-    const requiredAttrs = Object.keys(quickAddMatrix.value);
-    if (requiredAttrs.length === 0) return true;
-    return requiredAttrs.every(attr => quickAddSelections.value[attr]);
-});
-
 const isOptionAvailable = (attrName, attrValue) => {
     if (!quickAddProduct.value || !quickAddProduct.value.variants) return false;
 
-    const testSelections = { ...quickAddSelections.value, [attrName]: attrValue };
+    const activeSelections = Object.fromEntries(
+        Object.entries(quickAddSelections.value).filter(([_, v]) => v !== undefined && v !== null && v !== '')
+    );
+    const testSelections = { ...activeSelections, [attrName]: attrValue };
 
     return quickAddProduct.value.variants.some(variant => {
-        const vAttrs = variant.formatted_attributes;
-        if (!vAttrs) return false;
+        const vAttrs = variant.formatted_attributes || {};
 
         const isMatch = Object.entries(testSelections).every(([key, value]) => {
-            if (!value) return true; 
             return String(vAttrs[key]) === String(value);
         });
         
@@ -253,29 +249,26 @@ const isOptionAvailable = (attrName, attrValue) => {
     });
 };
 
-// Hàm xử lý chọn biến thể tích hợp Auto-Resolve Conflict (Tự gỡ xung đột)
 const handleSelect = (attrName, val) => {
-    // Nếu click lại vào option đang chọn -> bỏ chọn
     if (String(quickAddSelections.value[attrName]) === String(val)) {
         quickAddSelections.value = { ...quickAddSelections.value, [attrName]: '' };
     } else if (isOptionAvailable(attrName, val)) {
         quickAddSelections.value = { ...quickAddSelections.value, [attrName]: val };
     } else {
-        // Option bị mờ (hết hàng do xung đột) nhưng User vẫn bấm.
-        // Ta vẫn set nó làm active, và tự động bỏ chọn Option gây xung đột để User không bị kẹt cứng.
         const newSelections = { [attrName]: val };
         
         Object.keys(quickAddMatrix.value).forEach(key => {
             if (key !== attrName && quickAddSelections.value[key]) {
                 const testValid = quickAddProduct.value.variants.some(variant => {
-                    const vAttrs = variant.formatted_attributes;
-                    if (!vAttrs) return false;
-                    return String(vAttrs[attrName]) === String(val) && String(vAttrs[key]) === String(quickAddSelections.value[key]) && getVariantStock(variant) > 0;
+                    const vAttrs = variant.formatted_attributes || {};
+                    return String(vAttrs[attrName]) === String(val) && 
+                           String(vAttrs[key]) === String(quickAddSelections.value[key]) && 
+                           getVariantStock(variant) > 0;
                 });
                 if (testValid) {
                     newSelections[key] = quickAddSelections.value[key];
                 } else {
-                    newSelections[key] = ''; // Bỏ chọn phần xung đột
+                    newSelections[key] = '';
                 }
             } else if (key !== attrName) {
                  newSelections[key] = '';
@@ -284,17 +277,35 @@ const handleSelect = (attrName, val) => {
         quickAddSelections.value = newSelections;
     }
     quickAddError.value = false;
-    validateQuantity(); // Re-validate quantity when variant changes
+    validateQuantity();
 };
 
 const quickAddSelectedVariant = computed(() => {
     if (!quickAddProduct.value || !quickAddProduct.value.variants) return null;
-    const requiredAttrs = Object.keys(quickAddMatrix.value);
-    if (requiredAttrs.length === 0) return quickAddProduct.value.variants[0];
-    if (!isQuickAddAllSelected.value) return null;
-    return quickAddProduct.value.variants.find(v => {
-        return requiredAttrs.every(attr => v.formatted_attributes && String(v.formatted_attributes[attr]) === String(quickAddSelections.value[attr]));
+    
+    const activeSelections = Object.fromEntries(
+        Object.entries(quickAddSelections.value).filter(([_, v]) => v !== undefined && v !== null && v !== '')
+    );
+    const activeKeys = Object.keys(activeSelections);
+
+    if (activeKeys.length === 0 && (!quickAddProduct.value.variants[0].formatted_attributes || Object.keys(quickAddProduct.value.variants[0].formatted_attributes).length === 0)) {
+        return quickAddProduct.value.variants[0];
+    }
+
+    const matchedVariant = quickAddProduct.value.variants.find(v => {
+        const vAttrs = v.formatted_attributes || {};
+        const vKeys = Object.keys(vAttrs);
+        
+        if (vKeys.length !== activeKeys.length) return false;
+        
+        return vKeys.every(k => String(vAttrs[k]) === String(activeSelections[k]));
     });
+
+    return matchedVariant || null;
+});
+
+const isQuickAddAllSelected = computed(() => {
+    return quickAddSelectedVariant.value !== null;
 });
 
 const quickAddDisplayImage = computed(() => {
@@ -432,34 +443,21 @@ const confirmQuickAdd = async () => {
 
     isAdding.value = true;
     try {
-        const token = getToken();
-        let sessionId = getSafeStorage('cart_session_id');
-        if (!sessionId && !token) { 
-            sessionId = createCartSessionId();
-            if (sessionId) setSafeStorage('cart_session_id', sessionId);
-        }
-        
-        const headers = { 'Accept': 'application/json', 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-        if (sessionId) headers['X-Cart-Session-Id'] = sessionId;
-
         const payload = { product_variant_id: selectedVar.id, quantity: quantity.value };
-        const res = await axios.post(`${API_BASE_URL}/client/cart`, payload, { headers });
+        const res = await clientApiClient.post('/client/cart', payload, { ensureCartSession: true });
 
         if (res.data.session_id) {
             setSafeStorage('cart_session_id', res.data.session_id);
         }
 
-        // Lấy số lượng giỏ hàng ngay từ kết quả của POST API nếu có
         let cartCount = 1;
         if (res.data.summary && typeof res.data.summary.total_items !== 'undefined') {
              cartCount = res.data.summary.total_items;
         } else if (typeof res.data.cart_count !== 'undefined') {
              cartCount = res.data.cart_count;
         } else {
-            // Không chặn try-catch nếu GET lỗi. Lỗi GET chỉ là lỗi phụ.
             cartCount = await new Promise((resolve) => {
-                 axios.get(`${API_BASE_URL}/client/cart`, { headers })
+                 clientApiClient.get('/client/cart', { ensureCartSession: true })
                  .then(cartRes => resolve(cartRes.data?.summary?.total_items ?? 0))
                  .catch(() => resolve(1)); // Giả định có 1 sản phẩm nếu không thể lấy từ server
             });

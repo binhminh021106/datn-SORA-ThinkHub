@@ -49,7 +49,7 @@
                     class="position-absolute top-0 start-0" />
                   <img :src="getImageUrl(cat.thumbnail)" loading="eager" fetchpriority="high" :alt="cat.name"
                     @load="categoryImagesLoaded[cat.id] = true" @error="handleImageError"
-                    class="w-100 h-100 object-fit-contain rounded-circle transition-transform duration-500 group-hover-scale-img"
+                    class="w-100 h-100 object-fit-cover rounded-circle transition-transform duration-500 group-hover-scale-img"
                     :style="{ opacity: categoryImagesLoaded[cat.id] ? 1 : 0, transition: 'opacity 0.4s ease' }">
                 </div>
                 <h3 class="premium-category-name text-truncate w-100 text-center pb-1">
@@ -155,7 +155,7 @@
                       style="top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.2rem; text-shadow: 0px 0px 2px rgba(0,0,0,0.5);"></i>
                   </div>
                   <button v-else
-                    class="variant-select-btn transition-all"
+                    class="btn btn-sm border bg-white variant-select-btn transition-all"
                     :class="{ 'selected': selectedColors.includes(color) }"
                     @click="toggleColor(color)">
                     {{ color }}
