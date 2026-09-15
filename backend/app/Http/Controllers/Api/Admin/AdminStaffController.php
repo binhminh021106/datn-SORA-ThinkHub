@@ -12,12 +12,8 @@ use Illuminate\Support\Facades\Auth;
 
 class AdminStaffController extends Controller
 {
-    /**
-     * Lấy danh sách toàn bộ nhân sự (bao gồm cả tài khoản đã xóa mềm) kèm chức vụ.
-     */
     public function index()
     {
-        // Sử dụng Eloquent ORM tải eagers-load quan hệ 'role' và sắp xếp tối ưu
         $staffs = Admin::withTrashed()
             ->with('role')
             ->orderBy('id', 'desc')
@@ -29,9 +25,6 @@ class AdminStaffController extends Controller
         ]);
     }
 
-    /**
-     * Thêm mới tài khoản nhân viên.
-     */
     public function store(AdminStoreAdminRequest $request)
     {
         $data = $request->except(['password', 'avatar']);
@@ -44,7 +37,6 @@ class AdminStaffController extends Controller
 
         $admin = Admin::create($data);
         
-        // Tải thông tin chức vụ kèm theo để phản hồi ngay lập tức cho Frontend cache
         $admin->load('role');
 
         return response()->json([
@@ -54,9 +46,6 @@ class AdminStaffController extends Controller
         ], 201);
     }
 
-    /**
-     * Lấy thông tin chi tiết một nhân sự.
-     */
     public function show($id)
     {
         $admin = Admin::withTrashed()->with('role')->findOrFail($id);
@@ -66,9 +55,6 @@ class AdminStaffController extends Controller
         ]);
     }
 
-    /**
-     * Cập nhật thông tin nhân viên (Hỗ trợ cập nhật nhanh trạng thái qua API).
-     */
     public function update(AdminUpdateAdminRequest $request, $id)
     {
         $admin = Admin::findOrFail($id);
@@ -100,7 +86,7 @@ class AdminStaffController extends Controller
         }
 
         $admin->update($data);
-        $admin->load('role'); // Đồng bộ lại role sau khi cập nhật dữ liệu
+        $admin->load('role'); 
 
         return response()->json([
             'success' => true,
@@ -109,9 +95,6 @@ class AdminStaffController extends Controller
         ]);
     }
 
-    /**
-     * Đưa tài khoản vào thùng rác (Xóa mềm - Soft Delete).
-     */
     public function destroy($id)
     {
         $admin = Admin::findOrFail($id);
@@ -139,9 +122,6 @@ class AdminStaffController extends Controller
         ]);
     }
 
-    /**
-     * Khôi phục tài khoản nhân viên từ trạng thái xóa mềm.
-     */
     public function restore($id)
     {
         $admin = Admin::withTrashed()->findOrFail($id);

@@ -7,28 +7,18 @@ use App\Models\Coupon;
 
 class CleanUpVouchers extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
+    // Tên lệnh
     protected $signature = 'vouchers:cleanup';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
+    // Mô tả lệnh
     protected $description = 'Tự động Tạm dừng voucher chung hết hạn và Xóa mềm voucher sinh nhật/cá nhân hết hạn';
 
-    /**
-     * Execute the console command.
-     */
+    // Xử lý logic
     public function handle()
     {
         $this->info("Bắt đầu dọn dẹp voucher hết hạn...");
 
-        // 1. Dọn dẹp Voucher chung (user_id IS NULL) -> Chuyển thành inactive (tạm dừng)
+        // 1. Tạm dừng voucher chung hết hạn
         $hiddenCount = Coupon::where('status', 'active')
             ->whereNotNull('expires_at')
             ->where('expires_at', '<', now())
@@ -39,12 +29,12 @@ class CleanUpVouchers extends Command
             $this->info("Đã chuyển {$hiddenCount} voucher chung hết hạn sang trạng thái tạm dừng (inactive).");
         }
 
-        // 2. Dọn dẹp Voucher cá nhân/sinh nhật (user_id IS NOT NULL) -> Xóa mềm
+        // 2. Xóa mềm voucher cá nhân hết hạn
         $deletedCount = Coupon::where('status', 'active')
             ->whereNotNull('expires_at')
             ->where('expires_at', '<', now())
             ->whereNotNull('user_id')
-            ->delete(); // Soft delete do Model có trait SoftDeletes
+            ->delete();
 
         if ($deletedCount > 0) {
             $this->info("Đã xóa mềm {$deletedCount} voucher cá nhân hết hạn.");

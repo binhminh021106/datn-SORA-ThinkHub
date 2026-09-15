@@ -130,8 +130,8 @@ class PendingOrderCancellationService
         } catch (\Throwable $exception) {
             Log::error('Order cancellation failed due to exception.', [
                 'order_id' => $orderId,
-                'exception' => $exception, // Pass exception directly to get stack trace
-            ]);
+                'exception' => $exception, 
+               ]);
             return false;
         }
 

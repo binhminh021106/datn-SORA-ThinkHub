@@ -1,14 +1,14 @@
 <template>
   <div class="container-fluid py-4  page-container">
     
-    <!-- Shimmer Khởi động -->
+    <!-- Shimmer -->
     <div v-if="isFirstVisit && isLoadingShifts" class="d-flex flex-column justify-content-center align-items-center w-100 shimmer-wrapper">
       <h1 class="logo-shimmer mb-3">ThinkHub</h1>
       <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải cài đặt chấm công...</p>
     </div>
 
     <div v-show="!isFirstVisit || !isLoadingShifts">
-      <!-- Header Section -->
+
       <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h2 class="fw-bold text-dark mb-1">Quản lý Ca làm việc</h2>
@@ -24,7 +24,7 @@
         </div>
       </div>
 
-      <!-- Main Navigation Tabs -->
+      <!-- Tabs -->
       <div class="mb-3 d-flex">
         <div class="nav-segment-wrapper p-1 bg-light rounded-pill border d-inline-flex shadow-sm">
           <button 
@@ -44,12 +44,10 @@
         </div>
       </div>
 
-      <!-- ========================================== -->
-      <!-- TAB 1: DANH SÁCH CA LÀM VIỆC               -->
-      <!-- ========================================== -->
+
       <div v-if="mainTab === 'shifts'">
         
-        <!-- Sub-tabs -->
+
         <div class="mb-2">
           <ul class="nav nav-underline border-bottom mb-2 flex-nowrap overflow-hidden pb-1">
             <li class="nav-item">
@@ -73,7 +71,7 @@
           </ul>
         </div>
 
-        <!-- Skeleton Loading -->
+        <!-- Skeleton -->
         <div v-if="isLoadingShifts && !isFirstVisit" class="row g-4">
           <div v-for="i in 3" :key="i" class="col-12 col-md-6 col-xl-4">
             <div class="card shift-card skeleton-card h-100">
@@ -89,7 +87,7 @@
           </div>
         </div>
 
-        <!-- Empty State -->
+
         <div v-else-if="!shifts || shifts.length === 0" class="empty-state text-center py-5 bg-white rounded-4 shadow-sm">
           <div class="empty-icon mb-3">
             <i class="bi" :class="shiftSubTab === 'deleted' ? 'bi-trash-slash text-muted' : 'bi-calendar-x text-muted'" style="font-size: 4rem;"></i>
@@ -99,7 +97,7 @@
           <button v-if="shiftSubTab === 'active'" class="btn btn-brand mt-2 text-white" @click="openCreateShift()">Tạo ca ngay</button>
         </div>
 
-        <!-- Shift Grid -->
+
         <div v-else class="row g-3">
           <div v-for="shift in shifts" :key="shift.id" class="col-12 col-md-6 col-xl-4">
             <div class="card shift-card h-100 shadow-sm border-0 transition-hover d-flex flex-column" :class="{'border border-danger border-opacity-25': shiftSubTab === 'deleted'}">
@@ -177,12 +175,9 @@
         </div>
       </div>
 
-      <!-- ========================================== -->
-      <!-- TAB 2: PHÂN CÔNG NHÂN VIÊN                 -->
-      <!-- ========================================== -->
       <div v-if="mainTab === 'assignments'">
         
-        <!-- Sub-tabs for Assignments -->
+
         <div class="mb-3">
           <ul class="nav nav-underline border-bottom mb-2 flex-nowrap overflow-hidden pb-1">
             <li class="nav-item">
@@ -207,7 +202,7 @@
         </div>
 
         <div v-if="assignmentSubTab === 'assigned'">
-        <!-- Bảng điều khiển Gỡ ca hàng loạt -->
+        <!-- Gỡ ca hàng loạt -->
         <div v-if="bulkSelectedAssignments.length > 0" class="alert bg-danger-subtle text-danger border-danger border border-opacity-25 d-flex justify-content-between align-items-center shadow-sm rounded-4 mb-3 p-3 transition-all">
           <div>
             <i class="bi bi-check-square-fill me-2 fs-5"></i> 
@@ -251,7 +246,7 @@
                 </thead>
                 <tbody>
                   <tr v-if="isLoadingShifts">
-                    <td colspan="5" class="text-center py-5"><div class="spinner-border text-brand" role="status"></div></td>
+                    <td colspan="5" class="text-center py-5"><AdminLoadingSpinner class="text-brand"  /></td>
                   </tr>
                   <tr v-else-if="!paginatedAssignments.length">
                     <td colspan="5" class="text-center py-5 text-muted">Không tìm thấy dữ liệu phân công phù hợp.</td>
@@ -300,7 +295,7 @@
               </table>
             </div>
           </div>
-          <!-- Pagination -->
+
           <div class="card-footer bg-white p-3 border-top d-flex justify-content-between align-items-center">
             <span class="text-muted small fw-medium">Hiển thị {{ paginatedAssignments.length }} / {{ filteredAssignments.length }} kết quả</span>
             <nav v-if="totalPages > 1">
@@ -346,7 +341,7 @@
                   </thead>
                   <tbody>
                     <tr v-if="adminsLoading">
-                      <td colspan="4" class="text-center py-5"><div class="spinner-border text-brand" role="status"></div></td>
+                      <td colspan="4" class="text-center py-5"><AdminLoadingSpinner class="text-brand"  /></td>
                     </tr>
                     <tr v-else-if="!paginatedUnassignedAdmins.length">
                       <td colspan="4" class="text-center py-5 text-muted">Tất cả nhân viên đã được phân công ca làm.</td>
@@ -376,7 +371,7 @@
                 </table>
               </div>
             </div>
-            <!-- Pagination -->
+
             <div class="card-footer bg-white p-3 border-top d-flex justify-content-between align-items-center">
               <span class="text-muted small fw-medium">Hiển thị {{ paginatedUnassignedAdmins.length }} / {{ filteredUnassignedAdmins.length }} kết quả</span>
               <nav v-if="unassignedTotalPages > 1">
@@ -400,15 +395,12 @@
 
     </div>
 
-    <!-- Gọi Component Modal Tạo/Sửa Ca Làm Việc -->
+
     <ShiftModal ref="shiftModalComponent" @saved="onShiftSaved" />
 
-    <!-- Gọi Component Lịch Sử Ca Làm Cá Nhân -->
+
     <AttendanceHistoryModal ref="historyModalRef" />
 
-    <!-- ========================================== -->
-    <!-- MODAL: PHÂN CÔNG THỦ CÔNG                  -->
-    <!-- ========================================== -->
     <div class="modal fade" id="assignModal" tabindex="-1" style="z-index: 10600;">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg rounded-4">
@@ -421,7 +413,7 @@
           </div>
           <div class="modal-body p-4">
             <div class="row g-4">
-              <!-- Cột chọn Ca làm & Thời gian -->
+
               <div class="col-md-5 border-end pe-4">
                 <div class="mb-4">
                   <label class="form-label fw-semibold text-dark">Ca làm việc áp dụng <span class="text-danger">*</span></label>
@@ -463,11 +455,11 @@
                 </div>
               </div>
 
-              <!-- Cột chọn Nhân viên -->
+
               <div class="col-md-7 ps-md-4">
                 <label class="form-label fw-semibold text-dark mb-3">Chọn nhân viên (Có thể chọn nhiều) <span class="text-danger">*</span></label>
                 
-                <div v-if="adminsLoading" class="text-center py-5"><div class="spinner-border text-brand"></div></div>
+                <div v-if="adminsLoading" class="text-center py-5"><AdminLoadingSpinner class="text-brand" /></div>
                 
                 <div v-else class="row g-2 overflow-auto custom-scrollbar" style="max-height: 280px; padding-right: 5px;">
                   <div v-for="a in admins" :key="a.id" class="col-12">
@@ -485,7 +477,7 @@
                             <div class="text-muted text-truncate" style="font-size: 0.75rem;" :title="a.email">{{ a.email }}</div>
                           </div>
                         </div>
-                        <!-- CẢNH BÁO ĐANG CÓ CA LÀM -->
+
                         <div v-if="getAdminCurrentShift(a.id)" class="badge bg-warning-subtle text-warning border border-warning-subtle text-truncate ms-2" style="max-width: 90px;" :title="getAdminCurrentShift(a.id).name">
                           Bận: {{ getAdminCurrentShift(a.id).name }}
                         </div>
@@ -499,7 +491,7 @@
             <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
               <button type="button" class="btn btn-light px-4 fw-medium shadow-sm" @click="closeModal('assignModal')">Hủy</button>
               <button type="button" class="btn btn-outline-primary px-4 fw-bold shadow-sm" :disabled="assignLoading" @click="applyAssignments">
-                <span v-if="assignLoading" class="spinner-border spinner-border-sm me-2"></span>
+                <AdminLoadingSpinner v-if="assignLoading" class="me-2" size="16" />
                 Xác nhận Phân công
               </button>
             </div>
@@ -508,9 +500,6 @@
       </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- MODAL: TỰ ĐỘNG PHÂN CÔNG (AUTO-ASSIGN) XL  -->
-    <!-- ========================================== -->
     <div class="modal fade" id="autoAssignModal" tabindex="-1" style="z-index: 10600;">
       <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content border-0 shadow-lg rounded-4">
@@ -527,7 +516,7 @@
             <form @submit.prevent="runAutoAssign">
               <div class="row g-4">
                 
-                <!-- Cột trái: Cấu hình thuật toán & Thời gian (Chiếm 4 cột) -->
+
                 <div class="col-lg-4 border-end pe-lg-4">
                   <h6 class="fw-bold mb-3 text-brand border-bottom pb-2"><i class="bi bi-gear-fill me-2"></i>Cài đặt Ca làm</h6>
                   
@@ -541,7 +530,7 @@
                     </select>
                   </div>
 
-                  <!-- Giới hạn số người -->
+
                   <div class="mb-3">
                     <label class="form-label fw-semibold text-dark d-flex justify-content-between">
                       <span>Số lượng nhân sự bổ sung</span>
@@ -554,7 +543,7 @@
                     </div>
                   </div>
 
-                  <!-- Chế độ phân công -->
+
                   <div class="mb-3">
                     <label class="form-label fw-semibold text-dark mb-2">Chế độ phân công</label>
                     <div class="form-check custom-radio mb-2">
@@ -573,7 +562,7 @@
                     </div>
                   </div>
 
-                  <!-- Chọn khoảng thời gian -->
+
                   <div class="row g-2 mb-3">
                     <div class="col-12">
                       <label class="form-label fw-semibold text-dark small">Từ ngày <span class="text-danger">*</span></label>
@@ -593,7 +582,7 @@
                   </div>
                 </div>
 
-                <!-- Cột phải: Danh sách ứng viên (Chiếm 8 cột) -->
+
                 <div class="col-lg-8 ps-lg-4">
                   <div class="d-flex justify-content-between align-items-end mb-3 border-bottom pb-2">
                      <h6 class="fw-bold mb-0 text-brand"><i class="bi bi-person-lines-fill me-2"></i>Kho Ứng viên Đầu vào</h6>
@@ -603,7 +592,7 @@
                      </div>
                   </div>
 
-                  <!-- Bộ lọc nâng cao & Tính năng ẩn người bận -->
+
                   <div class="row g-2 mb-3 align-items-center">
                     <div class="col-md-5">
                       <div class="input-group shadow-sm rounded-pill" style="overflow:hidden;">
@@ -628,9 +617,9 @@
                     </div>
                   </div>
 
-                  <div v-if="adminsLoading || rolesLoading" class="text-center py-5"><div class="spinner-border text-brand"></div></div>
+                  <div v-if="adminsLoading || rolesLoading" class="text-center py-5"><AdminLoadingSpinner class="text-brand" /></div>
                   
-                  <!-- Danh sách Grid 2 cột -->
+
                   <div v-else class="row g-2 overflow-auto custom-scrollbar border rounded-3 p-3 bg-light bg-opacity-50" style="max-height: 400px;">
                     <div v-for="a in filteredCandidates" :key="'cand-'+a.id" class="col-md-6">
                       <div class="form-check custom-checkbox-brand p-2 border rounded-3 d-flex align-items-center transition-all bg-white shadow-xs h-100"
@@ -650,7 +639,7 @@
                               </div>
                             </div>
                           </div>
-                          <!-- Trạng thái -->
+
                           <div class="ms-2">
                             <span v-if="getAdminCurrentShift(a.id)" class="badge bg-warning-subtle text-warning border border-warning-subtle text-xs text-truncate" style="max-width:80px;" :title="getAdminCurrentShift(a.id).name">
                               {{ getAdminCurrentShift(a.id).name }}
@@ -668,7 +657,7 @@
                     </div>
                   </div>
                   
-                  <!-- Dòng thông báo chọn -->
+
                   <div class="alert alert-info border-0 bg-info-subtle small rounded-3 d-flex align-items-center mt-3 py-2 px-3">
                     <i class="bi bi-info-circle-fill text-info fs-5 me-2"></i>
                     <span class="flex-grow-1">Đang chọn: <strong class="fs-6 text-dark">{{ formAutoAssign.candidate_admin_ids.length }}</strong> nhân sự làm ứng viên.</span>
@@ -680,7 +669,7 @@
               <div class="d-flex justify-content-end gap-3 mt-4 pt-4 border-top">
                 <button type="button" class="btn btn-light px-5 py-2 fw-medium shadow-sm" @click="closeModal('autoAssignModal')">Hủy bỏ</button>
                 <button type="submit" class="btn btn-brand px-5 py-2 fw-bold text-white shadow-sm" :disabled="isAutoAssigning || formAutoAssign.candidate_admin_ids.length === 0">
-                  <span v-if="isAutoAssigning" class="spinner-border spinner-border-sm me-2"></span>
+                  <AdminLoadingSpinner v-if="isAutoAssigning" class="me-2" size="16" />
                   <span v-else><i class="bi bi-cpu-fill me-1"></i></span> 
                   Thực thi Phân công
                 </button>
@@ -699,18 +688,18 @@ import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
 import * as bootstrap from 'bootstrap';
-import ShiftModal from './ShiftModal.vue'; // Import Component con vừa tách
+import ShiftModal from './ShiftModal.vue';
 import AttendanceHistoryModal from './AttendanceHistoryModal.vue';
 import adminApiClient from '@/utils/adminApiClient';
 
-// --- CONFIG & TOKENS ---
+
 const queryClient = useQueryClient();
 
 const Toast = Swal.mixin({
   toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true
 });
 
-// Xóa triệt để bóng mờ đen (Backdrop) khi file Component cha (WorkShifts.vue) unmount
+
 onBeforeUnmount(() => {
   document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
   document.body.classList.remove('modal-open');
@@ -718,7 +707,7 @@ onBeforeUnmount(() => {
   document.body.style.paddingRight = '';
 });
 
-// --- STATE CHUNG ---
+
 const isFirstVisit = ref(sessionStorage.getItem('visited_workshifts') !== 'true');
 const mainTab = ref('shifts'); // 'shifts' | 'assignments'
 const shiftSubTab = ref('active'); // 'active' | 'deleted'
@@ -737,10 +726,10 @@ const searchQuery = ref('');
 const currentPage = ref(1);
 const itemsPerPage = 10;
 
-// --- BULK UNASSIGN STATE (GỠ CA HÀNG LOẠT) ---
+
 const bulkSelectedAssignments = ref([]);
 
-// --- MODAL REFS ---
+
 const historyModalRef = ref(null);
 
 const openHistoryModal = (admin, assignment = null) => {
@@ -749,7 +738,7 @@ const openHistoryModal = (admin, assignment = null) => {
   }
 };
 
-// --- API QUERIES ---
+
 const fetchShifts = async () => {
   const isTrashed = shiftSubTab.value === 'deleted' ? 'true' : 'false';
   const res = await adminApiClient.get('/work-shifts', { params: { trashed: isTrashed } });
@@ -766,7 +755,7 @@ const fetchRoles = async () => {
     const res = await adminApiClient.get('/roles');
     return res.data.success ? res.data.data : [];
   } catch (e) {
-    return []; // Fallback nếu API chưa sẵn sàng
+    return [];
   }
 };
 
@@ -799,7 +788,7 @@ const { data: rolesData, isFetching: rolesLoading } = useQuery({
   staleTime: 1000 * 60 * 60
 });
 
-// --- COMPUTED DATA ---
+
 const shifts = computed(() => shiftsData.value || []);
 const isLoadingShifts = computed(() => shiftsLoading.value);
 const activeShiftsForAssignments = computed(() => allActiveShiftsData.value || []);
@@ -828,7 +817,7 @@ watch(isLoadingShifts, (newVal) => {
   }
 });
 
-// TẤT CẢ PHÂN CÔNG (Làm phẳng)
+
 const allAssignments = computed(() => {
   if (!activeShiftsForAssignments.value) return [];
   return activeShiftsForAssignments.value.flatMap(shift => {
@@ -839,20 +828,20 @@ const allAssignments = computed(() => {
   });
 });
 
-// PHÂN CÔNG HIỆN ĐANG ACTIVE
+
 const activeAssignments = computed(() => {
   const today = getLocalDateString();
   return allAssignments.value.filter(a => !a.valid_to || a.valid_to >= today);
 });
 
-// Helper functions
+
 const activeAssignsForShift = (shiftId) => activeAssignments.value.filter(a => a.work_shift_id === shiftId);
 const getAdminCurrentShift = (adminId) => {
   const assign = activeAssignments.value.find(a => a.admin_id === adminId);
   return assign ? assign.work_shift : null;
 };
 
-// Table Pagination
+
 const filteredAssignments = computed(() => {
   let list = activeAssignments.value;
   if (!searchQuery.value) return list;
@@ -865,7 +854,7 @@ const paginatedAssignments = computed(() => {
   return filteredAssignments.value.slice(start, start + itemsPerPage);
 });
 
-// Unassigned Pagination
+
 const unassignedAdmins = computed(() => {
   if (!admins.value) return [];
   const assignedAdminIds = activeAssignments.value.map(a => a.admin_id);
@@ -885,7 +874,7 @@ const paginatedUnassignedAdmins = computed(() => {
   return filteredUnassignedAdmins.value.slice(start, start + itemsPerPage);
 });
 
-// Reset lựa chọn Bulk khi đổi trang hoặc tab
+
 watch([currentPage, mainTab, assignmentSubTab, searchQuery], () => {
   bulkSelectedAssignments.value = [];
 });
@@ -906,7 +895,7 @@ const toggleSelectAllAssignments = (event) => {
   }
 };
 
-// --- UI FORMATTERS ---
+
 const formatTimeUI = (timeStr) => timeStr ? (timeStr.length > 5 ? timeStr.substring(0, 5) : timeStr) : '--:--';
 const formatDateUI = (dateStr) => {
   if (!dateStr) return '';
@@ -955,7 +944,7 @@ const checkDurationOverYear = (fromStr, toStr) => {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) > 365;
 };
 
-// --- QUẢN LÝ COMPONENT TẠO/SỬA CA LÀM ---
+
 const shiftModalComponent = ref(null);
 
 function openCreateShift() {
@@ -968,7 +957,7 @@ function onShiftSaved() {
   queryClient.invalidateQueries({ queryKey: ['workShifts'] });
 }
 
-// Xóa & Khôi phục ca
+
 async function removeShift(shift) {
   const result = await Swal.fire({
     title: `Xóa ca "${shift.name}"?`,
@@ -993,7 +982,7 @@ async function restoreShift(shift) {
 }
 
 
-// --- MODAL PHÂN CÔNG (MANUAL) ---
+
 const assignLoading = ref(false);
 const isRemovingAssign = ref(false);
 const selectedAdmins = ref([]);
@@ -1054,7 +1043,6 @@ async function applyAssignments() {
 async function removeAssignment(adminId, shiftId) {
   isRemovingAssign.value = true;
   try {
-    // Không dùng SweetAlert bắt confirm thủ công để thao tác ĐƯỢC NHANH HƠN 
     await adminApiClient.delete(`/work-shifts/assignments/${adminId}`, {
       params: { work_shift_id: shiftId }
     });
@@ -1064,7 +1052,6 @@ async function removeAssignment(adminId, shiftId) {
   finally { isRemovingAssign.value = false; }
 }
 
-// Xử lý Gỡ ca HÀNG LOẠT cực nhanh
 async function removeBulkAssignments() {
   const result = await Swal.fire({
     title: `Gỡ ca ${bulkSelectedAssignments.value.length} nhân sự?`,
@@ -1073,7 +1060,6 @@ async function removeBulkAssignments() {
   });
   if (result.isConfirmed) {
     try {
-      // Loop bắn API gỡ từng người (có thể gộp API bulk delete ở BE nếu muốn tối ưu hơn)
       const deletePromises = bulkSelectedAssignments.value.map(item => 
         adminApiClient.delete(`/work-shifts/assignments/${item.adminId}`, {
           params: { work_shift_id: item.shiftId }
@@ -1082,17 +1068,15 @@ async function removeBulkAssignments() {
       await Promise.all(deletePromises);
       queryClient.invalidateQueries({ queryKey: ['workShifts'] });
       Toast.fire({ icon: 'success', title: `Đã gỡ ${bulkSelectedAssignments.value.length} nhân sự khỏi ca.` });
-      bulkSelectedAssignments.value = []; // Reset sau khi xóa xong
+      bulkSelectedAssignments.value = [];
     } catch (err) { Toast.fire({ icon: 'error', title: 'Có lỗi khi gỡ hàng loạt.' }); }
   }
 }
-
-// --- MODAL TỰ ĐỘNG PHÂN CÔNG (AUTO-ASSIGN) NÂNG CẤP ---
 const isAutoAssigning = ref(false);
 const autoAssignDurationType = ref('1w');
 const candidateSearchQuery = ref('');
 const candidateRoleFilter = ref('');
-const hideBusyCandidates = ref(false); // Tính năng ẩn người bận theo yêu cầu
+const hideBusyCandidates = ref(false);
 
 const formAutoAssign = ref({
   work_shift_id: '',
@@ -1103,7 +1087,6 @@ const formAutoAssign = ref({
   candidate_admin_ids: []   
 });
 
-// Lọc ứng viên (Search Name/Email + Role Filter + Hide Busy)
 const filteredCandidates = computed(() => {
   if (!admins.value) return [];
   return admins.value.filter(a => {
@@ -1111,7 +1094,6 @@ const filteredCandidates = computed(() => {
     const matchNameEmail = a.fullname?.toLowerCase().includes(q) || a.email?.toLowerCase().includes(q);
     const matchRole = candidateRoleFilter.value === '' || (a.role_id === candidateRoleFilter.value || a.role?.id === candidateRoleFilter.value);
     
-    // Nếu bật công tắc "Ẩn người bận", loại bỏ những ai đang có ca làm
     if (hideBusyCandidates.value && getAdminCurrentShift(a.id)) {
       return false;
     }
@@ -1136,7 +1118,7 @@ function openAutoAssignModal() {
     valid_to: calculateEndDate(getLocalDateString(), '1w'),
     override_existing: false,
     max_employees: null,
-    candidate_admin_ids: [] // MẶC ĐỊNH BỎ CHỌN TRỐNG NHƯ YÊU CẦU
+    candidate_admin_ids: [] 
   };
 
   if (!admins.value.length) refetchAdmins();
@@ -1146,7 +1128,6 @@ function openAutoAssignModal() {
 }
 
 function selectAllCandidates() {
-  // Chọn tất cả những người CÓ TRONG KẾT QUẢ LỌC HIỆN TẠI (Đã bao gồm điều kiện loại người bận nếu bật công tắc)
   formAutoAssign.value.candidate_admin_ids = filteredCandidates.value.map(a => a.id);
 }
 
@@ -1169,9 +1150,7 @@ async function runAutoAssign() {
 </script>
 
 <style>
-/* FIX Z-INDEX CHO MODAL VÀ BACKDROP TOÀN CỤC BỊ SIDEBAR ĐÈ:
-  (Không được dùng scoped cho phần này để tác động được ra ngoài body)
-*/
+
 .modal-backdrop {
   z-index: 10590 !important;
 }

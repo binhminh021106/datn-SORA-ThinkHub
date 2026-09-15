@@ -47,7 +47,7 @@
 
       <div class="d-flex justify-content-end border-top pt-4">
         <button type="submit" class="editorial-btn px-5 py-2 rounded-pill shadow-sm" style="min-width: 200px;" :disabled="isChangingPassword">
-          <span v-if="isChangingPassword" class="spinner-border spinner-border-sm me-2" role="status"></span>
+          <AdminLoadingSpinner v-if="isChangingPassword" class="me-2" size="16" />
           <i v-else class="bi bi-shield-lock me-2"></i>
           Đổi Mật Khẩu
         </button>
@@ -58,6 +58,7 @@
 
 <script setup>
 import { ref } from 'vue';
+import Toast from '@/utils/toastConfig';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
 import clientApiClient from '@/utils/clientApiClient';
 import { clearUserAuthStorage } from '@/composables/useUtilities';
@@ -77,12 +78,9 @@ const soraAlert = createSoraAlert({
 });
 
 const showToast = (message, type = 'success') => {
-  soraAlert.fire({
+  Toast.fire({
     icon: type,
-    title: type === 'success' ? 'Thành Công!' : 'Có Lỗi Xảy Ra!',
-    text: message,
-    timer: type === 'success' ? 2500 : undefined,
-    showConfirmButton: type !== 'success'
+    title: message
   });
 };
 
@@ -96,12 +94,7 @@ const changePassword = async () => {
     const response = await clientApiClient.post('/client/profile/password', passwordForm.value);
     if (response.data.status) {
       passwordForm.value = { current_password: '', password: '', password_confirmation: '' };
-      await soraAlert.fire({
-        icon: 'success',
-        title: 'Đổi mật khẩu thành công',
-        text: response.data.message,
-        confirmButtonText: 'Đăng nhập lại',
-      });
+      Toast.fire({ icon: 'success', title: response.data.message || 'Đổi mật khẩu thành công' });
       clearUserAuthStorage();
       window.location.assign('/login?password_changed=1');
     }

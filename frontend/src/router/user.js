@@ -70,16 +70,7 @@ const user = [
         name: 'checkout',
         component: () => import('../pages/user/checkout/Index.vue'),
       },
-      {
-        path: '/checkout/success',
-        name: 'checkout-success',
-        component: () => import('../pages/user/checkout/Success.vue'),
-      },
-      {
-        path: '/checkout/failed',
-        name: 'checkout-failed',
-        component: () => import('../pages/user/checkout/Failed.vue'),
-      },
+    
       {
         path: 'shop/:shop_slug/compare',
         name: 'compare',
@@ -127,6 +118,16 @@ const user = [
 
     ],
   },
+    {
+    path: '/checkout/success',
+    name: 'checkout-success',
+    component: () => import('../pages/user/checkout/Success.vue'),
+    },
+    {
+    path: '/checkout/failed',
+    name: 'checkout-failed',
+    component: () => import('../pages/user/checkout/Failed.vue'),
+    },
   {
     path: '/login',
     component: () => import('../layouts/AuthLayout.vue'),

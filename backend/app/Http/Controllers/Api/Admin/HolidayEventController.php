@@ -23,24 +23,19 @@ class HolidayEventController extends Controller
 
     public function store(StoreHolidayEventRequest $request)
     {
-        // Validation and merging already handled by HolidayEventRequest
         $validated = $request->validated();
 
         if (empty($validated['discount_value'])) {
             $validated['voucher_code'] = null;
         }
 
-        // 3. Lưu vào Database
         $event = \Illuminate\Support\Facades\DB::transaction(function () use ($validated) {
             $event = HolidayEvent::create($validated);
 
-            // 4. Đồng bộ Voucher
             $this->syncVoucherDiscount($event);
 
             return $event;
         });
-
-        // 6. Trả về thành công
         return response()->json([
             'success' => true,
             'message' => 'Thêm sự kiện thành công',
@@ -59,7 +54,6 @@ class HolidayEventController extends Controller
         }
 
         if ($event->voucher_code && !$event->discount_value) {
-            // Backward compatibility
             $coupon = Coupon::where('code', $event->voucher_code)->first();
             if ($coupon) {
                 $event->discount_type = $coupon->type;

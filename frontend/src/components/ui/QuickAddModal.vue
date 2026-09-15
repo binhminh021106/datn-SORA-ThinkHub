@@ -22,7 +22,6 @@
                {{ attrName }}: <span class="fw-normal text-sora-primary ms-1">{{ quickAddSelections[attrName] || '' }}</span>
              </p>
              <div class="d-flex flex-wrap gap-2">
-               <!-- Thay thế radio bằng div để kiểm soát hoàn toàn click event và CSS -->
                <div v-for="val in values" :key="val" 
                     class="attr-chip m-0 transition-all cursor-pointer" 
                     :class="{
@@ -60,7 +59,7 @@
           </div>
 
           <button @click="confirmQuickAdd" :disabled="isAdding || (quickAddSelectedVariant && getVariantStock(quickAddSelectedVariant) <= 0)" class="btn w-100 py-3 mt-4 px-4 font-oswald tracking-widest fw-normal text-white text-uppercase d-flex justify-content-center align-items-center transition-all" :style="(quickAddSelectedVariant && getVariantStock(quickAddSelectedVariant) <= 0) ? 'background-color: #6c757d !important; border-radius: 8px; cursor: not-allowed; opacity: 0.8;' : 'background-color: #9f273b; border-radius: 8px; box-shadow: 0 4px 15px rgba(159,39,59,0.2);'">
-             <span v-if="isAdding" class="spinner-border spinner-border-sm me-2"></span>
+             <AdminLoadingSpinner v-if="isAdding" class="me-2" size="16" />
              <span v-else-if="quickAddSelectedVariant && getVariantStock(quickAddSelectedVariant) <= 0"><i class="bi bi-slash-circle me-2"></i> ĐÃ HẾT HÀNG</span>
              <span v-else><i class="bi bi-bag-plus-fill me-2"></i> Xác nhận thêm</span>
           </button>
@@ -386,10 +385,8 @@ const openModal = async (prod) => {
                 quickAddProduct.value.variants.forEach(variant => {
                     let attrs = {};
                     let attrVals = variant.attributes;
-                    // Fix: ProductDetailController API map properties dưới dạng array attributes
                     if (attrVals && typeof attrVals === 'object') {
                         Object.entries(attrVals).forEach(([attrName, attrValId]) => {
-                            // API trả ID, nhưng QuickAddMatrix cần Tên, vì vậy ta map qua grouped attributes
                             const foundAttr = quickAddProduct.value.attributes?.[attrName]?.find(a => a.id === attrValId);
                             if (foundAttr) attrs[attrName] = foundAttr.name;
                         });
@@ -423,7 +420,7 @@ const openModal = async (prod) => {
     } catch (e) {
         if (requestId !== activeQuickAddRequest) return;
         quickAddModalInstance.hide();
-        soraAlert.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể tải thông tin sản phẩm' });
+        Toast.fire({ icon: 'error', title: 'Không thể tải thông tin sản phẩm' });
     }
 };
 
@@ -472,7 +469,7 @@ const confirmQuickAdd = async () => {
     } catch (error) {
         quickAddModalInstance.hide();
         const msg = error.response?.data?.message || 'Không thể thêm vào giỏ hàng!';
-        soraAlert.fire({icon: 'error', title: 'Lỗi', text: msg});
+        Toast.fire({ icon: 'error', title: msg });
     } finally {
         isAdding.value = false;
     }
@@ -501,7 +498,6 @@ const confirmQuickAdd = async () => {
 .attr-chip .chip-inner { border: 1px solid #dee2e6; background-color: #fff; color: #555; border-radius: 4px; transition: all 0.3s ease-in-out; padding: 6px 12px; }
 .attr-chip:hover .chip-inner { border-color: #e7ce7d; color: #9f273b; }
 
-/* Bắt buộc phải có !important để không bị đè bởi class mờ phía dưới */
 .attr-chip.selected .chip-inner { 
     background-color: #9f273b !important; 
     border-color: #9f273b !important; 
@@ -510,7 +506,6 @@ const confirmQuickAdd = async () => {
 }
 .attr-chip.selected .chip-inner span { color: #fff !important; }
 
-/* Hiệu ứng gạch bỏ khi option bị hết hàng do xung đột */
 .attr-chip.disabled-option .chip-inner {
   opacity: 0.4;
   background-color: #f8f9fa !important;

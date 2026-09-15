@@ -15,13 +15,12 @@ class StoreShiftSwapRequest extends FormRequest
 
     public function rules(): array
     {
-        // Ràng buộc góc khuất: Không thể chọn chính mình để đổi ca
         $currentUserId = $this->user()->id;
 
         return [
             'target_admin_id' => ['required', 'exists:admins,id', 'not_in:' . $currentUserId],
             'work_shift_id' => ['required', 'exists:work_shifts,id'],
-            'date' => ['required', 'date', 'after:today'], // Chỉ được đổi ca từ ngày mai trở đi
+            'date' => ['required', 'date', 'after:today'],
         ];
     }
 

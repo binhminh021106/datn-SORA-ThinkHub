@@ -1,7 +1,7 @@
 <template>
   <div class="services-page font-sans bg-light-custom pb-5">
     
-    <!-- 1. Tiêu đề chính (Hero Section) -->
+
     <section class="sora-banner position-relative d-flex align-items-center justify-content-center overflow-hidden">
       <div class="banner-ambient"></div>
       <div class="banner-glow banner-glow-left"></div>
@@ -26,7 +26,7 @@
       </div>
     </section>
 
-    <!-- 2. Đoạn giới thiệu -->
+
     <section class="py-5 bg-white text-center" style="position: relative; z-index: 2;">
       <div class="container py-4">
         <div class="col-lg-10 col-xl-9 mx-auto">
@@ -41,12 +41,12 @@
       </div>
     </section>
 
-    <!-- 3. Danh sách dịch vụ -->
+
     <section class="py-2 bg-light-custom">
       <div class="container">
         <div class="row g-4">
           
-          <!-- Dịch vụ 1 -->
+
           <div class="col-md-6 col-lg-4">
             <div class="card h-100 border-0 rounded-0 shadow-sm service-card p-4 p-md-5 text-center">
               <div class="icon-wrapper mx-auto mb-4 border border-accent rounded-circle d-flex align-items-center justify-content-center text-main" style="width: 70px; height: 70px;">
@@ -59,7 +59,7 @@
             </div>
           </div>
 
-          <!-- Dịch vụ 2 -->
+
           <div class="col-md-6 col-lg-4">
             <div class="card h-100 border-0 rounded-0 shadow-sm service-card p-4 p-md-5 text-center">
               <div class="icon-wrapper mx-auto mb-4 border border-accent rounded-circle d-flex align-items-center justify-content-center text-main" style="width: 70px; height: 70px;">
@@ -72,7 +72,7 @@
             </div>
           </div>
 
-          <!-- Dịch vụ 3 -->
+
           <div class="col-md-6 col-lg-4">
             <div class="card h-100 border-0 rounded-0 shadow-sm service-card p-4 p-md-5 text-center">
               <div class="icon-wrapper mx-auto mb-4 border border-accent rounded-circle d-flex align-items-center justify-content-center text-main" style="width: 70px; height: 70px;">
@@ -85,7 +85,7 @@
             </div>
           </div>
 
-          <!-- Dịch vụ 4 -->
+
           <div class="col-md-6 col-lg-4">
             <div class="card h-100 border-0 rounded-0 shadow-sm service-card p-4 p-md-5 text-center">
               <div class="icon-wrapper mx-auto mb-4 border border-accent rounded-circle d-flex align-items-center justify-content-center text-main" style="width: 70px; height: 70px;">
@@ -98,7 +98,7 @@
             </div>
           </div>
 
-          <!-- Dịch vụ 5 -->
+
           <div class="col-md-6 col-lg-4">
             <div class="card h-100 border-0 rounded-0 shadow-sm service-card p-4 p-md-5 text-center">
               <div class="icon-wrapper mx-auto mb-4 border border-accent rounded-circle d-flex align-items-center justify-content-center text-main" style="width: 70px; height: 70px;">
@@ -111,7 +111,7 @@
             </div>
           </div>
 
-          <!-- Dịch vụ 6 -->
+
           <div class="col-md-6 col-lg-4">
             <div class="card h-100 border-0 rounded-0 shadow-sm service-card p-4 p-md-5 text-center">
               <div class="icon-wrapper mx-auto mb-4 border border-accent rounded-circle d-flex align-items-center justify-content-center text-main" style="width: 70px; height: 70px;">
@@ -128,7 +128,7 @@
       </div>
     </section>
 
-    <!-- 4. Điểm nổi bật & 5. Cam kết -->
+
     <section class="py-5 bg-main text-white my-5">
       <div class="container py-4">
         <div class="row align-items-center g-5">
@@ -211,7 +211,7 @@
       </div>
     </section>
 
-    <!-- 6. Câu kết + Lời kêu gọi hành động (CTA) -->
+
     <section class="py-5 text-center px-3">
       <div class="container d-flex flex-column align-items-center py-4">
         <h2 class="display-6 font-serif text-main mb-4">Để Lại Dấu Ấn Của Riêng Bạn</h2>
@@ -237,7 +237,7 @@
 </template>
 
 <script setup>
-// Giao diện tĩnh giới thiệu dịch vụ bằng Bootstrap 5
+
 </script>
 
 <style scoped>
@@ -250,7 +250,7 @@
   --sora-accent-rgb: 204, 30, 46;
 }
 
-/* Màu sắc thương hiệu SORA */
+
 .bg-light-custom { background-color: #faf9f8 !important; }
 .bg-main { background-color: var(--sora-primary) !important; }
 .text-main { color: var(--sora-primary) !important; }
@@ -258,29 +258,29 @@
 .text-accent { color: var(--sora-secondary) !important; }
 .border-accent { border-color: var(--sora-secondary) !important; }
 
-/* Font Serif cho tiêu đề */
+
 .font-serif {
   font-family: 'Josefin Sans', sans-serif;
 }
 .max-w-2xl { max-width: 42rem; }
 
-/* Hero Section */
+
 .hero-services {
   height: 50vh;
   background-color: #2c2420;
-  background-image: url('https://images.unsplash.com/photo-1599643477877-530eb83abc8e?q=80&w=2000&auto=format&fit=crop'); /* Hình ảnh chế tác/dụng cụ kim hoàn */
+  background-image: url('https://images.unsplash.com/photo-1599643477877-530eb83abc8e?q=80&w=2000&auto=format&fit=crop');
   background-size: cover;
   background-position: center;
 }
 .hero-overlay {
-  background: rgba(40, 0, 10, 0.6); /* Ám đỏ đô tối */
+  background: rgba(40, 0, 10, 0.6);
 }
 .divider {
   width: 4rem;
   height: 2px;
 }
 
-/* Service Card Hover Effect */
+
 .service-card {
   transition: all 0.4s ease;
   border-bottom: 3px solid transparent !important;
@@ -357,7 +357,7 @@
   transform: rotate(45deg) translateY(200%);
 }
 
-/* Banner (Sora Banner Style) */
+
 .text-champagne {
   color: #ead089 !important;
 }
@@ -515,7 +515,7 @@
   }
 }
 
-/* Image wrapper (Border xoắn) */
+
 .img-wrapper {
   padding: 1rem;
 }
@@ -538,13 +538,13 @@
   aspect-ratio: 4/5;
 }
 
-/* Đường kẻ ngăn cách (Divider) */
+
 .divider {
   width: 4rem;
   height: 2px;
 }
 
-/* Card Mission & Vision */
+
 .card-hover {
   transition: box-shadow 0.3s ease;
 }
@@ -564,7 +564,7 @@
   opacity: 0.05;
 }
 
-/* Icon vòng tròn */
+
 .icon-circle {
   width: 64px;
   height: 64px;
@@ -572,11 +572,11 @@
   border: 1px solid;
 }
 
-/* Khối sản phẩm (Fix ảnh vuông tuyệt đối) */
+
 .square-ratio {
   width: 100%;
   padding-bottom: 100%;
-  /* Tạo tỷ lệ vuông chuẩn 1:1 */
+
   display: block;
   overflow: hidden;
 }
@@ -594,12 +594,12 @@
   z-index: 2;
 }
 
-/* Link khám phá */
+
 .product-link:hover {
   color: #cc1e2e !important;
 }
 
-/* Combo Carousel Container Overrides */
+
 .combos-editorial {
   background-color: #fffafa;
   overflow: hidden;

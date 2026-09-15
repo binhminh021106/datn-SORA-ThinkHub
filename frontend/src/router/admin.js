@@ -221,6 +221,18 @@ const admin = [
         meta: { moduleCode: 'admin_orders' },
       },
       {
+        path: 'orders/history',
+        name: 'admin-orders-history',
+        component: () => import('@/pages/admin/order/History.vue'),
+        meta: { title: 'Lịch sử hoạt động', moduleCode: 'admin_orders' }
+      },
+      {
+        path: 'orders/config',
+        name: 'admin-orders-config',
+        component: () => import('@/pages/admin/order/Config.vue'),
+        meta: { title: 'Cấu hình đơn hàng', moduleCode: 'admin_orders' }
+      },
+      {
         path: 'coupons',
         name: 'admin-coupons',
         component: () => import('../pages/admin/coupon/Index.vue'),

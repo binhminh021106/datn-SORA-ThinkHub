@@ -77,7 +77,7 @@
               </div>
 
               <h1 class="combo-detail-title display-4 fw-bold mb-3 font-serif">{{ combo.name }}</h1>
-              <p v-if="combo.description" class="combo-detail-desc fs-6 mb-4 lh-lg fw-light">{{ combo.description }}</p>
+              <div v-if="combo.description" class="combo-detail-desc fs-6 mb-4 lh-lg" v-html="combo.description"></div>
 
               <div class="luxury-timer-section mb-4" v-if="timerInfo.type !== 'forever'">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
@@ -153,8 +153,8 @@
                               style="font-size: 0.75rem;"><i
                                 class="bi bi-pin-angle-fill text-gold-gradient me-1"></i>Phiên bản cấu hình sẵn</p>
                             <div class="d-flex flex-wrap gap-2">
-                              <span v-if="item.variant?.formatted_attributes" class="fw-bold text-white">
-                                {{ Object.values(item.variant.formatted_attributes).join(' - ') }}
+                              <span v-if="formatAttributes(item.variant)" class="fw-bold text-white">
+                                {{ Object.values(formatAttributes(item.variant)).join(' - ') }}
                               </span>
                               <span v-else class="fw-bold text-white">{{ item.variant?.sku }}</span>
                             </div>
@@ -231,7 +231,7 @@
 
                 <div v-else class="d-flex flex-column flex-sm-row gap-3 mt-4">
                   <button class="editorial-btn-outline flex-fill py-3 text-uppercase" @click="addToCart">
-                    <span v-if="isAddingToCart" class="spinner-border spinner-border-sm me-2"></span>
+                    <AdminLoadingSpinner v-if="isAddingToCart" class="me-2" size="16" />
                     Thêm Vào Giỏ
                   </button>
                   <button class="editorial-btn flex-fill py-3 text-uppercase" @click="buyNow">
@@ -340,7 +340,7 @@
               </button>
             </div>
             <div v-else class="p-5 text-center">
-              <div class="spinner-border text-sora-primary" role="status"></div>
+              <AdminLoadingSpinner class="text-sora-primary"  />
               <p class="mt-3 text-muted font-oswald tracking-widest text-uppercase small">Đang nạp dữ liệu...</p>
             </div>
           </div>
@@ -452,23 +452,25 @@ const getCartHeaders = () => {
   return headers;
 };
 
+const formatAttributes = (variant) => {
+  if (!variant) return null;
+  if (variant.formatted_attributes) return variant.formatted_attributes;
+  let attrs = {};
+  const attrVals = variant.attributeValues || variant.attribute_values;
+  if (attrVals) {
+    attrVals.forEach(av => { if (av.attribute) attrs[av.attribute.name] = av.value; });
+  } else if (variant.attributes) {
+    attrs = typeof variant.attributes === 'string' ? JSON.parse(variant.attributes) : variant.attributes;
+  }
+  return Object.keys(attrs).length ? attrs : null;
+};
+
 const buildVariantMatrix = (variants) => {
   const matrix = {};
   if (!variants) return matrix;
 
   variants.forEach(variant => {
-    let attrs = {};
-    let attrVals = variant.attributeValues || variant.attribute_values;
-
-    if (attrVals) {
-      attrVals.forEach(av => { if (av.attribute) attrs[av.attribute.name] = av.value; });
-    } else if (variant.attributes) {
-      attrs = typeof variant.attributes === 'string' ? JSON.parse(variant.attributes) : variant.attributes;
-    } else if (variant.formatted_attributes) {
-      attrs = variant.formatted_attributes;
-    }
-
-    variant.formatted_attributes = attrs;
+    let attrs = formatAttributes(variant) || {};
 
     Object.entries(attrs).forEach(([attrName, attrValue]) => {
       if (!matrix[attrName]) matrix[attrName] = new Set();
@@ -487,10 +489,11 @@ const isOptionAvailable = (item, attrName, val) => {
   delete otherSelections[attrName];
 
   return item.product.variants.some(v => {
-    if (!v.formatted_attributes || String(v.formatted_attributes[attrName]) !== String(val)) return false;
+    const vAttrs = formatAttributes(v);
+    if (!vAttrs || String(vAttrs[attrName]) !== String(val)) return false;
     return Object.entries(otherSelections).every(([k, vVal]) => {
       if (!vVal) return true;
-      return String(v.formatted_attributes[k]) === String(vVal);
+      return String(vAttrs[k]) === String(vVal);
     });
   });
 };
@@ -501,10 +504,11 @@ const isQuickAddOptionAvailable = (attrName, val) => {
   delete otherSelections[attrName];
 
   return quickAddProduct.value.variants.some(v => {
-    if (!v.formatted_attributes || String(v.formatted_attributes[attrName]) !== String(val)) return false;
+    const vAttrs = formatAttributes(v);
+    if (!vAttrs || String(vAttrs[attrName]) !== String(val)) return false;
     return Object.entries(otherSelections).every(([k, vVal]) => {
       if (!vVal) return true;
-      return String(v.formatted_attributes[k]) === String(vVal);
+      return String(vAttrs[k]) === String(vVal);
     });
   });
 };
@@ -592,7 +596,8 @@ const getSelectedVariant = (itemId) => {
   if (!hasAllAttrs) return null;
 
   return item.product.variants.find(v => {
-    return requiredAttrs.every(attr => v.formatted_attributes && String(v.formatted_attributes[attr]) === String(selections[attr]));
+    const vAttrs = formatAttributes(v);
+    return requiredAttrs.every(attr => vAttrs && String(vAttrs[attr]) === String(selections[attr]));
   });
 };
 
@@ -635,7 +640,8 @@ const quickAddSelectedVariant = computed(() => {
   if (!isQuickAddAllSelected.value) return null;
 
   return quickAddProduct.value.variants.find(v => {
-    return requiredAttrs.every(attr => v.formatted_attributes && String(v.formatted_attributes[attr]) === String(quickAddSelections.value[attr]));
+    const vAttrs = formatAttributes(v);
+    return requiredAttrs.every(attr => vAttrs && String(vAttrs[attr]) === String(quickAddSelections.value[attr]));
   });
 });
 
@@ -678,8 +684,9 @@ const openQuickAdd = async (product) => {
 
       if (quickAddProduct.value.variants && quickAddProduct.value.variants.length === 1) {
         const singleVariant = quickAddProduct.value.variants[0];
-        if (singleVariant.formatted_attributes) {
-          Object.entries(singleVariant.formatted_attributes).forEach(([attrName, attrValue]) => {
+        const vAttrs = formatAttributes(singleVariant);
+        if (vAttrs) {
+          Object.entries(vAttrs).forEach(([attrName, attrValue]) => {
             quickAddSelections.value[attrName] = attrValue;
           });
         }
@@ -687,7 +694,7 @@ const openQuickAdd = async (product) => {
     }
   } catch (e) {
     quickAddModalInstance.hide();
-    soraAlert.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể tải thông tin sản phẩm' });
+    Toast.fire({ icon: 'error', title: 'Không thể tải thông tin sản phẩm' });
   }
 };
 
@@ -720,7 +727,7 @@ const confirmQuickAdd = async () => {
     Toast.fire({ icon: 'success', title: 'Đã thêm sản phẩm vào giỏ' });
   } catch (error) {
     const msg = error.response?.data?.message || 'Không thể thêm vào giỏ hàng!';
-    soraAlert.fire({ icon: 'error', title: 'Lỗi', text: msg });
+    Toast.fire({ icon: 'error', title: msg });
   }
 };
 
@@ -854,8 +861,9 @@ watch(combo, (newCombo, oldCombo) => {
 
       if (item.product?.variants && item.product.variants.length === 1) {
         const singleVariant = item.product.variants[0];
-        if (singleVariant.formatted_attributes) {
-          Object.entries(singleVariant.formatted_attributes).forEach(([attrName, attrValue]) => {
+        const vAttrs = formatAttributes(singleVariant);
+        if (vAttrs) {
+          Object.entries(vAttrs).forEach(([attrName, attrValue]) => {
             if (!userSelections.value[item.id][attrName]) {
               userSelections.value[item.id][attrName] = attrValue;
             }
@@ -1106,6 +1114,11 @@ onUnmounted(() => {
 .combo-detail-desc {
   color: #776360;
   font-family: Arial, sans-serif;
+}
+
+:deep(.combo-detail-desc strong),
+:deep(.combo-detail-desc b) {
+  font-weight: bold !important;
 }
 
 .luxury-image-wrapper {
@@ -1567,13 +1580,13 @@ onUnmounted(() => {
     font-size: 0.55rem !important;
   }
 
-  .luxury-product-card>.d-flex {
-    flex-direction: row !important;
+  .luxury-product-card>.row {
+    flex-wrap: nowrap !important;
     align-items: stretch;
   }
 
   .editorial-image-cell {
-    width: 38% !important;
+    width: 35% !important;
     min-height: auto !important;
     border-bottom: none !important;
     border-right: 1px solid rgba(197, 158, 74, 0.28);
@@ -1586,8 +1599,8 @@ onUnmounted(() => {
     flex: 1;
   }
 
-  .luxury-product-card>.d-flex>.p-4 {
-    width: 62% !important;
+  .luxury-product-card>.row>.col-md-7 {
+    width: 65% !important;
     padding: 12px 10px !important;
   }
 

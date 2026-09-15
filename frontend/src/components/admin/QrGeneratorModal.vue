@@ -4,7 +4,7 @@
       <div v-if="isVisible" class="custom-qr-overlay d-flex align-items-center justify-content-center" @click.self="closeModal">
         <div class="custom-qr-modal bg-white rounded-4 overflow-hidden shadow-lg">
           
-          <!-- Header -->
+
           <div class="modal-header border-0 bg-brand text-white px-4 py-3 d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
               <div class="icon-box-small bg-white text-brand rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 32px; height: 32px;">
@@ -15,15 +15,15 @@
             <button type="button" class="btn-close btn-close-white" aria-label="Close" @click="closeModal"></button>
           </div>
 
-          <!-- Body -->
+
           <div class="modal-body qr-modal-body text-center p-4">
             <p class="text-muted small fw-semibold mb-3">
               Hướng Camera về phía <span class="text-brand fw-bold">Màn hình Máy Chủ (Lễ tân)</span> hoặc tải ảnh lên để điểm danh.
             </p>
-            <!-- Khung Camera -->
+
             <div class="scanner-container mx-auto position-relative rounded-4 overflow-hidden bg-dark mb-3">
               <div id="reader"></div>
-              <!-- Ngăn chặn click để html5-qrcode không tự động pause -->
+
               <div class="position-absolute top-0 start-0 w-100 h-100" style="z-index: 5;" @click.stop.prevent></div>
               <div class="qr-scan-frame" aria-hidden="true">
                 <span class="qr-scan-corner corner-top-left"></span>
@@ -31,16 +31,16 @@
                 <span class="qr-scan-corner corner-bottom-left"></span>
                 <span class="qr-scan-corner corner-bottom-right"></span>
               </div>
-              <!-- Hiệu ứng Scanning (Chỉ hiện khi đang quét) -->
+
               <div v-if="isScanning" class="scan-line"></div>
               
               <div v-if="isProcessing" class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-dark bg-opacity-75" style="z-index: 10;">
-                <div class="spinner-border text-brand" role="status"></div>
+                <AdminLoadingSpinner class="text-brand"  />
                 <span class="text-white mt-2 small fw-bold">Đang xử lý dữ liệu...</span>
               </div>
             </div>
 
-            <!-- Công cụ test (Upload / Paste) -->
+
             <div class="test-controls qr-upload-panel p-3 rounded-3 border">
               <label class="small fw-bold text-dark d-block mb-2" for="qr-upload-input">
                 Tải ảnh QR hoặc paste ảnh bằng Ctrl+V
@@ -74,7 +74,7 @@ let autoResumeInterval = null;
 
 let audioContext = null;
 
-// Hàm phát âm thanh Beep (bọc try/catch để tránh lỗi trình duyệt chặn AudioContext)
+
 const playBeep = (type = 'success') => {
   try {
     if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -91,13 +91,13 @@ const playBeep = (type = 'success') => {
     
     if (type === 'success') {
       oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(800, audioContext.currentTime); // Tiếng thanh
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
       gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
       oscillator.start();
       oscillator.stop(audioContext.currentTime + 0.15);
     } else {
       oscillator.type = 'square';
-      oscillator.frequency.setValueAtTime(300, audioContext.currentTime); // Tiếng trầm báo lỗi
+      oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
       gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
       oscillator.start();
       oscillator.stop(audioContext.currentTime + 0.3);
@@ -107,7 +107,7 @@ const playBeep = (type = 'success') => {
   }
 };
 
-// Hàm xử lý Logic gọi API thông minh
+
 const processAttendance = async (qrTokenString) => {
   if (isProcessing.value) return;
   isProcessing.value = true;
@@ -159,13 +159,13 @@ const processAttendance = async (qrTokenString) => {
   }
 };
 
-// Callback khi Camera quét thành công
+
 const onScanSuccess = (decodedText) => {
   if (isProcessing.value) return;
   processAttendance(decodedText);
 };
 
-// Bật Camera
+
 const startScanner = async () => {
   try {
     if (!html5QrCode.value) {
@@ -209,14 +209,14 @@ const stopScanner = async () => {
   isScanning.value = false;
 };
 
-// Xử lý Upload file từ thẻ Input
+
 const handleFileUpload = async (event) => {
   const file = event.target.files[0];
   if (!file) return;
   await scanImageFile(file);
 };
 
-// Xử lý sự kiện Paste (Ctrl+V)
+
 const handlePaste = async (event) => {
   const items = (event.clipboardData || event.originalEvent.clipboardData).items;
   for (let index in items) {
@@ -229,7 +229,7 @@ const handlePaste = async (event) => {
   }
 };
 
-// Logic lõi quét ảnh
+
 const scanImageFile = async (file) => {
   if (isProcessing.value) return;
   
@@ -242,10 +242,10 @@ const scanImageFile = async (file) => {
     }
 
     if (!html5QrCode.value) html5QrCode.value = new Html5Qrcode("reader");
-    // false: Không rọi ảnh đè lên div
+
     const decodedText = await html5QrCode.value.scanFile(file, false);
     
-    // SỬA LỖI: Cần tắt cờ isProcessing tạm thời để hàm processAttendance không bị return sớm
+
     isProcessing.value = false;
     await processAttendance(decodedText);
 
@@ -264,7 +264,7 @@ const onModalHidden = () => {
   window.removeEventListener('paste', handlePaste);
 };
 
-// Public method để đóng Modal bằng Nút
+
 const closeModal = () => {
   isVisible.value = false;
   onModalHidden();
@@ -297,7 +297,7 @@ onUnmounted(() => {
   height: 100% !important;
 }
 
-/* Hiệu ứng tia quét xanh lá */
+
 .scan-line {
   position: absolute;
   top: 12%;
@@ -317,7 +317,7 @@ onUnmounted(() => {
   100% { top: 88%; opacity: 0; }
 }
 
-/* Custom Vue Overlay Modal */
+
 .custom-qr-overlay {
   position: fixed;
   inset: 0;
@@ -443,7 +443,7 @@ onUnmounted(() => {
   }
 }
 
-/* Transitions */
+
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s ease;

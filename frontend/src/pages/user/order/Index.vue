@@ -10,7 +10,7 @@
               <span>{{ tab.label }}</span>
               <span v-if="orderCounts && orderCounts[tab.value]"
                 class="position-absolute top-0 start-100 translate-middle badge rounded-pill border border-white"
-                :class="filterStatus === tab.value ? 'bg-dark text-white' : 'bg-secondary text-white'"
+                :class="getTabBadgeClass(tab.value, filterStatus === tab.value)"
                 style="font-size: 0.6rem; padding: 0.2rem 0.4rem;">
                 {{ orderCounts[tab.value] }}
               </span>
@@ -43,10 +43,10 @@
           </div>
         </div>
 
-        <!-- Hiệu ứng loading Skeleton cho riêng phần danh sách đơn hàng -->
+
         <div v-if="showSkeleton" class="d-flex flex-column gap-4">
           <div v-for="i in 3" :key="i" class="card border border-light-subtle shadow-sm rounded-0 p-3">
-            <!-- Header Skeleton -->
+
             <div class="d-flex justify-content-between align-items-center mb-3">
               <div class="d-flex gap-2 w-50">
                 <SoraSkeleton width="30%" height="24px" radius="4px" />
@@ -54,7 +54,7 @@
               </div>
               <SoraSkeleton width="15%" height="28px" radius="50px" />
             </div>
-            <!-- Body Skeleton -->
+
             <div class="d-flex align-items-center gap-3 mb-3">
               <SoraSkeleton width="60px" height="60px" radius="4px" class="flex-shrink-0" />
               <div class="flex-grow-1">
@@ -63,7 +63,7 @@
               </div>
             </div>
             <hr class="mt-0 mb-3 border-light-subtle">
-            <!-- Footer Skeleton -->
+
             <div class="d-flex flex-column align-items-end gap-2">
               <SoraSkeleton width="120px" height="14px" />
               <SoraSkeleton width="150px" height="30px" />
@@ -91,10 +91,10 @@
 
         <div v-else class="order-list">
           <div class="card border border-light-subtle shadow-sm rounded-0 mb-3 order-card-luxury hover-lift"
-            v-for="order in displayOrders" :key="order.id">
+            v-for="order in displayOrders" :key="order.id" :class="getOrderBgClass(order.status)">
 
             <div
-              class="card-header bg-white border-bottom-0 pt-3 pb-0 px-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+              class="card-header bg-transparent border-bottom-0 pt-3 pb-0 px-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
               <div class="d-flex align-items-center gap-3">
                 <span class="fw-bold text-dark fs-5 font-oswald" style="letter-spacing: 1px;">#<span
                     v-text="order.order_code"></span></span>
@@ -178,10 +178,15 @@
                     <div class="flex-grow-1">
                       <h6 class="mb-1 text-truncate text-dark fw-bold" style="max-width: 90%;"><span
                           v-text="item.product_name"></span></h6>
+                      <div v-if="item.variant_attributes || item.variant?.variant_attributes" class="d-flex flex-wrap gap-2 mt-1">
+                        <span v-for="(val, key) in parseAttributes(item.variant_attributes || item.variant?.variant_attributes)" :key="key"
+                            class="badge bg-white text-secondary border fw-normal px-2 py-1 rounded-sm shadow-sm" style="font-size: 0.7rem;">
+                            {{ key }}: <span class="text-dark fw-bold">{{ val }}</span>
+                        </span>
+                      </div>
                       <div class="d-flex justify-content-between align-items-center mt-2">
-                        <span class="small text-muted"><span v-text="formatPrice(item.price)"></span> <span
-                            class="mx-1">x</span> <span v-text="item.quantity"></span></span>
-                        <span class="fw-medium text-dark" v-text="formatPrice(item.price * item.quantity)"></span>
+                        <span class="small text-muted fw-bold">SL: <span v-text="item.quantity"></span></span>
+                        <span class="fw-bold text-dark" v-text="formatPrice(item.total_price || (item.price * item.quantity))"></span>
                       </div>
                     </div>
                   </div>
@@ -209,39 +214,39 @@
                   </template>
 
                   <div class="d-flex flex-column gap-2">
-                    <!-- Chi tiết đơn hàng - Màu trung tính -->
+
                     <button v-on:click="openDetails(order)"
                       class="btn py-2 px-2 fw-bold small text-uppercase w-100 btn-luxury-neutral">
                       Chi tiết đơn hàng
                     </button>
 
-                    <!-- Hủy đơn - Nền đỏ nhạt, chữ đỏ đậm -->
+
                     <button v-if="order.status === 'pending'" v-on:click="confirmCancel(order)"
                       class="btn py-2 px-4 small fw-bold text-uppercase w-100 btn-luxury-danger">
                       Hủy đơn
                     </button>
 
-                    <!-- Đánh giá - Màu chủ đạo -->
+
                     <button v-if="order.status === 'delivered' && (!order.reviews || order.reviews.length === 0)"
                       v-on:click="openReview(order)"
                       class="editorial-btn fw-bold w-100 border-0 btn-luxury-gold">
                       <i class="bi bi-star-fill me-1"></i> Đánh giá
                     </button>
 
-                    <!-- Xem đánh giá - Màu xanh lá -->
+
                     <button v-if="order.status === 'delivered' && order.reviews && order.reviews.length > 0"
                       v-on:click="openViewReview(order)"
                       class="btn py-2 px-4 small fw-bold text-uppercase w-100 btn-luxury-success">
                       <i class="bi bi-eye-fill me-1"></i> Xem đánh giá
                     </button>
 
-                    <!-- Mua lại - Màu xanh lá nhạt -->
+
                     <button v-on:click="handleReorder(order)"
                       class="btn py-2 px-4 small fw-bold text-uppercase w-100 mt-2 btn-luxury-success-light">
                       Mua lại
                     </button>
 
-                    <!-- Xuất hóa đơn - Màu chủ đạo (để nổi bật tài liệu) -->
+
                     <button v-on:click="exportInvoice(order)"
                       class="editorial-btn w-100 border-0 mt-2 text-white fw-bold">
                       <i class="bi bi-file-earmark-pdf me-1"></i> Xuất hóa đơn
@@ -268,7 +273,7 @@
         </div>
       </div>
 
-    <!-- MODALS -->
+
     <OrderDetailModal :is-open="isModalOpen" :order="selectedOrder" v-on:close="closeModal"
       v-on:cancel-order="confirmCancel" v-on:open-review="openReview" v-on:reorder="handleReorder" />
 
@@ -310,7 +315,7 @@ const filterDate = ref('all');
 const sortBy = ref('newest');
 const searchQuery = ref('');
 
-// Tạo debounce cho search
+
 const debouncedSearch = ref('');
 let searchTimeout = null;
 watch(searchQuery, (newVal) => {
@@ -359,6 +364,11 @@ const formatDate = (d) => d ? new Date(d).toLocaleDateString('vi-VN', { year: 'n
 const getImageUrl = (p) => getStorageUrl(p, defaultPlaceholder);
 const handleImageError = (e) => { e.target.src = defaultPlaceholder; };
 
+const parseAttributes = (attr) => {
+    if (typeof attr === 'object' && attr !== null) return attr;
+    try { return JSON.parse(attr); } catch { return {}; }
+};
+
 const getStatusClass = (order) => {
   if (order.status === 'delivered' && order.refund_amount !== null && Number(order.refund_amount) === 0) {
     if (order.refund_note && order.refund_note.startsWith('USER:')) return 'bg-secondary text-white';
@@ -371,6 +381,39 @@ const getStatusClass = (order) => {
     return_requested: 'bg-warning-custom text-dark', return_negotiating: 'bg-info-custom text-white', return_retrieving: 'bg-primary text-white',
     returned: 'bg-success text-white'
   }[s] || 'bg-secondary text-white';
+};
+
+const getOrderBgClass = (status) => {
+  return {
+    pending: 'bg-warning-subtle',
+    confirmed: 'bg-info-subtle',
+    processing: 'bg-primary-subtle',
+    shipping: 'bg-primary-subtle',
+    delivered: 'bg-success-subtle',
+    cancelled: 'bg-danger-subtle',
+    return_requested: 'bg-warning-subtle',
+    return_negotiating: 'bg-info-subtle',
+    return_retrieving: 'bg-primary-subtle',
+    returned: 'bg-success-subtle'
+  }[status] || 'bg-white';
+};
+
+const getTabBadgeClass = (status, isActive) => {
+  const colorMap = {
+    all: 'bg-dark text-white',
+    pending: 'bg-warning text-dark',
+    confirmed: 'bg-info text-white',
+    processing: 'bg-primary text-white',
+    shipping: 'bg-primary text-white',
+    delivered: 'bg-success text-white',
+    cancelled: 'bg-danger text-white',
+    return_requested: 'bg-warning text-dark',
+    return_negotiating: 'bg-info text-white',
+    return_retrieving: 'bg-primary text-white',
+    returned: 'bg-success text-white'
+  };
+  const baseClass = colorMap[status] || 'bg-secondary text-white';
+  return isActive ? baseClass : baseClass + ' opacity-75';
 };
 
 const getStatusIcon = (order) => {
@@ -498,7 +541,7 @@ const handleReorder = async (order) => {
   if (isModalOpen.value) closeModal();
 
   try {
-    // Hiện loading trước khi gọi API
+
     soraAlert.fire({
       title: 'Đang xử lý...',
       text: 'Đang đẩy sản phẩm vào giỏ hàng...',
@@ -508,7 +551,7 @@ const handleReorder = async (order) => {
       }
     });
 
-    // Bắn request tới backend để add vào bảng Carts
+
     const response = await clientApiClient.post(`/client/orders/${order.order_code}/reorder`, {}, {
       ensureCartSession: true,
       ignoreAuthRedirect: true
@@ -518,50 +561,50 @@ const handleReorder = async (order) => {
     const added = data.added || [];
     const outOfStock = data.out_of_stock || [];
 
-    let htmlContent = '<div class="text-start mt-3" style="font-family: \'Josefin Sans\', sans-serif;">';
-    
-    if (added.length > 0) {
-        htmlContent += `<div class="mb-3">
-            <h6 class="text-success fw-bold font-oswald tracking-wide"><i class="bi bi-check-circle-fill me-1"></i> ĐÃ THÊM VÀO GIỎ:</h6>
-            <ul class="text-muted small ps-3 mb-0" style="list-style-type: disc;">
-                ${added.map(name => `<li>${escapeHtml(name)}</li>`).join('')}
-            </ul>
-        </div>`;
+    if (added.length === 0) {
+      let errorHtml = '<div class="text-start mt-3" style="font-family: \'Josefin Sans\', sans-serif;">';
+      errorHtml += '<p class="text-danger fw-bold mb-2">Rất tiếc, tất cả sản phẩm trong đơn hàng này đều đã hết hàng hoặc ngừng kinh doanh.</p>';
+      if (outOfStock.length > 0) {
+          errorHtml += `<ul class="text-muted small ps-3 mb-0" style="list-style-type: disc;">
+              ${outOfStock.map(name => `<li>${escapeHtml(name)}</li>`).join('')}
+          </ul>`;
+      }
+      errorHtml += '</div>';
+
+      soraAlert.fire({
+        icon: 'error',
+        title: '<span class="font-oswald tracking-wider fs-4 text-dark">KHÔNG THỂ MUA LẠI</span>',
+        html: errorHtml,
+        confirmButtonText: 'Đóng',
+        buttonsStyling: false,
+        customClass: {
+          popup: 'border-0 shadow-lg',
+          confirmButton: 'editorial-btn px-4 py-2'
+        }
+      });
+      return;
     }
+
+    Swal.close();
 
     if (outOfStock.length > 0) {
-        htmlContent += `<div>
-            <h6 class="text-danger fw-bold font-oswald tracking-wide"><i class="bi bi-x-circle-fill me-1"></i> HẾT HÀNG (KHÔNG THỂ THÊM):</h6>
-            <ul class="text-muted small ps-3 mb-0" style="list-style-type: disc;">
-                ${outOfStock.map(name => `<li>${escapeHtml(name)}</li>`).join('')}
-            </ul>
-        </div>`;
+        Toast.fire({ 
+            icon: 'warning', 
+            title: `Đã thêm ${added.length} sản phẩm. Có ${outOfStock.length} sản phẩm đã hết hàng.`,
+            timer: 4000
+        });
+    } else {
+        Toast.fire({ 
+            icon: 'success', 
+            title: 'Đã thêm thành công vào giỏ hàng',
+            timer: 2000
+        });
     }
-    htmlContent += '</div>';
 
-    // Tắt loading và hiện thông báo
-    soraAlert.fire({
-      icon: outOfStock.length > 0 ? 'warning' : 'success',
-      title: '<span class="font-oswald tracking-wider fs-4 text-dark">KẾT QUẢ THÊM GIỎ HÀNG</span>',
-      html: htmlContent,
-      confirmButtonText: 'Đến giỏ hàng',
-      showCancelButton: true,
-      cancelButtonText: 'Đóng',
-      buttonsStyling: false,
-      customClass: {
-        popup: 'border-0 shadow-lg',
-        confirmButton: 'editorial-btn px-4 py-2 ms-2',
-        cancelButton: 'editorial-btn-outline px-4 py-2'
-      },
-      reverseButtons: true
-    }).then((result) => {
-      if (result.isConfirmed) {
-        router.push('/cart');
-      }
-    });
+    router.push('/checkout');
 
   } catch (err) {
-    // Bắt lỗi nếu API trả về fail (ví dụ tất cả đều hết hàng)
+
     const errData = err.response?.data?.data || {};
     const outOfStock = errData.out_of_stock || [];
     let errorHtml = escapeHtml(err.response?.data?.message || 'Không thể thêm sản phẩm vào giỏ hàng lúc này.');
@@ -614,12 +657,12 @@ const confirmReturnProposal = async (orderCode, isAccepted) => {
             const res = await clientApiClient.post(`/client/orders/${orderCode}/return/confirm`, {
                 is_accepted: isAccepted
             });
-            Swal.fire('Thành công', res.data.message || 'Cập nhật thành công', 'success');
+            Toast.fire({ icon: 'success', title: res.data.message || 'Cập nhật thành công' });
             isModalOpen.value = false;
             await refreshOrders();
         }
     } catch (err) {
-        Swal.fire('Lỗi', err.response?.data?.message || 'Không thể cập nhật yêu cầu', 'error');
+        Toast.fire({ icon: 'error', title: err.response?.data?.message || 'Không thể cập nhật yêu cầu' });
     }
 };
 
@@ -701,11 +744,11 @@ const confirmCancel = async (order) => {
     if (result.isConfirmed) {
       try {
         await clientApiClient.put(`/client/orders/${order.order_code}`, { action: 'cancel', cancel_reason: result.value });
-        soraAlert.fire({ icon: 'success', title: 'Thành công', text: 'Đơn hàng đã được hủy.' });
+        Toast.fire({ icon: 'success', title: 'Đơn hàng đã được hủy.' });
         if (isModalOpen.value) closeModal();
         queryClient.invalidateQueries(['client_orders']);
       } catch (err) {
-        soraAlert.fire({ icon: 'error', title: 'Lỗi', text: err.response?.data?.message || 'Không thể hủy đơn' });
+        Toast.fire({ icon: 'error', title: err.response?.data?.message || 'Không thể hủy đơn' });
       }
     }
   });
@@ -730,11 +773,11 @@ const handleConfirmRefund = async (order, isAccepted) => {
             const res = await clientApiClient.post(`/client/orders/${order.order_code}/return/confirm`, {
                 is_accepted: isAccepted
             });
-            Swal.fire('Thành công', res.data.message || 'Cập nhật thành công', 'success');
+            Toast.fire({ icon: 'success', title: res.data.message || 'Cập nhật thành công' });
             queryClient.invalidateQueries(['client_orders']);
         }
     } catch (err) {
-        Swal.fire('Lỗi', err.response?.data?.message || 'Không thể cập nhật yêu cầu', 'error');
+        Toast.fire({ icon: 'error', title: err.response?.data?.message || 'Không thể cập nhật yêu cầu' });
     }
 };
 
@@ -747,7 +790,7 @@ const exportInvoice = async (order) => {
       responseType: 'blob',
     });
 
-    // Tạo link tải file
+
     const blobUrl = window.URL.createObjectURL(res.data);
     const link = document.createElement('a');
     link.href = blobUrl;
@@ -759,11 +802,7 @@ const exportInvoice = async (order) => {
 
   } catch (err) {
     console.error(err);
-    soraAlert.fire({
-      icon: 'error',
-      title: 'Lỗi',
-      text: err.response?.data?.message || 'Không thể tải hóa đơn',
-    });
+    Toast.fire({ icon: 'error', title: err.response?.data?.message || 'Không thể tải hóa đơn' });
   }
 };
 
@@ -809,7 +848,7 @@ const exportInvoice = async (order) => {
   color: white;
 }
 
-/* Button Luxury States */
+
 .btn-luxury-neutral, .btn-luxury-danger, .btn-luxury-success, .btn-luxury-success-light {
   position: relative;
   overflow: hidden;
@@ -1122,7 +1161,7 @@ const exportInvoice = async (order) => {
   transform: rotate(45deg) translateY(200%);
 }
 
-/* Banner (Sora Banner Style) */
+
 .text-champagne {
   color: #ead089 !important;
 }
@@ -1272,7 +1311,7 @@ const exportInvoice = async (order) => {
   }
 }
 
-/* Image wrapper (Border xoắn) */
+
 .img-wrapper {
   padding: 1rem;
 }
@@ -1295,13 +1334,13 @@ const exportInvoice = async (order) => {
   aspect-ratio: 4/5;
 }
 
-/* Đường kẻ ngăn cách (Divider) */
+
 .divider {
   width: 4rem;
   height: 2px;
 }
 
-/* Card Mission & Vision */
+
 .card-hover {
   transition: box-shadow 0.3s ease;
 }
@@ -1321,7 +1360,7 @@ const exportInvoice = async (order) => {
   opacity: 0.05;
 }
 
-/* Icon vòng tròn */
+
 .icon-circle {
   width: 64px;
   height: 64px;
@@ -1329,11 +1368,11 @@ const exportInvoice = async (order) => {
   border: 1px solid;
 }
 
-/* Khối sản phẩm (Fix ảnh vuông tuyệt đối) */
+
 .square-ratio {
   width: 100%;
   padding-bottom: 100%;
-  /* Tạo tỷ lệ vuông chuẩn 1:1 */
+
   display: block;
   overflow: hidden;
 }
@@ -1351,12 +1390,12 @@ const exportInvoice = async (order) => {
   z-index: 2;
 }
 
-/* Link khám phá */
+
 .product-link:hover {
   color: #cc1e2e !important;
 }
 
-/* Combo Carousel Container Overrides */
+
 .combos-editorial {
   background-color: #fffafa;
   overflow: hidden;

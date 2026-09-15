@@ -8,13 +8,11 @@
                     <h5 class="fw-bold text-dark mb-0 flex-grow-1 d-flex align-items-center">
                         <i class="bi bi-receipt text-brand me-2"></i>Đơn Hàng
                         <span class="text-brand font-monospace ms-1" v-if="currentOrder">{{ currentOrder.order_code
-                            }}</span>
-                        <div v-if="isFetching" class="spinner-border spinner-border-sm text-brand ms-3" role="status">
-                        </div>
+                        }}</span>
+                        <AdminLoadingSpinner v-if="isFetching" class="text-brand ms-3" size="16" />
                     </h5>
 
                     <div class="d-flex align-items-center gap-2 gap-md-3 no-print">
-                        <!-- Nút này luôn luôn hiện dù đơn bị hủy -->
                         <select v-if="currentOrder"
                             class="form-select form-select-sm border-brand text-brand fw-bold shadow-sm cursor-pointer bg-white"
                             style="width: auto; min-width: 140px; border-width: 2px;" v-model="localSelectedWarehouseId"
@@ -105,13 +103,22 @@
                                                             <span
                                                                 class="badge bg-light text-brand border border-brand-subtle d-inline-block mb-1">
                                                                 <i class="bi bi-stars text-brand me-1"></i> Combo ({{
-                                                                parseCombo(item.combo_selections).length }} món)
+                                                                    parseCombo(item.combo_selections).length }} món)
                                                             </span>
-                                                            <div class="mt-1 ps-2 border-start border-2 border-brand-subtle">
-                                                                <div v-for="(selection, idx) in parseCombo(item.combo_selections)" :key="idx" class="mb-1 text-muted" style="font-size: 0.65rem;">
-                                                                    <div class="fw-bold text-dark">{{ selection.product_name || `Lựa chọn ${idx + 1}` }}</div>
-                                                                    <div v-if="selection.attributes" class="text-secondary">
-                                                                        <span v-for="(val, key) in parseAttributes(selection.attributes)" :key="key" class="me-1">[{{ key }}: {{ val }}]</span>
+                                                            <div
+                                                                class="mt-1 ps-2 border-start border-2 border-brand-subtle">
+                                                                <div v-for="(selection, idx) in parseCombo(item.combo_selections)"
+                                                                    :key="idx" class="mb-1 text-muted"
+                                                                    style="font-size: 0.65rem;">
+                                                                    <div class="fw-bold text-dark">{{
+                                                                        selection.product_name || `Lựa chọn ${idx + 1}`
+                                                                        }}</div>
+                                                                    <div v-if="selection.attributes"
+                                                                        class="text-secondary">
+                                                                        <span
+                                                                            v-for="(val, key) in parseAttributes(selection.attributes)"
+                                                                            :key="key" class="me-1">[{{ key }}: {{ val
+                                                                            }}]</span>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -186,20 +193,20 @@
                                                 <div class="fw-bold text-dark small">
                                                     Chuyển sang <span class="badge ms-1 border shadow-sm"
                                                         :class="getOrderStatusBadge(history.new_status)">{{
-                                                        formatOrderStatus(history.new_status) }}</span>
+                                                            formatOrderStatus(history.new_status) }}</span>
                                                 </div>
                                                 <span class="text-muted small"><i
                                                         class="bi bi-calendar-event me-1"></i>{{
-                                                    formatDateTime(history.created_at) }}</span>
+                                                            formatDateTime(history.created_at) }}</span>
                                             </div>
                                             <div class="text-muted mt-2" style="font-size: 0.75rem;">
                                                 <span class="badge bg-secondary bg-opacity-10 text-dark border me-2"><i
                                                         class="bi bi-person-fill me-1"></i>Bởi: {{
-                                                    history.changer?.fullName || 'Hệ thống/Khách' }}</span>
+                                                            history.changer?.fullName || 'Hệ thống/Khách' }}</span>
                                                 <span v-if="history.note"
                                                     class="fst-italic text-danger fw-medium d-block d-md-inline mt-2 mt-md-0"><i
                                                         class="bi bi-chat-right-text me-1"></i>"{{ history.note
-                                                    }}"</span>
+                                                        }}"</span>
                                             </div>
                                         </div>
                                     </li>
@@ -211,8 +218,7 @@
                 </div>
 
                 <div class="modal-body p-5 text-center bg-white" v-else>
-                    <div class="spinner-border text-brand" style="width: 3rem; height: 3rem; border-width: 0.25em;"
-                        role="status"></div>
+                    <AdminLoadingSpinner class="text-brand" style="width: 3rem; height: 3rem; border-width: 0.25em;" />
                     <p class="text-muted mt-3 fw-semibold">Đang truy xuất dữ liệu đơn hàng...</p>
                 </div>
 

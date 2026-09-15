@@ -10,9 +10,6 @@
         </div>
 
         <div class="modal-body p-4">
-
-
-          <!-- Khu vực kéo thả file -->
           <div class="mb-3">
             <label class="form-label fw-bold text-dark">Chọn file Excel tải lên (.xlsx, .xls, .csv)</label>
             <div class="border-2 border-dashed rounded-3 p-4 text-center cursor-pointer bg-light hover-bg-white transition-all position-relative"
@@ -42,7 +39,7 @@
         <div class="modal-footer bg-light border-top-0 rounded-bottom-4">
           <button type="button" class="btn btn-light border fw-bold px-4" data-bs-dismiss="modal">Hủy</button>
           <button type="button" class="btn btn-success fw-bold px-4 shadow-sm" :disabled="!selectedFile || isUploading" @click="handleUpload">
-            <span v-if="isUploading" class="spinner-border spinner-border-sm me-2"></span>
+            <AdminLoadingSpinner v-if="isUploading" class="me-2" size="16" />
             <i v-else class="bi bi-upload me-2"></i> Tiến hành Nhập dữ liệu
           </button>
         </div>

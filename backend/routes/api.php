@@ -3,7 +3,6 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-// Controllers Admin
 use App\Http\Controllers\Api\Client\ShopController;
 use App\Http\Controllers\Api\Admin\AdminCouponController;
 use App\Http\Controllers\Api\Admin\AdminAccountController;
@@ -36,7 +35,8 @@ use App\Http\Controllers\Api\Admin\AdminFaceRecognitionController;
 use App\Http\Controllers\Api\Admin\AdminWorkShiftController;
 use App\Http\Controllers\Api\Admin\AdminNotificationController;
 use App\Http\Controllers\Api\Admin\AdminChatbotController;
-// Controllers Client
+
+// client
 use App\Http\Controllers\Api\Client\ProductDetailController;
 use App\Http\Controllers\Api\Client\ClientCartController;
 use App\Http\Controllers\Api\Client\ClientOrderController;
@@ -60,15 +60,10 @@ use App\Http\Controllers\Api\Client\ClientNotificationController;
 use App\Http\Controllers\Api\Client\ClientRecommendationController;
 use App\Http\Controllers\Api\MessageController;
 
-// gửi maill_kh
 use App\Http\Controllers\Api\Admin\HolidayEventController;
 use App\Http\Controllers\Api\Admin\EmailCampaignController;
 
-
-
 Route::middleware(['auth:sanctum', 'ability:access', 'admin.user', 'throttle:admin-api'])->prefix('admin')->group(function () {
-    
-    // SETTINGS API
     Route::middleware(['check.module:admin_settings'])->group(function () {
         Route::get('/settings/logos', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'getLogos']);
         Route::post('/settings/logos/upload', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'uploadLogo']);
@@ -83,13 +78,9 @@ Route::middleware(['auth:sanctum', 'ability:access', 'admin.user', 'throttle:adm
         Route::apiResource('chatbot', AdminChatbotController::class)->except(['create', 'edit']);
     });
     
-    // THÊM: Bọc middleware check.module để kiểm tra quyền phân hệ
     Route::middleware(['check.module:admin_coupons'])->group(function () {
-        
-        // CRUD Quản lý ngày lễ
         Route::apiResource('holiday-events', HolidayEventController::class);
 
-        // Xử lý gửi & Lịch sử
         Route::prefix('email-campaign')->group(function () {
             Route::get('/settings', [EmailCampaignController::class, 'settings']);
             Route::post('/settings', [EmailCampaignController::class, 'updateSettings']);
@@ -123,7 +114,7 @@ Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect']);
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback']);
 Route::post('/auth/google/exchange', [GoogleAuthController::class, 'exchange'])->middleware('throttle:google-auth');
 
-// ── MOBILE APP AUTH ROUTES ─────────────────────────────────────────────────────
+
 use App\Http\Controllers\Api\Auth\MobileAuthController;
 
 Route::prefix('mobile')->group(function () {
@@ -238,8 +229,6 @@ Route::prefix('client')->group(function () {
     // MODULE ĐƠN HÀNG (Orders)
     Route::controller(ClientOrderController::class)->prefix('orders')->group(function () {
         Route::get('/', 'index')->middleware(['auth:sanctum', 'ability:access', 'client.user', 'throttle:cart-read']);
-        // Keep the legacy URL as a compatibility alias, but route it through
-        // the single hardened checkout implementation instead of a second flow.
         Route::post('/', [ClientCheckoutController::class, 'processCheckout'])
             ->middleware(['auth:sanctum', 'ability:access', 'client.user', 'cart.mutation.lock', 'throttle:checkout']);
         Route::get('/{order_code}/status', 'status')->middleware('throttle:30,1');
@@ -267,8 +256,6 @@ Route::prefix('client')->group(function () {
         Route::post('/orders/{order_code}/momo-retry', [ClientCheckoutController::class, 'retryMomoPayment'])->middleware(['auth:sanctum', 'ability:access', 'client.user', 'throttle:payment-retry']);
         Route::post('/orders/{order_code}/vnpay-retry', [ClientCheckoutController::class, 'retryVnpayPayment'])->middleware(['auth:sanctum', 'ability:access', 'client.user', 'throttle:payment-retry']);
         Route::get('/momo-return', [ClientCheckoutController::class, 'momoReturn']);
-        // Keep POST /momo-return as a compatibility alias for links issued
-        // before the dedicated IPN endpoint was introduced.
         Route::post('/momo-return', [ClientCheckoutController::class, 'momoIpn']);
         Route::post('/momo-ipn', [ClientCheckoutController::class, 'momoIpn']);
         Route::get('/vnpay-return', [ClientCheckoutController::class, 'vnpayReturn']);
@@ -383,15 +370,12 @@ Route::prefix('admin')->group(function () {
         });
 
         // Quản lý Vai trò & Phân quyền (Mã: admin_roles)
-        
-        // 1. Lấy danh sách modules (AI CŨNG CẦN ĐỂ RENDER SIDEBAR)
         Route::get('modules', [AdminModulePermissionController::class, 'index']);
         
         Route::middleware(['check.module:admin_roles'])->group(function () {
             Route::apiResource('roles', AdminRoleController::class);
             Route::post('roles/{id}/restore', [AdminRoleController::class, 'restore']);
 
-            // Quản lý phân quyền module trong vai trò (CHỈ ADMIN QUẢN LÝ QUYỀN)
             Route::controller(AdminModulePermissionController::class)->group(function () {
                 Route::post('modules/sync', 'sync');
                 Route::put('modules/{id}/level', 'updateLevel');
@@ -424,7 +408,6 @@ Route::prefix('admin')->group(function () {
 
         // Quản lý Sản phẩm (Mã: admin_products)
         Route::middleware(['check.module:admin_products'])->group(function () {
-            // Import / Export Excel
             Route::get('products/import/template', [\App\Http\Controllers\Api\Admin\ProductImportController::class, 'downloadTemplate']);
             Route::post('products/import', [\App\Http\Controllers\Api\Admin\ProductImportController::class, 'import']);
 
@@ -478,6 +461,7 @@ Route::prefix('admin')->group(function () {
             });
             Route::controller(AdminOrderController::class)->group(function () {
                 Route::get('orders', 'index');
+                Route::put('orders/bulk-status', 'bulkUpdateStatus');
                 Route::get('orders/{id}', 'show');
                 Route::get('orders/{id}/invoice', 'invoice');
                 Route::put('orders/{id}/status', 'updateStatus');
@@ -561,53 +545,43 @@ Route::prefix('admin')->group(function () {
             Route::post('/withdrawals/{id}/reject', 'rejectWithdrawal');
         });
 
-        // BỔ SUNG ROUTE REAL-TIME CHAT CHO ADMIN
         Route::prefix('messages')->group(function () {
             Route::get('/conversations', [MessageController::class, 'getConversations']);
             Route::get('/', [MessageController::class, 'history']);
             Route::post('/', [MessageController::class, 'store']);
-            // Xóa toàn bộ cuộc trò chuyện với user
             Route::delete('/conversations/{userId}', [MessageController::class, 'deleteConversation']);
         });
 
-        // 1. CÁC ROUTE ĐIỂM DANH CÁ NHÂN (AI CŨNG ĐƯỢC DÙNG, KHÔNG YÊU CẦU QUYỀN MODULE)
+        // QUẢN LÝ ĐIỂM DANH CÁ NHÂN 
         Route::controller(AdminAttendanceController::class)->prefix('attendances')->group(function () {
-            Route::get('/status', 'checkStatus');       // Lấy trạng thái của mình hoặc Quét QR
-            Route::post('/check-in', 'checkIn');        // Vào ca
-            Route::post('/check-out', 'checkOut');      // Tan ca
+            Route::get('/status', 'checkStatus');       
+            Route::post('/check-in', 'checkIn');       
+            Route::post('/check-out', 'checkOut');    
         });
 
-        // 2. CÁC ROUTE QUẢN LÝ ĐIỂM DANH (CHỈ DÀNH CHO QUẢN LÝ / SUPER ADMIN)
+        // 2. QUẢN LÝ ĐIỂM DANH
         Route::middleware(['check.module:admin_attendance'])->group(function () {
             Route::controller(AdminAttendanceController::class)->prefix('attendances')->group(function () {
-                // ĐẶT CÁC ROUTE TĨNH LÊN TRƯỚC (Tránh bị route động nuốt)
                 Route::get('/work-shifts', 'getWorkShifts');
                 Route::get('/roles', 'getRoles');
-                Route::get('/qr-token', 'generateQrToken'); // Lấy mã QR 25s
-                Route::get('/daily-status', 'dailyStatus'); // Kiosk gọi liên tục (Polling) để hiện Live Feed
-                Route::get('/monthly-summary', 'monthlySummary'); // Lấy báo cáo chấm công tháng
+                Route::get('/qr-token', 'generateQrToken'); 
+                Route::get('/daily-status', 'dailyStatus'); 
+                Route::get('/monthly-summary', 'monthlySummary'); 
                 Route::get('/adjustments', 'adjustmentHistory');
                 Route::post('/adjustments', 'adjustAttendance');
-
-                // ĐẶT CÁC ROUTE ĐỘNG {id} XUỐNG DƯỚI CÙNG
                 Route::get('/history/{adminId}', 'history');
                 Route::get('/', 'index');
                 Route::post('/{id}/resolve', 'resolveForgotten');
             });
 
-            // 2. Quản lý Ca làm việc
             Route::controller(AdminWorkShiftController::class)->prefix('work-shifts')->group(function () {
-                // ĐẶT CÁC ROUTE TĨNH LÊN TRƯỚC ĐỂ TRÁNH BỊ {id} NUỐT
                 Route::get('/', 'index');
                 Route::post('/', 'store');
                 Route::get('/assignments', 'getAssignments');
                 Route::post('/assign', 'assignShift');
                 Route::post('/assign-multiple', 'assignMultiple');
-                Route::post('/auto-assign', 'autoAssign'); // THÊM POST CHO AUTO ASSIGN
+                Route::post('/auto-assign', 'autoAssign');
                 Route::delete('/assignments/{adminId}', 'removeAssignment');
-
-                // ĐẶT CÁC ROUTE ĐỘNG {id} XUỐNG DƯỚI
-                // restore ca làm việc đã xóa
                 Route::post('/{id}/restore', 'restore');
                 Route::put('/{id}', 'update');
                 Route::delete('/{id}', 'destroy');

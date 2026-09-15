@@ -42,7 +42,6 @@ class GeoController extends Controller
             return response()->json($response->json(), $response->status());
         }
 
-        // Fallback to Nominatim
         $response = Http::withHeaders([
             'User-Agent' => 'Laravel/SORA-ThinkHub'
         ])->timeout(8)->retry(2, 200)->get('https://nominatim.openstreetmap.org/search', [
@@ -88,7 +87,6 @@ class GeoController extends Controller
         }
 
         if ($this->apiKey) {
-            // Use geocode endpoint with latlng param for reverse geocoding (rsapi.goong.io expects latlng)
             $response = Http::timeout(8)->retry(2, 200)->get("{$this->baseUrl}/geocode", [
                 'latlng' => $lat . ',' . $lng,
                 'api_key' => $this->apiKey,
@@ -101,7 +99,6 @@ class GeoController extends Controller
             return response()->json($response->json(), $response->status());
         }
 
-        // Fallback to OpenStreetMap Nominatim
         $response = Http::withHeaders([
             'User-Agent' => 'Laravel/SORA-ThinkHub'
         ])->timeout(8)->retry(2, 200)->get('https://nominatim.openstreetmap.org/reverse', [
@@ -123,7 +120,6 @@ class GeoController extends Controller
             $district = $address['district'] ?? $address['county'] ?? $address['suburb'] ?? '';
             $ward = $address['quarter'] ?? $address['neighbourhood'] ?? $address['village'] ?? $address['hamlet'] ?? $address['suburb'] ?? '';
 
-            // Format to match Goong API response expected by frontend
             $payload = [
                 'results' => [
                     [
@@ -169,7 +165,6 @@ class GeoController extends Controller
             return response()->json($response->json(), $response->status());
         }
 
-        // Fallback to Nominatim
         $response = Http::withHeaders([
             'User-Agent' => 'Laravel/SORA-ThinkHub'
         ])->timeout(8)->retry(2, 200)->get('https://nominatim.openstreetmap.org/search', [

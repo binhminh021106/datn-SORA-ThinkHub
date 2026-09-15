@@ -64,7 +64,6 @@
             </table>
 
             <div class="btn-wrapper">
-                <!-- Thay đổi Port nếu Frontend Admin của bạn chạy Port khác -->
                 <a href="{{ rtrim(config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:5173')), '/') }}/admin/orders" class="btn">Vào trang quản trị xử lý ngay</a>
             </div>
         </div>

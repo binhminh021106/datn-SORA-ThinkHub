@@ -15,8 +15,6 @@ class ColorDictionary extends Model
     protected static function booted()
     {
         static::saving(function ($color) {
-            // Using a simple normalization: lowercase and remove accents
-            // We use Str::slug with a space separator and then remove hyphens
             $slug = Str::slug($color->name, ' ');
             $color->normalized_name = str_replace('-', ' ', $slug);
         });

@@ -1,7 +1,7 @@
 <template>
   <div>
 
-      <!-- CẢNH BÁO NẾU CHƯA ĐĂNG NHẬP -->
+
       <div v-if="!isLoggedIn" class="text-center py-5 bg-white shadow-sm p-5 border border-light mb-5">
         <h4 class="text-danger-custom mb-3 font-serif">Bạn chưa đăng nhập!</h4>
         <p class="text-secondary mb-4">Vui lòng đăng nhập để xem tủ đồ cá nhân và quản lý các sản phẩm yêu thích.</p>
@@ -11,16 +11,16 @@
         </div>
       </div>
 
-      <!-- DANH SÁCH SẢN PHẨM YÊU THÍCH -->
+
       <div v-if="isLoggedIn" class="mb-5 pb-4">
         <h3 class="font-serif text-dark border-bottom pb-3 mb-4">
           Bộ Sưu Tập Của Bạn <span class="badge bg-main text-white rounded-pill ms-2" style="font-size: 0.9rem;">{{ favorites.length }}</span>
         </h3>
 
-        <!-- Trạng thái Loading -->
+
         <SoraProductGridSkeleton v-if="isLoading" :count="6" grid-class="row g-4" col-class="col-6 col-md-4" />
 
-        <!-- Trạng thái trống -->
+
         <div v-else-if="favorites.length === 0 && !isLoading" class="empty-state text-center py-5 bg-white shadow-sm p-5 border border-light">
           <div class="empty-icon text-muted mb-4 mx-auto d-flex justify-content-center align-items-center rounded-circle" style="width: 80px; height: 80px; background-color: #f8f9fa;">
             <i class="bi bi-heart fs-1 text-secondary opacity-50"></i>
@@ -32,7 +32,7 @@
           </router-link>
         </div>
 
-        <!-- Lưới sản phẩm dùng ProductCard -->
+
         <div v-else class="row g-4">
           <div v-for="item in favorites" :key="'fav-'+item.id" class="col-6 col-md-4">
             <ProductCard
@@ -50,10 +50,10 @@
       </div>
 
 
-    <!-- MODALS (outside layout) -->
-    <!-- TÍCH HỢP COMPONENT COMPARE MODAL -->
 
-    <!-- MODAL QUICK ADD CHUẨN ĐỒNG BỘ 100% -->
+
+
+
     <div class="modal fade" id="quickAddModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-0 border-0 shadow-lg">
@@ -161,7 +161,7 @@ const fetchFavorites = async () => {
 const toggleFavorite = async (product) => {
   const token = getUserToken();
   if (!token) {
-    soraAlert.fire({ icon: 'warning', title: 'Phiên đăng nhập hết hạn!', text: 'Vui lòng đăng nhập lại.' });
+    Toast.fire({ icon: 'warning', title: 'Phiên đăng nhập hết hạn! Vui lòng đăng nhập lại.' });
     isLoggedIn.value = false;
     router.push({ path: '/login', query: { redirect: router.currentRoute.value.fullPath } });
     return;
@@ -181,9 +181,6 @@ const toggleFavorite = async (product) => {
   }
 };
 
-// ==============================================
-// LOGIC QUICK ADD
-// ==============================================
 const quickAddProduct = ref(null);
 const quickAddMatrix = ref({});
 const quickAddSelections = ref({});
@@ -274,7 +271,7 @@ const openQuickAdd = async (prod) => {
         }
     } catch (e) {
         quickAddModalInstance.hide();
-        soraAlert.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể tải thông tin sản phẩm' });
+        Toast.fire({ icon: 'error', title: 'Không thể tải thông tin sản phẩm' });
     }
 };
 
@@ -303,7 +300,7 @@ const confirmQuickAdd = async () => {
       Toast.fire({ icon: 'success', title: 'Đã thêm sản phẩm vào giỏ' });
     } catch (error) {
         const msg = error.response?.data?.message || 'Không thể thêm vào giỏ hàng!';
-        soraAlert.fire({icon: 'error', title: 'Lỗi', text: msg});
+        Toast.fire({ icon: 'error', title: msg });
     }
 };
 
@@ -328,7 +325,7 @@ onUnmounted(() => {
 @import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Oswald:wght@400;500;600;700&display=swap');
 
 
-/* Màu sắc thương hiệu SORA */
+
 .bg-light-custom { background-color: #faf9f8 !important; }
 .bg-sora-primary { background-color: #9f273b !important; }
 .text-sora-primary { color: #9f273b !important; }
@@ -339,7 +336,7 @@ onUnmounted(() => {
 .text-gold { color: #e7ce7d !important; }
 .text-danger-custom { color: #cc1e2e !important; }
 
-/* Font chữ */
+
 .font-serif { font-family: 'Josefin Sans', sans-serif; }
 .font-oswald { font-family: 'Oswald', sans-serif; }
 .divider { width: 4rem; height: 2px; }
@@ -347,16 +344,16 @@ onUnmounted(() => {
 .tracking-wide { letter-spacing: 0.1em; }
 .tracking-widest { letter-spacing: 2px; }
 
-/* Nút Quay Lại */
+
 .back-link { transition: all 0.3s ease; }
 .back-link:hover { color: #9f273b !important; transform: translateX(-5px); }
 
-/* Nút main */
+
 .btn-main { background-color: #9f273b; color: white; border: 1px solid #9f273b; transition: all 0.3s ease; }
 .btn-main:hover { background-color: #7a1c2d; border-color: #7a1c2d; color: white; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(159,39,59,0.3); }
 .btn-outline-secondary:hover { background-color: #e9ecef; color: #2c2c2c; }
 
-/* CSS QUICK ADD MODAL CHIP */
+
 .attr-chip { border-radius: 4px; overflow: hidden; min-width: 55px; }
 .attr-chip .chip-inner { border: 1px solid #dee2e6; background-color: #fff; color: #555; border-radius: 4px; transition: all 0.3s ease-in-out; padding: 6px 12px; }
 .attr-chip:hover .chip-inner { border-color: #e7ce7d; color: #9f273b; }

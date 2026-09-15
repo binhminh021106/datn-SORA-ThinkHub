@@ -5,9 +5,7 @@
       <div class="d-flex flex-wrap align-items-center justify-content-between mb-5 gap-3">
         <div>
           <h2 class="fs-1 text-dark mb-0" style="font-family: 'Manrope', sans-serif; font-weight: 700;">Giỏ hàng của bạn</h2>
-          <span class="text-secondary fw-light border-bottom border-danger-custom pb-1">
-            {{ totalItems }} Sản phẩm trong danh sách
-          </span>
+         
         </div>
         
         <button v-if="cartItems.length > 0" 
@@ -23,10 +21,41 @@
         </div>
         <div class="col-lg-4">
           <div class="summary-skeleton-card">
-            <SoraSkeleton width="56%" height="24px" radius="6px" class="mb-4" />
-            <SoraSkeleton width="100%" height="16px" class="mb-3" />
-            <SoraSkeleton width="86%" height="16px" class="mb-4" />
-            <SoraSkeleton width="100%" height="48px" radius="999px" />
+
+            <div class="d-flex align-items-center mb-4 pb-3 border-bottom border-light border-opacity-25">
+              <SoraSkeleton width="32px" height="32px" radius="6px" class="me-3" />
+              <SoraSkeleton width="140px" height="28px" radius="6px" />
+            </div>
+            
+
+            <div class="mb-4">
+              <div class="d-flex justify-content-between mb-3">
+                <SoraSkeleton width="120px" height="20px" radius="4px" />
+                <SoraSkeleton width="90px" height="20px" radius="4px" />
+              </div>
+              <div class="d-flex justify-content-between mb-3">
+                <SoraSkeleton width="100px" height="20px" radius="4px" />
+                <SoraSkeleton width="70px" height="24px" radius="999px" />
+              </div>
+            </div>
+
+
+            <div class="border-top border-light border-opacity-25 pt-4 mb-4">
+              <div class="d-flex justify-content-between align-items-end mb-1">
+                <SoraSkeleton width="90px" height="20px" radius="4px" />
+                <SoraSkeleton width="140px" height="32px" radius="6px" />
+              </div>
+            </div>
+
+
+            <SoraSkeleton width="100%" height="56px" radius="12px" class="mb-4" />
+
+
+            <div class="d-flex justify-content-center gap-4 mt-4 pt-4 border-top border-light border-opacity-10">
+              <SoraSkeleton width="28px" height="28px" circle />
+              <SoraSkeleton width="28px" height="28px" circle />
+              <SoraSkeleton width="28px" height="28px" circle />
+            </div>
           </div>
         </div>
       </div>
@@ -43,9 +72,8 @@
 
       <div v-else class="row g-5">
         
-        <!-- Cột trái: Danh sách sản phẩm -->
         <div class="col-lg-8">
-          <div class="row d-none d-md-flex border-bottom pb-3 text-secondary small text-uppercase mb-4 fw-bold" style="letter-spacing: 0.05em;">
+          <div class="row d-none d-md-flex border-bottom  text-secondary small text-uppercase mb-4 fw-bold" style="letter-spacing: 0.05em;">
             <div class="col-5">Sản phẩm</div>
             <div class="col-2 text-center">Đơn giá</div>
             <div class="col-2 text-center">Số lượng</div>
@@ -57,7 +85,7 @@
             <div class="col-12 col-md-5 d-flex align-items-center gap-4">
               <div class="position-relative bg-light rounded shadow-sm border" style="width: 100px; height: 100px; flex-shrink: 0; overflow: hidden;">
                 <div v-if="item.isUpdating" class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-flex align-items-center justify-content-center" style="z-index: 10;">
-                  <div class="spinner-border spinner-border-sm" style="color: #9f273b;" role="status"></div>
+                  <AdminLoadingSpinner style="color: #9f273b;" size="16" />
                 </div>
                 <img :src="getImageUrl(getItemImage(item))" 
                      @error="handleImageError"
@@ -70,18 +98,13 @@
               <div class="flex-grow-1">
                 <h3 class="fs-5 text-dark mb-1 fw-bold" style="font-family: 'Manrope', sans-serif;">{{ getItemName(item) }}</h3>
                 
-                <p class="small text-secondary text-uppercase mb-2 fw-semibold" style="letter-spacing: 0.05em;">
-                  <span v-if="item.combo_id" class="text-sora-primary"><i class="bi bi-stars me-1"></i> GÓI ƯU ĐÃI (COMBO)</span>
-                  <span v-else>SKU: {{ item.variant?.sku || 'N/A' }}</span>
-                </p>
-                
                 <div class="d-flex flex-wrap gap-2 mb-2" v-if="item.combo_id">
                   <span class="badge bg-light text-secondary border fw-normal px-2 py-1 rounded-sm shadow-sm">
                     <i class="bi bi-box-seam me-1 text-dark"></i> Gồm {{ item.combo_selections?.length || 0 }} lựa chọn phong cách
                   </span>
                 </div>
-                <div class="d-flex flex-wrap gap-2 mb-2" v-else-if="item.variant?.attributes">
-                  <span v-for="(val, key) in item.variant.attributes" :key="key" 
+                <div class="d-flex flex-wrap gap-2 mb-2" v-else-if="item.variant?.variant_attributes || item.variant?.formatted_attributes || item.variant?.attributes">
+                  <span v-for="(val, key) in (item.variant.variant_attributes || item.variant.formatted_attributes || item.variant.attributes)" :key="key" 
                         class="badge bg-white text-secondary border fw-normal px-2 py-1 rounded-sm shadow-sm">
                     {{ key }}: <span class="text-sora-primary fw-bold">{{ val }}</span>
                   </span>
@@ -99,29 +122,37 @@
               </div>
             </div>
 
-            <!-- Đơn giá (Desktop) -->
+
             <div class="col-2 d-none d-md-block text-center text-secondary fw-medium text-nowrap">
               {{ formatPrice(getItemPrice(item)) }}
             </div>
 
-            <!-- Input Số lượng -->
-            <div class="col-12 col-md-2 mt-4 mt-md-0 d-flex justify-content-center">
-              <div class="quantity-picker shadow-sm">
+
+            <div class="col-12 col-md-2 mt-4 mt-md-0 d-flex flex-column align-items-center justify-content-center">
+              <div class="quantity-picker shadow-sm mb-1">
                 <button @click="updateQuantity(item, -1)" 
-                        :disabled="item.quantity <= 1 || item.isUpdating"
+                        :disabled="item.quantity <= 1"
                         class="qty-btn minus">
                   <i class="bi bi-dash"></i>
                 </button>
-                <div class="qty-input">{{ item.quantity }}</div>
+                <input type="number"
+                       class="qty-input form-control text-center border-0 p-0 shadow-none hide-arrow bg-transparent"
+                       style="width: 40px; font-weight: 600;"
+                       :value="item.quantity"
+                       @change="handleQuantityInput(item, $event)"
+                       min="1" />
                 <button @click="updateQuantity(item, 1)" 
-                        :disabled="(!item.combo_id && ((item.variant?.stock_quantity ?? item.variant?.stock ?? 0) <= 0 || item.quantity >= (item.variant?.stock_quantity || 0))) || item.isUpdating"
+                        :disabled="!item.combo_id && item.quantity >= (item.variant?.stock_quantity ?? item.variant?.stock ?? 1)"
                         class="qty-btn plus">
                   <i class="bi bi-plus"></i>
                 </button>
               </div>
+              <div v-if="!item.combo_id && (item.variant?.stock_quantity ?? item.variant?.stock ?? 0) > 0" class="small text-muted fw-medium text-nowrap" style="font-size: 0.8rem;">
+                Còn {{ item.variant?.stock_quantity ?? item.variant?.stock ?? 0 }} sản phẩm
+              </div>
             </div>
 
-            <!-- Tổng và Xóa (Desktop) -->
+
             <div class="col-3 d-none d-md-flex justify-content-end align-items-center gap-3">
               <span class="fs-5 fw-bold text-primary-custom text-nowrap" >
                 {{ formatPrice(item.quantity * getItemPrice(item)) }}
@@ -133,7 +164,7 @@
           </div>
         </div>
 
-        <!-- Cột phải: Summary -->
+
         <div class="col-lg-4">
           <div class="card border-0 shadow-lg rounded-4 p-4 sticky-top summary-card" style="top: 100px;">
             <h3 class="fs-4 text-white mb-4 pb-3 border-bottom border-light border-opacity-25" style="font-family: 'Manrope', sans-serif; font-weight: 700;"><i class="bi bi-receipt me-2"></i> Tổng quan</h3>
@@ -150,11 +181,10 @@
             </div>
 
             <div class="border-top border-light border-opacity-25 pt-4 mb-4">
-              <div class="d-flex justify-content-between align-items-end mb-1">
+              <div class="d-flex justify-content-between align-items-baseline mb-1">
                 <span class="text-white text-uppercase small fw-bold" style="letter-spacing: 1px;">Tổng cộng</span>
                 <span class="fs-2 fw-bold text-gold" >{{ formatPrice(summary.subtotal) }}</span>
               </div>
-              <p class="text-end small text-light text-opacity-50 mb-0">Giá đã bao gồm thuế VAT</p>
             </div>
 
             <router-link v-if="!hasInvalidItems" to="/checkout" class="editorial-btn w-100 py-3 d-flex align-items-center justify-content-center gap-2">
@@ -240,9 +270,6 @@ const formatPrice = (value) => {
   }).format(value || 0);
 };
 
-const totalItems = computed(() => {
-  return cartItems.value.reduce((total, item) => total + item.quantity, 0);
-});
 
 const summary = computed(() => {
   if (backendSummary.value) return backendSummary.value;
@@ -299,55 +326,66 @@ const fetchCart = async (isBackground = false) => {
   }
 };
 
+const handleQuantityInput = (item, event) => {
+  let val = parseInt(event.target.value);
+  if (isNaN(val) || val < 1) val = 1;
+  const maxStock = item.combo_id ? 9999 : (item.variant?.stock_quantity ?? item.variant?.stock ?? 1);
+  if (val > maxStock) {
+    val = maxStock;
+    Toast.fire({ icon: 'warning', title: `Chỉ còn ${maxStock} sản phẩm` });
+  }
+  event.target.value = val;
+  if (val !== item.quantity) {
+    const change = val - item.quantity;
+    updateQuantity(item, change);
+  }
+};
+
+let updateTimeout = null;
+
 const updateQuantity = async (item, change) => {
   const newQty = item.quantity + change;
   if (newQty < 1) return; 
   if (!item.combo_id && newQty > (item.variant?.stock_quantity || 0)) {
-      soraAlert.fire({
-        icon: 'warning',
-        title: 'Kho không đủ',
-        text: `Sản phẩm này chỉ còn ${item.variant?.stock_quantity} món trong kho.`,
-        confirmButtonText: 'Đã hiểu'
-      });
+      Toast.fire({ icon: 'warning', title: `Chỉ còn ${item.variant?.stock_quantity || 0} sản phẩm` });
       return;
   }
   
   const originalQty = item.quantity;
-  item.isUpdating = true;
+  item.quantity = newQty; // Optimistic update
+  item.isUpdating = true; // Show spinner without blocking
   
-  try {
-    const response = await clientApiClient.put(`/client/cart/${item.id}`, { quantity: newQty }, {
-      ensureCartSession: true,
-      ignoreAuthRedirect: true
-    });
-    
-    if (response.data.success) {
-      item.quantity = newQty;
-      await fetchCart(true);
-      notifyCartUpdate();
-    }
-  } catch (error) {
-    let errorMsg = 'Không thể cập nhật số lượng.';
-    if (error.response?.status === 500) {
-      errorMsg = 'Lỗi kết nối máy chủ, vui lòng thử lại sau.';
-    } else if (error.response?.data?.errors?.quantity) {
-      errorMsg = error.response.data.errors.quantity[0];
-    } else if (error.response?.data?.message) {
-      errorMsg = error.response.data.message;
-    }
-    
-    soraAlert.fire({
-      icon: 'error',
-      title: 'Không thể cập nhật',
-      text: errorMsg,
-      confirmButtonText: 'Đã hiểu'
-    });
+  if (updateTimeout) clearTimeout(updateTimeout);
+  
+  updateTimeout = setTimeout(async () => {
+    try {
+      const response = await clientApiClient.put(`/client/cart/${item.id}`, { quantity: item.quantity }, {
+        ensureCartSession: true,
+        ignoreAuthRedirect: true
+      });
+      
+      if (response.data.success) {
+        await fetchCart(true);
+        notifyCartUpdate();
+      }
+    } catch (error) {
+      let errorMsg = 'Không thể cập nhật số lượng.';
+      if (error.response?.status === 500) {
+        errorMsg = 'Lỗi kết nối máy chủ, vui lòng thử lại sau.';
+      } else if (error.response?.data?.errors?.quantity) {
+        errorMsg = error.response.data.errors.quantity[0];
+      } else if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      }
+      
+      Toast.fire({ icon: 'error', title: errorMsg });
 
-    item.quantity = originalQty;
-    await fetchCart(true);
-  } finally {
-    if (item) item.isUpdating = false;
-  }
+      item.quantity = originalQty;
+      await fetchCart(true);
+    } finally {
+      if (item) item.isUpdating = false;
+    }
+  }, 400);
 };
 
 const removeItem = async (itemId) => {
@@ -493,14 +531,46 @@ onUnmounted(() => {
 }
 .btn-remove-item:hover i { color: #dc3545 !important; }
 
-.summary-card { background-color: #9f273b; color: white; }
+.summary-card { 
+  background: linear-gradient(135deg, #9f273b, #7a1b2b);
+  color: white;
+  border: 1px solid rgba(231, 206, 125, 0.3);
+  box-shadow: 0 15px 40px rgba(159, 39, 59, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+.summary-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at top right, rgba(231, 206, 125, 0.15) 0%, transparent 60%);
+  pointer-events: none;
+}
+
 .summary-skeleton-card {
   padding: 24px;
-  border: 1px solid rgba(231, 206, 125, 0.24);
+  border: 1px solid rgba(231, 206, 125, 0.3);
   border-radius: 18px;
-  background: #9f273b;
-  box-shadow: 0 12px 30px rgba(159, 39, 59, 0.16);
+  background: linear-gradient(135deg, #9f273b, #7a1b2b);
+  box-shadow: 0 15px 40px rgba(159, 39, 59, 0.25);
 }
+
+.summary-skeleton-card :deep(.sora-skeleton) {
+  background: rgba(255, 255, 255, 0.15) !important;
+}
+.summary-skeleton-card :deep(.sora-skeleton::after) {
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.15) 25%,
+    rgba(255, 255, 255, 0.3) 60%,
+    rgba(255, 255, 255, 0)
+  ) !important;
+}
+
 .btn-gold { background-color: #e7ce7d; color: #9f273b; border: none; transition: all 0.3s ease; }
 .btn-gold:hover { background-color: #f1e0a8; box-shadow: 0 4px 15px rgba(231, 206, 125, 0.4); transform: translateY(-2px); }
 
@@ -512,7 +582,7 @@ onUnmounted(() => {
 
 textarea:focus { border-color: #9f273b; box-shadow: 0 0 0 0.2rem rgba(159, 39, 59, 0.1); }
 
-/* Toast Timer Bar */
+
 :deep(.swal2-progress-sora) {
   background-color: #9f273b !important;
 }

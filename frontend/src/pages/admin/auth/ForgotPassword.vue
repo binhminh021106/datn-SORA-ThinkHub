@@ -3,7 +3,6 @@
     <div class="auth-box shadow-lg rounded-4 overflow-hidden bg-white row g-0" style="max-width: 500px; width: 90%;">
       <div class="col-12 p-5 position-relative">
         
-        <!-- Nút Quay lại (Chỉ hiện ở bước 2 hoặc 3) -->
         <button v-if="step > 1" @click="goBackToStep1" class="btn border-0 text-muted position-absolute top-0 start-0 m-3 hover-brand">
           <i class="bi bi-arrow-left"></i> Quay lại
         </button>
@@ -33,7 +32,7 @@
           </div>
 
           <button type="submit" class="btn btn-brand w-100 py-2 fw-bold text-white shadow-sm mb-3" :disabled="isLoading || !recaptchaToken">
-            <span v-if="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+            <AdminLoadingSpinner v-if="isLoading" class="me-2" size="16" />
             {{ isLoading ? 'ĐANG XỬ LÝ...' : 'NHẬN MÃ OTP' }}
           </button>
 
@@ -69,7 +68,7 @@
           </div>
 
           <button type="submit" class="btn btn-brand w-100 py-2 fw-bold text-white shadow-sm mb-3" :disabled="isLoading || form.otp.length < 6">
-            <span v-if="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+            <AdminLoadingSpinner v-if="isLoading" class="me-2" size="16" />
             {{ isLoading ? 'ĐANG XỬ LÝ...' : 'XÁC NHẬN OTP' }}
           </button>
           
@@ -107,7 +106,7 @@
           </div>
 
           <button type="submit" class="btn btn-brand w-100 py-2 fw-bold text-white shadow-sm" :disabled="isLoading">
-            <span v-if="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+            <AdminLoadingSpinner v-if="isLoading" class="me-2" size="16" />
             {{ isLoading ? 'ĐANG XỬ LÝ...' : 'ĐỔI MẬT KHẨU' }}
           </button>
         </form>

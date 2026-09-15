@@ -4,10 +4,10 @@
     <h3 class="h4 font-serif text-dark mb-1">Hồ Sơ Của Tôi</h3>
     <p class="text-secondary fw-light border-bottom pb-3 mb-4">Quản lý thông tin hồ sơ để bảo mật tài khoản</p>
 
-    <!-- HIỂN THỊ HẠNG THÀNH VIÊN NỔI BẬT LÊN TRÊN CÙNG -->
+
     <div class="tier-banner text-white p-4 p-md-5 rounded-4 mb-5 position-relative overflow-hidden shadow-sm" 
          :class="tierBannerClass">
-      <!-- Decorative background elements -->
+
       <div class="position-absolute top-0 end-0 opacity-25" style="transform: translate(20%, -20%); pointer-events: none;">
         <i class="bi bi-award-fill" style="font-size: 15rem;"></i>
       </div>
@@ -91,12 +91,12 @@
         <div v-if="errors.gender" class="small text-danger mt-2 ms-1">{{ errors.gender }}</div>
       </div>
 
-      <!-- HIỂN THỊ ĐỊA CHỈ MẶC ĐỊNH -->
+
       <div class="mb-5">
         <label class="form-label text-secondary fw-medium mb-3"><i class="bi bi-geo-alt me-1"></i>Sổ Địa Chỉ</label>
         
         <div v-if="isLoadingAddresses" class="d-flex justify-content-center py-4">
-          <div class="spinner-border text-main" role="status"></div>
+          <AdminLoadingSpinner class="text-main"  />
         </div>
         
         <div v-else-if="!defaultAddress" class="d-flex align-items-center justify-content-between bg-light p-4 rounded-3 border border-light">
@@ -148,7 +148,7 @@
 
       <div class="d-flex justify-content-end border-top pt-4">
         <button type="submit" class="editorial-btn px-5 py-2 rounded-pill shadow-sm" style="min-width: 200px;" :disabled="isSaving">
-          <span v-if="isSaving" class="spinner-border spinner-border-sm me-2" role="status"></span>
+          <AdminLoadingSpinner v-if="isSaving" class="me-2" size="16" />
           <i v-else class="bi bi-save me-2"></i>
           {{ isSaving ? 'Đang lưu...' : 'Lưu Thay Đổi' }}
         </button>
@@ -159,6 +159,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
+import Toast from '@/utils/toastConfig';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
 import clientApiClient from '@/utils/clientApiClient';
 
@@ -182,12 +183,9 @@ const soraAlert = createSoraAlert({
 });
 
 const showToast = (message, type = 'success') => {
-  soraAlert.fire({
+  Toast.fire({
     icon: type,
-    title: type === 'success' ? 'Thành Công!' : 'Có Lỗi Xảy Ra!',
-    text: message,
-    timer: type === 'success' ? 2500 : undefined,
-    showConfirmButton: type !== 'success'
+    title: message
   });
 };
 
@@ -312,7 +310,7 @@ const updateProfile = async () => {
   }
 };
 
-// --- ADDRESS LOGIC (chỉ hiển thị default) ---
+
 const addresses = ref([]);
 const isLoadingAddresses = ref(false);
 
@@ -350,7 +348,7 @@ const tierBannerClass = computed(() => {
 </script>
 
 <style scoped>
-/* Thêm style cần thiết, phần lớn đã nằm ở file CSS tổng hợp hoặc Tailwind/Bootstrap classes */
+
 .bg-light-custom { background-color: #faf9f8 !important; }
 .bg-main { background-color: #9f273b !important; }
 .text-main { color: #9f273b !important; }
@@ -362,7 +360,7 @@ const tierBannerClass = computed(() => {
 
 .tracking-wide { letter-spacing: 0.1em; }
 
-/* Hiệu ứng hover cho card địa chỉ */
+
 .transition-all { transition: all 0.3s ease; }
 .hover-shadow:hover { 
   box-shadow: 0 .5rem 1rem rgba(0,0,0,.08)!important;
@@ -409,7 +407,7 @@ select.custom-input { padding-right: 2.5rem; }
   transition: opacity 0.25s ease-in-out, transform 0.25s ease-in-out !important;
 }
 
-/* MODAL OVERLAY */
+
 .custom-modal-overlay {
   position: fixed;
   top: 0; left: 0; width: 100%; height: 100%;
@@ -434,7 +432,7 @@ select.custom-input { padding-right: 2.5rem; }
 .modal-fade-enter-active, .modal-fade-leave-active { transition: opacity 0.3s ease; }
 .modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
 
-/* TIER BANNER */
+
 .tier-bg-default { background: linear-gradient(135deg, #757575 0%, #424242 100%); }
 .tier-bg-silver { background: linear-gradient(135deg, #a5a5a5 0%, #7d7d7d 50%, #5a5a5a 100%); }
 .tier-bg-gold { background: linear-gradient(135deg, #f0b90b 0%, #c49608 50%, #8b6b00 100%); }

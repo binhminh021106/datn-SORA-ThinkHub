@@ -23,7 +23,6 @@ class UserAddress extends Model
         'is_default'
     ];
 
-    // Địa chỉ này thuộc về User nào
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id', 'id');

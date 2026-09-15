@@ -11,13 +11,9 @@ use App\Events\NewsUpdated;
 
 class AdminNewController extends Controller
 {
-    /**
-     * Lấy danh sách tin tức đồng bộ tối ưu ORM
-     */
     public function index()
     {
         try {
-            // Lấy cả bài viết đã xóa mềm (cho tab Đã xóa)
             $news = News::withTrashed()->orderBy('created_at', 'desc')->get();
             return response()->json([
                 'success' => true,
@@ -33,9 +29,7 @@ class AdminNewController extends Controller
         }
     }
 
-    /**
-     * Lưu bài viết mới
-     */
+    /** Lưu bài viết mới */
     public function store(Request $request)
     {
         try {
@@ -58,10 +52,8 @@ class AdminNewController extends Controller
                 $validated['image_url'] = '/storage/' . $path;
             }
 
-            // Backend sanitization (Allowlist)
             $allowableTags = '<p><br><b><i><strong><em><ul><ol><li><a><img><span><div><h1><h2><h3><h4><h5><h6><blockquote><hr><u><s><sub><sup><table><thead><tbody><tr><th><td>';
             $validated['content'] = strip_tags($validated['content'], $allowableTags);
-            // Loại bỏ các script injection thô sơ (onEvent, javascript:)
             $validated['content'] = preg_replace('/on[a-z]+="[^"]*"/i', '', $validated['content']);
             $validated['content'] = preg_replace('/on[a-z]+=\'[^\']*\'/i', '', $validated['content']);
             $validated['content'] = preg_replace('/href="javascript:[^"]*"/i', 'href="#"', $validated['content']);
@@ -83,10 +75,6 @@ class AdminNewController extends Controller
             ], 500);
         }
     }
-
-    /**
-     * Xem chi tiết bài viết (Dùng cho giao diện Admin sửa/xem)
-     */
     public function show($id)
     {
         try {
@@ -102,10 +90,6 @@ class AdminNewController extends Controller
             ], 404);
         }
     }
-
-    /**
-     * Cập nhật bài viết
-     */
     public function update(Request $request, $id)
     {
         try {
@@ -126,7 +110,6 @@ class AdminNewController extends Controller
             ]);
 
             if ($request->hasFile('image')) {
-                // Xóa ảnh cũ nếu tồn tại
                 if ($news->image_url) {
                     $oldPath = str_replace('/storage/', '', $news->image_url);
                     Storage::disk('public')->delete($oldPath);
@@ -135,10 +118,8 @@ class AdminNewController extends Controller
                 $validated['image_url'] = '/storage/' . $path;
             }
 
-            // Backend sanitization (Allowlist)
             $allowableTags = '<p><br><b><i><strong><em><ul><ol><li><a><img><span><div><h1><h2><h3><h4><h5><h6><blockquote><hr><u><s><sub><sup><table><thead><tbody><tr><th><td>';
             $validated['content'] = strip_tags($validated['content'], $allowableTags);
-            // Loại bỏ các script injection thô sơ (onEvent, javascript:)
             $validated['content'] = preg_replace('/on[a-z]+="[^"]*"/i', '', $validated['content']);
             $validated['content'] = preg_replace('/on[a-z]+=\'[^\']*\'/i', '', $validated['content']);
             $validated['content'] = preg_replace('/href="javascript:[^"]*"/i', 'href="#"', $validated['content']);

@@ -201,16 +201,12 @@ onMounted(() => {
 .border-top-light {
   border-top: 1px solid #eaeaea !important;
 }
-
-/* ================================================= */
-/* BẢNG GIÁ VÀNG - CẤU TRÚC LƯỚI MỚI CHUẨN XA XỈ     */
-/* ================================================= */
 .custom-luxury-table {
   border-collapse: collapse;
   width: 100%;
 }
 .custom-luxury-table thead {
-  background-color: #f6f4ef; /* Màu kem đậm hơn chút cho Header */
+  background-color: #f6f4ef; 
 }
 .custom-luxury-table th {
   padding: 1.2rem 1rem;
@@ -219,33 +215,28 @@ onMounted(() => {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   font-size: 0.85rem;
-  border-bottom: 2px solid var(--sora-secondary); /* Kẻ ngang viền vàng ngăn cách Header */
+  border-bottom: 2px solid var(--sora-secondary); 
 }
 .custom-luxury-table td {
-  border-bottom: 1px solid rgba(var(--sora-secondary-rgb), 0.2); /* Kẻ ngang mờ nhẹ */
+  border-bottom: 1px solid rgba(var(--sora-secondary-rgb), 0.2); 
   vertical-align: middle;
 }
 
-/* Vạch kẻ dọc phân chia các cột (Điểm mấu chốt để không bị tạp nham) */
 .border-start-gold {
   border-left: 1px dashed rgba(var(--sora-secondary-rgb), 0.6) !important;
 }
-
-/* Sọc ngựa vằn (Zebra Striping) giúp mắt dễ gióng hàng ngang */
 .custom-luxury-table tbody tr:nth-child(odd) {
   background-color: #ffffff;
 }
 .custom-luxury-table tbody tr:nth-child(even) {
-  background-color: #faf8f5; /* Dòng chẵn màu kem cực nhạt */
+  background-color: #faf8f5; 
 }
 
-/* Hover Effect nguyên dòng */
 .custom-luxury-table tbody tr:hover td {
   background-color: #f1edd9 !important;
   transition: background-color 0.3s ease;
 }
 
-/* Typography cho Giá tiền */
 .price-text {
   font-family: 'Manrope', sans-serif;
   font-size: 1.15rem;
@@ -260,7 +251,6 @@ onMounted(() => {
 
 
 
-/* Banner (Sora Banner Style) */
 .text-champagne {
   color: #ead089 !important;
 }
@@ -424,7 +414,6 @@ onMounted(() => {
   }
 }
 
-/* Image wrapper (Border xoắn) */
 .img-wrapper {
   padding: 1rem;
 }
@@ -481,11 +470,9 @@ onMounted(() => {
   border: 1px solid;
 }
 
-/* Khối sản phẩm (Fix ảnh vuông tuyệt đối) */
 .square-ratio {
   width: 100%;
   padding-bottom: 100%;
-  /* Tạo tỷ lệ vuông chuẩn 1:1 */
   display: block;
   overflow: hidden;
 }
@@ -503,12 +490,10 @@ onMounted(() => {
   z-index: 2;
 }
 
-/* Link khám phá */
 .product-link:hover {
   color: #cc1e2e !important;
 }
 
-/* Combo Carousel Container Overrides */
 .combos-editorial {
   background-color: #fffafa;
   overflow: hidden;
@@ -537,6 +522,4 @@ onMounted(() => {
   font-size: clamp(2.3rem, 5vw, 4.4rem);
   line-height: 1.02;
 }
-
-
 </style>

@@ -6,18 +6,11 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class ResolveForgottenRequest extends FormRequest
 {
-    /**
-     * Xác định người dùng có quyền thực hiện request này hay không.
-     */
     public function authorize()
     {
-        // Trả về true vì middleware auth đã check quyền ở Route
         return true;
     }
 
-    /**
-     * Các quy tắc validation.
-     */
     public function rules()
     {
         return [
@@ -25,9 +18,6 @@ class ResolveForgottenRequest extends FormRequest
         ];
     }
 
-    /**
-     * Thông báo lỗi tùy chỉnh bằng tiếng Việt.
-     */
     public function messages(): array
     {
         return [

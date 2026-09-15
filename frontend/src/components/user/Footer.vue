@@ -73,7 +73,7 @@
                      v-model="email" required>
               <button type="submit" class="btn border-0 position-absolute end-0 top-50 translate-middle-y text-secondary-custom" 
                       style="padding: 5px 10px;" :disabled="isSubscribing">
-                <i v-if="isSubscribing" class="spinner-border spinner-border-sm"></i>
+                <AdminLoadingSpinner v-if="isSubscribing" size="16" />
                 <i v-else class="bi bi-arrow-right fs-5"></i>
               </button>
             </form>
@@ -167,14 +167,7 @@ const safeNavigate = (routeName, options = {}) => {
             window.scrollTo({ top: 0, behavior: 'smooth' }); 
         }
     } else {
-        Swal.fire({ 
-            toast: true, 
-            position: 'bottom-end', 
-            icon: 'info', 
-            title: 'Tính năng đang được phát triển!', 
-            showConfirmButton: false, 
-            timer: 2000 
-        });
+        Toast.fire({ icon: 'info', title: 'Tính năng đang được phát triển!' });
     }
 };
 
@@ -189,12 +182,7 @@ const subscribeNewsletter = () => {
     
     setTimeout(() => {
         isSubscribing.value = false;
-        Swal.fire({
-            icon: 'success',
-            title: 'Đăng ký thành công!',
-            text: 'Cảm ơn bạn đã quan tâm. Thông tin ưu đãi sẽ được gửi đến email của bạn.',
-            confirmButtonColor: '#9f273b'
-        });
+        Toast.fire({ icon: 'success', title: 'Đăng ký nhận bản tin thành công!' });
         email.value = '';
     }, 1000);
 };

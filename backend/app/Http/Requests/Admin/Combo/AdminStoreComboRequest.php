@@ -17,7 +17,6 @@ class AdminStoreComboRequest extends FormRequest
             $this->merge(['parsed_items' => json_decode($this->input('items_data'), true) ?? []]);
         }
         
-        // Convert checkbox to boolean
         if ($this->has('is_discount_stackable')) {
             $this->merge(['is_discount_stackable' => filter_var($this->input('is_discount_stackable'), FILTER_VALIDATE_BOOLEAN)]);
         }
@@ -29,7 +28,7 @@ class AdminStoreComboRequest extends FormRequest
             'name'                  => 'required|string|min:3|max:255',
             'slug'                  => 'required|string|unique:combos,slug|max:255',
             'description'           => 'nullable|string',
-            'thumbnail_image'       => 'required|image|mimes:jpeg,png,jpg,webp|max:5120', // Max 5MB
+            'thumbnail_image'       => 'required|image|mimes:jpeg,png,jpg,webp|max:5120', 
             'target_gender'         => 'required|in:male,female,unisex,couple',
             'target_age_group'      => 'nullable|string|max:100',
             'theme'                 => 'nullable|string|max:255',

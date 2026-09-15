@@ -1,7 +1,7 @@
 <template>
   <div class="auth-wrapper">
     <div class="auth-container">
-      <!-- Cột trái: Hình ảnh Branding -->
+
       <div class="auth-banner">
         <div class="banner-overlay"></div>
         <router-link to="/" class="auth-home-link">
@@ -14,7 +14,7 @@
         </div>
       </div>
 
-      <!-- Cột phải: Form Đăng nhập -->
+
       <div class="auth-box">
         <div class="auth-header">
           <h2 class="auth-title font-serif tracking-widest">ĐĂNG NHẬP</h2>
@@ -53,12 +53,12 @@
           </button>
         </form>
 
-        <!-- Divider -->
+
         <div class="divider">
           <span>Hoặc tiếp tục với</span>
         </div>
 
-        <!-- Social Logins -->
+
         <div class="social-login">
           <button @click="LoginWithGoogle" class="btn-social" type="button" :disabled="isLoading">
             <svg class="social-icon" viewBox="0 0 24 24">
@@ -144,7 +144,7 @@ const handleLogin = async () => {
 
     Toast.fire({ icon: 'success', title: 'Đăng nhập thành công!' });
 
-    // Lưu Token
+
     localStorage.setItem('auth_token', response.data.access_token);
 
     // CẬP NHẬT MỚI: Lưu thông tin User vào localStorage để Header nhận diện
@@ -161,7 +161,7 @@ const handleLogin = async () => {
     await syncAfterLogin(queryClient);
 
       setTimeout(() => {
-        // Smart Redirect Logic: accept only string relative paths, prevent open redirect
+
         let rawRedirect = route.query.redirect;
         let redirectPath = '/';
         
@@ -169,7 +169,7 @@ const handleLogin = async () => {
           redirectPath = rawRedirect;
         }
         
-        // Prevent loop redirect to admin routes if user is not admin
+
         if (redirectPath.startsWith('/admin')) {
           redirectPath = '/';
         }
@@ -208,7 +208,7 @@ const handleSocialLogin = (platform) => {
 </script>
 
 <style scoped>
-/* Reset & Base */
+
 .auth-wrapper {
   min-height: 100vh;
   min-height: 100dvh;
@@ -261,14 +261,14 @@ const handleSocialLogin = (platform) => {
   align-items: center;
 }
 
-/* Ánh sáng dịu (spotlight) chiếu hắt từ sau logo để làm nổi bật logo tự nhiên */
+
 
 
 .brand-logo-img {
   max-width: 180px;
   height: auto;
   margin-bottom: 25px;
-  /* Viền stroke vàng cực mỏng, không bị "nhựa", cộng với bóng đổ tối để nổi bật */
+
   filter: drop-shadow(0 0 1.5px #e7ce7d) drop-shadow(0 0 1.5px rgba(231, 206, 125, 0.01)) drop-shadow(0 4px 6px rgba(0, 0, 0, 0.01));
 }
 

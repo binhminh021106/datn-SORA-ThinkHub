@@ -154,17 +154,15 @@ class EmailCampaignService
 
             $eventTypeKey = 'holiday_' . $event->id;
 
-            // Tối ưu hiệu suất: Kiểm tra trạng thái sự kiện 1 lần duy nhất cho toàn bộ tập người dùng
             $eventStillSendable = HolidayEvent::whereKey($event->id)
                 ->where('status', 'active')
                 ->where('event_date', $todayStr)
                 ->exists();
 
             if (!$eventStillSendable) {
-                continue; // Bỏ qua sự kiện nếu đã bị tắt
+                continue; 
             }
 
-            // AUTO-EXTEND VOUCHER VALIDITY (Gia hạn mã tự động cho năm nay)
             if ($targetUsers->isNotEmpty() && $event->voucher_code && $event->validity_days && $event->event_date) {
                 try {
                     $eventDateObj = Carbon::createFromFormat('d/m/Y', $event->event_date . '/' . now()->year)->startOfDay();
@@ -204,7 +202,7 @@ class EmailCampaignService
                                 ->first();
 
                             if ($existingLog && in_array($existingLog->status, ['queued', 'sent'])) {
-                                continue; // Đã gửi trong năm nay
+                                continue; 
                             }
 
                             if ($existingLog) {
@@ -260,7 +258,6 @@ class EmailCampaignService
         }, $tiers);
         
         if (!$user->tier_id) {
-            // Lấy cấu hình của Khách thường (tier_id = 0)
             $matchedTierConfig = collect($tiers)->first(function($t) {
                 return isset($t['tier_id']) && (int) $t['tier_id'] === 0;
             });
@@ -292,7 +289,6 @@ class EmailCampaignService
         }
 
         $baseCode = $matchedTierConfig['voucherCode'];
-        // Tạo mã độc nhất cho từng user theo năm
         $couponCode = $baseCode . '-U' . $user->id . '-' . $today->year;
 
         $validityDays = $matchedTierConfig['validity_days'] ?? 7;

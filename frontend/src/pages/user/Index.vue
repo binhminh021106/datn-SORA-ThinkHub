@@ -533,7 +533,7 @@ const galleryDisplayImages = computed(() => {
   return data.products.map((product) => product.thumbnail_image).filter(Boolean).slice(0, 4);
 });
 
-const isHomeReady = computed(() => !isLoading.value && (!heroImage.value || isHeroImageReady.value));
+const isHomeReady = computed(() => !isLoading.value);
 const showHomeLogoLoader = computed(() => shouldShowHomeIntro.value && (!isHomeReady.value || !isLogoLoaderMinTimeDone.value));
 const showHomeSkeleton = computed(() =>
   isLoading.value && (!shouldShowHomeIntro.value || isLogoLoaderMinTimeDone.value)
@@ -731,7 +731,7 @@ const toggleWishlist = async (product) => {
     }
     showWishlistNotification(isAdded);
   } catch (error) {
-    soraAlert.fire({ icon: 'error', title: 'Không thể cập nhật danh sách yêu thích', text: error.message || 'Xin vui lòng thử lại sau.' });
+    Toast.fire({ icon: 'error', title: error.message || 'Không thể cập nhật danh sách yêu thích' });
   }
 };
 
@@ -787,7 +787,7 @@ watch(homeQueryData, (payload) => {
 
 watch(isQueryError, (hasError) => {
   if (hasError) {
-    soraAlert.fire({ icon: 'error', title: 'Không thể tải dữ liệu trang chủ' });
+    Toast.fire({ icon: 'error', title: 'Không thể tải dữ liệu trang chủ' });
   }
 });
 
@@ -795,7 +795,7 @@ onMounted(() => {
   if (shouldShowHomeIntro.value) {
     window.setTimeout(() => {
       isLogoLoaderMinTimeDone.value = true;
-    }, 1000);
+    }, 300);
   }
 
   window.addEventListener('resize', handleResize);
@@ -1279,9 +1279,6 @@ onUnmounted(() => {
 }
 
 
-/* ==========================================
-   CSS CHO COMBO CAROUSEL (VISIBLE-EDGE)
-   ========================================== */
 .combos-editorial {
   background-color: #fffafa;
   overflow: hidden;
@@ -1829,10 +1826,6 @@ onUnmounted(() => {
   }
 }
 
-
-/* ==========================================
-   CÁC PHẦN CÒN LẠI CỦA TRANG CHỦ
-   ========================================== */
 .craft-section {
   background: rgba(var(--sora-secondary-rgb), 0.18);
   padding: clamp(3rem, 5vw, 4rem) 0;

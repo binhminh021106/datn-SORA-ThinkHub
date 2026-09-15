@@ -23,7 +23,6 @@ class StoreOvertimeRequest extends FormRequest
                 try {
                     $mergeData[$field] = Carbon::parse($this->input($field))->format('H:i');
                 } catch (\Exception $e) {
-                    // Bỏ qua để Rules bắt lỗi date_format
                 }
             }
         }

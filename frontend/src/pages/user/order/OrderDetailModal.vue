@@ -1,11 +1,9 @@
 <template>
     <div v-if="isOpen" class="custom-modal-backdrop" @click.self="$emit('close')">
-        <!-- ĐÃ FIX: Bỏ Fullscreen, dùng Modal Box bo góc hiện đại nằm giữa màn hình -->
-        <!-- ĐÃ FIX: Bỏ Fullscreen, dùng Modal Box bo góc hiện đại nằm giữa màn hình, mở rộng width thành 1200px để chứa 3 cột -->
-        <div class="custom-modal-content shadow-lg border-0 rounded-4 slide-up d-flex flex-column"
+       <div class="custom-modal-content shadow-lg border-0 rounded-4 slide-up d-flex flex-column"
             style="width: 1200px; max-width: 95vw; max-height: 90vh;">
 
-            <!-- HEADER MÀU ĐỎ SORA QUEN THUỘC -->
+
             <div
                 class="p-3 p-md-4 d-flex justify-content-between align-items-center bg-sora-primary text-white rounded-top-4 flex-shrink-0">
                 <div>
@@ -17,13 +15,13 @@
                         class="bi bi-x-lg"></i></button>
             </div>
 
-            <!-- KHU VỰC NỘI DUNG TỰ CUỘN -->
+
             <div class="modal-body p-2 bg-light flex-grow-1 overflow-auto custom-scrollbar-y">
                 <div class="row g-1">
 
-                    <!-- CỘT TRÁI: TIẾN TRÌNH & SẢN PHẨM -->
+
                     <div :class="['return_requested', 'return_negotiating', 'return_retrieving', 'returned'].includes(order?.status) ? 'col-lg-5' : 'col-lg-7'">
-                        <!-- Tiến trình -->
+
                         <div class="bg-white p-3 shadow-sm border border-light-subtle mb-1 rounded-3">
                             <h6
                                 class="fw-bold mb-1 font-serif text-sora-primary text-uppercase tracking-wider border-bottom pb-2">
@@ -73,7 +71,7 @@
                             </div>
                         </div>
 
-                        <!-- Sản phẩm -->
+
                         <div class="bg-white p-3 shadow-sm border border-light-subtle rounded-3">
                             <h6
                                 class="fw-bold mb-3 font-serif text-sora-primary text-uppercase tracking-wider border-bottom pb-2">
@@ -85,7 +83,7 @@
                                     <tbody>
                                         <template v-for="item in order?.items" :key="item.id">
 
-                                            <!-- Sản phẩm lẻ -->
+
                                             <tr v-if="!item.combo_id" class="border-bottom border-light-subtle" style="cursor: pointer;" @click="goToProduct(item)">
                                                 <td class="ps-0 py-1" style="width: 70%;">
                                                     <div class="d-flex align-items-center gap-3">
@@ -98,19 +96,11 @@
                                                         <div class="flex-grow-1">
                                                             <h6 class="fw-bold text-dark mb-1 font-serif fs-6">{{
                                                                 item.product_name }}</h6>
-                                                            <div v-if="item.variant_attributes" class="text-muted"
-                                                                style="font-size: 0.75rem;">
-                                                                <template
-                                                                    v-for="(val, key, index) in parseAttributes(item.variant_attributes)"
-                                                                    :key="key">
-                                                                    <span class="text-uppercase"
-                                                                        style="font-size: 0.65rem;">{{ key }}:</span>
-                                                                    <strong class="text-dark ms-1 me-1">{{ val
-                                                                        }}</strong>
-                                                                    <span
-                                                                        v-if="index < Object.keys(parseAttributes(item.variant_attributes)).length - 1"
-                                                                        class="mx-1 text-secondary opacity-25">|</span>
-                                                                </template>
+                                                            <div v-if="item.variant_attributes || item.variant?.variant_attributes" class="d-flex flex-wrap gap-2 mt-1">
+                                                                <span v-for="(val, key) in parseAttributes(item.variant_attributes || item.variant?.variant_attributes)" :key="key"
+                                                                    class="badge bg-white text-secondary border fw-normal px-2 py-1 rounded-sm shadow-sm" style="font-size: 0.7rem;">
+                                                                    {{ key }}: <span class="text-dark fw-bold">{{ val }}</span>
+                                                                </span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -122,7 +112,7 @@
                                                     (item.quantity || 1))) }}</td>
                                             </tr>
 
-                                            <!-- Sản phẩm Combo -->
+
                                             <tr v-else class="border-bottom border-light-subtle bg-light rounded" style="cursor: pointer;" @click="goToProduct(item)">
                                                 <td colspan="3"
                                                     class="p-3 border-start border-end border-light-subtle rounded">
@@ -190,11 +180,11 @@
                         </div>
                     </div>
 
-                    <!-- CỘT GIỮA: GIAO HÀNG & TỔNG TIỀN -->
+
                     <div :class="['return_requested', 'return_negotiating', 'return_retrieving', 'returned'].includes(order?.status) ? 'col-lg-4' : 'col-lg-5'">
                         <div class="d-flex flex-column h-100 gap-1">
 
-                            <!-- Thông tin Khách hàng -->
+
                             <div class="bg-white p-3 shadow-sm border border-light-subtle rounded-3">
                                 <h6
                                     class="fw-bold mb-1 font-serif text-sora-primary text-uppercase tracking-wider border-bottom pb-2">
@@ -217,7 +207,7 @@
                                 </div>
                             </div>
 
-                            <!-- Thanh toán và Tổng tiền -->
+
                             <div class="bg-white p-3 shadow-sm border border-light-subtle rounded-3 flex-grow-1">
                                 <h6
                                     class="fw-bold mb-3 font-serif text-sora-primary text-uppercase tracking-wider border-bottom pb-2">
@@ -270,7 +260,7 @@
                         </div>
                     </div>
                         
-                    <!-- CỘT PHẢI: TIẾN TRÌNH HOÀN TRẢ (Chỉ hiện khi đang xử lý hoàn trả) -->
+
                     <div v-if="['return_requested', 'return_negotiating', 'return_retrieving', 'returned'].includes(order?.status)" class="col-lg-3">
                         <div class="bg-white p-4 shadow-sm border border-warning-subtle rounded-3 h-100">
                             <h6 class="fw-bold mb-3 font-serif text-warning text-uppercase tracking-wider border-bottom pb-2">
@@ -329,42 +319,42 @@
                 </div>
             </div>
 
-            <!-- FOOTER: NÚT ACTION TINH GỌN, SANG TRỌNG -->
+
             <div
                 class="p-3 border-top bg-white rounded-bottom-4 d-flex flex-wrap justify-content-center justify-content-md-end gap-2 flex-shrink-0">
 
-                <!-- Đánh giá -->
+
                 <button v-if="order?.status === 'delivered' && (!order?.reviews || order?.reviews.length === 0)"
                     @click="handleReview" class="editorial-btn btn-sm px-3 border-0 btn-luxury-gold">
                     <i class="bi bi-star-fill me-1"></i> Đánh giá
                 </button>
 
-                <!-- Xem đánh giá -->
+
                 <button v-if="order?.status === 'delivered' && order?.reviews && order?.reviews.length > 0"
                     @click="$emit('open-review', order)"
                     class="btn btn-sm fw-bold px-3 text-uppercase border-0 btn-luxury-success">
                     <i class="bi bi-eye-fill me-1"></i> Xem đánh giá
                 </button>
 
-                <!-- Hoàn Trả -->
+
                 <button v-if="order?.status === 'delivered'" @click="handleReturn"
                     class="editorial-btn btn-sm px-3 border-0 btn-luxury-warning">
                     <i class="bi bi-arrow-return-left me-1"></i> Yêu cầu đổi trả
                 </button>
 
-                <!-- Xuất PDF -->
+
                 <button v-if="order?.id" @click="handleDownloadInvoice"
                     class="editorial-btn btn-sm px-3 border-0 btn-luxury-danger">
                     <i class="bi bi-download me-1"></i> Xuất hóa đơn
                 </button>
 
-                <!-- Mua Lại -->
+
                 <button v-if="['delivered', 'cancelled', 'returned', 'return_requested'].includes(order?.status)"
                     @click="handleReorder" class="editorial-btn btn-sm px-3 border-0 btn-luxury-success-light">
                     <i class="bi bi-cart-plus me-1"></i> Mua Lại
                 </button>
 
-                <!-- Đóng -->
+
                 <button @click="$emit('close')" class="btn btn-sm fw-bold px-4 ms-md-2 text-uppercase border-0 btn-luxury-neutral">
                     Đóng
                 </button>
@@ -502,8 +492,6 @@ const getPaymentStatusClass = (status) => {
     return 'bg-warning-subtle text-warning-emphasis border-warning-subtle';
 };
 
-// ================= CÁC HÀM XỬ LÝ NÚT BẤM =================
-
 const handleReview = () => {
     if (!props.order?.items?.length) {
         soraAlert.fire({ icon: 'info', title: 'Không có sản phẩm để đánh giá' });
@@ -521,7 +509,6 @@ const handleReturn = async () => {
         'Tôi đổi ý, không muốn mua nữa'
     ];
 
-    // ĐÃ FIX: Danh sách Checkbox tròn (Radio buttons) xịn xò
     let radiosHtml = '<div class="text-start custom-radio-list px-2 px-md-4 mt-3">';
     quickNotes.forEach((n, idx) => {
         radiosHtml += `
@@ -570,7 +557,6 @@ const handleReturn = async () => {
             const otherContainer = document.getElementById('other_reason_container');
             const textarea = document.getElementById('swal-return-note');
 
-            // Xử lý ẩn/hiện textarea khi chọn "Khác"
             radios.forEach(radio => {
                 radio.addEventListener('change', (e) => {
                     if (e.target.value === 'other') {
@@ -591,7 +577,6 @@ const handleReturn = async () => {
             }
 
             let reason = selectedRadio.value;
-            // Nếu chọn "Khác" thì phải điền text
             if (reason === 'other') {
                 const val = document.getElementById('swal-return-note').value;
                 if (!val.trim() || val.trim().length < 5) {
@@ -626,14 +611,11 @@ const handleReturn = async () => {
             refund_account_name: noteText.bankOwner
         });
 
-        soraAlert.fire({
-            icon: 'success', title: 'Thành công',
-            text: 'Đã gửi yêu cầu. SORA sẽ liên hệ trong 24h!'
-        });
+        Toast.fire({ icon: 'success', title: 'Đã gửi yêu cầu. SORA sẽ liên hệ trong 24h!' });
         emit('refresh');
         emit('close');
     } catch (e) {
-        soraAlert.fire('Lỗi', e.response?.data?.message || 'Không thể gửi yêu cầu lúc này.', 'error');
+        Toast.fire({ icon: 'error', title: e.response?.data?.message || 'Không thể gửi yêu cầu lúc này.' });
     }
 };
 
@@ -644,15 +626,11 @@ const handleReorder = async () => {
             ensureCartSession: true,
             ignoreAuthRedirect: true
         });
-        soraAlert.fire({
-            icon: 'success', title: 'Thành công', text: 'Sản phẩm đã được thêm vào Giỏ hàng!',
-            timer: 2000, showConfirmButton: false
-        }).then(() => {
-            emit('close');
-            router.push('/cart');
-        });
+        Toast.fire({ icon: 'success', title: 'Sản phẩm đã được thêm vào Giỏ hàng!' });
+        emit('close');
+        router.push('/cart');
     } catch (e) {
-        soraAlert.fire('Lỗi', e.response?.data?.message || 'Sản phẩm đã ngừng kinh doanh.', 'error');
+        Toast.fire({ icon: 'error', title: e.response?.data?.message || 'Sản phẩm đã ngừng kinh doanh.' });
     }
 };
 
@@ -673,7 +651,7 @@ const handleDownloadInvoice = async () => {
         document.body.removeChild(link);
         Swal.close();
     } catch (e) {
-        soraAlert.fire({ icon: 'error', title: 'Lỗi', text: 'Chưa thể xuất hóa đơn lúc này.' });
+        Toast.fire({ icon: 'error', title: 'Chưa thể xuất hóa đơn lúc này.' });
     }
 };
 
@@ -694,12 +672,12 @@ const handleConfirmRefund = async (isAccepted) => {
             const res = await clientApiClient.post(`/client/orders/${props.order.order_code}/return/confirm`, {
                 is_accepted: isAccepted
             });
-            Swal.fire('Thành công', res.data.message || 'Cập nhật thành công', 'success');
+            Toast.fire({ icon: 'success', title: res.data.message || 'Cập nhật thành công' });
             emit('refresh');
             emit('close');
         }
     } catch (err) {
-        Swal.fire('Lỗi', err.response?.data?.message || 'Không thể cập nhật yêu cầu', 'error');
+        Toast.fire({ icon: 'error', title: err.response?.data?.message || 'Không thể cập nhật yêu cầu' });
     }
 };
 </script>
@@ -737,7 +715,6 @@ const handleConfirmRefund = async (isAccepted) => {
     letter-spacing: 2px;
 }
 
-/* Nút Bootstrap chuẩn SORA */
 .btn-sora-primary {
     background-color: #9f273b;
     color: white;
@@ -764,7 +741,6 @@ const handleConfirmRefund = async (isAccepted) => {
     transition: 0.2s;
 }
 
-/* MODAL BOX CHUẨN */
 .custom-modal-backdrop {
     position: fixed;
     top: 0;
@@ -802,7 +778,6 @@ const handleConfirmRefund = async (isAccepted) => {
     animation: slideUp 0.3s ease-out;
 }
 
-/* THANH CUỘN LÕI */
 .custom-scrollbar-y::-webkit-scrollbar {
     width: 6px;
 }
@@ -816,7 +791,6 @@ const handleConfirmRefund = async (isAccepted) => {
     border-radius: 10px;
 }
 
-/* THANH TIẾN TRÌNH (Nhỏ gọn hơn) */
 .order-stepper-horizontal {
     position: relative;
     justify-content: space-between;
@@ -941,7 +915,6 @@ const handleConfirmRefund = async (isAccepted) => {
     box-shadow: 0 0 0 3px rgba(159, 39, 59, 0.2);
 }
 
-/* Button Luxury States */
 .editorial-btn.btn-luxury-warning { background-color: #f08c00 !important; color: #fff !important; }
 .editorial-btn.btn-luxury-warning:hover { background-color: #d97700 !important; box-shadow: 0 8px 20px rgba(240, 140, 0, 0.4) !important; }
 
@@ -1081,7 +1054,6 @@ const handleConfirmRefund = async (isAccepted) => {
   transform: rotate(45deg) translateY(200%);
 }
 
-/* Banner (Sora Banner Style) */
 .text-champagne {
   color: #ead089 !important;
 }
@@ -1231,7 +1203,6 @@ const handleConfirmRefund = async (isAccepted) => {
   }
 }
 
-/* Image wrapper (Border xoắn) */
 .img-wrapper {
   padding: 1rem;
 }
@@ -1254,13 +1225,11 @@ const handleConfirmRefund = async (isAccepted) => {
   aspect-ratio: 4/5;
 }
 
-/* Đường kẻ ngăn cách (Divider) */
 .divider {
   width: 4rem;
   height: 2px;
 }
 
-/* Card Mission & Vision */
 .card-hover {
   transition: box-shadow 0.3s ease;
 }
@@ -1280,7 +1249,6 @@ const handleConfirmRefund = async (isAccepted) => {
   opacity: 0.05;
 }
 
-/* Icon vòng tròn */
 .icon-circle {
   width: 64px;
   height: 64px;
@@ -1288,11 +1256,9 @@ const handleConfirmRefund = async (isAccepted) => {
   border: 1px solid;
 }
 
-/* Khối sản phẩm (Fix ảnh vuông tuyệt đối) */
 .square-ratio {
   width: 100%;
   padding-bottom: 100%;
-  /* Tạo tỷ lệ vuông chuẩn 1:1 */
   display: block;
   overflow: hidden;
 }
@@ -1310,12 +1276,9 @@ const handleConfirmRefund = async (isAccepted) => {
   z-index: 2;
 }
 
-/* Link khám phá */
 .product-link:hover {
   color: #cc1e2e !important;
 }
-
-/* Combo Carousel Container Overrides */
 .combos-editorial {
   background-color: #fffafa;
   overflow: hidden;
@@ -1358,7 +1321,6 @@ const handleConfirmRefund = async (isAccepted) => {
     z-index: 9999 !important;
 }
 
-/* Thay màu Checkbox tròn mặc định của Bootstrap thành màu Đỏ SORA */
 .custom-radio-list .form-check-input:checked {
     background-color: #9f273b;
     border-color: #9f273b;

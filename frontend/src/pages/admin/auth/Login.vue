@@ -46,7 +46,6 @@
               <label class="form-check-label text-muted" for="rememberMe">Nhớ mật khẩu</label>
             </div>
 
-            <!-- ĐÃ SỬA: Thay thẻ <a> thành <router-link> trỏ về route quên mật khẩu -->
             <router-link :to="{ name: 'admin-forgot-password' }" class="text-decoration-none fw-semibold text-brand">
               Quên mật khẩu?
             </router-link>
@@ -54,7 +53,7 @@
 
           <button type="submit" class="btn btn-brand w-100 py-2 fw-bold text-white shadow-sm mb-3"
             :disabled="isLoading">
-            <span v-if="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+            <AdminLoadingSpinner v-if="isLoading" class="me-2" size="16" />
             {{ isLoading ? 'ĐANG XỬ LÝ...' : 'ĐĂNG NHẬP' }}
           </button>
 

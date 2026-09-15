@@ -185,7 +185,7 @@ class AdminWorkShiftController extends Controller
                     ->where('valid_from', '<', $validFrom)
                     ->first();
 
-                // Đóng ca cũ lại (Ghi đè)
+
                 if ($currentActive) {
                     $currentActive->update([
                         'valid_to' => Carbon::parse($validFrom)->subDay()->toDateString()
@@ -239,11 +239,8 @@ class AdminWorkShiftController extends Controller
 
         DB::beginTransaction();
         try {
-            // Danh sách bận của ứng viên
             $busyAdmins = [];
 
-            // Góc khuất đã xử lý: Overlap Date logic chuẩn xác
-            // Một người bị coi là bận nếu có ca làm việc: Start <= To AND (End >= From OR End is NULL)
             if (!$override) {
                 $busyAdmins = AdminShiftAssignment::whereIn('admin_id', $candidateIds)
                     ->where('valid_from', '<=', $to)
@@ -255,14 +252,12 @@ class AdminWorkShiftController extends Controller
                     ->toArray();
             }
 
-            // Loại trừ nhân sự có ĐƠN XIN NGHỈ PHÉP
             $leaveAdmins = ShiftException::where('type', 'leave') 
                 ->whereIn('admin_id', $candidateIds)
                 ->whereBetween('date', [$from, $to])
                 ->pluck('admin_id')
                 ->toArray();
 
-            // Lọc ra danh sách những ứng viên rảnh thực sự
             $excludedAdmins = array_unique(array_merge($busyAdmins, $leaveAdmins));
             $availableAdmins = array_diff($candidateIds, $excludedAdmins);
 
@@ -273,8 +268,6 @@ class AdminWorkShiftController extends Controller
                 ], 400);
             }
 
-            // Xác định số lượng nhân sự tối đa cần bổ sung:
-            // Thứ tự ưu tiên: 1. Do người dùng nhập từ UI -> 2. Cấu hình định mức (Requirements) -> 3. Toàn bộ ứng viên rảnh
             $limit = count($availableAdmins);
             if ($maxEmployees && $maxEmployees > 0) {
                 $limit = min($maxEmployees, $limit);
@@ -285,18 +278,15 @@ class AdminWorkShiftController extends Controller
                 }
             }
             
-            // Xếp ca ngẫu nhiên cho những người được chọn trong limit
             $selectedAdmins = array_slice(array_values($availableAdmins), 0, $limit);
             $assignments = [];
 
             foreach ($selectedAdmins as $adminId) {
-                // Kiểm tra ca làm hiện đang active của nhân sự trong thời gian tới để đóng lại (nếu ghi đè)
                 $currentActive = AdminShiftAssignment::where('admin_id', $adminId)
                     ->active($from)
                     ->where('valid_from', '<', $from)
                     ->first();
 
-                // Đóng ca cũ của nhân sự nếu trùng lịch
                 if ($currentActive) {
                     $currentActive->update(['valid_to' => Carbon::parse($from)->subDay()->toDateString()]);
                 }

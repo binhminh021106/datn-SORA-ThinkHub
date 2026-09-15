@@ -54,7 +54,7 @@
         <ul class="nav nav-pills nav-sidebar flex-column gap-2" data-widget="treeview" role="menu">
           <template v-for="(item, index) in visibleMenuItems" :key="item.stateKey || item.path || index">
 
-            <!-- Menu item không có menu con -->
+
             <li class="nav-item position-relative" v-if="!item.children && hasAccess(item.moduleCode)">
               
               <!-- CHỈ SUPER ADMIN MỚI NHÌN THẤY HUY HIỆU CẤP ĐỘ -->
@@ -72,7 +72,7 @@
               </router-link>
             </li>
 
-            <!-- Menu item có menu con -->
+
             <li class="nav-item mt-2 rounded shadow-sm position-relative transition-all"
               :class="[shouldShowChildren(item) ? 'menu-open bg-dark' : '']" v-else-if="item.children && hasAnyAccess(item)">
 
@@ -129,13 +129,13 @@ import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
-// Khai báo sự kiện để báo cho Layout (cha) biết trạng thái sidebar
+
 const emit = defineEmits(['toggle-collapse']);
 
 const route = useRoute();
 const queryClient = useQueryClient();
 
-// Trạng thái thu gọn/mở rộng Sidebar
+
 const isCollapsed = ref(false);
 const searchKeyword = ref('');
 
@@ -144,7 +144,7 @@ const currentUser = inject('currentUser', ref(null));
 const userLevel = computed(() => {
   const user = currentUser?.value || currentUser;
   if (user && user.role && user.role.level) {
-    return user.role.level;
+    return Number(user.role.level);
   }
 
   try {
@@ -152,7 +152,7 @@ const userLevel = computed(() => {
     const savedLevel = localStorage.getItem('admin_level') || sessionStorage.getItem('admin_level') || localAdmin.role?.level;
 
     if (savedLevel) {
-      return parseInt(savedLevel);
+      return Number(savedLevel);
     }
   } catch (e) {
     console.warn("Không thể parse localStorage cho Sidebar", e);
@@ -166,53 +166,8 @@ const menuItems = ref([
   {
     name: 'Chấm công', icon: 'bi-clock-fill', stateKey: 'attendance',
     children: [
-      { name: 'Tổng quan', path: '/admin/attendance', moduleCode: 'admin_attendance' },
-      { name: 'Ca làm việc', path: '/admin/attendance/shifts', moduleCode: 'admin_attendance' }
-    ]
-  },
-  { name: 'Phân Quyền', path: '/admin/roles', icon: 'bi-shield-fill-check', moduleCode: 'admin_roles' },
-  {
-    name: 'Tài khoản', icon: 'bi-people-fill', stateKey: 'users',
-    children: [
-      { name: 'Nội bộ', path: '/admin/staff', moduleCode: 'admin_staff' },
-      { name: 'Khách hàng', path: '/admin/users', moduleCode: 'admin_users' },
-      { name: 'Hạng thành viên', path: '/admin/tiers', moduleCode: 'admin_tiers' }
-    ]
-  },
-  {
-    name: 'Sản phẩm', icon: 'bi-box-seam', stateKey: 'products',
-    children: [
-      { name: 'Danh mục', path: '/admin/categories', moduleCode: 'admin_categories' },
-      { name: 'Thương hiệu', path: '/admin/brands', moduleCode: 'admin_brands' },
-      { name: 'SP & Biến thể', path: '/admin/products', moduleCode: 'admin_products' },
-      { name: 'Combo sản phẩm', path: '/admin/combos', moduleCode: 'admin_combos' },
-      { name: 'Kho hàng', path: '/admin/inventory', moduleCode: 'admin_inventory' }
-    ]
-  },
-  {
-    name: 'Đơn hàng', icon: 'bi-receipt-cutoff', stateKey: 'orders',
-    children: [
-      { name: 'Danh sách đơn', path: '/admin/orders', moduleCode: 'admin_orders' },
-      { name: 'Hoàn trả', path: '/admin/orders/returns', moduleCode: 'admin_orders' }
-    ]
-  },
-  {
-    name: 'Marketing', icon: 'bi-megaphone-fill', stateKey: 'marketing',
-    children: [
-      { name: 'Banner', path: '/admin/banners', moduleCode: 'admin_banners' },
-      { name: 'Mã Giảm Giá', path: '/admin/coupons', moduleCode: 'admin_coupons' },
-      { name: 'Email tự động', path: '/admin/email-campaigns', moduleCode: 'admin_coupons' },
-      { name: 'Chân dung SORA', path: '/admin/gallery', moduleCode: 'admin_gallery' },
-      { name: 'Đánh giá', path: '/admin/reviews', moduleCode: 'admin_reviews' },
-      { name: 'Tin tức', path: '/admin/news', moduleCode: 'admin_news' }
-    ]
-  },
-
-  {
-    name: 'Đối tác Affiliate', icon: 'bi-share-fill', stateKey: 'affiliate',
-    children: [
-      { name: 'Danh sách Đối tác', path: '/admin/affiliates', moduleCode: 'admin_affiliates' },
-      { name: 'Yêu cầu rút tiền', path: '/admin/affiliates/withdrawals', moduleCode: 'admin_affiliates' }
+      { name: 'Ca làm việc', path: '/admin/attendance/shifts', moduleCode: 'admin_attendance' },
+      { name: 'Tổng quan', path: '/admin/attendance', moduleCode: 'admin_attendance' }
     ]
   },
   {
@@ -220,8 +175,53 @@ const menuItems = ref([
     children: [
       { name: 'Hỗ trợ Chat', path: '/admin/chat', moduleCode: 'admin_chat' },
       { name: 'Hộp thư liên hệ', path: '/admin/contacts', moduleCode: 'admin_contacts' },
-      { name: 'Quản lý Chatbot', path: '/admin/chatbot', moduleCode: 'admin_chat' },
-      
+      { name: 'Quản lý Chatbot', path: '/admin/chatbot', moduleCode: 'admin_chat' }
+    ]
+  },
+  {
+    name: 'Đơn hàng', icon: 'bi-receipt-cutoff', stateKey: 'orders',
+    children: [
+      { name: 'Cấu hình & Spam', path: '/admin/orders/config', moduleCode: 'admin_orders' },
+      { name: 'Danh sách đơn', path: '/admin/orders', moduleCode: 'admin_orders' },
+      { name: 'Hoàn trả', path: '/admin/orders/returns', moduleCode: 'admin_orders' },
+      { name: 'Lịch sử hoạt động', path: '/admin/orders/history', moduleCode: 'admin_orders' }
+    ]
+  },
+  {
+    name: 'Marketing', icon: 'bi-megaphone-fill', stateKey: 'marketing',
+    children: [
+      { name: 'Banner', path: '/admin/banners', moduleCode: 'admin_banners' },
+      { name: 'Chân dung SORA', path: '/admin/gallery', moduleCode: 'admin_gallery' },
+      { name: 'Email tự động', path: '/admin/email-campaigns', moduleCode: 'admin_coupons' },
+      { name: 'Mã Giảm Giá', path: '/admin/coupons', moduleCode: 'admin_coupons' },
+      { name: 'Tin tức', path: '/admin/news', moduleCode: 'admin_news' },
+      { name: 'Đánh giá', path: '/admin/reviews', moduleCode: 'admin_reviews' }
+    ]
+  },
+  { name: 'Phân Quyền', path: '/admin/roles', icon: 'bi-shield-fill-check', moduleCode: 'admin_roles' },
+  {
+    name: 'Sản phẩm', icon: 'bi-box-seam', stateKey: 'products',
+    children: [
+      { name: 'Combo sản phẩm', path: '/admin/combos', moduleCode: 'admin_combos' },
+      { name: 'Danh mục', path: '/admin/categories', moduleCode: 'admin_categories' },
+      { name: 'Kho hàng', path: '/admin/inventory', moduleCode: 'admin_inventory' },
+      { name: 'SP & Biến thể', path: '/admin/products', moduleCode: 'admin_products' },
+      { name: 'Thương hiệu', path: '/admin/brands', moduleCode: 'admin_brands' }
+    ]
+  },
+  {
+    name: 'Tài khoản', icon: 'bi-people-fill', stateKey: 'users',
+    children: [
+      { name: 'Hạng thành viên', path: '/admin/tiers', moduleCode: 'admin_tiers' },
+      { name: 'Khách hàng', path: '/admin/users', moduleCode: 'admin_users' },
+      { name: 'Nội bộ', path: '/admin/staff', moduleCode: 'admin_staff' }
+    ]
+  },
+  {
+    name: 'Đối tác Affiliate', icon: 'bi-share-fill', stateKey: 'affiliate',
+    children: [
+      { name: 'Danh sách Đối tác', path: '/admin/affiliates', moduleCode: 'admin_affiliates' },
+      { name: 'Yêu cầu rút tiền', path: '/admin/affiliates/withdrawals', moduleCode: 'admin_affiliates' }
     ]
   },
   { name: 'Cấu hình', path: '/admin/settings', icon: 'bi-gear-fill', moduleCode: 'admin_settings' },
@@ -338,7 +338,7 @@ const getModuleLevel = (code) => {
   return mod ? mod.required_level : null;
 };
 
-// ĐÃ SỬA: HÀM PHÂN QUYỀN THÔNG MINH HƠN
+
 const hasAccess = (code) => {
   if (!code) return true;
   const requiredLevel = getModuleLevel(code);
@@ -397,7 +397,7 @@ useAdminRefreshListener((payload) => {
 </script>
 
 <style scoped>
-/* Nút lơ lửng mép phải */
+
 .toggle-sidebar-btn {
   position: absolute;
   top: 15px;
@@ -593,7 +593,7 @@ useAdminRefreshListener((payload) => {
   transition: all 0.3s ease;
 }
 
-/* Skeleton Loading cho Sidebar Dark Theme */
+
 .skeleton-item {
   background-color: rgba(255, 255, 255, 0.02);
 }

@@ -15,15 +15,12 @@ class AdminInventoryController extends Controller
     public function getVariants()
     {
         try {
-            // Tối ưu ORM: Eager Loading chọn lọc
             $variants = ProductVariant::whereHas('product')->with([
                 'product:id,name,slug,category_id,base_price,status,thumbnail_image',
                 'product.category:id,name',
                 'attributeValues.attribute:id,name'
             ])->orderBy('id', 'desc')->get();
 
-            // TỐI ƯU PAYLOAD JSON CHO AXIOS (TanStack Query): 
-            // Map thành Array thuần túy, loại bỏ các meta-data thừa của Laravel Collection giúp gói tin nhẹ đi 30-40%
             $mappedVariants = $variants->map(function ($variant) {
                 $attrMap = [];
                 foreach ($variant->attributeValues as $val) {
@@ -41,7 +38,7 @@ class AdminInventoryController extends Controller
                     'stock_quantity'       => $variant->stock_quantity,
                     'image_url'            => $variant->image_url,
                     'formatted_attributes' => $attrMap,
-                    'product'              => $variant->product, // Đã bao gồm cả category bên trong nhờ Eager Loading
+                    'product'              => $variant->product,
                 ];
             });
 
@@ -75,7 +72,6 @@ class AdminInventoryController extends Controller
             
             DB::commit();
 
-            // Broadcast sự kiện Realtime cập nhật kho
             event(new InventoryUpdated('variant', $variant->id, ['old_stock' => $oldStock, 'new_stock' => $variant->stock_quantity]));
 
             return response()->json([
@@ -104,7 +100,6 @@ class AdminInventoryController extends Controller
             
             $combo->update(['usage_limit' => $request->input('usage_limit')]);
 
-            // Broadcast sự kiện Realtime cho Combo
             event(new InventoryUpdated('combo', $combo->id, ['usage_limit' => $combo->usage_limit]));
 
             return response()->json([

@@ -7,7 +7,7 @@
       </button>
     </transition>
 
-    <!-- BOTTOM BAR: Danh sách đang so sánh -->
+    <!-- Thanh so sánh (Bottom Bar) -->
     <transition name="slide-up">
       <div v-if="compareList.length > 0 && !isBottomBarMinimized" class="compare-bottom-bar">
         
@@ -56,7 +56,7 @@
       </div>
     </transition>
 
-    <!-- LIST BAR: Danh sách đang so sánh -->
+    <!-- Modal Thêm SP So Sánh -->
     <transition name="fade">
       <div v-if="showComparePopup" class="compare-modal-overlay" @click.self="closeComparePopup">
         <div class="compare-modal">
@@ -246,7 +246,7 @@ const toggleCompareItem = (prod) => {
     globalModalState.updateCompareList([...compareList.value, item], props.shopSlug);
     Toast.fire({ icon: 'success', title: 'Đã thêm vào danh sách so sánh' });
   }
-  // Mở lại Bottom Bar nếu đang bị thu nhỏ
+  // Mở lại Bottom Bar
   isBottomBarMinimized.value = false;
 };
 
@@ -286,7 +286,7 @@ const fetchFavouritesForCompare = async () => {
 </script>
 
 <style scoped>
-/* KHU VỰC BOTTOM BAR MỚI ĐÃ ĐƯỢC CẢI TIẾN */
+/* Bottom Bar */
 .compare-bottom-bar { 
   position: fixed; 
   bottom: 0; 
@@ -300,11 +300,11 @@ const fetchFavouritesForCompare = async () => {
   pointer-events: auto; 
 }
 
-/* Nút bong bóng hiển thị khi Bottom bar bị thu gọn (Giao diện mới) */
+/* Nút thu gọn */
 .minimized-compare-btn {
   position: fixed;
   bottom: 24px;
-  left: 24px; /* Chuyển sang trái để không đè nút Chat bên phải */
+  left: 24px; /* Đặt bên trái tránh đè nút Chat */
   width: 62px;
   height: 62px;
   border-radius: 50%;
@@ -328,7 +328,7 @@ const fetchFavouritesForCompare = async () => {
   color: #fff;
 }
 
-/* Badge số lượng trên nút tròn */
+/* Badge số lượng */
 .compare-badge {
   position: absolute;
   top: -4px;
@@ -346,7 +346,7 @@ const fetchFavouritesForCompare = async () => {
   border: 2px solid #fff;
 }
 
-/* Phần tiêu đề giống hình */
+/* Tiêu đề */
 .compare-header-row {
   max-width: 1300px;
   margin: 0 auto 15px auto;
@@ -363,7 +363,7 @@ const fetchFavouritesForCompare = async () => {
   text-transform: uppercase;
 }
 
-/* Nút đóng UI mới: Giống button, có nền và bo viền */
+/* Nút đóng */
 .close-bar-btn {
   background: #f5f5f5;
   border: 1px solid #e0e0e0;
@@ -398,19 +398,19 @@ const fetchFavouritesForCompare = async () => {
   align-items: center; 
 }
 
-/* Fix Product Slots Spacing */
+/* Khoảng cách các slot SP */
 .compare-items { 
   display: flex; 
   flex-direction: row;
-  gap: 16px; /* gap-4 */
+  gap: 16px; 
 }
 
-/* Bỏ overflow: hidden, thêm border-radius 8px */
+/* Styles cho item so sánh */
 .compare-item { 
   width: 86px; 
   height: 86px; 
   border: 1px solid #e5e5e5; 
-  border-radius: 8px; /* Distinct rounded corners */
+  border-radius: 8px;
   position: relative; 
   background: #fff; 
   display: flex; 
@@ -429,12 +429,12 @@ const fetchFavouritesForCompare = async () => {
 .compare-empty-btn { width: 100%; height: 100%; border: none; background: #f7f6f4; color: #b0b0b0; display: grid; place-items: center; font-size: 1.4rem; cursor: pointer; border-radius: 8px; transition: background 0.2s, color 0.2s; }
 .compare-empty-btn:hover { background: #efebe7; color: #9f273b; }
 
-/* Fix Red Delete Badge */
+/* Nút xóa */
 .remove-compare { 
   position: absolute; 
   top: -8px; 
   right: -8px; 
-  background: #dc3545; /* Red Badge */
+  background: #dc3545;
   color: white; 
   border: none; 
   border-radius: 50%; 
@@ -449,7 +449,7 @@ const fetchFavouritesForCompare = async () => {
   z-index: 10;
 }
 
-/* Bố cục bên phải: Divider, Text và Nút ngang hàng */
+/* Bố cục bên phải */
 .compare-right {
   display: flex;
   align-items: center;
@@ -480,7 +480,7 @@ const fetchFavouritesForCompare = async () => {
   color: #333;
 }
 
-/* Fix Action Buttons: Nằm ngang (row), w-auto */
+/* Nút chức năng */
 .compare-actions { 
   display: flex; 
   flex-direction: row; 
@@ -557,7 +557,7 @@ const fetchFavouritesForCompare = async () => {
   .hidden-mobile { display: none; }
 }
 
-/* KHU VỰC POPUP MODAL (Giữ nguyên) */
+/* Popup Modal */
 .compare-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9998; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); padding-bottom: 140px; }
 .compare-modal { background: #fff; border-radius: 12px; width: 90%; max-width: 800px; max-height: 70vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
 .compare-modal-header { padding: 20px 25px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap; }

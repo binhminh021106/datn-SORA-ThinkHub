@@ -123,7 +123,6 @@
                                             </small>
                                         </div>
 
-                                        <!-- Trình soạn thảo Word (Quill Editor) cho mô tả sản phẩm -->
                                         <div class="col-md-12 mt-3">
                                             <div class="d-flex justify-content-between align-items-center mb-2">
                                                 <label class="form-label fw-bold text-dark mb-0">Mô tả sản phẩm</label>
@@ -168,8 +167,7 @@
                                 <button type="button"
                                     class="btn btn-brand px-5 fw-bold text-white rounded-pill shadow-sm py-2"
                                     @click="proceedToStep2" :disabled="!canProceedToStep2 || isProcessingSchema">
-                                    <span v-if="isProcessingSchema"
-                                        class="spinner-border spinner-border-sm me-2"></span>
+                                    <AdminLoadingSpinner v-if="isProcessingSchema" class="me-2" size="16" />
                                     {{ isProcessingSchema ? 'Đang cấu hình lưới...' : 'Chuyển sang Bộ tạo Biến thể' }}
                                     <i class="bi bi-arrow-right ms-1"></i>
                                 </button>
@@ -411,7 +409,7 @@
                                     1</button>
                                 <button type="submit" class="btn btn-brand text-white px-5 py-2 fw-bold shadow"
                                     :disabled="isSaving || variants.length === 0">
-                                    <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span> HOÀN TẤT
+                                    <AdminLoadingSpinner v-if="isSaving" class="me-2" size="16" /> HOÀN TẤT
                                     LƯU
                                 </button>
                             </div>
@@ -545,6 +543,16 @@
 
         <ColorDictionaryModal />
 
+        <ImageCropperModal
+            :show="showCropper"
+            :image-url="cropperUrl"
+            :aspect-ratio="cropperRatio"
+            :allow-ratio-change="true"
+            :max-size-kb="200"
+            title="Cắt ảnh Sản phẩm"
+            @crop="handleCrop"
+            @close="closeCropper"
+        />
     </div>
 </template>
 
@@ -557,6 +565,7 @@ import adminApiClient from '@/utils/adminApiClient';
 import { QuillEditor } from '@vueup/vue-quill';
 import '@vueup/vue-quill/dist/vue-quill.snow.css';
 import ColorDictionaryModal from '@/components/admin/ColorDictionaryModal.vue';
+import ImageCropperModal from '@/components/admin/ImageCropperModal.vue';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -713,9 +722,37 @@ const handleThumbUpload = (e) => {
     const f = e.target.files[0];
     if (f) {
         if (f.size > 15 * 1024 * 1024) { Swal.fire('Lỗi', 'Ảnh tối đa 15MB', 'error'); return; }
-        thumbnailFile.value = f;
-        thumbnailPreview.value = URL.createObjectURL(f);
+        cropperContext.value = 'thumbnail';
+        cropperRatio.value = 1; // Tỉ lệ 1:1 chuẩn
+        cropperUrl.value = URL.createObjectURL(f);
+        showCropper.value = true;
+        e.target.value = '';
     }
+};
+
+// State cho Cropper Modal
+const showCropper = ref(false);
+const cropperUrl = ref('');
+const cropperRatio = ref(1);
+const cropperContext = ref(null);
+
+const handleCrop = (data) => {
+    if (cropperContext.value === 'thumbnail') {
+        if (thumbnailPreview.value) URL.revokeObjectURL(thumbnailPreview.value);
+        thumbnailFile.value = data.file;
+        thumbnailPreview.value = data.blobUrl;
+    } else if (Number.isInteger(cropperContext.value)) {
+        const idx = cropperContext.value;
+        if (variants.value[idx].preview) URL.revokeObjectURL(variants.value[idx].preview);
+        variants.value[idx].imageFile = data.file;
+        variants.value[idx].preview = data.blobUrl;
+    }
+    showCropper.value = false;
+};
+
+const closeCropper = () => {
+    showCropper.value = false;
+    if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
 };
 
 const proceedToStep2 = async () => {
@@ -855,8 +892,12 @@ const duplicateVariant = (index) => {
 const handleVariantImage = (index, e) => {
     const f = e.target.files[0];
     if (f) {
-        variants.value[index].imageFile = f;
-        variants.value[index].preview = URL.createObjectURL(f);
+        if (f.size > 15 * 1024 * 1024) { Swal.fire('Lỗi', 'Ảnh tối đa 15MB', 'error'); return; }
+        cropperContext.value = index;
+        cropperRatio.value = 1;
+        cropperUrl.value = URL.createObjectURL(f);
+        showCropper.value = true;
+        e.target.value = '';
     }
 };
 

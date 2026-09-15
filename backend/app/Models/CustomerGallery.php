@@ -9,7 +9,6 @@ class CustomerGallery extends Model
 {
     use HasFactory;
 
-    // Khai báo tên bảng (Laravel sẽ tự hiểu là customer_galleries nhưng cứ khai báo cho chắc cú)
     protected $table = 'customer_galleries';
 
     protected $fillable = [

@@ -57,7 +57,7 @@
         <div class="card-header bg-white border-bottom-0 pt-2 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
           <h6 class="fw-bold mb-0 text-dark">
             <i class="bi bi-person-lines-fill text-brand me-1"></i> Danh sách hiển thị
-            <span v-if="isFetching" class="spinner-border spinner-border-sm text-brand ms-2" title="Đang đồng bộ dữ liệu..."></span>
+            <AdminLoadingSpinner v-if="isFetching" class="text-brand ms-2" title="Đang đồng bộ dữ liệu..." size="16" />
           </h6>
           
           <div class="d-flex align-items-center gap-2">

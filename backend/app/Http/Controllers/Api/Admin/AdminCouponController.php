@@ -10,12 +10,10 @@ use App\Models\Coupon;
 
 class AdminCouponController extends Controller
 {
-    /**
-     * Lấy danh sách Coupon (Tối ưu trả về chuẩn format)
-     */
+    // Danh sách
     public function index()
     {
-        // Tự động dọn dẹp các voucher hết hạn ngay khi Admin vừa mở danh sách (Lazy Cleanup)
+        // Tự động dọn dẹp voucher hết hạn
         \App\Models\Coupon::where('status', 'active')
             ->whereNotNull('expires_at')
             ->where('expires_at', '<', now())
@@ -36,9 +34,7 @@ class AdminCouponController extends Controller
         ]);
     }
 
-    /**
-     * Tạo mới
-     */
+    // Tạo mới
     public function store(AdminStoreCouponRequest $request)
     {
         try {
@@ -55,24 +51,20 @@ class AdminCouponController extends Controller
         }
     }
 
-    /**
-     * Chi tiết
-     */
+    // Chi tiết
     public function show(string $id)
     {
         $coupon = Coupon::withTrashed()->findOrFail($id);
         return response()->json(['success' => true, 'data' => $coupon]);
     }
 
-    /**
-     * Cập nhật
-     */
+    // Cập nhật
     public function update(AdminUpdateCouponRequest $request, string $id)
     {
         $coupon = Coupon::withTrashed()->findOrFail($id);
 
         try {
-            // Hỗ trợ cập nhật nhanh duy nhất trạng thái (status)
+            // Cập nhật nhanh trạng thái
             if ($request->has('status') && count($request->all()) == 1) {
                 $coupon->update(['status' => $request->status]);
             } else {
@@ -90,15 +82,13 @@ class AdminCouponController extends Controller
         }
     }
 
-    /**
-     * Xóa mềm
-     */
+    // Xóa mềm
     public function destroy(string $id)
     {
         $coupon = Coupon::findOrFail($id);
 
         try {
-            $coupon->delete(); // Fixed bug: ->delete($coupon)
+            $coupon->delete();
 
             return response()->json([
                 'success' => true,
@@ -110,9 +100,7 @@ class AdminCouponController extends Controller
         }
     }
 
-    /**
-     * Dọn dẹp mã giảm giá mồ côi (chỉ Super Admin)
-     */
+    // Dọn dẹp mã mồ côi
     public function cleanOrphanVouchers()
     {
         if ($authError = $this->authorizeSuperAdmin()) {
@@ -125,10 +113,10 @@ class AdminCouponController extends Controller
                 $count = 0;
 
                 foreach ($trashedCoupons as $coupon) {
-                    // Kiểm tra xem voucher đã từng được dùng trong đơn hàng nào chưa
+                    // Kiểm tra sử dụng
                     $hasOrders = \Illuminate\Support\Facades\DB::table('orders')->where('coupon_id', $coupon->id)->exists();
                     
-                    // Cẩn thận: Chỉ xóa những mã đã hết hạn HOẶC hết lượt HOẶC chưa từng sử dụng.
+                    // Xóa mã hết hạn/lượt hoặc chưa dùng
                     $isExpired = $coupon->expires_at !== null && now()->greaterThan($coupon->expires_at);
                     $isUsedUp = $coupon->usage_limit !== null && $coupon->usage_count >= $coupon->usage_limit;
                     $isNeverUsed = $coupon->usage_count == 0;
@@ -154,10 +142,7 @@ class AdminCouponController extends Controller
         }
     }
 
-    /**
-     * Khôi phục từ thùng rác
-
-     */
+    // Khôi phục
     public function restore(string $id)
     {
         $coupon = Coupon::withTrashed()->findOrFail($id);
@@ -175,9 +160,7 @@ class AdminCouponController extends Controller
         }
     }
 
-    /**
-     * Xóa vĩnh viễn 1 mã (chỉ Super Admin)
-     */
+    // Xóa vĩnh viễn
     public function forceDelete(string $id)
     {
         if ($authError = $this->authorizeSuperAdmin()) {
@@ -203,9 +186,7 @@ class AdminCouponController extends Controller
         }
     }
 
-    /**
-     * Kiểm tra quyền Super Admin
-     */
+    // Check Super Admin
     private function authorizeSuperAdmin()
     {
         $admin = request()->user();

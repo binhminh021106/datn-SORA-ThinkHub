@@ -83,8 +83,7 @@
               </div>
             </div>
 
-            <div v-if="isSilentLoading || isTableLoading" class="spinner-border spinner-border-sm text-brand ms-2"
-              role="status"></div>
+            <AdminLoadingSpinner v-if="isSilentLoading || isTableLoading" class="text-brand ms-2" size="16" />
           </h6>
           <div class="search-box position-relative" style="width: 300px; max-width: 100%;">
             <input type="text" class="form-control rounded-pill pe-5 shadow-sm bg-light border-0" v-model="searchQuery"
@@ -121,7 +120,7 @@
                       <div
                         class="position-relative d-inline-block me-3 shadow-sm border rounded-3 overflow-hidden bg-white flex-shrink-0"
                         style="width: 60px; height: 60px;">
-                        <!-- SỬ DỤNG SORA IMAGE Ở ĐÂY -->
+
                         <SoraImage :src="combo.thumbnail_image" imgClass="w-100 h-100 object-fit-cover"
                           :placeholder="defaultPlaceholder" />
                       </div>
@@ -230,7 +229,7 @@
       </div>
     </div>
 
-    <!-- MODAL QUICK VIEW COMBO -->
+    <!-- Modal Quick View -->
     <div class="modal fade" id="quickViewComboModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content rounded-4 border-0 shadow">
@@ -240,23 +239,24 @@
           </div>
 
           <div class="modal-body p-0" v-if="selectedCombo">
-            <!-- Header Modal -->
+
             <div class="p-3 bg-white border-bottom d-flex align-items-center gap-3 position-relative">
 
-              <!-- THÊM: Indicator báo hiệu đang fetch API ngầm -->
+
               <div v-if="isFetchingDetail"
                 class="position-absolute top-0 end-0 m-3 text-brand small fw-bold d-flex align-items-center bg-white px-2 py-1 rounded shadow-sm border">
-                <div class="spinner-border spinner-border-sm me-2" role="status"></div> Đang tải chi tiết...
+                <AdminLoadingSpinner class="me-2" size="16" /> Đang tải chi tiết...
               </div>
 
-              <!-- SỬ DỤNG SORA IMAGE Ở ĐÂY -->
+
               <SoraImage :src="selectedCombo.thumbnail_image" imgClass="rounded border object-fit-cover shadow-sm"
                 style="width: 80px; height: 80px;" :placeholder="defaultPlaceholder" />
               <div class="flex-grow-1">
                 <h5 class="mb-1 fw-bold text-dark">{{ selectedCombo.name }}</h5>
-                <div class="text-muted small mb-2">{{ selectedCombo.description || 'Chưa có thông tin mô tả...' }}</div>
+                <div class="text-muted small mb-2 combo-desc-content" v-if="selectedCombo.description" v-html="selectedCombo.description"></div>
+                <div class="text-muted small mb-2" v-else>Chưa có thông tin mô tả...</div>
 
-                <!-- Tags Giới hạn & Thời gian -->
+
                 <div class="d-flex flex-wrap gap-2">
                   <span class="badge bg-danger">Giảm: {{ selectedCombo.discount_type === 'percentage' ?
                     selectedCombo.discount_value + '%' : formatCurrency(selectedCombo.discount_value) }}</span>
@@ -279,16 +279,16 @@
               <h6 class="fw-bold text-dark mb-3">Sản phẩm có trong gói ({{ selectedCombo.items?.length ||
                 selectedCombo.items_count || 0 }} món):</h6>
 
-              <!-- THÊM: Nếu chỉ mới có dữ liệu mồi (isPartial), hiển thị bảng Loading mượt mà -->
+
               <div v-if="selectedCombo.isPartial && isFetchingDetail"
                 class="text-center py-5 bg-white border rounded-3 shadow-sm">
-                <div class="spinner-border text-brand mb-3" style="width: 2.5rem; height: 2.5rem;" role="status"></div>
+                <AdminLoadingSpinner class="text-brand mb-3" style="width: 2.5rem; height: 2.5rem;"  />
                 <div class="text-muted small fw-semibold text-uppercase tracking-widest">Đang đồng bộ danh sách sản
                   phẩm...
                 </div>
               </div>
 
-              <!-- Nếu đã lấy đủ data từ API -->
+
               <div v-else>
                 <div class="table-responsive">
                   <table class="table table-bordered bg-white shadow-sm mb-0 align-middle small">
@@ -304,16 +304,24 @@
                       <tr v-for="item in selectedCombo.items" :key="item.id">
                         <td class="px-3">
                           <div class="d-flex align-items-center gap-2">
-                            <!-- SỬ DỤNG SORA IMAGE Ở ĐÂY -->
+
                             <SoraImage :src="item.product?.thumbnail_image" imgClass="rounded border"
                               style="width: 40px; height: 40px; object-fit: cover;" :placeholder="defaultPlaceholder" />
                             <div class="fw-semibold">{{ item.product?.name }}</div>
                           </div>
                         </td>
                         <td class="px-3 text-center">
-                          <span v-if="item.product_variant_id" class="badge bg-light text-dark border">
-                            SKU: {{ item.variant?.sku }}
-                          </span>
+                          <div v-if="item.product_variant_id">
+                            <div v-if="item.variant?.attributes || item.variant?.variant_attributes" class="d-flex flex-wrap gap-1 justify-content-center">
+                              <span v-for="(val, key) in parseAttributes(item.variant?.attributes || item.variant?.variant_attributes)" :key="key" 
+                                  class="badge bg-white text-secondary border fw-normal px-2 py-1 shadow-sm" style="font-size: 0.7rem;">
+                                  {{ key }}: <span class="text-dark fw-bold">{{ val }}</span>
+                              </span>
+                            </div>
+                            <span v-else class="badge bg-light text-dark border">
+                              SKU: {{ item.variant?.sku }}
+                            </span>
+                          </div>
                           <span v-else class="badge bg-success bg-opacity-10 text-success border border-success">
                             Khách tự chọn
                           </span>
@@ -325,7 +333,7 @@
                   </table>
                 </div>
 
-                <!-- BẢNG TÍNH TỔNG GIÁ COMBO -->
+
                 <div class="bg-white border rounded-3 p-3 mt-3 shadow-sm ms-auto" style="max-width: 350px;">
                   <div class="d-flex justify-content-between mb-2">
                     <span class="text-muted fw-semibold">Tổng giá gốc ước tính:</span>
@@ -361,7 +369,7 @@ import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 
-// 1. Import Component SoraImage và Ảnh Placeholder
+
 import SoraImage from '@/components/ui/SoraImage.vue';
 import StatusConfirmSelect from '@/components/admin/StatusConfirmSelect.vue';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
@@ -374,7 +382,7 @@ const combos = ref([]);
 const isFirstLoad = ref(true);
 const isTableLoading = ref(false);
 const isSilentLoading = ref(false);
-const isFetchingDetail = ref(false); // Cờ kiểm soát việc load ngầm chi tiết Combo
+const isFetchingDetail = ref(false);
 
 const searchQuery = ref('');
 const activeTab = ref('all');
@@ -400,6 +408,11 @@ const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bear
 const formatCurrency = (val) => {
   if (val === null || val === undefined || isNaN(val)) return '---';
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val);
+};
+
+const parseAttributes = (attr) => {
+  if (typeof attr === 'object' && attr !== null) return attr;
+  try { return JSON.parse(attr); } catch { return {}; }
 };
 const formatDateTime = (dateString) => {
   if (!dateString) return '';
@@ -454,7 +467,7 @@ const getStatusSelectClass = (status) => {
   return map[status] || 'bg-light text-secondary';
 };
 
-// FETCH DATA DÙNG LẠI CHUẨN AXIOS GỐC
+
 const fetchData = async (silent = false) => {
   if (silent) isSilentLoading.value = true;
   else if (!isFirstLoad.value) isTableLoading.value = true;
@@ -476,26 +489,26 @@ const fetchData = async (silent = false) => {
   }
 };
 
-// KỸ THUẬT: TÁI SỬ DỤNG CACHE CỤC BỘ TỪ DANH SÁCH (ZERO-LOADING)
+
 let activeQuickViewRequestId = 0;
 const openQuickView = async (id) => {
   const currentRequestId = ++activeQuickViewRequestId;
-  // 1. Chụp dữ liệu mồi từ danh sách có sẵn để Modal hiện ngay lập tức
+
   const cachedCombo = combos.value.find(c => c.id === id);
   if (cachedCombo) {
-    selectedCombo.value = { ...cachedCombo, isPartial: true }; // Gắn cờ báo hiệu thiếu danh sách sản phẩm
+    selectedCombo.value = { ...cachedCombo, isPartial: true };
     if (!quickViewModalInstance) quickViewModalInstance = new window.bootstrap.Modal(document.getElementById('quickViewComboModal'));
     quickViewModalInstance.show();
   }
 
-  // 2. Fetch API dưới nền để cập nhật đầy đủ chi tiết
+
   isFetchingDetail.value = true;
   try {
     const res = await axios.get(`${API_URL}/admin/combos/${id}`, { headers: getHeaders() });
     if (!isUnmounted && currentRequestId === activeQuickViewRequestId) {
       selectedCombo.value = res.data.data;
 
-      // Nếu cực kỳ hiếm trường hợp mảng danh sách trống, Modal sẽ tự bật khi API gọi xong
+
       if (!cachedCombo) {
         if (!quickViewModalInstance) quickViewModalInstance = new window.bootstrap.Modal(document.getElementById('quickViewComboModal'));
         quickViewModalInstance.show();
@@ -683,5 +696,10 @@ onMounted(() => fetchData());
   to {
     background-position: 200% center;
   }
+}
+
+:deep(.combo-desc-content strong),
+:deep(.combo-desc-content b) {
+  font-weight: bold !important;
 }
 </style>

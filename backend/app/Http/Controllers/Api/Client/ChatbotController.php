@@ -28,14 +28,12 @@ class ChatbotController extends Controller
             if ($matchedResponse) {
                 $botReply = $matchedResponse->reply;
                 
-                // Giải mã JSON thành mảng
                 if (!empty($matchedResponse->options)) {
                     $decoded = json_decode($matchedResponse->options, true);
                     if(is_array($decoded)) $options = $decoded;
                 }
             } else {
                 $botReply = "Dạ, hiện tại SORA chưa hiểu ý của Quý khách. Quý khách muốn hỏi về chủ đề nào dưới đây ạ?";
-                // Các nút mặc định (Label và Link)
                 $options = [
                     ['label' => 'Giá vàng', 'link' => ''],
                     ['label' => 'Bảo hành', 'link' => ''],

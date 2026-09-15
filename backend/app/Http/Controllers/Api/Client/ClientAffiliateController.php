@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\DB;
 
 class ClientAffiliateController extends Controller
 {
-    // lấy status affiliate của user hiện tại
     public function status()
     {
         try {
@@ -29,13 +28,11 @@ class ClientAffiliateController extends Controller
             ];
 
             if ($user->is_affiliate) {
-                // chờ duyệt tiền hh
                 $pendingBalance = CommissionHistory::where('user_id', $user->id)
                     ->where('type', 'earn')
                     ->where('status', 'pending')
                     ->sum('amount');
 
-                // tổng tiền hh đã rút
                 $totalWithdrawn = CommissionHistory::where('user_id', $user->id)
                     ->where('type', 'withdraw')
                     ->whereIn('status', ['approved', 'withdrawn'])
@@ -47,7 +44,6 @@ class ClientAffiliateController extends Controller
                     'total_withdrawn'   => (float) $totalWithdrawn
                 ];
 
-                // lịch sử giao dịch hh gần đây (lấy 20)
                 $data['histories'] = CommissionHistory::with('order:id,order_code')
                     ->where('user_id', $user->id)
                     ->orderBy('created_at', 'desc')
@@ -78,7 +74,6 @@ class ClientAffiliateController extends Controller
         }
     }
 
-    // gửi đơn đăng ký làm affiliate
     public function apply(Request $request)
     {
         try {
@@ -123,7 +118,6 @@ class ClientAffiliateController extends Controller
         }
     }
 
-    // rút tiền hoa hồng về tài khoản ngân hàng
     public function withdraw(Request $request)
     {
         $request->validate([

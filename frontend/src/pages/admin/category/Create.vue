@@ -125,7 +125,7 @@
                                         class="btn btn-light me-2 px-4 shadow-sm fw-bold">Hủy</router-link>
                                     <button type="submit" class="btn btn-brand btn-brand-solid px-5 fw-bold shadow-sm"
                                         :disabled="isSaving">
-                                        <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span> 
+                                        <AdminLoadingSpinner v-if="isSaving" class="me-2" size="16" /> 
                                         {{ isSaving ? 'ĐANG LƯU...' : 'XÁC NHẬN THÊM' }}
                                     </button>
                                 </div>
@@ -136,6 +136,17 @@
             </form>
         </div>
     </div>
+    <!-- CROPPER MODAL -->
+    <ImageCropperModal
+      :show="showCropper"
+      :image-url="cropperUrl"
+      :aspect-ratio="NaN"
+      :allow-ratio-change="true"
+      :max-size-kb="200"
+      title="Cắt ảnh Danh mục"
+      @crop="handleCrop"
+      @close="closeCropper"
+    />
 </template>
 
 <script setup>
@@ -143,7 +154,9 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
-import defaultImage from '../../../assets/images/defaults/placeholder.png';
+import { useQueryClient, useQuery } from '@tanstack/vue-query';
+import defaultImage from '@/assets/images/defaults/placeholder.png';
+import ImageCropperModal from '@/components/admin/ImageCropperModal.vue';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -172,15 +185,33 @@ const fetchTreeCategories = async () => {
     }
 };
 
-const handleImageChange = (e) => {
+// Cropper State
+const showCropper = ref(false);
+const cropperUrl = ref('');
+
+const closeCropper = () => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+};
+
+const handleCrop = (data) => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+  
+  selectedFile.value = data.file;
+  previewImage.value = data.blobUrl;
+};
+
+const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-        if(file.size > 15 * 1024 * 1024) { 
-            Swal.fire('Lỗi', 'Ảnh tối đa 15MB', 'error'); 
-            return; 
+        if (file.size > 5 * 1024 * 1024) {
+            Swal.fire('Lỗi', 'Dung lượng ảnh không được vượt quá 5MB.', 'error');
+            return;
         }
-        selectedFile.value = file;
-        previewImage.value = URL.createObjectURL(file);
+        cropperUrl.value = URL.createObjectURL(file);
+        showCropper.value = true;
+        e.target.value = '';
     }
 };
 

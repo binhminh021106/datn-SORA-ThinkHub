@@ -80,7 +80,7 @@
             
             <div class="col-12 text-end border-top pt-4">
               <button type="submit" class="btn btn-brand px-5 fw-bold text-white rounded-pill shadow-sm" :disabled="isSaving || !form.name">
-                <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span> LƯU HẠNG THÀNH VIÊN
+                <AdminLoadingSpinner v-if="isSaving" class="me-2" size="16" /> LƯU HẠNG THÀNH VIÊN
               </button>
             </div>
           </div>

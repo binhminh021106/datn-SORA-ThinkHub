@@ -115,7 +115,7 @@
                 <div class="card-footer bg-white border-top p-3 d-flex justify-content-end gap-2">
                   <button type="button" class="btn btn-light rounded-3 px-4" @click="closeModal">Hủy</button>
                   <button type="submit" class="btn btn-brand rounded-3 px-4 text-white fw-bold" :disabled="submitting">
-                    <span v-if="submitting" class="spinner-border spinner-border-sm me-2"></span>
+                    <AdminLoadingSpinner v-if="submitting" class="me-2" size="16" />
                     Lưu điều chỉnh
                   </button>
                 </div>

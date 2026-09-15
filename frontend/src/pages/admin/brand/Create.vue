@@ -63,7 +63,7 @@
               
               <div class="col-12 text-end border-top pt-4 mt-2">
                 <button type="submit" class="btn btn-brand px-5 fw-bold text-white rounded-pill shadow-sm py-2" :disabled="isSaving || !form.name">
-                  <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span> LƯU THƯƠNG HIỆU
+                  <AdminLoadingSpinner v-if="isSaving" class="me-2" size="16" /> LƯU THƯƠNG HIỆU
                 </button>
               </div>
             </div>
@@ -72,17 +72,31 @@
       </div>
     </div>
   </div>
+  <!-- CROPPER MODAL -->
+  <ImageCropperModal
+    :show="showCropper"
+    :image-url="cropperUrl"
+    :aspect-ratio="NaN"
+    :allow-ratio-change="true"
+    :max-size-kb="100"
+    title="Cắt ảnh Thương hiệu"
+    @crop="handleCrop"
+    @close="closeCropper"
+  />
 </template>
 
 <script setup>
 import { ref } from 'vue';
+import adminApiClient from '@/utils/adminApiClient.js';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
-import axios from 'axios';
+import { useQueryClient } from '@tanstack/vue-query';
+import ImageCropperModal from '@/components/admin/ImageCropperModal.vue';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
 const router = useRouter();
+const queryClient = useQueryClient();
 const isSaving = ref(false);
 
 const form = ref({
@@ -105,12 +119,30 @@ const generateSlug = () => {
   form.value.slug = s.replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '').replace(/\-\-+/g, '-');
 };
 
+// Cropper State
+const showCropper = ref(false);
+const cropperUrl = ref('');
+
+const closeCropper = () => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+};
+
+const handleCrop = (data) => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+  
+  logoFile.value = data.file;
+  logoPreview.value = data.blobUrl;
+};
+
 const handleLogoUpload = (e) => {
   const f = e.target.files[0];
   if(f) { 
       if(f.size > 15 * 1024 * 1024) { Swal.fire('Lỗi', 'Ảnh tối đa 15MB', 'error'); return; }
-      logoFile.value = f; 
-      logoPreview.value = URL.createObjectURL(f); 
+      cropperUrl.value = URL.createObjectURL(f);
+      showCropper.value = true;
+      e.target.value = '';
   }
 };
 

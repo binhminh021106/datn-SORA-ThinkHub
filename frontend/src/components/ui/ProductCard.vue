@@ -35,6 +35,7 @@
       <router-link
         :to="{ name: 'productDetail', params: { shop_slug: shopSlug, slug: product.slug } }"
         class="d-block w-100 text-decoration-none"
+        @click="handlePreload(product)"
       >
         <div class="ratio ratio-1x1 w-100 overflow-hidden position-relative">
           <div v-if="isOutOfStock" class="position-absolute w-100 h-100 d-flex align-items-center justify-content-center pointer-events-none" style="background-color: rgba(255, 255, 255, 0.4); z-index: 3; top: 0; left: 0;">
@@ -73,13 +74,13 @@
         <router-link
           :to="{ name: 'productDetail', params: { shop_slug: shopSlug, slug: product.slug } }"
           class="text-decoration-none flex-grow-1 d-flex flex-column justify-content-center"
+          @click="handlePreload(product)"
         >
           <h6 class="text-dark font-oswald text-uppercase fw-normal mb-2 text-truncate-2 product-name" style="font-size: 1.05rem; letter-spacing: 1px; line-height: 1.4;">{{ product.name }}</h6>
           
           <div class="d-flex justify-content-between align-items-center mb-2">
             <p class="font-oswald text-secondary small fw-light mb-0" style="letter-spacing: 0.8px; font-size: 0.75rem; opacity: 0.7;">{{ product.category?.name || 'TRANG SỨC SORA' }}</p>
             
-            <!-- Luxury constraint: Show only one badge (Out of Stock > Scarcity > Sold Count > In Stock) -->
             <span v-if="isOutOfStock" class="small font-oswald text-uppercase tracking-widest text-secondary" style="font-size: 0.7rem; opacity: 0.8;">
               <i class="bi bi-slash-circle me-1"></i>Hết hàng
             </span>
@@ -155,6 +156,16 @@ import Toast from '@/utils/toastConfig';
 import soraAlert from '@/utils/soraAlertConfig';
 import { getStorageUrl } from '@/utils/env';
 import { getProtectedRating, formatCompactPrice, getUserToken } from '@/composables/useUtilities';
+
+const handlePreload = (prod) => {
+  try {
+    sessionStorage.setItem('preloaded_product', JSON.stringify({
+      ...prod,
+      images: [prod.thumbnail_image],
+      is_preloaded: true
+    }));
+  } catch(e){}
+};
 
 const props = defineProps({
   product: { type: Object, required: true },

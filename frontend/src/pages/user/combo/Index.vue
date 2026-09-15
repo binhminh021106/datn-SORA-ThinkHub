@@ -1,6 +1,5 @@
 <template>
   <main class="combo-client-page">
-    <!-- banner combo đầu trang -->
     <section class="sora-banner position-relative d-flex align-items-center justify-content-center overflow-hidden">
       <div class="banner-ambient"></div>
       <div class="banner-glow banner-glow-left"></div>
@@ -130,7 +129,7 @@
 
                 <div class="position-relative z-index-2 d-flex flex-column justify-content-center flex-grow-1 p-4 text-center text-md-start bg-white">
                   <h3 class="combo-title font-serif mb-2">{{ combo.name }}</h3>
-                  <p class="combo-description small mb-4 line-clamp-2 text-muted fst-italic" v-if="combo.description && combo.description.toLowerCase() !== 'ưu đãi'">{{ combo.description }}</p>
+                  <div class="combo-description small mb-4 line-clamp-2 text-muted fst-italic" v-if="combo.description && stripHtml(combo.description).toLowerCase() !== 'ưu đãi'" v-html="combo.description"></div>
 
                   <div class="offer-footer d-flex align-items-end justify-content-center justify-content-md-between flex-wrap gap-3">
                     <div>
@@ -252,6 +251,7 @@ const currentTime = ref(new Date().getTime());
 let timerInterval = null;
 
 const formatCurrency = (val) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val || 0);
+const stripHtml = (html) => html ? html.replace(/<[^>]*>?/gm, '').trim() : '';
 const getImage = (path) => path ? `${import.meta.env.VITE_STORAGE_URL}/${path}` : 'https://placehold.co/400x400?text=No+Image';
 
 const getItemPrice = (item) => {
@@ -1161,5 +1161,9 @@ onUnmounted(() => {
   .item-image-frame {
     height: 172px;
   }
+}
+:deep(.combo-description strong),
+:deep(.combo-description b) {
+  font-weight: bold !important;
 }
 </style>

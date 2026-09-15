@@ -123,7 +123,7 @@
             
             <div class="col-12 text-end border-top pt-4">
               <button type="submit" class="btn btn-brand px-5 fw-bold text-white rounded-pill shadow-sm" :disabled="isSaving || !form.title">
-                <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span> LƯU BANNER
+                <AdminLoadingSpinner v-if="isSaving" class="me-2" size="16" /> LƯU BANNER
               </button>
             </div>
           </div>
@@ -131,6 +131,18 @@
       </div>
     </div>
   </div>
+
+  <!-- CROPPER MODAL -->
+  <ImageCropperModal
+    :show="showCropper"
+    :image-url="cropperUrl"
+    :aspect-ratio="cropperRatio"
+    :allow-ratio-change="true"
+    :max-size-kb="400"
+    title="Cắt ảnh Banner"
+    @crop="handleCrop"
+    @close="closeCropper"
+  />
 </template>
 
 <script setup>
@@ -139,6 +151,7 @@ import adminApiClient from '@/utils/adminApiClient.js';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import { useQueryClient } from '@tanstack/vue-query';
+import ImageCropperModal from '@/components/admin/ImageCropperModal.vue';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -173,22 +186,43 @@ const handleUpload = (e, type) => {
     if(type === 'video' && f.size > 50 * 1024 * 1024) { return Swal.fire('Lỗi', 'Video tối đa 50MB', 'error'); }
     if(type !== 'video' && f.size > 15 * 1024 * 1024) { return Swal.fire('Lỗi', 'Ảnh tối đa 15MB', 'error'); }
     
-    if(type === 'desk') { 
-      if (previewDesk.value) URL.revokeObjectURL(previewDesk.value);
-      fileDesk.value = f; 
-      previewDesk.value = URL.createObjectURL(f); 
-    }
-    else if(type === 'mob') { 
-      if (previewMob.value) URL.revokeObjectURL(previewMob.value);
-      fileMob.value = f; 
-      previewMob.value = URL.createObjectURL(f); 
-    }
-    else if(type === 'video') {
+    if (type === 'video') {
       if (previewVideo.value) URL.revokeObjectURL(previewVideo.value);
       fileVideo.value = f; 
       previewVideo.value = URL.createObjectURL(f); 
+    } else {
+      // Open cropper modal instead of saving directly
+      cropperType.value = type;
+      cropperRatio.value = type === 'desk' ? (1920/600) : (800/1200);
+      cropperUrl.value = URL.createObjectURL(f);
+      showCropper.value = true;
     }
+    e.target.value = '';
   }
+};
+
+// State cho Cropper Modal
+const showCropper = ref(false);
+const cropperUrl = ref('');
+const cropperRatio = ref(1);
+const cropperType = ref('');
+
+const handleCrop = (data) => {
+  if (cropperType.value === 'desk') {
+    if (previewDesk.value) URL.revokeObjectURL(previewDesk.value);
+    fileDesk.value = data.file;
+    previewDesk.value = data.blobUrl;
+  } else if (cropperType.value === 'mob') {
+    if (previewMob.value) URL.revokeObjectURL(previewMob.value);
+    fileMob.value = data.file;
+    previewMob.value = data.blobUrl;
+  }
+  showCropper.value = false;
+};
+
+const closeCropper = () => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
 };
 
 const clearMedia = (type) => {

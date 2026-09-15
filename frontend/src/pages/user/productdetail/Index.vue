@@ -28,13 +28,13 @@
                 class="thumb-btn"
                 :class="{ 'active': img === mainImage }"
               >
-                <img :src="img" :alt="'Thumbnail ' + idx" class="thumb-img" @error="handleImageError">
+                <img :src="img" :alt="'Thumbnail ' + idx" class="thumb-img" loading="lazy" decoding="async" @error="handleImageError">
               </button>
             </div>
             
             <div class="main-image-wrapper position-relative">
               <button class="main-wishlist-btn" :class="{ 'active': isFavourited(product.id) }" @click.stop="toggleFavourite(product)" :title="isFavourited(product.id) ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'" :disabled="isTogglingFav === product.id">
-                  <span v-if="isTogglingFav === product.id" class="spinner-border spinner-border-sm text-danger" style="width: 1rem; height: 1rem;"></span>
+                  <AdminLoadingSpinner v-if="isTogglingFav === product.id" class="text-danger" style="width: 1rem; height: 1rem;" size="16" />
                   <i v-else :class="isFavourited(product.id) ? 'bi bi-suit-heart-fill text-danger' : 'bi bi-suit-heart'"></i>
               </button>
               
@@ -44,7 +44,7 @@
                  </div>
               </div>
 
-              <img :src="mainImage" :alt="product.name" class="main-img" :class="{ 'opacity-50': isCompletelyOutOfStock }" @error="handleImageError">
+              <img :src="mainImage" :alt="product.name" class="main-img" :class="{ 'opacity-50': isCompletelyOutOfStock }" @error="handleMainImageError">
             </div>
           </div>
 
@@ -70,24 +70,12 @@
               </span>
             </div>
             
-            <!-- PRICE DISPLAY -->
             <PriceDisplay
               :is-all-attributes-selected="isAllAttributesSelected"
               :current-variant="currentVariant"
               :default-price="defaultDisplayPrice"
             />
 
-            <div class="flash-sale-countdown mb-4">
-              <div class="countdown-text">Nhanh lên! Chương trình khuyến mãi kết thúc sau:</div>
-              <div class="countdown-timer">
-                <span class="time-block">{{ countdown.days }}</span> <span class="colon">:</span>
-                <span class="time-block">{{ countdown.hours }}</span> <span class="colon">:</span>
-                <span class="time-block">{{ countdown.minutes }}</span> <span class="colon">:</span>
-                <span class="time-block">{{ countdown.seconds }}</span>
-              </div>
-            </div>
-
-            <!-- VARIANT SELECTION (ĐÃ NÂNG CẤP SMART SELECTION) -->
             <div v-if="product.attributes" class="product-variants mb-4">
               <div v-for="(options, attrName) in product.attributes" :key="attrName" class="variant-group mb-3">
                 <div class="variant-label-wrapper d-flex justify-content-between align-items-center gap-2 mb-2">
@@ -141,7 +129,7 @@
               </div>
             </div>
 
-            <!-- STOCK STATUS -->
+            <!-- Trạng thái tồn kho -->
             <div class="stock-progress-wrapper mb-4">
               <template v-if="isAllAttributesSelected && currentVariant">
                 <div v-if="currentStock > 0 && currentStock < 10" class="stock-alert critical" style="background: #fff0f2; border: 1px solid #f8d7da; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
@@ -197,7 +185,7 @@
               </div>
             </div>
 
-            <!-- CỤM NÚT SO SÁNH & YÊU THÍCH -->
+            <!-- So sánh & Yêu thích -->
             <div class="d-flex flex-row gap-3 mt-4 align-items-center">
               <button class="btn-action-sub" style="flex: 1;" @click="handleToggleCompare(product)" :class="{ 'active': isInCompare(product.id) }">
                 <i class="bi bi-arrow-left-right me-1"></i>
@@ -211,21 +199,9 @@
                 :title="isFavourited(product.id) ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'"
                 :disabled="isTogglingFav === product.id"
               >
-                <span v-if="isTogglingFav === product.id" class="spinner-border spinner-border-sm text-danger" style="width: 1.2rem; height: 1.2rem;"></span>
+                <AdminLoadingSpinner v-if="isTogglingFav === product.id" class="text-danger" style="width: 1.2rem; height: 1.2rem;" size="16" />
                 <i v-else :class="isFavourited(product.id) ? 'bi bi-suit-heart-fill text-danger' : 'bi bi-suit-heart'"></i>
               </button>
-            </div>
-
-            <div class="product-short-desc mt-4">
-              <p><em>(*) Giá niêm yết trên đây là <strong>GIÁ THAM KHẢO</strong> dành cho nhẫn nữ với các thông số tiêu chuẩn. Giá có thể thay đổi trên thực tế tùy thuộc vào thông số cụ thể <strong>theo ni tay và yêu cầu riêng của từng khách hàng.</strong></em></p>
-              
-              <div class="notes">
-                <h4>GHI CHÚ</h4>
-                <ul>
-                  <li>Sản phẩm được bảo hành trọn đời với phiếu bảo hành đính kèm.</li>
-                  <li>Nhấn nút <strong>TƯ VẤN NGAY</strong> để gặp nhân viên hỗ trợ thêm về thông tin và báo giá sản phẩm.</li>
-                </ul>
-              </div>
             </div>
 
           </div>
@@ -250,7 +226,7 @@
           <!-- Content -->
           <div class="featured-content">
 
-            <!-- Brand filter -->
+            <!-- Lọc thương hiệu -->
             <div class="featured-tags">
                <h1 class="font-serif text-sora-primary mb-3">SORA <i class="bi bi-brightness-high fs-4 text-gold"></i></h1>
                <div class="d-flex flex-wrap gap-2">
@@ -288,7 +264,7 @@
         </div>
       </section>
 
-      <!-- CÓ THỂ BẠN SẼ THÍCH SECTION -->
+      <!-- Có thể bạn sẽ thích -->
       <section class="recommendations-section fade-in">
         <div class="recommendations-header">
           <div class="rec-title-wrap">
@@ -316,14 +292,13 @@
 
         <SoraProductGridSkeleton v-if="isLoadingRecs" :count="4" gap="20px" :is-slider="true" />
 
-        <!-- LIST SẢN PHẨM GỢI Ý - SỬ DỤNG COMPONENT PRODUCTCARD ĐÃ TÍCH HỢP ĐẦY ĐỦ -->
+        <!-- Danh sách sản phẩm gợi ý -->
         <div v-else class="rec-slider-container" ref="recSliderRef">
           <div 
             v-for="item in recommendedProducts" 
             :key="item.id" 
             class="position-relative rec-slider-item"
           >
-            <!-- Sử dụng ProductCard Đã Được Nâng Cấp -->
             <ProductCard
               :product="item"
               :shop-slug="item.shop_slug || shopSlug"
@@ -342,12 +317,14 @@
         </div>
       </section>
 
-      <section class="product-description-section fade-in">
+      <section v-if="product?.description && product.description.trim() !== '' && product.description !== '<p><br></p>'" class="product-description-section fade-in">
         <h2 class="section-title text-center font-serif text-sora-primary mb-5"><i class="bi bi-journal-text text-gold me-2"></i>MÔ TẢ SẢN PHẨM</h2>
-        <div class="description-content" v-html="sanitizeRichHtml(product?.description)"></div>
+        <div class="description-content">
+          <div v-html="sanitizeRichHtml(product.description)"></div>
+        </div>
       </section>
 
-      <!-- PRODUCT REVIEWS SECTION -->
+      <!-- Đánh giá sản phẩm -->
      <section class="product-reviews-section fade-in">
         <h2 class="section-title text-center font-serif text-sora-primary mb-5"><i class="bi bi-star-fill text-gold me-2"></i>ĐÁNH GIÁ SẢN PHẨM</h2>
         
@@ -413,7 +390,7 @@
       </section>
     </template>
     
-    <!-- COMBO CAROUSEL SECTION -->
+    <!-- Danh sách combo -->
     <section class="product-combo-carousel-section fade-in mt-5 mb-5" v-if="!isLoading && combos.length > 0">
       <div class="section-heading text-center mb-4 mt-5">
         <span class="section-kicker text-gold">Ưu Đãi Đặc Quyền</span>
@@ -422,7 +399,7 @@
       <ComboCarousel :combos="combos" />
     </section>
     
-    <!-- SIZE GUIDE MODAL COMPONENT -->
+    <!-- Hướng dẫn chọn size -->
     <SizeGuideModal
       :show="showSizeGuideModal"
       :rows="sizeGuideRows"
@@ -430,7 +407,7 @@
       @close="showSizeGuideModal = false"
     />
 
-    <!-- POPUP QUICK ADD TỪ COMPONENT PRODUCT CARD -->
+    <!-- Popup thêm nhanh -->
     <div class="modal fade" id="quickAddModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-0 border-0 shadow-lg">
@@ -524,10 +501,10 @@ const shopSlug = computed(() => route.params.shop_slug || 'aurora');
 const currentProductSlug = computed(() => route.params.slug || route.params.product_slug || '');
 const soraPlaceholder = '/Sora-placeholder.png';
 
-// Wishlist composable
+// Yêu thích
 const { favourites, isTogglingFav, fetchFavorites, isFavourited, toggleFavourite: toggleFav } = useWishlist();
 
-// Variants composable - need to pass product ref
+// Phân loại sản phẩm
 let variantsComposable;
 
 const getVariantsComposable = () => {
@@ -537,7 +514,7 @@ const getVariantsComposable = () => {
   return variantsComposable || useProductVariants({ value: null });
 };
 
-// Computed refs from variants composable
+// Computed phân loại
 const selectedAttributes = computed(() => {
   const comp = getVariantsComposable();
   return comp ? comp.selectedAttributes.value : {};
@@ -577,7 +554,7 @@ const defaultDisplayPrice = computed(() => Number(
   product.value?.variants?.[0]?.price || 
   0
 ));
-// Countdown & Recommendations
+// Đồng hồ & Gợi ý
 const countdown = ref({ days: '00', hours: '00', minutes: '00', seconds: '00' });
 let timerInterval = null;
 const activeTab = ref('related_category');
@@ -612,7 +589,7 @@ const isCurrentSelectionOutOfStock = computed(() => {
   return false;
 });
 
-// Quick Add
+// Thêm nhanh
 const quickAddMatrix = ref({});
 const quickAddSelections = ref({});
 const quickAddError = ref(false);
@@ -756,7 +733,7 @@ const handleToggleCompare = (prod) => {
   globalModalState.openCompare(compareData);
 };
 
-// Quick Add computed properties
+// Computed Thêm nhanh
 const isQuickAddAllSelected = computed(() => {
   const requiredAttrs = Object.keys(quickAddMatrix.value);
   if (requiredAttrs.length === 0) return true;
@@ -788,7 +765,7 @@ const quickAddSelectedPrice = computed(() => {
   return quickAddProduct.value.promotional_price || quickAddProduct.value.base_price || quickAddProduct.value.fallback_price || 0;
 });
 
-// Quick Add functions
+// Hàm Thêm nhanh
 const openQuickAdd = async (prod) => {
   quickAddProduct.value = null;
   quickAddError.value = false;
@@ -842,7 +819,7 @@ const openQuickAdd = async (prod) => {
     }
   } catch (e) {
     quickAddModalInstance.hide();
-    soraAlert.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể tải thông tin sản phẩm' });
+    Toast.fire({ icon: 'error', title: 'Không thể tải thông tin sản phẩm' });
   }
 };
 
@@ -853,14 +830,14 @@ const approvedReviews = computed(() => {
   return product.value.reviews.filter(r => r.status === 'approved');
 });
 
-// 2. Tính lại trung bình sao cho CHÍNH XÁC với những bài đã duyệt
+// 2. Tính lại trung bình đánh giá
 const calculatedAvgRating = computed(() => {
   if (approvedReviews.value.length === 0) return 0;
   const sum = approvedReviews.value.reduce((acc, cur) => acc + Number(cur.rating), 0);
   return (sum / approvedReviews.value.length).toFixed(1);
 });
 
-// 3. Hàm giải mã JSON ảnh (rất quan trọng, nếu không v-for ảnh sẽ lỗi trắng trang)
+// 3. Giải mã JSON ảnh
 const parseImages = (images) => {
   if (!images) return [];
   if (Array.isArray(images)) return images;
@@ -896,7 +873,7 @@ const confirmQuickAdd = async () => {
     Toast.fire({ icon: 'success', title: 'Đã thêm sản phẩm vào giỏ' });
   } catch (error) {
     const msg = error.response?.data?.message || 'Không thể thêm vào giỏ hàng!';
-    soraAlert.fire({ icon: 'error', title: 'Lỗi', text: msg });
+    Toast.fire({ icon: 'error', title: msg });
   }
 };
 
@@ -908,12 +885,12 @@ const soraAlert = Swal.mixin({
   customClass: { confirmButton: 'px-4 py-2 mx-2 rounded-pill shadow-sm fw-bold', cancelButton: 'px-4 py-2 mx-2 rounded-pill fw-bold' }
 });
 
-// Wishlist wrapper with Toast & soraAlert
+// Xử lý yêu thích
 const toggleFavourite = async (prod) => {
   await toggleFav(prod, Toast, soraAlert, router);
 };
 
-// Countdown
+// Đếm ngược
 const startCountdown = () => {
   if (timerInterval) clearInterval(timerInterval);
   const targetTime = new Date().getTime() + (5 * 60 * 60 * 1000 + 59 * 60 * 1000 + 47 * 1000);
@@ -963,7 +940,7 @@ const viewFullImage = (url) => {
   });
 };
 
-// API & Data functions
+// API & Dữ liệu
 // Fetch dictionaries early
 fetchColorDictionary();
 
@@ -1054,11 +1031,21 @@ const fetchRecommendations = async (tab) => {
   }
 };
 
+const getPreloadedData = () => {
+  try {
+    const data = JSON.parse(sessionStorage.getItem('preloaded_product'));
+    if (data && data.slug === currentProductSlug.value) {
+      return data;
+    }
+  } catch(e) {}
+  return undefined;
+};
+
 const { data: productData, isLoading: isProductQueryLoading, isFetching: isProductQueryFetching, isError: isProductQueryError } = useQuery({
   queryKey: ['userProductDetail', shopSlug, currentProductSlug],
   queryFn: fetchProductData,
-  enabled: computed(() => !!currentProductSlug.value),
-  staleTime: 0, // Cập nhật lại liên tục (không cache cứng 5 phút) để tránh lỗi kẹt dữ liệu tồn kho
+  initialData: getPreloadedData,
+  staleTime: 0, // Cập nhật liên tục tránh lỗi tồn kho
 });
 
 watch(productData, (newData) => {
@@ -1066,7 +1053,7 @@ watch(productData, (newData) => {
     const cloned = JSON.parse(JSON.stringify(newData));
     product.value = cloned;
     
-    // Re-initialize variantsComposable with new product
+    // Reset phân loại
     variantsComposable = null;
 
     if (product.value.variants) {
@@ -1099,14 +1086,14 @@ watch(isProductQueryError, (hasError) => {
 
 
 
-// MỚI: Xử lý logic gỡ xung đột tự động cho Chi tiết sản phẩm
+// Xử lý gỡ xung đột phân loại
 const selectAttribute = (attrName, optionId) => {
   const comp = getVariantsComposable();
   if (comp) {
     if (comp.isOptionAvailable(attrName, optionId)) {
         comp.selectAttribute(attrName, optionId);
     } else {
-        // Auto-resolve: Nếu option này bị mờ nhưng user vẫn chọn -> Bỏ chọn tất cả các lựa chọn khác
+        // Tự động bỏ chọn các thuộc tính khác nếu xung đột
         Object.keys(comp.selectedAttributes.value).forEach(key => {
             if (key !== attrName) {
                 comp.selectAttribute(key, null);
@@ -1136,7 +1123,7 @@ const validateQuantity = () => {
   }
 };
 
-// Helper functions for template
+// Hàm hỗ trợ
 const isOptionDisabled = (attrName, optionId) => {
   const comp = getVariantsComposable();
   return comp ? !comp.isOptionAvailable(attrName, optionId) : false;
@@ -1168,7 +1155,7 @@ const addToCart = async () => {
       errorMsg = error.response.data.message;
       if (errorMsg.includes('vượt quá tồn kho')) return Toast.fire({ icon: 'warning', title: 'Đã quá số lượng trong kho' });
     }
-    soraAlert.fire({ icon: 'error', title: 'Không thành công', text: errorMsg });
+    Toast.fire({ icon: 'error', title: errorMsg });
   }
 };
 
@@ -1193,6 +1180,31 @@ const handleImageError = (e) => {
   const img = e?.target;
   if (!img || img.src.endsWith(soraPlaceholder)) return;
   img.src = soraPlaceholder;
+};
+
+const handleMainImageError = (e) => {
+  const img = e?.target;
+  if (!img) return;
+  
+  const fallbacks = [];
+  if (product.value?.variants) {
+    product.value.variants.forEach(v => {
+      const vImg = v.image_url || v.image;
+      if (vImg) fallbacks.push(getFullImage(vImg));
+    });
+  }
+  fallbacks.push(soraPlaceholder);
+  
+  const uniqueFallbacks = [...new Set(fallbacks)];
+  const currentIndex = uniqueFallbacks.indexOf(img.src);
+  
+  if (currentIndex === -1 && uniqueFallbacks.length > 0) {
+    img.src = uniqueFallbacks[0];
+  } else if (currentIndex >= 0 && currentIndex < uniqueFallbacks.length - 1) {
+    img.src = uniqueFallbacks[currentIndex + 1];
+  } else if (!img.src.endsWith(soraPlaceholder)) {
+    img.src = soraPlaceholder;
+  }
 };
 
 // Lifecycle hooks
@@ -1221,9 +1233,7 @@ watch(() => route.params.slug, (newSlug, oldSlug) => {
 </style>
 
 <style scoped>
-/* =========================================
-   LUXURY UI & PURE CSS LAYOUT 
-   ========================================= */
+/* Layout */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 .product-page { font-family: "Helvetica Neue", Arial, sans-serif; background-color: #ffffff; min-height: 100vh; padding: 20px 0; color: var(--sora-text); }
@@ -1236,7 +1246,7 @@ watch(() => route.params.slug, (newSlug, oldSlug) => {
 .breadcrumb { margin-bottom: 30px; font-size: 13px; color: #888; }
 .product-container, .featured-lines-section, .recommendations-section, .product-description-section { max-width: 1300px; margin: 0 auto; background: #fff; padding: 0 20px 50px 20px; }
 
-/* GRID SẢN PHẨM 2 CỘT */
+/* Lưới sản phẩm */
 .product-grid { display: flex; gap: 50px; align-items: flex-start; }
 .product-gallery { display: flex; gap: 15px; width: 58%; }
 .thumbnails-list { display: flex; flex-direction: column; gap: 10px; width: 75px; flex-shrink: 0; }
@@ -1320,9 +1330,7 @@ input[type=number] { -moz-appearance: textfield; }
 .btn-action-sub.active { background: #fdf5f6; color: rgb(159,39,59); border-color: rgb(159,39,59); border-style: solid; }
 .btn-action-sub.active i { color: rgb(159,39,59) !important; }
 
-/* =========================================
-   ĐỒNG BỘ NÚT YÊU THÍCH VỚI TRANG CHỦ
-   ========================================= */
+/* Nút yêu thích */
 .main-wishlist-btn {
     width: 38px;
     height: 38px;
@@ -1383,7 +1391,7 @@ input[type=number] { -moz-appearance: textfield; }
 .featured-banner img { width: 100%; height: 100%; object-fit: cover; transition: 0.3s; }
 .featured-banner img:hover { transform: scale(1.05); }
 
-/* Promo Badge Đã Cập Nhật Emojis -> Icons */
+/* Badge khuyến mãi */
 .promo-badge { position: absolute; top: 15px; left: 15px; color: white; padding: 8px 12px; border-radius: 8px; font-weight: bold; }
 .bg-sora-primary { background-color: var(--sora-primary) !important; }
 .text-sora-primary { color: var(--sora-primary) !important; }
@@ -1469,7 +1477,7 @@ input[type=number] { -moz-appearance: textfield; }
   transform: scale(0.95);
 }
 
-/* CSS CHO SMART SELECTION (AUTO-RESOLVE CONFLICT) */
+/* CSS cho Smart Selection */
 .color-swatch-btn.disabled-option {
   opacity: 0.4 !important;
   cursor: pointer !important;

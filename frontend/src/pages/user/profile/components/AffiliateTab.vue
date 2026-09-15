@@ -175,7 +175,7 @@
 
           <div class="mt-5">
             <button type="submit" class="editorial-btn px-5 py-3 rounded-pill sora-btn-submit" :disabled="isSubmitting">
-              <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>
+              <AdminLoadingSpinner v-if="isSubmitting" class="me-2" size="16" />
               {{ isSubmitting ? 'ĐANG GỬI...' : 'GỬI ĐƠN ĐĂNG KÝ TỚI SORA' }}
             </button>
           </div>
@@ -183,7 +183,7 @@
       </div>
     </div>
 
-    <!-- MODAL RÚT TIỀN -->
+
     <div class="modal fade" id="withdrawModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 rounded-0 shadow">
@@ -200,7 +200,7 @@
                 <span class="fw-bold text-primary-luxury fs-4 font-oswald">{{ formatCurrency(dashboardStats.available_balance) }}</span>
               </div>
 
-              <!-- SỐ TIỀN MUỐN RÚT -->
+
               <div class="mb-3">
                 <label class="form-label font-oswald tracking-wide small text-dark fw-bold text-uppercase">Số tiền muốn rút (VND) <span class="text-danger">*</span></label>
                 <div class="input-group">
@@ -210,7 +210,7 @@
                 <div class="form-text text-muted small mt-1 font-serif fst-italic">Hạn mức rút tối thiểu là 200.000đ mỗi giao dịch.</div>
               </div>
 
-              <!-- CHỌN NGÂN HÀNG -->
+
               <div class="mb-3 position-relative">
                 <label class="form-label font-oswald tracking-wide small text-dark fw-bold text-uppercase">Ngân Hàng Nhận Tiền <span class="text-danger">*</span></label>
                 
@@ -242,7 +242,7 @@
                 </div>
               </div>
 
-              <!-- Ô NHẬP TÊN NGÂN HÀNG CUSTOM -->
+
               <div v-if="selectedBank && selectedBank.code === 'OTHER'" class="mb-3 fade-in">
                 <label class="form-label font-oswald tracking-wide small text-dark fw-bold text-uppercase">Tên Ngân Hàng Của Bạn <span class="text-danger">*</span></label>
                 <input type="text" 
@@ -252,7 +252,7 @@
                   required>
               </div>
 
-              <!-- SỐ TÀI KHOẢN -->
+
               <div class="mb-3">
                 <label class="form-label font-oswald tracking-wide small text-dark fw-bold text-uppercase">Số Tài Khoản <span class="text-danger">*</span></label>
                 <input type="text" 
@@ -271,7 +271,7 @@
                 </div>
               </div>
 
-              <!-- TÊN CHỦ TÀI KHOẢN -->
+
               <div class="mb-3">
                 <label class="form-label font-oswald tracking-wide small text-dark fw-bold text-uppercase">Tên Chủ Tài Khoản (Viết hoa không dấu) <span class="text-danger">*</span></label>
                 <input type="text" 
@@ -286,7 +286,7 @@
             <div class="modal-footer border-top p-3 bg-white justify-content-center">
               <button type="button" class="editorial-btn-outline px-4 py-2" data-bs-dismiss="modal">Hủy Bỏ</button>
               <button type="submit" class="editorial-btn px-5 py-2" :disabled="isWithdrawing || dashboardStats.available_balance < 200000 || !selectedBank">
-                <span v-if="isWithdrawing" class="spinner-border spinner-border-sm me-2"></span>
+                <AdminLoadingSpinner v-if="isWithdrawing" class="me-2" size="16" />
                 Xác Nhận Rút Tiền
               </button>
             </div>
@@ -373,7 +373,7 @@ const selectBank = (bankName) => {
   isBankDropdownOpen.value = false; 
 };
 
-// load trạng thái affiliate khi vào tab
+
 const fetchStatus = async () => {
   isLoading.value = true;
   try {
@@ -405,7 +405,7 @@ const fetchStatus = async () => {
   }
 };
 
-// gửi đơn đk để thành đối tác
+
 const submitApplication = async () => {
   if (!form.social_links.trim() || !form.introduce_message.trim()) return;
   
@@ -417,40 +417,40 @@ const submitApplication = async () => {
     });
     
     if (result.success) {
-      soraAlert.fire({ icon: 'success', title: 'Thành công!', text: result.message });
+      Toast.fire({ icon: 'success', title: result.message || 'Thành công!' });
       applicationStatus.value = 'pending'; 
     } else {
-      soraAlert.fire({ icon: 'error', title: 'Lỗi', text: result.message });
+      Toast.fire({ icon: 'error', title: result.message || 'Lỗi' });
     }
   } catch (error) {
-    soraAlert.fire({ icon: 'error', title: 'Lỗi hệ thống', text: 'Vui lòng thử lại sau.' });
+    Toast.fire({ icon: 'error', title: 'Vui lòng thử lại sau.' });
   } finally {
     isSubmitting.value = false;
   }
 };
 
-// gửi yêu cầu rút tiền
+
 const submitWithdraw = async () => {
   if (withdrawForm.amount < 200000) {
-    soraAlert.fire('Chú ý', 'Số tiền rút tối thiểu phải từ 200.000đ trở lên.', 'warning');
+    Toast.fire({ icon: 'warning', title: 'Số tiền rút tối thiểu phải từ 200.000đ trở lên.' });
     return;
   }
   if (withdrawForm.amount > dashboardStats.value.available_balance) {
-    soraAlert.fire('Thất bại', 'Số dư tài khoản của bạn không đủ để rút số tiền này.', 'error');
+    Toast.fire({ icon: 'error', title: 'Số dư tài khoản của bạn không đủ để rút số tiền này.' });
     return;
   }
 
   if (selectedBank.value) {
     const accLen = withdrawForm.account_number.length;
     if (accLen < selectedBank.value.min || accLen > selectedBank.value.max) {
-      soraAlert.fire('Sai thông tin', `Số tài khoản ${selectedBank.value.name} phải có từ ${selectedBank.value.min} - ${selectedBank.value.max} ký tự!`, 'error');
+      Toast.fire({ icon: 'error', title: `Số tài khoản ${selectedBank.value.name} phải có từ ${selectedBank.value.min} - ${selectedBank.value.max} ký tự!` });
       return;
     }
   }
 
-  // nhập tên BANK khác nếu chọn OTHER
+
   if (selectedBank.value && selectedBank.value.code === 'OTHER' && !withdrawForm.custom_bank_name.trim()) {
-    soraAlert.fire('Bổ sung thông tin', 'Vui lòng nhập tên ngân hàng của bạn!', 'warning');
+    Toast.fire({ icon: 'warning', title: 'Vui lòng nhập tên ngân hàng của bạn!' });
     return;
   }
 
@@ -470,7 +470,7 @@ const submitWithdraw = async () => {
       const modalInstance = window.bootstrap.Modal.getInstance(modalEl);
       if (modalInstance) modalInstance.hide();
 
-      soraAlert.fire({ icon: 'success', title: 'Đã gửi yêu cầu!', text: result.message });
+      Toast.fire({ icon: 'success', title: result.message || 'Đã gửi yêu cầu!' });
       
       withdrawForm.amount = '';
       withdrawForm.bank_name = '';
@@ -481,10 +481,10 @@ const submitWithdraw = async () => {
 
       fetchStatus(); 
     } else {
-      soraAlert.fire({ icon: 'error', title: 'Lỗi', text: result.message });
+      Toast.fire({ icon: 'error', title: result.message || 'Lỗi' });
     }
   } catch (error) {
-    soraAlert.fire({ icon: 'error', title: 'Lỗi kết nối', text: 'Không thể kết nối tới máy chủ. Vui lòng thử lại sau.' });
+    Toast.fire({ icon: 'error', title: 'Không thể kết nối tới máy chủ. Vui lòng thử lại sau.' });
   } finally {
     isWithdrawing.value = false;
   }
@@ -510,7 +510,7 @@ const copyLink = () => {
 
 const openWithdrawModal = () => {
   if (dashboardStats.value.available_balance < 200000) {
-    soraAlert.fire('Hạn mức không đủ', 'Số dư ví khả dụng phải có tối thiểu từ 200.000đ trở lên để làm lệnh rút tiền.', 'warning');
+    Toast.fire({ icon: 'warning', title: 'Số dư ví khả dụng phải có tối thiểu từ 200.000đ trở lên để làm lệnh rút tiền.' });
     return;
   }
   const m = new window.bootstrap.Modal(document.getElementById('withdrawModal'));
@@ -573,7 +573,7 @@ onMounted(() => {
 .max-w-500 { max-width: 500px; }
 .max-w-600 { max-width: 600px; }
 
-/* CSS Tái sử dụng nút luxury */
+
 .bg-primary-luxury { background-color: #9f273b !important; }
 .text-primary-luxury { color: #9f273b !important; }
 .text-gold { color: #e7ce7d !important; }

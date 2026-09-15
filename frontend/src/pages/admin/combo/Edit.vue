@@ -2,7 +2,6 @@
   <div class="combo-edit-wrapper ">
     <div class="container-fluid py-4" v-if="!isPageLoading">
       
-      <!-- HEADER -->
       <div class="row mb-4 align-items-center">
         <div class="col-md-8 d-flex align-items-center">
           <router-link :to="{ name: 'admin-combos' }" class="btn btn-light shadow-sm me-3 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
@@ -18,7 +17,6 @@
       <form @submit.prevent="submitCombo">
         <div class="row g-4">
           
-          <!-- CỘT TRÁI -->
           <div class="col-lg-8">
             <div class="card border-0 shadow-sm rounded-4 mb-4">
               <div class="card-body p-4">
@@ -72,7 +70,6 @@
               </div>
             </div>
 
-            <!-- BẢNG DANH SÁCH MÓN ĐỒ -->
             <div class="card border-0 shadow-sm rounded-4 mb-4">
               <div class="card-header bg-white border-bottom p-4 d-flex justify-content-between align-items-center">
                 <h6 class="fw-bold text-brand mb-0"><i class="bi bi-box-seam-fill me-2"></i>Thành phần Gói Sản phẩm</h6>
@@ -98,7 +95,6 @@
                     <tbody>
                       <tr v-for="(item, index) in comboItems" :key="index">
                         <td class="p-2 position-relative">
-                          <!-- CUSTOM SELECT DROPDOWN (VUE-DRIVEN) -->
                           <div class="custom-select-wrapper w-100 position-relative">
                               <button class="btn btn-light bg-white border w-100 text-start d-flex justify-content-between align-items-center shadow-sm"
                                       type="button" @click="item.isDropdownOpen = !item.isDropdownOpen" style="min-height: 38px;">
@@ -106,11 +102,9 @@
                                   <i class="bi bi-chevron-down text-muted small"></i>
                               </button>
                               
-                              <!-- Lớp Overlay bắt sự kiện click ra ngoài để đóng Dropdown -->
                               <div v-if="item.isDropdownOpen" class="position-fixed top-0 start-0 w-100 h-100" style="z-index: 1050; cursor: default;" @click="item.isDropdownOpen = false"></div>
                               
                               <div v-if="item.isDropdownOpen" class="dropdown-menu show p-0 shadow-lg border-0 rounded-3 overflow-hidden position-absolute mt-1" style="width: 360px; z-index: 1060; top: 100%; left: 0;">
-                                  <!-- Khung tìm kiếm & lọc -->
                                   <div class="p-3 border-bottom bg-light">
                                       <div class="input-group input-group-sm mb-2 shadow-sm">
                                           <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
@@ -124,11 +118,9 @@
                                       </select>
                                   </div>
                                   
-                                  <!-- Danh sách sản phẩm -->
                                   <div class="product-list-scroll bg-white custom-scrollbar" style="max-height: 280px; overflow-y: auto;">
                                       <template v-for="(group, catName) in getFilteredAndGroupedProducts(item, index)" :key="catName">
                                           
-                                          <!-- Tên danh mục (Sticky) kèm Tính năng Collapse & Sort -->
                                           <div class="bg-light fw-bold text-secondary px-3 py-2 small sticky-top border-bottom border-top d-flex justify-content-between align-items-center" style="z-index: 2; top: 0;">
                                               <div class="cursor-pointer d-flex align-items-center flex-grow-1" @click="toggleCategory(item, catName, group)">
                                                   <i class="bi bi-tags-fill me-1 text-brand"></i> 
@@ -136,7 +128,6 @@
                                                   <i class="bi" :class="isCollapsed(item, catName, group) ? 'bi-chevron-down' : 'bi-chevron-up'"></i>
                                               </div>
                                               
-                                              <!-- Các nút Lọc/Sort nhanh giá (ĐÃ FIX: Trắng chữ khi active) -->
                                               <div class="d-flex align-items-center bg-white border rounded shadow-sm">
                                                   <button type="button" class="btn btn-sm px-2 py-0 border-end hover-brand" 
                                                           @click.stop="sortCategory(item, catName, 'asc')" 
@@ -153,7 +144,6 @@
                                               </div>
                                           </div>
                                           
-                                          <!-- Nút sản phẩm (Bị ẩn nếu danh mục Collapse) -->
                                           <template v-if="!isCollapsed(item, catName, group)">
                                             <button v-for="p in group" :key="p.id"
                                                     type="button"
@@ -175,7 +165,7 @@
                         </td>
                         
                         <td class="p-2 text-center">
-                          <div v-if="item.isLoadingVariants" class="spinner-border spinner-border-sm text-brand"></div>
+                          <AdminLoadingSpinner v-if="item.isLoadingVariants" class="text-brand" size="16" />
                           <span v-else-if="!item.product_id" class="text-muted small fst-italic">---</span>
                           <select v-else class="form-select form-select-sm" v-model="item.product_variant_id">
                             <option :value="null" class="text-success fw-bold">[Khách hàng tự do chọn Size]</option>
@@ -201,13 +191,11 @@
             </div>
           </div>
 
-          <!-- CỘT PHẢI: QUẢN LÝ ITEMS & BẢNG TÍNH LỢI NHUẬN -->
           <div class="col-lg-4">
             <div class="px-1 pb-3">
             <div class="card border-0 shadow-sm rounded-4 mb-4 text-center p-4">
               <h6 class="fw-bold mb-3 text-start"><i class="bi bi-image me-2"></i>Ảnh Đại Diện Combo <span class="text-danger">*</span></h6>
               <div class="mb-3 position-relative border rounded-4 overflow-hidden bg-white shadow-sm mx-auto" style="width: 100%; height: 200px;">
-                <!-- HIỂN THỊ ẢNH PREVIEW LÚC UPLOAD HOẶC SORA IMAGE TỪ DB -->
                 <img v-if="thumbnailPreview" :src="thumbnailPreview" class="w-100 h-100 object-fit-cover">
                 <SoraImage v-else-if="form.thumbnail_image" 
                            :src="form.thumbnail_image" 
@@ -223,7 +211,6 @@
               </label>
             </div>
 
-            <!-- SMART CALCULATOR BOX -->
             <div class="card border-brand border-2 shadow-sm rounded-4 mb-4 overflow-hidden">
               <div class="card-header bg-brand text-white border-0 py-3">
                 <h6 class="fw-bold mb-0"><i class="bi bi-calculator-fill me-2"></i>Bảng tính Lợi nhuận</h6>
@@ -263,7 +250,6 @@
               </div>
             </div>
 
-            <!-- OPTIONS KÈM THÊM LỊCH FLATPICKR XỊN XÒ -->
             <div class="card border-0 shadow-sm rounded-4 mb-4">
               <div class="card-body p-4">
                 <h6 class="fw-bold mb-3"><i class="bi bi-gear me-2"></i>Cài đặt Khác</h6>
@@ -324,21 +310,29 @@
 
         <div class="border-top pt-4 text-end mt-2">
           <router-link :to="{ name: 'admin-combos' }" class="btn btn-light px-4 me-2 border fw-semibold">Hủy bỏ</router-link>
-          <!-- Sử dụng trạng thái isPending của TanStack Query -->
           <button type="submit" class="btn btn-brand px-5 py-2 fw-bold shadow-sm rounded-pill" :disabled="updateMutation.isPending.value || comboItems.length < 2">
-            <span v-if="updateMutation.isPending.value" class="spinner-border spinner-border-sm me-2"></span> 
+            <AdminLoadingSpinner v-if="updateMutation.isPending.value" class="me-2" size="16" /> 
             LƯU THAY ĐỔI
           </button>
         </div>
       </form>
     </div>
 
-    <!-- MÀN HÌNH CHỜ -->
     <div v-else class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
       <h1 class="logo-shimmer mb-3">ThinkHub</h1>
       <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ liệu Combo...</p>
     </div>
   </div>
+  <ImageCropperModal
+    :show="showCropper"
+    :image-url="cropperUrl"
+    :aspect-ratio="NaN"
+    :allow-ratio-change="true"
+    :max-size-kb="200"
+    title="Cắt ảnh Combo"
+    @crop="handleCrop"
+    @close="closeCropper"
+  />
 </template>
 
 <script setup>
@@ -350,12 +344,12 @@ import axios from 'axios';
 import { QuillEditor } from '@vueup/vue-quill';
 import '@vueup/vue-quill/dist/vue-quill.snow.css';
 
-// State cho trình soạn thảo
 const isHtmlMode = ref(false);
 
-// Import Component SoraImage và Ảnh Placeholder
+import { getFullImage } from '@/composables/useUtilities';
 import SoraImage from '@/components/ui/SoraImage.vue';
-import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
+import defaultImage from '../../../assets/images/defaults/placeholder.png';
+import ImageCropperModal from '@/components/admin/ImageCropperModal.vue';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -380,9 +374,6 @@ const comboItems = ref([]);
 
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
 
-// ============================================================================
-// TANSTACK QUERY 1: LẤY DANH SÁCH SẢN PHẨM (Kèm Bắt Lỗi Mạng/Auth)
-// ============================================================================
 const { data: allProducts } = useQuery({
   queryKey: ['admin-products'],
   queryFn: async () => {
@@ -398,9 +389,6 @@ const { data: allProducts } = useQuery({
   staleTime: 5 * 60 * 1000, 
 });
 
-// ============================================================================
-// TANSTACK QUERY 2: LẤY CHI TIẾT COMBO (Kèm Bắt Lỗi Mạng/Auth)
-// ============================================================================
 const { data: comboData, isLoading: isLoadingCombo } = useQuery({
   queryKey: ['admin-combo', comboId],
   queryFn: async () => {
@@ -431,11 +419,6 @@ const formatToDBDate = (str) => {
     return cleanStr;
 };
 
-// ============================================================================
-// TỐI ƯU HÓA BỘ LỌC TÌM KIẾM, PHÂN NHÓM & QUẢN LÝ UI DROPDOWN
-// ============================================================================
-
-// Hàm chuẩn hóa chuỗi để tìm kiếm mờ (xoá dấu tiếng Việt)
 const removeAccents = (str) => {
     if (!str) return '';
     return str.normalize('NFD')
@@ -455,22 +438,17 @@ const getProductName = (productId) => {
     return p ? `${p.name} (${formatCurrency(p.base_price)})` : 'Sản phẩm không tồn tại';
 };
 
-// Quản lý trạng thái Thu/Gọn của từng Category
 const isCollapsed = (item, catName, groupProducts) => {
-    // Luôn mở hết nếu đang gõ tìm kiếm
     if (item.searchQuery) return false; 
     
-    // Nếu người dùng đã tự click Tắt/Mở, ưu tiên trạng thái đó
     if (item.collapsedCategories[catName] !== undefined) {
         return item.collapsedCategories[catName];
     }
     
-    // Auto-Expand: Tự động mở danh mục ĐANG CHỨA sản phẩm được chọn
     if (item.product_id && groupProducts.some(p => p.id === item.product_id)) {
         return false;
     }
     
-    // Mặc định ban đầu là Thu gọn (Gọn gàng)
     return true; 
 };
 
@@ -479,26 +457,23 @@ const toggleCategory = (item, catName, groupProducts) => {
     item.collapsedCategories[catName] = !currentState;
 };
 
-// Quản lý chức năng Sắp xếp (Sort) theo giá
 const sortCategory = (item, catName, direction) => {
     if (item.categorySorts[catName] === direction) {
-        item.categorySorts[catName] = null; // Huỷ sort nếu click lại
+        item.categorySorts[catName] = null;
     } else {
         item.categorySorts[catName] = direction;
-        item.collapsedCategories[catName] = false; // Mở category đó ra nếu đang đóng
+        item.collapsedCategories[catName] = false;
     }
 };
 
 const getFilteredAndGroupedProducts = (item, currentIndex) => {
     let filtered = eligibleProducts.value || [];
 
-    // Tìm kiếm mờ (Fuzzy Search)
     if (item.searchQuery) {
         const q = removeAccents(item.searchQuery);
         filtered = filtered.filter(p => removeAccents(p.name).includes(q));
     }
 
-    // Lọc theo khoảng giá
     if (item.priceFilter !== 'all') {
         filtered = filtered.filter(p => {
             const price = parseFloat(p.base_price);
@@ -509,9 +484,8 @@ const getFilteredAndGroupedProducts = (item, currentIndex) => {
         });
     }
 
-    const limited = filtered.slice(0, 100); // Tránh lag DOM
+    const limited = filtered.slice(0, 100);
     
-    // Đảm bảo item đã chọn không bị ẩn
     if (item.product_id) {
         const selectedProd = eligibleProducts.value.find(p => p.id === item.product_id);
         if (selectedProd && !limited.some(p => p.id === selectedProd.id)) {
@@ -519,7 +493,6 @@ const getFilteredAndGroupedProducts = (item, currentIndex) => {
         }
     }
 
-    // Grouping
     const grouped = {};
     limited.forEach(p => {
         const catName = p.category?.name || p.category_name || 'Khác';
@@ -527,7 +500,6 @@ const getFilteredAndGroupedProducts = (item, currentIndex) => {
         grouped[catName].push(p);
     });
     
-    // Áp dụng Sort cho từng Category nếu có
     for (const cat in grouped) {
         const sortDir = item.categorySorts[cat];
         if (sortDir === 'asc') {
@@ -540,20 +512,16 @@ const getFilteredAndGroupedProducts = (item, currentIndex) => {
     return grouped;
 };
 
-// Khi chọn 1 sản phẩm
 const selectProduct = async (index, productId) => {
     if (isProductAlreadySelected(productId, index)) return;
     
     comboItems.value[index].product_id = productId;
-    comboItems.value[index].isDropdownOpen = false; // Đóng mượt mà
+    comboItems.value[index].isDropdownOpen = false;
     
     await handleProductSelect(index, false);
 };
 
 
-// ============================================================================
-// HÀM XỬ LÝ LẤY BIẾN THỂ TỪ CACHE TANSTACK
-// ============================================================================
 const handleProductSelect = async (index, isInit = false) => {
   const item = comboItems.value[index];
 
@@ -570,7 +538,7 @@ const handleProductSelect = async (index, isInit = false) => {
         const res = await axios.get(`${API_URL}/admin/products/${item.product_id}`, { headers: getHeaders() });
         return res.data?.data || null;
       },
-      staleTime: 10 * 60 * 1000 // Cache variants 10 phút
+      staleTime: 10 * 60 * 1000
     });
 
     if (productData && productData.variants) {
@@ -584,9 +552,6 @@ const handleProductSelect = async (index, isInit = false) => {
 };
 
 
-// ============================================================================
-// ĐIỀN DỮ LIỆU VÀO FORM (Chỉ chạy 1 lần)
-// ============================================================================
 watch(comboData, async (c) => {
   if (c && !isFormInitialized.value) {
     form.value = {
@@ -600,7 +565,6 @@ watch(comboData, async (c) => {
         thumbnail_image: c.thumbnail_image
     };
 
-    // KHỞI TẠO TẤT CẢ BIẾN STATE 
     comboItems.value = c.items.map(i => ({
         product_id: i.product_id,
         product_variant_id: i.product_variant_id,
@@ -610,8 +574,8 @@ watch(comboData, async (c) => {
         searchQuery: '',
         priceFilter: 'all',
         isDropdownOpen: false,
-        collapsedCategories: {}, // Lưu trạng thái Collapsed
-        categorySorts: {} // Lưu trạng thái Sort
+        collapsedCategories: {},
+        categorySorts: {}
     }));
 
     for (let i = 0; i < comboItems.value.length; i++) {
@@ -694,7 +658,6 @@ const savingsPercentage = computed(() => {
   return Math.round((savings / originalTotal.value) * 100);
 });
 
-// Chỉnh sửa Format tiền theo đúng chuẩn đơn giản: 100.000 VNĐ
 const formatCurrency = (val) => {
     if (val === null || val === undefined) return '0 VNĐ';
     return new Intl.NumberFormat('vi-VN').format(val) + ' VNĐ';
@@ -702,16 +665,33 @@ const formatCurrency = (val) => {
 
 const generateSlug = () => {
   let s = form.value.name.toLowerCase();
-  s = removeAccents(s); // Dùng lại hàm removeAccents cho nhất quán
+  s = removeAccents(s);
   form.value.slug = s.replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '').replace(/\-\-+/g, '-');
+};
+
+const showCropper = ref(false);
+const cropperUrl = ref('');
+
+const closeCropper = () => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+};
+
+const handleCrop = (data) => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+  
+  thumbnailFile.value = data.file;
+  thumbnailPreview.value = data.blobUrl;
 };
 
 const handleThumbnailUpload = (e) => {
   const f = e.target.files[0];
   if(f) { 
       if(f.size > 15 * 1024 * 1024) { Swal.fire('Lỗi', 'Ảnh tối đa 15MB', 'error'); return; }
-      thumbnailFile.value = f; 
-      thumbnailPreview.value = URL.createObjectURL(f); 
+      cropperUrl.value = URL.createObjectURL(f);
+      showCropper.value = true;
+      e.target.value = '';
   }
 };
 
@@ -757,7 +737,6 @@ const setToday = (field) => {
     } else {
         form.value.end_date = localISOTime;
         if (window.fpEnd) window.fpEnd.setDate(localISOTime);
-        // Recalculate duration if start date exists
         if (form.value.start_date) {
             const start = new Date(form.value.start_date.replace(' ', 'T'));
             const end = new Date(localISOTime.replace(' ', 'T'));
@@ -847,9 +826,6 @@ const initPickers = () => {
 };
 
 
-// ============================================================================
-// TANSTACK MUTATION: XỬ LÝ CẬP NHẬT COMBO
-// ============================================================================
 const updateMutation = useMutation({
   mutationFn: async (formData) => {
     return axios.post(`${API_URL}/admin/combos/${comboId}`, formData, { headers: getHeaders() });
@@ -942,7 +918,6 @@ const submitCombo = () => {
 .text-brand { color: #009981 !important; }
 .border-brand { border-color: #009981 !important; }
 
-/* FIX HIỂN THỊ CHỮ TRONG NỀN TỐI TOÀN CỤC */
 .btn-brand { background-color: #009981; color: white !important; border: none; transition: 0.2s; }
 .btn-brand:hover { background-color: #007a67; color: white !important; }
 .btn-outline-brand { color: #009981; border-color: #009981; transition: 0.2s; background: transparent; }
@@ -953,14 +928,12 @@ const submitCombo = () => {
 .hover-bg-danger:hover { color: #dc3545 !important; background-color: #fff5f5; border-radius: 4px; }
 .hover-brand:hover { color: #009981 !important; }
 
-/* CSS CHI TIẾT CHO CUSTOM SELECT DROPDOWN */
 .custom-scrollbar::-webkit-scrollbar { width: 6px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #009981; }
 .dropdown-hover:hover { background-color: #f8f9fa; cursor: pointer; }
 
-/* GHI ĐÈ MÀU XANH & ÉP MÀU CHỮ TRẮNG CHO LỊCH FLATPICKR ĐỂ ĐỒNG BỘ THEME THINKHUB */
 :deep(.flatpickr-calendar) { box-shadow: 0 15px 30px rgba(0,0,0,0.1); border: none; border-radius: 12px; font-family: inherit; }
 :deep(.flatpickr-day.selected),
 :deep(.flatpickr-day.startRange),

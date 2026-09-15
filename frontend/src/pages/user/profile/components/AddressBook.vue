@@ -11,7 +11,7 @@
       </button>
     </div>
 
-    <!-- DANH SÁCH ĐỊA CHỈ -->
+
     <div v-if="!showAddressForm">
       <AddressBookSkeleton v-if="isLoading" />
 
@@ -50,7 +50,7 @@
       </div>
     </div>
 
-    <!-- FORM THÊM / SỬA ĐỊA CHỈ -->
+
     <div v-if="showAddressForm" class="address-form-panel">
       <h4 class="font-serif text-main mb-4"><i class="bi bi-geo-alt-fill me-2"></i>{{ isEditing ? 'Cập Nhật Địa Chỉ' : 'Thêm Địa Chỉ Mới' }}</h4>
       <form @submit.prevent="saveAddress">
@@ -96,7 +96,7 @@
         <div class="mb-4">
           <div class="d-flex justify-content-end mb-2">
             <button type="button" class="btn btn-sm btn-outline-main d-flex align-items-center gap-1 rounded-pill px-3" @click="getCurrentLocation" :disabled="isLocating">
-              <span v-if="isLocating" class="spinner-border spinner-border-sm"></span>
+              <AdminLoadingSpinner v-if="isLocating" size="16" />
               <i v-else class="bi bi-geo-alt"></i> Lấy định vị hiện tại
             </button>
           </div>
@@ -118,7 +118,7 @@
 
         <div class="address-form-actions d-flex flex-wrap gap-3">
           <button type="submit" class="address-primary-btn" :disabled="isSaving">
-            <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>Hoàn Thành
+            <AdminLoadingSpinner v-if="isSaving" class="me-2" size="16" />Hoàn Thành
           </button>
           <button type="button" @click="closeForm" class="address-outline-btn">Trở Lại</button>
         </div>
@@ -140,26 +140,20 @@ const props = defineProps({
   userPhone: { type: String, default: '' }
 });
 
+import Toast from '@/utils/toastConfig';
+
 const soraAlert = createSoraAlert({
   customClass: { confirmButton: 'px-4 py-2 mx-2 rounded-0 shadow-sm fw-bold text-uppercase' }
 });
 
 const showToast = (message, type = 'success') => {
-  soraAlert.fire({
+  Toast.fire({
     icon: type,
-    title:
-type === 'success'
-? 'Thành Công!'
-: type === 'warning'
-? 'Lưu Ý'
-: 'Có Lỗi Xảy Ra!',
-    text: message,
-    timer: type === 'success' ? 2500 : undefined,
-    showConfirmButton: type !== 'success'
+    title: message
   });
 };
 
-// === STATE ===
+
 const addresses = ref([]);
 const isLoading = ref(false);
 const showAddressForm = ref(false);
@@ -200,7 +194,7 @@ const fetchAddresses = async () => {
   }
 };
 
-// === FORM OPEN / CLOSE ===
+
 const openAddForm = () => {
   isEditing.value = false;
   addrForm.value = {
@@ -233,7 +227,7 @@ const closeForm = () => {
   showAddressForm.value = false;
 };
 
-// === VALIDATION ===
+
 const validateField = (field) => {
   const v = addrForm.value;
   if (field === 'customer_name') {
@@ -322,7 +316,7 @@ const getCurrentLocation = () => {
 
 
       const provinceName = compound.province || compound.city || '';
-      // Goong có thể trả về district với nhiều key khác nhau
+
       const districtName = compound.district || compound.district_name || '';
       const wardName = compound.commune || compound.ward || compound.commune_name || '';
       const resolvedAddress = await addressPickerRef.value?.resolveAddress({
@@ -334,7 +328,7 @@ const getCurrentLocation = () => {
 
 
       addrForm.value.city = resolvedAddress?.province?.name || provinceName || addrForm.value.city;
-      // Ưu tiên kết quả đã resolve; nếu không match được thì dùng tên raw từ Goong để user thấy và chọn lại
+
       addrForm.value.district = resolvedAddress?.district?.name || districtName || addrForm.value.district;
       addrForm.value.ward = resolvedAddress?.ward?.name || wardName || addrForm.value.ward;
       addressHasDistrictLevel.value = Boolean(resolvedAddress?.hasDistrictLevel);
@@ -363,7 +357,7 @@ const getCurrentLocation = () => {
   }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
 };
 
-// === SAVE ===
+
 const saveAddress = async () => {
   ['customer_name','customer_phone','shipping_address','city','district','ward'].forEach(validateField);
   if (Object.values(errs.value).some(e => e !== '')) return;
@@ -389,7 +383,7 @@ const saveAddress = async () => {
   }
 };
 
-// === DELETE ===
+
 const confirmDelete = async (id) => {
   soraAlert.fire({
     title: 'Xóa Địa Chỉ?',
@@ -413,7 +407,7 @@ const confirmDelete = async (id) => {
   });
 };
 
-// === SET DEFAULT ===
+
 const setDefault = async (id) => {
   try {
     const res = await clientApiClient.put(`/client/profile/addresses/${id}/default`, {});

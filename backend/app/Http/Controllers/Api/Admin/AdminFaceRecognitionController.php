@@ -169,7 +169,6 @@ class AdminFaceRecognitionController extends Controller
                 if ($existingProfile) {
                     $currentDescriptors = $existingProfile->face_descriptors ?? [];
                     $mergedDescriptors = array_merge($currentDescriptors, $descriptors);
-                    // Ensure we don't exceed 5 samples
                     $mergedDescriptors = array_slice($mergedDescriptors, 0, 5);
 
                     $existingProfile->update([

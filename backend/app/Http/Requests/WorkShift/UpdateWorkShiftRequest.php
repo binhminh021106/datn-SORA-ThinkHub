@@ -32,7 +32,6 @@ class UpdateWorkShiftRequest extends FormRequest
                 try {
                     $mergeData[$field] = Carbon::parse($this->input($field))->format('H:i');
                 } catch (\Exception $e) {
-                    // Bỏ qua để Rules bắt lỗi date_format
                 }
             }
         }
@@ -58,7 +57,6 @@ class UpdateWorkShiftRequest extends FormRequest
 
     public function rules(): array
     {
-        // Lấy ID của work shift từ Route để ignore khi validate Unique
         $shiftId = $this->route('id') ?? $this->route('work_shift');
 
         $rules = [

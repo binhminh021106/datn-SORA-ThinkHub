@@ -344,7 +344,6 @@ class AdminProductController extends Controller
                 }
             }
 
-            // XÓA DỮ LIỆU DATABASE (CASCADE)
             DB::table('product_images')->where('product_id', $id)->delete();
             
             if (!empty($variantIds)) {
@@ -441,7 +440,6 @@ class AdminProductController extends Controller
                     }
                 }
 
-                // XÓA DỮ LIỆU DATABASE (CASCADE)
                 DB::table('product_images')->where('product_id', $id)->delete();
                 
                 if (!empty($variantIds)) {

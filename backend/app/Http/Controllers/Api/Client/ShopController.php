@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Attribute;
 use App\Models\AttributeValue;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class ShopController extends Controller
 {
@@ -29,12 +30,10 @@ class ShopController extends Controller
         $query = Product::with([
             'category:id,name,slug,parent_id',
             'variants' => function ($variantQuery) {
-                $variantQuery->where('stock_quantity', '>', 0)
-                    ->with('attributeValues.attribute');
+                $variantQuery->select('id', 'product_id', 'stock_quantity', 'image_url')
+                    ->where('stock_quantity', '>', 0);
             },
         ])
-            ->withCount('reviews')
-            ->withAvg('reviews', 'rating')
             ->where('status', 'published')
             ->whereHas('variants', function ($variantQuery) {
                 $variantQuery->where('stock_quantity', '>', 0);
@@ -101,7 +100,16 @@ class ShopController extends Controller
                 break;
         }
 
-        $products = $query->paginate($filters['per_page'] ?? 12);
+        $isDefaultQuery = empty($filters['keyword']) && empty($filters['categories']) && empty($filters['color']) && empty($filters['attribute_values']) && empty($filters['dimension']) && empty($filters['size']) && empty($filters['min_price']) && empty($filters['max_price']) && ($filters['sort'] ?? 'recommended') === 'recommended' && ($filters['per_page'] ?? 12) == 12 && ($request->page ?? 1) == 1;
+
+        if ($isDefaultQuery) {
+            $cacheKey = "shop_products_{$shop_slug}_default_page_1";
+            $products = Cache::remember($cacheKey, 300, function () use ($query) {
+                return $query->paginate(12);
+            });
+        } else {
+            $products = $query->paginate($filters['per_page'] ?? 12);
+        }
 
         $products->getCollection()->transform(function ($product) {
             $product->is_new = $product->created_at >= now()->subDays(30);
@@ -125,66 +133,75 @@ class ShopController extends Controller
 
     public function categories($shop_slug)
     {
-        $categories = Category::where('status', 'active')
-            ->where(function ($categoryQuery) {
-                $categoryQuery->whereHas('products', function ($productQuery) {
-                    $productQuery->where('status', 'published')
-                        ->whereHas('variants', function ($variantQuery) {
-                            $variantQuery->where('stock_quantity', '>', 0);
-                        });
-                })->orWhereHas('children.products', function ($productQuery) {
-                    $productQuery->where('status', 'published')
-                        ->whereHas('variants', function ($variantQuery) {
-                            $variantQuery->where('stock_quantity', '>', 0);
-                        });
-                });
-            })
-            ->orderBy('sort_order', 'asc')
-            ->get(['id', 'parent_id', 'name', 'slug', 'thumbnail']);
+        $cacheKey = "shop_categories_{$shop_slug}";
+        $categories = Cache::remember($cacheKey, 3600, function () {
+            return Category::where('status', 'active')
+                ->where(function ($categoryQuery) {
+                    $categoryQuery->whereHas('products', function ($productQuery) {
+                        $productQuery->where('status', 'published')
+                            ->whereHas('variants', function ($variantQuery) {
+                                $variantQuery->where('stock_quantity', '>', 0);
+                            });
+                    })->orWhereHas('children.products', function ($productQuery) {
+                        $productQuery->where('status', 'published')
+                            ->whereHas('variants', function ($variantQuery) {
+                                $variantQuery->where('stock_quantity', '>', 0);
+                            });
+                    });
+                })
+                ->orderBy('sort_order', 'asc')
+                ->get(['id', 'parent_id', 'name', 'slug', 'thumbnail']);
+        });
 
         return response()->json(['success' => true, 'data' => $categories]);
     }
 
     public function colors(Request $request, $shop_slug)
     {
-        $uniqueColors = AttributeValue::whereHas('attribute', function ($attributeQuery) {
-                $attributeQuery->whereIn('name', ['Màu sắc', 'Color', 'Màu', 'color']);
-            })
-            ->whereHas('variants', function ($variantQuery) use ($request) {
-                $variantQuery->where('stock_quantity', '>', 0)
-                    ->whereHas('product', function ($productQuery) use ($request) {
-                        $productQuery->where('status', 'published');
-                        $this->applyCategoryScope($productQuery, $request);
-                    });
-            })
-            ->orderBy('value')
-            ->distinct()
-            ->pluck('value');
+        $cacheKey = "shop_colors_{$shop_slug}_" . md5(json_encode($request->all()));
+        $uniqueColors = Cache::remember($cacheKey, 3600, function () use ($request) {
+            return AttributeValue::whereHas('attribute', function ($attributeQuery) {
+                    $attributeQuery->whereIn('name', ['Màu sắc', 'Color', 'Màu', 'color']);
+                })
+                ->whereHas('variants', function ($variantQuery) use ($request) {
+                    $variantQuery->where('stock_quantity', '>', 0)
+                        ->whereHas('product', function ($productQuery) use ($request) {
+                            $productQuery->where('status', 'published');
+                            $this->applyCategoryScope($productQuery, $request);
+                        });
+                })
+                ->orderBy('value')
+                ->distinct()
+                ->pluck('value');
+        });
 
         return response()->json(['success' => true, 'data' => $uniqueColors]);
     }
 
     public function attributes(Request $request, $shop_slug)
     {
-        $attributes = Attribute::with(['values' => function ($valueQuery) use ($request) {
-                $valueQuery->select('id', 'attribute_id', 'value')
-                    ->whereHas('variants', function ($variantQuery) use ($request) {
-                        $variantQuery->where('stock_quantity', '>', 0)
-                            ->whereHas('product', function ($productQuery) use ($request) {
-                                $productQuery->where('status', 'published');
-                                $this->applyCategoryScope($productQuery, $request);
-                            });
-                    })
-                    ->orderBy('value');
-            }])
-            ->whereHas('values.variants', function ($variantQuery) use ($request) {
-                $variantQuery->where('stock_quantity', '>', 0)
-                    ->whereHas('product', function ($productQuery) use ($request) {
-                        $productQuery->where('status', 'published');
-                        $this->applyCategoryScope($productQuery, $request);
-                    });
-            })
-            ->get();
+        $cacheKey = "shop_attributes_{$shop_slug}_" . md5(json_encode($request->all()));
+        $attributes = Cache::remember($cacheKey, 3600, function () use ($request) {
+            return Attribute::with(['values' => function ($valueQuery) use ($request) {
+                    $valueQuery->select('id', 'attribute_id', 'value')
+                        ->whereHas('variants', function ($variantQuery) use ($request) {
+                            $variantQuery->where('stock_quantity', '>', 0)
+                                ->whereHas('product', function ($productQuery) use ($request) {
+                                    $productQuery->where('status', 'published');
+                                    $this->applyCategoryScope($productQuery, $request);
+                                });
+                        })
+                        ->orderBy('value');
+                }])
+                ->whereHas('values.variants', function ($variantQuery) use ($request) {
+                    $variantQuery->where('stock_quantity', '>', 0)
+                        ->whereHas('product', function ($productQuery) use ($request) {
+                            $productQuery->where('status', 'published');
+                            $this->applyCategoryScope($productQuery, $request);
+                        });
+                })
+                ->get();
+        });
 
         return response()->json(['success' => true, 'data' => $attributes]);
     }

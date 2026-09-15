@@ -30,7 +30,7 @@
                                         Hủy
                                     </button>
                                     <button type="submit" class="btn btn-sm btn-info text-white flex-fill fw-bold shadow-sm" :disabled="isSaving">
-                                        <span v-if="isSaving" class="spinner-border spinner-border-sm me-1"></span>
+                                        <AdminLoadingSpinner v-if="isSaving" class="me-1" size="16" />
                                         {{ editingColor ? 'Cập nhật' : 'Thêm vào từ điển' }}
                                     </button>
                                 </div>
@@ -60,7 +60,7 @@
                                     <tbody>
                                         <tr v-if="isLoading">
                                             <td colspan="4" class="text-center py-4 text-muted">
-                                                <div class="spinner-border spinner-border-sm text-info me-2"></div> Đang tải dữ liệu...
+                                                <AdminLoadingSpinner class="text-info me-2" size="16" /> Đang tải dữ liệu...
                                             </td>
                                         </tr>
                                         <tr v-else-if="filteredColors.length === 0">

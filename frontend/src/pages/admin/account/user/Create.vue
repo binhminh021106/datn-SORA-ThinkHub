@@ -13,10 +13,9 @@
                 </div>
             </div>
 
-            <!-- Tắt autocomplete ở cấp độ form -->
             <form class="account-create-form" @submit.prevent="saveUser" autocomplete="off">
                 <div class="row g-3">
-                    <!-- Cột Trái: Avatar & Trạng thái -->
+                    <!-- Avatar & Trạng thái -->
                     <div class="col-md-4 col-lg-3">
                         <div class="card border-0 shadow-sm rounded-4 text-center p-3 h-100">
                             <label class="form-label fw-bold mb-3">Ảnh đại diện</label>
@@ -44,7 +43,7 @@
                         </div>
                     </div>
 
-                    <!-- Cột Phải: Thông tin chi tiết -->
+                    <!-- Thông tin chi tiết -->
                     <div class="col-md-8 col-lg-9">
                         <div class="card border-0 shadow-sm rounded-4 mb-3">
                             <div class="card-body p-3">
@@ -97,7 +96,7 @@
                                         </div>
                                     </div>
                                     
-                                    <!-- Phân cách phần Mật khẩu cho rõ ràng -->
+                                    <!-- Mật khẩu -->
                                     <div class="col-12 mt-3 mb-3">
                                         <h6 class="fw-bold text-dark border-bottom pb-2"><i class="bi bi-shield-lock me-2"></i>Thiết lập Mật khẩu</h6>
                                     </div>
@@ -132,7 +131,7 @@
                             </div>
                         </div>
 
-                        <!-- ĐỊA CHỈ MẶC ĐỊNH -->
+                        <!-- Địa chỉ mặc định -->
                         <div class="card border-0 shadow-sm rounded-4">
                             <div class="card-body p-3">
                                 <h5 class="fw-bold mb-4 text-brand"><i class="bi bi-geo-alt-fill me-2"></i>Địa chỉ mặc định (Tùy chọn)</h5>
@@ -158,7 +157,7 @@
                                 <div class="text-end">
                                     <router-link :to="{ name: 'admin-users' }" class="btn btn-light me-2 px-4 shadow-sm fw-bold">Hủy bỏ</router-link>
                                     <button type="submit" class="btn btn-brand px-5 fw-bold text-white shadow-sm" :disabled="isSaving">
-                                        <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span> 
+                                        <AdminLoadingSpinner v-if="isSaving" class="me-2" size="16" /> 
                                         {{ isSaving ? 'ĐANG TẠO...' : 'XÁC NHẬN THÊM' }}
                                     </button>
                                 </div>
@@ -168,6 +167,18 @@
                 </div>
             </form>
         </div>
+        <!-- Cropper Modal -->
+        <ImageCropperModal
+            :show="showCropper"
+            :image-url="cropperUrl"
+            :aspect-ratio="1"
+            :allow-ratio-change="false"
+            title="Cắt ảnh Đại diện"
+            :max-size-kb="50"
+            :is-avatar="true"
+            @crop="handleCrop"
+            @close="closeCropper"
+        />
     </div>
 </template>
 
@@ -176,7 +187,9 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import placeholderImg from '../../../../assets/images/defaults/placeholder.png';
 import defaultAvatar from '../../../../assets/images/defaults/avatar1.png';
+import ImageCropperModal from '@/components/admin/ImageCropperModal.vue';
 import VietnamAddressPicker from '@/components/ui/VietnamAddressPicker.vue';
 
 const router = useRouter();
@@ -228,6 +241,22 @@ const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
   }
 };
 
+const showCropper = ref(false);
+const cropperUrl = ref('');
+
+const closeCropper = () => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+};
+
+const handleCrop = (data) => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+  
+  selectedFile.value = data.file;
+  previewAvatar.value = data.blobUrl;
+};
+
 const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -237,8 +266,9 @@ const handleAvatarChange = (e) => {
         if (file.size > 2 * 1024 * 1024) {
             Swal.fire('Lỗi', 'Dung lượng tối đa 2MB', 'error'); return;
         }
-        selectedFile.value = file;
-        previewAvatar.value = URL.createObjectURL(file);
+        cropperUrl.value = URL.createObjectURL(file);
+        showCropper.value = true;
+        e.target.value = '';
     }
 };
 
@@ -280,7 +310,6 @@ const saveUser = async () => {
 </script>
 
 <style scoped>
-/* Smooth floating label transition */
 .form-floating > label {
   transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
 }

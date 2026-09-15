@@ -15,7 +15,6 @@ class AdminUserController extends Controller
 {
     public function index()
     {
-        // Sử dụng get() thay vì paginate() để Frontend xử lý client-side filtering/pagination mượt mà qua Tanstack
         $users = User::withTrashed()
             ->with(['defaultAddress', 'addresses'])
             ->orderBy('id', 'desc')
@@ -54,7 +53,6 @@ class AdminUserController extends Controller
                 return $newUser;
             });
 
-            // Eager load các relations để trả về cho TanStack Query lưu cache
             $user->load(['defaultAddress', 'addresses']);
 
             event(new UserAccountUpdated($user->id, ['action' => 'created']));

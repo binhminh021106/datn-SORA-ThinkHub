@@ -1,6 +1,6 @@
 <template>
     <section class="blog-page">
-        <!-- banner tin tức đầu trang -->
+
         <section class="sora-banner position-relative d-flex align-items-center justify-content-center overflow-hidden">
             <div class="banner-ambient"></div>
             <div class="banner-glow banner-glow-left"></div>
@@ -31,10 +31,10 @@
         <main class="page-container container">
             <SoraBlogSkeleton v-if="isLoading" class="fade-in" />
 
-            <!-- Dữ liệu thực tế -->
+
             <div v-else class="page-layout fade-in" :class="{ 'opacity-50': isFetching }">
                 <section class="content-column">
-                    <!-- Trạng thái trống -->
+
                     <div v-if="allLatestPosts.length === 0" class="empty-state card-style">
                         <i class="bi bi-newspaper display-4 text-muted mb-3"></i>
                         <h3 class="text-main" v-if="searchQuery">Không tìm thấy kết quả cho "{{ searchQuery }}"</h3>
@@ -52,7 +52,7 @@
                             {{ isSearching ? 'Kết quả nổi bật' : 'Tin tức nổi bật' }}
                         </h3>
 
-                        <!-- Bài viết nổi bật (Chỉ hiện ở trang 1) -->
+
                         <article v-if="featuredPost" class="featured-post card-style product-card">
                             <div class="featured-image-wrap img-zoom-wrapper overflow-hidden">
                                 <router-link
@@ -100,7 +100,7 @@
                             </div>
                         </article>
 
-                        <!-- Lưới bài viết khác -->
+
                         <div v-if="paginatedPosts.length > 0" class="latest-section" id="latest-news-section">
                             <h3 class="section-heading text-main font-serif">
                                 <i class="bi bi-grid-fill me-2 text-accent"></i> {{ isSearching ? 'Các kết quả khác' : 'Tin mới cập nhật' }}
@@ -110,7 +110,7 @@
                                 <NewsPostCard v-for="post in paginatedPosts" :key="post.id" :post="post" />
                             </div>
 
-                            <!-- Phân trang API bằng Laravel Paginator -->
+
                             <div v-if="totalPages > 1" class="pagination-wrapper">
                                 <button class="page-btn prev" :disabled="currentPage === 1"
                                     @click="changePage(currentPage - 1)">
@@ -131,9 +131,9 @@
                     </template>
                 </section>
 
-                <!-- Sidebar -->
+
                 <aside class="sidebar-column custom-scrollbar" :style="{ top: sidebarTop, maxHeight: 'calc(100vh - ' + sidebarTop + ' - 20px)', overflowY: 'auto' }">
-                    <!-- Widget Tìm kiếm -->
+
                     <div class="sidebar-widget search-widget border-light-subtle shadow-sm bg-white">
                         <h4 class="font-serif text-main"><i class="bi bi-search me-2 text-accent"></i> Tìm kiếm</h4>
                         <div class="search-box">
@@ -153,7 +153,7 @@
                         </div>
                     </div>
 
-                    <!-- Widget Danh mục -->
+
                     <div class="sidebar-widget category-widget border-light-subtle shadow-sm bg-white">
                         <h4 class="font-serif text-main"><i class="bi bi-tags-fill me-2 text-accent"></i> Danh mục</h4>
                         <ul>
@@ -166,7 +166,7 @@
                         </ul>
                     </div>
 
-                    <!-- Widget Phổ biến -->
+
                     <div class="sidebar-widget popular-widget border-light-subtle shadow-sm bg-white">
                         <h4 class="font-serif text-main"><i class="bi bi-star-fill me-2 text-accent"></i> Phổ biến nhất</h4>
 
@@ -195,7 +195,7 @@
                         </div>
                     </div>
 
-                    <!-- Widget Đăng ký -->
+
                     <div
                         class="sidebar-widget support-box mt-4 border-light-subtle shadow-sm bg-light-custom text-center">
                         <i class="bi bi-envelope-paper-fill fs-1 text-main mb-2 d-block"></i>
@@ -217,8 +217,6 @@ import NewsPostCard from '@/components/ui/NewsPostCard.vue';
 import SoraBlogSkeleton from '@/components/ui/SoraBlogSkeleton.vue';
 import { API_BASE_URL, getStorageUrl } from '@/utils/env';
 
-// --- CONFIG ---
-// Tăng số lượng tải lên 7 để chừa 1 bài nổi bật và đúng 6 bài ở phần danh sách lưới bên dưới
 const ITEMS_PER_PAGE = 7;
 const SITE_NAME = 'SORA Jewelry';
 
@@ -229,14 +227,12 @@ const CATEGORIES = [
     { name: 'Kiến thức đá quý & kim loại', icon: 'bi-gift' }
 ];
 
-// --- STATE ---
 const searchInput = ref(''); 
 const searchQuery = ref(''); 
 const authorQuery = ref('');
 const categoryQuery = ref('');
 const currentPage = ref(1);
 
-// --- TANSTACK QUERY: FETCH NEWS CHÍNH ---
 const fetchNews = async ({ queryKey }) => {
     const [_key, page, q, author, category] = queryKey;
     
@@ -256,7 +252,6 @@ const { data: newsPaginator, isLoading, isFetching } = useQuery({
     staleTime: 5 * 60 * 1000, 
 });
 
-// --- TANSTACK QUERY: POPULAR NEWS ---
 const fetchPopular = async () => {
     const { data } = await axios.get(`${API_BASE_URL}/news/popular`);
     return data.data;
@@ -268,7 +263,6 @@ const { data: popularPosts } = useQuery({
     staleTime: 10 * 60 * 1000,
 });
 
-// --- COMPUTED FROM QUERY DATA ---
 const isSearching = computed(() => !!searchQuery.value || !!authorQuery.value || !!categoryQuery.value);
 const allLatestPosts = computed(() => newsPaginator.value?.data || []);
 const totalPages = computed(() => newsPaginator.value?.last_page || 1);
@@ -287,7 +281,7 @@ const paginatedPosts = computed(() => {
     return allLatestPosts.value;
 });
 
-// --- HELPER METHODS ---
+
 const soraPlaceholder = '/Sora-placeholder.png';
 
 const toSlug = (str) => {
@@ -336,7 +330,7 @@ const updateListingSeo = () => {
     document.title = `Tin tức & Xu hướng trang sức - ${SITE_NAME}`;
 };
 
-// --- ACTIONS ---
+
 let debounceTimer = null;
 const handleSearchInput = () => {
     clearTimeout(debounceTimer);
@@ -434,7 +428,6 @@ onUnmounted(() => {
 .border-main { border-color: var(--primary) !important; }
 .tracking-widest { letter-spacing: 1px; }
 
-/* Các thành phần cơ bản */
 .btn-main { background-color: var(--primary); color: white; border: 1px solid var(--primary); transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
 .btn-main:hover { background-color: var(--primary-dark); border-color: var(--primary-dark); color: white; box-shadow: 0 8px 20px rgba(159,39,59,0.3); transform: translateY(-2px); }
 .btn-outline-main { color: var(--primary); border: 1px solid var(--primary); background: transparent; transition: all 0.2s ease; }
@@ -446,21 +439,17 @@ onUnmounted(() => {
 .font-oswald { font-family: "Oswald", sans-serif !important; }
 .tracking-wide { letter-spacing: 0.1em; }
 
-/* Badge hiển thị trên ảnh nổi bật */
 .cat-badge { position: absolute; top: 20px; left: 20px; background: rgba(159, 39, 59, 0.95); color: white; padding: 6px 18px; font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; border-radius: 4px; z-index: 2; }
 
-/* Link tác giả */
 .author-link { color: var(--text-dark); text-decoration: none; transition: color 0.2s; }
 .author-link:hover { color: var(--primary); text-decoration: underline; }
 
-/* Giao diện Page */
 .blog-page { font-family: 'Manrope', sans-serif; background-color: var(--bg-light); min-height: 100vh; color: var(--text-dark); display: flex; flex-direction: column; }
 .text-reset { text-decoration: none; color: inherit; transition: color 0.2s; }
 
 h1, h2, h3, h4, h5, h6 { font-family: 'Manrope', sans-serif; font-weight: 700; color: var(--text-dark); }
 .hover-primary:hover { color: #9f273b !important;}
 
-/* Hero Banner (Sora Banner Style) */
 .text-champagne { color: #ead089 !important; }
 .z-index-2 { z-index: 2; }
 
@@ -554,13 +543,11 @@ h1, h2, h3, h4, h5, h6 { font-family: 'Manrope', sans-serif; font-weight: 700; c
 .banner-line-art-left { left: 8%; top: 24%; }
 .banner-line-art-right { right: 8%; bottom: 22%; }
 
-/* Layout Grid */
 .page-container { margin: 50px auto; flex-grow: 1; }
 .page-layout { display: grid; grid-template-columns: 1fr 340px; gap: 48px; align-items: start; position: relative; transition: opacity 0.3s; }
 .card-style { background: #FFFFFF; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04); overflow: hidden; }
 .empty-state { padding: 60px 0; text-align: center; grid-column: 1 / -1; }
 
-/* Bài nổi bật (Featured Post) */
 .featured-heading { font-size: 1.6rem; margin-bottom: 20px; display: flex; align-items: center; padding-bottom: 10px; border-bottom: 2px solid var(--accent); }
 .featured-post { display: flex; flex-direction: row; min-height: 400px; margin-bottom: 50px; }
 .featured-image-wrap { width: 60%; position: relative; display: flex; border-radius: 12px 0 0 12px; }
@@ -576,13 +563,9 @@ h1, h2, h3, h4, h5, h6 { font-family: 'Manrope', sans-serif; font-weight: 700; c
 .read-more-btn { color: var(--primary); font-weight: 700; text-decoration: none; display: flex; align-items: center; transition: transform 0.2s; }
 .read-more-btn:hover { transform: translateX(5px); color: #cc1e2e;}
 
-/* Các bài mới cập nhật (Lưới) */
 .section-heading { font-size: 1.4rem; margin-bottom: 25px; display: flex; align-items: center; }
 .latest-posts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 30px; }
 
-/* ==================================
-   Hiệu ứng Hover SORA Brand chung
-================================== */
 .product-card { transition: transform 0.3s ease, box-shadow 0.3s ease; border-bottom: 2px solid transparent !important; }
 .product-card:hover { transform: translateY(-5px); box-shadow: 0 .5rem 1.5rem rgba(0, 0, 0, .08) !important; border-bottom: 2px solid var(--accent) !important; }
 .img-zoom-wrapper img { transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
@@ -592,7 +575,6 @@ h1, h2, h3, h4, h5, h6 { font-family: 'Manrope', sans-serif; font-weight: 700; c
 .product-title-link { transition: color 0.3s ease; }
 .product-card:hover .product-title, .product-title-link:hover .product-title { color: var(--primary) !important; }
 
-/* Sidebar Widgets */
 .sidebar-column { display: flex; flex-direction: column; gap: 30px; position: sticky; transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
 .sidebar-widget { padding: 25px; border-radius: 12px; }
 .sidebar-widget h4 { border-bottom: 1px dashed #ccc; padding-bottom: 15px; display: flex; align-items: center; }
@@ -608,12 +590,9 @@ h1, h2, h3, h4, h5, h6 { font-family: 'Manrope', sans-serif; font-weight: 700; c
 .category-widget a { text-decoration: none; color: var(--text-dark); font-weight: 500; padding: 8px 10px; border-radius: 6px; display: flex; align-items: center; transition: all 0.2s; }
 .category-widget a:hover, .category-widget a.active-cat { background-color: rgba(159, 39, 59, 0.08); color: var(--primary); padding-left: 15px; }
 
-/* Popular Posts */
 .popular-post-item { display: flex; align-items: center; margin-bottom: 15px; cursor: pointer; }
 .popular-post-item:last-child { margin-bottom: 0; }
 .post-meta-small { font-size: 0.8rem; color: #888; }
-
-/* Pagination */
 .pagination-wrapper { display: flex; justify-content: center; align-items: center; margin-top: 40px; gap: 15px; }
 .page-numbers { display: flex; gap: 8px; }
 .page-btn { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 1px solid #ddd; background: #FFFFFF; border-radius: 8px; color: var(--text-dark); cursor: pointer; transition: all 0.2s; }
@@ -621,7 +600,6 @@ h1, h2, h3, h4, h5, h6 { font-family: 'Manrope', sans-serif; font-weight: 700; c
 .page-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
 .page-btn:disabled { background: var(--bg-light); color: #ccc; cursor: not-allowed; border-color: #eee; }
 
-/* Responsive */
 @media (max-width: 992px) {
     .page-layout { grid-template-columns: 1fr; gap: 40px; }
     .featured-post { flex-direction: column; min-height: auto; }

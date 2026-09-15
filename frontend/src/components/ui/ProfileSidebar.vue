@@ -54,7 +54,7 @@
           <label class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center m-0 avatar-hover-overlay" 
                  style="background: rgba(0,0,0,0.5); cursor: pointer; transition: all 0.3s;"
                  :style="isUploadingAvatar ? 'opacity: 1 !important; pointer-events: none;' : ''">
-            <span v-if="isUploadingAvatar" class="spinner-border text-white" role="status"></span>
+            <AdminLoadingSpinner v-if="isUploadingAvatar" class="text-white"  />
             <template v-else>
               <i class="bi bi-camera-fill text-white fs-4 mb-1"></i>
               <span class="text-white fw-medium" style="font-size: 0.65rem;">Thay đổi</span>
@@ -167,6 +167,20 @@
         </li>
       </ul>
     </div>
+    
+    <!-- CROPPER MODAL -->
+    <ImageCropperModal
+      :show="showCropper"
+      :image-url="cropperUrl"
+      :aspect-ratio="1"
+      :allow-ratio-change="false"
+      title="Cắt ảnh Đại diện"
+      :max-size-kb="50"
+      :is-avatar="true"
+      :theme-color="'#9f273b'"
+      @crop="handleCrop"
+      @close="closeCropper"
+    />
   </div>
 </template>
 
@@ -178,6 +192,7 @@ import { getStorageUrl } from '@/utils/env';
 import Swal from 'sweetalert2';
 import clientApiClient from '@/utils/clientApiClient';
 import { useAuthSync } from '@/composables/useAuthSync.js';
+import ImageCropperModal from '@/components/admin/ImageCropperModal.vue';
 
 const props = defineProps({
   /** Cho phép truyền thẳng user data từ parent */
@@ -196,7 +211,6 @@ const { clearAuthSession } = useAuthSync();
 
 const isPreviewMode = computed(() => route.path.startsWith('/admin'));
 
-// ===== USER DATA =====
 const userData = ref({
   fullName: '',
   email: '',
@@ -265,7 +279,6 @@ const loadUserFromStorage = () => {
   }
 };
 
-// ===== COMPUTED =====
 const displayName = computed(() => {
   if (props.user) return props.user.fullName || props.user.name || 'Thành viên SORA';
   return userData.value.fullName || 'Thành viên SORA';
@@ -292,7 +305,11 @@ const avatarSrc = computed(() => {
 const isUploadingAvatar = ref(false);
 const previewAvatar = ref(null);
 
-const uploadAvatar = async (event) => {
+// Cropper State
+const showCropper = ref(false);
+const cropperUrl = ref('');
+
+const uploadAvatar = (event) => {
   const file = event.target.files[0];
   if (!file) return;
 
@@ -301,8 +318,22 @@ const uploadAvatar = async (event) => {
     return;
   }
 
+  cropperUrl.value = URL.createObjectURL(file);
+  showCropper.value = true;
+  event.target.value = '';
+};
+
+const closeCropper = () => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+};
+
+const handleCrop = async (data) => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+  
   isUploadingAvatar.value = true;
-  previewAvatar.value = URL.createObjectURL(file);
+  previewAvatar.value = data.blobUrl;
 
   try {
     const formData = new FormData();
@@ -336,12 +367,7 @@ const uploadAvatar = async (event) => {
     }
     Swal.fire({ icon: 'error', title: 'Lỗi', text: msg });
   } finally {
-    if (previewAvatar.value) {
-      URL.revokeObjectURL(previewAvatar.value);
-      previewAvatar.value = null;
-    }
     isUploadingAvatar.value = false;
-    event.target.value = '';
   }
 };
 
@@ -375,11 +401,9 @@ const tierSvgIcon = computed(() => {
   return svgStar(14, 'psb-grad-default');
 });
 
-// ===== ACTIVE STATE =====
 const isActive = (path, tab = null) => {
   if (route.path !== path) return false;
   if (!tab) {
-    // Nếu không có tab param, active khi route là /profile mà không có tab=tier hay tab=password
     if (path === '/profile') {
       const currentTab = route.query.tab;
       return !currentTab || currentTab === 'profile';
@@ -389,14 +413,12 @@ const isActive = (path, tab = null) => {
   return route.query.tab === tab;
 };
 
-// ===== LOGOUT =====
 const handleLogout = () => {
   emit('logout');
   clearAuthSession(queryClient);
   router.push({ name: 'login' });
 };
 
-// ===== FETCH PROFILE =====
 const fetchProfile = async () => {
   const token = getToken();
   if (!token) return;
@@ -412,7 +434,6 @@ const fetchProfile = async () => {
       userData.value.avatar_url = u.avatar_url || '';
       userData.value.tier = u.tier || null;
 
-      // Cập nhật lại localStorage để đồng bộ với Header nếu cần
       try {
         let authState = JSON.parse(localStorage.getItem('auth') || '{}');
         if (!authState.user) authState.user = {};
@@ -422,11 +443,9 @@ const fetchProfile = async () => {
       } catch(e) {}
     }
   } catch (err) {
-    // Bỏ qua lỗi
   }
 };
 
-// ===== LIFECYCLE =====
 onMounted(() => {
   if (!props.user) {
     loadUserFromStorage();

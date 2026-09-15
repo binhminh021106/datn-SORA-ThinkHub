@@ -25,6 +25,10 @@ const props = defineProps({
     type: [Number, String],
     default: 20,
   },
+  color: {
+    type: String,
+    default: 'currentColor', // Mặc định kế thừa màu của thẻ cha (ví dụ text-white thì nó màu trắng)
+  },
   label: {
     type: String,
     default: 'Đang tải',
@@ -38,6 +42,7 @@ const normalizedSize = computed(() => (
 const spinnerStyle = computed(() => ({
   width: normalizedSize.value,
   height: normalizedSize.value,
+  color: props.color !== 'currentColor' ? props.color : undefined,
 }));
 </script>
 
@@ -45,7 +50,6 @@ const spinnerStyle = computed(() => ({
 .admin-loading-spinner {
   display: inline-block;
   flex: 0 0 auto;
-  color: #009981;
   vertical-align: middle;
 }
 

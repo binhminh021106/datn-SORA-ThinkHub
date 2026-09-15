@@ -30,7 +30,7 @@ class ClientCheckoutController extends Controller
     public function initData(Request $request)
     {
         $cart = $this->resolveCart($request);
-        $cartItems = $cart ? $cart->items->load(['variant.product', 'combo.items.variant']) : [];
+        $cartItems = $cart ? $cart->items->load(['variant.product', 'variant.attributeValues.attribute', 'combo.items.variant']) : [];
 
         $addresses = [];
         $userData = null;
@@ -49,11 +49,7 @@ class ClientCheckoutController extends Controller
             if ($user->tier_id) {
                 $tier = MembershipTier::find($user->tier_id);
                 if ($tier && $tier->discount_percent > 0) {
-                    $usedCount = TierServiceUsage::where('user_id', $user->id)
-                        ->where('service_type', 'tier_discount')
-                        ->whereYear('used_at', now()->year)
-                        ->count();
-                    
+                    $usedCount = $this->getUsedTierDiscountCount($user, $tier->id);
                     $maxLimit = $tier->yearly_discount_quota ?? 0;
                     
                     $tierDiscountInfo = [
@@ -83,8 +79,22 @@ class ClientCheckoutController extends Controller
             })
             ->get();
 
+        $userCouponUsages = [];
+        if ($user) {
+            $couponIds = $coupons->pluck('id');
+            if ($couponIds->isNotEmpty()) {
+                $userCouponUsages = Order::where('user_id', $user->id)
+                    ->whereIn('coupon_id', $couponIds)
+                    ->whereNotIn('status', ['cancelled', 'returned'])
+                    ->groupBy('coupon_id')
+                    ->selectRaw('coupon_id, count(*) as count')
+                    ->pluck('count', 'coupon_id')
+                    ->toArray();
+            }
+        }
+
         // 3. Xử lý logic hiển thị mã khả dụng / vô hiệu hóa
-        $coupons->transform(function ($coupon) use ($user) {
+        $coupons->transform(function ($coupon) use ($user, $userCouponUsages) {
             $coupon->is_disabled = false;
             $coupon->disabled_reason = '';
 
@@ -94,9 +104,12 @@ class ClientCheckoutController extends Controller
                 $coupon->disabled_reason = 'Đã hết lượt sử dụng';
             } 
             // Kiểm tra giới hạn cá nhân
-            elseif ($user && $this->hasUserReachedCouponLimit($coupon, $user)) {
-                $coupon->is_disabled = true;
-                $coupon->disabled_reason = 'Bạn đã dùng mã này';
+            elseif ($user && !is_null($coupon->usage_limit_per_user) && $coupon->usage_limit_per_user > 0) {
+                $usedCount = $userCouponUsages[$coupon->id] ?? 0;
+                if ($usedCount >= $coupon->usage_limit_per_user) {
+                    $coupon->is_disabled = true;
+                    $coupon->disabled_reason = 'Bạn đã dùng mã này';
+                }
             }
 
             return $coupon;
@@ -245,7 +258,7 @@ class ClientCheckoutController extends Controller
                     }
                 }
 
-                $variants = ProductVariant::with('product')->whereIn('id', array_unique($variantIdsToLock))
+                $variants = ProductVariant::with(['product', 'attributeValues.attribute'])->whereIn('id', array_unique($variantIdsToLock))
                     ->orderBy('id')->lockForUpdate()->get()->keyBy('id');
 
                 $subTotal = 0;
@@ -280,7 +293,7 @@ class ClientCheckoutController extends Controller
                             'product_variant_id' => $variant->id,
                             'product_name'       => $variant->product->name ?? 'Sản phẩm SORA',
                             'variant_sku'        => $variant->sku,
-                            'variant_attributes' => $variant->attributes,
+                            'variant_attributes' => $variant->variant_attributes,
                             'variant_image'      => $variant->image_url,
                             'price'              => $item->price,
                             'quantity'           => $item->quantity,
@@ -392,10 +405,7 @@ class ClientCheckoutController extends Controller
                 if ($user->tier_id) {
                     $tier = MembershipTier::find($user->tier_id);
                     if ($tier && $tier->discount_percent > 0) { 
-                        $usedCount = TierServiceUsage::where('user_id', $user->id)
-                            ->where('service_type', 'tier_discount')
-                            ->whereYear('used_at', now()->year)
-                            ->count();
+                        $usedCount = $this->getUsedTierDiscountCount($user, $tier->id);
 
                         $maxLimit = $tier->yearly_discount_quota ?? 0;
 
@@ -612,7 +622,6 @@ class ClientCheckoutController extends Controller
     {
         $limit = (int) ($coupon->usage_limit_per_user ?? 0);
         
-        // Block coupons with user quota if not authenticated
         if (! $user instanceof \App\Models\User) {
             return $limit > 0; // Reject if coupon has per-user limit
         }
@@ -646,9 +655,6 @@ class ClientCheckoutController extends Controller
         ];
 
         if ($order->payment_status !== 'paid' && in_array($order->payment_method, ['momo', 'vnpay'], true)) {
-            // An idempotent replay must not create a second provider payment
-            // reference/link. The customer can deliberately retry from their
-            // order history if the original payment session has expired.
             $response['payment_pending'] = true;
             $response['message'] = 'Đơn hàng đang chờ thanh toán. Vui lòng kiểm tra lại trong Đơn mua của tôi.';
         }
@@ -658,7 +664,6 @@ class ClientCheckoutController extends Controller
 
     private function calculateShippingFee(float $subTotal): int
     {
-        // Shipping rules are authoritative on the server. The client value is never trusted.
         return $subTotal > 500000 ? 0 : 30000;
     }
 
@@ -1076,9 +1081,6 @@ class ClientCheckoutController extends Controller
 
         $frontendUrl = rtrim((string) config('payment.frontend_url', 'http://localhost:5173'), '/');
 
-        // Verify the gateway signature before performing an order lookup so
-        // arbitrary browser traffic cannot turn this public endpoint into a
-        // database-probing endpoint.
         $hasValidGatewaySignature = $this->verifyMomoCallbackSignature($request)
             && (string) $request->input('partnerCode') === (string) config('payment.momo.partner_code')
             && $orderId !== '';
@@ -1096,8 +1098,6 @@ class ClientCheckoutController extends Controller
             return redirect($frontendUrl . '/checkout/failed?order=' . urlencode($orderCode));
         }
 
-        // Use server-side order data for every business check after the
-        // signature has established that the gateway payload is authentic.
         $order = $orderCode !== '' ? Order::where('order_code', $orderCode)->first() : null;
 
         $isValidCallback = $order
@@ -1143,9 +1143,6 @@ class ClientCheckoutController extends Controller
             return redirect($frontendUrl . '/checkout/success?order=' . $orderCode);
         }
 
-        // Browser returns are user-agent traffic and can race the provider's
-        // IPN. A verified IPN performs cancellation for a failed payment; the
-        // browser return only renders the outcome.
         if ($isMobileCheckout) {
             return redirect($this->buildMobileMomoReturnUrl($mobileReturnUrl, $orderCode, 'failed', 'cart'));
         }
@@ -1182,11 +1179,6 @@ class ClientCheckoutController extends Controller
         return hash_equals($expectedSignature, $signature);
     }
 
-    /**
-     * Server-to-server MoMo notification. This endpoint intentionally has no
-     * browser redirect: a valid notification is acknowledged with 204 after
-     * its idempotent settlement work completes.
-     */
     public function momoIpn(Request $request)
     {
         $orderId = trim((string) $request->input('orderId', ''));
@@ -1255,7 +1247,6 @@ class ClientCheckoutController extends Controller
     {
         $hashSecret = config('payment.vnpay.hash_secret');
         
-        // thông báo lỗi nếu chưa cấu hình VNPAY_HASH_SECRET để tránh lỗi không rõ ràng
         if (empty($hashSecret)) {
             Log::error('VNPay callback failed: VNPAY_HASH_SECRET is not configured.');
             $frontendUrl = rtrim((string) config('payment.frontend_url', 'http://localhost:5173'), '/');
@@ -1320,17 +1311,12 @@ class ClientCheckoutController extends Controller
                 'order_code' => $orderCode,
                 'txn_ref' => $request->query('vnp_TxnRef'),
             ]);
-            
-            // An unverified browser return must never mutate order state.
             if ($isMobileCheckout) {
                 return redirect($this->buildMobilePaymentReturnUrl($mobileReturnUrl, $orderCode, 'failed', 'cart'));
             }
 
             return redirect($frontendUrl . '/checkout/failed?order=' . $orderCode);
         }
-
-        // A gateway IPN is authoritative for failed/cancelled payments. Do
-        // not let a browser return race it and cancel a paid order.
 
         if ($isMobileCheckout) {
             return redirect($this->buildMobilePaymentReturnUrl($mobileReturnUrl, $orderCode, 'failed', 'cart'));
@@ -1776,5 +1762,25 @@ class ClientCheckoutController extends Controller
         if ($amount < 5000 || $amount > 1000000000) {
             throw new \DomainException("Thanh toán qua VNPay chỉ hỗ trợ giao dịch từ 5.000đ đến 1.000.000.000đ.");
         }
+    }
+
+    private function getUsedTierDiscountCount($user, $tierId)
+    {
+        $latestTierUpgrade = \App\Models\TierHistory::where('user_id', $user->id)
+            ->where('new_tier_id', $tierId)
+            ->latest('created_at')
+            ->first();
+            
+        $query = \App\Models\TierServiceUsage::where('tier_service_usages.user_id', $user->id)
+            ->where('tier_service_usages.service_type', 'tier_discount')
+            ->whereYear('tier_service_usages.used_at', now()->year)
+            ->join('orders', 'orders.id', '=', 'tier_service_usages.order_id')
+            ->whereNotIn('orders.status', ['cancelled', 'returned']);
+            
+        if ($latestTierUpgrade && \Carbon\Carbon::parse($latestTierUpgrade->created_at)->year == now()->year) {
+            $query->where('tier_service_usages.used_at', '>=', $latestTierUpgrade->created_at);
+        }
+        
+        return $query->count();
     }
 }

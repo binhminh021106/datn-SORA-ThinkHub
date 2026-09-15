@@ -1,7 +1,6 @@
 <template>
   <div class="admin-chat-page">
 
-    <!-- Header -->
     <div class="chat-page-header">
       <div class="d-flex align-items-center gap-3">
         <div class="header-icon">
@@ -19,10 +18,8 @@
       </div>
     </div>
 
-    <!-- Main Chat Container -->
     <div class="chat-container">
 
-      <!-- LEFT SIDEBAR: Danh sách khách -->
       <div class="contacts-sidebar">
 
         <div class="contacts-search">
@@ -34,7 +31,7 @@
 
         <div class="contacts-list">
           <div v-if="isLoadingContacts" class="loading-state">
-            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+            <AdminLoadingSpinner class="text-primary" size="16" />
             <span>Đang tải...</span>
           </div>
 
@@ -65,10 +62,8 @@
         </div>
       </div>
 
-      <!-- RIGHT: Khung chat chi tiết -->
       <div class="chat-main">
 
-        <!-- Màn hình chờ chọn user -->
         <div v-if="!activeUserId" class="chat-empty">
           <div class="chat-empty-content">
             <div class="chat-empty-icon">
@@ -80,7 +75,6 @@
         </div>
 
         <template v-else>
-          <!-- Chat Header -->
           <div class="chat-header">
             <div class="d-flex align-items-center gap-3">
               <div class="chat-avatar-lg">
@@ -96,22 +90,19 @@
                 <span class="online-dot me-1"></span>
                 Trực tuyến
               </span>
-              <!-- NÚT XÓA CUỘC TRÒ CHUYỆN -->
               <button class="delete-conv-btn" @click="confirmDeleteConversation" title="Xóa toàn bộ cuộc trò chuyện">
                 <i class="bi bi-trash3-fill"></i>
               </button>
             </div>
           </div>
 
-          <!-- Messages -->
           <div class="messages-area" ref="chatBodyRef" @click="closeEmojiPicker">
             <div v-if="isLoadingMessages" class="loading-state">
-              <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+              <AdminLoadingSpinner class="text-primary" size="16" />
             </div>
 
             <template v-else>
               <template v-for="(msg, index) in messages" :key="msg.id || index">
-                <!-- Date separator -->
                 <div v-if="shouldShowDateSeparator(index)" class="date-separator">
                   <span>{{ getDateSeparatorLabel(msg.created_at) }}</span>
                 </div>
@@ -119,13 +110,11 @@
                 <div :id="'msg-' + msg.id" class="message-row"
                   :class="isAdminMessage(msg) ? 'message-sent' : 'message-received'" @mouseenter="hoveredMsgId = msg.id"
                   @mouseleave="hoveredMsgId = null" @click="hoveredMsgId = hoveredMsgId === msg.id ? null : msg.id">
-                  <!-- Avatar (chỉ show khi không phải admin) -->
                   <div v-if="!isAdminMessage(msg)" class="msg-avatar">
                     {{ (activeUser.fullName || 'K').charAt(0).toUpperCase() }}
                   </div>
 
                   <div class="message-group">
-                    <!-- Trích dẫn tin nhắn -->
                     <div v-if="msg.reply_to" class="quote-block"
                       :class="isAdminMessage(msg) ? 'quote-block-sent' : 'quote-block-received'"
                       @click.stop="scrollToMessage(msg.reply_to.id)">
@@ -137,7 +126,6 @@
                       </div>
                     </div>
 
-                    <!-- File/Image message -->
                     <template v-if="msg.message_type === 'image'">
                       <div class="message-bubble img-bubble"
                         :class="isAdminMessage(msg) ? 'bubble-sent' : 'bubble-received'">
@@ -159,7 +147,6 @@
                         </a>
                       </div>
                     </template>
-                    <!-- Text/Emoji message -->
                     <template v-else>
                       <div class="message-bubble" :class="isAdminMessage(msg) ? 'bubble-sent' : 'bubble-received'">
                         {{ msg.content }}
@@ -175,7 +162,6 @@
                       </span>
                     </div>
 
-                    <!-- Action bar beside bubble -->
                     <div class="msg-actions-side" :class="{ 'show-actions': hoveredMsgId === msg.id }">
                       <button class="msg-action-btn-pro" @click.stop="setReply(msg)" title="Trả lời"><i
                           class="bi bi-reply-fill"></i></button>
@@ -184,7 +170,6 @@
                 </div>
               </template>
 
-              <!-- Typing indicator -->
               <div v-if="isSending" class="message-row message-sent">
                 <div class="message-group">
                   <div class="bubble-sent message-bubble typing-indicator">
@@ -195,9 +180,7 @@
             </template>
           </div>
 
-          <!-- Input Area Wrapper -->
           <div class="chat-input-wrapper">
-            <!-- File Preview -->
             <div v-if="selectedFile" class="file-preview-bar">
               <div class="file-preview-content">
                 <img v-if="selectedFilePreview" :src="selectedFilePreview" alt="preview" class="file-preview-thumb" />
@@ -212,7 +195,6 @@
               </button>
             </div>
 
-            <!-- Reply Preview -->
             <div v-if="replyTo" class="reply-preview-bar">
               <div class="reply-preview-content">
                 <p class="reply-preview-text mb-0">
@@ -225,21 +207,17 @@
               <button class="reply-cancel-btn" @click="clearReply"><i class="bi bi-x-lg"></i></button>
             </div>
 
-            <!-- Input Area -->
             <div class="chat-input-area">
               <div class="input-toolbar">
-                <!-- File Upload Button -->
                 <button class="toolbar-btn" title="Đính kèm file" @click.stop="triggerFileInput">
                   <i class="bi bi-paperclip"></i>
                 </button>
                 <input ref="fileInputRef" type="file" style="display:none" @change="onFileSelected" accept="*/*" />
-                <!-- Emoji Button -->
                 <button class="toolbar-btn" title="Emoji" @click.stop="toggleEmojiPicker">
                   <i class="bi bi-emoji-smile"></i>
                 </button>
               </div>
 
-              <!-- Emoji Picker -->
               <div v-if="showEmojiPicker" class="emoji-picker-container admin-emoji" @click.stop>
                 <div class="emoji-search">
                   <input v-model="emojiSearch" placeholder="Tìm emoji..." class="emoji-search-input" />
@@ -264,7 +242,7 @@
                   :aria-label="isSending ? 'Đang gửi tin nhắn' : 'Gửi tin nhắn'"
                   :disabled="(!newMessage.trim() && !selectedFile) || isSending">
                   <i v-if="!isSending" class="bi bi-send-fill"></i>
-                  <div v-else class="spinner-border spinner-border-sm" role="status"></div>
+                  <AdminLoadingSpinner v-else size="16" />
                 </button>
               </form>
             </div>
@@ -274,7 +252,6 @@
       </div>
     </div>
 
-    <!-- MODAL XÁC NHẬN XÓA -->
     <div v-if="showDeleteModal" class="delete-modal-overlay" @click.self="showDeleteModal = false">
       <div class="delete-modal">
         <div class="delete-modal-icon">
@@ -287,7 +264,7 @@
         <div class="delete-modal-actions">
           <button class="btn-cancel" @click="showDeleteModal = false">Hủy</button>
           <button class="btn-delete-confirm" @click="deleteConversation" :disabled="isDeletingConv">
-            <div v-if="isDeletingConv" class="spinner-border spinner-border-sm me-1"></div>
+            <AdminLoadingSpinner v-if="isDeletingConv" class="me-1" size="16" />
             <i v-else class="bi bi-trash3-fill me-1"></i>
             Xóa vĩnh viễn
           </button>
@@ -295,7 +272,6 @@
       </div>
     </div>
 
-    <!-- Image Lightbox -->
     <div v-if="lightboxUrl" class="lightbox-overlay" @click="lightboxUrl = null">
       <img :src="lightboxUrl" alt="preview" class="lightbox-img" @click.stop />
       <button class="lightbox-close" @click="lightboxUrl = null"><i class="bi bi-x-lg"></i></button>
@@ -323,22 +299,18 @@ const chatBodyRef = ref(null);
 const unreadMap = ref({});
 const renderedIds = ref(new Set());
 
-// File upload
 const fileInputRef = ref(null);
 const messageInputRef = ref(null);
 const selectedFile = ref(null);
 const selectedFilePreview = ref(null);
 
-// Emoji
 const showEmojiPicker = ref(false);
 const emojiSearch = ref('');
 const activeCategoryAdmin = ref('smileys');
 
-// Delete conversation
 const showDeleteModal = ref(false);
 const isDeletingConv = ref(false);
 
-// Lightbox
 const lightboxUrl = ref(null);
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
@@ -348,7 +320,6 @@ const axiosConfig = () => ({
   headers: { Authorization: `Bearer ${getToken()}`, Accept: 'application/json' }
 });
 
-// ===== EMOJI DATA =====
 const emojiCategories = [
   { name: 'smileys', label: 'Mặt cười', icon: '😀' },
   { name: 'people', label: 'Con người', icon: '👋' },
@@ -372,12 +343,10 @@ const emojiData = {
 const filteredEmojis = computed(() => {
   const list = emojiData[activeCategoryAdmin.value] || [];
   if (!emojiSearch.value.trim()) return list;
-  // Simple search across all categories
   const all = Object.values(emojiData).flat();
   return all.filter(e => e.includes(emojiSearch.value));
 });
 
-// ===== COMPUTED =====
 const filteredContacts = computed(() => {
   if (!searchQuery.value.trim()) return contacts.value;
   const q = searchQuery.value.toLowerCase();
@@ -387,7 +356,6 @@ const filteredContacts = computed(() => {
   );
 });
 
-// ===== HELPERS =====
 const getDateSeparatorLabel = (timestamp) => {
   if (!timestamp) return '';
   const date = new Date(timestamp);
@@ -457,7 +425,6 @@ const scrollToMessage = (msgId) => {
   }
 };
 
-// ===== EMOJI =====
 const toggleEmojiPicker = () => {
   showEmojiPicker.value = !showEmojiPicker.value;
 };
@@ -471,7 +438,6 @@ const insertEmoji = (emoji) => {
   messageInputRef.value?.focus();
 };
 
-// ===== FILE UPLOAD =====
 const triggerFileInput = () => {
   fileInputRef.value?.click();
 };
@@ -480,7 +446,6 @@ const onFileSelected = (e) => {
   const file = e.target.files[0];
   if (!file) return;
   selectedFile.value = file;
-  // Preview nếu là ảnh
   if (file.type.startsWith('image/')) {
     const reader = new FileReader();
     reader.onload = (ev) => { selectedFilePreview.value = ev.target.result; };
@@ -496,14 +461,13 @@ const removeSelectedFile = () => {
   selectedFilePreview.value = null;
 };
 
-// ===== API CALLS =====
 const fetchContacts = async () => {
   isLoadingContacts.value = true;
   try {
     const res = await axios.get(`${API_URL}/admin/messages/conversations`, axiosConfig());
     if (res.data.status) {
       contacts.value = res.data.data;
-      unreadMap.value = {}; // Reset to prevent stale unread entries
+      unreadMap.value = {};
       contacts.value.forEach(user => {
         if (user.unread_count > 0) {
           unreadMap.value[user.id] = user.unread_count;
@@ -540,7 +504,6 @@ const selectUser = async (user) => {
   try {
     const res = await axios.get(`${API_URL}/admin/messages?partner_id=${user.id}`, axiosConfig());
     if (res.data.status) {
-      // Sắp xếp tin nhắn cũ nhất lên đầu (asc) bằng ID để tránh lỗi parse Date
       const sortedMessages = res.data.data.sort((a, b) => Number(a.id) - Number(b.id));
       messages.value = sortedMessages.map(m => {
         if (m.reply_to_message) {
@@ -554,7 +517,6 @@ const selectUser = async (user) => {
     console.error('Lỗi lấy tin nhắn:', err);
   } finally {
     isLoadingMessages.value = false;
-    // Đảm bảo DOM đã render tin nhắn (thoát khỏi v-if="isLoadingMessages") trước khi cuộn
     scrollToBottom();
   }
 };
@@ -568,7 +530,6 @@ const sendMessage = async () => {
   const tempId = 'temp_' + Date.now();
 
   if (hasFile) {
-    // Gửi file
     const file = selectedFile.value;
     const isImage = file.type.startsWith('image/');
     const currentReply = replyTo.value;
@@ -614,12 +575,11 @@ const sendMessage = async () => {
         } else {
           const idx = messages.value.findIndex(m => m.id === tempId);
           if (idx !== -1) {
-            // Giữ lại phần reply_to từ tin nhắn tạm (nếu API lỡ không trả về kịp do cache/relation load xịt)
             if (!realMsg.reply_to && messages.value[idx].reply_to) {
               realMsg.reply_to = messages.value[idx].reply_to;
             }
             renderedIds.value.delete(tempId);
-            messages.value.splice(idx, 1, realMsg); // Dùng splice để ép Vue render lại chắc chắn 100%
+            messages.value.splice(idx, 1, realMsg);
             renderedIds.value.add(realMsg.id);
           }
         }
@@ -632,7 +592,6 @@ const sendMessage = async () => {
       isSending.value = false;
     }
   } else {
-    // Gửi text
     const text = newMessage.value.trim();
     newMessage.value = '';
     const currentReply = replyTo.value;
@@ -669,12 +628,11 @@ const sendMessage = async () => {
         } else {
           const idx = messages.value.findIndex(m => m.id === tempId);
           if (idx !== -1) {
-            // Cứu cánh: Giữ lại reply_to từ tin nhắn tạm nếu API gửi về thiếu
             if (!realMsg.reply_to && messages.value[idx].reply_to) {
               realMsg.reply_to = messages.value[idx].reply_to;
             }
             renderedIds.value.delete(tempId);
-            messages.value.splice(idx, 1, realMsg); // Ép Vue thay thế và render lại
+            messages.value.splice(idx, 1, realMsg);
             renderedIds.value.add(realMsg.id);
           }
         }
@@ -689,7 +647,6 @@ const sendMessage = async () => {
   }
 };
 
-// ===== DELETE CONVERSATION =====
 const confirmDeleteConversation = () => {
   showDeleteModal.value = true;
 };
@@ -703,7 +660,6 @@ const deleteConversation = async () => {
       axiosConfig()
     );
     if (res.data.status) {
-      // Xóa khỏi UI
       messages.value = [];
       renderedIds.value = new Set();
       contacts.value = contacts.value.filter(c => c.id !== activeUserId.value);
@@ -718,10 +674,8 @@ const deleteConversation = async () => {
   }
 };
 
-// Khai báo biến lưu tham chiếu hàm callback reconnect để remove
 let onReconnect = null;
 
-// ===== WEBSOCKET =====
 onMounted(() => {
   fetchContacts();
 
@@ -760,11 +714,8 @@ onMounted(() => {
           moveContactToTop(msg.sender_id);
         }
       });
-
-    // Khắc phục lỗi chat lâu bị đơ (mất kết nối ngầm WebSocket)
     if (window.Echo.connector.pusher) {
       onReconnect = () => {
-        // Khi mạng có lại, tải lại chat để tránh sót tin nhắn
         if (activeUserId.value && activeUser.value) {
           selectUser(activeUser.value);
         } else {
@@ -803,7 +754,6 @@ onUnmounted(() => {
   gap: 20px;
 }
 
-/* ===== PAGE HEADER ===== */
 .chat-page-header {
   background: linear-gradient(135deg, #1e3a5f 0%, #2d6a4f 100%);
   border-radius: 16px;
@@ -834,7 +784,6 @@ onUnmounted(() => {
   color: rgba(255, 255, 255, 0.7) !important;
 }
 
-/* ===== MAIN CONTAINER ===== */
 .chat-container {
   display: flex;
   background: var(--bs-body-bg, white);
@@ -845,7 +794,6 @@ onUnmounted(() => {
   min-height: 500px;
 }
 
-/* ===== CONTACTS SIDEBAR ===== */
 .contacts-sidebar {
   width: 300px;
   flex-shrink: 0;
@@ -997,7 +945,6 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-/* ===== MAIN CHAT AREA ===== */
 .chat-main {
   flex: 1;
   display: flex;
@@ -1030,7 +977,6 @@ onUnmounted(() => {
   margin: 0 auto;
 }
 
-/* ===== CHAT HEADER ===== */
 .chat-header {
   padding: 14px 20px;
   border-bottom: 1px solid var(--bs-border-color, #f0f0f0);
@@ -1072,7 +1018,6 @@ onUnmounted(() => {
   align-items: center;
 }
 
-/* Delete conversation button */
 .delete-conv-btn {
   display: flex;
   align-items: center;
@@ -1095,7 +1040,6 @@ onUnmounted(() => {
   box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
 }
 
-/* ===== MESSAGES ===== */
 .messages-area {
   flex: 1;
   overflow-y: auto;
@@ -1191,7 +1135,6 @@ onUnmounted(() => {
   border: 1px solid var(--bs-border-color, #f0f0f0);
 }
 
-/* Image bubble */
 .img-bubble {
   padding: 4px !important;
   background: transparent !important;
@@ -1214,7 +1157,6 @@ onUnmounted(() => {
   transform: scale(1.02);
 }
 
-/* File bubble */
 .file-bubble {
   padding: 10px 12px !important;
   min-width: 200px;
@@ -1283,7 +1225,6 @@ onUnmounted(() => {
   align-items: center;
 }
 
-/* Typing indicator */
 .typing-indicator {
   display: flex;
   align-items: center;
@@ -1322,7 +1263,6 @@ onUnmounted(() => {
   }
 }
 
-/* ===== FILE PREVIEW BAR ===== */
 .file-preview-bar {
   display: flex;
   align-items: center;
@@ -1392,7 +1332,6 @@ onUnmounted(() => {
   color: #dc2626;
 }
 
-/* ===== ACTION BAR (beside bubble) ===== */
 .msg-actions-side {
   display: flex;
   align-items: center;
@@ -1458,7 +1397,6 @@ onUnmounted(() => {
   box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
 }
 
-/* ===== REPLY PREVIEW BAR ===== */
 .reply-preview-bar {
   display: flex;
   align-items: center;
@@ -1511,7 +1449,6 @@ onUnmounted(() => {
   color: #dc2626;
 }
 
-/* ===== QUOTE BLOCK in bubble ===== */
 .quote-block {
   border-radius: 6px;
   padding: 5px 10px;
@@ -1545,7 +1482,6 @@ onUnmounted(() => {
   opacity: 0.85;
 }
 
-/* ===== INPUT AREA ===== */
 .chat-input-wrapper {
   position: relative;
   background: var(--bs-body-bg, white);
@@ -1634,7 +1570,6 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
-/* ===== EMOJI PICKER ===== */
 .emoji-picker-container {
   position: absolute;
   bottom: 100%;
@@ -1739,7 +1674,6 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.6);
 }
 
-/* ===== DELETE MODAL ===== */
 .delete-modal-overlay {
   position: fixed;
   inset: 0;
@@ -1859,7 +1793,6 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
-/* ===== LIGHTBOX ===== */
 .lightbox-overlay {
   position: fixed;
   inset: 0;
@@ -1901,7 +1834,6 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* ===== ONLINE / OFFLINE DOTS ===== */
 .online-dot,
 .offline-dot {
   display: inline-block;

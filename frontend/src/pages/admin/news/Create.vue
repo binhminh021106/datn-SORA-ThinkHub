@@ -15,28 +15,28 @@
                         </div>
                     </div>
 
-                    <!-- Các nút tác vụ được đưa lên góc phải -->
+
                     <div class="d-flex align-items-center gap-2">
                         <button type="button" class="btn btn-light border px-4 py-2 fw-semibold shadow-sm text-nowrap"
                             @click="router.push('/admin/news')">Hủy bỏ</button>
                         <button type="submit"
                             class="btn btn-brand btn-brand-solid px-4 py-2 fw-bold shadow-sm text-nowrap"
                             :disabled="isLoading">
-                            <span v-if="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+                            <AdminLoadingSpinner v-if="isLoading" class="me-2" size="16" />
                             <i v-else class="bi bi-send-fill me-1"></i> Xuất Bản Bài Viết
                         </button>
                     </div>
                 </div>
 
                 <div class="row g-4">
-                    <!-- CỘT TRÁI: Nội dung chính -->
+
                     <div class="col-lg-8">
                         <div class="card border-0 shadow-sm rounded-4 mb-4">
                             <div class="card-body p-4">
                                 <h6 class="fw-bold mb-4 text-dark"><i class="bi bi-journal-text text-brand me-2"></i>Nội
                                     dung bài viết</h6>
 
-                                <!-- Tiêu đề -->
+
                                 <div class="mb-4">
                                     <label class="form-label fw-semibold text-dark required">Tiêu đề bài viết</label>
                                     <input type="text"
@@ -44,7 +44,7 @@
                                         v-model="formData.title" placeholder="Nhập tiêu đề thật hấp dẫn..." required>
                                 </div>
 
-                                <!-- Đường dẫn (Slug) -->
+
                                 <div class="mb-4">
                                     <label class="form-label fw-semibold text-dark">Đường dẫn thân thiện (Slug)</label>
                                     <div class="input-group shadow-sm rounded-3 overflow-hidden border">
@@ -56,7 +56,7 @@
                                         đề.</small>
                                 </div>
 
-                                <!-- Mô tả ngắn -->
+
                                 <div class="mb-4">
                                     <label class="form-label fw-semibold text-dark required">Mô tả ngắn
                                         (Excerpt)</label>
@@ -66,7 +66,7 @@
                                         required></textarea>
                                 </div>
 
-                                <!-- Trình soạn thảo Word (Quill Editor) -->
+
                                 <div class="mb-3">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <label class="form-label fw-semibold text-dark required mb-0">Nội dung chi
@@ -92,10 +92,10 @@
                         </div>
                     </div>
 
-                    <!-- CỘT PHẢI: Cài đặt & SEO -->
+
                     <div class="col-lg-4">
 
-                        <!-- Ảnh đại diện -->
+
                         <div class="card border-0 shadow-sm rounded-4 mb-4">
                             <div class="card-body p-4 text-center">
                                 <h6 class="fw-bold text-start mb-3 text-dark"><i
@@ -110,7 +110,7 @@
                                         <p class="mt-2 mb-0 fw-semibold">Click để chọn ảnh</p>
                                         <small>(Khuyên dùng ảnh tỷ lệ 16:9)</small>
                                     </div>
-                                    <!-- Nút xóa ảnh -->
+
                                     <button v-if="previewImage" type="button" @click.stop="removeImage"
                                         class="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle shadow"
                                         style="width: 30px; height: 30px; padding: 0;">
@@ -122,7 +122,7 @@
                             </div>
                         </div>
 
-                        <!-- Cài đặt bài viết -->
+
                         <div class="card border-0 shadow-sm rounded-4 mb-4">
                             <div class="card-body p-4">
                                 <h6 class="fw-bold mb-3 text-dark"><i class="bi bi-gear text-brand me-2"></i>Cài đặt
@@ -157,7 +157,7 @@
                             </div>
                         </div>
 
-                        <!-- SEO Meta -->
+
                         <div class="card border-0 shadow-sm rounded-4 mb-4">
                             <div class="card-body p-4">
                                 <h6 class="fw-bold mb-3 text-dark"><i class="bi bi-search text-brand me-2"></i>Tối ưu

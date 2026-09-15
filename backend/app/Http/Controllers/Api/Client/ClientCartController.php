@@ -32,8 +32,6 @@ class ClientCartController extends Controller
             ]);
         }
 
-        // TỐI ƯU ORM: Eager load toàn bộ items và các quan hệ từ đầu
-        // Tránh lỗi N+1 khi truy cập các thuộc tính ảo (accessor) tính giá
         $cart->load([
             'items.variant.product', 
             'items.variant.attributeValues.attribute', 
@@ -45,7 +43,7 @@ class ClientCartController extends Controller
             'data' => $cart->items,
             'summary' => [
                 'total_items' => $cart->items->sum('quantity'),
-                'subtotal'    => $cart->items->sum('subtotal') // Đảm bảo model CartItem đã có accessor getSubtotalAttribute()
+                'subtotal'    => $cart->items->sum('subtotal')
             ]
         ]);
     }
@@ -136,7 +134,6 @@ class ClientCartController extends Controller
                 $variantIds = array_column($comboSelections, 'selected_variant_id');
                 $variantsInCombo = ProductVariant::whereIn('id', $variantIds)->lockForUpdate()->get();
 
-                // Lưu luôn giá variant vào combo_selections để tránh N+1 query ở accessor
                 $existingItem = CartItem::where('cart_id', $cart->id)
                     ->where('combo_id', $request->combo_id)
                     ->get()
@@ -344,7 +341,6 @@ class ClientCartController extends Controller
             return response()->json(['success' => false, 'message' => 'Dữ liệu không hợp lệ.'], 400);
         }
 
-        // TỐI ƯU ORM: Load sẵn item của guest để tránh N+1 khi gọi $guestCart->items
         $guestCart = Cart::with('items')->where('session_id', $sessionId)->first();
         
         if (!$guestCart || $guestCart->items->isEmpty()) {
@@ -368,13 +364,10 @@ class ClientCartController extends Controller
 
             $userCart = $this->lockCart(Cart::firstOrCreate(['user_id' => $user->id]));
             
-            // Load and lock current items once so merge decisions and capacity
-            // checks are made against a stable cart snapshot.
             $userItems = CartItem::where('cart_id', $userCart->id)->lockForUpdate()->get();
 
             foreach ($lockedGuestCart->items as $guestItem) {
                 if ($guestItem->combo_id) {
-                    // Tìm kiếm trên Collection thay vì Query Builder
                     $userItem = $userItems->where('combo_id', $guestItem->combo_id)
                                           ->first(function ($item) use ($guestItem) {
                                               return $item->combo_selections == $guestItem->combo_selections;
@@ -448,24 +441,20 @@ public function applyBirthdayCoupon(Request $request)
             return response()->json(['success' => false, 'message' => 'Bạn cần đăng nhập để sử dụng voucher.']);
         }
 
-        // Tìm mã voucher đang Active
         $coupon = Coupon::where('code', $code)->where('status', 'active')->first();
 
         if (!$coupon) {
             return response()->json(['success' => false, 'message' => 'Mã voucher không hợp lệ hoặc đã bị vô hiệu hóa.']);
         }
 
-        // Kiểm tra quyền sở hữu (Nếu là mã cá nhân)
         if ($coupon->user_id && $coupon->user_id !== $user->id) {
             return response()->json(['success' => false, 'message' => 'Mã voucher này không thuộc quyền sở hữu của bạn.']);
         }
 
-        // Kiểm tra hạn sử dụng
         if ($coupon->expires_at && now()->greaterThan($coupon->expires_at)) {
             return response()->json(['success' => false, 'message' => 'Mã voucher đã hết hạn sử dụng.']);
         }
 
-        // Kiểm tra lượt dùng
         if ($coupon->usage_limit !== null && $coupon->usage_count >= $coupon->usage_limit) {
             return response()->json(['success' => false, 'message' => 'Mã voucher đã hết lượt sử dụng.']);
         }
