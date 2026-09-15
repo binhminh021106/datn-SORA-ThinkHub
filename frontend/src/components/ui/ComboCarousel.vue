@@ -689,7 +689,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: visible;
+  overflow: hidden;
   padding: 1rem 0;
   margin-bottom: 2rem;
 }

@@ -27,8 +27,6 @@ class ClientCompareController extends Controller
         }
 
         try {
-            // Lấy dữ liệu sản phẩm cùng với brand và category
-            // BỔ SUNG: Lấy thêm variants để tính toán stock_quantity chuẩn xác từ CSDL
             $products = Product::with([
                 'brand:id,name',
                 'category:id,name',
@@ -40,15 +38,12 @@ class ClientCompareController extends Controller
             ->where('status', 'published')
             ->get();
 
-            // Sắp xếp lại mảng theo đúng thứ tự ID mà user đã chọn
             $sortedProducts = collect($productIds)->map(function ($id) use ($products) {
                 return $products->firstWhere('id', $id);
             })->filter()->values();
 
-            // Format dữ liệu trả về
             $formattedData = $sortedProducts->map(function ($product) {
                 
-                // Tự động tính tổng tồn kho từ các variants của CSDL
                 $totalStock = $product->variants ? $product->variants->sum('stock_quantity') : 0;
 
                 return [
@@ -61,11 +56,9 @@ class ClientCompareController extends Controller
                     'brand_name' => $product->brand ? $product->brand->name : 'Không có',
                     'category_name' => $product->category ? $product->category->name : 'Không có',
                     
-                    // BỔ SUNG: Truyền tồn kho thực tế từ CSDL để Frontend so sánh
                     'stock_quantity' => $totalStock, 
 
                     'description' => $product->description,
-                    // Giả sử specifications lưu dạng JSON, decode nó ra
                     'specifications' => is_string($product->specifications) ? json_decode($product->specifications, true) : $product->specifications,
                 ];
             });

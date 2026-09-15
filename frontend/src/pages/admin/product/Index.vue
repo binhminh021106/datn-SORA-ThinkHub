@@ -113,8 +113,7 @@
           class="card-header bg-white border-bottom-0 pt-2 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
           <h6 class="fw-bold mb-0 text-dark d-flex align-items-center">
             <i class="bi bi-list-ul me-2"></i>Danh sách Sản phẩm
-            <div v-if="isSilentLoading || isTableLoading" class="spinner-border spinner-border-sm text-brand ms-2"
-              role="status"></div>
+            <AdminLoadingSpinner v-if="isSilentLoading || isTableLoading" class="text-brand ms-2" size="16" />
             
             <button v-if="activeTab === 'deleted' && selectedProductIds.length > 0 && isHighestRole" 
                     class="btn btn-sm btn-danger ms-3 shadow-sm rounded-pill px-3"
@@ -217,7 +216,7 @@
                       class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary"><i
                         class="bi bi-trash3-fill"></i> Đã xóa</span>
                     <div v-else class="w-100">
-                      <!-- SỬA TRẠNG THÁI NHANH BẰNG COMPONENT -->
+
                       <StatusConfirmSelect
                         :modelValue="localStatuses[product.id] || product.status"
                         @update:modelValue="val => checkStatusChange(product, val)"
@@ -289,7 +288,7 @@
             <div class="p-3 bg-white border-bottom d-flex align-items-center gap-3 position-relative">
               <div v-if="isFetchingDetail"
                 class="position-absolute top-0 end-0 m-3 text-brand small fw-bold d-flex align-items-center bg-white px-2 py-1 rounded shadow-sm border">
-                <div class="spinner-border spinner-border-sm me-2" role="status"></div> Đang tải biến thể...
+                <AdminLoadingSpinner class="me-2" size="16" /> Đang tải biến thể...
               </div>
 
               <SoraImage :src="selectedProduct.thumbnail_image" imgClass="rounded border object-fit-cover shadow-sm"
@@ -320,7 +319,7 @@
 
             <div v-if="selectedProduct.isPartial && isFetchingDetail"
               class="text-center py-5 bg-white border rounded-3 shadow-sm my-3 mx-3">
-              <div class="spinner-border text-brand mb-3" style="width: 2.5rem; height: 2.5rem;" role="status"></div>
+              <AdminLoadingSpinner class="text-brand mb-3" style="width: 2.5rem; height: 2.5rem;"  />
               <div class="text-muted small fw-semibold text-uppercase tracking-widest">Đang trích xuất biến thể sản
                 phẩm...
               </div>
@@ -788,7 +787,7 @@ const visiblePages = computed(() => {
 
 const paginatedProducts = computed(() => { const start = (currentPage.value - 1) * itemsPerPage; return processedProducts.value.slice(start, start + itemsPerPage); });
 
-// BULK ACTIONS
+
 const selectedProductIds = ref([]);
 const isAllSelected = computed(() => {
   if (paginatedProducts.value.length === 0) return false;
@@ -1045,7 +1044,7 @@ watch(isProductsInitialLoading, (loading) => {
   background: #c0c0c0;
 }
 
-/* CSS NÂNG CẤP BỘ LỌC DANH MỤC & THƯƠNG HIỆU ĐỒNG BỘ */
+
 .filter-box {
   min-width: 250px;
   max-width: 100%;
@@ -1061,7 +1060,7 @@ watch(isProductsInitialLoading, (loading) => {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-  /* Thêm mũi tên SVG màu thương hiệu #009981 sang xịn mịn */
+
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23009981' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
   background-repeat: no-repeat !important;
   background-position: right center !important;

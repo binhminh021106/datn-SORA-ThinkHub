@@ -24,7 +24,6 @@ class ProductUpdated implements ShouldBroadcastNow
 
     public function broadcastOn(): array
     {
-        // Admin should receive on private admin channel; clients can listen on public-admin
         return [new PrivateChannel('admin'), new Channel('public-admin')];
     }
 

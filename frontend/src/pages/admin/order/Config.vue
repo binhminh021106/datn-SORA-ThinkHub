@@ -1,11 +1,25 @@
 <template>
-  <div class="order-config-tab animation-fade-in">
-    <!-- Cấu hình thời gian delay -->
-    <div class="card anti-spam-card anti-spam-config-card mb-3">
+  <div class="order-config-wrapper container-fluid py-4 animation-fade-in">
+
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+        <div>
+            <h3 class="fw-bold text-dark mb-0 d-flex align-items-center">
+                <i class="bi bi-shield-check me-2 text-brand"></i>Cấu hình & Chống Spam
+            </h3>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <button class="btn btn-light border shadow-sm fw-bold text-dark px-4 py-2" @click="handleRefresh">
+                <i class="bi bi-arrow-clockwise me-1"></i> Làm mới
+            </button>
+        </div>
+    </div>
+
+
+    <div class="card anti-spam-card anti-spam-config-card mb-4">
       <div class="card-header anti-spam-card-header d-flex align-items-start gap-3">
         <span class="anti-spam-title-icon"><i class="bi bi-shield-check"></i></span>
         <div>
-          <h6 class="fw-bold mb-1 text-dark">Cấu hình nhịp đặt hàng</h6>
+          <h6 class="fw-bold mb-1 text-body">Cấu hình nhịp đặt hàng</h6>
           <p class="mb-0 small text-muted">Thiết lập giới hạn mềm theo từng tài khoản để giảm thao tác đặt đơn liên tiếp.</p>
         </div>
       </div>
@@ -18,21 +32,21 @@
             <span>phút</span>
           </div>
           <button @click="updateConfig" :disabled="isSavingConfig" class="btn admin-action admin-action-primary">
-            <span v-if="isSavingConfig" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            <AdminLoadingSpinner v-if="isSavingConfig" class="me-2" size="16" />
             <i v-else class="bi bi-check2-circle me-2"></i>Lưu cấu hình
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Bảng Theo dõi User -->
+
     <div class="card anti-spam-card">
       <div class="card-header anti-spam-toolbar d-flex flex-column flex-xl-row justify-content-between align-items-xl-center gap-3">
         <div>
-          <h6 class="fw-bold mb-1 text-dark d-flex align-items-center"><i class="bi bi-shield-exclamation me-2 text-brand"></i>Giám sát chống spam</h6>
+          <h6 class="fw-bold mb-1 text-body d-flex align-items-center"><i class="bi bi-shield-exclamation me-2 text-brand"></i>Giám sát chống spam</h6>
           <p class="mb-0 small text-muted">Ưu tiên xem đơn chờ thanh toán trước khi khóa hoặc dọn dữ liệu của tài khoản.</p>
         </div>
-        <!-- Filters -->
+
         <div class="d-flex flex-column flex-md-row justify-content-end align-items-center gap-2 w-100">
           <div class="admin-search-wrap">
             <i class="bi bi-search"></i>
@@ -61,7 +75,7 @@
               </tr>
             </thead>
             <tbody>
-              <!-- Skeleton Loading -->
+
               <template v-if="isLoading">
                 <tr v-for="i in 5" :key="'skeleton-' + i">
                   <td class="py-3 px-4">
@@ -88,21 +102,21 @@
                 </tr>
               </template>
 
-              <!-- Empty State -->
+
               <tr v-else-if="users.length === 0">
                 <td colspan="4" class="text-center py-5 text-muted">
                   Không tìm thấy người dùng nào.
                 </td>
               </tr>
 
-              <!-- Data Rows -->
+
               <template v-else>
                 <tr v-for="user in users" :key="user.id">
                 <td class="py-3 px-4 text-start">
                   <div class="d-flex align-items-center">
                     <img :src="user.avatar_url ? getFullImage(user.avatar_url) : defaultAvatar" @error="(e) => e.target.src = defaultAvatar" class="anti-spam-avatar me-3" />
                     <div>
-                      <div class="fw-bold text-dark">{{ user.fullName }}</div>
+                      <div class="fw-bold text-body">{{ user.fullName }}</div>
                       <div class="small text-muted">{{ user.email }} <br v-if="user.phone"/> {{ user.phone }}</div>
                     </div>
                   </div>
@@ -137,7 +151,7 @@
                     {{ user.status === 'active' ? 'Khóa tài khoản' : 'Mở khóa' }}
                   </button>
                   <button @click="cleanupSpamOrders(user)" :disabled="cleaningUserId === user.id || user.pending_unpaid_orders_count === 0" class="btn btn-sm admin-action admin-action-cleanup" :title="user.pending_unpaid_orders_count > 0 ? 'Hủy và ẩn mềm các đơn pending chưa thanh toán' : 'Tài khoản không có đơn chờ thanh toán để dọn'">
-                    <span v-if="cleaningUserId === user.id" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>
+                    <AdminLoadingSpinner v-if="cleaningUserId === user.id" class="me-1" size="16" />
                     <i v-else class="bi bi-trash3 me-1"></i>Dọn spam ({{ user.pending_unpaid_orders_count || 0 }})
                   </button>
                   </div>
@@ -148,7 +162,7 @@
           </table>
         </div>
 
-        <!-- Phân trang -->
+
         <div class="d-flex justify-content-between align-items-center px-4 py-3 bg-white border-top rounded-bottom-4" v-if="totalPages > 1">
           <span class="text-muted small fw-semibold">
             Trang {{ currentPage }} / {{ totalPages }}
@@ -162,7 +176,7 @@
             <li class="page-item" v-for="page in totalPages" :key="page"
               :class="{ active: currentPage === page }">
               <button class="page-link"
-                :class="currentPage === page ? 'bg-brand border-brand text-white' : 'text-dark'"
+                :class="currentPage === page ? 'bg-brand border-brand text-white' : 'text-body'"
                 @click="changePage(page)">
                 {{ page }}
               </button>
@@ -187,6 +201,7 @@ import Toast from '@/utils/toastConfig';
 import Swal from 'sweetalert2';
 import defaultAvatar from '@/assets/images/defaults/avatar1.png';
 import { getFullImage } from '@/composables/useUtilities';
+import AdminLoadingSpinner from '@/components/admin/AdminLoadingSpinner.vue';
 
 const queryClient = useQueryClient();
 
@@ -210,6 +225,10 @@ const handleSortChange = () => {
 
 const changePage = (page) => {
   currentPage.value = page;
+};
+
+const handleRefresh = () => {
+    queryClient.invalidateQueries(['order-config']);
 };
 
 const { data: configData, isFetching: isLoading } = useQuery({
@@ -350,12 +369,23 @@ const cleanupSpamOrders = async (user) => {
   animation: fadeIn 0.3s ease-in-out;
 }
 
-.order-config-tab {
+.order-config-wrapper {
   --admin-brand: #009a83;
   --admin-brand-dark: #007b6a;
   --admin-brand-soft: #e7f7f2;
   --admin-border: #e7edf2;
   --admin-text-muted: #687788;
+}
+
+.text-brand {
+    color: var(--admin-brand);
+}
+
+.bg-brand {
+    background-color: var(--admin-brand) !important;
+}
+.border-brand {
+    border-color: var(--admin-brand) !important;
 }
 
 .anti-spam-card {
@@ -594,8 +624,9 @@ const cleanupSpamOrders = async (user) => {
   .admin-sort-select { width: 100%; }
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+[data-bs-theme="dark"] .anti-spam-card-header,
+[data-bs-theme="dark"] .anti-spam-toolbar {
+  background: var(--bs-gray-900);
+  border-bottom-color: var(--bs-border-color);
 }
 </style>

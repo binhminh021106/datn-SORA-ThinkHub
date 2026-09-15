@@ -14,7 +14,7 @@ class ShiftRequirement extends Model
     protected $fillable = [
         'work_shift_id',
         'role_id',
-        'day_of_week', // 0=CN, 1=T2... 6=T7
+        'day_of_week', 
         'required_count'
     ];
 

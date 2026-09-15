@@ -22,7 +22,6 @@ class AdminNotificationController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
         }
 
-        // Fetch notifications, paginated
         $notifications = $admin->notifications()->paginate(20);
         $unreadCount = $admin->unreadNotifications()->count();
 

@@ -9,12 +9,11 @@ class Review extends Model
 {
     use HasFactory;
 
-    // Trỏ tới bảng reviews tổng quát (chứa cả Product và Combo)
     protected $table = 'reviews';
 
     protected $fillable = [
         'product_id',
-        'combo_id', // Bổ sung combo_id
+        'combo_id',
         'user_id',
         'order_id',
         'rating',
@@ -24,7 +23,6 @@ class Review extends Model
         'admin_reply'
     ];
 
-    // Ép kiểu mảng JSON cho cột images tự động
     protected function casts(): array
     {
         return [

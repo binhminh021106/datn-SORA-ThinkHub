@@ -1,9 +1,8 @@
 <template>
   <div class="policy-faq-page font-sans bg-light-custom pb-5">
     
-    <!-- ========================================== -->
-    <!-- HERO SECTION -->
-    <!-- ========================================== -->
+    
+
     <section class="hero-policy position-relative d-flex align-items-center justify-content-center text-center overflow-hidden">
       <div class="hero-overlay position-absolute w-100 h-100 top-0 start-0"></div>
       <div class="position-relative z-1 d-flex flex-column align-items-center px-3 pt-5">
@@ -16,9 +15,9 @@
     <div class="container" style="margin-top: -3rem; position: relative; z-index: 2;">
       <div class="bg-white shadow-sm p-4 p-md-5 rounded-3">
         
-        <!-- ========================================== -->
-        <!-- PHẦN 1: CHÍNH SÁCH ĐỔI TRẢ & THU MUA -->
-        <!-- ========================================== -->
+        
+
+        
         <div id="return-policy" class="text-center max-w-2xl mb-5 mx-auto">
           <h2 class="h3 font-serif text-main mb-3">Chính Sách Đổi Trả & Thu Mua</h2>
           <p class="text-secondary fw-light" style="line-height: 1.8;">
@@ -26,9 +25,9 @@
           </p>
         </div>
 
-        <!-- 2 MỐC THỜI GIAN -->
+
         <div class="row g-4 mb-5">
-          <!-- Mốc 1 -->
+
           <div class="col-md-6">
             <div class="h-100 border border-light bg-light-custom p-4 p-lg-5 position-relative policy-card rounded-3">
               <div class="position-absolute top-0 start-0 w-100 h-100 border border-accent m-2 pointer-events-none rounded-3" style="transform: translate(-10px, -10px); z-index: 0; opacity: 0.5;"></div>
@@ -57,7 +56,7 @@
             </div>
           </div>
 
-          <!-- Mốc 2 -->
+
           <div class="col-md-6">
             <div class="h-100 border border-light bg-white shadow-sm p-4 p-lg-5 position-relative policy-card rounded-3">
               <div class="position-relative z-1">
@@ -85,7 +84,7 @@
           </div>
         </div>
 
-        <!-- ĐIỀU KHOẢN BẢO VỆ -->
+
         <h4 class="h5 font-serif text-dark mb-4 text-center mt-5 pt-4 border-top">Điều Khoản & Lưu Ý Quan Trọng</h4>
         <div class="row g-4 mb-5 pb-5">
           <div class="col-md-6">
@@ -135,9 +134,9 @@
         </div>
 
 
-        <!-- ========================================== -->
-        <!-- PHẦN 2: CÂU HỎI THƯỜNG GẶP (FAQ) -->
-        <!-- ========================================== -->
+        
+
+        
         <div id="faq" class="text-center max-w-2xl mb-5 mx-auto border-top pt-5">
           <span class="text-accent text-uppercase fw-bold mb-2 d-block tracking-wide" style="font-size: 0.75rem;">SORA Lắng Nghe</span>
           <h2 class="h3 font-serif text-main mb-3">Câu Hỏi Thường Gặp (FAQ)</h2>
@@ -147,7 +146,7 @@
         </div>
 
         <div class="row g-5">
-          <!-- Cột Menu Điều Hướng (Bên trái) -->
+
           <div class="col-lg-4 d-none d-lg-block pe-5 border-end border-light">
             <div class="sticky-top" style="top: 100px;">
               <h5 class="font-serif text-dark mb-4">Chủ Đề</h5>
@@ -176,10 +175,10 @@
             </div>
           </div>
 
-          <!-- Cột Nội Dung Accordion (Bên phải) -->
+
           <div class="col-lg-8">
             
-            <!-- Nhóm 1: Đặt Hàng -->
+
             <div id="ordering" class="faq-section mb-5 pb-4">
               <h4 class="h5 font-serif text-dark mb-4 d-flex align-items-center">
                 <i class="fa-solid fa-cart-shopping text-accent me-3 d-lg-none"></i> Đặt Hàng & Sản Phẩm
@@ -227,7 +226,7 @@
               </div>
             </div>
 
-            <!-- Nhóm 2: Giao Hàng -->
+
             <div id="shipping" class="faq-section mb-5 pb-4">
               <h4 class="h5 font-serif text-dark mb-4 d-flex align-items-center">
                 <i class="fa-solid fa-truck-fast text-accent me-3 d-lg-none"></i> Giao Hàng & Nhận Hàng
@@ -264,7 +263,7 @@
               </div>
             </div>
 
-            <!-- Nhóm 3: Bảo Hành -->
+
             <div id="warranty" class="faq-section mb-5 pb-4">
               <h4 class="h5 font-serif text-dark mb-4 d-flex align-items-center">
                 <i class="fa-solid fa-shield-halved text-accent me-3 d-lg-none"></i> Bảo Hành & Hậu Mãi
@@ -286,7 +285,7 @@
               </div>
             </div>
 
-            <!-- Nhóm 4: Thanh Toán -->
+
             <div id="payment" class="faq-section mb-5 pb-4">
               <h4 class="h5 font-serif text-dark mb-4 d-flex align-items-center">
                 <i class="fa-regular fa-credit-card text-accent me-3 d-lg-none"></i> Thanh Toán & Bảo Mật
@@ -308,7 +307,7 @@
               </div>
             </div>
 
-            <!-- Nhóm 5: Chính Sách Bảo Mật -->
+
             <div id="privacy-policy" class="faq-section border-top pt-4">
               <h4 class="h5 font-serif text-dark mb-4 d-flex align-items-center">
                 <i class="fa-solid fa-user-shield text-accent me-3 d-lg-none"></i> Chính Sách Bảo Mật
@@ -336,9 +335,9 @@
       </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- CALL TO ACTION -->
-    <!-- ========================================== -->
+    
+
+    
     <section class="py-5 text-center mt-3">
       <div class="container py-3">
         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" class="text-accent mb-3 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -361,7 +360,6 @@ import { useRoute } from 'vue-router';
 
 const route = useRoute();
 
-// Hiệu ứng cuộn mượt và kích hoạt Menu bên cột trái
 const scrollToSection = (sectionId) => {
   const element = document.getElementById(sectionId);
   if (element) {
@@ -400,19 +398,19 @@ watch(() => route.hash, (newHash) => {
 @import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap');
 
 
-/* Cấu hình màu chuẩn của SORA */
+
 .bg-light-custom { background-color: #faf9f8 !important; }
 .bg-main { background-color: #9f273b !important; }
 .text-main { color: #9f273b !important; }
 .bg-accent { background-color: #e7ce7d !important; }
 .text-accent { color: #e7ce7d !important; }
 
-/* Font Serif cho sự sang trọng */
+
 .font-serif { font-family: 'Josefin Sans', sans-serif; }
 .max-w-2xl { max-width: 45rem; }
 .tracking-wide { letter-spacing: 0.1em; }
 
-/* Hero Section */
+
 .hero-policy {
   height: 40vh;
   background-color: #1a1a1a;
@@ -423,7 +421,7 @@ watch(() => route.hash, (newHash) => {
 .hero-overlay { background: rgba(40, 0, 10, 0.8); }
 .divider { width: 3rem; height: 2px; }
 
-/* Khối Chính Sách (Nửa trên) */
+
 .policy-card {
   transition: all 0.3s ease;
 }
@@ -440,7 +438,7 @@ watch(() => route.hash, (newHash) => {
   box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.05);
 }
 
-/* Menu FAQ (Nửa dưới) */
+
 .faq-nav .custom-link {
   transition: all 0.3s ease;
 }
@@ -449,7 +447,7 @@ watch(() => route.hash, (newHash) => {
   padding-left: 5px;
 }
 
-/* Giao diện Dropdown của FAQ (Accordion) */
+
 .custom-accordion .accordion-item {
   transition: all 0.3s ease;
   border-left: 3px solid transparent !important;
@@ -466,7 +464,7 @@ watch(() => route.hash, (newHash) => {
 .custom-accordion .accordion-collapse.show {
   border-left: 3px solid #9f273b;
 }
-/* Thay đổi icon mũi tên xổ xuống */
+
 .custom-accordion .accordion-button::after {
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%236c757d'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
 }
@@ -475,7 +473,7 @@ watch(() => route.hash, (newHash) => {
   transform: rotate(-180deg);
 }
 
-/* Nút CTA */
+
 .btn-outline-main {
   background-color: transparent;
   color: #9f273b;

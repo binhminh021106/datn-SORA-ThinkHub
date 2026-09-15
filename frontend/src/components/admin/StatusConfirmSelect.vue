@@ -12,7 +12,7 @@
 
     <div class="d-flex align-items-start justify-content-center w-100" style="min-height: 38px;">
       <div v-if="isUpdating" class="mt-2 text-center w-100">
-        <div class="spinner-border text-brand" style="width: 1.1rem; height: 1.1rem; border-width: 0.15em;" role="status"></div>
+        <AdminLoadingSpinner class="text-brand" style="width: 1.1rem; height: 1.1rem; border-width: 0.15em;"  />
       </div>
 
       <div v-else-if="isChanged" class="mt-2 w-100 d-flex gap-1 animate-fade-in">

@@ -15,9 +15,7 @@ use Illuminate\Support\Str;
 
 class MessageController extends Controller
 {
-    /**
-     * API: Nhận tin nhắn (text hoặc file) và Phát sóng
-     */
+
     public function store(Request $request)
     {
         $isAdmin = $request->is('api/admin/*');
@@ -28,7 +26,7 @@ class MessageController extends Controller
         }
 
         if (!$isAdmin) {
-            $receiverId = 1; // Force receiver to Admin for normal users
+            $receiverId = 1;
         } else {
             $receiverId = $request->input('receiver_id');
         }
@@ -57,7 +55,7 @@ class MessageController extends Controller
             }
         }
 
-        // Nếu gửi file
+
         if ($request->hasFile('file')) {
             $request->validate([
                 'file' => [
@@ -82,17 +80,17 @@ class MessageController extends Controller
             $fileSize = $this->formatFileSize($file->getSize());
             $mimeType = $file->getMimeType();
 
-            // Xác định loại message
+
             $messageType = str_starts_with($mimeType, 'image/') ? 'image' : 'file';
 
-            // Lưu file vào storage/public/chat_files
+
             $path = $file->store('chat_files', 'public');
             $fileUrl = url('storage/' . $path);
 
             $message = Message::create([
                 'sender_id'    => $senderId,
                 'receiver_id'  => $receiverId,
-                'content'      => $originalName, // Nội dung là tên file
+                'content'      => $originalName, 
                 'message_type' => $messageType,
                 'file_url'     => $fileUrl,
                 'file_name'    => $originalName,
@@ -101,7 +99,7 @@ class MessageController extends Controller
                 'reply_to_id'  => $replyToId,
             ]);
         } else {
-            // Gửi text/emoji
+
             $request->validate([
                 'content'     => 'required|string|max:2000',
             ]);
@@ -118,17 +116,13 @@ class MessageController extends Controller
 
         $message->load('replyToMessage');
 
-        // Phát sóng cho cả 2 bên (Event đã broadcast trên kênh sender + receiver)
-        // Không dùng toOthers() vì sẽ bị loại trừ nhầm bên nhận
+
         broadcast(new MessageSent($message, $isAdmin));
 
         return response()->json(['status' => true, 'data' => $message]);
     }
     
-    /**
-     * API: Lấy lịch sử chat
-     * Nếu Admin gọi: Phải truyền thêm partner_id (ID của khách)
-     */
+
     public function history(Request $request)
     {
         $isAdmin = $request->is('api/admin/*');
@@ -143,7 +137,7 @@ class MessageController extends Controller
         $beforeId = $request->integer('before_id') ?: null;
 
         if ($partnerId) {
-            // Mark unread messages as read
+
             Message::where('sender_id', $partnerId)
                 ->where('receiver_id', $userId)
                 ->where('is_read', false)
@@ -163,8 +157,7 @@ class MessageController extends Controller
             $messagesQuery->where('id', '<', $beforeId);
         }
 
-        // Read newest records first so a long-running conversation cannot make
-        // the initial load unbounded, then restore chronological UI ordering.
+
         $messages = $messagesQuery
             ->latest('id')
             ->take($limit + 1)
@@ -185,14 +178,12 @@ class MessageController extends Controller
         ]);
     }
 
-    /**
-     * API: Lấy danh sách những người đã nhắn tin (dành cho Admin)
-     */
+
     public function getConversations()
     {
         $adminId = 1;
 
-        // Fetch all messages involving the admin, ordered by latest first
+
         $messages = Message::where('sender_id', $adminId)
             ->orWhere('receiver_id', $adminId)
             ->orderBy('created_at', 'desc')
@@ -218,7 +209,7 @@ class MessageController extends Controller
     })
       ->values();
 
-        // Calculate unread count and attach to each user in one query to avoid N+1
+
         $unreadCounts = Message::where('receiver_id', $adminId)
             ->whereIn('sender_id', $userIds)
             ->where('is_read', false)
@@ -233,37 +224,35 @@ class MessageController extends Controller
         return response()->json(['status' => true, 'data' => $users]);
     }
 
-    /**
-     * API MỚI: Admin xóa toàn bộ cuộc trò chuyện với 1 user cụ thể
-     */
+
     public function deleteConversation(Request $request, $userId)
     {
         $adminId = 1;
 
-        // Lấy tất cả messages có file để xóa file khỏi storage
+
         $messagesWithFiles = Message::where(function($q) use ($adminId, $userId) {
             $q->where('sender_id', $adminId)->where('receiver_id', $userId);
         })->orWhere(function($q) use ($adminId, $userId) {
             $q->where('sender_id', $userId)->where('receiver_id', $adminId);
         })->whereNotNull('file_url')->get();
 
-        // Xóa file khỏi storage
+
         foreach ($messagesWithFiles as $msg) {
             if ($msg->file_url) {
-                // Lấy path từ URL
+
                 $relativePath = str_replace(url('storage/'), '', $msg->file_url);
                 Storage::disk('public')->delete($relativePath);
             }
         }
 
-        // Xóa tất cả tin nhắn
+
         Message::where(function($q) use ($adminId, $userId) {
             $q->where('sender_id', $adminId)->where('receiver_id', $userId);
         })->orWhere(function($q) use ($adminId, $userId) {
             $q->where('sender_id', $userId)->where('receiver_id', $adminId);
         })->delete();
 
-        // Báo cho client dọn dẹp giao diện real-time
+
         broadcast(new ConversationDeleted($userId));
 
         return response()->json([
@@ -272,9 +261,7 @@ class MessageController extends Controller
         ]);
     }
 
-    /**
-     * Helper: Format kích thước file
-     */
+
     private function formatFileSize($bytes)
     {
         if ($bytes >= 1048576) return round($bytes / 1048576, 2) . ' MB';

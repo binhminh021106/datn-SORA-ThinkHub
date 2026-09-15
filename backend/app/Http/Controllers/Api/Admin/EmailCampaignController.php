@@ -56,7 +56,6 @@ class EmailCampaignController extends Controller
                 $query->where('event_type', 'like', 'holiday_%');
             }
 
-            // CHỈ CẦN GỌI DELETE TRỰC TIẾP TRÊN QUERY LOGS
             $deleted = $query->delete();
 
             return response()->json([
@@ -75,7 +74,6 @@ public function settings()
     {
         $setting = EmailCampaignSetting::current();
         
-        // Load linh hoạt danh sách hạng thành viên từ Database thay vì hard-code
         $dbTiers = \App\Models\MembershipTier::orderBy('min_spent', 'asc')->get();
         $savedTiers = collect($setting->birthday_tiers ?? []);
 
@@ -90,12 +88,11 @@ public function settings()
                 'min_spend' => $saved['min_spend'] ?? 0,
                 'usage_limit' => $saved['usage_limit'] ?? null,
                 'usage_limit_per_user' => $saved['usage_limit_per_user'] ?? 1,
-                'validity_days' => $saved['validity_days'] ?? 7, // Thời hạn tính từ ngày sinh nhật
+                'validity_days' => $saved['validity_days'] ?? 7,
                 'status' => $saved['status'] ?? 'active',
             ];
         });
 
-        // Bổ sung hạng ảo cho Khách thường (tier_id = 0)
         $savedRegular = $savedTiers->firstWhere('tier_id', 0) ?? [];
         $tiersData->prepend([
             'tier_id' => 0,
@@ -123,7 +120,6 @@ public function settings()
 
     public function updateSettings(Request $request)
     {
-        // Áp dụng bộ validation chuẩn của hệ thống Coupon
         $validated = $request->validate([
             'is_auto_birthday' => 'sometimes|boolean',
             'birthday_subject' => 'required|string|max:255',
@@ -178,14 +174,12 @@ public function settings()
 
     public function triggerBirthday()
     {
-        // Giảm thời gian khoá từ 3600 giây (1 tiếng) xuống 60 giây để lỡ có lỗi Fatal Error thì cũng tự nhả khoá nhanh chóng.
         $lock = Cache::lock('email_campaign:birthday', 60);
         if (!$lock->get()) {
             return response()->json(['success' => false, 'message' => 'Campaign sinh nhật đang được xử lý.'], 429);
         }
 
         try {
-            // Truyền tham số để bỏ qua check AutoSetting nhưng BẬT check chống trùng lặp
             return response()->json($this->emailCampaignService->sendBirthdayCampaign(
                 respectAutoSetting: false, 
                 preventDuplicateSends: true
@@ -204,14 +198,12 @@ public function settings()
 
     public function triggerHoliday()
     {
-        // thời gian khoá 60 giây
         $lock = Cache::lock('email_campaign:holiday', 60);
         if (!$lock->get()) {
             return response()->json(['success' => false, 'message' => 'Campaign ngày lễ đang được xử lý.'], 429);
         }
 
         try {
-            // Bật cờ preventDuplicateSends thành true khi trigger bằng tay
             return response()->json($this->emailCampaignService->sendHolidayCampaign(preventDuplicateSends: true));
         } catch (\Throwable $e) {
             Log::error('triggerHoliday failed: ' . $e->getMessage());

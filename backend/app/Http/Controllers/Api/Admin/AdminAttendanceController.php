@@ -54,9 +54,7 @@ class AdminAttendanceController extends Controller
         return response()->json(['success' => true, 'data' => $shifts]);
     }
 
-    /**
-     * TẠO MỚI: API cấp mã QR cho điện thoại nhân viên
-     */
+
     public function generateQrToken(Request $request)
     {
         if ($response = $this->denyUnlessSuperAdmin($request)) {
@@ -79,7 +77,7 @@ class AdminAttendanceController extends Controller
             'success' => true,
             'data' => [
                 'qr_token' => $shortToken,
-                'expires_in' => 300 // Báo cho Frontend biết token này sống 5 phút (để test)
+                'expires_in' => 300 // Báo cho Frontend biết token này sống 5 phút
             ]
         ]);
     }
@@ -601,7 +599,6 @@ class AdminAttendanceController extends Controller
         for ($day = 1; $day <= $totalDays; $day++) {
             $date = Carbon::create($year, $month, $day);
             $dateString = $date->format('Y-m-d');
-            // FIX BUG: Đồng bộ với mảng index từ Frontend [0: CN, 1: T2, ..., 6: T7]
             $weekdayIndex = $date->dayOfWeek; 
             $isFuture = $date->isAfter($today);
 

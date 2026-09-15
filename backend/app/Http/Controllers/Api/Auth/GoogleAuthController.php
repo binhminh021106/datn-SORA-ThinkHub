@@ -13,20 +13,20 @@ use Illuminate\Http\Request;
 
 class GoogleAuthController extends Controller
 {
-    // Chuyển hướng người dùng sang Google
+
     public function redirect()
     {
         return Socialite::driver('google')->stateless()->redirect();
     }
 
-    // Xử lý callback từ Google trả về
+
     public function callback()
     {
         try {
-            // Lấy thông tin user từ Google
+
             $googleUser = Socialite::driver('google')->stateless()->user();
 
-            // Tìm hoặc tạo user mới trong hệ thống
+
             $user = User::updateOrCreate(
                 ['email' => $googleUser->email],
                 [
@@ -37,18 +37,18 @@ class GoogleAuthController extends Controller
                 ]
             );
 
-            // Generate a secure one-time exchange code
+
             $exchangeCode = Str::random(64);
             
-            // Store it in cache for 2 minutes mapped to the user ID
+
             Cache::put('google_auth_exchange_' . $exchangeCode, $user->id, now()->addMinutes(2));
 
-            // Chuyển hướng người dùng về frontend với code
+
             $frontendUrl = config('app.frontend_url') . '/auth/google/callback?code=' . $exchangeCode;
             return redirect($frontendUrl);
 
         } catch (Exception $e) {
-            // dd($e->getMessage());
+
             return redirect()->away(config('app.frontend_url') . '/login?error=google_auth_failed');
         }
     }

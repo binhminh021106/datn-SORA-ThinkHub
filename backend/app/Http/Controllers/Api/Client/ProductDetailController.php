@@ -8,41 +8,25 @@ use Illuminate\Http\Request;
 
 class ProductDetailController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+   
     public function index()
     {
-        //
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        //
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
     }
 
-    /**
-     * Hiển thị chi tiết sản phẩm dựa trên Slug
-     */
     public function show($shop_slug, $slug)
     {
         try {
-            // 1. Query lấy sản phẩm
-            // Load các relationship: brand, category (Đã bổ sung slug để tìm sp liên quan) và toàn bộ thông tin attribute
             $product = Product::with([
                 'brand:id,name',
-                'category:id,name,slug', // THÊM SLUG Ở ĐÂY
+                'category:id,name,slug', 
                 'variants' => function($q) {
                     $q->whereNull('deleted_at'); 
                 },
@@ -54,8 +38,6 @@ class ProductDetailController extends Controller
             ->where('status', 'published') 
             ->firstOrFail();
 
-            // 2. Xử lý logic Hình ảnh (Gallery)
-            // Lấy ảnh thumbnail làm ảnh đầu tiên
             $images = collect([$product->thumbnail_image]);
             foreach ($product->variants as $variant) {
                 if ($variant->image_url && !$images->contains($variant->image_url)) {
@@ -63,12 +45,10 @@ class ProductDetailController extends Controller
                 }
             }
             
-            // Format URL ảnh
             $formattedImages = $images->map(function ($img) {
                 return asset('storage/' . $img); 
             })->values();
 
-            // 3. Xử lý logic Thuộc tính & Biến thể một cách động
             $groupedAttributes = [];
             $mappedVariants = [];
 
@@ -105,13 +85,12 @@ class ProductDetailController extends Controller
                 ];
             }
 
-            // 4. Trả về JSON Response
             return response()->json([
                 'success' => true,
                 'data' => [
                     'id' => $product->id,
                     'name' => $product->name,
-                    'category' => $product->category, // Trả về category để frontend lấy slug
+                    'category' => $product->category, 
                     'brand' => $product->brand,
                     'rating_avg' => (float) ($product->reviews_avg_rating ?? $product->rating_avg ?? 0),
                     'review_count' => (int) ($product->reviews_count ?? $product->review_count ?? 0),
@@ -121,7 +100,6 @@ class ProductDetailController extends Controller
                     'attributes' => $groupedAttributes, 
                     'variants' => $mappedVariants,
                     'images' => $formattedImages,
-                    // FIX: Giới hạn số lượng review lấy ra (VD: 10) để tránh treo RAM nếu sản phẩm có hàng ngàn đánh giá
                     'reviews' => \App\Models\Review::with('user:id,fullName,avatar_url')->where('product_id', $product->id)->orderBy('created_at', 'desc')->take(10)->get()->map(function($review) {
                         if ($review->images) {
                             $review->images = array_map(function($img) {

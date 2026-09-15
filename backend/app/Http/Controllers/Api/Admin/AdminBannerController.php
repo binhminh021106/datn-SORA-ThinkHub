@@ -19,9 +19,7 @@ class AdminBannerController extends Controller
         return is_numeric($max) ? $max + 1 : 1;
     }
 
-    /**
-     * Lấy danh sách tối ưu ORM
-     */
+
     public function index()
     {
         $banners = Banner::withTrashed()
@@ -33,9 +31,7 @@ class AdminBannerController extends Controller
         return response()->json(['success' => true, 'data' => $banners]);
     }
 
-    /**
-     * Tạo mới - Load kèm brand để FE nhét vào cache không bị mồ côi data
-     */
+    // Load kèm brand để FE nhét vào cache không bị mồ côi data
     public function store(AdminStoreBannerRequest $request)
     {
         $data = $request->validated();
@@ -62,24 +58,20 @@ class AdminBannerController extends Controller
         $banner = Banner::create($data);
         $banner->load('brand:id,name,slug'); // Eager load trả về cho FE
 
-        // Clear homepage cache when a new banner is stored
+
         Cache::forget('sora_home_data_v4');
 
         return response()->json(['success' => true, 'message' => 'Tạo banner thành công', 'data' => $banner]);
     }
 
-    /**
-     * Chi tiết
-     */
+
     public function show($id)
     {
         $banner = Banner::with('brand:id,name,slug')->findOrFail($id);
         return response()->json(['success' => true, 'data' => $banner]);
     }
 
-    /**
-     * Cập nhật
-     */
+
     public function update(AdminUpdateBannerRequest $request, $id)
     {
         $banner = Banner::findOrFail($id);
@@ -117,30 +109,26 @@ class AdminBannerController extends Controller
         $banner->update($data);
         $banner->load('brand:id,name,slug'); // Load lại quan hệ để FE update cache
 
-        // Clear homepage cache when a banner is updated
+
         Cache::forget('sora_home_data_v4');
 
         return response()->json(['success' => true, 'message' => 'Cập nhật thành công', 'data' => $banner]);
     }
 
-    /**
-     * Xóa mềm
-     */
+
     public function destroy($id)
     {
         $banner = Banner::findOrFail($id);
         $banner->update(['sort_order' => null]);
         $banner->delete();
 
-        // Clear homepage cache when a banner is deleted
+
         Cache::forget('sora_home_data_v4');
 
         return response()->json(['success' => true, 'message' => 'Đã đưa banner vào thùng rác', 'id' => $id]);
     }
 
-    /**
-     * Khôi phục
-     */
+
     public function restore($id)
     {
         $banner = Banner::withTrashed()->findOrFail($id);
@@ -151,35 +139,31 @@ class AdminBannerController extends Controller
         }
         $banner->load('brand:id,name,slug'); // Load lại data cho cache FE
 
-        // Clear homepage cache when a banner is restored
+
         Cache::forget('sora_home_data_v4');
 
         return response()->json(['success' => true, 'message' => 'Đã khôi phục banner', 'data' => $banner]);
     }
 
-    /**
-     * Xóa vĩnh viễn
-     */
+
     public function forceDelete($id)
     {
         $banner = Banner::withTrashed()->findOrFail($id);
 
         $banner->forceDelete();
 
-        // Xóa ảnh và video thực tế trên ổ cứng
+
         if ($banner->image_desktop) Storage::disk('public')->delete($banner->image_desktop);
         if ($banner->image_mobile) Storage::disk('public')->delete($banner->image_mobile);
         if ($banner->video_url) Storage::disk('public')->delete($banner->video_url);
 
-        // Clear homepage cache just in case
+
         Cache::forget('sora_home_data_v4');
 
         return response()->json(['success' => true, 'message' => 'Đã xóa vĩnh viễn banner cùng các file đính kèm']);
     }
 
-    /**
-     * Kéo thả Reorder
-     */
+
     public function reorder(Request $request)
     {
         $items = $request->items;
@@ -190,5 +174,25 @@ class AdminBannerController extends Controller
         Cache::forget('sora_home_data_v2');
 
         return response()->json(['success' => true, 'message' => 'Đã cập nhật thứ tự']);
+    }
+
+
+    public function deleteMedia(Request $request, $id)
+    {
+        $banner = Banner::withTrashed()->findOrFail($id);
+        $type = $request->input('type');
+
+        if (!in_array($type, ['image_desktop', 'image_mobile', 'video_url'])) {
+            return response()->json(['success' => false, 'message' => 'Loại file không hợp lệ'], 400);
+        }
+
+        if ($banner->$type) {
+            Storage::disk('public')->delete($banner->$type);
+            $banner->update([$type => null]);
+            Cache::forget('sora_home_data_v4');
+            return response()->json(['success' => true, 'message' => 'Xóa file thành công']);
+        }
+
+        return response()->json(['success' => true, 'message' => 'File không tồn tại']);
     }
 }

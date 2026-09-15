@@ -1,7 +1,7 @@
 <template>
   <div class="auth-wrapper">
     <div class="auth-container">
-      <!-- Cột trái: Hình ảnh Branding giống Login -->
+
       <div class="auth-banner">
         <div class="banner-overlay"></div>
         <router-link to="/" class="auth-home-link">
@@ -14,7 +14,7 @@
         </div>
       </div>
 
-      <!-- Cột phải: Form Quên mật khẩu -->
+
       <div class="auth-box">
         <router-link to="/login" class="auth-back-link">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -32,14 +32,14 @@
           <p class="subtitle" v-if="step === 3">Tạo mật khẩu mới cho tài khoản của bạn.</p>
         </div>
 
-        <!-- BƯỚC 1: NHẬP EMAIL -->
+
         <form @submit.prevent="handleSendOtp" v-if="step === 1" class="auth-form animation-fade-in">
           <div class="form-group">
             <label>Email đăng ký <span style="color: #cc1e2e">*</span></label>
             <input type="email" v-model="form.email" placeholder="Nhập email của bạn" required />
           </div>
 
-          <!-- CAPTCHA -->
+
           <div class="form-group">
             <div id="otp-recaptcha" v-show="!recaptchaError"></div>
             <div v-if="recaptchaError" class="recaptcha-error">
@@ -53,7 +53,7 @@
           </button>
         </form>
 
-        <!-- BƯỚC 2: NHẬP OTP -->
+
         <form @submit.prevent="handleVerifyOtp" v-if="step === 2" class="auth-form animation-fade-in">
           <div class="otp-container">
             <input
@@ -95,7 +95,7 @@
           </div>
         </form>
 
-        <!-- BƯỚC 3: ĐẶT LẠI MẬT KHẨU -->
+
         <form @submit.prevent="handleResetPassword" v-if="step === 3" class="auth-form animation-fade-in">
           <div class="form-group password-group">
             <label>Mật khẩu mới <span style="color: #cc1e2e">*</span></label>
@@ -359,7 +359,7 @@ const handleSendOtp = async () => {
     startCountdown();
   } catch (error) {
     handleFormErrors(error, 'Lỗi gửi OTP.');
-    // Reset recaptcha if failed so they can try again
+
     if (window.grecaptcha) {
         window.grecaptcha.reset(recaptchaWidgetId);
         recaptchaToken.value = '';
@@ -444,7 +444,7 @@ onUnmounted(() => { if (timer) clearInterval(timer); });
 </script>
 
 <style scoped>
-/* Reset & Base - Dựa trên Login.vue của SORA */
+
 .auth-wrapper {
   min-height: 100vh;
   min-height: 100dvh;
@@ -468,7 +468,7 @@ onUnmounted(() => { if (timer) clearInterval(timer); });
   box-shadow: 0 20px 50px rgba(159, 39, 59, 0.15);
 }
 
-/* Banner trái */
+
 .auth-banner {
   flex: 0 0 52%;
   position: relative;
@@ -623,7 +623,7 @@ onUnmounted(() => { if (timer) clearInterval(timer); });
   transform: translateX(-2px);
 }
 
-/* Box form phải */
+
 .auth-box {
   flex: 1;
   padding: 0 40px 10px 40px;
@@ -707,7 +707,7 @@ onUnmounted(() => { if (timer) clearInterval(timer); });
   color: #9f273b;
 }
 
-/* OTP UI */
+
 .otp-container {
   display: flex;
   justify-content: space-between;
@@ -795,7 +795,7 @@ onUnmounted(() => { if (timer) clearInterval(timer); });
   cursor: not-allowed;
 }
 
-/* Button */
+
 .btn-primary {
   width: 100%;
   padding: 15px;
@@ -824,7 +824,7 @@ onUnmounted(() => { if (timer) clearInterval(timer); });
   cursor: not-allowed;
 }
 
-/* Utils */
+
 .animation-fade-in {
   animation: fadeIn 0.4s ease forwards;
 }

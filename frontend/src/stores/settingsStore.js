@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import axios from 'axios';
 import defaultLogoImg from '@/assets/images/logo1.png';
 
@@ -13,6 +13,7 @@ export const useSettingsStore = defineStore('settings', () => {
         footer_copyright: '',
         footer_address: '',
         footer_email: '',
+        footer_opening_hours: '',
         footer_socials: [],
         footer_trust_items: [],
         home_stats: [
@@ -38,6 +39,7 @@ export const useSettingsStore = defineStore('settings', () => {
                 settings.value.footer_copyright = data.footer_copyright || '© 2026 SORA JEWELRY. ALL RIGHTS RESERVED.';
                 settings.value.footer_address = data.footer_address || '123 Đường Ngọc Hồi, Hà Nội';
                 settings.value.footer_email = data.footer_email || 'SORA@GMAIL.COM';
+                settings.value.footer_opening_hours = data.footer_opening_hours || '09:00 - 21:00 (Từ Thứ 2 đến Chủ Nhật)';
                 let parsedFooterTrustItems = null;
                 if (data.footer_trust_items) {
                     try {
@@ -114,8 +116,22 @@ export const useSettingsStore = defineStore('settings', () => {
         return () => {};
     };
 
+    const hotlinePhone = computed(() => {
+        const items = settings.value.footer_trust_items;
+        if (Array.isArray(items)) {
+            // Find the item that contains a hotline (like "HỖ TRỢ 24/7" or any item with "Hotline:" in subtitle)
+            const hotlineItem = items.find(item => item.subtitle && item.subtitle.toLowerCase().includes('hotline'));
+            if (hotlineItem) {
+                // Extract the phone number part (e.g. "Hotline: 1234.567.8910" -> "1234.567.8910")
+                return hotlineItem.subtitle.replace(/hotline[:\s]*/i, '').trim();
+            }
+        }
+        return '090 123 4567'; // default fallback
+    });
+
     return {
         settings,
+        hotlinePhone,
         isLoading,
         defaultLogo,
         fetchSettings,

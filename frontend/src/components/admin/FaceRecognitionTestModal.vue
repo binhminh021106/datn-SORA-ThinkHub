@@ -4,7 +4,6 @@
       <div v-if="isVisible" class="face-id-overlay d-flex align-items-center justify-content-center" @click.self="closeModal">
         <div class="face-id-wrapper w-100 h-100 d-flex align-items-center justify-content-center">
           
-          <!-- SETUP STATE -->
           <div v-if="uiState === 'setup'" class="face-id-setup bg-white shadow-lg overflow-hidden d-flex flex-column">
             <div class="face-manager-header px-3 py-2 px-md-4 py-md-3 border-bottom d-flex justify-content-between align-items-center bg-brand text-white">
               <div>
@@ -166,7 +165,7 @@
                           <button v-if="canRegister" class="btn btn-brand fw-bold text-white" @click="confirmAndStartRegistration">
                             <i class="bi bi-person-add me-2"></i>Bắt đầu đăng ký
                           </button>
-                          <div v-else-if="isFetchingProfile" class="small text-center text-muted py-2"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Đang kiểm tra hồ sơ...</div>
+                          <div v-else-if="isFetchingProfile" class="small text-center text-muted py-2"><AdminLoadingSpinner class="me-2" size="16" />Đang kiểm tra hồ sơ...</div>
                           <div v-else class="alert alert-success small mb-0 py-2 text-center"><i class="bi bi-check-circle me-1"></i>Hồ sơ đã đủ 5 mẫu.</div>
                           <button type="button" class="btn btn-outline-danger" @click="resetFaceProfile" :disabled="!canResetProfile">
                             <i class="bi bi-trash3 me-2"></i>Xóa hồ sơ
@@ -203,7 +202,6 @@
             </div>
           </div>
 
-          <!-- SCANNING STATE (Face ID Style) -->
           <div v-if="uiState === 'scanning'" class="face-id-scanner w-100 h-100 d-flex flex-column align-items-center justify-content-center position-relative">
             <button
               type="button"
@@ -253,20 +251,17 @@
             </div>
 
             <div class="face-id-ring-container position-relative" :class="{'zoom-closer': isRegistering && currentRegStep === 4}">
-              <!-- SVG Dashed Ring -->
               <svg class="face-id-svg" viewBox="0 0 100 136">
                 <ellipse class="ring-bg" cx="50" cy="68" rx="66" ry="48" transform="rotate(-90 50 68)"></ellipse>
                 <ellipse class="ring-progress" :class="{'is-success': resultType === 'success', 'is-warning': resultType === 'warning', 'is-danger': !!errorMessage}" cx="50" cy="68" rx="66" ry="48" transform="rotate(-90 50 68)" :style="{ strokeDashoffset: ringDashoffset }"></ellipse>
               </svg>
 
-              <!-- Camera Video Cutout -->
               <div class="face-id-camera-wrapper">
                  <video ref="videoRef" class="camera-video" autoplay muted playsinline></video>
               </div>
 
-              <!-- Loading / Processing state -->
               <div v-if="isLoadingModels" class="scanner-overlay position-absolute d-flex align-items-center justify-content-center rounded-circle z-2">
-                 <div class="spinner-border text-white opacity-75" style="width: 3rem; height: 3rem;"></div>
+                 <AdminLoadingSpinner class="text-white opacity-75" style="width: 3rem; height: 3rem;" />
               </div>
             </div>
 

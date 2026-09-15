@@ -12,7 +12,6 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
-        // Web app: Họ tên, email, SĐT, mật khẩu, xác nhận mật khẩu
         $request->validate([
             'fullName' => 'required|string|max:150',
             'email'    => 'required|string|email|max:150|unique:users',
@@ -76,7 +75,6 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        // Xóa cả access_token và refresh_token
         $request->user()->tokens()->whereIn('name', ['auth_token', 'refresh_token'])->delete();
         
         return response()->json(['message' => 'Đăng xuất thành công'])
@@ -87,7 +85,6 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        // Kiểm tra xem token đang dùng có phải là refresh_token không
         if (!$user->currentAccessToken()->can('refresh')) {
             return response()->json([
                 'message' => 'Token không hợp lệ để thực hiện Refresh.'
@@ -101,10 +98,8 @@ class AuthController extends Controller
             ], 403);
         }
 
-        // Xóa refresh_token cũ
         $user->currentAccessToken()->delete();
 
-        // Tạo bộ token mới
         $accessToken = $user->createToken('auth_token', ['access'], now()->addMinutes(60))->plainTextToken;
         $refreshToken = $user->createToken('refresh_token', ['refresh'], now()->addDays(7))->plainTextToken;
 

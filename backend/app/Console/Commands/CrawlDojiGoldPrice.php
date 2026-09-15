@@ -19,10 +19,10 @@ class CrawlDojiGoldPrice extends Command
         $this->info('Bắt đầu lấy dữ liệu giá vàng từ API Vang.Today...');
 
         try {
-            // Luồng 1: API vang.today (Nhanh, xịn, không bị chặn Bot)
+            // Luồng 1: API vang.today
             $goldPrices = $this->crawlVangToday();
 
-            // Luồng 2: Dự phòng Chợ Giá
+            // Luồng 2: Chợ Giá
             if (empty($goldPrices)) {
                 $this->warn('API Vang.Today thất bại. Chuyển sang cào dự phòng từ Chợ Giá...');
                 try {
@@ -40,14 +40,14 @@ class CrawlDojiGoldPrice extends Command
                 }
             }
 
-            // Luồng 3: Dự phòng DOJI
+            // Luồng 3: DOJI
             if (empty($goldPrices)) {
                 $this->warn('Chợ Giá cũng thất bại. Chuyển sang cào dự phòng từ DOJI...');
                 $goldPrices = $this->crawlDoji();
             }
 
             if (!empty($goldPrices)) {
-                // Tăng thời gian sống của Cache lên 1 ngày (86400s) thay vì 300s để giữ lại dữ liệu cũ hợp lệ khi cào lỗi
+                // Cache 1 ngày
                 Cache::put('sora_gold_prices', $goldPrices, 86400);
                 Cache::put('sora_gold_last_updated', now()->format('H:i d/m/Y'), 86400);
 
@@ -109,27 +109,10 @@ class CrawlDojiGoldPrice extends Command
                 'Accept' => 'application/json, text/plain, */*',
             ])->timeout(15)->get('https://giavang.doji.vn/api/gia-vang');
 
-            // Fixture chứa payload endpoint DOJI (dùng để tham khảo/ánh xạ)
-            /*
-            $fixturePayload = '{
-                "status": 1,
-                "data": [
-                    {
-                        "name": "DOJI HN",
-                        "buy": 74500000,
-                        "sell": 76500000
-                    },
-                    {
-                        "name": "DOJI HCM",
-                        "buy": 74500000,
-                        "sell": 76500000
-                    }
-                ]
-            }';
-            */
+
 
             if (!$response->successful()) {
-                // Đảm bảo khi endpoint không trả dữ liệu thì không lưu dữ liệu mock vào cache
+                // Không lưu mock nếu lỗi
                 return [];
             }
 
@@ -145,7 +128,7 @@ class CrawlDojiGoldPrice extends Command
                 if (isset($item['name'], $item['buy'], $item['sell']) && $item['buy'] > 0 && $item['sell'] > 0) {
                     $goldPrices[] = [
                         'name' => trim($item['name']),
-                        // Ánh xạ dữ liệu từ payload sang định dạng giá hiện tại (VD: chia 10000 để ra giá chỉ)
+                        // Ánh xạ giá vàng
                         'buy' => number_format($item['buy'] / 10000, 0, '.', ','),
                         'sell' => number_format($item['sell'] / 10000, 0, '.', ','),
                     ];
@@ -178,7 +161,7 @@ class CrawlDojiGoldPrice extends Command
                     is_numeric($item['buy']) && $item['buy'] > 0 &&
                     is_numeric($item['sell']) && $item['sell'] > 0
                 ) {
-                    // API trả về Giá Lượng (VD: 140,800,000). Frontend dùng Giá Chỉ / 1000 (VD: 14,080)
+                    // Đổi giá Lượng sang Chỉ
                     $buyPrice = $item['buy'] / 10000;
                     $sellPrice = $item['sell'] / 10000;
 
@@ -197,8 +180,7 @@ class CrawlDojiGoldPrice extends Command
 
     private function getDynamicMockData()
     {
-        // Random dao động từ -500.000đ đến +500.000đ mỗi lượng (tức là -50 đến +50 nghìn/chỉ)
-        // Để đồ án trông có vẻ như đang chạy realtime
+        // Tạo biến động giá ảo
         $noise = rand(-50, 50);
 
         return [

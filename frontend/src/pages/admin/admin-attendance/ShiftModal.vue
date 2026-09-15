@@ -81,7 +81,7 @@
             <div class="d-flex justify-content-end gap-2 mt-5 pt-3 border-top">
               <button type="button" class="btn btn-light px-4 fw-medium shadow-sm" @click="closeModal()">Hủy</button>
               <button type="submit" class="btn btn-brand px-5 fw-bold shadow-sm text-white" :disabled="formSubmitting">
-                <span v-if="formSubmitting" class="spinner-border spinner-border-sm me-2"></span>
+                <AdminLoadingSpinner v-if="formSubmitting" class="me-2" size="16" />
                 {{ isEditing ? 'Lưu thay đổi' : 'Tạo ca làm' }}
               </button>
             </div>

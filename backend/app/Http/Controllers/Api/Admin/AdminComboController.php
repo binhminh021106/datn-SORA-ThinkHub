@@ -17,7 +17,6 @@ class AdminComboController extends Controller
 {
     public function index()
     {
-        // Tối ưu ORM: Chỉ select các trường thật sự cần thiết để hiển thị trên bảng
         $combos = Combo::withTrashed()
             ->select('id', 'name', 'theme', 'thumbnail_image', 'target_gender', 'discount_type', 'discount_value', 'is_discount_stackable', 'status', 'deleted_at', 'start_date', 'end_date', 'usage_limit')
             ->withCount('items')
@@ -35,12 +34,12 @@ class AdminComboController extends Controller
 
     public function show($id)
     {
-        // Tối ưu ORM: Giới hạn select các cột bên trong mảng Eager Loading (items, product, variant)
         $combo = Combo::withTrashed()
             ->with([
                 'items:id,combo_id,product_id,product_variant_id,quantity',
                 'items.product:id,name,thumbnail_image,base_price,status',
-                'items.variant:id,sku,price,image_url,stock_quantity'
+                'items.variant:id,sku,price,image_url,stock_quantity',
+                'items.variant.attributeValues.attribute'
             ])->findOrFail($id);
 
         return response()->json(['success' => true, 'data' => $combo]);

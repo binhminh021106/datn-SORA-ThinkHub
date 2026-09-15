@@ -62,7 +62,6 @@
 
         <div class="card-body p-0 mt-2 position-relative">
           
-          <!-- Ocean Wave Loading Overlay -->
           <div v-if="isUsersFetching" class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75" style="z-index: 10;">
              <div class="ocean-wave" style="position: sticky; top: 50vh; transform: translateY(-50%); margin: 0 auto; width: fit-content;">
                <span></span><span></span><span></span>
@@ -127,7 +126,6 @@
                       <span v-else class="text-muted small fst-italic">Chưa có địa chỉ</span>
                     </td>
                     
-                    <!-- CỘT SỬA TRẠNG THÁI NHANH (OPTIMISTIC UPDATES) -->
                     <td class="px-2 text-center">
                       <span v-if="user.deleted_at" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary" title="Đã chuyển vào thùng rác">
                         <i class="bi bi-trash3-fill"></i> Đã xóa
@@ -190,7 +188,6 @@
       </div>
     </div>
 
-    <!-- POPUP XEM CHI TIẾT (QUICK VIEW) -->
     <div class="modal fade" id="quickViewModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content rounded-4 border-0 shadow">
@@ -383,10 +380,6 @@ const viewFullImage = (url) => {
   });
 };
 
-// ==========================================
-// TANSTACK VUE QUERY - FETCH DATA
-// ==========================================
-
 const { data: usersResponse, isLoading: isUsersLoading, isFetching: isUsersFetching } = useQuery({
   queryKey: ['adminUsers'],
   queryFn: async () => {
@@ -465,9 +458,6 @@ const getStatusSelectClass = (status) => {
 const checkStatusChange = (user) => { user.isStatusChanged = (user.localStatus !== user.status); };
 const cancelStatusChange = (user) => { user.localStatus = user.status; user.isStatusChanged = false; };
 
-// ==========================================
-// TANSTACK VUE QUERY - MUTATIONS
-// ==========================================
 
 const updateStatusMutation = useMutation({
   mutationFn: async ({ id, payload }) => {
@@ -562,9 +552,6 @@ const restoreUser = (id) => {
   });
 };
 
-// ==========================================
-// FILTERS & PAGINATION LOGIC
-// ==========================================
 const processedUsers = computed(() => {
   let result = localUsers.value;
   if (activeTab.value === 'deleted') { result = result.filter(u => u.deleted_at); } 

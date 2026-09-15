@@ -14,12 +14,36 @@
       </div>
     </div>
 
-    <div v-for="row in 5" :key="row" class="row mb-4 align-items-center">
-      <div class="col-sm-3 d-flex justify-content-sm-end">
-        <SoraSkeleton width="72%" height="14px" radius="4px" />
+    <div class="row gx-3 gy-4 mb-5">
+      <div v-for="i in 4" :key="i" class="col-md-6">
+        <SoraSkeleton width="100%" height="58px" radius="8px" />
       </div>
-      <div class="col-sm-9 col-md-7 mt-2 mt-sm-0">
-        <SoraSkeleton width="100%" height="42px" radius="9px" />
+    </div>
+
+    <div class="mb-5">
+      <SoraSkeleton width="120px" height="16px" radius="4px" class="mb-3" />
+      <div class="d-flex flex-wrap gap-3">
+        <SoraSkeleton v-for="i in 3" :key="'gender-'+i" width="100px" height="42px" radius="6px" />
+      </div>
+    </div>
+
+    <div class="mb-5">
+      <SoraSkeleton width="120px" height="16px" radius="4px" class="mb-3" />
+      <div class="border border-light p-4 rounded-4" style="background: rgba(255,255,255,0.4);">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+          <SoraSkeleton width="40%" height="24px" radius="5px" />
+          <SoraSkeleton width="15%" height="18px" radius="4px" />
+        </div>
+        <div class="d-flex align-items-start gap-2 mb-3">
+          <SoraSkeleton width="18px" height="18px" circle class="mt-1" />
+          <div class="flex-grow-1">
+            <SoraSkeleton width="70%" height="16px" radius="4px" class="mb-2" />
+            <SoraSkeleton width="50%" height="14px" radius="4px" />
+          </div>
+        </div>
+        <div class="mt-3 pt-3 border-top border-light">
+          <SoraSkeleton width="90px" height="28px" radius="20px" />
+        </div>
       </div>
     </div>
   </div>

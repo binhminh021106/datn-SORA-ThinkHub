@@ -1,7 +1,7 @@
 <template>
   <div class="gallery-index-wrapper ">
     
-    <!-- HIỂU ỨNG LOGO SHIMMER CHỈ XUẤT HIỆN DUY NHẤT LẦN ĐẦU TẢI TRANG -->
+
     <div v-if="isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
       <h1 class="logo-shimmer mb-3">ThinkHub</h1>
       <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ liệu...</p>
@@ -50,8 +50,8 @@
         <div class="card-header bg-white border-bottom-0 pt-2 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
           <h6 class="fw-bold mb-0 text-dark d-flex align-items-center">
             <i class="bi bi-images text-brand me-2"></i> Thư viện ảnh
-            <!-- SPINNER THÔNG MINH CHO CÁC LẦN FETCH NGẦM -->
-            <div v-if="isFetching" class="spinner-border spinner-border-sm text-brand ms-2" role="status" title="Đang đồng bộ dữ liệu..."></div>
+
+            <AdminLoadingSpinner v-if="isFetching" class="text-brand ms-2" title="Đang đồng bộ dữ liệu..." size="16" />
           </h6>
           
           <div class="d-flex align-items-center gap-2">
@@ -74,7 +74,7 @@
                   <th class="py-3 px-4 text-secondary text-center border-0" style="width: 15%;">Thao tác</th>
                 </tr>
               </thead>
-              <!-- Mờ bảng khi đang fetch dữ liệu ngầm -->
+
               <tbody :class="{'opacity-50 pe-none': isFetching}" style="transition: opacity 0.2s;">
                 <tr v-if="displayGalleries.length === 0 && !isFetching">
                   <td colspan="5" class="text-center py-5 text-muted">
@@ -152,7 +152,7 @@
       </div>
     </div>
 
-    <!-- MODAL QUICK VIEW -->
+
     <div class="modal fade" id="quickViewModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content rounded-4 border-0 shadow">
@@ -226,10 +226,10 @@ let quickViewModalInstance = null;
 
 const getHeaders = () => ({ 'Accept': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
 
-// Khai báo biến kiểm soát First Load
+
 const isFirstLoad = ref(true);
 
-// --- TANSTACK QUERY KẾT HỢP AXIOS ---
+
 const fetchGalleries = async () => {
   const res = await axios.get(`${API_URL}/admin/galleries`, { headers: getHeaders() });
   return res.data.data || res.data; 
@@ -253,7 +253,7 @@ const { data: rawGalleries, isFetching, refetch } = useQuery({
   }
 });
 
-// Tắt Shimmer khi dữ liệu về lần đầu
+
 const localGalleries = ref([]);
 watch(rawGalleries, (newData) => {
   if (newData && Array.isArray(newData)) {
@@ -344,7 +344,7 @@ const displayGalleries = computed(() => {
   return processedGalleries.value.slice(start, start + itemsPerPage);
 });
 
-// --- MUTATIONS SỬ DỤNG LẠI AXIOS ---
+
 const statusMutation = useMutation({
   mutationFn: async ({ id, status }) => {
     const is_active = status === 'active' ? 1 : 0;

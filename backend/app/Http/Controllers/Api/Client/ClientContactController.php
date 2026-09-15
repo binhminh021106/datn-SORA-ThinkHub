@@ -12,7 +12,6 @@ class ClientContactController extends Controller
 {
     public function store(Request $request)
     {
-        // 1. Kiểm tra khóa chống spam (24 giờ) theo IP hoặc Email
         $lockKeyIp = 'contact_lock_ip_' . $request->ip();
         $emailInput = strtolower(trim($request->input('email', '')));
         $lockKeyEmail = 'contact_lock_email_' . $emailInput;
@@ -24,7 +23,6 @@ class ClientContactController extends Controller
             ], 429);
         }
 
-        // 2. Validate dữ liệu khắt khe (CHẠY TRƯỚC KHI TÍNH LƯỢT RATE LIMIT)
         $request->validate([
             'g-recaptcha-response' => ['required', new \App\Rules\Recaptcha],
             'fullname' => 'required|string|min:2|max:150',
@@ -51,7 +49,6 @@ class ClientContactController extends Controller
             'message.min' => 'Nội dung lời nhắn quá ngắn, vui lòng nhập ít nhất 10 ký tự.'
         ]);
 
-        // 3. Khóa Spam (3 lần / giờ) áp dụng cho pass
         $throttleKey = 'contact_valid_' . $request->ip();
         if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($throttleKey, 3)) {
             return response()->json([

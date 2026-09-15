@@ -72,7 +72,7 @@
                 Hủy bỏ
               </router-link>
               <button type="submit" class="btn btn-brand btn-brand-solid px-4 py-2 fw-bold shadow-sm d-flex align-items-center" :disabled="isSubmitting">
-                <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                <AdminLoadingSpinner v-if="isSubmitting" class="me-2" size="16" />
                 <i v-else class="bi bi-check-circle me-2"></i>
                 {{ isSubmitting ? 'Đang lưu...' : 'Lưu Hình Ảnh' }}
               </button>

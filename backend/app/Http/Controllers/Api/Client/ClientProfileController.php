@@ -8,7 +8,7 @@ use App\Http\Requests\Client\Profile\ClientPasswordUpdateRequest;
 use App\Http\Requests\Client\Address\ClientAddressStoreRequest;
 use App\Http\Requests\Client\Address\ClientAddressUpdateRequest;
 use App\Models\User; 
-use App\Models\UserAddress; // BẮT BUỘC IMPORT MODEL NÀY
+use App\Models\UserAddress;
 use App\Models\MembershipTier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,9 +17,6 @@ use Illuminate\Support\Facades\Storage;
 
 class ClientProfileController extends Controller
 {
-    // ==========================================
-    // PHẦN 1: HỒ SƠ CÁ NHÂN & MẬT KHẨU
-    // ==========================================
 
     public function show()
     {
@@ -31,12 +28,10 @@ class ClientProfileController extends Controller
             $userData['avatar_url'] = url('storage/' . $user->avatar_url);
         }
 
-        // Đính kèm URL đầy đủ cho icon tier (nếu có)
         if ($user->tier && $user->tier->icon) {
             $userData['tier']['icon_url'] = url('storage/' . $user->tier->icon);
         }
 
-        // Trả thêm danh sách toàn bộ hạng thành viên (để hiển thị progress)
         $allTiers = MembershipTier::orderBy('min_spent', 'asc')->get()->map(function ($t) {
             $t->icon_url = $t->icon ? url('storage/' . $t->icon) : null;
             return $t;
@@ -51,7 +46,6 @@ class ClientProfileController extends Controller
         $user = User::find(Auth::guard('sanctum')->id());
         if (!$user) return response()->json(['status' => false, 'message' => 'Vui lòng đăng nhập'], 401);
 
-        // Form request đã validate và chuẩn hóa số điện thoại rồi
         $user->fullName = $request->fullName;
         if ($request->has('phone')) $user->phone = $request->phone;
         if ($request->has('birthday')) $user->birthday = $request->birthday;
@@ -79,12 +73,61 @@ class ClientProfileController extends Controller
         ]);
     }
 
+    public function updateAvatar(Request $request)
+    {
+        $user = User::find(Auth::guard('sanctum')->id());
+        if (!$user) return response()->json(['status' => false, 'message' => 'Vui lòng đăng nhập'], 401);
+
+        $request->validate([
+            'avatar' => ['required', 'image', 'max:5120']
+        ], [
+            'avatar.required' => 'Vui lòng chọn ảnh',
+            'avatar.image' => 'File phải là định dạng hình ảnh',
+            'avatar.max' => 'Dung lượng ảnh không được vượt quá 5MB'
+        ]);
+
+        $oldAvatar = $user->avatar_url;
+        $path = false;
+
+        try {
+            $path = $request->file('avatar')->store('avatars', 'public');
+            if (!$path) {
+                return response()->json(['status' => false, 'message' => 'Không thể lưu file ảnh'], 500);
+            }
+
+            $user->avatar_url = $path;
+            if (!$user->save()) {
+                throw new \Exception('Lưu thay đổi thất bại');
+            }
+
+            if ($oldAvatar && Storage::disk('public')->exists($oldAvatar)) {
+                Storage::disk('public')->delete($oldAvatar);
+            }
+        } catch (\Exception $e) {
+            if ($path && Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
+            $user->avatar_url = $oldAvatar;
+            return response()->json(['status' => false, 'message' => 'Lỗi cập nhật ảnh đại diện'], 500);
+        }
+
+        $userData = $user->toArray();
+        if ($user->avatar_url && !str_starts_with($user->avatar_url, 'http')) {
+            $userData['avatar_url'] = url('storage/' . $user->avatar_url);
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Cập nhật ảnh đại diện thành công!',
+            'data' => $userData
+        ]);
+    }
+
     public function updatePassword(ClientPasswordUpdateRequest $request)
     {
         $user = User::find(Auth::guard('sanctum')->id());
         if (!$user) return response()->json(['status' => false, 'message' => 'Vui lòng đăng nhập'], 401);
 
-        // Form request đã validate rồi
         if (empty($user->password) || !Hash::check($request->current_password, $user->password)) {
             return response()->json([
                 'status' => false,
@@ -95,8 +138,6 @@ class ClientProfileController extends Controller
         $user->password = Hash::make($request->password);
         $user->save();
 
-        // Revoke every existing session so a previously stolen token cannot
-        // survive after the account owner changes their password.
         $user->tokens()->delete();
 
         return response()->json([
@@ -107,7 +148,6 @@ class ClientProfileController extends Controller
     }
 
     
-    // PHẦN 2: QUẢN LÝ SỔ ĐỊA CHỈ
     
 
     public function getAddresses()
@@ -116,7 +156,7 @@ class ClientProfileController extends Controller
         if (!$user) return response()->json(['status' => false, 'message' => 'Vui lòng đăng nhập'], 401);
 
         $addresses = UserAddress::where('user_id', $user->id)
-            ->orderBy('is_default', 'desc') // Mặc định đưa lên đầu
+            ->orderBy('is_default', 'desc') 
             ->orderBy('id', 'desc')
             ->get();
 
@@ -135,15 +175,12 @@ class ClientProfileController extends Controller
             ], 422);
         }
 
-        // Form request đã validate và chuẩn hóa số điện thoại rồi
         $isDefault = $request->is_default ? 1 : 0;
 
-        // Nếu là địa chỉ đầu tiên của user, ép nó thành mặc định luôn
         if (UserAddress::where('user_id', $user->id)->count() === 0) {
             $isDefault = 1;
         }
 
-        // Nếu chọn làm mặc định, phải gỡ mặc định của các địa chỉ cũ đi
         if ($isDefault == 1) {
             UserAddress::where('user_id', $user->id)->update(['is_default' => 0]);
         }
@@ -170,7 +207,6 @@ class ClientProfileController extends Controller
         $address = UserAddress::where('user_id', $user->id)->where('id', $id)->first();
         if (!$address) return response()->json(['status' => false, 'message' => 'Không tìm thấy địa chỉ'], 404);
 
-        // Form request đã validate và chuẩn hóa số điện thoại rồi
         $isDefault = $request->is_default ? 1 : 0;
 
         if ($isDefault == 1 && $address->is_default == 0) {
@@ -201,7 +237,6 @@ class ClientProfileController extends Controller
         $wasDefault = $address->is_default;
         $address->delete();
 
-        // Nếu lỡ tay xóa mất địa chỉ mặc định, tự động lấy địa chỉ gần nhất gán làm mặc định
         if ($wasDefault) {
             $latest = UserAddress::where('user_id', $user->id)->latest()->first();
             if ($latest) {

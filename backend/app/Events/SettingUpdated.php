@@ -16,9 +16,6 @@ class SettingUpdated implements ShouldBroadcastNow
 
     public $module = 'settings';
 
-    /**
-     * Create a new event instance.
-     */
     public function __construct()
     {
         //
@@ -33,7 +30,7 @@ class SettingUpdated implements ShouldBroadcastNow
     {
         return [
             new Channel('settings'),
-            new PrivateChannel('admin'), // also notify admin
+            new PrivateChannel('admin'),
         ];
     }
 }

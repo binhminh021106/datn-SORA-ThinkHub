@@ -61,7 +61,6 @@ class AdminForgotPasswordController extends Controller
             }
         }
 
-        // Luôn trả về thông báo chung để tránh lỗi Enumeration Attack
         return response()->json(['success' => true, 'message' => 'Nếu tài khoản quản trị tồn tại, mã OTP sẽ được gửi đến email của bạn.']);
     }
 
@@ -100,12 +99,10 @@ class AdminForgotPasswordController extends Controller
 
         $cacheData = Cache::get($cacheKey);
 
-        // 1. Lỗi: Hết hạn hoặc không tồn tại
         if (!$cacheData) {
             return response()->json(['message' => 'Mã OTP đã hết hạn hoặc không tồn tại. Vui lòng gửi lại.'], 400);
         }
 
-        // 2. Lỗi: Vượt quá số lần cho phép trong cùng 1 vòng đời OTP
         if ($cacheData['attempts'] >= 5) {
             Cache::forget($cacheKey);
             return response()->json(['message' => 'Bạn đã nhập sai quá nhiều lần. Mã OTP đã bị hủy để bảo mật.'], 403);
@@ -202,7 +199,6 @@ class AdminForgotPasswordController extends Controller
             return response()->json(['message' => 'Lỗi hệ thống khi lưu mật khẩu mới.'], 500);
         }
 
-        // Hủy Token bảo mật sau khi đổi xong
         Cache::forget($this->resetTokenCacheKey($email));
 
         return response()->json(['success' => true, 'message' => 'Đổi mật khẩu thành công! Bạn có thể đăng nhập ngay.']);

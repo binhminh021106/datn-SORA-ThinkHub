@@ -12,7 +12,6 @@ class ContactThankYouMail extends Mailable
 
     public $name;
 
-    // Nhận tên khách hàng để chào hỏi cho thân thiện
     public function __construct($name)
     {
         $this->name = $name;
@@ -20,7 +19,7 @@ class ContactThankYouMail extends Mailable
 
     public function build()
     {
-        return $this->subject('Cảm ơn bạn đã liên hệ với chúng tôi') // Tiêu đề mail
-                    ->markdown('emails.contact_thank_you'); // Trỏ đến file giao diện
+        return $this->subject('Cảm ơn bạn đã liên hệ với chúng tôi')
+                    ->markdown('emails.contact_thank_you');
     }
 }

@@ -38,12 +38,10 @@
 
       <form class="account-edit-form" @submit.prevent="updateStaff">
         <div class="row g-3">
-          <!-- ================= CỘT TRÁI: AVATAR & TRẠNG THÁI ================= -->
           <div class="col-md-4 col-lg-3">
             <div class="card border-0 shadow-sm rounded-4 text-center p-3 h-100">
               <label class="form-label fw-bold mb-3 text-dark">Ảnh đại diện</label>
               <div class="position-relative d-inline-block mx-auto mb-3" style="width: 120px; height: 120px;">
-                <!-- Sử dụng SoraImage thay cho img thường để xử lý lỗi ảnh mượt mà -->
                 <SoraImage :src="previewAvatar" :placeholder="defaultAvatar"
                   imgClass="rounded-circle shadow-sm border border-3 border-white object-fit-cover"
                   style="width: 120px; height: 120px;" alt="Avatar" />
@@ -74,7 +72,6 @@
 
               <div class="text-start">
                 <label class="form-label fw-bold text-muted small text-uppercase mb-2">Cập nhật Trạng thái</label>
-                <!-- Nút chọn trạng thái được thu nhỏ và thêm nền tương phản -->
                 <select class="form-select fw-bold shadow-sm" v-model="form.status" required :disabled="isCurrentUser"
                   :class="form.status === 'active' ? 'text-success border-success bg-success bg-opacity-10' : 'text-danger border-danger bg-danger bg-opacity-10'">
                   <option value="active" class="text-success fw-bold">Hoạt động (Active)</option>
@@ -84,7 +81,6 @@
             </div>
           </div>
 
-          <!-- ================= CỘT PHẢI: THÔNG TIN CHI TIẾT ================= -->
           <div class="col-md-8 col-lg-9">
             <div class="card border-0 shadow-sm rounded-4 account-edit-card">
               <div class="card-header bg-white border-bottom-0 pt-3 pb-0 px-3">
@@ -113,9 +109,7 @@
                         <input type="email" id="staffEmail" class="form-control bg-light text-muted cursor-not-allowed border-secondary-subtle shadow-none" v-model="form.email" placeholder="name@domain.com" required readonly disabled>
                         <label for="staffEmail" class="fw-bold text-muted" style="z-index: 4;">Email đăng nhập <span class="text-danger">*</span></label>
                       </div>
-                    </div>
-                    <small class="text-danger mt-1 d-block" style="font-size: 0.75rem;">Không được phép thay đổi
-                      email.</small>
+                    </div>      
                   </div>
 
                   <div class="col-md-6 mb-4">
@@ -123,12 +117,11 @@
                       <span class="input-group-text bg-white text-muted border-secondary-subtle"><i class="bi bi-key"></i></span>
                       <div class="form-floating flex-grow-1">
                         <input type="text" id="staffPassword" class="form-control bg-white border-secondary-subtle shadow-none" v-model="form.password" placeholder="Bỏ trống nếu không đổi">
-                        <label for="staffPassword" class="fw-bold text-dark" style="z-index: 4;">Đổi mật khẩu <span class="text-muted fw-normal small">(Tùy chọn)</span></label>
+                        <label for="staffPassword" class="fw-bold text-dark" style="z-index: 4;">Đổi mật khẩu</label>
                       </div>
                     </div>
                   </div>
 
-                  <!-- ================= DROPDOWN ĐỊA CHỈ XỊN XÒ ================= -->
                   <div class="col-12 mb-2 mt-2">
                     <label class="form-label fw-bold text-dark border-bottom pb-2 w-100"><i
                         class="bi bi-geo-alt-fill text-brand me-1"></i> Địa chỉ thường trú</label>
@@ -146,7 +139,6 @@
                       <label for="staffAddress" class="fw-semibold text-dark">Địa chỉ cụ thể (Số nhà, đường)</label>
                     </div>
                   </div>
-                  <!-- ================= KẾT THÚC ĐỊA CHỈ ================= -->
 
                   <div class="col-12 mb-4 mt-2">
                     <div class="form-floating">
@@ -165,7 +157,7 @@
                   <router-link :to="{ name: 'admin-staff-index' }" class="btn btn-light me-2 px-4 fw-bold shadow-sm">Hủy
                     bỏ</router-link>
                   <button type="submit" class="btn btn-brand px-5 fw-bold text-white shadow-sm" :disabled="isSaving">
-                    <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span> LƯU THAY ĐỔI
+                    <AdminLoadingSpinner v-if="isSaving" class="me-2" size="16" /> LƯU THAY ĐỔI
                   </button>
                 </div>
               </div>
@@ -175,7 +167,6 @@
       </form>
     </div>
 
-    <!-- HIỆU ỨNG LOGO SHIMMER (MÀN HÌNH CHỜ) -->
     <div v-else class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
       <h1 class="logo-shimmer mb-3">ThinkHub</h1>
       <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">
@@ -183,6 +174,17 @@
       </p>
     </div>
 
+    <ImageCropperModal
+      :show="showCropper"
+      :image-url="cropperUrl"
+      :aspect-ratio="1"
+      :allow-ratio-change="false"
+      title="Cắt ảnh Đại diện"
+      :max-size-kb="50"
+      :is-avatar="true"
+      @crop="handleCrop"
+      @close="closeCropper"
+    />
   </div>
 </template>
 
@@ -194,10 +196,10 @@ import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { getFullImage } from '@/composables/useUtilities';
 
-// Tái sử dụng SoraImage và defaultAvatar đồng bộ thống nhất
 import SoraImage from '@/components/ui/SoraImage.vue';
 import VietnamAddressPicker from '@/components/ui/VietnamAddressPicker.vue';
 import defaultAvatar from '@/assets/images/defaults/avatar1.png';
+import ImageCropperModal from '@/components/admin/ImageCropperModal.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -263,10 +265,6 @@ const parseAddressToDropdowns = async (fullAddress) => {
   }
 };
 
-// ==========================================
-// TANSTACK VUE QUERY - FETCH DATA
-// ==========================================
-
 // 1. Dùng chung danh sách roles đã lưu trong cache Tanstack của Index.vue
 const { data: rolesResponse } = useQuery({
   queryKey: ['adminRoles'],
@@ -307,15 +305,12 @@ const { data: staffResponse, isLoading: isStaffLoading } = useQuery({
     const response = await axios.get(`${API_URL}/admin/staff/${route.params.id}`, { headers: getHeaders() });
     return response.data;
   },
-  staleTime: 2 * 60 * 1000 // Cache cục bộ 2 phút
+  staleTime: 2 * 60 * 1000
 });
 
 const rawStaffData = computed(() => staffResponse.value?.data);
-
-// Thiết lập trạng thái load màn hình hoàn thành
 const isLoaded = computed(() => !isStaffLoading.value);
 
-// Đồng bộ hóa thông tin nhân viên từ TanStack Query vào Form an toàn sau khi load xong các danh mục tỉnh thành
 watch(rawStaffData, async (newVal) => {
   if (newVal) {
     form.value = {
@@ -328,19 +323,41 @@ watch(rawStaffData, async (newVal) => {
       password: ''
     };
 
-    // Đồng bộ preview avatar của SoraImage
     previewAvatar.value = newVal.avatar_url ? getFullImage(newVal.avatar_url) : defaultAvatar;
 
     await parseAddressToDropdowns(newVal.address);
   }
 }, { immediate: true });
 
+const showCropper = ref(false);
+const cropperUrl = ref('');
+
+const closeCropper = () => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+};
+
+const handleCrop = (data) => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+  
+  selectedFile.value = data.file;
+  previewAvatar.value = data.blobUrl;
+  isRemoveAvatar.value = false;
+};
+
 const handleAvatarChange = (e) => {
   const file = e.target.files[0];
   if (file) {
-    selectedFile.value = file;
-    previewAvatar.value = URL.createObjectURL(file);
-    isRemoveAvatar.value = false;
+    if (!['image/jpeg', 'image/png', 'image/jpg', 'image/webp'].includes(file.type)) {
+      Swal.fire('Lỗi', 'Chỉ chấp nhận file ảnh (JPG, PNG, WEBP)', 'error'); return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      Swal.fire('Lỗi', 'Dung lượng tối đa 2MB', 'error'); return;
+    }
+    cropperUrl.value = URL.createObjectURL(file);
+    showCropper.value = true;
+    e.target.value = '';
   }
 };
 
@@ -349,10 +366,6 @@ const removeAvatar = () => {
   previewAvatar.value = defaultAvatar;
   isRemoveAvatar.value = true;
 };
-
-// ==========================================
-// TANSTACK VUE QUERY - MUTATION (LƯU THAY ĐỔI)
-// ==========================================
 
 const updateStaffMutation = useMutation({
   mutationFn: async (formData) => {
@@ -367,7 +380,6 @@ const updateStaffMutation = useMutation({
   onSuccess: (data) => {
     Swal.fire({ icon: 'success', title: 'Thành công', text: data.message, timer: 1500, showConfirmButton: false });
 
-    // Nếu cập nhật chính tài khoản của bạn, tự động cập nhật cả LocalStorage và cache Header
     if (isCurrentUser.value) {
       const updatedAdmin = { ...currentAdmin, fullname: form.value.fullname, phone: form.value.phone };
       if (isRemoveAvatar.value || (data.data && !data.data.avatar_url)) {
@@ -377,11 +389,9 @@ const updateStaffMutation = useMutation({
       }
       localStorage.setItem('admin_info', JSON.stringify(updatedAdmin));
 
-      // Đồng bộ làm tươi profile ở Header ngay lập tức
       queryClient.invalidateQueries({ queryKey: ['adminProfile'] });
     }
 
-    // Làm tươi danh sách nhân viên ở trang index
     queryClient.invalidateQueries({ queryKey: ['adminStaffs'] });
 
     router.push({ name: 'admin-staff-index' });
@@ -438,7 +448,6 @@ const updateStaff = async () => {
 </script>
 
 <style scoped>
-/* LOGO SHIMMER (SÓNG BIỂN LẤP LÁNH) */
 .logo-shimmer {
   font-size: 3.5rem;
   font-weight: 900;
@@ -510,7 +519,6 @@ const updateStaff = async () => {
 }
 
 
-/* Smooth floating label transition */
 .form-floating > label {
   transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
 }

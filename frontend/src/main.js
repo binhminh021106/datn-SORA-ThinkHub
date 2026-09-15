@@ -143,6 +143,39 @@ app.use(createPinia())
 app.use(router)
 app.component('AdminLoadingSpinner', AdminLoadingSpinner)
 
+// GLOBAL HANDLER: Catch clicks on disabled elements across the whole website
+let lastDisabledToastTime = 0;
+const handleDisabledClick = (e) => {
+    const path = e.composedPath ? e.composedPath() : (e.path || []);
+    for (let el of path) {
+        if (el && el.tagName) {
+            // Check if element is disabled via attribute or class
+            const isDisabled = el.hasAttribute('disabled') || el.classList.contains('disabled');
+            if (isDisabled) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const now = Date.now();
+                if (now - lastDisabledToastTime > 1500) { // Debounce 1.5s
+                    lastDisabledToastTime = now;
+                    import('@/utils/toastConfig').then(({ default: Toast }) => {
+                        const title = el.getAttribute('title') || 'Tính năng này hiện không khả dụng hoặc bạn không có quyền thao tác.';
+                        Toast.fire({ icon: 'warning', title: title });
+                    });
+                }
+                return;
+            }
+        }
+    }
+};
+
+// Use capture phase to intercept the click before it's swallowed or ignored
+document.addEventListener('click', handleDisabledClick, true);
+// Some browsers block click events entirely on disabled form controls, so we also listen to mousedown/pointerdown
+document.addEventListener('pointerdown', handleDisabledClick, true);
+document.addEventListener('mousedown', handleDisabledClick, true);
+
+
 app.use(VueQueryPlugin, {
   queryClientConfig: {
     defaultOptions: {

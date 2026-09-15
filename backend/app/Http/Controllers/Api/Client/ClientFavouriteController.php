@@ -12,12 +12,8 @@ use Illuminate\Support\Facades\DB;
 
 class ClientFavouriteController extends Controller
 {
-    /**
-     * Lấy danh sách sản phẩm yêu thích của user đang đăng nhập
-     */
     public function index(Request $request)
     {
-        // FIX: Dùng guard sanctum để bắt token ở mọi trường hợp
         $user = Auth::guard('sanctum')->user();
         
         if (! $user instanceof User) {
@@ -25,10 +21,9 @@ class ClientFavouriteController extends Controller
                 'status' => false,
                 'message' => 'Vui lòng đăng nhập để xem danh sách yêu thích',
                 'require_login' => true
-            ], 200); // Trả về 200 thay vì 401 để không báo đỏ network
+            ], 200); 
         }
 
-        // Lấy danh sách yêu thích kèm chi tiết sản phẩm (Lấy các trường cần thiết theo Product Model)
         $favourites = Favourite::whereHas('product', function($query) {
                 $query->where('status', 'published');
             })
@@ -50,9 +45,6 @@ class ClientFavouriteController extends Controller
         ]);
     }
 
-    /**
-     * Thả tim hoặc Hủy thả tim sản phẩm (Toggle)
-     */
     public function toggle(Request $request)
     {
         $request->validate([
@@ -66,18 +58,15 @@ class ClientFavouriteController extends Controller
                 'status' => false,
                 'message' => 'Vui lòng đăng nhập để thực hiện chức năng này',
                 'require_login' => true
-            ], 200); // Trả về 200 thay vì 401 để không báo đỏ network
+            ], 200); 
         }
 
         $productId = $request->product_id;
-
-        // Tìm xem user đã tim sản phẩm này chưa
         return DB::transaction(function () use ($user, $productId) {
-            // Serialize a user's whole favourite set. This keeps both the per-user
-            // cap and the toggle operation correct even without a composite unique key.
+
             User::query()->whereKey($user->id)->lockForUpdate()->first();
 
-            // Serialize toggles for the same product to avoid duplicate rows.
+
             $product = Product::query()->whereKey($productId)->lockForUpdate()->first();
             $favourite = Favourite::where('user_id', $user->id)
                 ->where('product_id', $productId)
@@ -85,7 +74,7 @@ class ClientFavouriteController extends Controller
                 ->first();
 
             if ($favourite) {
-                $favourite->delete(); // Hủy tim
+                $favourite->delete(); 
                 return response()->json([
                     'status' => true,
                     'action' => 'removed',
@@ -93,7 +82,6 @@ class ClientFavouriteController extends Controller
                 ]);
             }
 
-            // Chỉ cho phép thêm nếu sản phẩm tồn tại và đang được bán
             if (!$product || $product->status !== 'published') {
                 return response()->json([
                     'status' => false,
@@ -108,7 +96,7 @@ class ClientFavouriteController extends Controller
                 ], 422);
             }
 
-            Favourite::create([   // Thả tim
+            Favourite::create([  
                 'user_id' => $user->id,
                 'product_id' => $productId
             ]);
@@ -120,9 +108,6 @@ class ClientFavouriteController extends Controller
         });
     }
 
-    /**
-     * Kiểm tra trạng thái tim của 1 sản phẩm 
-     */
     public function check($productId)
     {
         $user = Auth::guard('sanctum')->user();

@@ -127,11 +127,11 @@
                                 <hr class="text-muted opacity-25 my-4">
                                 <div class="text-end">
                                     <button type="button" class="btn btn-light me-2 px-4 shadow-sm fw-bold border" @click="handleRestore" :disabled="isRestoring">
-                                      <span v-if="isRestoring" class="spinner-border spinner-border-sm me-2"></span>Khôi phục gốc
+                                      <AdminLoadingSpinner v-if="isRestoring" class="me-2" size="16" />Khôi phục gốc
                                     </button>
                                     <button type="submit" class="btn btn-brand btn-brand-solid px-5 fw-bold shadow-sm"
                                         :disabled="isSaving">
-                                        <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span> 
+                                        <AdminLoadingSpinner v-if="isSaving" class="me-2" size="16" /> 
                                         {{ isSaving ? 'ĐANG LƯU...' : 'LƯU THAY ĐỔI' }}
                                     </button>
                                 </div>
@@ -146,6 +146,17 @@
           <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ liệu...</p>
         </div>
     </div>
+    <!-- CROPPER MODAL -->
+    <ImageCropperModal
+      :show="showCropper"
+      :image-url="cropperUrl"
+      :aspect-ratio="NaN"
+      :allow-ratio-change="true"
+      :max-size-kb="200"
+      title="Cắt ảnh Danh mục"
+      @crop="handleCrop"
+      @close="closeCropper"
+    />
 </template>
 
 <script setup>
@@ -155,6 +166,7 @@ import Swal from 'sweetalert2';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { getFullImage } from '@/composables/useUtilities';
+import ImageCropperModal from '@/components/admin/ImageCropperModal.vue';
 import defaultImage from '../../../assets/images/defaults/placeholder.png';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
@@ -171,6 +183,10 @@ const selectedFile = ref(null);
 const isRemoveImage = ref(false);
 const errors = ref({});
 const treeCategories = ref([]);
+
+// Cropper State
+const showCropper = ref(false);
+const cropperUrl = ref('');
 
 const form = ref({
     name: '', slug: '', parent_id: null, description: '', status: '', sort_order: 0, attributes_schema: []
@@ -255,6 +271,20 @@ const handleRestore = async () => {
     Swal.fire({ icon: 'success', title: 'Đã khôi phục dữ liệu gốc', timer: 1500, showConfirmButton: false });
 };
 
+const closeCropper = () => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+};
+
+const handleCrop = (data) => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+  
+  selectedFile.value = data.file;
+  previewImage.value = data.blobUrl;
+  isRemoveImage.value = false;
+};
+
 const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -262,9 +292,9 @@ const handleImageChange = (e) => {
             Swal.fire('Lỗi', 'Ảnh tối đa 15MB', 'error'); 
             return; 
         }
-        selectedFile.value = file;
-        previewImage.value = URL.createObjectURL(file);
-        isRemoveImage.value = false;
+        cropperUrl.value = URL.createObjectURL(file);
+        showCropper.value = true;
+        e.target.value = '';
     }
 };
 

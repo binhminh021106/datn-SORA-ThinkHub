@@ -13,13 +13,11 @@ class CheckAdminPermission
     {
         $admin = $request->user();
 
-        // Kiểm tra xem role của admin này có chứa permission_id yêu cầu không
         $hasPermission = DB::table('role_permissions')
             ->where('role_id', $admin->role_id)
             ->where('permission_id', $permissionId)
             ->exists();
 
-        // Nếu không có quyền VÀ không phải Super Admin (giả sử role_id = 1 luôn là Super Admin tối cao nhất)
         if (!$hasPermission && $admin->role_id != 1) {
             return response()->json([
                 'success' => false,

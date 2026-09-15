@@ -16,9 +16,7 @@ use Illuminate\Support\Facades\Schema;
 
 class AdminDashboardController extends Controller
 {
-    /**
-     * Lọc đơn hàng được tính vào doanh thu.
-     */
+
     private function applyRevenueFilter($query, $tablePrefix = '')
     {
         $statusCol = $tablePrefix ? $tablePrefix . '.status' : 'status';
@@ -113,7 +111,7 @@ class AdminDashboardController extends Controller
     public function index(Request $request)
     {
         try {
-            // 1. TỔNG QUAN
+
             $period = $this->resolvePeriod($request);
             $previousPeriod = $this->previousPeriod($period);
             $periodOrders = Order::query()->whereBetween('created_at', [$period['start'], $period['end']]);
@@ -124,7 +122,7 @@ class AdminDashboardController extends Controller
             $cancelledOrders = (clone $periodOrders)->whereIn('status', ['cancelled', 'returned', 'return_requested'])->count();
             $averageOrderValue = $successfulOrders > 0 ? $totalRevenue / $successfulOrders : 0;
             
-            // Tính Lợi Nhuận Ròng (Net Profit)
+
             $totalCostQuery = DB::table('order_items')
                 ->join('orders', 'order_items.order_id', '=', 'orders.id')
                 ->leftJoin('product_variants', 'order_items.product_variant_id', '=', 'product_variants.id')
@@ -142,7 +140,7 @@ class AdminDashboardController extends Controller
                 ? DB::table('product_variants')->whereNull('deleted_at')->sum('stock_quantity') 
                 : 0;
 
-            // 2. TÍNH TOÁN % TĂNG/GIẢM SO VỚI KỲ TRƯỚC
+
             $revenueGrowth = null;
             $netProfitGrowth = null;
             $ordersGrowth = null;
@@ -157,7 +155,7 @@ class AdminDashboardController extends Controller
                     $previousTotalRevenue
                 );
 
-                // Tính Lợi Nhuận Ròng kỳ trước
+
                 $previousTotalCostQuery = DB::table('order_items')
                     ->join('orders', 'order_items.order_id', '=', 'orders.id')
                     ->leftJoin('product_variants', 'order_items.product_variant_id', '=', 'product_variants.id')
@@ -180,7 +178,7 @@ class AdminDashboardController extends Controller
                 );
             }
 
-            // 3. ĐƠN HÀNG GẦN ĐÂY
+
             $recentOrders = (clone $periodOrders)->with('user:id,fullName')->orderBy('created_at', 'desc')->take(8)->get()->map(function($order) {
                 return [
                     'id' => $order->id,
@@ -192,7 +190,7 @@ class AdminDashboardController extends Controller
                 ];
             });
 
-            // 4. SẢN PHẨM BÁN CHẠY
+
             $productsQuery = DB::table('order_items')
                 ->join('orders', 'order_items.order_id', '=', 'orders.id')
                 ->whereNull('orders.deleted_at') 
@@ -224,7 +222,7 @@ class AdminDashboardController extends Controller
                 ];
             });
 
-            // 4.1. CẢNH BÁO TỒN KHO THẤP (LOW STOCK)
+
             $lowStockProducts = collect([]);
             if (Schema::hasTable('product_variants') && Schema::hasColumn('product_variants', 'stock_quantity')) {
                 $lowStockRaw = DB::table('product_variants')
@@ -249,7 +247,7 @@ class AdminDashboardController extends Controller
                 });
             }
 
-            // 4.2. ĐÁNH GIÁ MỚI NHẤT (RECENT REVIEWS)
+
             $recentReviews = collect([]);
             if (Schema::hasTable('reviews')) {
                 $recentReviewsRaw = Review::with('user:id,fullName,avatar_url')
@@ -269,7 +267,7 @@ class AdminDashboardController extends Controller
                 });
             }
 
-            // 4.3. COMBO ĐANG CHẠY (ACTIVE COMBOS)
+
             $activeCombos = collect([]);
             if (Schema::hasTable('combos')) {
                 $activeCombosRaw = Combo::where('status', 'active')->orderBy('created_at', 'desc')->take(5)->get();
@@ -286,7 +284,7 @@ class AdminDashboardController extends Controller
                 });
             }
 
-            // 5. THỐNG KÊ KHUYẾN MÃI (DỮ LIỆU THẬT)
+
             $activeCoupons = Coupon::where('status', 'active')->count();
             $expiredCoupons = Coupon::where('status', 'expired')->orWhere('expires_at', '<', Carbon::now())->count();
             $upcomingCoupons = Coupon::where('status', 'upcoming')->orWhere(function($q) {
@@ -301,7 +299,7 @@ class AdminDashboardController extends Controller
                 'total_uses' => (int) $totalUses
             ];
 
-            // Lấy 3 mã giảm giá mới nhất để hiển thị
+
             $couponsRaw = Coupon::orderBy('created_at', 'desc')->take(3)->get();
             $couponList = $couponsRaw->map(function($coupon) {
                 $isPercent = in_array(strtolower($coupon->type), ['percent', '%', 'percentage']);
@@ -326,18 +324,18 @@ class AdminDashboardController extends Controller
                 ];
             });
 
-            // 6. BIỂU ĐỒ & PAYMENT STATS (Mặc định lấy từ đầu năm nay đến hiện tại)
+
             $chartData = $this->getDynamicChartData($period['start'], $period['end']);
 
-            // 7. NHÂN SỰ (STAFF STATS)
+
             $totalStaff = Schema::hasTable('admins') ? DB::table('admins')->whereNull('deleted_at')->count() : User::where('role_id', '!=', 2)->count();
             
-            // Tìm ca làm việc hiện tại
+
             $nowTime = Carbon::now()->format('H:i:s');
             $currentShiftInfo = "Không có ca làm";
 
             if (Schema::hasTable('work_shifts')) {
-                // Ca bình thường
+
                 $currentShift = DB::table('work_shifts')
                     ->where('start_time', '<=', $nowTime)
                     ->where('end_time', '>=', $nowTime)
@@ -346,7 +344,7 @@ class AdminDashboardController extends Controller
                     ->first();
                 
                 if (!$currentShift) {
-                    // Xử lý ca qua đêm (start_time > end_time)
+
                     $currentShift = DB::table('work_shifts')
                         ->where('is_overnight', true)
                         ->whereNull('deleted_at')
@@ -370,8 +368,7 @@ class AdminDashboardController extends Controller
                 'current_shift' => $currentShiftInfo
             ];
 
-            // CUSTOMER INSIGHTS
-            // 1. Top Buyers (in filtered period)
+
             $topBuyerQuery = Order::whereNotNull('user_id')
                 ->whereBetween('created_at', [$period['start'], $period['end']]);
             $topBuyerRaw = $this->applyRevenueFilter($topBuyerQuery)
@@ -398,7 +395,7 @@ class AdminDashboardController extends Controller
                 ];
             }
 
-            // 2. Top Gender (in filtered period)
+
             $topGenderQuery = DB::table('orders')
                 ->join('users', 'orders.user_id', '=', 'users.id')
                 ->whereNotNull('orders.user_id')
@@ -411,7 +408,7 @@ class AdminDashboardController extends Controller
             
             $topGender = null;
             if ($topGenderRaw && $topGenderRaw->gender) {
-                // Determine top age range
+
                 $topGenderAgeQuery = DB::table('orders')
                     ->join('users', 'orders.user_id', '=', 'users.id')
                     ->whereNotNull('users.birthday')
@@ -445,7 +442,7 @@ class AdminDashboardController extends Controller
             }
 
             $bestMonthQuery = Order::query();
-            // 3. Best Month (All-time)
+
             $bestMonthsRaw = $this->applyRevenueFilter($bestMonthQuery)
                 ->select(DB::raw('MONTH(created_at) as month'), DB::raw('YEAR(created_at) as year'), DB::raw('SUM(total_amount) as total_spent'))
                 ->groupBy('year', 'month')
@@ -457,7 +454,7 @@ class AdminDashboardController extends Controller
             if ($bestMonthsRaw->isNotEmpty()) {
                 $first = $bestMonthsRaw->first();
 
-                // Find best day in that month
+
                 $bestDayRaw = $this->applyRevenueFilter(Order::query())
                     ->whereYear('created_at', $first->year)
                     ->whereMonth('created_at', $first->month)
@@ -474,7 +471,7 @@ class AdminDashboardController extends Controller
                 ];
             }
 
-            // 4. Revenue by Category (in filtered period)
+
             $categoryRevenueQuery = DB::table('order_items')
                 ->join('orders', 'order_items.order_id', '=', 'orders.id')
                 ->join('products', 'order_items.product_id', '=', 'products.id')
@@ -487,12 +484,12 @@ class AdminDashboardController extends Controller
                 ->orderByDesc('revenue')
                 ->get();
             
-            // 5. Top Regions
+
             $topRegionsQuery = DB::table('orders')
                 ->whereBetween('created_at', [$period['start'], $period['end']])
                 ->whereNotNull('customer_address');
             
-            // Using SUBSTRING_INDEX to get the last part of address (usually Province/City)
+
             $topRegionsRaw = $this->applyRevenueFilter($topRegionsQuery)
                 ->select(DB::raw('TRIM(SUBSTRING_INDEX(customer_address, ",", -1)) as region'), DB::raw('COUNT(*) as order_count'), DB::raw('SUM(total_amount) as revenue'))
                 ->groupBy('region')
@@ -500,7 +497,7 @@ class AdminDashboardController extends Controller
                 ->limit(5)
                 ->get();
 
-            // 6. Inventory Value & Dead Stock
+
             $inventoryValue = DB::table('product_variants')
                 ->join('products', 'product_variants.product_id', '=', 'products.id')
                 ->select(DB::raw('SUM(product_variants.stock_quantity * COALESCE(NULLIF(products.cost_price, 0), products.base_price, 0)) as total_value'))
@@ -543,7 +540,7 @@ class AdminDashboardController extends Controller
                     return $item;
                 });
 
-            // 7. Cancel/Return Insights
+
             $cancelReasons = DB::table('order_status_histories')
                 ->whereIn('new_status', ['cancelled', 'return_requested', 'returned'])
                 ->whereBetween('created_at', [$period['start'], $period['end']])
@@ -625,9 +622,7 @@ class AdminDashboardController extends Controller
         }
     }
 
-    /**
-     * API Lọc riêng cho Biểu đồ
-     */
+
     public function chart(Request $request)
     {
         try {
@@ -659,9 +654,7 @@ class AdminDashboardController extends Controller
         }
     }
 
-    /**
-     * Nhóm dữ liệu theo ngày, tháng hoặc năm cho đúng kỳ đã chọn.
-     */
+
     private function getDynamicChartData($startDate, $endDate)
     {
         $ordersQuery = Order::where('created_at', '>=', $startDate)
@@ -678,7 +671,7 @@ class AdminDashboardController extends Controller
             $orderColumns[] = 'discount_amount';
         }
 
-        // Tính toán chi phí
+
         $costsQuery = $this->applyRevenueFilter(
             DB::table('order_items')
                 ->join('orders', 'order_items.order_id', '=', 'orders.id')
@@ -702,7 +695,7 @@ class AdminDashboardController extends Controller
             $costsRaw = $costsQuery->select(DB::raw('YEAR(orders.created_at) as date_key'), DB::raw('SUM(order_items.quantity * COALESCE(product_variants.cost_price, products.cost_price, 0)) as total_cost'))->groupBy('date_key')->get()->pluck('total_cost', 'date_key');
         }
 
-        // Iterate lazily so a long dashboard period does not retain every order in memory.
+
         $orders = clone $ordersQuery;
         $orders = $this->applyRevenueFilter($orders)
             ->select($orderColumns)
@@ -733,7 +726,7 @@ class AdminDashboardController extends Controller
             if (!isset($orderCounts[$key])) { $orderCounts[$key] = 0; }
             $orderCounts[$key]++;
 
-            // Đếm số lượt sử dụng coupon theo ngày
+
             if (!isset($couponUses[$key])) { $couponUses[$key] = 0; }
             if ($hasCouponId && $order->coupon_id) {
                 $couponUses[$key]++;
@@ -741,7 +734,7 @@ class AdminDashboardController extends Controller
                 $couponUses[$key]++;
             }
 
-            // Phân tích phương thức thanh toán
+
             $method = strtolower($order->payment_method ?? '');
             if (str_contains($method, 'vnpay')) {
                 $paymentCounts['vnpay']++;
@@ -755,7 +748,7 @@ class AdminDashboardController extends Controller
             $totalPayments++;
         }
 
-        // Tính % payment stats
+
         $paymentStats = [
             'vnpayPercent' => $totalPayments > 0 ? (int) round(($paymentCounts['vnpay'] / $totalPayments) * 100) : 0,
             'momoPercent' => $totalPayments > 0 ? (int) round(($paymentCounts['momo'] / $totalPayments) * 100) : 0,
@@ -763,7 +756,7 @@ class AdminDashboardController extends Controller
             'bankPercent' => $totalPayments > 0 ? (int) round(($paymentCounts['bank'] / $totalPayments) * 100) : 0,
         ];
 
-        // Do làm tròn đôi khi không tròn 100%, thực hiện bù trừ nhẹ ở codPercent nếu cần thiết
+
         if ($totalPayments > 0) {
             $sum = $paymentStats['vnpayPercent'] + $paymentStats['momoPercent'] + $paymentStats['codPercent'] + $paymentStats['bankPercent'];
             if ($sum !== 100 && $sum > 0) {

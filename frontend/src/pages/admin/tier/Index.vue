@@ -1,7 +1,7 @@
 <template>
   <div class="tier-index-wrapper ">
 
-    <!-- MÀN HÌNH CHỜ ĐỘC LẬP (SHIMMER) CHỈ CHẠY 1 LẦN ĐẦU -->
+
     <div v-if="isPageLoading" class="d-flex flex-column justify-content-center align-items-center w-100"
       style="min-height: 70vh;">
       <h1 class="logo-shimmer mb-3">ThinkHub</h1>
@@ -43,7 +43,7 @@
                 </tr>
               </thead>
               <tbody>
-                <!-- HIỆU ỨNG SKELETON KHI REFETCH HOẶC LỌC DỮ LIỆU -->
+
                 <template v-if="isTableLoading">
                   <tr v-for="i in 3" :key="'skeleton-' + i">
                     <td class="px-4 py-3">
@@ -80,7 +80,7 @@
                         <div
                           class="position-relative shadow-sm border rounded-circle bg-white d-flex justify-content-center align-items-center overflow-hidden"
                           style="width: 45px; height: 45px; padding: 0.2rem;">
-                          <!-- Sử dụng SoraImage thay cho img thường -->
+
                           <SoraImage :src="tier.icon" :placeholder="placeholderImg"
                             imgClass="w-100 h-100 object-fit-contain" alt="Tier Icon" />
                         </div>
@@ -174,9 +174,7 @@ const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
   }
 };
 
-// ==========================================
-// TANSTACK VUE QUERY - FETCH DATA
-// ==========================================
+
 const { data: tiersResponse, isLoading: isUsersLoading } = useQuery({
   queryKey: ['adminTiers'],
   queryFn: async () => {
@@ -189,9 +187,6 @@ const { data: tiersResponse, isLoading: isUsersLoading } = useQuery({
 const isPageLoading = computed(() => isUsersLoading.value);
 const tiers = computed(() => tiersResponse.value?.data || []);
 
-// ==========================================
-// TANSTACK VUE QUERY - MUTATIONS
-// ==========================================
 const deleteTierMutation = useMutation({
   mutationFn: async (id) => {
     const response = await axios.delete(`${API_URL}/admin/tiers/${id}`, { headers: getHeaders() });

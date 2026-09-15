@@ -12,7 +12,7 @@ use Illuminate\Support\Str;
 
 class AdminAffiliateController extends Controller
 {
-    // lấy danh sách đơn đăng ký làm affiliate
+
     public function index()
     {
         try {
@@ -29,7 +29,7 @@ class AdminAffiliateController extends Controller
         }
     }
 
-    // phê duyệt đơn đăng ký
+
     public function approve($id)
     {
         try {
@@ -41,7 +41,7 @@ class AdminAffiliateController extends Controller
 
             $application->update(['status' => 'approved']);
 
-            // Kích hoạt User thành Affiliate và tạo mã
+
             $user = $application->user;
             $user->is_affiliate = true;
 
@@ -70,7 +70,7 @@ class AdminAffiliateController extends Controller
         }
     }
 
-    // Từ chối đơn đăng ký
+
     public function reject(Request $request, $id)
     {
         try {
@@ -101,7 +101,7 @@ class AdminAffiliateController extends Controller
         }
     }
 
-    // Vô hiệu hóa tư cách affiliate và mã giới thiệu của khách hàng
+
     public function revoke($id)
     {
         \Illuminate\Support\Facades\DB::beginTransaction();
@@ -156,8 +156,7 @@ class AdminAffiliateController extends Controller
         }
     }
 
-    // quản lý hoa hồng của các đối tác
-    // 1. Lấy danh sách tất cả yêu cầu rút tiền
+
     private function notifyAffiliateUser($user, string $title, string $body, string $status, array $params = []): void
     {
         if (!$user) {
@@ -201,7 +200,7 @@ class AdminAffiliateController extends Controller
         ]);
     }
 
-    // 2. Admin/Kế toán duyệt lệnh rút tiền (Đã chuyển khoản)
+
     public function approveWithdrawal($id)
     {
         $withdrawal = \App\Models\CommissionHistory::find($id);
@@ -220,7 +219,7 @@ class AdminAffiliateController extends Controller
         return response()->json(['success' => true, 'message' => 'Đã duyệt yêu cầu rút tiền thành công!']);
     }
 
-    // 3. Admin/Kế toán từ chối lệnh rút tiền (Sai STK, Lỗi ngân hàng...) -> Hoàn tiền lại cho user
+
     public function rejectWithdrawal(Request $request, $id)
     {
         $withdrawal = \App\Models\CommissionHistory::find($id);

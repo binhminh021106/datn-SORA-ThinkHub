@@ -12,7 +12,6 @@ class AdminMembershipTierController extends Controller
 {
     public function index()
     {
-        // Sử dụng ORM withCount để đếm số user tối ưu
         $tiers = MembershipTier::withCount('users')
                     ->orderBy('min_spent', 'asc')
                     ->get();

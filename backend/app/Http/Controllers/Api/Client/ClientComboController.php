@@ -62,7 +62,6 @@ class ClientComboController extends Controller
     {
         $now = Carbon::now();
 
-        // Tối ưu hóa: Chỉ select các cột cần thiết cho trang Detail.vue
         $combo = Combo::with([
             'items:id,combo_id,product_id,product_variant_id,quantity',
             'items.product' => function($q) {

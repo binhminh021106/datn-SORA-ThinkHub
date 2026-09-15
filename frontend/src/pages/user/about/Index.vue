@@ -1,7 +1,7 @@
 <template>
   <div class="about-page font-sans">
 
-    <!-- 1. Tiêu đề chính (Hero Section) -->
+
     <section class="sora-banner position-relative d-flex align-items-center justify-content-center overflow-hidden">
       <div class="banner-ambient"></div>
       <div class="banner-glow banner-glow-left"></div>
@@ -26,7 +26,7 @@
       </div>
     </section>
 
-    <!-- 2. Đoạn giới thiệu ngắn & 3. Câu chuyện thương hiệu -->
+
     <section class="py-4 mt-3">
       <div class="container">
         <div class="row align-items-start gx-5">
@@ -61,7 +61,7 @@
       </div>
     </section>
 
-    <!-- 4. Sứ mệnh & 5. Tầm nhìn -->
+
     <section class="py-2 bg-white">
       <div class="container">
         <div class="row g-4">
@@ -98,7 +98,7 @@
       </div>
     </section>
 
-    <!-- 6. Giá trị cốt lõi -->
+
     <section class="py-5 bg-main text-white mt-5">
       <div class="container py-5">
         <div class="text-center mb-4">
@@ -151,7 +151,7 @@
       </div>
     </section>
 
-    <!-- 7. Giới thiệu sản phẩm (Combo Carousel) -->
+
     <section class="pb-5 combos-editorial" v-if="combos.length > 0">
       <div class="container-fluid px-0 combos-container">
         <div class="section-heading text-center mb-2 mt-5">
@@ -162,7 +162,7 @@
       </div>
     </section>
 
-    <!-- 8. Cam kết với khách hàng -->
+
     <section class="py-5" style="background-color: #f4f1ee;">
       <div class="container py-4 text-center">
         <h2 class="display-6 font-serif text-main mb-5 fw-bold">Lời Cam Kết Của Chúng Tôi</h2>
@@ -219,7 +219,7 @@
       </div>
     </section>
 
-    <!-- 9. Đoạn kết + Lời kêu gọi hành động (CTA) -->
+
     <section class="py-5 my-4 text-center">
       <div class="container d-flex flex-column align-items-center py-2">
         <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" class="text-accent mb-3" fill="none"
@@ -308,7 +308,7 @@ onMounted(() => {
   --sora-accent-rgb: 204, 30, 46;
 }
 
-/* Màu sắc thương hiệu SORA */
+
 .bg-main {
   background-color: #9f273b !important;
 }
@@ -333,12 +333,12 @@ onMounted(() => {
   border-color: #e7ce7d !important;
 }
 
-/* Font Serif cho tiêu đề */
+
 .font-serif {
   font-family: 'Josefin Sans', sans-serif;
 }
 
-/* Các tiện ích tùy chỉnh */
+
 .max-w-2xl {
   max-width: 42rem;
   margin-left: auto;
@@ -355,7 +355,7 @@ onMounted(() => {
   object-fit: cover !important;
 }
 
-/* Nút bấm (Button) */
+
 .editorial-btn {
   position: relative;
   overflow: hidden;
@@ -400,7 +400,7 @@ onMounted(() => {
   transform: rotate(45deg) translateY(200%);
 }
 
-/* Banner (Sora Banner Style) */
+
 .text-champagne {
   color: #ead089 !important;
 }
@@ -558,7 +558,7 @@ onMounted(() => {
   }
 }
 
-/* Image wrapper (Border xoắn) */
+
 .img-wrapper {
   padding: 1rem;
 }
@@ -581,13 +581,13 @@ onMounted(() => {
   aspect-ratio: 1/1.1;
 }
 
-/* Đường kẻ ngăn cách (Divider) */
+
 .divider {
   width: 4rem;
   height: 2px;
 }
 
-/* Card Mission & Vision */
+
 .card-hover {
   transition: box-shadow 0.3s ease;
 }
@@ -607,7 +607,7 @@ onMounted(() => {
   opacity: 0.05;
 }
 
-/* Icon vòng tròn */
+
 .icon-circle {
   width: 64px;
   height: 64px;
@@ -615,11 +615,11 @@ onMounted(() => {
   border: 1px solid;
 }
 
-/* Khối sản phẩm (Fix ảnh vuông tuyệt đối) */
+
 .square-ratio {
   width: 100%;
   padding-bottom: 100%;
-  /* Tạo tỷ lệ vuông chuẩn 1:1 */
+
   display: block;
   overflow: hidden;
 }
@@ -637,12 +637,12 @@ onMounted(() => {
   z-index: 2;
 }
 
-/* Link khám phá */
+
 .product-link:hover {
   color: #cc1e2e !important;
 }
 
-/* Combo Carousel Container Overrides */
+
 .combos-editorial {
   background-color: #fffafa;
   overflow: hidden;

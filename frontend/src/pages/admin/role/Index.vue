@@ -36,7 +36,7 @@
       </div>
 
       <div v-if="activeTab === 'roles'" class="card border-0 shadow-sm rounded-4 mb-4">
-        <!-- ĐÃ TỐI ƯU GIAO DIỆN HEADER TRÊN MOBILE: Chuyển d-flex thành flex-column trên mobile -->
+
         <div class="card-header bg-white border-bottom-0 pt-4 pb-3 px-4 d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center gap-3">
           <div class="d-flex align-items-center justify-content-between gap-2">
             <h6 class="fw-bold mb-0 text-dark text-nowrap"><i class="bi bi-list-ul me-2"></i>Danh sách Roles</h6>
@@ -52,7 +52,7 @@
         </div>
         
         <div class="card-body p-0 mt-2">
-          <!-- ĐÃ SỬA: Đổi style cứng thành class .responsive-table để CSS xử lý Responsive -->
+
           <div class="table-responsive border-0">
             <table class="table table-hover align-middle mb-0 responsive-table w-100">
               <thead class="bg-light">
@@ -67,7 +67,7 @@
               <tbody>
                 <tr v-if="isLoadingRoles">
                   <td colspan="5" class="text-center py-5 text-muted">
-                    <span class="spinner-border spinner-border-sm me-2 text-brand"></span> Đang tải dữ liệu...
+                    <AdminLoadingSpinner class="me-2 text-brand" size="16" /> Đang tải dữ liệu...
                   </td>
                 </tr>
                 <tr v-else-if="paginatedRoles.length === 0">
@@ -75,7 +75,7 @@
                     <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>Không tìm thấy dữ liệu.
                   </td>
                 </tr>
-                <!-- ĐÃ SỬA: Gắn thêm data-label="" cho từng ô <td> để trên điện thoại nó tự biết tên cột -->
+
                 <tr v-else v-for="role in paginatedRoles" :key="role.id" :class="{'bg-light opacity-75': role.deleted_at}">
                   <td data-label="ID" class="px-4 fw-bold text-muted font-monospace">#{{ role.id }}</td>
                   <td data-label="Tên hiển thị" class="px-4 fw-semibold">
@@ -131,7 +131,7 @@
         </div>
       </div>
 
-      <!-- TƯƠNG TỰ VỚI TAB MODULES -->
+
       <div v-if="activeTab === 'modules'" class="card border-0 shadow-sm rounded-4 mb-4">
         <div class="card-header bg-white border-bottom-0 pt-4 pb-3 px-4 d-flex flex-column flex-md-row justify-content-between align-items-stretch align-items-md-center gap-3">
           <div class="d-flex align-items-center justify-content-between gap-3">
@@ -159,7 +159,7 @@
               <tbody>
                 <tr v-if="isLoadingModules">
                   <td colspan="4" class="text-center py-5 text-muted">
-                    <span class="spinner-border spinner-border-sm me-2 text-brand"></span> Đang tải cấu hình trang...
+                    <AdminLoadingSpinner class="me-2 text-brand" size="16" /> Đang tải cấu hình trang...
                   </td>
                 </tr>
                 <tr v-else-if="paginatedModules.length === 0">
@@ -230,7 +230,7 @@
       </p>
     </div>
 
-    <!-- MODAL ROLE RESPONSIVE -->
+
     <div class="modal fade" id="roleModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow rounded-4">
@@ -261,7 +261,7 @@
 
               <div class="mb-3 p-3 p-md-4 bg-light rounded-4 border border-light-subtle shadow-sm">
                 <label class="form-label fw-bold text-brand mb-3">Định vị Cấp độ (Level) <span class="text-danger">*</span></label>
-                <!-- ĐÃ SỬA: flex-column trên mobile, flex-row trên PC -->
+
                 <div class="d-flex align-items-stretch gap-3 flex-column flex-md-row">
                     <div class="input-group shadow-sm flex-shrink-0 border border-brand rounded mx-auto mx-md-0" style="width: 140px; height: fit-content;">
                         <button class="btn btn-light bg-white border-end" type="button" @click="roleForm.level > 1 && roleForm.id !== 1 ? roleForm.level-- : null" :disabled="roleForm.id === 1">
@@ -305,7 +305,7 @@
               <div class="text-end pt-3 border-top">
                 <button type="button" class="btn btn-light me-2 px-4 shadow-sm border fw-bold" data-bs-dismiss="modal">Hủy</button>
                 <button type="submit" class="btn btn-brand text-white px-5 fw-bold shadow-sm" :disabled="isSaving">
-                  <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span> {{ modalMode === 'create' ? 'Tạo Mới' : 'Cập Nhật' }}
+                  <AdminLoadingSpinner v-if="isSaving" class="me-2" size="16" /> {{ modalMode === 'create' ? 'Tạo Mới' : 'Cập Nhật' }}
                 </button>
               </div>
             </form>
@@ -626,7 +626,7 @@ onBeforeUnmount(() => {
 @keyframes bi-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(359deg); } }
 .invalid-feedback { font-size: 0.8rem; }
 
-/* CSS XỬ LÝ RESPONSIVE BẢNG THÀNH DẠNG CARD (KHÔNG THANH CUỘN NGANG) */
+
 @media (max-width: 767.98px) {
   .responsive-table {
     display: block;

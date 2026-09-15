@@ -18,7 +18,6 @@
       :class="isOpen ? 'chatbot-open' : 'chatbot-closed'"
       style="width: 380px; height: 550px; border-radius: 16px; right: 25px; bottom: 25px; z-index: 999999;"
     >
-      <!-- Header -->
       <div class="bg-primary p-3 position-relative d-flex align-items-center justify-content-between text-white">
         <div class="d-flex align-items-center gap-2">
           <div class="position-relative">
@@ -37,18 +36,15 @@
         </button>
       </div>
 
-      <!-- Body -->
       <div class="flex-grow-1 chat-body-scroll p-3" ref="chatBodyRef" style="background-color: #f8f9fa;" @click="closeAllPickers">
         <div v-for="msg in messages" :key="msg.id" :id="'msg-' + msg.id" class="d-flex mb-3 msg-row" :class="msg.type === 'user' ? 'justify-content-end' : 'justify-content-start'" @mouseenter="hoveredMsgId = msg.id" @mouseleave="hoveredMsgId = null" @click="hoveredMsgId = hoveredMsgId === msg.id ? null : msg.id">
           <div v-if="msg.type === 'admin'" class="me-2 mt-auto">
             <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; font-size: 0.7rem;">NV</div>
           </div>
 
-          <!-- Image message -->
           <template v-if="msg.message_type === 'image'">
             <div class="msg-bubble-wrap" :class="msg.type === 'user' ? 'align-items-end' : 'align-items-start'">
               <div style="max-width: 100%; position: relative;">
-                <!-- Quote block -->
                 <div v-if="msg.reply_to" class="quote-block mb-1" :class="msg.type === 'user' ? 'quote-block-user' : 'quote-block-admin'" @click="scrollToMessage(msg.reply_to.id)" style="cursor: pointer;">
                   <p class="quote-text"><i class="bi bi-reply-fill me-1 opacity-75"></i>{{ msg.reply_to.text || (msg.reply_to.message_type === 'image' ? '📷 Hình ảnh' : '📎 File') }}</p>
                 </div>
@@ -56,18 +52,15 @@
                 <div v-else class="small text-muted p-2">Tep dinh kem khong hop le.</div>
                 <div><small :class="msg.type === 'user' ? 'text-white-50' : 'text-muted'" style="font-size: 0.65rem;">{{ msg.time }}</small></div>
               </div>
-              <!-- Action bar beside bubble -->
               <div class="msg-actions-side" :class="{ 'show-actions': hoveredMsgId === msg.id }">
                 <button class="msg-action-btn-pro" @click.stop="setReply(msg)" title="Trả lời"><i class="bi bi-reply-fill"></i></button>
               </div>
             </div>
           </template>
 
-          <!-- File message -->
           <template v-else-if="msg.message_type === 'file'">
             <div class="msg-bubble-wrap" :class="msg.type === 'user' ? 'align-items-end' : 'align-items-start'">
               <div class="p-2 shadow-sm rounded" :class="msg.type === 'user' ? 'bg-primary text-white text-end rounded-user' : 'bg-white border text-start rounded-bot'" style="max-width: 100%;">
-                <!-- Quote block -->
                 <div v-if="msg.reply_to" class="quote-block mb-1" :class="msg.type === 'user' ? 'quote-block-user' : 'quote-block-admin'" @click="scrollToMessage(msg.reply_to.id)" style="cursor: pointer;">
                   <p class="quote-text"><i class="bi bi-reply-fill me-1 opacity-75"></i>{{ msg.reply_to.text || (msg.reply_to.message_type === 'image' ? '📷 Hình ảnh' : '📎 File') }}</p>
                 </div>
@@ -79,25 +72,21 @@
                 <span v-else class="small opacity-75">Tep dinh kem khong hop le.</span>
                 <small :class="msg.type === 'user' ? 'text-white-50' : 'text-muted'" style="font-size: 0.65rem;">{{ msg.time }}</small>
               </div>
-              <!-- Action bar beside bubble -->
               <div class="msg-actions-side" :class="{ 'show-actions': hoveredMsgId === msg.id }">
                 <button class="msg-action-btn-pro" @click.stop="setReply(msg)" title="Trả lời"><i class="bi bi-reply-fill"></i></button>
               </div>
             </div>
           </template>
 
-          <!-- Text/Emoji message -->
           <template v-else>
             <div class="msg-bubble-wrap" :class="msg.type === 'user' ? 'align-items-end' : 'align-items-start'">
               <div class="p-2 shadow-sm rounded" :class="msg.type === 'user' ? 'bg-primary text-white text-end rounded-user' : 'bg-white border text-start rounded-bot'" style="max-width: 100%;">
-                <!-- Quote block -->
                 <div v-if="msg.reply_to" class="quote-block mb-1" :class="msg.type === 'user' ? 'quote-block-user' : 'quote-block-admin'" @click="scrollToMessage(msg.reply_to.id)" style="cursor: pointer;">
                   <p class="quote-text"><i class="bi bi-reply-fill me-1 opacity-75"></i>{{ msg.reply_to.text || (msg.reply_to.message_type === 'image' ? '📷 Hình ảnh' : '📎 File') }}</p>
                 </div>
                 <p class="mb-0 text-break" style="font-size: 0.9rem; line-height: 1.4;" v-text="msg.text"></p>
                 <small :class="msg.type === 'user' ? 'text-white-50' : 'text-muted'" style="font-size: 0.65rem;">{{ msg.time }}</small>
               </div>
-              <!-- Action bar beside bubble -->
               <div class="msg-actions-side" :class="{ 'show-actions': hoveredMsgId === msg.id }">
                 <button class="msg-action-btn-pro" @click.stop="setReply(msg)" title="Trả lời"><i class="bi bi-reply-fill"></i></button>
               </div>
@@ -118,7 +107,6 @@
         </div>
       </div>
 
-      <!-- Reply Preview Bar -->
       <div v-if="replyTo" class="reply-preview-bar">
         <div class="reply-preview-content">
           <p class="reply-preview-text mb-0"><i class="bi bi-reply-fill me-1 text-primary"></i>{{ replyTo.text || (replyTo.message_type === 'image' ? '📷 Hình ảnh' : '📎 File') }}</p>
@@ -126,7 +114,6 @@
         <button class="reply-cancel-btn" @click="clearReply" title="Hủy trả lời"><i class="bi bi-x"></i></button>
       </div>
 
-      <!-- File Preview (compact) -->
       <div v-if="selectedFile" class="file-preview-compact">
         <img v-if="selectedFilePreview" :src="selectedFilePreview" alt="preview" class="preview-thumb-sm" />
         <i v-else class="bi bi-file-earmark-fill preview-file-icon"></i>
@@ -134,9 +121,7 @@
         <button class="preview-remove-btn" @click="removeSelectedFile"><i class="bi bi-x"></i></button>
       </div>
 
-      <!-- Footer -->
       <div class="bg-white border-top" style="position: relative;">
-        <!-- Emoji Picker -->
         <div v-if="showEmojiPicker" class="user-emoji-picker" @click.stop>
           <div class="emoji-categories">
             <button
@@ -158,9 +143,7 @@
           </div>
         </div>
 
-        <!-- Toolbar -->
         <div class="d-flex align-items-center gap-1 px-2 pt-1">
-          <!-- File Button -->
           <button
             class="chat-toolbar-btn"
             title="Đính kèm file"
@@ -170,7 +153,6 @@
             <i class="bi bi-paperclip"></i>
           </button>
           <input ref="fileInputRef" type="file" style="display:none" @change="onFileSelected" accept=".jpg,.jpeg,.png,.webp,.pdf,.txt,.doc,.docx,.xls,.xlsx" />
-          <!-- Emoji Button -->
           <button
             class="chat-toolbar-btn"
             title="Emoji"
@@ -214,7 +196,6 @@
 
     </div>
 
-    <!-- Image Lightbox -->
     <div v-if="lightboxUrl" class="user-lightbox" @click="lightboxUrl = null">
       <img :src="lightboxUrl" alt="preview" class="user-lightbox-img" @click.stop />
       <button class="user-lightbox-close" @click="lightboxUrl = null"><i class="bi bi-x-lg"></i></button>
@@ -245,27 +226,20 @@ const isSocketActive = ref(false);
 const userId = ref(null);
 const isLoggedIn = ref(false);
 
-// File upload
 const fileInputRef = ref(null);
 const selectedFile = ref(null);
 const selectedFilePreview = ref(null);
 const fileValidationError = ref('');
 
-// Emoji (input)
 const showEmojiPicker = ref(false);
 const emojiSearch = ref('');
 const activeCategory = ref('smileys');
 
-// Lightbox
 const lightboxUrl = ref(null);
 
-// Reply
 const hoveredMsgId = ref(null);
 const replyTo = ref(null);
 
-// clientApiClient handles auth token and headers automatically
-
-// ===== EMOJI DATA =====
 const emojiCategories = [
   { name: 'smileys', label: 'Mặt cười', icon: '😀' },
   { name: 'people', label: 'Con người', icon: '👋' },
@@ -293,7 +267,6 @@ const filteredEmojis = computed(() => {
   return all.filter(e => e.includes(emojiSearch.value));
 });
 
-// ===== HELPERS =====
 const formatTime = () => new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 const formatTimeFromTs = (ts) => new Date(ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 const formatFileSize = (bytes) => {
@@ -342,7 +315,6 @@ const safeChatFileUrl = (value) => {
   }
 };
 
-// ===== EMOJI (input) =====
 const toggleEmojiPicker = () => {
   if (isSending.value) return;
   showEmojiPicker.value = !showEmojiPicker.value;
@@ -354,7 +326,6 @@ const insertEmoji = (emoji) => {
   messageInputRef.value?.focus();
 };
 
-// ===== REPLY =====
 const setReply = (msg) => {
   if (isSending.value) return;
   replyTo.value = msg;
@@ -362,7 +333,6 @@ const setReply = (msg) => {
 };
 const clearReply = () => { replyTo.value = null; };
 
-// ===== FILE UPLOAD =====
 const triggerFileInput = () => {
   if (isSending.value) return;
   fileInputRef.value?.click();
@@ -407,7 +377,6 @@ const removeSelectedFile = () => {
   fileValidationError.value = '';
 };
 
-// ===== AUTH =====
 const checkAuth = () => {
   try {
     const userData = JSON.parse(localStorage.getItem('userData'));
@@ -429,13 +398,11 @@ const checkAuth = () => {
 
 const renderedIds = new Set();
 
-// ===== FETCH HISTORY =====
 const fetchHistory = async () => {
   if (!checkAuth()) {
     messages.value = [{ id: 'sys1', type: 'admin', message_type: 'text', text: 'Kính chào quý khách! Vui lòng Đăng Nhập ở góc trên cùng bên phải để chuyên viên có thể hỗ trợ trực tiếp.', time: 'Ngay bây giờ' }];
     return;
   }
-  // Không gọi API nếu không có token
   const token = getUserToken();
   if (!token) {
     isLoggedIn.value = false;
@@ -479,7 +446,6 @@ const fetchHistory = async () => {
     }
   } catch(err) {
     if (err.response?.status === 401) {
-      // Token hết hạn hoặc không hợp lệ -> hiện thông báo đăng nhập
       isLoggedIn.value = false;
       messages.value = [{ id: 'sys1', type: 'admin', message_type: 'text', text: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để được hỗ trợ.', time: 'Ngay bây giờ' }];
     } else {
@@ -491,7 +457,6 @@ const fetchHistory = async () => {
 const toggleChat = () => {
   isOpen.value = !isOpen.value;
   if (isOpen.value && messages.value.length === 0) {
-    // Chỉ fetch nếu đã đăng nhập
     if (checkAuth() && getUserToken()) {
       fetchHistory();
     } else {
@@ -513,7 +478,6 @@ watch(() => props.visible, (visible) => {
   }
 });
 
-// ===== SEND MESSAGE =====
 const sendMessage = async () => {
   const hasText = inputText.value.trim();
   const hasFile = selectedFile.value;
@@ -522,7 +486,6 @@ const sendMessage = async () => {
   isSending.value = true;
 
   if (hasFile) {
-    // Gửi file
     const file = selectedFile.value;
     const isImage = file.type.startsWith('image/');
     const tempId = Date.now();
@@ -576,7 +539,6 @@ const sendMessage = async () => {
       isSending.value = false;
     }
   } else {
-    // Gửi text
     const userMessage = inputText.value;
     const currentReply = replyTo.value;
     clearReply();
@@ -627,7 +589,6 @@ const sendMessage = async () => {
   }
 };
 
-// ===== WEBSOCKET =====
 onMounted(() => {
   if (checkAuth()) {
     fetchHistory();
@@ -661,7 +622,6 @@ onMounted(() => {
           }
         })
         .listen('.ConversationDeleted', () => {
-          // Xóa toàn bộ tin nhắn khỏi UI khi Admin ấn xóa
           messages.value = [{ 
             id: 'sys2', 
             type: 'admin',
@@ -727,7 +687,6 @@ onUnmounted(() => {
 .chat-body-scroll::-webkit-scrollbar-track { background: transparent; }
 .chat-body-scroll::-webkit-scrollbar-thumb { background-color: #ccc; border-radius: 10px; }
 
-/* ===== Image in chat ===== */
 .user-chat-image {
   max-width: 200px;
   max-height: 180px;
@@ -740,7 +699,6 @@ onUnmounted(() => {
 }
 .user-chat-image:hover { transform: scale(1.02); }
 
-/* ===== File link ===== */
 .user-file-link {
   text-decoration: none;
   display: flex;
@@ -749,7 +707,6 @@ onUnmounted(() => {
 }
 .user-file-link:hover { text-decoration: underline; }
 
-/* ===== File Preview compact ===== */
 .file-preview-compact {
   display: flex;
   align-items: center;
@@ -797,7 +754,6 @@ onUnmounted(() => {
 }
 .preview-remove-btn:hover { background: #fee2e2; color: #dc2626; }
 
-/* ===== Toolbar buttons ===== */
 .chat-toolbar-btn {
   background: none;
   border: none;
@@ -815,7 +771,6 @@ onUnmounted(() => {
 }
 .chat-toolbar-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* ===== EMOJI PICKER (User) ===== */
 .user-emoji-picker {
   position: absolute;
   bottom: calc(100% + 5px);
@@ -877,7 +832,6 @@ onUnmounted(() => {
 }
 .emoji-btn:hover { background: rgba(255, 255, 255, 0.6); }
 
-/* ===== LIGHTBOX ===== */
 .user-lightbox {
   position: fixed;
   inset: 0;
@@ -921,7 +875,6 @@ onUnmounted(() => {
 }
 .user-lightbox-close:hover { background: rgba(255,255,255,0.3); }
 
-/* ===== MSG BUBBLE WRAP ===== */
 .msg-bubble-wrap {
   display: flex;
   flex-direction: column;
@@ -929,7 +882,6 @@ onUnmounted(() => {
   position: relative;
 }
 
-/* ===== ACTION BAR (beside bubble) ===== */
 .msg-actions-side {
   display: flex;
   align-items: center;
@@ -983,7 +935,6 @@ onUnmounted(() => {
   box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
 }
 
-/* ===== REPLY PREVIEW BAR ===== */
 .reply-preview-bar {
   display: flex;
   align-items: center;
@@ -1025,7 +976,6 @@ onUnmounted(() => {
 }
 .reply-cancel-btn:hover { background: #fee2e2; color: #dc2626; }
 
-/* ===== QUOTE BLOCK in bubble ===== */
 .quote-block {
   border-radius: 6px;
   padding: 5px 10px;

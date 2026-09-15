@@ -4,11 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes; // 1. Import SoftDeletes
-
+use Illuminate\Database\Eloquent\SoftDeletes; 
 class News extends Model
 {
-    use HasFactory, SoftDeletes; // 2. Thêm SoftDeletes vào đây
+    use HasFactory, SoftDeletes; 
 
     protected $table = 'news';
 

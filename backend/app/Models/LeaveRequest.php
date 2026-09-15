@@ -16,7 +16,7 @@ class LeaveRequest extends Model
         'start_datetime',
         'end_datetime',
         'reason',
-        'status', // pending, approved, rejected
+        'status', 
         'approved_by'
     ];
 

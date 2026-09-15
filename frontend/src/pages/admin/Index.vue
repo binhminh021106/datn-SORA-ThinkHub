@@ -1,6 +1,6 @@
 <template>
   <div>
-    <!-- Màn hình Loading -->
+
     <div v-if="isLoading && hasAccess" class="d-flex flex-column justify-content-center align-items-center w-100"
       style="min-height: 70vh;">
       <h1 class="logo-shimmer mb-3">ThinkHub</h1>
@@ -9,7 +9,7 @@
       </p>
     </div>
 
-    <!-- Không có quyền truy cập: hiển thị ngay, không chờ load -->
+
     <div v-else-if="!hasAccess" class="d-flex justify-content-center align-items-center w-100"
       style="min-height: 70vh;">
       <div class="text-center">
@@ -20,17 +20,17 @@
       </div>
     </div>
 
-    <!-- Nội dung Dashboard -->
+
     <div v-else class="dashboard-wrapper min-vh-100 p-1">
 
-      <!-- Nút xuất báo cáo fixed -->
+
       <div class="dropdown position-fixed" style="bottom: 30px; right: 30px; z-index: 1050;">
         <button class="btn btn-brand shadow-lg d-flex align-items-center justify-content-center transition-all"
           type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false"
           :disabled="isExporting"
           style="width: 60px; height: 60px; border-radius: 50%; padding: 0;"
           title="Xuất báo cáo Excel">
-          <span v-if="isExporting" class="spinner-border spinner-border-sm text-white" role="status" aria-hidden="true"></span>
+          <AdminLoadingSpinner v-if="isExporting" class="text-white" size="16" />
           <i v-else class="bi bi-file-earmark-arrow-down-fill fs-4 text-white"></i>
         </button>
         <div class="dropdown-menu dropdown-menu-end shadow border mb-3 p-3" aria-labelledby="exportDropdown" style="border-radius: 20px; min-width: 260px; border-color: rgba(0,0,0,0.08) !important;">
@@ -73,10 +73,10 @@
         </div>
       </div>
 
-      <!-- Hàng 1: Các thẻ thống kê tổng quan (Compact) -->
+
       <div class="row row-cols-1 row-cols-md-3 row-cols-xl-6 g-3 g-xl-2 mb-3">
 
-        <!-- Tổng doanh thu -->
+
         <div class="col">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4">
             <div class="card-body p-3 d-flex flex-column justify-content-between">
@@ -101,7 +101,7 @@
           </div>
         </div>
 
-        <!-- Lợi nhuận ròng -->
+
         <div class="col">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4">
             <div class="card-body p-3 d-flex flex-column justify-content-between">
@@ -125,7 +125,7 @@
           </div>
         </div>
 
-        <!-- Đơn hàng mới -->
+
         <div class="col">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4">
             <div class="card-body p-3 d-flex flex-column justify-content-between">
@@ -148,7 +148,7 @@
           </div>
         </div>
 
-        <!-- Tổng Tồn Kho -->
+
         <div class="col">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4">
             <div class="card-body p-3 d-flex flex-column justify-content-between">
@@ -170,7 +170,7 @@
           </div>
         </div>
 
-        <!-- Khách hàng -->
+
         <div class="col">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4">
             <div class="card-body p-3 d-flex flex-column justify-content-between">
@@ -194,7 +194,7 @@
           </div>
         </div>
 
-        <!-- Nhân sự hôm nay -->
+
         <div class="col">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4">
             <div class="card-body p-3 d-flex flex-column justify-content-between">
@@ -221,7 +221,7 @@
 
       </div>
 
-      <!-- Hàng 2: Biểu đồ Doanh thu & Phương thức -->
+
       <div class="row g-3 g-xl-3 mb-3">
         <div class="col-12 col-xl-9">
           <div class="card custom-card border-0 shadow-sm rounded-4 h-100">
@@ -232,13 +232,13 @@
                 <span class="text-muted font-size-xs">Kỳ {{ periodInfo.label }} · {{ periodInfo.start_date }} đến {{ periodInfo.end_date }}</span>
               </div>
 
-              <!-- Bộ lọc ngày thông minh -->
+
               <div class="d-flex flex-wrap align-items-center gap-2 dashboard-period-filter">
                 <button v-for="preset in periodPresets" :key="preset.key" @click="selectPeriod(preset.key)"
                   class="btn btn-sm rounded-pill px-3 fw-semibold dashboard-period-button d-flex align-items-center gap-1"
                   :class="filterParams.period === preset.key ? 'btn-brand' : 'btn-light border-light text-secondary'"
                   :disabled="isFetching">
-                  <span v-if="isFetching && filterParams.period === preset.key" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                  <AdminLoadingSpinner v-if="isFetching && filterParams.period === preset.key" size="16" />
                   {{ preset.label }}
                 </button>
 
@@ -263,8 +263,7 @@
                 <button v-if="filterParams.period === 'custom'" @click="applyDashboardFilter"
                   class="btn btn-brand rounded-3 px-3 py-2 fw-bold d-flex align-items-center gap-2 transition-all shadow-sm"
                   style="height: 42px;" :disabled="isFetching">
-                  <span v-if="isFetching" class="spinner-border spinner-border-sm" role="status"
-                    aria-hidden="true"></span>
+                  <AdminLoadingSpinner v-if="isFetching" size="16" />
                   <i v-else class="bi bi-funnel-fill"></i>
                 </button>
 
@@ -343,24 +342,24 @@
         </div>
       </div>
 
-      <!-- Hàng 3: Phân tích chuyên sâu (Insights) -->
+
       <div class="row g-3 g-xl-3 mb-3">
-        <!-- Khách hàng mua nhiều nhất -->
+
         <div class="col-12 col-md-4">
-          <div class="card custom-card h-100 border-0 shadow-sm rounded-4 bg-gradient-to-br from-primary-soft to-white">
+          <div class="card custom-card h-100 border-0 shadow-sm rounded-4" style="background: linear-gradient(to bottom right, rgba(13,110,253,0.05), var(--bs-card-bg));">
             <div class="card-body p-3 d-flex flex-column position-relative overflow-hidden">
               <div class="position-absolute end-0 top-0 mt-3 me-3 opacity-25" style="font-size: 3rem; color: #005baa; pointer-events: none;">
                 <i class="bi bi-trophy-fill"></i>
               </div>
               <div class="d-flex align-items-start justify-content-between mb-3 z-index-1" style="position: relative; z-index: 2;">
                 <div class="pe-2 min-w-0">
-                  <p class="text-primary fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate">Top 5 Khách VIP (Trong kỳ)</p>
+                  <p class="text-primary fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1 text-truncate">Top 5 mua nhiều nhất (Trong kỳ)</p>
                 </div>
               </div>
-              <div class="d-flex flex-column gap-2 z-index-1 position-relative custom-scrollbar" style="z-index: 2; overflow-y: auto; max-height: 220px; padding-right: 4px;">
+              <div class="d-flex flex-column gap-2 z-index-1 position-relative custom-scrollbar flex-grow-1" style="z-index: 2; overflow-y: auto; max-height: 300px; padding-right: 4px; padding-bottom: 4px;">
                 <div v-if="!customerInsights?.topBuyers || customerInsights.topBuyers.length === 0" class="text-muted font-size-sm">Không có dữ liệu</div>
                 <div v-else v-for="(buyer, idx) in customerInsights.topBuyers" :key="buyer.name || idx" class="d-flex align-items-center rounded-3 p-2 shadow-sm border border-light transition-all table-row-hover position-relative overflow-hidden" :style="{ backgroundColor: getRankBgStyle(idx) }">
-                   <!-- Watermark Icon Giới tính -->
+
                    <div class="position-absolute d-flex align-items-center justify-content-center" style="font-size: 2.8rem; right: 10px; top: 0; bottom: 0; pointer-events: none; z-index: 0; opacity: 0.1;"
                         :class="{'text-info': buyer.gender?.toLowerCase() === 'male' || buyer.gender?.toLowerCase() === 'nam', 
                                  'text-danger': buyer.gender?.toLowerCase() === 'female' || buyer.gender?.toLowerCase() === 'nữ',
@@ -392,10 +391,10 @@
           </div>
         </div>
 
-        <!-- Nhóm khách hàng chủ lực -->
+
         <div class="col-12 col-md-4">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4 transition-all" 
-               :style="{ background: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'linear-gradient(to bottom right, rgba(13,202,240,0.05), #ffffff)' : 'linear-gradient(to bottom right, rgba(165,0,100,0.05), #ffffff)' }">
+               :style="{ background: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'linear-gradient(to bottom right, rgba(13,202,240,0.05), var(--bs-card-bg))' : 'linear-gradient(to bottom right, rgba(165,0,100,0.05), var(--bs-card-bg))' }">
             <div class="card-body p-4 d-flex flex-column position-relative overflow-hidden">
               <div class="position-absolute" style="font-size: 8rem; right: -20px; bottom: -30px; pointer-events: none; z-index: 0; opacity: 0.06;"
                    :class="customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'text-info' : (customerInsights?.topGender?.gender?.toLowerCase() === 'nữ' ? 'text-danger' : 'text-secondary')">
@@ -404,21 +403,21 @@
               
               <div class="z-index-1" style="position: relative; z-index: 2;">
                 <p class="fw-bold font-size-xs mb-0 text-uppercase letter-spacing-1 text-truncate" 
-                   :style="{ color: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? '#0dcaf0' : '#a50064' }">
+                   :class="customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'text-info' : 'text-gender-female'">
                   Nhóm KH chủ lực
                 </p>
               </div>
 
               <div class="z-index-1 my-auto py-2" style="position: relative; z-index: 2;">
                 <h2 class="fw-bolder display-6 mb-2" style="letter-spacing: -1px;"
+                    :class="customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'text-gender-male' : 'text-gender-female'"
                     :style="{ 
-                      color: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? '#005baa' : '#a50064',
                       textShadow: '0 2px 10px rgba(0,0,0,0.05)'
                     }">
                   {{ customerInsights?.topGender?.gender ? 'Phái ' + customerInsights.topGender.gender : 'Chưa xác định' }}
                 </h2>
                 <div v-if="customerInsights?.topGender?.age_range" class="d-inline-flex align-items-center gap-1 bg-white border rounded-pill px-3 py-1 shadow-sm mt-1">
-                  <i class="bi bi-person-hearts" :style="{ color: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? '#0dcaf0' : '#a50064' }"></i>
+                  <i class="bi bi-person-hearts" :class="customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'text-info' : 'text-gender-female'"></i>
                   <span class="font-size-xs text-secondary fw-semibold">Độ tuổi phổ biến:</span>
                   <span class="font-size-sm fw-bold text-dark">{{ customerInsights.topGender.age_range }}</span>
                 </div>
@@ -426,7 +425,7 @@
 
               <div class="mt-4 pt-3 border-top border-light fw-bold text-dark text-truncate z-index-1 d-flex align-items-center gap-2" style="position: relative; z-index: 2;">
                 <span class="badge rounded-pill px-2 py-1 text-white font-size-sm" 
-                      :style="{ backgroundColor: customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? '#0dcaf0' : '#a50064' }">
+                      :class="customerInsights?.topGender?.gender?.toLowerCase() === 'nam' ? 'bg-info' : 'bg-gender-female'">
                   <i class="bi bi-pie-chart-fill"></i> Đóng góp
                 </span> 
                 <span class="fs-5">{{ formatCurrency(customerInsights?.topGender?.spent || 0) }}</span>
@@ -435,7 +434,7 @@
           </div>
         </div>
 
-        <!-- Mùa bội thu -->
+
         <div class="col-12 col-md-4">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4 bg-gradient-to-br from-success-soft to-white" style="background: linear-gradient(to bottom right, rgba(16,185,129,0.05), #ffffff);">
             <div class="card-body p-4 d-flex flex-column position-relative overflow-hidden">
@@ -474,9 +473,9 @@
         </div>
       </div>
 
-      <!-- Hàng 3.5: Khu vực bán hàng & Danh mục -->
+
       <div class="row g-3 g-xl-3 mb-3">
-        <!-- Doanh thu theo Danh mục -->
+
         <div class="col-12 col-xl-6">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4">
             <div class="card-header bg-transparent border-bottom pt-3 pb-3 px-3 px-xxl-4 d-flex justify-content-between align-items-center">
@@ -493,7 +492,7 @@
           </div>
         </div>
 
-        <!-- Top Khu Vực -->
+
         <div class="col-12 col-xl-6">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4 border-top border-primary border-3">
             <div class="card-header bg-transparent border-bottom pt-3 pb-3 px-3 px-xxl-4 d-flex justify-content-between align-items-center">
@@ -520,7 +519,7 @@
         </div>
       </div>
 
-      <!-- Hàng 4: Giao dịch & Tương tác -->
+
       <div class="row g-3 g-xl-3 mb-3">
         <div class="col-12 col-xl-7">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4">
@@ -623,9 +622,9 @@
         </div>
       </div>
 
-      <!-- Hàng 4: Sản phẩm & Chiến dịch -->
+
       <div class="row g-3 g-xl-3 mb-3">
-        <!-- Top Bán Chạy -->
+
         <div class="col-12 col-xl-4">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4 border-top border-brand border-3">
             <div class="card-header bg-transparent border-bottom pt-3 pb-3 px-3 px-xxl-4">
@@ -672,7 +671,7 @@
           </div>
         </div>
 
-        <!-- Cảnh báo Hết Hàng -->
+
         <div class="col-12 col-xl-4">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4 border-top border-danger border-3">
             <div
@@ -712,7 +711,7 @@
           </div>
         </div>
 
-        <!-- Combo đang chạy -->
+
         <div class="col-12 col-xl-4">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4 border-top border-info border-3">
             <div
@@ -730,7 +729,7 @@
               <ul v-else class="list-unstyled mb-0 d-flex flex-column gap-3">
                 <li v-for="combo in activeCombos" :key="combo.id" class="combo-ticket position-relative">
                   <div class="d-flex align-items-stretch bg-white border border-info border-opacity-25 rounded-3 shadow-sm overflow-hidden h-100">
-                    <!-- Hình ảnh bên trái -->
+
                     <div class="position-relative bg-light flex-shrink-0" style="width: 85px;">
                       <img v-if="combo.image" :src="combo.image" @load="handleImageLoad('combo-' + combo.id)" @error="handleImageError"
                         class="img-fluid w-100 h-100 object-fit-cover img-fade-in" :class="{ 'img-loaded': isImageLoaded('combo-' + combo.id) }" />
@@ -738,25 +737,25 @@
                         <i class="bi bi-gift fs-3"></i>
                       </div>
                       
-                      <!-- Tag giảm giá đè lên ảnh -->
+
                       <div class="position-absolute bottom-0 start-0 w-100 bg-info text-white text-center py-1 bg-opacity-75 backdrop-blur" style="font-size: 0.75rem; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
                         -{{ combo.discount_type === 'percentage' ? combo.discount_value + '%' : formatCompactCurrency(combo.discount_value) }}
                       </div>
                     </div>
                     
-                    <!-- Phần đường rọc xé (Dashed line) -->
+
                     <div class="position-relative d-flex flex-column align-items-center bg-info-soft" style="width: 16px;">
-                      <!-- Vòng tròn khuyết trên -->
+
                       <div class="position-absolute bg-white rounded-circle" style="width: 12px; height: 12px; top: -6px; border-bottom: 1px solid rgba(13, 202, 240, 0.25);"></div>
                       
-                      <!-- Đường nét đứt -->
+
                       <div class="h-100 border-start border-info border-opacity-25" style="border-left-style: dashed !important; border-left-width: 2px !important; margin-top: 6px; margin-bottom: 6px;"></div>
                       
-                      <!-- Vòng tròn khuyết dưới -->
+
                       <div class="position-absolute bg-white rounded-circle" style="width: 12px; height: 12px; bottom: -6px; border-top: 1px solid rgba(13, 202, 240, 0.25);"></div>
                     </div>
 
-                    <!-- Nội dung bên phải -->
+
                     <div class="p-3 flex-grow-1 d-flex flex-column justify-content-center min-w-0 bg-info-soft bg-opacity-10">
                       <h6 class="fw-bold text-dark mb-2 font-size-sm text-truncate" :title="combo.name">{{ combo.name }}</h6>
                       <div class="d-flex justify-content-between align-items-center mt-auto">
@@ -774,9 +773,9 @@
         </div>
       </div>
 
-      <!-- Hàng 5: Vận hành & Cảnh báo -->
+
       <div class="row g-3 g-xl-3 mb-3">
-        <!-- Giá trị Kho & Hàng tồn đọng -->
+
         <div class="col-12 col-xl-6">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4 border-top border-warning border-3">
             <div class="card-header bg-transparent border-bottom pt-3 pb-3 px-3 px-xxl-4 d-flex justify-content-between align-items-center">
@@ -785,7 +784,7 @@
               </h5>
             </div>
             <div class="card-body p-3 p-xxl-4 custom-scrollbar" style="max-height: 420px; overflow-y: auto;">
-              <!-- Tổng Giá trị Kho -->
+
               <div class="d-flex align-items-center justify-content-between p-3 rounded-4 mb-3 bg-gradient-to-r from-warning-soft to-white border border-light shadow-sm">
                 <div>
                   <p class="text-secondary fw-bold font-size-xs mb-1 text-uppercase letter-spacing-1">Tổng Vốn Tồn Kho</p>
@@ -796,7 +795,7 @@
                 </div>
               </div>
 
-              <!-- Danh sách Dead Stock -->
+
               <div class="d-flex justify-content-between align-items-center mb-3 mt-4">
                 <h6 class="fw-bold text-dark mb-0"><i class="bi bi-exclamation-circle text-danger me-1"></i> Top 5 Tồn đọng</h6>
                 <span class="badge bg-danger text-white rounded-pill px-2 py-1" v-if="customerInsights?.deadStockCount > 0" title="Tổng số mẫu mã tồn đọng (30 ngày chưa bán được)">
@@ -823,7 +822,7 @@
           </div>
         </div>
 
-        <!-- Lý do Hủy/Hoàn Đơn -->
+
         <div class="col-12 col-xl-6">
           <div class="card custom-card h-100 border-0 shadow-sm rounded-4 border-top border-danger border-3">
             <div class="card-header bg-transparent border-bottom pt-3 pb-3 px-3 px-xxl-4 d-flex justify-content-between align-items-center">
@@ -851,7 +850,7 @@
         </div>
       </div>
 
-      <!-- Hàng 6: Thống kê Khuyến mãi & Mã giảm giá -->
+
       <div class="row g-3 g-xl-4 mt-1">
         <div class="col-12">
           <div class="d-flex justify-content-between align-items-center mb-2">
@@ -923,15 +922,13 @@
                           <button v-if="coupon.status === 'active'" @click="toggleCouponStatus(coupon)"
                             :disabled="isUpdatingCoupon === coupon.id"
                             class="btn btn-sm btn-danger-soft text-danger border-0 fw-semibold">
-                            <span v-if="isUpdatingCoupon === coupon.id" class="spinner-border spinner-border-sm"
-                              role="status"></span>
+                            <AdminLoadingSpinner v-if="isUpdatingCoupon === coupon.id" size="16" />
                             <span v-else>Dừng</span>
                           </button>
                           <button v-else-if="['inactive', 'expired', 'soon'].includes(coupon.status)"
                             @click="toggleCouponStatus(coupon)" :disabled="isUpdatingCoupon === coupon.id"
                             class="btn btn-sm btn-success-soft text-success border-0 fw-semibold">
-                            <span v-if="isUpdatingCoupon === coupon.id" class="spinner-border spinner-border-sm"
-                              role="status"></span>
+                            <AdminLoadingSpinner v-if="isUpdatingCoupon === coupon.id" size="16" />
                             <span v-else>Kích hoạt</span>
                           </button>
                         </div>
@@ -944,12 +941,12 @@
           </div>
         </div>
 
-        <!-- Thanh tóm tắt thống kê -->
+
         <div class="col-12 mt-3">
           <div class="row g-3">
-            <!-- Hoạt động -->
+
             <div class="col-6 col-md-3">
-              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 100%);">
+              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, var(--bs-card-bg) 100%);">
                 <div class="card-body p-3 d-flex align-items-center gap-3">
                   <div class="avatar-circle bg-success text-white flex-shrink-0 shadow-sm d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: 50%;">
                     <i class="bi bi-check-circle-fill fs-4"></i>
@@ -962,9 +959,9 @@
               </div>
             </div>
             
-            <!-- Sắp tới -->
+
             <div class="col-6 col-md-3">
-              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);">
+              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, var(--bs-card-bg) 100%);">
                 <div class="card-body p-3 d-flex align-items-center gap-3">
                   <div class="avatar-circle bg-warning text-white flex-shrink-0 shadow-sm d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: 50%;">
                     <i class="bi bi-clock-fill fs-4"></i>
@@ -977,9 +974,9 @@
               </div>
             </div>
 
-            <!-- Đã hết hạn -->
+
             <div class="col-6 col-md-3">
-              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);">
+              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, var(--bs-card-bg) 100%);">
                 <div class="card-body p-3 d-flex align-items-center gap-3">
                   <div class="avatar-circle bg-danger text-white flex-shrink-0 shadow-sm d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: 50%;">
                     <i class="bi bi-x-circle-fill fs-4"></i>
@@ -992,9 +989,9 @@
               </div>
             </div>
 
-            <!-- Tổng lượt dùng -->
+
             <div class="col-6 col-md-3">
-              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, #f3e8ff 0%, #ffffff 100%);">
+              <div class="card h-100 border-0 shadow-sm rounded-4 position-relative overflow-hidden" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, var(--bs-card-bg) 100%);">
                 <div class="card-body p-3 d-flex align-items-center gap-3">
                   <div class="avatar-circle flex-shrink-0 shadow-sm d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; border-radius: 50%; background-color: #8b5cf6; color: white;">
                     <i class="bi bi-ticket-perforated-fill fs-4"></i>
@@ -1009,7 +1006,7 @@
           </div>
         </div>
 
-        <!-- Biểu đồ sử dụng Coupon -->
+
         <div class="col-12 mt-3">
           <div class="card custom-card border-0 shadow-sm rounded-4 h-100">
             <div class="card-header bg-transparent border-0 pt-3 pb-0 px-3 px-xxl-4">
@@ -1099,11 +1096,7 @@ const exportWithPeriod = async (period) => {
   
   isExporting.value = true;
   
-  // Backup state
-  const prevFilter = { ...filterParams.value };
-  const prevApplied = { ...appliedFilterParams.value };
-  
-  // Apply new period temp
+
   filterParams.value.period = period;
   if (period !== 'custom') {
     filterParams.value.startDate = '';
@@ -1115,15 +1108,13 @@ const exportWithPeriod = async (period) => {
     const { isError } = await refetch();
     if (isError) throw new Error("Fetch failed");
     
-    // Process and download Excel
-    exportToExcel(); 
-    // exportToExcel will toggle isExporting.value = false at the end
+    exportToExcel();
   } catch (err) {
     console.error("Lỗi lấy dữ liệu xuất Excel:", err);
     Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Không thể tải dữ liệu báo cáo.' });
     isExporting.value = false;
   } finally {
-    // Restore quietly without blocking UI
+
     filterParams.value = prevFilter;
     appliedFilterParams.value = prevApplied;
     refetch();
@@ -1131,7 +1122,7 @@ const exportWithPeriod = async (period) => {
 };
 
 const showCustomExportModal = async () => {
-  // Load flatpickr dynamically from bundle if not exist
+
   if (!window.flatpickrLoaded) {
     try {
       await Promise.race([
@@ -1171,7 +1162,7 @@ const showCustomExportModal = async () => {
         allowInput: true,
         onReady: function(selectedDates, dateStr, instance) {
           instance.altInput.addEventListener('input', function(e) {
-            // Ngăn việc format lại khi đang nhấn phím Backspace để xóa
+
             if (e.inputType === 'deleteContentBackward') return;
             
             let v = this.value.replace(/\D/g, '');
@@ -1267,7 +1258,7 @@ const exportToExcel = () => {
       const ws = XLSX.utils.aoa_to_sheet(data);
       const lastColumn = headers.length - 1;
       const lastRow = rows.length + 3;
-      const borderColor = '000000'; // Đổi sang viền đen rõ nét
+      const borderColor = '000000';
 
 
       ws['!merges'] = [
@@ -1478,11 +1469,7 @@ const paymentStats = ref({
   bankPercent: 0
 });
 
-// ==========================================
-// 1. TANSTACK QUERY: LẤY DỮ LIỆU CHÍNH
-// ==========================================
-// Quick local permission check to avoid unnecessary loading when user lacks role
-const REQUIRED_ADMIN_LEVEL = 1; // adjust this value if your admin level scheme differs
+const REQUIRED_ADMIN_LEVEL = 1;
 let _storedInfo = {};
 const storedAdminInfo = localStorage.getItem('admin_info') || sessionStorage.getItem('admin_info');
 try { _storedInfo = JSON.parse(storedAdminInfo || '{}'); } catch (e) { _storedInfo = {}; }
@@ -1533,12 +1520,10 @@ const staffStats = computed(() => dashboardData.value?.staffStats || {
   current_shift: 'Không có ca làm'
 });
 
-// Lấy dữ liệu danh sách coupon
 const couponData = computed(() => {
   return dashboardData.value?.coupons || { summary: {}, list: [] };
 });
 
-// Cập nhật trạng thái Payment Chart và Main Chart khi có dữ liệu mới
 watch(dashboardData, (newData) => {
   if (newData?.chartData) {
     if (newData.paymentStats) {
@@ -1583,7 +1568,6 @@ const applyDashboardFilter = async () => {
 
   appliedFilterParams.value = { ...filterParams.value };
   
-  // Vue Query tự động refetch, nhưng ta gọi refetch() nếu muốn áp dụng lại bộ lọc không thay đổi
   refetch();
 };
 
@@ -1596,7 +1580,6 @@ watch(queryError, (newError) => {
   }
 });
 
-// API: Kích hoạt / Dừng mã giảm giá (DÙNG PATCH DO ROUTE LÀ PATCH)
 const toggleCouponStatus = async (coupon) => {
   isUpdatingCoupon.value = coupon.id;
   const newStatus = coupon.status === 'active' ? 'inactive' : 'active';
@@ -1605,7 +1588,7 @@ const toggleCouponStatus = async (coupon) => {
 
     if (res && res.data.success) {
       Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã cập nhật trạng thái mã!', showConfirmButton: false, timer: 1500 });
-      refetch(); // Tải lại Dashboard Data để thay đổi trạng thái ngay lập tức
+      refetch(); 
     }
   } catch (e) {
     console.error(e);
@@ -1619,9 +1602,6 @@ const toggleCouponStatus = async (coupon) => {
   }
 };
 
-// ==========================================
-// 3. CHART.JS LOGIC
-// ==========================================
 const threeColorPalette = ['#009981', '#FF9F1C', '#2EC4B6'];
 const generateColors = (count) => {
   let colors = [];
@@ -1638,7 +1618,7 @@ const initOrUpdateChart = (labels, values, netProfits = [], orderCounts = []) =>
     chartInstance.data.datasets[1].data = netProfits;
     chartInstance.data.datasets[2].data = orderCounts;
     chartInstance.data.datasets[0].backgroundColor = generateColors(labels.length);
-    chartInstance.data.datasets[1].backgroundColor = '#8b5cf6'; // Tím (Purple) contrast
+    chartInstance.data.datasets[1].backgroundColor = '#8b5cf6'; 
     chartInstance.data.datasets[0].barPercentage = labels.length > 15 ? 0.8 : 0.5;
     chartInstance.data.datasets[1].barPercentage = labels.length > 15 ? 0.8 : 0.5;
     chartInstance.update();
@@ -1659,10 +1639,10 @@ const initOrUpdateChart = (labels, values, netProfits = [], orderCounts = []) =>
           {
             label: 'Lợi nhuận ròng',
             data: netProfits,
-            backgroundColor: '#8b5cf6', // Tím contrast
+            backgroundColor: '#8b5cf6', 
             borderRadius: 6,
             barPercentage: 0.5,
-            yAxisID: 'yRevenue' // Dùng chung trục Y với doanh thu
+            yAxisID: 'yRevenue' 
           },
           {
             type: 'line',
@@ -1714,7 +1694,7 @@ const initOrUpdateChart = (labels, values, netProfits = [], orderCounts = []) =>
 const initPaymentChart = () => {
   const ctx = document.getElementById('paymentMethodChart');
   if (!ctx) return;
-  if (paymentChartInstance) paymentChartInstance.destroy(); // Hủy chart cũ trước khi render dữ liệu lọc mới để mượt mà
+  if (paymentChartInstance) paymentChartInstance.destroy();
   paymentChartInstance = new Chart(ctx, {
     type: 'doughnut',
     data: { labels: ['VNPay', 'MoMo', 'COD', 'Chuyển khoản'], datasets: [{ data: [paymentStats.value.vnpayPercent, paymentStats.value.momoPercent, paymentStats.value.codPercent, paymentStats.value.bankPercent], backgroundColor: ['#005baa', '#a50064', '#10b981', '#6c757d'], borderWidth: 2, borderColor: '#ffffff' }] },
@@ -1808,10 +1788,6 @@ const initCouponChart = (labels, values) => {
   }
 };
 
-
-// ==========================================
-// 5. HELPER FORMAT CHUNG
-// ==========================================
 const getGrowthClass = (value) => {
   if (value === null || value === undefined) return 'bg-secondary-soft text-secondary';
   return value >= 0 ? 'bg-success-soft text-success' : 'bg-danger-soft text-danger';
@@ -1877,15 +1853,12 @@ const getTierColor = (tierName) => {
 };
 
 const getRankBgStyle = (index) => {
-  if (index === 0) return 'rgba(255, 193, 7, 0.15)'; // Vàng
-  if (index === 1) return 'rgba(108, 117, 125, 0.1)'; // Bạc
-  if (index === 2) return 'rgba(253, 126, 20, 0.15)'; // Đồng
-  return '#ffffff';
+  if (index === 0) return 'rgba(255, 193, 7, 0.15)'; 
+  if (index === 1) return 'rgba(108, 117, 125, 0.1)'; 
+  if (index === 2) return 'rgba(253, 126, 20, 0.15)'; 
+  return 'transparent';
 };
 
-// ==========================================
-// 6. HELPER FORMAT RIÊNG CHO COUPON
-// ==========================================
 const getCouponCardClass = (status) => {
   if (status === 'active') return 'coupon-active';
   if (status === 'expired') return 'coupon-expired';
@@ -2109,7 +2082,7 @@ const formatCouponDate = (dateStr) => {
   background-color: #fd7e14 !important;
 }
 
-/* Styling riêng cho Khu vực Coupon */
+
 .coupon-card {
   border: 2px solid transparent;
 }
@@ -2289,7 +2262,7 @@ button:focus {
   border-radius: 12px !important;
 }
 
-/* Image fade-in animation */
+
 .img-fade-in {
   opacity: 0;
   will-change: opacity;
@@ -2313,7 +2286,7 @@ button:focus {
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 
-/* TỐI ƯU DARK MODE - KHÔNG SCOPED ĐỂ FIX LỖI NHẬN CSS */
+
 [data-bs-theme="dark"] .dashboard-wrapper {
   background-color: transparent !important;
 }
@@ -2404,7 +2377,7 @@ button:focus {
 }
 
 [data-bs-theme="dark"] .dashboard-wrapper .rank-normal {
-  background-color: #2b3035 !important;
+  background-color: transparent !important;
   color: #adb5bd !important;
 }
 
@@ -2421,5 +2394,41 @@ button:focus {
 
 [data-bs-theme="dark"] .dashboard-wrapper .table-hover>tbody>tr:hover>* {
   color: #f8f9fa !important;
+}
+
+
+.text-gender-male { color: #005baa !important; }
+.text-gender-female { color: #a50064 !important; }
+.bg-gender-female { background-color: #a50064 !important; }
+
+[data-bs-theme="dark"] .dashboard-wrapper .text-gender-male { color: #66b2ff !important; }
+[data-bs-theme="dark"] .dashboard-wrapper .text-gender-female { color: #ff77c2 !important; }
+[data-bs-theme="dark"] .dashboard-wrapper .bg-gender-female { background-color: #d84596 !important; }
+
+
+[data-bs-theme="dark"] .swal2-popup {
+  background-color: #2b3035 !important;
+  color: #f8f9fa !important;
+}
+[data-bs-theme="dark"] .swal2-title {
+  color: #f8f9fa !important;
+}
+[data-bs-theme="dark"] .swal2-popup .text-dark {
+  color: #f8f9fa !important;
+}
+[data-bs-theme="dark"] .swal2-popup .bg-light {
+  background-color: #1e2125 !important;
+}
+[data-bs-theme="dark"] .swal2-popup .form-control {
+  background-color: #1e2125 !important;
+  color: #f8f9fa !important;
+}
+[data-bs-theme="dark"] .swal2-popup .form-control::placeholder {
+  color: #6c757d !important;
+}
+[data-bs-theme="dark"] .swal2-popup .alert-info {
+  background-color: rgba(13, 202, 240, 0.1) !important;
+  color: #9eeaf9 !important;
+  border-color: rgba(13, 202, 240, 0.2) !important;
 }
 </style>

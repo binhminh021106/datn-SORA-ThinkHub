@@ -14,7 +14,6 @@
 
       <form class="account-create-form" @submit.prevent="saveStaff">
         <div class="row g-3">
-          <!-- ================= CỘT TRÁI: AVATAR & TRẠNG THÁI ================= -->
           <div class="col-md-4 col-lg-3">
             <div class="card border-0 shadow-sm rounded-4 text-center p-3 h-100">
               <label class="form-label fw-bold mb-3 text-dark">Ảnh đại diện</label>
@@ -38,7 +37,6 @@
             </div>
           </div>
 
-          <!-- ================= CỘT PHẢI: THÔNG TIN CHI TIẾT ================= -->
           <div class="col-md-8 col-lg-9">
             <div class="card border-0 shadow-sm rounded-4 h-100">
               <div class="card-header bg-white border-bottom-0 pt-3 pb-0 px-3">
@@ -79,7 +77,6 @@
                     </div>
                   </div>
 
-                  <!-- ================= DROPDOWN ĐỊA CHỈ XỊN XÒ ================= -->
                   <div class="col-12 mb-2 mt-2">
                     <label class="form-label fw-bold text-dark border-bottom pb-2 w-100"><i class="bi bi-geo-alt-fill text-brand me-1"></i> Địa chỉ thường trú</label>
                   </div>
@@ -99,7 +96,6 @@
                       <label for="staffAddress" class="fw-semibold text-dark">Địa chỉ cụ thể (Số nhà, đường)</label>
                     </div>
                   </div>
-                  <!-- ================= KẾT THÚC ĐỊA CHỈ ================= -->
 
                   <div class="col-12 mb-4 mt-2">
                     <div class="form-floating">
@@ -117,7 +113,7 @@
                 <div class="text-end border-top pt-3 mt-2">
                   <router-link :to="{ name: 'admin-staff-index' }" class="btn btn-light me-2 px-4 shadow-sm fw-bold">Hủy bỏ</router-link>
                   <button type="submit" class="btn btn-brand px-5 fw-bold text-white shadow-sm" :disabled="isSaving">
-                    <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span> XÁC NHẬN THÊM
+                    <AdminLoadingSpinner v-if="isSaving" class="me-2" size="16" /> XÁC NHẬN THÊM
                   </button>
                 </div>
               </div>
@@ -126,6 +122,18 @@
         </div>
       </form>
     </div>
+    <!-- CROPPER MODAL -->
+    <ImageCropperModal
+      :show="showCropper"
+      :image-url="cropperUrl"
+      :aspect-ratio="1"
+      :allow-ratio-change="false"
+      title="Cắt ảnh Đại diện"
+      :max-size-kb="50"
+      :is-avatar="true"
+      @crop="handleCrop"
+      @close="closeCropper"
+    />
   </div>
 </template>
 
@@ -134,6 +142,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import defaultAvatar from '../../../../assets/images/defaults/avatar1.png';
+import ImageCropperModal from '@/components/admin/ImageCropperModal.vue';
 import VietnamAddressPicker from '@/components/ui/VietnamAddressPicker.vue';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
@@ -157,11 +166,35 @@ const fetchRoles = async () => {
   if(res.ok) roles.value = data.data;
 };
 
+// Cropper State
+const showCropper = ref(false);
+const cropperUrl = ref('');
+
+const closeCropper = () => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+};
+
+const handleCrop = (data) => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+  
+  selectedFile.value = data.file;
+  previewAvatar.value = data.blobUrl;
+};
+
 const handleAvatarChange = (e) => {
   const file = e.target.files[0];
   if (file) {
-    selectedFile.value = file;
-    previewAvatar.value = URL.createObjectURL(file);
+    if (!['image/jpeg', 'image/png', 'image/jpg', 'image/webp'].includes(file.type)) {
+      Swal.fire('Lỗi', 'Chỉ chấp nhận file ảnh (JPG, PNG, WEBP)', 'error'); return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      Swal.fire('Lỗi', 'Dung lượng tối đa 2MB', 'error'); return;
+    }
+    cropperUrl.value = URL.createObjectURL(file);
+    showCropper.value = true;
+    e.target.value = '';
   }
 };
 

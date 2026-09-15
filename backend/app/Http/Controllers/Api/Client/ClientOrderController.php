@@ -22,16 +22,13 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
-use Barryvdh\DomPDF\Facade\Pdf;   // ← Thêm dòng này
+use Barryvdh\DomPDF\Facade\Pdf; 
 
 class ClientOrderController extends Controller
 {
     private const MAX_CART_LINES = 50;
     private const MAX_CART_TOTAL_QUANTITY = 200;
 
-    /**
-     * Lấy danh sách đơn hàng của User hiện tại.
-     */
     public function index(Request $request)
     {
         $user = auth('sanctum')->user();
@@ -49,7 +46,7 @@ class ClientOrderController extends Controller
 
         $perPage = $validated['per_page'] ?? 5;
 
-        $query = Order::with(['items.product', 'items.combo', 'reviews'])
+        $query = Order::with(['items.product', 'items.combo', 'items.variant.attributeValues.attribute', 'reviews'])
             ->where('user_id', $user->id);
 
         if (!empty($validated['status']) && $validated['status'] !== 'all') {
@@ -104,8 +101,8 @@ class ClientOrderController extends Controller
         }
 
         $orders = $query->paginate($perPage);
+        $this->enrichComboSelections($orders->getCollection());
 
-        // Lấy thống kê số lượng đơn hàng theo trạng thái
         $countsQuery = \Illuminate\Support\Facades\DB::table('orders')
             ->select('status', \Illuminate\Support\Facades\DB::raw('count(*) as count'))
             ->where('user_id', $user->id)
@@ -176,7 +173,6 @@ class ClientOrderController extends Controller
 
             return DB::transaction(function () use ($request, $user, $cart) {
                 
-                // 1. GOM TOÀN BỘ ID CỦA VARIANT (Bao gồm Sản phẩm lẻ & Món trong Combo) để Lock 1 lần
                 $variantIdsToLock = [];
                 foreach ($cart->items as $item) {
                     if ($item->product_variant_id) {
@@ -186,28 +182,26 @@ class ClientOrderController extends Controller
                     }
                 }
                 
-                $variants = ProductVariant::whereIn('id', array_unique($variantIdsToLock))
+                $variants = ProductVariant::with(['product', 'attributeValues.attribute'])->whereIn('id', array_unique($variantIdsToLock))
                             ->orderBy('id')
-                            ->lockForUpdate() // Khóa dòng chống Race Condition
+                            ->lockForUpdate()
                             ->get()
                             ->keyBy('id');
 
                 $subTotal = 0;
                 $orderItemsData = [];
 
-                // 2. KIỂM TRA TỒN KHO & CHUẨN BỊ DATA
                 foreach ($cart->items as $item) {
-                    // Xử lý Sản phẩm lẻ
                     if ($item->product_variant_id) {
                         $variant = $variants->get($item->product_variant_id);
                         if (!$variant || $variant->stock_quantity < $item->quantity) {
                             throw new \Exception("Sản phẩm SKU {$variant->sku} không đủ số lượng trong kho.");
                         }
                         
-                        $variant->stock_quantity -= $item->quantity; // Trừ kho ảo trong biến nhớ
+                        $variant->stock_quantity -= $item->quantity; 
                         $variant->save();
 
-                        $itemTotal = $item->subtotal; // Lấy luôn giá trị tạm tính từ CartItem Model
+                        $itemTotal = $item->subtotal; 
                         $subTotal += $itemTotal;
 
                         $orderItemsData[] = [
@@ -215,7 +209,7 @@ class ClientOrderController extends Controller
                             'product_variant_id' => $variant->id,
                             'product_name'       => $variant->product->name ?? 'Sản phẩm SORA',
                             'variant_sku'        => $variant->sku,
-                            'variant_attributes' => $variant->attributes, // Tự encode vì model cast array
+                            'variant_attributes' => $variant->variant_attributes,
                             'variant_image'      => $variant->image_url,
                             'price'              => $item->price,
                             'quantity'           => $item->quantity,
@@ -224,7 +218,6 @@ class ClientOrderController extends Controller
                             'combo_selections'   => null,
                         ];
                     } 
-                    // Xử lý Combo
                     elseif ($item->combo_id && $item->combo) {
                         if (is_array($item->combo_selections)) {
                             foreach ($item->combo_selections as $selection) {
@@ -258,7 +251,6 @@ class ClientOrderController extends Controller
                     }
                 }
 
-                // 3. XỬ LÝ COUPON (Bắt chặt điều kiện)
                 $discountAmount = 0;
                 $couponId = null;
                 if ($request->coupon_code) {
@@ -291,7 +283,6 @@ class ClientOrderController extends Controller
                     $coupon->increment('usage_count');
                     $coupon->refresh();
 
-                    // Tự động dọn dẹp nếu vừa hết lượt dùng
                     if ($coupon->usage_limit !== null && $coupon->usage_count >= $coupon->usage_limit) {
                         if (!is_null($coupon->user_id)) {
                             $coupon->delete();
@@ -304,14 +295,13 @@ class ClientOrderController extends Controller
                 $shippingFee = $subTotal > 500000 ? 0 : 30000;
                 $totalAmount = max($subTotal - $discountAmount + $shippingFee, 0);
 
-                // 4. TẠO ĐƠN HÀNG
                 $order = Order::create([
                     'order_code'       => 'ORD-' . now()->format('Ymd') . '-' . strtoupper(Str::random(5)),
                     'guest_access_token' => $user ? null : Str::random(64),
                     'user_id'          => $user->id ?? null,
                     'customer_name'    => $request->customer_name,
                     'customer_phone'   => $request->customer_phone,
-                    'customer_email'   => $request->customer_email, // Đã thêm Email
+                    'customer_email'   => $request->customer_email,
                     'customer_address' => $request->customer_address,
                     'order_note'       => $request->order_note,
                     'sub_total'        => $subTotal,
@@ -325,26 +315,22 @@ class ClientOrderController extends Controller
                     'status'           => 'pending',
                 ]);
 
-                // 5. LƯU CHI TIẾT
                 foreach ($orderItemsData as $itemData) {
                     $itemData['order_id'] = $order->id;
                     OrderItem::create($itemData);
                 }
 
-                // 6. GHI LỊCH SỬ (Chuẩn hóa changed_by_type)
                 OrderStatusHistory::create([
                     'order_id'        => $order->id,
                     'new_status'      => 'pending',
                     'note'            => 'Khách hàng đặt đơn thành công',
                     'changed_by'      => $user->id ?? null,
-                    'changed_by_type' => $user ? 'user' : 'guest', // Phân loại ai là người tạo
+                    'changed_by_type' => $user ? 'user' : 'guest',
                 ]);
 
-                // 7. XÓA GIỎ HÀNG
                 $cart->items()->delete();
                 $cart->delete();
 
-                // 8. BẮN EVENT (PUB/SUB)
                 event(new OrderCreated($order));
 
                 return response()->json([
@@ -408,32 +394,28 @@ class ClientOrderController extends Controller
         return response()->json(['success' => true, 'data' => $order]);
     }
 
-    /**
-     * Xem chi tiết đơn hàng (Dành cho User đã login)
-     */
     public function show(Request $request, string $order_code)
     {
         $user = auth('sanctum')->user();
         $user = ($user instanceof \App\Models\User) ? $user : null;
         
-        // Đã thêm 'reviews' vào để load kèm trạng thái đánh giá
-        $order = Order::with(['items.product', 'items.combo', 'histories', 'reviews'])->where('order_code', $order_code)->first();
+        $order = Order::with(['items.product', 'items.combo', 'items.variant.attributeValues.attribute', 'histories', 'reviews'])->where('order_code', $order_code)->first();
 
         if (!$order) {
             return response()->json(['success' => false, 'message' => 'Không tìm thấy đơn hàng'], 404);
         }
 
-        // Bảo mật: Nếu có User_id, phải check xem đúng chính chủ không
         if (!$this->canAccessOrder($request, $order, $user)) {
             return response()->json(['success' => false, 'message' => 'Bạn không có quyền xem đơn hàng này'], 403);
+        }
+
+        if ($order) {
+            $this->enrichComboSelections($order);
         }
 
         return response()->json(['success' => true, 'data' => $order]);
     }
 
-    /**
-     * Khách hàng chủ động HỦY đơn hàng.
-     */
     public function update(UserUpdateOrderRequest $request, string $order_code)
     {
         $user = auth('sanctum')->user();
@@ -468,8 +450,6 @@ class ClientOrderController extends Controller
                     'payment_status' => 'failed',
                 ]);
 
-                // Checkout reserves these resources before an unpaid order is
-                // completed. Undo them atomically with the cancellation.
                 \App\Models\TierServiceUsage::where('order_id', $lockedOrder->id)
                     ->where('service_type', 'tier_discount')
                     ->delete();
@@ -485,8 +465,6 @@ class ClientOrderController extends Controller
                     ->get()
                     ->keyBy('id');
 
-                // Restore only an unpaid pending order. The same row lock also
-                // serializes this transition against a payment callback.
                 foreach ($lockedOrder->items as $item) {
                     if ($item->product_variant_id) {
                         ProductVariant::where('id', $item->product_variant_id)->increment('stock_quantity', $item->quantity);
@@ -512,7 +490,6 @@ class ClientOrderController extends Controller
                     }
                 }
 
-                // Ghi lịch sử rõ ràng
                 OrderStatusHistory::create([
                     'order_id'        => $lockedOrder->id,
                     'old_status'      => 'pending',
@@ -535,12 +512,8 @@ class ClientOrderController extends Controller
         return response()->json(['success' => false, 'message' => 'Xóa đơn hàng vĩnh viễn không được phép'], 403);
     }
     
-    /**
-     * Khách hàng đánh giá đơn hàng (Từng sản phẩm)
-     */
     public function review(Request $request, string $order_code)
     {
-        // Bao bọc toàn bộ code bằng try-catch để bắt mọi lỗi PHP/SQL
         try {
             $user = auth('sanctum')->user();
             $user = ($user instanceof \App\Models\User) ? $user : null;
@@ -558,7 +531,6 @@ class ClientOrderController extends Controller
                 return response()->json(['success' => false, 'message' => 'Bạn không có quyền đánh giá đơn hàng này'], 403);
             }
 
-            // Validate dữ liệu từ FormData
             $request->validate([
                 'reviews' => 'required|array|min:1|max:20',
                 'reviews.*.product_id' => 'nullable|integer|exists:products,id',
@@ -664,7 +636,7 @@ class ClientOrderController extends Controller
                     'rating'     => $itemData['rating'],
                     'comment'    => $itemData['comment'] ?? null,
                     'images'     => empty($imagePaths) ? null : $imagePaths,
-                    'status'     => 'approved', // Sửa từ 'published' thành 'approved' khớp với DB ENUM
+                    'status'     => 'approved',
                 ]);
 
                 if (!empty($itemData['product_id'])) {
@@ -693,7 +665,7 @@ class ClientOrderController extends Controller
                 'errors' => $e->errors()
             ], 422);
             
-        } catch (\Throwable $e) { // Dùng Throwable sẽ tóm được cả lỗi thiếu file (Class Not Found) hoặc lỗi Database Constraints
+        } catch (\Throwable $e) { 
             if (DB::transactionLevel() > 0) {
                 DB::rollBack();
             }
@@ -763,15 +735,11 @@ class ClientOrderController extends Controller
         ]);
     }
 
-    /**
-     * Chức năng Mua lại (Thêm toàn bộ sản phẩm của đơn hàng cũ vào giỏ)
-     */
     public function reorder(Request $request, string $order_code)
     {
         $user = auth('sanctum')->user();
         $user = ($user instanceof \App\Models\User) ? $user : null;
         
-        // Lấy đơn hàng cùng chi tiết sản phẩm
         $order = Order::with('items')->where('order_code', $order_code)->first();
 
         if (!$order) {
@@ -780,7 +748,6 @@ class ClientOrderController extends Controller
 
         $sessionId = $request->header('X-Cart-Session-Id');
 
-        // 1. Tìm hoặc tạo Giỏ hàng (Cart) gốc cho User hoặc Session
         if (!$this->canAccessOrder($request, $order, $user)) {
             return response()->json(['success' => false, 'message' => 'Khong co quyen mua lai don hang nay'], 403);
         }
@@ -797,8 +764,6 @@ class ClientOrderController extends Controller
             $cart->save();
         }
 
-        // Reorder can import a legacy order with hundreds of lines. Reject the
-        // operation up-front rather than letting it bypass cart-size limits.
         $cartSummary = \App\Models\CartItem::where('cart_id', $cart->id)
             ->selectRaw('COUNT(*) as line_count, COALESCE(SUM(quantity), 0) as total_quantity')
             ->first();
@@ -820,25 +785,20 @@ class ClientOrderController extends Controller
         $addedItems = [];
         $outOfStockItems = [];
 
-        // 2. LƯU CHUẨN XÁC VÀO BẢNG CHI TIẾT GIỎ HÀNG (CartItem) NẾU CÒN HÀNG
         foreach ($order->items as $item) {
             $isAvailable = true;
             $qtyToAdd = $item->quantity;
 
-            // Trường hợp 1: Sản phẩm lẻ
             if ($item->product_variant_id) {
                 $variant = \App\Models\ProductVariant::with('product')->find($item->product_variant_id);
-                // Cần kiểm tra tồn kho và trạng thái sản phẩm
                 if (!$variant || $variant->stock_quantity <= 0 || (isset($variant->product->is_active) && !$variant->product->is_active)) {
                     $isAvailable = false;
                 } else {
                     $qtyToAdd = min($item->quantity, $variant->stock_quantity);
                 }
             } 
-            // Trường hợp 2: Sản phẩm là Combo
             elseif ($item->combo_id) {
                 $combo = \App\Models\Combo::find($item->combo_id);
-                // Giả định Combo có trường status hoặc is_active
                 if (!$combo || (isset($combo->status) && $combo->status !== 'active') || (isset($combo->is_active) && !$combo->is_active)) {
                     $isAvailable = false;
                 } else {
@@ -856,7 +816,6 @@ class ClientOrderController extends Controller
                     }
                 }
                 }
-                // Removed hardcoded $qtyToAdd = 1; to preserve the original $item->quantity
 
             if ($isAvailable) {
                 $addedItems[] = $item->product_name;
@@ -868,7 +827,6 @@ class ClientOrderController extends Controller
                         ->first();
 
                     if ($cartItem) {
-                        // Tránh việc cộng dồn vượt quá tồn kho, nhưng tạm thời cứ cộng (Cart Controller sẽ check lại khi thanh toán)
                         $cartItem->increment('quantity', $qtyToAdd);
                     } else {
                         $newCartItem = new \App\Models\CartItem();
@@ -931,9 +889,7 @@ class ClientOrderController extends Controller
             ]
         ]);
     }
-        /**
-     * Xuất hóa đơn PDF (khách hàng tự xuất)
-     */
+
     public function invoice(Request $request, string $order_code)
     {
         $user = auth('sanctum')->user();
@@ -943,7 +899,6 @@ class ClientOrderController extends Controller
                     ->where('order_code', $order_code)
                     ->firstOrFail();
 
-        // Bảo mật: chỉ chủ đơn hàng mới được xuất
         if (!$this->canAccessOrder($request, $order, $user)) {
             abort(403, 'Bạn không có quyền xuất hóa đơn này.');
         }
@@ -951,7 +906,6 @@ class ClientOrderController extends Controller
         $pdf = Pdf::loadView('invoices.order', compact('order'));
         $pdf->setPaper('A4');
 
-        // Cấu hình để hỗ trợ CSS và hình ảnh tốt hơn
         $pdf->setOptions([
             'isHtml5ParserEnabled' => true,
             'isRemoteEnabled'      => true,
@@ -960,9 +914,6 @@ class ClientOrderController extends Controller
 
         return $pdf->download("hoa-don-{$order->order_code}.pdf");
     }
-        /**
-     * Khách hàng yêu cầu hoàn hàng / hoàn tiền
-     */
     private function canAccessOrder(Request $request, Order $order, ?\App\Models\User $user = null): bool
     {
         if ($order->user_id !== null) {
@@ -1057,7 +1008,6 @@ class ClientOrderController extends Controller
                     }
                 }
 
-                // Cập nhật trạng thái đơn hàng và thông tin ngân hàng thụ hưởng
                 $lockedOrder->update([
                     'status' => 'return_requested',
                     'refund_bank_name' => $request->refund_bank_name,
@@ -1065,12 +1015,8 @@ class ClientOrderController extends Controller
                     'refund_account_name' => mb_strtoupper($request->refund_account_name, 'UTF-8'),
                     'refund_amount' => null,
                     'refund_note' => null,
-                    // Order::return_images is cast to an array; passing the
-                    // array directly avoids persisting a double-encoded value.
                     'return_images' => $imagePaths ?: null
                 ]);
-
-                // Lưu lịch sử
                 OrderStatusHistory::create([
                     'order_id'        => $lockedOrder->id,
                     'old_status'      => 'delivered',
@@ -1141,7 +1087,6 @@ class ClientOrderController extends Controller
                         'message' => 'Bạn đã đồng ý thỏa thuận. Chuyên viên của chúng tôi sẽ liên hệ để thu hồi sản phẩm.'
                     ]);
                 } else {
-                    // Khách không đồng ý, đưa về trạng thái delivered hoặc hủy yêu cầu hoàn trả
                     $lockedOrder->update([
                         'status' => 'delivered',
                         'refund_amount' => 0,
@@ -1166,6 +1111,61 @@ class ClientOrderController extends Controller
         } catch (\Throwable $e) {
             report($e);
             return response()->json(['success' => false, 'message' => 'Không thể xác nhận phương án hoàn trả lúc này. Vui lòng thử lại sau.'], 500);
+        }
+    }
+
+    private function enrichComboSelections($orders)
+    {
+        $orderList = $orders instanceof \Illuminate\Database\Eloquent\Collection ? $orders : collect([$orders]);
+        $variantIds = [];
+        
+        foreach ($orderList as $order) {
+            if (!$order->items) continue;
+            foreach ($order->items as $item) {
+                if ($item->combo_id && is_array($item->combo_selections)) {
+                    foreach ($item->combo_selections as $sel) {
+                        if (isset($sel['selected_variant_id'])) {
+                            $variantIds[] = $sel['selected_variant_id'];
+                        }
+                    }
+                }
+            }
+        }
+        
+        if (empty($variantIds)) return;
+        
+        $variants = \App\Models\ProductVariant::with(['product', 'attributeValues.attribute'])->whereIn('id', array_unique($variantIds))->get()->keyBy('id');
+        
+        foreach ($orderList as $order) {
+            if (!$order->items) continue;
+            foreach ($order->items as $item) {
+                if ($item->combo_id && is_array($item->combo_selections)) {
+                    $selections = $item->combo_selections;
+                    $changed = false;
+                    foreach ($selections as &$sel) {
+                        if (isset($sel['selected_variant_id'])) {
+                            $variant = $variants->get($sel['selected_variant_id']);
+                            if ($variant && $variant->product) {
+                                if (empty($sel['product_name'])) {
+                                    $sel['product_name'] = $variant->product->name;
+                                    $changed = true;
+                                }
+                                if (empty($sel['attributes'])) {
+                                    $sel['attributes'] = $variant->variant_attributes;
+                                    $changed = true;
+                                }
+                                if (empty($sel['price'])) {
+                                    $sel['price'] = $variant->promotional_price ?: $variant->price;
+                                    $changed = true;
+                                }
+                            }
+                        }
+                    }
+                    if ($changed) {
+                        $item->combo_selections = $selections;
+                    }
+                }
+            }
         }
     }
 }

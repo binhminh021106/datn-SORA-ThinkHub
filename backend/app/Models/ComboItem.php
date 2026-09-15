@@ -22,7 +22,6 @@ class ComboItem extends Model
         return $this->belongsTo(Product::class, 'product_id');
     }
 
-    // Biến thể cố định (Nếu null -> Khách tự chọn)
     public function variant()
     {
         return $this->belongsTo(ProductVariant::class, 'product_variant_id');

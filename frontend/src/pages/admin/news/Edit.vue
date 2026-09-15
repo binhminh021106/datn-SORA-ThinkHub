@@ -1,6 +1,6 @@
 <template>
     <div class="news-edit-wrapper ">
-        <!-- Loading Shimmer lúc tải chi tiết lần đầu -->
+
         <div v-if="isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
             <h1 class="logo-shimmer mb-3">ThinkHub</h1>
             <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ liệu bài viết...</p>
@@ -8,7 +8,7 @@
 
         <div class="container-fluid py-4" v-else>
             <form @submit.prevent="handleSave" autocomplete="off">
-                <!-- Header chung 1 hàng -->
+
                 <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
                     <div class="d-flex align-items-center">
                         <router-link :to="{ name: 'admin-news' }"
@@ -22,31 +22,31 @@
                         </div>
                     </div>
                     
-                    <!-- Các nút tác vụ được đưa lên góc phải -->
+
                     <div class="d-flex align-items-center gap-2">
                         <button type="button" class="btn btn-light border px-4 py-2 fw-semibold shadow-sm text-nowrap" @click="router.push('/admin/news')">Hủy bỏ</button>
                         <button type="submit" class="btn btn-brand btn-brand-solid px-4 py-2 fw-bold shadow-sm text-nowrap" :disabled="isSaving">
-                            <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>
+                            <AdminLoadingSpinner v-if="isSaving" class="me-2" size="16" />
                             <i v-else class="bi bi-save-fill me-1"></i> Lưu Thay Đổi
                         </button>
                     </div>
                 </div>
 
                 <div class="row g-4">
-                    <!-- CỘT TRÁI: Nội dung chính -->
+
                     <div class="col-lg-8">
                         <div class="card border-0 shadow-sm rounded-4 mb-4">
                             <div class="card-body p-4">
                                 <h6 class="fw-bold mb-4 text-dark"><i class="bi bi-journal-text text-brand me-2"></i>Nội dung bài viết</h6>
                                 
-                                <!-- Tiêu đề -->
+
                                 <div class="mb-4">
                                     <label class="form-label fw-semibold text-dark required">Tiêu đề bài viết</label>
                                     <input type="text" class="form-control form-control-lg border rounded-3 bg-white shadow-sm fs-5 fw-bold" 
                                            v-model="formData.title" placeholder="Nhập tiêu đề thật hấp dẫn..." required>
                                 </div>
 
-                                <!-- Đường dẫn (Slug) -->
+
                                 <div class="mb-4">
                                     <label class="form-label fw-semibold text-dark required">Đường dẫn thân thiện (Slug)</label>
                                     <div class="input-group shadow-sm rounded-3 overflow-hidden border">
@@ -55,14 +55,14 @@
                                     </div>
                                 </div>
 
-                                <!-- Mô tả ngắn -->
+
                                 <div class="mb-4">
                                     <label class="form-label fw-semibold text-dark required">Mô tả ngắn (Excerpt)</label>
                                     <textarea class="form-control border rounded-3 bg-white shadow-sm" rows="3" v-model="formData.excerpt" 
                                               placeholder="Tóm tắt ngắn gọn nội dung bài viết (sẽ hiển thị ở trang chủ và danh sách tin tức)..." required></textarea>
                                 </div>
 
-                                <!-- Trình soạn thảo Quill Editor -->
+
                                 <div class="mb-3">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <label class="form-label fw-semibold text-dark required mb-0">Nội dung chi tiết</label>
@@ -80,10 +80,10 @@
                         </div>
                     </div>
 
-                    <!-- CỘT PHẢI: Cài đặt & SEO -->
+
                     <div class="col-lg-4">
                         
-                        <!-- Ảnh đại diện -->
+
                         <div class="card border-0 shadow-sm rounded-4 mb-4">
                             <div class="card-body p-4 text-center">
                                 <h6 class="fw-bold text-start mb-3 text-dark"><i class="bi bi-image text-brand me-2"></i>Ảnh đại diện</h6>
@@ -99,7 +99,7 @@
                             </div>
                         </div>
 
-                        <!-- Cài đặt bài viết -->
+
                         <div class="card border-0 shadow-sm rounded-4 mb-4">
                             <div class="card-body p-4">
                                 <h6 class="fw-bold mb-3 text-dark"><i class="bi bi-gear text-brand me-2"></i>Cài đặt chung</h6>
@@ -128,7 +128,7 @@
                             </div>
                         </div>
 
-                        <!-- SEO Meta -->
+
                         <div class="card border-0 shadow-sm rounded-4 mb-4">
                             <div class="card-body p-4">
                                 <h6 class="fw-bold mb-3 text-dark"><i class="bi bi-search text-brand me-2"></i>Tối ưu tìm kiếm (SEO)</h6>
@@ -212,7 +212,7 @@ const formData = reactive({
     meta_title: '', meta_description: '', meta_keywords: ''
 });
 
-// TANSTACK QUERY: Lấy thông tin bài viết cũ
+
 const { data: newsDetail, refetch: refetchDetail } = useQuery({
     queryKey: ['admin-news-detail', route.params.id],
     queryFn: async () => {
@@ -222,7 +222,7 @@ const { data: newsDetail, refetch: refetchDetail } = useQuery({
     staleTime: 5 * 60 * 1000
 });
 
-// Tự động đồng bộ hóa thông tin chi tiết bài viết vào form phản hồi nhanh
+
 watch(newsDetail, (item) => {
     if (item) {
         Object.assign(formData, { ...item, content: item.content || '' });
@@ -292,7 +292,7 @@ const removeImage = () => {
     isRemoveImage.value = true;
 };
 
-// TANSTACK MUTATION: Thực thi lưu bài viết
+
 const { mutate: mutateUpdate, isPending: isSaving } = useMutation({
     mutationFn: async (submitData) => {
         return adminApiClient.post(`/news/${formData.id}`, submitData);

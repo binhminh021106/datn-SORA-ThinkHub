@@ -86,7 +86,6 @@
                 <div class="p-4 bg-light rounded-4 border text-center flex-fill d-flex flex-column justify-content-center">
                   <h6 class="fw-bold mb-3">Icon/Huy hiệu Hạng</h6>
                   <div class="mb-3 border rounded-circle bg-white shadow-sm position-relative mx-auto overflow-hidden d-flex justify-content-center align-items-center" style="height: 120px; width: 120px; padding: 0.5rem;">
-                    <!-- Sử dụng SoraImage cho xem trước ảnh -->
                     <SoraImage 
                       :src="previewIcon" 
                       :placeholder="placeholderImg"
@@ -103,7 +102,7 @@
               
               <div class="col-12 text-end border-top pt-4">
                 <button type="submit" class="btn btn-brand px-5 fw-bold text-white rounded-pill shadow-sm" :disabled="isSaving || !form.name">
-                  <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span> CẬP NHẬT
+                  <AdminLoadingSpinner v-if="isSaving" class="me-2" size="16" /> CẬP NHẬT
                 </button>
               </div>
             </div>
@@ -168,9 +167,7 @@ const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
   } else Swal.fire('Lỗi', 'Mất kết nối Server', 'error');
 };
 
-// ==========================================
-// TANSTACK VUE QUERY - FETCH DATA
-// ==========================================
+
 const { data: tierResponse, isLoading: isTierLoading, isError } = useQuery({
   queryKey: ['adminTier', tierId],
   queryFn: async () => {
@@ -214,9 +211,7 @@ const handleUpload = (e) => {
   }
 };
 
-// ==========================================
-// TANSTACK VUE QUERY - MUTATIONS
-// ==========================================
+
 const updateTierMutation = useMutation({
   mutationFn: async (formData) => {
     const res = await axios.post(`${API_URL}/admin/tiers/${tierId}`, formData, { headers: getHeaders() });

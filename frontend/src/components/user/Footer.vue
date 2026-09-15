@@ -73,14 +73,16 @@
                      v-model="email" required>
               <button type="submit" class="btn border-0 position-absolute end-0 top-50 translate-middle-y text-secondary-custom" 
                       style="padding: 5px 10px;" :disabled="isSubscribing">
-                <i v-if="isSubscribing" class="spinner-border spinner-border-sm"></i>
+                <AdminLoadingSpinner v-if="isSubscribing" size="16" />
                 <i v-else class="bi bi-arrow-right fs-5"></i>
               </button>
             </form>
             
             <div class="contact-info mt-4">
               <p class="text-white small mb-2 fw-medium"><i class="bi bi-geo-alt text-secondary-custom me-2 fs-6"></i> {{ s.footer_address || '123 Đường Ngọc Hồi, Hà Nội' }}</p>
-              <p class="text-white small mb-0 fw-medium"><i class="bi bi-envelope text-secondary-custom me-2 fs-6"></i> {{ s.footer_email || 'SORA@GMAIL.COM' }}</p>
+              <p class="text-white small mb-2 fw-medium"><i class="bi bi-telephone text-secondary-custom me-2 fs-6"></i> {{ hotlineDisplay }}</p>
+              <p class="text-white small mb-2 fw-medium"><i class="bi bi-envelope text-secondary-custom me-2 fs-6"></i> {{ s.footer_email || 'SORA@GMAIL.COM' }}</p>
+              <p class="text-white small mb-0 fw-medium"><i class="bi bi-clock text-secondary-custom me-2 fs-6"></i> {{ s.footer_opening_hours || '09:00 - 21:00 (Từ Thứ 2 đến Chủ Nhật)' }}</p>
             </div>
           </div>
 
@@ -137,6 +139,16 @@ const safeSocials = computed(() => {
     .filter((social) => social.url);
 });
 
+const hotlineDisplay = computed(() => {
+    if (props.previewData && Array.isArray(props.previewData.footer_trust_items)) {
+        const item = props.previewData.footer_trust_items.find(i => i.icon === 'bi-headset');
+        if (item && typeof item.subtitle === 'string') {
+            return item.subtitle.replace(/Hotline:\s*/i, '').trim();
+        }
+    }
+    return settingsStore.hotlinePhone;
+});
+
 const router = useRouter();
 const email = ref('');
 const isSubscribing = ref(false);
@@ -155,14 +167,7 @@ const safeNavigate = (routeName, options = {}) => {
             window.scrollTo({ top: 0, behavior: 'smooth' }); 
         }
     } else {
-        Swal.fire({ 
-            toast: true, 
-            position: 'bottom-end', 
-            icon: 'info', 
-            title: 'Tính năng đang được phát triển!', 
-            showConfirmButton: false, 
-            timer: 2000 
-        });
+        Toast.fire({ icon: 'info', title: 'Tính năng đang được phát triển!' });
     }
 };
 
@@ -177,12 +182,7 @@ const subscribeNewsletter = () => {
     
     setTimeout(() => {
         isSubscribing.value = false;
-        Swal.fire({
-            icon: 'success',
-            title: 'Đăng ký thành công!',
-            text: 'Cảm ơn bạn đã quan tâm. Thông tin ưu đãi sẽ được gửi đến email của bạn.',
-            confirmButtonColor: '#9f273b'
-        });
+        Toast.fire({ icon: 'success', title: 'Đăng ký nhận bản tin thành công!' });
         email.value = '';
     }, 1000);
 };

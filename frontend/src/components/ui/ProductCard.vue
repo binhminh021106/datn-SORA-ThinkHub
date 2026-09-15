@@ -3,20 +3,18 @@
     
     <div class="position-relative bg-white text-center border-bottom sora-img-container" style="border-color: #f8f9fa !important;" :class="{'has-hover-image': showHoverImage && hasHoverImage(product)}">
       
-      <!-- Compare Button -->
       <button
         type="button"
         v-if="showCompare"
         @click.stop="handleCompareClick"
-        class="compare-btn position-absolute top-0 start-0 m-3 z-index-2 border-0 bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center"
-        style="width: 38px; height: 38px; z-index: 10;"
+        class="compare-btn position-absolute start-0 ms-3 z-index-2 border-0 bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center"
+        style="top: 16px; width: 38px; height: 38px; z-index: 10;"
         :class="{ 'active': isProductInCompare }"
         :title="isProductInCompare ? 'Bỏ so sánh' : 'Thêm so sánh'"
       >
         <i class="bi bi-arrow-left-right fs-6 transition-colors" style="margin-top: 2px;"></i>
       </button>
 
-      <!-- Wishlist Button -->
       <button
         type="button"
         v-if="showWishlist"
@@ -29,14 +27,15 @@
         <i :class="heartIconClass" class="fs-5 transition-colors" style="margin-top: 2px;"></i>
       </button>
 
-      <div v-if="showBadges" class="position-absolute start-0 d-flex flex-column gap-2 z-index-3 pointer-events-none text-start" :style="{ top: showCompare ? '60px' : '15px', left: '15px' }">
-        <span v-if="product.is_new && !isOutOfStock" class="badge bg-white text-dark border border-light-subtle shadow-sm font-oswald tracking-widest px-2 py-1 rounded-0" style="font-size: 0.65rem;">MỚI</span>
-        <span v-if="product.promotional_price && !isOutOfStock" class="badge text-white shadow-sm font-oswald tracking-widest px-2 py-1 rounded-0" style="background-color: #cc1e2e; font-size: 0.65rem;">SALE</span>
+      <div v-if="showBadges" class="position-absolute start-0 top-0 d-flex flex-column z-index-3 pointer-events-none text-start">
+        <span v-if="product.is_new && !isOutOfStock" class="badge text-white shadow-sm font-oswald tracking-widest px-3 py-1" style="background-color: #9f273b; font-size: 0.7rem; border-radius: 18px 0 18px 0;">MỚI</span>
+        <span v-if="product.promotional_price && !isOutOfStock" class="badge text-white shadow-sm font-oswald tracking-widest px-3 py-1 mt-1" style="background-color: #cc1e2e; font-size: 0.7rem; border-radius: 18px 0 18px 0;">SALE</span>
       </div>
 
       <router-link
         :to="{ name: 'productDetail', params: { shop_slug: shopSlug, slug: product.slug } }"
         class="d-block w-100 text-decoration-none"
+        @click="handlePreload(product)"
       >
         <div class="ratio ratio-1x1 w-100 overflow-hidden position-relative">
           <div v-if="isOutOfStock" class="position-absolute w-100 h-100 d-flex align-items-center justify-content-center pointer-events-none" style="background-color: rgba(255, 255, 255, 0.4); z-index: 3; top: 0; left: 0;">
@@ -62,6 +61,7 @@
             decoding="async"
             class="sora-hover-img position-absolute top-0 start-0 w-100 h-100 object-fit-cover"
             style="object-position: center;"
+            @error="handleHoverImageError"
           >
         </div>
       </router-link>
@@ -74,30 +74,34 @@
         <router-link
           :to="{ name: 'productDetail', params: { shop_slug: shopSlug, slug: product.slug } }"
           class="text-decoration-none flex-grow-1 d-flex flex-column justify-content-center"
+          @click="handlePreload(product)"
         >
           <h6 class="text-dark font-oswald text-uppercase fw-normal mb-2 text-truncate-2 product-name" style="font-size: 1.05rem; letter-spacing: 1px; line-height: 1.4;">{{ product.name }}</h6>
           
           <div class="d-flex justify-content-between align-items-center mb-2">
             <p class="font-oswald text-secondary small fw-light mb-0" style="letter-spacing: 0.8px; font-size: 0.75rem; opacity: 0.7;">{{ product.category?.name || 'TRANG SỨC SORA' }}</p>
             
-            <!-- Luxury constraint: Show only one badge (Out of Stock > Scarcity > Sold Count > In Stock) -->
             <span v-if="isOutOfStock" class="small font-oswald text-uppercase tracking-widest text-secondary" style="font-size: 0.7rem; opacity: 0.8;">
               <i class="bi bi-slash-circle me-1"></i>Hết hàng
             </span>
             <span v-else-if="effectiveStock > 0 && effectiveStock <= 5" class="small font-oswald text-uppercase tracking-widest" style="font-size: 0.7rem; color: #cc1e2e;">
               Còn {{ effectiveStock }}
             </span>
-            <span v-else-if="product.sold_count > 0" class="small text-muted font-oswald text-uppercase tracking-widest" style="font-size: 0.7rem;">
-              Đã bán {{ product.sold_count }}
-            </span>
             <span v-else class="small text-success font-oswald text-uppercase tracking-widest opacity-75" style="font-size: 0.7rem;">
               Sẵn hàng
             </span>
           </div>
           
-          <div class="d-flex justify-content-start align-items-center mb-3 gap-1" style="color: #e7ce7d; font-size: 0.9rem;">
-            <i v-for="n in 5" :key="n" class="bi" :class="n <= Math.round(getProtectedRating(product.rating_avg || product.rating, product.reviews_count || product.reviews?.length)) ? 'bi-star-fill' : 'bi-star text-muted'"></i>
-            <span class="small text-muted ms-1 font-oswald">({{ getProtectedRating(product.rating_avg || product.rating, product.reviews_count || product.reviews?.length).toFixed(1) }})</span>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div v-if="(product.reviews_count || product.reviews?.length) > 0" class="d-flex justify-content-start align-items-center gap-1" style="color: #e7ce7d; font-size: 0.9rem;">
+              <i v-for="n in 5" :key="n" class="bi" :class="n <= Math.round(getProtectedRating(product.rating_avg || product.rating, product.reviews_count || product.reviews?.length)) ? 'bi-star-fill' : 'bi-star text-muted'"></i>
+              <span class="small text-muted ms-1 font-oswald">({{ getProtectedRating(product.rating_avg || product.rating, product.reviews_count || product.reviews?.length).toFixed(1) }})</span>
+            </div>
+            <div v-else></div>
+            
+            <span v-if="product.sold_count > 0" class="small text-muted font-oswald text-uppercase tracking-widest" style="font-size: 0.7rem;">
+              Đã bán {{ product.sold_count }}
+            </span>
           </div>
         </router-link>
 
@@ -105,7 +109,7 @@
           <div class="d-flex align-items-center justify-content-between">
             <template v-if="priceInfo.isRange">
               <div class="d-flex align-items-baseline gap-2 flex-wrap w-100">
-                <span class="text-main fw-normal font-oswald text-truncate" :title="`${formatCurrency(priceInfo.min)} - ${formatCurrency(priceInfo.max)}`" style="font-size: 1.15rem; letter-spacing: 0.5px;">{{ formatCompactPrice(priceInfo.min) }} - {{ formatCompactPrice(priceInfo.max) }}</span>
+                <span class="text-main fw-normal font-oswald text-truncate" :title="`Từ ${formatCurrency(priceInfo.min)}`" style="font-size: 1.15rem; letter-spacing: 0.5px;">Từ {{ formatCurrency(priceInfo.min) }}</span>
               </div>
             </template>
             <template v-else>
@@ -152,6 +156,16 @@ import Toast from '@/utils/toastConfig';
 import soraAlert from '@/utils/soraAlertConfig';
 import { getStorageUrl } from '@/utils/env';
 import { getProtectedRating, formatCompactPrice, getUserToken } from '@/composables/useUtilities';
+
+const handlePreload = (prod) => {
+  try {
+    sessionStorage.setItem('preloaded_product', JSON.stringify({
+      ...prod,
+      images: [prod.thumbnail_image],
+      is_preloaded: true
+    }));
+  } catch(e){}
+};
 
 const props = defineProps({
   product: { type: Object, required: true },
@@ -273,7 +287,40 @@ const getImageUrl = (path) => {
 };
 
 const handleImageError = (e) => {
-  e.target.src = '/Sora-placeholder.png';
+  const target = e.target;
+  const p = props.product;
+  
+  if (target.dataset.fallbackIndex === undefined) {
+    target.dataset.fallbackIndex = -1;
+  }
+  
+  let fallbackIndex = parseInt(target.dataset.fallbackIndex);
+  fallbackIndex++;
+  
+  let fallbackImages = [];
+  
+  if (p.galleries && p.galleries.length > 0) {
+    fallbackImages = fallbackImages.concat(p.galleries.map(g => g.image_path || g.image));
+  }
+  
+  if (p.variants && p.variants.length > 0) {
+    fallbackImages = fallbackImages.concat(p.variants.map(v => v.image || v.image_url));
+  }
+  
+  fallbackImages = fallbackImages.filter(img => img && img !== p.thumbnail_image);
+  fallbackImages = [...new Set(fallbackImages)];
+  
+  if (fallbackIndex < fallbackImages.length) {
+    target.dataset.fallbackIndex = fallbackIndex;
+    target.src = getImageUrl(fallbackImages[fallbackIndex]);
+  } else if (!target.src.includes('Sora-placeholder.png')) {
+    target.src = '/Sora-placeholder.png';
+  }
+};
+
+const handleHoverImageError = (e) => {
+  // Ẩn luôn ảnh hover nếu bị lỗi, để hiện ảnh chính thay vì chữ xanh dương lỗi
+  e.target.style.display = 'none';
 };
 
 const hasHoverImage = (product) => {

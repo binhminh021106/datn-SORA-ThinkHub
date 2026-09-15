@@ -1,13 +1,13 @@
 <template>
   <div class="banner-index-wrapper">
     
-    <!-- 1. SHIMMER CHỈ CHẠY 1 LẦN ĐẦU TIÊN KHI CHƯA CÓ CACHE (isLoading) -->
+    <!-- Shimmer Loading -->
     <div v-if="isLoading" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
       <h1 class="logo-shimmer mb-3">ThinkHub</h1>
       <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ liệu banner...</p>
     </div>
 
-    <!-- 2. NỘI DUNG CHÍNH (Đã có Cache) -->
+    <!-- Nội dung -->
     <div class="container-fluid py-4" v-else>
       <div class="row mb-3 align-items-center">
         <div class="col-md-6">
@@ -20,7 +20,7 @@
         </div>
       </div>
 
-      <!-- TABS RESPONSIVE -->
+      <!-- Tabs -->
       <div class="mb-4" :class="{'opacity-50 pe-none': isReorderMode}">
         <ul class="nav nav-underline border-bottom mb-2 pb-1" style="flex-wrap: wrap !important; gap: 8px;">
           <li class="nav-item">
@@ -44,8 +44,8 @@
             <i class="bi" :class="isReorderMode ? 'bi-arrows-move text-warning' : 'bi-images'"></i> 
             {{ isReorderMode ? 'Kéo thả dòng để thay đổi thứ tự ưu tiên' : 'Danh sách Banner' }}
             
-            <!-- Icon Loading nhỏ góc Header khi fetch ngầm -->
-            <span v-if="isFetching && !isLoading" class="spinner-border spinner-border-sm text-brand ms-2" title="Đang đồng bộ dữ liệu..."></span>
+            <!-- Loading -->
+            <AdminLoadingSpinner v-if="isFetching && !isLoading" class="text-brand ms-2" title="Đang đồng bộ dữ liệu..." size="16" />
           </h6>
           
           <div class="d-flex align-items-center flex-wrap gap-2">
@@ -61,7 +61,7 @@
               {{ isReorderMode ? 'Hủy Sắp Xếp' : 'Sắp xếp thứ tự' }}
             </button>
             <button v-if="isReorderMode" class="btn btn-sm btn-success text-white fw-bold px-4 shadow-sm py-2" @click="saveReorder" :disabled="isSavingOrder">
-              <span v-if="isSavingOrder" class="spinner-border spinner-border-sm me-2"></span>
+              <AdminLoadingSpinner v-if="isSavingOrder" class="me-2" size="16" />
               <i class="bi bi-floppy-fill me-1" v-else></i> LƯU THỨ TỰ
             </button>
           </div>
@@ -82,7 +82,6 @@
                 </tr>
               </thead>
               <tbody>
-                <!-- SKELETON LOADING KHI CHUYỂN TAB / ĐANG FETCH NGẦM -->
                 <template v-if="isFetching && !isLoading && displayBanners.length === 0">
                   <tr v-for="i in 5" :key="'skel'+i" class="placeholder-glow">
                     <td class="px-4 text-center"><span class="placeholder col-6 rounded"></span></td>
@@ -113,7 +112,7 @@
 
                   <td class="px-4 py-3">
                     <div class="d-flex gap-2 align-items-center">
-                      <!-- Tích hợp @error fallback image -->
+                      <!-- Fallback image -->
                       <div class="position-relative shadow-sm border rounded overflow-hidden bg-white cursor-pointer" style="width: 80px; height: 45px;" @click="openPreview(banner.image_desktop, 'image')">
                         <img :src="getImageUrl(banner.image_desktop)" @error="handleImageError" class="w-100 h-100 object-fit-cover">
                         <span class="position-absolute bottom-0 start-0 bg-dark text-white opacity-75 fw-bold" style="font-size: 0.55rem; padding: 1px 4px;">PC</span>
@@ -182,7 +181,7 @@
       </div>
     </div>
 
-    <!-- MODAL XEM NHANH ẢNH/VIDEO -->
+    <!-- Modal Xem Nhanh -->
     <div v-if="previewMedia.show" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.8); z-index: 1055" @click="closePreview" @vue:mounted="el => el.focus()" @keydown.esc="closePreview">
       <div class="modal-dialog modal-dialog-centered modal-lg" @click.stop>
         <div class="modal-content bg-transparent border-0">
@@ -219,7 +218,7 @@ const isSavingOrder = ref(false);
 const draggedIndex = ref(null);
 const dragOverIndex = ref(null);
 const reorderList = ref([]);
-const isMutating = ref(false); // Khóa UI khi có mutation đang chạy
+const isMutating = ref(false);
 
 const getImageUrl = (path) => path ? getFullImage(path) : '/Sora-placeholder.png';
 const handleImageError = (e) => { e.target.src = '/Sora-placeholder.png'; };
@@ -244,7 +243,7 @@ const openPreview = (url, type) => {
 };
 const closePreview = () => { previewMedia.value.show = false; };
 
-// --- TANSTACK QUERY: FETCH LIST ---
+// --- FETCH DATA ---
 const fetchBanners = async () => {
   const res = await adminApiClient.get(`/banners`);
   const result = res.data;
@@ -273,7 +272,7 @@ watch(rawBanners, (newList) => {
   }
 }, { immediate: true });
 
-// Sync data thô ra view, tách riêng logic Reorder
+// Sync data thô ra view
 const allCount = computed(() => localBanners.value.filter(b => !b.deleted_at).length);
 const trashedCount = computed(() => localBanners.value.filter(b => b.deleted_at).length);
 
@@ -294,7 +293,7 @@ const displayBanners = computed(() => {
   return list;
 });
 
-// --- MUTATIONS: CẬP NHẬT TRẠNG THÁI (OPTIMISTIC UPDATE) ---
+// --- CẬP NHẬT TRẠNG THÁI ---
 const statusMutation = useMutation({
   mutationFn: async ({ id, title, status }) => {
     const fd = new FormData(); fd.append('_method', 'PUT'); fd.append('title', title); fd.append('status', status);
@@ -324,7 +323,7 @@ const saveBannerStatus = (banner) => {
   });
 };
 
-// --- MUTATIONS: XÓA ---
+// --- XÓA ---
 const deleteMutation = useMutation({
   mutationFn: async (id) => {
     const res = await adminApiClient.delete(`/banners/${id}`);
@@ -334,7 +333,6 @@ const deleteMutation = useMutation({
     isMutating.value = true;
     await queryClient.cancelQueries({ queryKey: ['admin', 'banners'] });
     const prev = queryClient.getQueryData(['admin', 'banners']);
-    // Optimistic Delete
     if (Array.isArray(prev)) {
       queryClient.setQueryData(['admin', 'banners'], old => (
         Array.isArray(old) ? old.filter(Boolean).map(b => b.id === id ? { ...b, deleted_at: new Date().toISOString(), sort_order: null } : b) : []
@@ -363,7 +361,7 @@ const confirmDelete = async (id) => {
   }
 };
 
-// --- MUTATIONS: XÓA VĨNH VIỄN ---
+// --- XÓA VĨNH VIỄN ---
 const { mutate: forceDeleteBanner } = useMutation({
   mutationFn: async (id) => {
     const res = await adminApiClient.delete(`/banners/${id}/force`);
@@ -400,7 +398,7 @@ const handleForceDelete = async (id) => {
   }
 };
 
-// --- MUTATIONS: KHÔI PHỤC ---
+// --- KHÔI PHỤC ---
 const restoreMutation = useMutation({
   mutationFn: async (id) => {
     const res = await adminApiClient.post(`/banners/${id}/restore`);
@@ -408,7 +406,6 @@ const restoreMutation = useMutation({
   },
   onMutate: () => { isMutating.value = true; },
   onSuccess: (data) => {
-    // Cập nhật record bằng data thật từ server trả về để cache chuẩn
     queryClient.setQueryData(['admin', 'banners'], old => (
       Array.isArray(old) ? old.filter(Boolean).map(b => b.id === data.id ? data : b) : []
     ));
@@ -419,7 +416,7 @@ const restoreMutation = useMutation({
 });
 const handleRestore = (id) => restoreMutation.mutate(id);
 
-// --- KÉO THẢ (REORDER) ---
+// --- KÉO THẢ ---
 const toggleReorderMode = () => {
   isReorderMode.value = !isReorderMode.value;
   if (isReorderMode.value && Array.isArray(localBanners.value)) {
@@ -447,7 +444,7 @@ const saveReorder = async () => {
     if(res) {
         Swal.fire({icon: 'success', title: 'Đã lưu thứ tự!', timer: 1500, showConfirmButton: false});
         isReorderMode.value = false; 
-        queryClient.invalidateQueries({ queryKey: ['admin', 'banners'] }); // Fetch lại lấy thứ tự chuẩn từ DB
+        queryClient.invalidateQueries({ queryKey: ['admin', 'banners'] });
     }
   } catch (e) {
     Swal.fire('Lỗi', 'Không thể lưu thứ tự', 'error');

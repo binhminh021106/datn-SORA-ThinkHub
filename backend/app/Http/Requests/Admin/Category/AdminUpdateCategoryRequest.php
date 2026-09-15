@@ -36,7 +36,7 @@ class AdminUpdateCategoryRequest extends FormRequest
             'parent_id' => ['nullable', 'integer', 'exists:categories,id', 'not_in:' . $id],
             'description' => ['nullable', 'string', 'max:5000'],
             'status' => ['required', Rule::in(['active', 'hidden'])],
-            'thumbnail' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:15360'],  // 15MB
+            'thumbnail' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:15360'],  
             'sort_order' => ['nullable', 'integer', 'min:0'],
             'attributes_schema' => ['nullable', 'string'], 
         ];

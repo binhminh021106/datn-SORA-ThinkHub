@@ -8,7 +8,6 @@ class OrderItem extends Model
 {
     protected $table = 'order_items';
 
-    // Vì bảng này lưu snapshot, không cần updated_at, created_at
     public $timestamps = false;
 
     protected $fillable = [

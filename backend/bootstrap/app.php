@@ -18,8 +18,6 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
 
-        // Production must explicitly list the reverse proxy / load-balancer addresses.
-        // Trusting every private range lets a caller that can reach the app directly spoof client IP headers.
         $middleware->trustProxies(at: array_values(array_filter(array_map(
             'trim',
             explode(',', env('TRUSTED_PROXIES', '127.0.0.1'))

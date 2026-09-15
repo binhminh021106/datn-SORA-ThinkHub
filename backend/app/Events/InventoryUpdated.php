@@ -13,7 +13,7 @@ class InventoryUpdated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public $type; // 'variant'|'combo' etc
+    public $type; 
     public $id;
     public $payload;
 
@@ -26,7 +26,6 @@ class InventoryUpdated implements ShouldBroadcastNow
 
     public function broadcastOn(): array
     {
-        // Inventory changes are relevant to admin; combos/products may also trigger public-admin updates
         $channels = [new PrivateChannel('admin')];
         if (in_array($this->type, ['product', 'combo'], true)) {
             $channels[] = new Channel('public-admin');

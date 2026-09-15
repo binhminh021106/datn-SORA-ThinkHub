@@ -1,7 +1,7 @@
 <template>
   <div class="gallery-edit-wrapper ">
     
-    <!-- SKELETON CHỜ KHI KHÔNG CÓ CACHE -->
+
     <div v-if="isLoading" class="container-fluid py-4">
         <div class="row mb-4"><div class="col-6"><span class="placeholder col-8 rounded" style="height: 40px;"></span></div></div>
         <div class="card border-0 shadow-sm rounded-4 max-w-800 mx-auto placeholder-glow p-4">
@@ -20,7 +20,7 @@
               <h3 class="fw-bold text-dark mb-0">Cập Nhật Chân Dung SORA</h3>
               <p class="text-muted small mb-0 mt-1">
                 Chỉnh sửa thông tin hình ảnh
-                <span v-if="isFetching" class="spinner-border spinner-border-sm text-brand ms-2" title="Đang đồng bộ ngầm"></span>
+                <AdminLoadingSpinner v-if="isFetching" class="text-brand ms-2" title="Đang đồng bộ ngầm" size="16" />
               </p>
             </div>
           </div>
@@ -78,10 +78,10 @@
 
             <div class="border-top mt-5 pt-4 d-flex justify-content-end gap-3">
               <button type="button" class="btn btn-light me-2 px-4 shadow-sm fw-bold border" @click="handleRestore" :disabled="isRestoring || isSubmitting">
-                <span v-if="isRestoring" class="spinner-border spinner-border-sm me-2"></span>Khôi phục gốc
+                <AdminLoadingSpinner v-if="isRestoring" class="me-2" size="16" />Khôi phục gốc
               </button>
               <button type="submit" class="btn btn-brand btn-brand-solid px-4 py-2 fw-bold shadow-sm d-flex align-items-center" :disabled="isSubmitting">
-                <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                <AdminLoadingSpinner v-if="isSubmitting" class="me-2" size="16" />
                 <i v-else class="bi bi-save me-2"></i>
                 {{ isSubmitting ? 'Đang cập nhật...' : 'Cập Nhật' }}
               </button>
@@ -100,7 +100,7 @@ import { ref, reactive, watchEffect } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
-import axios from 'axios'; // Phục hồi Axios 100% để đảm bảo hoạt động cực nhanh trên interceptors gốc
+import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 const BASE_URL = API_URL.replace('/api', '');
@@ -127,7 +127,7 @@ const form = reactive({
 
 const getHeaders = () => ({ 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
 
-// 1. LẤY DATA VÀ TẬN DỤNG CACHE TỐI ĐA (DÙNG AXIOS TRỞ LẠI)
+
 const fetchGalleryDetail = async () => {
   const res = await axios.get(`${API_URL}/admin/galleries/${galleryId}`, { headers: getHeaders() });
   return res.data.data;
@@ -190,7 +190,7 @@ const handleFileChange = (event) => {
   }
 };
 
-// 3. MUTATION CẬP NHẬT (SỬ DỤNG AXIOS ĐỂ TƯƠNG THÍCH MỌI INTERCEPTORS)
+
 const { mutate: updateGallery, isPending: isSubmitting } = useMutation({
   mutationFn: async (formData) => {
     const res = await axios.post(`${API_URL}/admin/galleries/${form.id}`, formData, { headers: getHeaders() });

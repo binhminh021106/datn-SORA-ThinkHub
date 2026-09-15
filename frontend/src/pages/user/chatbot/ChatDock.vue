@@ -1,9 +1,9 @@
 <template>
   <div class="chat-dock-wrapper">
-    <!-- Satellite buttons visible when expanded -->
+
     <transition name="fade-slide">
       <div v-if="expanded" class="chat-dock-actions">
-        <!-- SORA AI Satellite Button -->
+
         <button 
           @click="activeSora = true" 
           class="chat-satellite-btn sora-sat" 
@@ -11,7 +11,7 @@
         >
           <i class="bi bi-robot fs-4"></i>
         </button>
-        <!-- Live Chat Satellite Button -->
+
         <button 
           @click="activeLive = true" 
           class="chat-satellite-btn live-sat" 
@@ -22,13 +22,13 @@
       </div>
     </transition>
 
-    <!-- Central toggle button -->
+
     <button :class="['chat-dock-toggle', { open: expanded }]" class="btn rounded-circle shadow-lg" @click="togglePanel" title="Mở menu hỗ trợ">
       <i class="bi bi-chat-dots-fill fs-4"></i>
       <span v-if="showAnyChat" class="status-dot"></span>
     </button>
 
-    <!-- Chat widgets (always rendered, hidden with hideFab) -->
+
     <ChatbotWidget :visible="activeSora" :hideFab="true" @update:visible="activeSora = $event" />
     <SoraChatWidget :visible="activeLive" :hideFab="true" @update:visible="activeLive = $event" />
   </div>
@@ -49,7 +49,7 @@ const togglePanel = () => {
 
 const showAnyChat = computed(() => activeSora.value || activeLive.value);
 
-// When SORA opens, close Live Chat and satellites
+
 watch(() => activeSora.value, (newVal) => {
   if (newVal) {
     activeLive.value = false;
@@ -57,7 +57,7 @@ watch(() => activeSora.value, (newVal) => {
   }
 });
 
-// When Live Chat opens, close SORA and satellites
+
 watch(() => activeLive.value, (newVal) => {
   if (newVal) {
     activeSora.value = false;

@@ -74,7 +74,7 @@
 
           <button type="submit" class="btn btn-brand w-100 py-2 fw-bold text-white shadow-sm mb-3"
             :disabled="isLoading">
-            <span v-if="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+            <AdminLoadingSpinner v-if="isLoading" class="me-2" size="16" />
             {{ isLoading ? 'ĐANG XỬ LÝ...' : 'ĐĂNG KÝ TÀI KHOẢN' }}
           </button>
 

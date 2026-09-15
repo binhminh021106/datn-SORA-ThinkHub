@@ -64,7 +64,6 @@ watch(
   { immediate: true }
 );
 
-// ===== XỬ LÝ GOOGLE AUTH OVERLAY =====
 watch(
   () => route.fullPath,
   async () => {
@@ -98,7 +97,6 @@ watch(
   },
   { immediate: true }
 );
-// ===== KẾT THÚC: LOGIC LƯU MÃ AFFILIATE TỰ ĐỘNG =====
 
 const checkAuthentication = async () => {
   const token = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token') ||
@@ -184,6 +182,16 @@ input[type="password"]::-ms-reveal,
 input[type="password"]::-ms-clear,
 input::-webkit-credentials-auto-fill-button {
   display: none !important;
+}
+
+/* Hide native number input spin buttons (arrows) */
+.hide-arrow::-webkit-outer-spin-button,
+.hide-arrow::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.hide-arrow[type="number"] {
+  -moz-appearance: textfield;
 }
 
 .app-auth-check-screen {

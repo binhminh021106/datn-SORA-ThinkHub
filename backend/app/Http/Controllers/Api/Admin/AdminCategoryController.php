@@ -32,7 +32,6 @@ class AdminCategoryController extends Controller
             $query->withTrashed();
         }
 
-        // Tải eager-load liên quan danh mục cha và đếm số lượng danh mục con trực tiếp
         $categories = $query->with('parent')
             ->withCount('children')
             ->orderByRaw('sort_order IS NULL, sort_order ASC')
@@ -45,9 +44,6 @@ class AdminCategoryController extends Controller
         ]);
     }
 
-    /**
-     * Lấy danh sách cây danh mục hoạt động phục vụ gán danh mục cha
-     */
     public function getTree()
     {
         $categories = Category::where('status', 'active')
@@ -60,10 +56,6 @@ class AdminCategoryController extends Controller
             'data' => $categories
         ]);
     }
-
-    /**
-     * Tạo mới danh mục
-     */
     public function store(AdminStoreCategoryRequest $request)
     {
         try {
@@ -97,9 +89,6 @@ class AdminCategoryController extends Controller
         }
     }
 
-    /**
-     * Chi tiết danh mục
-     */
     public function show($id)
     {
         $category = Category::withTrashed()->with('parent')->findOrFail($id);
@@ -108,10 +97,6 @@ class AdminCategoryController extends Controller
             'data' => $category
         ]);
     }
-
-    /**
-     * Cập nhật thông tin danh mục
-     */
     public function update(AdminUpdateCategoryRequest $request, $id)
     {
         try {
@@ -163,9 +148,6 @@ class AdminCategoryController extends Controller
         }
     }
 
-    /**
-     * Xóa mềm danh mục
-     */
     public function destroy($id)
     {
         $category = Category::findOrFail($id);
@@ -189,9 +171,6 @@ class AdminCategoryController extends Controller
         ]);
     }
 
-    /**
-     * Khôi phục danh mục từ thùng rác
-     */
     public function restore($id)
     {
         $category = Category::withTrashed()->findOrFail($id);
@@ -220,9 +199,6 @@ class AdminCategoryController extends Controller
         ]);
     }
 
-    /**
-     * Sắp xếp kéo thả đồng bộ
-     */
     public function reorder(Request $request)
     {
         $request->validate([

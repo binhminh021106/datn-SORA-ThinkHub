@@ -37,7 +37,7 @@
           <div v-if="isMapLoading"
             class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-white bg-opacity-75"
             style="z-index: 10;">
-            <div class="spinner-border text-brand mb-2" style="width: 3rem; height: 3rem;"></div>
+            <AdminLoadingSpinner class="text-brand mb-2" style="width: 3rem; height: 3rem;" />
             <div class="fw-bold text-brand text-uppercase tracking-widest small">Đang kết nối vệ tinh Mapbox...</div>
           </div>
         </div>
@@ -87,7 +87,6 @@ const handleMapWheel = (e) => {
 const handleKeyDown = (e) => { if (e.key === 'Control' && leafletMap) leafletMap.scrollWheelZoom.enable(); };
 const handleKeyUp = (e) => { if (e.key === 'Control' && leafletMap) leafletMap.scrollWheelZoom.disable(); };
 
-// TOKEN MAPBOX CỦA BẠN (Dùng để quét đường đi rất tốt)
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
 const warehouses = ref([
@@ -160,7 +159,6 @@ const initMap = async (isAutoTriggered = false) => {
     if (!leafletMap) {
       leafletMap = window.L.map('tracking-map', { scrollWheelZoom: false }).setView(p1, 6);
       
-      // Bản đồ Google Maps (Không cần API Key)
       window.L.tileLayer('https://mt1.google.com/vt/lyrs=m&hl=vi&x={x}&y={y}&z={z}', {
         attribution: '&copy; Google Maps'
       }).addTo(leafletMap);
@@ -169,7 +167,6 @@ const initMap = async (isAutoTriggered = false) => {
       window.addEventListener('keydown', handleKeyDown);
       window.addEventListener('keyup', handleKeyUp);
 
-      // Fix lỗi icon mặc định của Leaflet khi dùng với Vite/Webpack
       const defaultIcon = window.L.icon({
           iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
           shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
@@ -182,7 +179,7 @@ const initMap = async (isAutoTriggered = false) => {
     } else {
       leafletMap.eachLayer((layer) => {
         if (layer !== routingLine && layer !== truckMarker && !layer._url) {
-          leafletMap.removeLayer(layer); // Xóa các marker rác cũ
+          leafletMap.removeLayer(layer); 
         }
       });
       if (routingLine) leafletMap.removeLayer(routingLine);

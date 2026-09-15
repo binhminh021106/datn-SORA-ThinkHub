@@ -19,9 +19,7 @@ class AdminBrandController extends Controller
         return is_numeric($max) ? $max + 1 : 1;
     }
 
-    /**
-     * Lấy danh sách thương hiệu đồng bộ tối ưu ORM
-     */
+
     public function index(Request $request)
     {
         $query = Brand::query();
@@ -32,7 +30,7 @@ class AdminBrandController extends Controller
             $query->withTrashed();
         }
 
-        // Tải eager-load đếm số sản phẩm liên quan và sắp xếp tối ưu
+
         $brands = $query->withCount('products')
             ->orderByRaw('sort_order IS NULL, sort_order ASC') 
             ->orderBy('id', 'desc') 
@@ -44,9 +42,7 @@ class AdminBrandController extends Controller
         ]);
     }
 
-    /**
-     * Tạo mới thương hiệu
-     */
+
     public function store(AdminStoreBrandRequest $request)
     {
         $data = $request->validated();
@@ -69,9 +65,7 @@ class AdminBrandController extends Controller
         ]);
     }
 
-    /**
-     * Chi tiết thương hiệu
-     */
+
     public function show($id)
     {
         $brand = Brand::withTrashed()->withCount('products')->findOrFail($id);
@@ -81,9 +75,7 @@ class AdminBrandController extends Controller
         ]);
     }
 
-    /**
-     * Cập nhật thông tin đối tác thương hiệu
-     */
+
     public function update(AdminUpdateBrandRequest $request, $id)
     {
         try {
@@ -128,9 +120,7 @@ class AdminBrandController extends Controller
         }
     }
 
-    /**
-     * Xóa mềm thương hiệu
-     */
+
     public function destroy($id)
     {
         $brand = Brand::findOrFail($id);
@@ -144,9 +134,7 @@ class AdminBrandController extends Controller
         ]);
     }
 
-    /**
-     * Khôi phục thương hiệu từ thùng rác
-     */
+
     public function restore($id)
     {
         $brand = Brand::withTrashed()->findOrFail($id);
@@ -164,9 +152,7 @@ class AdminBrandController extends Controller
         ]);
     }
 
-    /**
-     * Lưu thứ tự kéo thả của đối tác hoạt động
-     */
+
     public function reorder(Request $request)
     {
         $items = $request->items;

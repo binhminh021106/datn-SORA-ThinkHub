@@ -75,15 +75,12 @@ class ClientProfileUpdateRequest extends FormRequest
                         $validator->errors()->add('birthday', 'Bạn chưa đủ tuổi sử dụng');
                     }
                 } catch (\Exception $e) {
-                    // Lỗi format date đã được xử lý ở rules()
                 }
             }
 
-            // Kiểm tra số điện thoại đã tồn tại chưa
             if ($this->has('phone') && $this->phone && preg_match('/^0[3|5|7|8|9][0-9]{8}$/', $this->phone)) {
                 $userId = auth('sanctum')->id();
                 
-                // Fallback nếu guard sanctum chưa được khởi tạo (do thiếu middleware trên route)
                 if (!$userId && $this->bearerToken()) {
                     $token = \Laravel\Sanctum\PersonalAccessToken::findToken($this->bearerToken());
                     if ($token) {
