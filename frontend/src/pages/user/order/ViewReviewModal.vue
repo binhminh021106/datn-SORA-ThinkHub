@@ -2,7 +2,7 @@
   <div v-if="isOpen" class="custom-modal-backdrop" @click.self="$emit('close')">
     <div class="custom-modal-content shadow-lg border-0 rounded-0 slide-up" style="max-width: 800px;">
       
-      <!-- Header -->
+
       <div class="modal-header-luxury p-4 d-flex justify-content-between align-items-center">
         <div>
           <h3 class="mb-1 fw-bold font-serif text-white tracking-wider">ĐÁNH GIÁ CỦA BẠN</h3>
@@ -14,14 +14,14 @@
       <div class="modal-body p-4 overflow-auto bg-light" style="max-height: 70vh;">
         <SoraListSkeleton v-if="isLoading" :rows="3" image-size="70px" card />
 
-        <!-- Content -->
+
         <div v-else-if="reviews && reviews.length > 0">
           <p class="text-muted mb-4 fst-italic">Đây là những đánh giá của bạn về sản phẩm trong đơn hàng này.</p>
           
-          <!-- Lặp qua từng đánh giá -->
+
           <div v-for="review in reviews" :key="review.id" class="bg-white p-4 shadow-sm border border-light-subtle mb-4 rounded">
             
-            <!-- Thông tin sản phẩm -->
+
             <div class="d-flex align-items-center gap-3 border-bottom pb-3 mb-3">
               <div v-if="review.product" class="product-img border p-1" style="width: 60px; height: 60px; flex-shrink: 0;">
                 <img :src="getProductImage(review.product)" @error="handleImageError" class="w-100 h-100 object-fit-cover">
@@ -35,7 +35,7 @@
               </div>
             </div>
 
-            <!-- Star Rating Display -->
+
             <div class="mb-3 text-center">
               <div class="d-flex justify-content-center gap-2 mb-2">
                 <i v-for="star in 5" :key="star" 
@@ -46,7 +46,7 @@
               <span class="small text-muted fw-medium text-uppercase">{{ ratingLabels[review.rating] }}</span>
             </div>
 
-            <!-- Comment -->
+
             <div v-if="review.comment" class="mb-3 p-3 bg-light border-start border-4 border-warning rounded">
               <p class="mb-0">{{ review.comment }}</p>
             </div>
@@ -54,7 +54,7 @@
               Không có nhận xét
             </div>
 
-            <!-- Images Display -->
+
             <div v-if="review.images && review.images.length > 0" class="mt-3">
               <p class="small text-muted fw-bold mb-2">Hình ảnh:</p>
               <div class="d-flex flex-wrap gap-2">
@@ -76,7 +76,7 @@
         </div>
       </div>
 
-      <!-- Footer -->
+
       <div class="modal-footer p-3 px-4 border-top bg-white d-flex justify-content-end gap-2">
         <button @click="$emit('close')" class="btn btn-luxury-neutral border-0 px-4 fw-bold text-uppercase small py-2">Đóng</button>
       </div>
@@ -86,6 +86,8 @@
 </template>
 
 <script setup>
+import { getStorageUrl } from '@/utils/env';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { ref, watch } from 'vue';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
@@ -123,7 +125,17 @@ const getProductImage = (product) => {
 };
 
 const handleImageError = (e) => { 
-  e.target.src = defaultPlaceholder; 
+  let fallback = '/Sora-placeholder.png';
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_client_active) {
+          fallback = getStorageUrl(store.settings.placeholder_client_active);
+      }
+  } catch (err) {}
+  
+  if (e.target.src !== fallback) {
+      e.target.src = fallback;
+  }
 };
 
 const formatDate = (dateString) => {
@@ -139,7 +151,7 @@ const openImagePreview = (imagePath) => {
   window.open(url, '_blank');
 };
 
-// Lấy đánh giá khi modal mở
+
 watch(() => props.isOpen, async (newVal) => {
   if (newVal && props.order) {
     isLoading.value = true;
@@ -182,7 +194,7 @@ watch(() => props.isOpen, async (newVal) => {
 .slide-up { animation: slideUp 0.3s ease-out; }
 
 
-/* Button Luxury States */
+
 .btn-luxury-neutral, .btn-luxury-danger, .btn-luxury-success, .btn-luxury-success-light {
   position: relative;
   overflow: hidden;
@@ -319,7 +331,7 @@ watch(() => props.isOpen, async (newVal) => {
   transform: rotate(45deg) translateY(200%);
 }
 
-/* Banner (Sora Banner Style) */
+
 .text-champagne {
   color: #ead089 !important;
 }
@@ -469,7 +481,7 @@ watch(() => props.isOpen, async (newVal) => {
   }
 }
 
-/* Image wrapper (Border xoắn) */
+
 .img-wrapper {
   padding: 1rem;
 }
@@ -492,13 +504,13 @@ watch(() => props.isOpen, async (newVal) => {
   aspect-ratio: 4/5;
 }
 
-/* Đường kẻ ngăn cách (Divider) */
+
 .divider {
   width: 4rem;
   height: 2px;
 }
 
-/* Card Mission & Vision */
+
 .card-hover {
   transition: box-shadow 0.3s ease;
 }
@@ -518,7 +530,7 @@ watch(() => props.isOpen, async (newVal) => {
   opacity: 0.05;
 }
 
-/* Icon vòng tròn */
+
 .icon-circle {
   width: 64px;
   height: 64px;
@@ -526,11 +538,11 @@ watch(() => props.isOpen, async (newVal) => {
   border: 1px solid;
 }
 
-/* Khối sản phẩm (Fix ảnh vuông tuyệt đối) */
+
 .square-ratio {
   width: 100%;
   padding-bottom: 100%;
-  /* Tạo tỷ lệ vuông chuẩn 1:1 */
+
   display: block;
   overflow: hidden;
 }
@@ -548,12 +560,12 @@ watch(() => props.isOpen, async (newVal) => {
   z-index: 2;
 }
 
-/* Link khám phá */
+
 .product-link:hover {
   color: #cc1e2e !important;
 }
 
-/* Combo Carousel Container Overrides */
+
 .combos-editorial {
   background-color: #fffafa;
   overflow: hidden;

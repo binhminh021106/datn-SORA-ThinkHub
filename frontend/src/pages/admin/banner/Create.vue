@@ -82,7 +82,10 @@
                   </div>
                 </div>
                 <input type="file" class="d-none" id="deskUpload" accept="image/*" @change="(e) => handleUpload(e, 'desk')">
-                <label for="deskUpload" class="btn btn-sm btn-outline-brand rounded-pill w-100 fw-semibold cursor-pointer"><i class="bi bi-upload"></i> Chọn ảnh PC</label>
+                <div class="d-flex gap-2">
+                  <label for="deskUpload" class="btn btn-sm btn-outline-brand rounded-pill flex-fill fw-semibold cursor-pointer mb-0"><i class="bi bi-upload"></i> Chọn ảnh</label>
+                  <button v-if="previewDesk" type="button" class="btn btn-sm btn-outline-danger rounded-pill fw-semibold cursor-pointer" @click="clearMedia('desk')"><i class="bi bi-trash"></i> Xóa</button>
+                </div>
               </div>
 
               <div class="p-4 bg-light rounded-4 border text-center flex-fill">
@@ -95,7 +98,10 @@
                   </div>
                 </div>
                 <input type="file" class="d-none" id="mobUpload" accept="image/*" @change="(e) => handleUpload(e, 'mob')">
-                <label for="mobUpload" class="btn btn-sm btn-outline-brand rounded-pill w-100 fw-semibold cursor-pointer"><i class="bi bi-upload"></i> Chọn ảnh Mobile</label>
+                <div class="d-flex gap-2">
+                  <label for="mobUpload" class="btn btn-sm btn-outline-brand rounded-pill flex-fill fw-semibold cursor-pointer mb-0"><i class="bi bi-upload"></i> Chọn ảnh</label>
+                  <button v-if="previewMob" type="button" class="btn btn-sm btn-outline-danger rounded-pill fw-semibold cursor-pointer" @click="clearMedia('mob')"><i class="bi bi-trash"></i> Xóa</button>
+                </div>
               </div>
 
               <div class="p-4 bg-light rounded-4 border text-center flex-fill">
@@ -108,13 +114,16 @@
                   </div>
                 </div>
                 <input type="file" class="d-none" id="videoUpload" accept="video/mp4,video/webm" @change="(e) => handleUpload(e, 'video')">
-                <label for="videoUpload" class="btn btn-sm btn-outline-brand rounded-pill w-100 fw-semibold cursor-pointer"><i class="bi bi-upload"></i> Chọn Video</label>
+                <div class="d-flex gap-2">
+                  <label for="videoUpload" class="btn btn-sm btn-outline-brand rounded-pill flex-fill fw-semibold cursor-pointer mb-0"><i class="bi bi-upload"></i> Chọn Video</label>
+                  <button v-if="previewVideo" type="button" class="btn btn-sm btn-outline-danger rounded-pill fw-semibold cursor-pointer" @click="clearMedia('video')"><i class="bi bi-trash"></i> Xóa</button>
+                </div>
               </div>
             </div>
             
             <div class="col-12 text-end border-top pt-4">
               <button type="submit" class="btn btn-brand px-5 fw-bold text-white rounded-pill shadow-sm" :disabled="isSaving || !form.title">
-                <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span> LƯU BANNER
+                <AdminLoadingSpinner v-if="isSaving" class="me-2" size="16" /> LƯU BANNER
               </button>
             </div>
           </div>
@@ -122,6 +131,18 @@
       </div>
     </div>
   </div>
+
+  <!-- CROPPER MODAL -->
+  <ImageCropperModal
+    :show="showCropper"
+    :image-url="cropperUrl"
+    :aspect-ratio="cropperRatio"
+    :allow-ratio-change="true"
+    :max-size-kb="400"
+    title="Cắt ảnh Banner"
+    @crop="handleCrop"
+    @close="closeCropper"
+  />
 </template>
 
 <script setup>
@@ -130,6 +151,7 @@ import adminApiClient from '@/utils/adminApiClient.js';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import { useQueryClient } from '@tanstack/vue-query';
+import ImageCropperModal from '@/components/admin/ImageCropperModal.vue';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -164,22 +186,49 @@ const handleUpload = (e, type) => {
     if(type === 'video' && f.size > 50 * 1024 * 1024) { return Swal.fire('Lỗi', 'Video tối đa 50MB', 'error'); }
     if(type !== 'video' && f.size > 15 * 1024 * 1024) { return Swal.fire('Lỗi', 'Ảnh tối đa 15MB', 'error'); }
     
-    if(type === 'desk') { 
-      if (previewDesk.value) URL.revokeObjectURL(previewDesk.value);
-      fileDesk.value = f; 
-      previewDesk.value = URL.createObjectURL(f); 
-    }
-    else if(type === 'mob') { 
-      if (previewMob.value) URL.revokeObjectURL(previewMob.value);
-      fileMob.value = f; 
-      previewMob.value = URL.createObjectURL(f); 
-    }
-    else if(type === 'video') {
+    if (type === 'video') {
       if (previewVideo.value) URL.revokeObjectURL(previewVideo.value);
       fileVideo.value = f; 
       previewVideo.value = URL.createObjectURL(f); 
+    } else {
+      // Open cropper modal instead of saving directly
+      cropperType.value = type;
+      cropperRatio.value = type === 'desk' ? (1920/600) : (800/1200);
+      cropperUrl.value = URL.createObjectURL(f);
+      showCropper.value = true;
     }
+    e.target.value = '';
   }
+};
+
+// State cho Cropper Modal
+const showCropper = ref(false);
+const cropperUrl = ref('');
+const cropperRatio = ref(1);
+const cropperType = ref('');
+
+const handleCrop = (data) => {
+  if (cropperType.value === 'desk') {
+    if (previewDesk.value) URL.revokeObjectURL(previewDesk.value);
+    fileDesk.value = data.file;
+    previewDesk.value = data.blobUrl;
+  } else if (cropperType.value === 'mob') {
+    if (previewMob.value) URL.revokeObjectURL(previewMob.value);
+    fileMob.value = data.file;
+    previewMob.value = data.blobUrl;
+  }
+  showCropper.value = false;
+};
+
+const closeCropper = () => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+};
+
+const clearMedia = (type) => {
+  if (type === 'desk') { fileDesk.value = null; previewDesk.value = null; document.getElementById('deskUpload').value = ''; }
+  else if (type === 'mob') { fileMob.value = null; previewMob.value = null; document.getElementById('mobUpload').value = ''; }
+  else if (type === 'video') { fileVideo.value = null; previewVideo.value = null; document.getElementById('videoUpload').value = ''; }
 };
 
 onMounted(async () => {

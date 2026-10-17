@@ -1,7 +1,7 @@
 <template>
   <div class="shop-page min-vh-100 bg-white">
 
-    <!-- LỰA CHỌN LÝ TƯỞNG (DANH MỤC TOP) -->
+
     <section
       class="ideal-choices-section border-bottom sora-border-light sora-banner position-relative d-flex flex-column align-items-center justify-content-center overflow-hidden"
       style="height: 340px; padding: 20px 0;">
@@ -13,17 +13,20 @@
       <div class="banner-line-art banner-line-art-left"></div>
       <div class="banner-line-art banner-line-art-right"></div>
 
-      <div class="container-fluid px-3 position-relative z-index-2 w-100 h-100 d-flex flex-column justify-content-center">
+      <div
+        class="container-fluid px-3 position-relative z-index-2 w-100 h-100 d-flex flex-column justify-content-center">
         <div class="d-flex flex-column align-items-center text-center mb-2">
           <h2 class="fw-bold mb-1 font-serif text-gold-gradient"
-          style="font-size: clamp(1.8rem, 3.5vw, 2.5rem); letter-spacing: 0.05em; text-transform: uppercase;">Bộ Sưu Tập Trang Sức</h2>
+            style="font-size: clamp(1.8rem, 3.5vw, 2.5rem); letter-spacing: 0.05em; text-transform: uppercase;">Bộ Sưu
+            Tập Trang Sức</h2>
           <div class="d-flex align-items-center justify-content-center mb-2">
             <svg width="120" height="15" viewBox="0 0 150 20" xmlns="http://www.w3.org/2000/svg" style="opacity: 0.9;">
               <path d="M10 10h45m40 0h45M65 10c0-3 4-5 10-5s10 2 10 5-4 5-10 5-10-2-10-5z" stroke="#e7ce7d"
                 stroke-width="1.5" fill="none" />
             </svg>
           </div>
-          <p class="text-white-50 font-sans mx-auto mb-0" style="max-width: 800px; font-size: 0.9rem;">Khám phá những tuyệt tác trang sức tôn vinh đẳng cấp của bạn.</p>
+          <p class="text-white-50 font-sans mx-auto mb-0" style="max-width: 800px; font-size: 0.9rem;">Khám phá những
+            tuyệt tác trang sức tôn vinh đẳng cấp của bạn.</p>
         </div>
 
         <div v-if="isLoadingCategories" class="mx-auto w-100 mt-2" style="max-width: 900px;">
@@ -38,18 +41,17 @@
         </div>
 
         <div v-else class="mx-auto w-100 mt-2" style="max-width: 900px;">
-          <!-- LƯỚI DANH MỤC -->
+
           <transition-group name="cat-list" tag="div"
             class="row justify-content-center row-cols-2 row-cols-sm-3 row-cols-md-5 g-2 mb-0">
             <div class="col" v-for="cat in visibleCategories" :key="cat.id">
-              <div class="premium-category-item"
-                @click="filterByCategory(cat.slug)">
+              <div class="premium-category-item" @click="filterByCategory(cat.slug)">
                 <div class="premium-circle-img position-relative overflow-hidden">
                   <SoraSkeleton v-show="!categoryImagesLoaded[cat.id]" variant="image" width="100%" height="100%" circle
                     class="position-absolute top-0 start-0" />
                   <img :src="getImageUrl(cat.thumbnail)" loading="eager" fetchpriority="high" :alt="cat.name"
                     @load="categoryImagesLoaded[cat.id] = true" @error="handleImageError"
-                    class="w-100 h-100 object-fit-contain rounded-circle transition-transform duration-500 group-hover-scale-img"
+                    class="w-100 h-100 object-fit-cover rounded-circle transition-transform duration-500 group-hover-scale-img"
                     :style="{ opacity: categoryImagesLoaded[cat.id] ? 1 : 0, transition: 'opacity 0.4s ease' }">
                 </div>
                 <h3 class="premium-category-name text-truncate w-100 text-center pb-1">
@@ -62,14 +64,15 @@
       </div>
     </section>
 
-    <!-- MAIN CONTENT: BỘ LỌC VÀ LƯỚI SẢN PHẨM -->
+
     <div class="container-fluid px-4 py-4 mt-2 mx-auto" style="max-width: 1440px;">
       <div class="row">
 
-        <!-- SIDEBAR BỘ LỌC (LEFT) -->
+
         <div class="col-lg-2 col-md-3 d-none d-md-block sidebar-filter pe-3 pt-2"
           style="flex-basis: 23%; max-width: 23%;">
-          <div class="filter-panel position-sticky custom-scrollbar" :style="{ top: filterTop, transition: 'top 0.3s cubic-bezier(0.4, 0, 0.2, 1)', zIndex: 10, maxHeight: 'calc(100vh - ' + filterTop + ' - 20px)', overflowY: 'auto' }">
+          <div class="filter-panel position-sticky custom-scrollbar"
+            :style="{ top: filterTop, transition: 'top 0.3s cubic-bezier(0.4, 0, 0.2, 1)', zIndex: 10, maxHeight: 'calc(100vh - ' + filterTop + ' - 20px)', overflowY: 'auto' }">
 
             <div class="filter-header mb-4 border-bottom pb-3">
               <h5 class="text-uppercase fw-bold mb-0 d-flex align-items-center"
@@ -81,7 +84,7 @@
               </button>
             </div>
 
-            <!-- BỘ LỌC DANH MỤC -->
+
             <div class="filter-widget mb-4 border-bottom pb-3">
               <div class="d-flex justify-content-between align-items-center cursor-pointer"
                 :class="{ 'mb-3': filterCollapses.categories !== false }" @click="toggleCollapse('categories')">
@@ -98,7 +101,7 @@
               </div>
 
               <ul v-if="filterCollapses.categories !== false" class="list-unstyled mb-0 d-flex flex-column mt-3">
-                <!-- Mục Tất Cả -->
+
                 <li class="border-bottom sora-border-light last-no-border">
                   <div
                     class="d-flex align-items-center justify-content-between cursor-pointer py-2 px-1 category-elegant-item"
@@ -107,7 +110,7 @@
                     <i class="bi bi-chevron-right text-muted chevron-icon" style="font-size: 0.8rem;"></i>
                   </div>
                 </li>
-                <!-- Render Danh mục ẩn hình ảnh -->
+
                 <li v-for="cat in visibleSidebarCategories" :key="cat.id"
                   class="border-bottom sora-border-light last-no-border">
                   <div
@@ -117,7 +120,7 @@
                     <i class="bi bi-chevron-right text-muted chevron-icon" style="font-size: 0.8rem;"></i>
                   </div>
                 </li>
-                <!-- Nút Xem thêm cho Sidebar -->
+
                 <li v-if="categories.length > 5" class="text-center pt-2 pb-1">
                   <span @click="showAllSidebarCategories = !showAllSidebarCategories"
                     class="cursor-pointer text-muted transition-colors d-inline-block hover-text-primary"
@@ -129,7 +132,7 @@
               </ul>
             </div>
 
-            <!-- BỘ LỌC MÀU SẮC -->
+
             <div v-if="colorOptions.length > 0" class="filter-widget mb-4 border-bottom pb-3">
               <div class="d-flex justify-content-between align-items-center cursor-pointer"
                 :class="{ 'mb-3': filterCollapses.colors !== false }" @click="toggleCollapse('colors')">
@@ -145,17 +148,24 @@
               </div>
 
               <div v-if="filterCollapses.colors !== false" class="d-flex flex-wrap gap-2 mt-3">
-                <div v-for="(color, index) in colorOptions" :key="index"
-                  class="color-filter-circle cursor-pointer position-relative shadow-sm"
-                  :class="{ 'selected': selectedColors.includes(color) }"
-                  :style="{ backgroundColor: getColorCode(color) }" @click="toggleColor(color)" :title="color">
-                  <i v-if="selectedColors.includes(color)" class="bi bi-check position-absolute text-white"
-                    style="top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.2rem; text-shadow: 0px 0px 2px rgba(0,0,0,0.5);"></i>
-                </div>
+                <template v-for="(color, index) in colorOptions" :key="index">
+                  <div v-if="getColorCode(color) !== null"
+                    class="color-filter-circle cursor-pointer position-relative shadow-sm"
+                    :class="{ 'selected': selectedColors.includes(color) }"
+                    :style="{ backgroundColor: getColorCode(color) }" @click="toggleColor(color)" :title="color">
+                    <i v-if="selectedColors.includes(color)" class="bi bi-check position-absolute"
+                      :class="isLightColor(color) ? 'text-dark' : 'text-white'"
+                      style="top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 1.2rem; text-shadow: 0px 0px 2px rgba(0,0,0,0.5);"></i>
+                  </div>
+                  <button v-else class="btn btn-sm border bg-white variant-select-btn transition-all"
+                    :class="{ 'selected': selectedColors.includes(color) }" @click="toggleColor(color)">
+                    {{ color }}
+                  </button>
+                </template>
               </div>
             </div>
 
-            <!-- BỘ LỌC THUỘC TÍNH ĐỘNG KHÁC -->
+
             <div v-if="isLoadingAttributes" class="mb-5">
               <SoraListSkeleton :rows="3" :image="false" />
             </div>
@@ -203,31 +213,50 @@
           </div>
         </div>
 
-        <!-- MAIN PRODUCT GRID (RIGHT) -->
+
         <div class="col-lg-10 col-md-9 ps-lg-3" style="flex-basis: 77%; max-width: 77%;">
 
           <div
             class="shop-top-bar d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom sora-border-light">
-            <div class="result-count text-muted mb-3 mb-md-0 font-oswald text-uppercase tracking-wide" style="font-size: 0.9rem;">
-              <span v-if="!isLoadingProducts">Hiển thị {{ visibleResultStart }}–{{ visibleResultEnd }} của {{ pagination.total }} kết quả</span>
+            <div class="result-count text-muted mb-3 mb-md-0 font-oswald text-uppercase tracking-wide"
+              style="font-size: 0.9rem;">
+              <span v-if="!isLoadingProducts">Hiển thị {{ visibleResultStart }}–{{ visibleResultEnd }} của {{
+                pagination.total
+                }} kết quả</span>
               <span v-else>Đang tải dữ liệu...</span>
             </div>
 
             <div class="d-flex align-items-center gap-4">
               <div class="dropdown sort-dropdown position-relative">
-                <button class="btn btn-link text-decoration-none text-dark fw-bold d-flex align-items-center p-0 font-oswald text-uppercase tracking-wide" type="button" @click.stop="isSortDropdownOpen = !isSortDropdownOpen" style="font-size: 0.95rem;">
-                  Sắp xếp: 
-                  <span class="ms-2 text-muted fw-normal font-inter text-capitalize" style="letter-spacing: 0;">{{ sortOptions[filters.sort] }}</span>
-                  <i class="bi fs-6 text-muted ms-2" :class="isSortDropdownOpen ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                <button
+                  class="btn btn-link text-decoration-none text-dark fw-bold d-flex align-items-center p-0 font-oswald text-uppercase tracking-wide"
+                  type="button" @click.stop="isSortDropdownOpen = !isSortDropdownOpen" style="font-size: 0.95rem;">
+                  Sắp xếp:
+                  <span class="ms-2 text-muted fw-normal font-inter text-capitalize" style="letter-spacing: 0;">{{
+                    sortOptions[filters.sort] }}</span>
+                  <i class="bi fs-6 text-muted ms-2"
+                    :class="isSortDropdownOpen ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
                 </button>
-                <div v-show="isSortDropdownOpen" class="dropdown-menu-wrapper position-absolute shadow border-light-subtle rounded-1 bg-white" style="right: 0; top: 100%; min-width: 180px; z-index: 1000; margin-top: 8px;">
-                  <!-- Cầu nối tàng hình -->
+                <div v-show="isSortDropdownOpen"
+                  class="dropdown-menu-wrapper position-absolute shadow border-light-subtle rounded-1 bg-white"
+                  style="right: 0; top: 100%; min-width: 180px; z-index: 1000; margin-top: 8px;">
+
                   <div class="position-absolute w-100 bg-transparent" style="height: 12px; top: -12px; left: 0;"></div>
-                  <ul class="dropdown-menu position-static d-block w-100 shadow-none border-0 m-0" style="padding: 0.5rem 0;">
-                    <li><a class="dropdown-item custom-sort-item py-2 font-inter" :class="{ 'active-sort': filters.sort === 'recommended' }" href="#" @click.prevent="setSort('recommended')">Mặc định</a></li>
-                    <li><a class="dropdown-item custom-sort-item py-2 font-inter" :class="{ 'active-sort': filters.sort === 'new' }" href="#" @click.prevent="setSort('new')">Mới nhất</a></li>
-                    <li><a class="dropdown-item custom-sort-item py-2 font-inter" :class="{ 'active-sort': filters.sort === 'price_asc' }" href="#" @click.prevent="setSort('price_asc')">Giá tăng dần</a></li>
-                    <li><a class="dropdown-item custom-sort-item py-2 font-inter" :class="{ 'active-sort': filters.sort === 'price_desc' }" href="#" @click.prevent="setSort('price_desc')">Giá giảm dần</a></li>
+                  <ul class="dropdown-menu position-static d-block w-100 shadow-none border-0 m-0"
+                    style="padding: 0.5rem 0;">
+                    <li><a class="dropdown-item custom-sort-item py-2 font-inter"
+                        :class="{ 'active-sort': filters.sort === 'recommended' }" href="#"
+                        @click.prevent="setSort('recommended')">Mặc định</a></li>
+                    <li><a class="dropdown-item custom-sort-item py-2 font-inter"
+                        :class="{ 'active-sort': filters.sort === 'new' }" href="#" @click.prevent="setSort('new')">Mới
+                        nhất</a>
+                    </li>
+                    <li><a class="dropdown-item custom-sort-item py-2 font-inter"
+                        :class="{ 'active-sort': filters.sort === 'price_asc' }" href="#"
+                        @click.prevent="setSort('price_asc')">Giá tăng dần</a></li>
+                    <li><a class="dropdown-item custom-sort-item py-2 font-inter"
+                        :class="{ 'active-sort': filters.sort === 'price_desc' }" href="#"
+                        @click.prevent="setSort('price_desc')">Giá giảm dần</a></li>
                   </ul>
                 </div>
               </div>
@@ -248,8 +277,8 @@
           <!-- LƯỚI SẢN PHẨM THỰC TẾ -->
           <div v-else class="product-grid product-grid-live" :class="{ 'is-refreshing': isProductRefreshing }">
             <ProductCard v-for="product in allProducts" :key="product.id" :product="product" :shop-slug="shopSlug"
-              :is-in-wishlist="isFavourited(product.id)" :show-wishlist="true"
-              :show-compare="true" :show-add-to-cart="true" @toggle-wishlist="handleToggleWishlist" />
+              :is-in-wishlist="isFavourited(product.id)" :show-wishlist="true" :show-compare="true"
+              :show-add-to-cart="true" @toggle-wishlist="handleToggleWishlist" />
           </div>
 
           <!-- Empty State -->
@@ -279,7 +308,7 @@
                   :class="{ 'active': page !== '...' && Number(page) === Number(pagination.current_page), 'disabled': page === '...' }">
                   <span v-if="page === '...'" class="page-link border-0 text-muted bg-transparent px-2">...</span>
                   <button v-else class="page-link shadow-sm font-serif fw-bold" @click="changePage(page)">{{ page
-                    }}</button>
+                  }}</button>
                 </li>
 
                 <li class="page-item"
@@ -383,7 +412,7 @@
             :disabled="quickAddModal.isAdding || !isAllAttributesSelected || !currentVariant || currentVariant.stock_quantity <= 0"
             class="btn w-100 py-3 text-uppercase fw-bold text-white d-flex justify-content-center align-items-center gap-2"
             style="background-color: #9f273b; border-radius: 8px; font-family: 'Oswald', sans-serif; letter-spacing: 1px; border: none; font-size: 0.95rem;">
-            <span v-if="quickAddModal.isAdding" class="spinner-border spinner-border-sm" role="status"></span>
+            <AdminLoadingSpinner v-if="quickAddModal.isAdding" size="16" />
             <template v-else><i class="bi bi-cart-plus me-1"></i> XÁC NHẬN THÊM</template>
           </button>
         </div>
@@ -394,9 +423,10 @@
 </template>
 
 <script setup>
+import { useSettingsStore } from '@/stores/settingsStore';
 import { ref, shallowRef, onMounted, onUnmounted, reactive, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useQuery, keepPreviousData } from '@tanstack/vue-query';
+import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/vue-query';
 import ProductCard from '@/components/ui/ProductCard.vue';
 import SoraSkeleton from '@/components/ui/SoraSkeleton.vue';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
@@ -406,9 +436,13 @@ import Toast from '@/utils/toastConfig';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
 import { getStorageUrl } from '@/utils/env';
 import clientApiClient from '@/utils/clientApiClient';
+import { isColorAttribute, getColorCode, isLightColor, fetchColorDictionary } from '@/composables/useColorMapping';
+
+fetchColorDictionary();
 
 const route = useRoute();
 const router = useRouter();
+const queryClient = useQueryClient();
 const shopSlug = computed(() => route.params.shop_slug || 'aurora-jewelry');
 
 const soraAlert = createSoraAlert({
@@ -455,8 +489,8 @@ const showAllSidebarCategories = ref(false);
 
 const expandedAttributes = reactive({});
 const filterCollapses = ref({
-  categories: true,
-  colors: true
+  categories: false,
+  colors: false
 });
 
 
@@ -504,30 +538,22 @@ const handleBirthdayCouponFromUrl = async () => {
       ensureCartSession: true,
       ignoreAuthRedirect: true
     });
-    
- if (data.success) {
+
+    if (data.success) {
       // Lưu lại mã vào bộ nhớ tạm của trình duyệt
       localStorage.setItem('birthday_coupon_code', data.coupon || code);
-      
-      // BẮT SỰ KIỆN VÀ HIỂN THỊ TOAST THÔNG BÁO XANH THÀNH CÔNG
-      Toast.fire({ 
-        icon: 'success', 
-        title: data.message || 'Áp dụng mã voucher thành công!' 
+
+      // Hiển thị toast thành công
+      Toast.fire({
+        icon: 'success',
+        title: data.message || 'Áp dụng mã voucher thành công!'
       });
     } else {
       localStorage.removeItem('birthday_coupon_code');
-      soraAlert.fire({
-        icon: 'error',
-        title: 'Không thể áp dụng voucher',
-        text: data.message || 'Voucher chi danh cho thanh vien hang Bac tro len.'
-      });
+      Toast.fire({ icon: 'error', title: data.message || 'Không thể áp dụng voucher' });
     }
   } catch (error) {
-    soraAlert.fire({
-      icon: 'error',
-      title: 'Lỗi áp dụng voucher',
-      text: 'Không thể kiểm tra voucher lúc này.'
-    });
+    Toast.fire({ icon: 'error', title: 'Không thể kiểm tra voucher lúc này.' });
   } finally {
     const { coupon, ...query } = route.query;
     router.replace({ query }).catch(() => { });
@@ -541,7 +567,19 @@ const formatPrice = (price) => {
 
 const getImageUrl = (path) => getStorageUrl(path);
 
-const handleImageError = (e) => { e.target.src = '/Sora-placeholder.png'; };
+const handleImageError = (e) => { 
+  let fallback = '/Sora-placeholder.png';
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_client_active) {
+          fallback = getStorageUrl(store.settings.placeholder_client_active);
+      }
+  } catch (err) {}
+  
+  if (e.target.src !== fallback) {
+      e.target.src = fallback;
+  }
+};
 const handleHoverImageError = (e) => { e.target.style.display = 'none'; };
 const hasHoverImage = (product) => product.hover_image && product.hover_image !== product.thumbnail_image;
 
@@ -549,27 +587,9 @@ const handleToggleWishlist = (product) => {
   toggleFavourite(product, Toast, soraAlert, router);
 };
 
-const isColorAttribute = (attrName) => {
-  const name = attrName.toLowerCase();
-  return name.includes('màu') || name.includes('color');
-};
-
 const isMaterialAttribute = (attrName) => {
   const name = attrName.toLowerCase();
   return name.includes('chất liệu') || name.includes('material');
-};
-
-const getColorCode = (colorName) => {
-  const map = {
-    'đỏ': '#cc1e2e', 'red': '#cc1e2e',
-    'xanh': '#2e5b9f', 'blue': '#2e5b9f', 'xanh dương': '#2e5b9f',
-    'vàng': '#e7ce7d', 'gold': '#e7ce7d', 'vàng 18k': '#d4af37',
-    'trắng': '#fcfcfc', 'white': '#fcfcfc', 'vàng trắng': '#f4f4f4',
-    'đen': '#2c2c2c', 'black': '#2c2c2c',
-    'hồng': '#f4a4b4', 'pink': '#f4a4b4', 'vàng hồng': '#b76e79',
-    'bạc': '#c0c0c0', 'silver': '#c0c0c0'
-  };
-  return map[colorName.toLowerCase().trim()] || '#e0e0e0';
 };
 
 const buildFilterOptionParams = () => {
@@ -578,7 +598,7 @@ const buildFilterOptionParams = () => {
   return params;
 };
 
-// SỬ DỤNG TANSTACK QUERY ĐỂ QUẢN LÝ CACHE VÀ FETCHING
+
 const { data: categoriesData, isLoading: isLoadingCategories } = useQuery({
   queryKey: computed(() => ['shopCategories', shopSlug.value]),
   queryFn: async () => {
@@ -593,6 +613,14 @@ const { data: categoriesData, isLoading: isLoadingCategories } = useQuery({
     return [];
   },
   staleTime: 30 * 60 * 1000,
+  initialData: () => {
+    const homeData = queryClient.getQueryData(['homeData']);
+    if (homeData && homeData.categories) {
+      return homeData.categories;
+    }
+    return undefined;
+  },
+  initialDataUpdatedAt: 0,
 });
 
 const { data: colorsData } = useQuery({
@@ -628,12 +656,12 @@ watch(dynamicAttributes, (attrs) => {
   Object.keys(expandedAttributes).forEach((key) => {
     if (!attrs.some((attr) => attr.name === key)) delete expandedAttributes[key];
   });
-  
+
   const newCollapses = { ...filterCollapses.value };
   let hasChanges = false;
   attrs.forEach(attr => {
     if (newCollapses[attr.name] === undefined) {
-      newCollapses[attr.name] = true;
+      newCollapses[attr.name] = false;
       hasChanges = true;
     }
   });
@@ -657,6 +685,22 @@ const { data: productsData, isLoading: isLoadingProducts, isFetching: isProductR
   },
   staleTime: 5 * 60 * 1000,
   placeholderData: keepPreviousData,
+  initialData: () => {
+    if (currentPage.value === 1 && !hasActiveFilters.value) {
+      const homeData = queryClient.getQueryData(['homeData']);
+      if (homeData && homeData.products) {
+        return {
+          data: homeData.products,
+          current_page: 1,
+          last_page: 1,
+          per_page: 12,
+          total: homeData.products.length
+        };
+      }
+    }
+    return undefined;
+  },
+  initialDataUpdatedAt: 0,
 });
 
 const allProducts = computed(() => productsData.value?.data || []);
@@ -939,7 +983,7 @@ const confirmAddToCart = async () => {
   }
   const maxStock = currentVariant.value.stock_quantity || 0;
   if (quickAddModal.quantity > maxStock) {
-    return soraAlert.fire({ icon: 'error', title: 'Vượt quá tồn kho', text: `Rất tiếc, cửa hàng chỉ còn ${maxStock} sản phẩm khả dụng.` });
+    return Toast.fire({ icon: 'error', title: `Rất tiếc, cửa hàng chỉ còn ${maxStock} sản phẩm khả dụng.` });
   }
 
   quickAddModal.isAdding = true;
@@ -955,9 +999,9 @@ const confirmAddToCart = async () => {
       localStorage.setItem('cart_session_id', data.session_id);
     }
     if (data.success) { closeQuickAdd(); router.push('/cart'); }
-    else { soraAlert.fire({ icon: 'error', title: 'Không thể thêm', text: data.message || "Đã có lỗi xảy ra." }); }
+    else { Toast.fire({ icon: 'error', title: data.message || "Đã có lỗi xảy ra." }); }
   } catch (error) {
-    soraAlert.fire({ icon: 'error', title: 'Lỗi', text: 'Lỗi kết nối tới máy chủ.' });
+    Toast.fire({ icon: 'error', title: 'Lỗi kết nối tới máy chủ.' });
   } finally {
     quickAddModal.isAdding = false;
   }
@@ -1007,7 +1051,7 @@ onMounted(() => {
   border-color: var(--sora-border) !important;
 }
 
-/* Banner (Sora Banner Style) */
+
 .text-champagne {
   color: #ead089 !important;
 }
@@ -1212,9 +1256,7 @@ onMounted(() => {
   pointer-events: none;
 }
 
-/* -------------------------------------
-   CSS NÚT XEM THÊM VÀ HIỆU ỨNG TRƯỢT
-   ------------------------------------- */
+
 .sora-btn-outline-gold {
   background-color: transparent;
   border: 1px solid var(--sora-secondary);
@@ -1243,9 +1285,7 @@ onMounted(() => {
   transform: translateY(-15px);
 }
 
-/* -------------------------------------
-   CSS CUSTOM CHO DROPDOWN SẮP XẾP
-   ------------------------------------- */
+
 .custom-sort-item {
   color: #444;
   transition: all 0.2s ease;
@@ -1264,9 +1304,7 @@ onMounted(() => {
   font-weight: 600;
 }
 
-/* -------------------------------------
-   CSS MỚI DÀNH CHO BỘ LỌC CHECKBOX (THUỘC TÍNH)
-   ------------------------------------- */
+
 .attr-checkbox-item {
   padding: 6px 0;
   transition: all 0.3s ease;
@@ -1332,9 +1370,7 @@ onMounted(() => {
   color: var(--sora-primary);
 }
 
-/* -------------------------------------
-   CSS MỚI DÀNH CHO DANH MỤC SẢN PHẨM (CLEAN TEXT)
-   ------------------------------------- */
+
 .category-elegant-item {
   position: relative;
   padding-left: 0 !important;
@@ -1375,7 +1411,7 @@ onMounted(() => {
   border-bottom: none !important;
 }
 
-/* Các thành phần còn lại giữ nguyên */
+
 .color-filter-circle {
   width: 28px;
   height: 28px;
@@ -1393,7 +1429,7 @@ onMounted(() => {
 }
 
 .color-filter-circle.selected {
-  border: 2px solid #111;
+  border: 2px solid #9f273b;
   transform: scale(1.1);
 }
 
@@ -1454,7 +1490,7 @@ onMounted(() => {
   transform: translateY(-5px);
 }
 
-/* SORA-IMG-CONTAINER MẶC ĐỊNH */
+
 .sora-img-container {
   position: relative;
   width: 100%;
@@ -1467,7 +1503,7 @@ onMounted(() => {
   position: relative;
   overflow: hidden;
   background-color: #f5efe8;
-  /* Màu nền nhẹ khi chưa có ảnh */
+
 }
 
 
@@ -1493,7 +1529,7 @@ onMounted(() => {
   opacity: 0;
 }
 
-/* SỬA Ở ĐÂY: XÓA DOÒNG opacity: 0 CỦA ẢNH CHÍNH, BÂY GIỜ CHỈ CHO ẢNH HOVER HIỆN LÊN ĐÈ LÊN ẢNH CHÍNH THÔI */
+
 .sora-luxury-card:hover .sora-card-image.has-hover-image .sora-hover-img {
   opacity: 1;
 }
@@ -1595,7 +1631,7 @@ onMounted(() => {
   color: #fff;
 }
 
-/* CSS QUICK ADD MODAL */
+
 @keyframes slideUp {
   from {
     transform: translateY(30px) scale(0.98);
@@ -1628,7 +1664,7 @@ onMounted(() => {
   border-radius: 2px;
 }
 
-/* PREMIUM BANNER CSS */
+
 
 
 .premium-category-item {
@@ -1650,7 +1686,7 @@ onMounted(() => {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(231, 206, 125, 0.5);
   transform: translateY(-3px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.2), inset 0 0 10px rgba(231, 206, 125, 0.1);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2), inset 0 0 10px rgba(231, 206, 125, 0.1);
 }
 
 .premium-circle-img {
@@ -1659,7 +1695,7 @@ onMounted(() => {
   border-radius: 50%;
   background: #ffffff;
   padding: 2px;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.15), inset 0 0 5px rgba(0,0,0,0.1);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15), inset 0 0 5px rgba(0, 0, 0, 0.1);
   transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
   border: 2px solid transparent;
 }

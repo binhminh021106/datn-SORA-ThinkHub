@@ -19,7 +19,6 @@ class ClientHeaderController extends Controller
                 ->select('id', 'name', 'slug')
                 ->get();
 
-            // FIX: Tối ưu N+1 query - Lấy tất cả top products của các category cùng lúc
             $categoryIds = $categories->pluck('id');
             $allTopProducts = Product::whereIn('category_id', $categoryIds)
                 ->where('status', 'published')
@@ -34,7 +33,6 @@ class ClientHeaderController extends Controller
                 return $category;
             });
 
-            // Lấy Số lượng mặt hàng trong Giỏ (Không phải tổng Quantity)
             $cartCount = 0;
             $user = auth('sanctum')->user();
             $sessionId = $request->header('X-Cart-Session-Id');
@@ -97,7 +95,6 @@ class ClientHeaderController extends Controller
         $productsQuery = Product::where('name', 'LIKE', "%{$keyword}%")
             ->where('status', 'published');
 
-        // Áp dụng bộ lọc danh mục nếu người dùng chọn danh mục cụ thể
         if ($categoryName && $categoryName !== 'Tất cả') {
             $cat = Category::where('name', 'LIKE', "%{$categoryName}%")->first();
             if ($cat) {

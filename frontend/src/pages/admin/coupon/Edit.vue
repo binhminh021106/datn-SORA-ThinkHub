@@ -1,6 +1,5 @@
 <template>
     <div class="coupon-edit-wrapper">
-        <!-- SKELETON CHỜ KHI KHÔNG CÓ CACHE (F5) -->
         <div v-if="isLoading" class="container-fluid py-4">
             <div class="row mb-4"><div class="col-6"><span class="placeholder col-8 rounded" style="height: 40px;"></span></div></div>
             <div class="row g-4">
@@ -20,19 +19,19 @@
                     <h3 class="fw-bold text-dark mb-0">Cập Nhật Mã Giảm Giá</h3>
                     <p class="text-muted mb-0 small">
                         Mã: <span class="fw-bold text-brand">{{ form.code }}</span>
-                        <span v-if="isFetching" class="spinner-border spinner-border-sm text-brand ms-2" title="Đang đồng bộ ngầm"></span>
+                        <AdminLoadingSpinner v-if="isFetching" class="text-brand ms-2" title="Đang đồng bộ ngầm" size="16" />
                     </p>
                 </div>
             </div>
 
             <form @submit.prevent="submitForm" autocomplete="off">
                 <div class="row g-4">
-                    <!-- Cột Trái: Preview Coupon & Trạng thái -->
+
                     <div class="col-md-4 col-lg-3">
                         <div class="card border-0 shadow-sm rounded-4 text-center p-4 h-100 position-sticky" style="top: 20px;">
                             <label class="form-label fw-bold mb-3 text-brand">Trực Quan VOUCHER</label>
                             
-                            <!-- Thẻ Ticket mô phỏng -->
+
                             <div class="ticket-preview mb-4 bg-light rounded-4 border border-dashed border-2 border-brand p-3 position-relative overflow-hidden">
                                 <div class="bg-brand text-white fw-bold py-1 px-3 position-absolute top-0 start-0 w-100 small" style="letter-spacing: 1px;">VOUCHER</div>
                                 <div class="mt-4">
@@ -45,7 +44,7 @@
                                 </div>
                             </div>
 
-                            <!-- Box Thông kê nhỏ -->
+
                             <div class="bg-light p-3 rounded-3 mb-4 text-start">
                                 <span class="d-block small text-muted fw-bold mb-1"><i class="bi bi-bar-chart-fill me-1"></i> Đã sử dụng</span>
                                 <h4 class="fw-bold mb-0">{{ usage_count }} <span class="fs-6 text-muted fw-normal">/ {{ form.usage_limit }} lượt</span></h4>
@@ -57,7 +56,7 @@
                         </div>
                     </div>
 
-                    <!-- Cột Phải: Thông tin chi tiết -->
+
                     <div class="col-md-8 col-lg-9">
                         <div class="card border-0 shadow-sm rounded-4 mb-4">
                             <div class="card-body p-4">
@@ -155,11 +154,11 @@
                                 <hr class="text-muted opacity-25 my-4">
                                 <div class="text-end">
                                     <button type="button" class="btn btn-light me-2 px-4 shadow-sm fw-bold" @click="handleRestore" :disabled="isRestoring || isUpdating">
-                                      <span v-if="isRestoring" class="spinner-border spinner-border-sm me-2"></span>Khôi phục gốc
+                                      <AdminLoadingSpinner v-if="isRestoring" class="me-2" size="16" />Khôi phục gốc
                                     </button>
                                     <button type="submit" class="btn btn-brand btn-brand-solid px-5 fw-bold shadow-sm"
                                         :disabled="isUpdating">
-                                        <span v-if="isUpdating" class="spinner-border spinner-border-sm me-2"></span> 
+                                        <AdminLoadingSpinner v-if="isUpdating" class="me-2" size="16" /> 
                                         {{ isUpdating ? 'ĐANG LƯU...' : 'LƯU THAY ĐỔI' }}
                                     </button>
                                 </div>
@@ -211,10 +210,10 @@ const formatDate = (dateString) => {
 
 const formatForPayload = (dateLocal) => {
     if (!dateLocal) return '';
-    return dateLocal.replace('T', ' ') + ':00'; // Parse lại format SQL Backend hiểu nếu dùng datetime-local
+    return dateLocal.replace('T', ' ') + ':00';
 };
 
-// 1. Fetch/Lấy Cache Coupon Detail (Triệt tiêu mồ côi)
+
 const fetchCouponDetail = async () => {
   const res = await adminApiClient.get(`/coupons/${couponId}`);
   return res.data.data;
@@ -229,7 +228,7 @@ const { data: couponData, isLoading, isFetching, refetch } = useQuery({
   staleTime: 1000 * 60 * 5,
 });
 
-// Map Cache sang Local State
+
 watchEffect(() => {
   if (couponData.value) {
     const u = couponData.value;
@@ -252,7 +251,7 @@ const handleRestore = async () => {
   }, 400); 
 };
 
-// 2. Mutation Cập nhật API (Cập nhật Cache danh sách khi thành công)
+
 const { mutate: updateCoupon, isLoading: isUpdating } = useMutation({
   mutationFn: async (payload) => {
     try {

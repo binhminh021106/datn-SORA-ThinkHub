@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Storage;
 
 class AdminCustomerGalleryController extends Controller
 {
-    // Lấy danh sách ảnh cho Admin (Đã bỏ withTrashed gây lỗi 500)
     public function index()
     {
         $galleries = CustomerGallery::orderBy('sort_order', 'asc')
@@ -18,7 +17,6 @@ class AdminCustomerGalleryController extends Controller
         return response()->json(['success' => true, 'data' => $galleries]);
     }
 
-    // Lấy thông tin 1 ảnh để hiển thị lên form Sửa (Vue Edit)
     public function show($id)
     {
         try {

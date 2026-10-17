@@ -1,14 +1,8 @@
 <template>
   <div class="category-index-wrapper">
-    
-    <!-- Lần tải đầu tiên và dữ liệu hoàn toàn trống trong cache -->
-    <div v-if="isLoading && isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
-      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải danh mục...</p>
-    </div>
+    <AdminShimmerLoading v-if="isLoading" text="Đang tải danh mục..." />
 
     <div class="container-fluid py-4" v-else>
-      <!-- Header -->
       <div class="row mb-3 align-items-center">
         <div class="col-md-6">
           <h3 class="fw-bold text-dark mb-0">Danh Mục Sản Phẩm</h3>
@@ -20,7 +14,6 @@
         </div>
       </div>
 
-      <!-- TABS RESPONSIVE -->
       <div class="mb-4" :class="{'opacity-50 pe-none': isReorderMode}">
         <ul class="nav nav-underline border-bottom mb-2 pb-1" style="flex-wrap: wrap !important; gap: 8px;">
           <li class="nav-item">
@@ -50,7 +43,6 @@
         </ul>
       </div>
 
-      <!-- Bảng Dữ liệu -->
       <div class="card border-0 shadow-sm rounded-4 mb-4" :class="{'border-warning border-2': isReorderMode}">
         <div class="card-header bg-white border-bottom-0 pt-2 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
           <div class="d-flex align-items-center gap-2">
@@ -58,8 +50,7 @@
               <i class="bi" :class="isReorderMode ? 'bi-arrows-move text-warning' : 'bi-list-ul'"></i> 
               {{ isReorderMode ? 'Kéo thả dòng để thay đổi thứ tự ưu tiên' : 'Danh sách hiển thị' }}
             </h6>
-            <!-- Indicator hiển thị nạp dữ liệu ngầm mượt mà (Background Fetching) -->
-            <div v-if="isFetching && !isLoading" class="spinner-border spinner-border-sm text-brand" role="status"></div>
+            <AdminLoadingSpinner v-if="isFetching && !isLoading" class="text-brand" size="16" />
           </div>
           
           <div class="d-flex align-items-center flex-wrap gap-2">
@@ -73,7 +64,7 @@
             </template>
 
             <button v-if="isReorderMode" class="btn btn-sm btn-warning text-dark fw-bold px-4 shadow-sm py-2" @click="saveReorder" :disabled="isReorderPending">
-              <span v-if="isReorderPending" class="spinner-border spinner-border-sm me-2"></span>
+              <AdminLoadingSpinner v-if="isReorderPending" class="me-2" size="16" />
               <i class="bi bi-floppy-fill me-1" v-else></i> LƯU THỨ TỰ
             </button>
 
@@ -99,7 +90,6 @@
                 </tr>
               </thead>
               <tbody>
-                <!-- HIỆU ỨNG SKELETON INLINE TRỰC TIẾP (Khi đang tải lần đầu) -->
                 <template v-if="isLoading">
                   <tr v-for="n in 5" :key="'skeleton-row-' + n" class="skeleton-row-item">
                     <td v-if="isReorderMode" class="px-4 text-center">
@@ -141,7 +131,6 @@
                   </td>
                 </tr>
 
-                <!-- NATIVE HTML5 DRAG & DROP -->
                 <tr v-else v-for="(cat, index) in displayCategories" :key="cat.id" 
                     :class="{'bg-light opacity-75': cat.deleted_at || cat.status === 'hidden', 'drag-item': isReorderMode, 'dragging': draggedIndex === index, 'drag-over': dragOverIndex === index}"
                     :draggable="isReorderMode"
@@ -162,8 +151,7 @@
 
                   <td class="px-4 py-3">
                     <div class="d-flex align-items-center">
-                      <!-- Xử lý lỗi nạp ảnh bằng @error Fallback thông minh tránh vỡ layout -->
-                      <img :src="getImageUrl(cat.thumbnail)" @error="handleImageError" class="rounded-3 object-fit-cover me-3 border shadow-sm pe-none" style="width: 45px; height: 45px;">
+                      <SoraImage :src="cat.thumbnail" class="rounded-3 object-fit-cover me-3 border shadow-sm pe-none" style="width: 45px; height: 45px;" />
                       <div class="overflow-hidden">
                         <h6 class="mb-0 fw-bold text-dark text-truncate" :title="cat.name">{{ cat.name }}</h6>
                         <small class="text-muted d-block mt-1 text-truncate"><i class="bi bi-link-45deg"></i> {{ cat.slug }}</small>
@@ -182,11 +170,9 @@
                     </div>
                   </td>
 
-                  <!-- Cột Trạng thái (Inline Edit) -->
                   <td class="px-4 text-center">
                     <span v-if="cat.deleted_at" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary"><i class="bi bi-trash3-fill"></i> Đã xóa</span>
                     <div v-else class="w-100">
-                      <!-- SỬA TRẠNG THÁI NHANH BẰNG COMPONENT -->
                       <StatusConfirmSelect
                         v-model="cat.localStatus"
                         :originalValue="cat.status"
@@ -226,7 +212,6 @@
         </div>
       </div>
 
-      <!-- Phân trang (Ẩn khi đang sắp xếp) -->
       <div class="d-flex justify-content-between align-items-center" v-if="totalPages > 1 && !isReorderMode">
         <span class="text-muted small">Hiển thị {{ (currentPage - 1) * itemsPerPage + 1 }} đến {{ Math.min(currentPage * itemsPerPage, processedCategories.length) }}</span>
         <nav>
@@ -239,7 +224,6 @@
       </div>
     </div>
 
-    <!-- POPUP QUICK VIEW -->
     <div class="modal fade" id="quickViewModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content rounded-4 border-0 shadow">
@@ -250,7 +234,7 @@
           <div class="modal-body p-4" v-if="selectedCategory">
             <div class="row">
               <div class="col-md-5 text-center border-end mb-4 mb-md-0">
-                <img :src="getImageUrl(selectedCategory.thumbnail)" @error="handleImageError" class="rounded-4 shadow-sm border border-2 border-light object-fit-cover mb-3" style="width: 100%; max-height: 250px;">
+                <SoraImage :src="selectedCategory.thumbnail" class="rounded-4 shadow-sm border border-2 border-light object-fit-cover mb-3" style="width: 100%; max-height: 250px;" />
                 <h5 class="fw-bold mb-1">{{ selectedCategory.name }}</h5>
                 <p class="text-muted small mb-3">/{{ selectedCategory.slug }}</p>
                 <span class="badge px-3 py-2 rounded-pill" :class="selectedCategory.status === 'active' ? 'bg-success text-white' : (selectedCategory.status === 'hidden' ? 'bg-warning text-dark' : 'bg-danger text-white')">
@@ -290,11 +274,14 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
+import SoraImage from '@/components/ui/SoraImage.vue';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 import { getFullImage } from '@/composables/useUtilities';
 
@@ -333,33 +320,28 @@ const itemsPerPage = 10;
 const selectedCategory = ref(null);
 let quickViewModalInstance = null;
 
-// DRAG & DROP STATES
 const isReorderMode = ref(false);
 const draggedIndex = ref(null);
 const dragOverIndex = ref(null);
 const reorderList = ref([]); 
 
-// Khởi tạo headers
 const getHeaders = () => ({ 
   'Accept': 'application/json', 
   'Authorization': `Bearer ${localStorage.getItem('admin_token')}` 
 });
 
-// TANSTACK QUERY: Đọc toàn bộ danh sách danh mục (Tự động nạp từ cache)
 const { data: categoriesData, isLoading, isFetching } = useQuery({
   queryKey: ['admin-categories-all'],
   queryFn: async () => {
     const res = await axios.get(`${API_URL}/admin/categories`, { headers: getHeaders() });
     return Array.isArray(res.data.data) ? res.data.data : (res.data.data?.data || []);
   },
-  staleTime: 5 * 60 * 1000, // Lưu cache trong 5 phút
+  staleTime: 5 * 60 * 1000,
   keepPreviousData: true
 });
 
-// Local state để xử lý chỉnh sửa trạng thái trực quan
 const categories = ref([]);
 
-// Đồng bộ danh mục từ bộ nhớ cache của Vue Query khi có cập nhật mới
 watch(categoriesData, (newVal) => {
   if (newVal) {
     categories.value = newVal.map(c => ({
@@ -372,7 +354,6 @@ watch(categoriesData, (newVal) => {
   }
 }, { immediate: true });
 
-// Tải thông tin module quản trị phân quyền
 const fetchSystemModules = async () => {
   try {
     const res = await axios.get(`${API_URL}/admin/modules`, { headers: getHeaders() });
@@ -406,7 +387,18 @@ const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
 };
 
 const getImageUrl = (path) => path ? getFullImage(path) : defaultImage;
-const handleImageError = (e) => { e.target.src = defaultImage; };
+const handleImageError = (e) => { 
+  let fallback = defaultImage;
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_admin_active) {
+          fallback = `${import.meta.env.VITE_URL}/storage/${store.settings.placeholder_admin_active}`;
+      }
+  } catch (err) {}
+  if (e.target.src !== fallback) {
+      e.target.src = fallback; 
+  }
+};
 
 const getLevelColor = (level) => {
   if(!level) return 'bg-secondary';
@@ -421,13 +413,11 @@ const getLevelColor = (level) => {
   }
 };
 
-// Đếm dữ liệu phản hồi nhanh trên UI
 const totalCount = computed(() => categories.value.filter(c => !c.deleted_at).length);
 const activeCount = computed(() => categories.value.filter(c => c.status === 'active' && !c.deleted_at).length);
 const hiddenCount = computed(() => categories.value.filter(c => c.status === 'hidden' && !c.deleted_at).length);
 const deletedCount = computed(() => categories.value.filter(c => c.deleted_at).length);
 
-// ======================= DRAG AND DROP LOGIC =======================
 const toggleReorderMode = () => {
   if (activeTab.value !== 'active') {
     Swal.fire('Lưu ý', 'Chỉ có thể sắp xếp các danh mục đang Hiển thị!', 'info');
@@ -464,7 +454,6 @@ const onDragEnd = (event) => {
   dragOverIndex.value = null;
 };
 
-// TANSTACK MUTATION: Sắp xếp danh mục
 const { mutate: mutateReorder, isPending: isReorderPending } = useMutation({
   mutationFn: async (payload) => {
     return axios.post(`${API_URL}/admin/categories/reorder`, { categories: payload }, { headers: getHeaders() });
@@ -487,7 +476,6 @@ const saveReorder = () => {
   mutateReorder(payload);
 };
 
-// ================= INLINE STATUS =================
 const getStatusSelectClass = (status) => {
   const map = { 
     'active': 'text-success border-success bg-success bg-opacity-10', 
@@ -511,7 +499,6 @@ const cancelStatusChange = (cat) => {
   cat.isStatusChanged = false; 
 };
 
-// TANSTACK MUTATION: Cập nhật nhanh trạng thái Inline
 const { mutate: mutateStatus } = useMutation({
   mutationFn: async ({ id, formData }) => {
     return axios.post(`${API_URL}/admin/categories/${id}`, formData, { headers: getHeaders() });
@@ -580,7 +567,6 @@ const displayCategories = computed(() => {
   return processedCategories.value.slice(start, start + itemsPerPage);
 });
 
-// TANSTACK MUTATION: Đưa vào thùng rác
 const { mutate: mutateDelete } = useMutation({
   mutationFn: async (id) => {
     return axios.delete(`${API_URL}/admin/categories/${id}`, { headers: getHeaders() });
@@ -609,7 +595,6 @@ const confirmDelete = (id, name) => {
   });
 };
 
-// TANSTACK MUTATION: Khôi phục danh mục
 const { mutate: restoreCategoryMutation } = useMutation({
   mutationFn: async (id) => {
     return axios.post(`${API_URL}/admin/categories/${id}/restore`, {}, { headers: getHeaders() });
@@ -658,8 +643,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.logo-shimmer { font-size: 3.5rem; font-weight: 900; letter-spacing: -1.5px; background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%); background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text; animation: shine 1.5s linear infinite; }
-@keyframes shine { to { background-position: 200% center; } }
 .custom-tab { font-weight: 600 !important; color: #6c757d; border-bottom: 2px solid transparent !important; margin-bottom: -1px; transition: color 0.2s ease; }
 .custom-tab:hover { color: #009981; }
 .custom-tab.active-tab { color: #009981 !important; border-bottom: 2px solid #009981 !important; }
@@ -675,7 +658,6 @@ onMounted(() => {
 .dragging { opacity: 0.5; background-color: #f8f9fa; }
 .transition-all { transition: all 0.3s ease; }
 
-/* INLINE SKELETON PLACEHOLDER EFFECT */
 .skeleton-row-item {
   animation: skeletonPulse 1.5s infinite ease-in-out;
 }

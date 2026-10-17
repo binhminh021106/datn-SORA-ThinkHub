@@ -1,10 +1,7 @@
 <template>
   <div class="tier-edit-wrapper ">
 
-    <div v-if="!isLoaded" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
-      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ liệu...</p>
-    </div>
+    <AdminShimmerLoading v-if="!isLoaded" text="Đang tải dữ liệu..." />
 
     <div class="container-fluid py-4" v-else>
       <div class="row mb-4 align-items-center">
@@ -86,7 +83,6 @@
                 <div class="p-4 bg-light rounded-4 border text-center flex-fill d-flex flex-column justify-content-center">
                   <h6 class="fw-bold mb-3">Icon/Huy hiệu Hạng</h6>
                   <div class="mb-3 border rounded-circle bg-white shadow-sm position-relative mx-auto overflow-hidden d-flex justify-content-center align-items-center" style="height: 120px; width: 120px; padding: 0.5rem;">
-                    <!-- Sử dụng SoraImage cho xem trước ảnh -->
                     <SoraImage 
                       :src="previewIcon" 
                       :placeholder="placeholderImg"
@@ -103,7 +99,7 @@
               
               <div class="col-12 text-end border-top pt-4">
                 <button type="submit" class="btn btn-brand px-5 fw-bold text-white rounded-pill shadow-sm" :disabled="isSaving || !form.name">
-                  <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span> CẬP NHẬT
+                  <AdminLoadingSpinner v-if="isSaving" class="me-2" size="16" /> CẬP NHẬT
                 </button>
               </div>
             </div>
@@ -116,6 +112,7 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
@@ -168,9 +165,7 @@ const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
   } else Swal.fire('Lỗi', 'Mất kết nối Server', 'error');
 };
 
-// ==========================================
-// TANSTACK VUE QUERY - FETCH DATA
-// ==========================================
+
 const { data: tierResponse, isLoading: isTierLoading, isError } = useQuery({
   queryKey: ['adminTier', tierId],
   queryFn: async () => {
@@ -214,9 +209,7 @@ const handleUpload = (e) => {
   }
 };
 
-// ==========================================
-// TANSTACK VUE QUERY - MUTATIONS
-// ==========================================
+
 const updateTierMutation = useMutation({
   mutationFn: async (formData) => {
     const res = await axios.post(`${API_URL}/admin/tiers/${tierId}`, formData, { headers: getHeaders() });
@@ -244,8 +237,6 @@ const updateTier = () => {
 </script>
 
 <style scoped>
-.logo-shimmer { font-size: 3.5rem; font-weight: 900; letter-spacing: -1.5px; background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%); background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text; animation: shine 1.5s linear infinite; }
-@keyframes shine { to { background-position: 200% center; } }
 .bg-brand { background-color: #009981 !important; } .text-brand { color: #009981 !important; }
 .btn-brand { background-color: #009981; border: none; color: white; transition: 0.2s; } 
 .btn-brand:hover { background-color: #007a67; color: white; }

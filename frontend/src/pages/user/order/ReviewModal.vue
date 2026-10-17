@@ -2,7 +2,7 @@
   <div v-if="isOpen" class="custom-modal-backdrop" @click.self="$emit('close')">
     <div class="custom-modal-content shadow-lg border-0 rounded-0 slide-up" style="max-width: 800px;">
       
-      <!-- Header -->
+
       <div class="modal-header-luxury p-4 d-flex justify-content-between align-items-center">
         <div>
           <h3 class="mb-1 fw-bold font-serif text-white tracking-wider">ĐÁNH GIÁ SẢN PHẨM</h3>
@@ -14,14 +14,14 @@
       <div class="modal-body p-4 overflow-auto bg-light" style="max-height: 70vh;">
         <SoraListSkeleton v-if="isLoading" :rows="3" image-size="70px" card />
 
-        <!-- Content -->
+
         <div v-else-if="order?.items?.length > 0">
           <p class="text-muted mb-4 fst-italic">Vui lòng chia sẻ cảm nhận của bạn về từng sản phẩm. Đánh giá của bạn giúp chúng tôi phục vụ tốt hơn!</p>
           
-          <!-- Lặp qua từng sản phẩm trong đơn -->
+
           <div v-for="(item, index) in reviewForms" :key="index" class="bg-white p-4 shadow-sm border border-light-subtle mb-4 rounded">
             
-            <!-- Thông tin sản phẩm -->
+
             <div class="d-flex align-items-center gap-3 border-bottom pb-3 mb-3">
               <div class="product-img border p-1" style="width: 60px; height: 60px; flex-shrink: 0;">
                 <img :src="getImageUrl(item.image)" @error="handleImageError" class="w-100 h-100 object-fit-cover">
@@ -32,7 +32,7 @@
               </div>
             </div>
 
-            <!-- Star Rating -->
+
             <div class="mb-3 text-center">
               <div class="d-flex justify-content-center gap-2 mb-2">
                 <i v-for="star in 5" :key="star" 
@@ -46,7 +46,7 @@
               <span class="small text-muted fw-medium text-uppercase">{{ ratingLabels[item.rating] }}</span>
             </div>
 
-            <!-- Comment -->
+
             <div class="mb-3">
               <textarea class="form-control bg-light shadow-none border-light-subtle rounded-0" 
                         rows="3" 
@@ -54,14 +54,14 @@
                         v-model="item.comment"></textarea>
             </div>
 
-            <!-- Image Upload -->
+
             <div>
               <label class="btn btn-outline-secondary btn-sm rounded-0 fw-bold upload-btn">
                 <i class="bi bi-camera me-1"></i> Thêm hình ảnh
                 <input type="file" multiple accept="image/*" class="d-none" @change="handleFileUpload($event, index)">
               </label>
               
-              <!-- Image Previews -->
+
               <div v-if="item.previews.length > 0" class="d-flex flex-wrap gap-2 mt-3">
                 <div v-for="(preview, pIdx) in item.previews" :key="pIdx" class="position-relative preview-wrapper border p-1">
                   <img :src="preview" class="object-fit-cover w-100 h-100">
@@ -77,11 +77,11 @@
         </div>
       </div>
 
-      <!-- Footer -->
+
       <div class="modal-footer p-3 px-4 border-top bg-white d-flex justify-content-end gap-2">
         <button @click="$emit('close')" class="btn btn-luxury-neutral border-0 px-4 fw-bold text-uppercase small py-2" :disabled="isSubmitting">Hủy</button>
         <button @click="submitReviews" class="editorial-btn border-0 px-5 fw-bold text-uppercase small py-2" :disabled="isSubmitting">
-          <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+          <AdminLoadingSpinner v-if="isSubmitting" class="me-2" size="16" />
           {{ isSubmitting ? 'Đang gửi...' : 'Gửi Đánh Giá' }}
         </button>
       </div>
@@ -91,9 +91,12 @@
 </template>
 
 <script setup>
+import { getStorageUrl } from '@/utils/env';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { ref, watch } from 'vue';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 import soraAlert from '@/utils/soraAlertConfig';
+import Toast from '@/utils/toastConfig';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
 import clientApiClient from '@/utils/clientApiClient';
 
@@ -117,7 +120,7 @@ const ratingLabels = {
   5: "Tuyệt Vời"
 };
 
-// Khởi tạo mảng form dựa trên các sản phẩm trong đơn hàng
+
 watch(() => props.isOpen, async (newVal) => {
   if (newVal && props.order) {
     isLoading.value = true;
@@ -148,9 +151,21 @@ const getImageUrl = (path) => {
   if (path.startsWith('http')) return path;
   return `${import.meta.env.VITE_STORAGE_URL}/${path}`;
 };
-const handleImageError = (e) => { e.target.src = defaultPlaceholder; };
+const handleImageError = (e) => { 
+  let fallback = '/Sora-placeholder.png';
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_client_active) {
+          fallback = getStorageUrl(store.settings.placeholder_client_active);
+      }
+  } catch (err) {}
+  
+  if (e.target.src !== fallback) {
+      e.target.src = fallback;
+  }
+};
 
-// Xử lý upload và tạo file preview
+
 const handleFileUpload = (event, itemIndex) => {
   const files = Array.from(event.target.files);
   if (files.length === 0) return;
@@ -160,7 +175,7 @@ const handleFileUpload = (event, itemIndex) => {
   files.forEach(file => {
     // Check dung lượng (vd: < 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      soraAlert.fire({ icon: 'warning', title: 'File quá lớn', text: 'Vui lòng chọn ảnh dưới 5MB' });
+      Toast.fire({ icon: 'warning', title: 'Vui lòng chọn ảnh dưới 5MB' });
       return;
     }
     
@@ -181,18 +196,18 @@ const removeImage = (itemIndex, fileIndex) => {
   reviewForms.value[itemIndex].previews.splice(fileIndex, 1);
 };
 
-// Gửi API
+
 const submitReviews = async () => {
-  // Validate
+
   const hasUnrated = reviewForms.value.some(r => r.rating === 0);
   if (hasUnrated) {
-    soraAlert.fire({ icon: 'error', title: 'Thiếu thông tin', text: 'Vui lòng đánh giá (chọn số sao) cho tất cả sản phẩm.' });
+    Toast.fire({ icon: 'error', title: 'Vui lòng đánh giá (chọn số sao) cho tất cả sản phẩm.' });
     return;
   }
 
   isSubmitting.value = true;
   
-  // Dùng FormData vì có đính kèm nhiều file ảnh
+
   const formData = new FormData();
   
   reviewForms.value.forEach((item, index) => {
@@ -201,7 +216,7 @@ const submitReviews = async () => {
     formData.append(`reviews[${index}][rating]`, item.rating);
     if (item.comment) formData.append(`reviews[${index}][comment]`, item.comment);
     
-    // Đính kèm các file của item này
+
     item.files.forEach((file) => {
       formData.append(`reviews[${index}][images][]`, file);
     });
@@ -210,20 +225,17 @@ const submitReviews = async () => {
   try {
     const response = await clientApiClient.post(`/client/orders/${props.order.order_code}/review`, formData);
     
-    soraAlert.fire({
+    Toast.fire({
       icon: 'success',
-      title: 'Đánh giá thành công!',
-      text: response.data.message,
-      timer: 2000
+      title: response.data.message || 'Đánh giá thành công!'
     });
     
     emit('review-success');
     emit('close');
   } catch (error) {
-    soraAlert.fire({
+    Toast.fire({
       icon: 'error', 
-      title: 'Lỗi', 
-      text: error.response?.data?.message || 'Không thể gửi đánh giá lúc này'
+      title: error.response?.data?.message || 'Không thể gửi đánh giá lúc này'
     });
   } finally {
     isSubmitting.value = false;
@@ -259,7 +271,7 @@ const submitReviews = async () => {
 textarea:focus { border-color: #9f273b; box-shadow: 0 0 0 0.2rem rgba(159, 39, 59, 0.25); }
 
 
-/* Button Luxury States */
+
 .btn-luxury-neutral, .btn-luxury-danger, .btn-luxury-success, .btn-luxury-success-light {
   position: relative;
   overflow: hidden;
@@ -396,7 +408,7 @@ textarea:focus { border-color: #9f273b; box-shadow: 0 0 0 0.2rem rgba(159, 39, 5
   transform: rotate(45deg) translateY(200%);
 }
 
-/* Banner (Sora Banner Style) */
+
 .text-champagne {
   color: #ead089 !important;
 }
@@ -546,7 +558,7 @@ textarea:focus { border-color: #9f273b; box-shadow: 0 0 0 0.2rem rgba(159, 39, 5
   }
 }
 
-/* Image wrapper (Border xoắn) */
+
 .img-wrapper {
   padding: 1rem;
 }
@@ -569,13 +581,13 @@ textarea:focus { border-color: #9f273b; box-shadow: 0 0 0 0.2rem rgba(159, 39, 5
   aspect-ratio: 4/5;
 }
 
-/* Đường kẻ ngăn cách (Divider) */
+
 .divider {
   width: 4rem;
   height: 2px;
 }
 
-/* Card Mission & Vision */
+
 .card-hover {
   transition: box-shadow 0.3s ease;
 }
@@ -595,7 +607,7 @@ textarea:focus { border-color: #9f273b; box-shadow: 0 0 0 0.2rem rgba(159, 39, 5
   opacity: 0.05;
 }
 
-/* Icon vòng tròn */
+
 .icon-circle {
   width: 64px;
   height: 64px;
@@ -603,11 +615,11 @@ textarea:focus { border-color: #9f273b; box-shadow: 0 0 0 0.2rem rgba(159, 39, 5
   border: 1px solid;
 }
 
-/* Khối sản phẩm (Fix ảnh vuông tuyệt đối) */
+
 .square-ratio {
   width: 100%;
   padding-bottom: 100%;
-  /* Tạo tỷ lệ vuông chuẩn 1:1 */
+
   display: block;
   overflow: hidden;
 }
@@ -625,12 +637,12 @@ textarea:focus { border-color: #9f273b; box-shadow: 0 0 0 0.2rem rgba(159, 39, 5
   z-index: 2;
 }
 
-/* Link khám phá */
+
 .product-link:hover {
   color: #cc1e2e !important;
 }
 
-/* Combo Carousel Container Overrides */
+
 .combos-editorial {
   background-color: #fffafa;
   overflow: hidden;

@@ -65,7 +65,6 @@ const admin = [
         meta: { moduleCode: 'admin_staff' },
       },
       {
-        // ROUTE QUẢN LÝ KHÁCH HÀNG (USERS)
         path: 'users',
         name: 'admin-users',
         meta: { moduleCode: 'admin_users' },
@@ -83,7 +82,6 @@ const admin = [
         meta: { moduleCode: 'admin_users', sidebarPath: '/admin/users' },
         component: () => import('../pages/admin/account/user/Edit.vue'),
       },
-      // ROUTE QUẢN LÝ DANH MỤC (CATEGORIES)
       {
         path: 'categories',
         name: 'admin-categories',
@@ -102,7 +100,6 @@ const admin = [
         meta: { moduleCode: 'admin_categories' },
         component: () => import('../pages/admin/category/Edit.vue'),
       },
-      // ROUTE QUẢN LÝ SẢN PHẨM (PRODUCTS)
       {
         path: 'products',
         name: 'admin-products',
@@ -121,7 +118,6 @@ const admin = [
         component: () => import('../pages/admin/product/Edit.vue'),
         meta: { moduleCode: 'admin_products' },
       },
-      // ROUTE QUẢN LÝ THƯƠNG HIỆU (BRANDS)
       {
         path: 'brands',
         name: 'admin-brands',
@@ -141,7 +137,6 @@ const admin = [
         meta: { moduleCode: 'admin_brands' },
       },
 
-      // history attendance
       {
         path: 'attendance/history',
         name: 'admin-attendance-history',
@@ -151,7 +146,6 @@ const admin = [
           sidebarPath: null
         },
       },
-      // ROUTE QUẢN LÝ CHẤM CÔNG (ATTENDANCE)
       {
         path: 'attendance',
         name: 'admin-attendance-dashboard',
@@ -170,7 +164,6 @@ const admin = [
           title: 'Quản lý ca làm việc'
         },
       },
-      // ROUTE QUẢN LÝ BANNER (BANNERS) - THÊM MỚI
       {
         path: 'banners',
         name: 'admin-banners',
@@ -190,7 +183,6 @@ const admin = [
         meta: { moduleCode: 'admin_banners' },
       },
 
-      // ROUTE QUẢN LÝ CHÂN DUNG SORA (GALLERY)
       {
         path: 'gallery',
         name: 'admin-gallery',
@@ -210,7 +202,6 @@ const admin = [
         meta: { moduleCode: 'admin_gallery' },
       },
 
-      // ROUTE QUẢN LÝ ĐƠN HÀNG (ORDERS)
       {
         path: 'orders',
         name: 'admin-orders',
@@ -228,6 +219,18 @@ const admin = [
         name: 'admin-orders-returns',
         component: () => import('../pages/admin/order/Returns.vue'),
         meta: { moduleCode: 'admin_orders' },
+      },
+      {
+        path: 'orders/history',
+        name: 'admin-orders-history',
+        component: () => import('@/pages/admin/order/History.vue'),
+        meta: { title: 'Lịch sử hoạt động', moduleCode: 'admin_orders' }
+      },
+      {
+        path: 'orders/config',
+        name: 'admin-orders-config',
+        component: () => import('@/pages/admin/order/Config.vue'),
+        meta: { title: 'Cấu hình đơn hàng', moduleCode: 'admin_orders' }
       },
       {
         path: 'coupons',
@@ -329,7 +332,12 @@ const admin = [
         component: () => import('../pages/admin/AdminChat.vue'),
         meta: { moduleCode: 'admin_chat' },
       },
-      // ROUTE QUẢN LÝ TIN TỨC (NEWS)
+      {
+        path: 'chatbot',
+        name: 'admin-chatbot',
+        component: () => import('../pages/admin/chatbot/Index.vue'),
+        meta: { moduleCode: 'admin_chat' },
+      },
       {
         path: 'news',
         name: 'admin-news',
@@ -349,14 +357,12 @@ const admin = [
         meta: { moduleCode: 'admin_news' },
       },
 
-      // ROUTE SETTINGS
       {
         path: 'settings',
         name: 'admin-settings',
         component: () => import('../pages/admin/setting/Index.vue'),
         meta: { moduleCode: 'admin_settings', title: 'Cấu hình Website' },
       },
-      // ROUTE QUẢN LÝ AFFILIATE (AFFILIATES)
       {
         path: 'affiliates',
         name: 'AdminAffiliates',

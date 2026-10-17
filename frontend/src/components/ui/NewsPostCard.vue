@@ -1,6 +1,5 @@
 <template>
   <article class="post-card card-style product-card h-100 d-flex flex-column border-0 shadow-sm rounded-3">
-    <!-- KHU VỰC ẢNH ĐÃ ĐƯỢC CẬP NHẬT DÙNG THẺ <img> ĐỂ BẮT LỖI -->
     <div class="card-img-top img-zoom-wrapper position-relative overflow-hidden" style="border-radius: 12px 12px 0 0; aspect-ratio: 16/9;">
       <router-link :to="postLink" class="full-link d-block w-100 h-100 position-relative">
         <img 

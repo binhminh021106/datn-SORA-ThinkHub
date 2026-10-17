@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Config;
 
 class AdminModulePermissionController extends Controller
 {
-    // Lấy toàn bộ danh sách trang hiện có
     public function index()
     {
         $modules = ModulePermission::all();

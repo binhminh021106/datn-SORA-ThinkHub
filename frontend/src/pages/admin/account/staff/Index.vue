@@ -14,7 +14,7 @@
         </div>
       </div>
 
-      <!-- TABS PHÂN LOẠI -->
+      <!-- Tabs -->
       <div class="mb-2">
         <ul class="nav nav-underline border-bottom mb-2 pb-1" style="flex-wrap: wrap !important; gap: 8px;">
           <li class="nav-item" v-for="tab in allTabs" :key="tab.id" :class="{'ms-auto': tab.isEnd}">
@@ -62,7 +62,6 @@
                 </tr>
               </thead>
               <tbody>
-                <!-- DỮ LIỆU THẬT -->
                   <tr v-if="paginatedStaff.length === 0">
                     <td colspan="5" class="text-center py-5 text-muted">
                       <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>
@@ -73,7 +72,6 @@
                     
                     <td class="px-4 py-3">
                       <div class="d-flex align-items-center">
-                        <!-- Áp dụng SoraImage thay cho thẻ img truyền thống để xử lý lỗi ảnh mượt mà -->
                         <div class="position-relative flex-shrink-0 cursor-pointer hover-zoom me-3" style="width: 45px; height: 45px;">
                           <SoraImage 
                             :src="staff.avatar_url" 
@@ -107,7 +105,7 @@
                       </div>
                     </td>
                     
-                    <!-- SỬA TRẠNG THÁI NHANH (INLINE EDIT) -->
+                    <!-- Trạng thái -->
                     <td class="px-4 text-center">
                       <span v-if="staff.deleted_at" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary" title="Đã chuyển vào thùng rác">
                         <i class="bi bi-trash3-fill"></i> Đã xóa
@@ -181,15 +179,10 @@
       </div>
     </div>
 
-    <!-- MÀN HÌNH CHỜ ĐỘC LẬP (Chỉ chạy 1 lần duy nhất khi vừa vào trang) -->
-    <div v-else class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
-      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">
-        Đang tải dữ liệu...
-      </p>
-    </div>
+    <!-- Loading -->
+    <AdminShimmerLoading v-else text="Đang tải dữ liệu..." />
 
-    <!-- POPUP (MODAL) XEM CHI TIẾT NHÂN VIÊN -->
+    <!-- Modal Chi Tiết -->
     <div class="modal fade" id="quickViewModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow">
@@ -199,7 +192,6 @@
           </div>
           <div class="modal-body p-4 text-center" v-if="selectedStaff">
             <div class="position-relative d-inline-block mb-3" style="width: 110px; height: 110px;">
-              <!-- Sử dụng SoraImage thay cho thẻ img truyền thống ở Modal chi tiết -->
               <SoraImage 
                 :src="selectedStaff.avatar_url" 
                 :placeholder="defaultAvatar"
@@ -240,7 +232,6 @@
               </div>
             </div>
             
-            <!-- Chuyển trang an toàn -->
             <div class="mt-4" v-if="!selectedStaff.deleted_at">
               <button type="button" @click="goToEditStaff(selectedStaff.id)" class="btn btn-outline-brand rounded-pill px-4 fw-semibold w-100">
                 <i class="bi bi-pencil-square me-1"></i> Chỉnh sửa thông tin
@@ -255,6 +246,7 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, onMounted, computed, onBeforeUnmount, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
@@ -262,7 +254,6 @@ import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { getFullImage } from '@/composables/useUtilities';
 
-// Tái sử dụng linh hoạt SoraImage và defaultAvatar thống nhất hệ thống
 import SoraImage from '@/components/ui/SoraImage.vue';
 import StatusConfirmSelect from '@/components/admin/StatusConfirmSelect.vue';
 import defaultAvatar from '@/assets/images/defaults/avatar1.png';
@@ -274,7 +265,7 @@ const queryClient = useQueryClient();
 const searchQuery = ref('');
 const activeTab = ref('all');
 const currentPageLevel = ref(null);
-const isUpdatingStatusId = ref(null); // Quản lý spin-loading theo id riêng biệt tránh nhiễu loạn UI
+const isUpdatingStatusId = ref(null);
 
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
@@ -367,31 +358,24 @@ const getLevelColor = (level) => {
   }
 };
 
-// ==========================================
-// TANSTACK VUE QUERY - FETCH DATA
-// ==========================================
-
-// Query lấy danh sách staff
 const { data: staffsResponse, isLoading: isStaffsLoading, isFetching: isStaffsFetching } = useQuery({
   queryKey: ['adminStaffs'],
   queryFn: async () => {
     const response = await axios.get(`${API_URL}/admin/staff`, { headers: getHeaders() });
     return response.data;
   },
-  staleTime: 5 * 60 * 1000 // Cache dữ liệu trong 5 phút
+  staleTime: 5 * 60 * 1000
 });
 
-// Query lấy danh sách roles
 const { data: rolesResponse } = useQuery({
   queryKey: ['adminRoles'],
   queryFn: async () => {
     const response = await axios.get(`${API_URL}/admin/roles`, { headers: getHeaders() });
     return response.data;
   },
-  staleTime: 30 * 60 * 1000 // Roles ít thay đổi, cache 30 phút
+  staleTime: 30 * 60 * 1000
 });
 
-// Query lấy danh sách modules
 const { data: modulesResponse } = useQuery({
   queryKey: ['adminModules'],
   queryFn: async () => {
@@ -401,19 +385,15 @@ const { data: modulesResponse } = useQuery({
   staleTime: 30 * 60 * 1000
 });
 
-// isLoading dùng cho giao diện Shimmer ở lần load ĐẦU TIÊN
 const isLoading = computed(() => isStaffsLoading.value);
 
-// Chuyển đổi dữ liệu thô sang reactive state tương thích cục bộ
 const localStaffs = ref([]);
 const roles = computed(() => rolesResponse.value?.data || []);
 
 const rawStaffsList = computed(() => staffsResponse.value?.data || []);
 
-// ĐỊNH NGHĨA HÀM KHỞI TẠO ĐỒNG BỘ TRƯỚC (ĐỂ ĐẢM BẢO KHÔNG BỊ TRUY CẬP TRƯỚC KHI KHỞI TẠO)
 const syncLocalStaffs = () => {
   localStaffs.value = rawStaffsList.value.map(s => {
-    // Giữ lại trạng thái thay đổi cục bộ hiện tại nếu có
     const existing = localStaffs.value.find(ls => ls.id === s.id);
     return {
       ...s,
@@ -423,14 +403,12 @@ const syncLocalStaffs = () => {
   });
 };
 
-// SỬ DỤNG WATCH SAU KHI CÁC HÀM PHỤ TRỢ ĐÃ ĐƯỢC ĐỊNH NGHĨA AN TOÀN
 watch(rawStaffsList, (newList) => {
   if (newList && newList.length > 0) {
     syncLocalStaffs();
   }
 }, { immediate: true });
 
-// Thiết lập quyền hạn cấp trang từ dữ liệu modules đã load
 computed(() => {
   const modules = modulesResponse.value?.data || [];
   const currentCode = route.meta.moduleCode;
@@ -493,11 +471,6 @@ const getStatusSelectClass = (status) => {
 const checkStatusChange = (staff) => { staff.isStatusChanged = (staff.localStatus !== staff.status); };
 const cancelStatusChange = (staff) => { staff.localStatus = staff.status; staff.isStatusChanged = false; };
 
-// ==========================================
-// TANSTACK VUE QUERY - MUTATIONS (THAY ĐỔI DỮ LIỆU)
-// ==========================================
-
-// 1. Cập nhật trạng thái
 const updateStatusMutation = useMutation({
   mutationFn: async ({ id, payload }) => {
     const response = await axios.post(`${API_URL}/admin/staff/${id}`, payload, { headers: getHeaders() });
@@ -514,7 +487,6 @@ const updateStatusMutation = useMutation({
       staff.isStatusChanged = false;
     }
 
-    // Đồng bộ nóng (optimistic updates) dữ liệu cache mà không cần reload
     queryClient.setQueryData(['adminStaffs'], (old) => {
       if (!old) return old;
       return {
@@ -523,13 +495,11 @@ const updateStatusMutation = useMutation({
       };
     });
 
-    // Nếu sửa trạng thái của chính mình, đồng bộ luôn query thông tin profile cá nhân ở Header
     if (variables.id === currentUserId) {
       queryClient.invalidateQueries({ queryKey: ['adminProfile'] });
     }
   },
   onError: (error, variables) => {
-    // Nếu lỗi, rollback giá trị cũ của nhân viên tương ứng
     const staff = localStaffs.value.find(s => s.id === variables.id);
     if (staff) cancelStatusChange(staff);
     handleAxiosError(error, 'Không thể cập nhật trạng thái');
@@ -552,7 +522,6 @@ const saveStaffStatus = (staff) => {
   updateStatusMutation.mutate({ id: staff.id, payload });
 };
 
-// 2. Xóa mềm nhân viên
 const deleteStaffMutation = useMutation({
   mutationFn: async (id) => {
     const response = await axios.delete(`${API_URL}/admin/staff/${id}`, { headers: getHeaders() });
@@ -561,7 +530,6 @@ const deleteStaffMutation = useMutation({
   onSuccess: (data, id) => {
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Đã xóa', text: data.message, showConfirmButton: false, timer: 1500 });
     
-    // Optimistic update: Chuyển dữ liệu của nhân sự này sang trạng thái deleted_at cục bộ
     queryClient.setQueryData(['adminStaffs'], (old) => {
       if (!old) return old;
       return {
@@ -586,7 +554,6 @@ const confirmDelete = (id, name) => {
   });
 };
 
-// 3. Khôi phục nhân viên
 const restoreStaffMutation = useMutation({
   mutationFn: async (id) => {
     const response = await axios.post(`${API_URL}/admin/staff/${id}/restore`, {}, { headers: getHeaders() });
@@ -595,7 +562,6 @@ const restoreStaffMutation = useMutation({
   onSuccess: (data, id) => {
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Thành công', text: data.message, showConfirmButton: false, timer: 1500 });
     
-    // Optimistic update: Khôi phục trạng thái deleted_at về null ngay lập tức
     queryClient.setQueryData(['adminStaffs'], (old) => {
       if (!old) return old;
       return {
@@ -622,9 +588,6 @@ const restoreStaff = (id) => {
   });
 };
 
-// ==========================================
-// FILTERS & PAGINATION LOGIC
-// ==========================================
 
 const processedStaff = computed(() => {
   let result = localStaffs.value;
@@ -676,22 +639,6 @@ const paginatedStaff = computed(() => {
 [data-bs-theme="dark"] .current-user-row > td {
   background-color: rgba(0, 153, 129, 0.15) !important;
 }
-.logo-shimmer {
-  font-size: 3.5rem;
-  font-weight: 900;
-  letter-spacing: -1.5px;
-  background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%);
-  background-size: 200% auto;
-  color: transparent;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: shine 1.5s linear infinite;
-}
-
-@keyframes shine {
-  to { background-position: 200% center; }
-}
-
 .custom-tab {
   font-weight: 600 !important;
   color: #6c757d;
@@ -736,7 +683,6 @@ const paginatedStaff = computed(() => {
 .custom-scrollbar-y::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
 
 
-/* Các tiện ích khác */
 .tracking-widest { letter-spacing: 2px; }
 .border-dashed { border-style: dashed !important; }
 .cursor-pointer { cursor: pointer; }

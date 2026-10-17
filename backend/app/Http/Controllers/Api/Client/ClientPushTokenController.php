@@ -19,8 +19,6 @@ class ClientPushTokenController extends Controller
         $userId = $request->user()->id;
         $token = UserPushToken::where('expo_push_token', $data['expo_push_token'])->first();
 
-        // A device token must not be reassigned by another authenticated
-        // account simply because that account submits the same value.
         if ($token && (int) $token->user_id !== (int) $userId) {
             return response()->json([
                 'success' => false,

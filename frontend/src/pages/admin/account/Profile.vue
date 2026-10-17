@@ -11,7 +11,7 @@
         </div>
 
         <div class="row g-4">
-            <!-- CỘT TRÁI: AVATAR & MENU NAV -->
+            <!-- Cột trái: Avatar & Menu -->
             <div class="col-md-4 col-lg-3">
                 <div class="card border-0 shadow-sm rounded-4 text-center p-4 mb-4">
                     <div class="position-relative d-inline-block mx-auto mb-3">
@@ -58,12 +58,12 @@
                 </div>
             </div>
 
-            <!-- CỘT PHẢI: NỘI DUNG -->
+            <!-- Cột phải: Nội dung -->
             <div class="col-md-8 col-lg-9">
                 <div class="card border-0 shadow-sm rounded-4 h-100">
                     <div class="card-body p-4 p-lg-1">
 
-                        <!-- TAB 1: THÔNG TIN CHUNG -->
+                        <!-- Tab 1: Thông tin chung -->
                         <div v-if="activeTab === 'info'">
                             <h4 class="fw-bold mb-4">Cập nhật thông tin</h4>
                             <form @submit.prevent="updateProfile">
@@ -132,14 +132,14 @@
                                 <div class="text-end mt-4 pt-3 border-top">
                                     <button type="submit" class="btn btn-brand px-5 py-2 fw-bold text-white shadow-sm"
                                         :disabled="isLoading">
-                                        <span v-if="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+                                        <AdminLoadingSpinner v-if="isLoading" class="me-2" size="16" />
                                         {{ isLoading ? 'Đang lưu...' : 'Lưu thay đổi' }}
                                     </button>
                                 </div>
                             </form>
                         </div>
 
-                        <!-- TAB 2: ĐỔI MẬT KHẨU (ĐÃ FIX LAYOUT TRẢI ĐỀU 2 CỘT) -->
+                        <!-- Tab 2: Đổi mật khẩu -->
                         <div v-if="activeTab === 'password'">
                             <h4 class="fw-bold mb-4">Đổi mật khẩu</h4>
                             <form @submit.prevent="updatePassword">
@@ -153,9 +153,8 @@
                                     </div>
                                 </div>
 
-                                <!-- Giao diện 2 cột song song -->
                                 <div class="row g-4">
-                                    <!-- Input Mật khẩu mới -->
+                                    <!-- Nhập mật khẩu mới -->
                                     <div class="col-md-6">
                                         <label class="form-label fw-semibold">Mật khẩu mới <span
                                                 class="text-danger">*</span></label>
@@ -172,7 +171,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- Input Xác nhận mật khẩu mới -->
+                                    <!-- Xác nhận mật khẩu mới -->
                                     <div class="col-md-6">
                                         <label class="form-label fw-semibold">Xác nhận mật khẩu mới <span
                                                 class="text-danger">*</span></label>
@@ -194,7 +193,7 @@
                                 <div class="text-end mt-5 pt-3 border-top">
                                     <button type="submit" class="btn btn-brand px-5 py-2 fw-bold text-white shadow-sm"
                                         :disabled="isLoading">
-                                        <span v-if="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+                                        <AdminLoadingSpinner v-if="isLoading" class="me-2" size="16" />
                                         {{ isLoading ? 'Đang cập nhật...' : 'Cập nhật mật khẩu' }}
                                     </button>
                                 </div>
@@ -205,6 +204,19 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Modal cắt ảnh -->
+        <ImageCropperModal
+            :show="showCropper"
+            :image-url="cropperUrl"
+            :aspect-ratio="1"
+            :allow-ratio-change="false"
+            title="Cắt ảnh Đại diện"
+            :max-size-kb="50"
+            :is-avatar="true"
+            @crop="handleCrop"
+            @close="closeCropper"
+        />
     </div>
 </template>
 
@@ -216,6 +228,7 @@ import { getFullImage } from '@/composables/useUtilities';
 import defaultAvatar from '../../../assets/images/defaults/avatar1.png';
 import VietnamAddressPicker from '@/components/ui/VietnamAddressPicker.vue';
 import { API_BASE_URL } from '@/utils/env';
+import ImageCropperModal from '@/components/admin/ImageCropperModal.vue';
 
 const activeTab = ref('info');
 const isLoading = ref(false);
@@ -292,10 +305,27 @@ const handleAvatarChange = (event) => {
         if (file.size > 2 * 1024 * 1024) {
             Swal.fire('Lỗi', 'Dung lượng tối đa 2MB', 'error'); return;
         }
-        selectedFile.value = file;
-        previewAvatar.value = URL.createObjectURL(file);
-        isRemoveAvatar.value = false;
+        cropperUrl.value = URL.createObjectURL(file);
+        showCropper.value = true;
+        event.target.value = '';
     }
+};
+
+const showCropper = ref(false);
+const cropperUrl = ref('');
+
+const closeCropper = () => {
+    showCropper.value = false;
+    if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+};
+
+const handleCrop = (data) => {
+    showCropper.value = false;
+    if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+    
+    selectedFile.value = data.file;
+    previewAvatar.value = data.blobUrl;
+    isRemoveAvatar.value = false;
 };
 
 const removeAvatar = () => {

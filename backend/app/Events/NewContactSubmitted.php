@@ -5,7 +5,7 @@ namespace App\Events;
 use App\Models\Contact;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow; // Phát ngay lập tức
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow; 
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
@@ -22,7 +22,6 @@ class NewContactSubmitted implements ShouldBroadcastNow
 
     public function broadcastOn()
     {
-        // Phát trên kênh công khai 'admin-contacts'
         return new Channel('admin-contacts');
     }
 

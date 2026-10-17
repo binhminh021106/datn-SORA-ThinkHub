@@ -36,7 +36,6 @@
           </a>
 
           <div class="user-menu-wrapper position-relative" ref="userMenuContainer">
-            <!-- User Menu khi đăng nhập phải đổi màu và đổi biểu tượng biểu thị là đã dăng nhập -->
             <button @click="toggleUserMenu"
               class="btn border-0 p-0 bg-transparent icon-link hover-primary transition-color d-flex align-items-center justify-content-center">
               <i v-if="user" class="bi bi-person-circle text-primary-custom"></i>
@@ -99,7 +98,6 @@
             <li><router-link :to="{ name: 'home' }" class="nav-item-link" exact-active-class="header-active">XU
                 HƯỚNG</router-link></li>
 
-            <!-- MEGA MENU SẢN PHẨM: ĐÃ ÁP DỤNG HÀM BẢO VỆ MOUSE LEAVE (DELAY 200MS) -->
             <li class="position-static py-2" @mouseenter="openMegaMenu" @mouseleave="closeMegaMenu">
               <a href="#" @click.prevent="safeNavigate('shop')" class="nav-item-link d-flex align-items-center"
                 :class="{ 'header-active': ['shop', 'productDetail', 'category'].includes($route.name) }">
@@ -132,7 +130,7 @@
                 placeholder="Tìm kiếm..." v-model="searchQuery" @input="onSearchInput"
                 @focus="showSearchResults = true">
               <button type="submit" class="btn border-0 p-0 position-absolute end-0 text-dark hover-primary">
-                <i v-if="isFetchingSearch" class="spinner-border spinner-border-sm text-muted"></i>
+                <AdminLoadingSpinner v-if="isFetchingSearch" class="text-muted" size="16" />
                 <i v-else class="bi bi-search fs-6"></i>
               </button>
               <div class="search-underline"></div>
@@ -197,10 +195,8 @@
       </div>
     </div>
 
-    <!-- Nền mờ khi Header trượt lên -->
     <div class="border-bottom opacity-50"></div>
 
-    <!-- MOBILE OFFCANVAS MENU -->
     <transition name="slide-left">
       <div v-if="isMobileMenuOpen" class="mobile-menu-overlay">
         <div class="mobile-backdrop" @click="toggleMobileMenu"></div>
@@ -269,7 +265,6 @@
       </div>
     </transition>
 
-    <!-- Mini Cart -->
     <MiniCart ref="miniCartRef" />
   </header>
 </template>
@@ -330,9 +325,6 @@ const isCategoryFallback = ref(false);
 let searchDebounce = null;
 const isFetchingSearch = ref(false);
 
-// ==========================================
-// TÍCH HỢP BẢO VỆ CHUỘT CHO MEGA MENU (200MS)
-// ==========================================
 const isMegaMenuOpen = ref(false);
 let megaMenuTimer = null;
 
@@ -346,10 +338,6 @@ const closeMegaMenu = () => {
     isMegaMenuOpen.value = false;
   }, 200);
 };
-
-// ==========================================
-// THUẬT TOÁN SMART STICKY HEADER
-// ==========================================
 const isScrolled = ref(false);
 const isHidden = ref(false);
 let lastScrollY = 0;
@@ -419,7 +407,19 @@ const getImage = (path) => {
   if (cleaned.startsWith('http') || cleaned.startsWith('data:')) return cleaned;
   return getStorageUrl(cleaned);
 };
-const handleImageError = (e) => { e.target.src = soraPlaceholder; };
+const handleImageError = (e) => { 
+  let fallback = '/Sora-placeholder.png';
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_client_active) {
+          fallback = getStorageUrl(store.settings.placeholder_client_active);
+      }
+  } catch (err) {}
+  
+  if (e.target.src !== fallback) {
+      e.target.src = fallback;
+  }
+};
 const handleLogoError = (e) => {
   logoLoadFailed.value = true;
 };
@@ -558,15 +558,10 @@ const handleLogout = () => {
   });
 };
 
-// ==========================================
-// XỬ LÝ SỰ KIỆN CẬP NHẬT GIỎ HÀNG THÔNG MINH
-// ==========================================
 const handleCartUpdateEvent = (e) => {
-  // Nếu tín hiệu có gửi kèm con số chính xác -> Cập nhật luôn, khỏi gọi API đỡ lag
   if (e && e.detail && e.detail.cart_count !== undefined) {
     cartItemCount.value = parseInt(e.detail.cart_count) || 0;
   } else {
-    // Nếu chỉ báo hiệu (không có số) -> Tải lại dữ liệu từ server
     fetchHeaderData();
   }
 };
@@ -582,11 +577,10 @@ const handleAuthStatusChanged = () => {
   fetchUserProfile();
 };
 
-// Theo dõi chuyển hướng trang (SPA Router) - Tự động tải lại số lượng giỏ hàng khi người dùng chuyển qua lại các trang
 watch(
   () => route.fullPath,
   () => {
-    // FIX: Tắt gọi fetchHeaderData() ở đây để tránh gọi API liên tục mỗi khi đổi route, gây giật lag
+    // Tắt gọi fetchHeaderData() ở đây để tránh gọi API liên tục mỗi khi đổi route, gây giật lag
     // fetchHeaderData();
   }
 );

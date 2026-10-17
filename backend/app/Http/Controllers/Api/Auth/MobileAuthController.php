@@ -9,15 +9,10 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
-/**
- * Controller xử lý Đăng ký / Đăng nhập riêng cho Mobile App
- * Khác với AuthController (web): form đăng ký KHÔNG yêu cầu số điện thoại
- */
 class MobileAuthController extends Controller
 {
     public function register(Request $request)
     {
-        // Mobile app: Họ tên, email, mật khẩu, xác nhận mật khẩu (không có SĐT)
         $request->validate([
             'fullName' => 'required|string|max:150',
             'email'    => 'required|string|email|max:150|unique:users',
@@ -78,8 +73,6 @@ class MobileAuthController extends Controller
             ]);
         }
 
-        // Thu hồi token cũ (đăng nhập 1 thiết bị) - tuỳ chọn
-        // $user->tokens()->delete();
 
         $token = $user->createToken('mobile_token', ['access'], now()->addDays(30))->plainTextToken;
 
@@ -187,12 +180,10 @@ class MobileAuthController extends Controller
             $userData['avatar_url'] = url('storage/' . $user->avatar_url);
         }
 
-        // Đính kèm URL đầy đủ cho icon tier (nếu có)
         if ($user->tier && $user->tier->icon) {
             $userData['tier']['icon_url'] = url('storage/' . $user->tier->icon);
         }
 
-        // Trả thêm danh sách toàn bộ hạng thành viên (để hiển thị progress)
         $allTiers = \App\Models\MembershipTier::orderBy('min_spent', 'asc')->get()->map(function ($t) {
             $t->icon_url = $t->icon ? url('storage/' . $t->icon) : null;
             return $t;

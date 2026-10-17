@@ -1,10 +1,10 @@
 <template>
   <div v-if="canAccess" class="station-wrapper d-flex flex-column vh-100 bg-dark text-white position-relative">
     
-    <!-- HEADER -->
+
     <div class="station-header d-flex justify-content-between align-items-center p-3 border-bottom border-secondary">
       <div class="d-flex align-items-center">
-        <!-- Nút Back về màn hình trước -->
+        <!-- Nút Back -->
         <a href="javascript:history.back()" class="btn btn-outline-light rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
           <i class="bi bi-arrow-left"></i>
         </a>
@@ -15,32 +15,29 @@
       </div>
     </div>
 
-    <!-- MAIN AREA -->
+
     <div class="station-body flex-grow-1 d-flex align-items-center justify-content-center position-relative p-4">
       
       <div class="row w-100 max-w-1200 h-100">
-        <!-- CỘT TRÁI: MÃ QR -->
+        <!-- QR -->
         <div class="col-lg-7 d-flex flex-column align-items-center justify-content-center border-end border-secondary">
           
-          <!-- Trạng thái Loading lúc đầu -->
+          <!-- Loading -->
           <div v-if="isLoading && !qrToken" class="py-5 d-flex flex-column align-items-center">
-            <div class="spinner-border text-brand" role="status" style="width: 4rem; height: 4rem;"></div>
+            <AdminLoadingSpinner class="text-brand" style="width: 4rem; height: 4rem;" />
             <p class="mt-3 text-white-50 fw-semibold fs-5">Đang khởi tạo mã an toàn...</p>
           </div>
 
-          <!-- Vùng hiển thị QR Code -->
           <div v-else class="text-center">
             <div class="qr-container bg-white p-4 rounded-4 shadow-lg mb-4 position-relative mx-auto" style="width: 350px; height: 350px;">
-              <!-- Mã QR Level L để dễ quét bằng ảnh -->
               <qrcode-vue :value="qrToken" :size="300" level="L" foreground="#000000" background="#ffffff" />
               
-              <!-- Lớp phủ Loading khi đang làm mới mã -->
               <div v-if="isLoading" class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-flex align-items-center justify-content-center rounded-4">
-                <div class="spinner-border text-brand" role="status"></div>
+                <AdminLoadingSpinner class="text-brand"  />
               </div>
             </div>
 
-            <!-- Thanh đếm ngược vòng tròn (Timer) -->
+            <!-- Timer -->
             <div class="timer-section mb-4 d-flex flex-column align-items-center">
               <h3 class="fw-bold mb-2" :class="timeLeft <= 5 ? 'text-danger' : 'text-brand'">{{ timeLeft }}s</h3>
               <div class="progress" style="height: 8px; width: 280px; background-color: #333; border-radius: 10px;">
@@ -54,7 +51,7 @@
           </div>
         </div>
 
-        <!-- CỘT PHẢI: HOẠT ĐỘNG ĐIỂM DANH TRỰC TIẾP (LIVE FEED) -->
+        <!-- LIVE FEED -->
         <div class="col-lg-5 d-flex flex-column ps-lg-5 py-4">
           <div class="d-flex align-items-center mb-4">
             <div class="live-indicator me-3"></div>
@@ -142,7 +139,7 @@ const canAccess = computed(() => {
   );
 });
 
-// --- QUẢN LÝ QR CODE ---
+// --- QR CODE ---
 const isLoading = ref(true);
 const qrToken = ref('');
 const timeLeft = ref(25);
@@ -196,12 +193,11 @@ const stopTimer = () => {
   }
 };
 
-// --- QUẢN LÝ HOẠT ĐỘNG TRỰC TIẾP (LIVE POLLING) ---
+// --- LIVE POLLING ---
 const recentLogs = ref([]);
 let previousState = [];
 let pollingInterval = null;
 
-// Hàm phát âm thanh khi có người check-in/out
 const playStationBeep = (type) => {
   const AudioContext = window.AudioContext || window.webkitAudioContext;
   if (!AudioContext) return;
@@ -213,12 +209,12 @@ const playStationBeep = (type) => {
   gainNode.connect(audioCtx.destination);
   
   if (type === 'in') {
-    osc.frequency.setValueAtTime(1200, audioCtx.currentTime); // Tít tiếng thanh cao (In)
+    osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
     gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
     osc.start();
     osc.stop(audioCtx.currentTime + 0.15);
   } else {
-    osc.frequency.setValueAtTime(600, audioCtx.currentTime); // Tít tiếng trầm thấp (Out)
+    osc.frequency.setValueAtTime(600, audioCtx.currentTime);
     gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
     osc.start();
     osc.stop(audioCtx.currentTime + 0.2);
@@ -230,21 +226,18 @@ const triggerStationAlert = (name, type) => {
   const now = new Date();
   const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   
-  // Đẩy hoạt động mới lên đầu danh sách
   recentLogs.value.unshift({
     id: Date.now(),
     name: name,
-    type: type, // 'in' hoặc 'out'
+    type: type,
     time: timeStr
   });
 
-  // Chỉ giữ lại 5 hoạt động gần nhất để giao diện không bị đầy
   if (recentLogs.value.length > 5) {
     recentLogs.value.pop();
   }
 };
 
-// Hàm "Lắng nghe" liên tục API Status
 const fetchLiveStatus = async () => {
   if (!token || !canAccess.value) return;
 
@@ -254,21 +247,17 @@ const fetchLiveStatus = async () => {
     if (res.data.success) {
       const currentAdmins = res.data.data;
 
-      // So sánh dữ liệu mới với dữ liệu cũ để tìm ra ai vừa thao tác
       if (previousState.length > 0) {
         currentAdmins.forEach(admin => {
           const prevAdmin = previousState.find(a => a.id === admin.id);
           
-          // Lấy record điểm danh của nhân sự đó
           const currAtt = Array.isArray(admin.attendance) ? admin.attendance[0] : admin.attendance;
           const prevAtt = prevAdmin ? (Array.isArray(prevAdmin.attendance) ? prevAdmin.attendance[0] : prevAdmin.attendance) : null;
 
           if (currAtt) {
-            // Trường hợp 1: Có dữ liệu mới mà trước đó chưa có -> VỪA CHECK-IN
             if (!prevAtt && currAtt.clock_in) {
               triggerStationAlert(admin.fullname, 'in');
             }
-            // Trường hợp 2: Trạng thái chuyển từ pending sang completed -> VỪA CHECK-OUT
             else if (prevAtt && prevAtt.checkout_status === 'pending' && currAtt.checkout_status === 'completed') {
               triggerStationAlert(admin.fullname, 'out');
             }
@@ -276,7 +265,6 @@ const fetchLiveStatus = async () => {
         });
       }
       
-      // Lưu lại trạng thái để so sánh cho vòng lặp tiếp theo
       previousState = currentAdmins;
     }
   } catch (err) {
@@ -291,7 +279,6 @@ onMounted(() => {
   }
 
   fetchQrToken();
-  // Khởi chạy Polling: Cứ 3 giây hỏi API một lần
   pollingInterval = setInterval(fetchLiveStatus, 3000);
 });
 
@@ -308,13 +295,11 @@ onUnmounted(() => {
 
 .max-w-1200 { max-width: 1200px; margin: 0 auto; }
 
-/* Tránh cuộn trang làm xấu UI máy Kiosk */
 .station-wrapper {
   overflow: hidden;
   user-select: none;
 }
 
-/* Đèn báo nhấp nháy trực tiếp (Live Indicator) */
 .live-indicator {
   width: 12px;
   height: 12px;
@@ -330,7 +315,6 @@ onUnmounted(() => {
   100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
 
-/* Hiệu ứng thêm phần tử vào Live Feed */
 .list-enter-active,
 .list-leave-active {
   transition: all 0.5s ease;

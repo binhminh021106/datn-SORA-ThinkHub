@@ -1,6 +1,6 @@
 <template>
   <div class="admin-contact-page min-vh-100" :class="{ 'has-selection-bar': selectedIds.length > 0 }">
-    <!-- Tiêu đề & Thống kê & Bộ lọc -->
+
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
       <div>
         <h2 class="h3 font-serif mb-2 fw-bold">Hộp Thư Khách Hàng</h2>
@@ -34,11 +34,11 @@
       </ul>
     </div>
 
-    <!-- Bảng danh sách liên hệ -->
+
     <div class="card contact-inbox-card overflow-hidden">
       <div class="card-header contact-list-toolbar">
         <div class="d-flex flex-wrap align-items-center gap-3">
-          <h6 class="fw-bold mb-0 text-dark d-flex align-items-center"><i class="bi bi-list-ul me-2"></i>Danh sách liên hệ <span v-if="isContactsFetching && !isLoading" class="spinner-border spinner-border-sm text-brand ms-2" role="status"></span></h6>
+          <h6 class="fw-bold mb-0 text-dark d-flex align-items-center"><i class="bi bi-list-ul me-2"></i>Danh sách liên hệ <AdminLoadingSpinner v-if="isContactsFetching && !isLoading" class="text-brand ms-2" size="16" /></h6>
           <div class="contact-sort-filter">
             <span><i class="bi bi-sort-down-alt"></i>Sắp xếp:</span>
             <select v-model="sortOrder" class="form-select form-select-sm">
@@ -59,7 +59,7 @@
           <table class="table table-hover align-middle mb-0 custom-table">
             <thead>
               <tr class="contact-table-head">
-                <!-- CỘT TÍCH CHỌN TẤT CẢ -->
+
                 <th scope="col" class="ps-4 py-3" style="width: 50px;">
                   <div class="form-check custom-checkbox">
                     <input class="form-check-input" type="checkbox" @change="selectAll($event)" :checked="isAllSelected">
@@ -84,7 +84,7 @@
               <tr v-else-if="contacts.length === 0">
                 <td colspan="5" class="text-center py-5 text-muted small">Không tìm thấy yêu cầu nào phù hợp.</td>
               </tr>
-              <!-- DANH SÁCH ĐÃ ĐƯỢC LỌC VÀ SẮP XẾP -->
+
               <tr v-else v-for="contact in contacts" :key="contact.id" :class="{'contact-row-pending': contact.status === 'pending'}">
                 <td class="ps-4">
                   <div class="form-check custom-checkbox">
@@ -158,7 +158,7 @@
       </div>
     </Transition>
 
-    <!-- Modal Chi Tiết & Gửi Mail (Giữ nguyên giao diện sang trọng) -->
+
     <div class="modal fade" id="contactDetailModal" tabindex="-1" ref="detailModal">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content contact-modal border-0 shadow-lg overflow-hidden" v-if="selectedContact">
@@ -214,7 +214,7 @@
                 </div>
                 <div class="text-end">
                   <button type="submit" class="btn contact-reply-button d-inline-flex align-items-center" :disabled="isReplying">
-                    <span v-if="isReplying" class="spinner-border spinner-border-sm me-2"></span>Gửi Phản Hồi
+                    <AdminLoadingSpinner v-if="isReplying" class="me-2" size="16" />Gửi Phản Hồi
                   </button>
                 </div>
               </form>
@@ -239,7 +239,7 @@ import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/vue-query'
 
 const API_URL = import.meta.env.VITE_API_BASE_URL + '/admin/contacts';
 
-// --- QUẢN LÝ DỮ LIỆU ---
+
 const selectedIds = ref([]);
 const searchInput = ref('');
 const searchQuery = ref('');
@@ -249,7 +249,7 @@ const isSocketActive = ref(false);
 const currentPage = ref(1);
 const queryClient = useQueryClient();
 
-// --- MODAL & FORM ---
+
 const selectedContact = ref(null);
 const replyForm = ref({ subject: '', message: '' });
 const isReplying = ref(false);
@@ -270,7 +270,7 @@ const quickReplyTemplates = [
   { label: 'Cảm ơn', message: 'Cảm ơn bạn đã liên hệ SORA. Chúng tôi luôn sẵn sàng hỗ trợ bạn.' },
 ];
 
-// --- 2. LOGIC CHỌN HÀNG LOẠT ---
+
 const isAllSelected = computed(() => {
   return contacts.value.length > 0 && contacts.value.every((contact) => selectedIds.value.includes(contact.id));
 });
@@ -351,7 +351,7 @@ const bulkDelete = async () => {
 
   if (result.isConfirmed) {
     try {
-      // Sếp lưu ý: Sẽ cần thêm route 'bulk-delete' ở backend
+      // Cần route bulk-delete ở backend
       await axios.post(`${API_URL}/bulk-delete`, { ids: selectedIds.value }, axiosConfig.value);
       selectedIds.value = [];
       await refreshContacts();
@@ -478,7 +478,7 @@ onUnmounted(() => {
 .font-serif { font-family: 'Josefin Sans', sans-serif; }
 .avatar-circle { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
 
-/* Màu cho dòng đang chờ xử lý */
+
 .table-warning-custom {
   background-color: rgba(255, 193, 7, 0.05) !important;
 }
@@ -521,13 +521,13 @@ onUnmounted(() => {
   to { transform: translateX(100%); }
 }
 
-/* Custom checkbox */
+
 .custom-checkbox .form-check-input:checked {
   background-color: #9f273b;
   border-color: #9f273b;
 }
 
-/* Nâng cấp table */
+
 .custom-table thead th { border: none; font-size: 0.75rem; letter-spacing: 0.5px; }
 .custom-table tbody td { border-bottom: 1px solid var(--bs-border-color); }
 
@@ -759,5 +759,51 @@ onUnmounted(() => {
   .contact-selection-bar { align-items: stretch; flex-direction: column; gap: .55rem; }
   .contact-selection-bar > div, .contact-selection-delete { width: 100%; }
   .contact-selection-bar > div { justify-content: center; }
+}
+
+
+[data-bs-theme="dark"] .custom-table .contact-table-head th {
+  background: #1e2125;
+  color: #adb5bd;
+  border-bottom-color: #373b3e;
+}
+[data-bs-theme="dark"] .contact-row-pending { 
+  background: rgba(0, 154, 131, 0.1); 
+}
+[data-bs-theme="dark"] .contact-row-pending:hover, 
+[data-bs-theme="dark"] .custom-table tbody tr:hover { 
+  background: rgba(255, 255, 255, 0.05); 
+}
+[data-bs-theme="dark"] .custom-table tbody td {
+  border-bottom-color: #373b3e;
+}
+[data-bs-theme="dark"] .contact-inbox-card {
+  background-color: #1e2125;
+  border-color: #373b3e;
+}
+[data-bs-theme="dark"] .contact-list-toolbar {
+  background: #1e2125;
+  border-bottom: 1px solid #373b3e;
+}
+[data-bs-theme="dark"] .contact-list-toolbar .text-dark {
+  color: #f8f9fa !important;
+}
+[data-bs-theme="dark"] .contact-sort-filter {
+  background: #2b3035;
+  border-color: #373b3e;
+}
+[data-bs-theme="dark"] .contact-sort-filter > span {
+  color: #adb5bd;
+}
+[data-bs-theme="dark"] .contact-sort-filter .form-select {
+  color: #f8f9fa;
+}
+[data-bs-theme="dark"] .contact-search-wrap input {
+  background-color: #2b3035 !important;
+  color: #f8f9fa;
+  border: 1px solid #373b3e !important;
+}
+[data-bs-theme="dark"] .contact-search-wrap input::placeholder {
+  color: #adb5bd;
 }
 </style>

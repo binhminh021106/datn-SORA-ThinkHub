@@ -30,7 +30,7 @@ class AdminAttributeValueController extends Controller
 
         try {
             DB::transaction(function () use ($id, $val) {
-                // Kiểm tra xem giá trị này có đang được sử dụng ở bất kỳ biến thể sản phẩm nào không
+
                 $isUsed = \Illuminate\Support\Facades\DB::table('product_variant_attributes')
                     ->where('attribute_value_id', $id)
                     ->exists();

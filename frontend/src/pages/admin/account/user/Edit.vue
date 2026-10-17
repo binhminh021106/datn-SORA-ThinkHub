@@ -61,7 +61,6 @@
           </div>
         </div>
 
-        <!-- ================= CỘT PHẢI: TABS THÔNG TIN & ĐỊA CHỈ ================= -->
         <div class="col-md-8 col-lg-9">
           <div class="card border-0 shadow-sm rounded-4 h-100 mb-3 account-edit-card">
 
@@ -88,7 +87,6 @@
 
             <div class="card-body p-3 pt-2">
 
-              <!-- ================= TAB 1: THÔNG TIN CHUNG ================= -->
               <form v-if="activeTab === 'info'" class="account-edit-form" @submit.prevent="updateUser">
                 <div class="row">
                   <div class="col-md-6 mb-3">
@@ -186,17 +184,16 @@
                 <div class="text-end mt-2 pt-3 border-top">
                   <button type="button" class="btn btn-light me-2 px-4 fw-bold shadow-sm" @click="handleRestore"
                     :disabled="isRestoring">
-                    <span v-if="isRestoring" class="spinner-border spinner-border-sm me-2"></span>Khôi phục gốc
+                    <AdminLoadingSpinner v-if="isRestoring" class="me-2" size="16" />Khôi phục gốc
                   </button>
                   <button type="submit" class="btn btn-brand px-5 fw-bold text-white shadow-sm"
                     :disabled="isSavingUser">
-                    <span v-if="isSavingUser" class="spinner-border spinner-border-sm me-2"></span>
+                    <AdminLoadingSpinner v-if="isSavingUser" class="me-2" size="16" />
                     {{ isSavingUser ? 'ĐANG LƯU...' : 'LƯU THAY ĐỔI' }}
                   </button>
                 </div>
               </form>
 
-              <!-- ================= TAB 2: QUẢN LÝ SỔ ĐỊA CHỈ ================= -->
               <div v-if="activeTab === 'address'">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                   <button type="button" class="btn btn-brand rounded-pill px-4 py-2 fw-bold text-white shadow-sm"
@@ -233,8 +230,7 @@
                       <button v-if="!addr.is_default" @click="setDefaultAddress(addr.id)"
                         class="btn btn-sm btn-outline-secondary fw-bold rounded-pill mt-2 mt-md-0 px-3 shadow-sm hover-brand-btn"
                         :disabled="settingDefaultId === addr.id">
-                        <span v-if="settingDefaultId === addr.id"
-                          class="spinner-border spinner-border-sm me-1"></span>Đặt làm mặc định
+                        <AdminLoadingSpinner v-if="settingDefaultId === addr.id" class="me-1" size="16" />Đặt làm mặc định
                       </button>
                     </div>
                     <div class="mb-4">
@@ -265,13 +261,9 @@
       </div>
     </div>
 
-    <div v-else class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
-      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ
-        liệu...</p>
-    </div>
+    <AdminShimmerLoading v-else text="Đang tải dữ
+        liệu..." />
 
-    <!-- MODAL ĐỊA CHỈ (ĐÃ SỬA LỖI CORS - SỬ DỤNG FETCH NATIVE) -->
     <div class="modal fade" id="addressModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content rounded-4 border-0 shadow">
@@ -326,7 +318,7 @@
                 <button type="button" class="btn btn-light px-4 fw-bold me-2 shadow-sm" data-bs-dismiss="modal">Hủy
                   bỏ</button>
                 <button type="submit" class="btn btn-brand px-5 fw-bold text-white shadow-sm" :disabled="isSavingAddr">
-                  <span v-if="isSavingAddr" class="spinner-border spinner-border-sm me-1"></span> LƯU ĐỊA CHỈ
+                  <AdminLoadingSpinner v-if="isSavingAddr" class="me-1" size="16" /> LƯU ĐỊA CHỈ
                 </button>
               </div>
             </form>
@@ -335,16 +327,30 @@
       </div>
     </div>
 
-  </div>
+        <!-- CROPPER MODAL -->
+        <ImageCropperModal
+            :show="showCropper"
+            :image-url="cropperUrl"
+            :aspect-ratio="1"
+            :allow-ratio-change="false"
+            title="Cắt ảnh Đại diện"
+            :max-size-kb="50"
+            :is-avatar="true"
+            @crop="handleCrop"
+            @close="closeCropper"
+        />
+    </div>
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { getFullImage } from '@/composables/useUtilities';
+import ImageCropperModal from '@/components/admin/ImageCropperModal.vue';
 
 import SoraImage from '@/components/ui/SoraImage.vue';
 import VietnamAddressPicker from '@/components/ui/VietnamAddressPicker.vue';
@@ -409,10 +415,6 @@ const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
   }
 };
 
-// ==========================================
-// TANSTACK VUE QUERY - FETCH DATA
-// ==========================================
-
 const { data: userResponse, isLoading: isUserLoading } = useQuery({
   queryKey: ['adminUser', route.params.id],
   queryFn: async () => {
@@ -448,6 +450,24 @@ const handleRestore = () => {
   }, 400);
 };
 
+// Cropper State
+const showCropper = ref(false);
+const cropperUrl = ref('');
+
+const closeCropper = () => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+};
+
+const handleCrop = (data) => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+  
+  selectedFile.value = data.file;
+  previewAvatar.value = data.blobUrl;
+  isRemoveAvatar.value = false;
+};
+
 const handleAvatarChange = (e) => {
   const file = e.target.files[0];
   if (file) {
@@ -457,9 +477,9 @@ const handleAvatarChange = (e) => {
     if (file.size > 2 * 1024 * 1024) {
       Swal.fire('Lỗi', 'Dung lượng tối đa 2MB', 'error'); return;
     }
-    selectedFile.value = file;
-    previewAvatar.value = URL.createObjectURL(file);
-    isRemoveAvatar.value = false;
+    cropperUrl.value = URL.createObjectURL(file);
+    showCropper.value = true;
+    e.target.value = '';
   }
 };
 
@@ -468,10 +488,6 @@ const removeAvatar = () => { selectedFile.value = null; previewAvatar.value = pl
 const validatePhone = (e) => {
   form.value.phone = e.target.value.replace(/\D/g, '').slice(0, 11);
 };
-
-// ==========================================
-// TANSTACK VUE QUERY - MUTATIONS
-// ==========================================
 
 const updateUserMutation = useMutation({
   mutationFn: async (formData) => {
@@ -579,24 +595,6 @@ const setDefaultAddress = (id) => { setDefaultAddressMutation.mutate(id); };
 /* Smooth floating label transition */
 .form-floating > label {
   transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
-}
-
-.logo-shimmer {
-  font-size: 3.5rem;
-  font-weight: 900;
-  letter-spacing: -1.5px;
-  background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%);
-  background-size: 200% auto;
-  color: transparent;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: shine 1.5s linear infinite;
-}
-
-@keyframes shine {
-  to {
-    background-position: 200% center;
-  }
 }
 
 .bg-brand {

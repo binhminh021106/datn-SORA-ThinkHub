@@ -1,6 +1,5 @@
 <template>
   <div class="banner-edit-page">
-  <!-- SKELETON CHỜ KHI KHÔNG CÓ CACHE (F5 MÀN HÌNH) -->
   <div v-if="isLoading" class="container-fluid py-4">
     <div class="row mb-4"><div class="col-6"><span class="placeholder col-8 rounded" style="height: 40px;"></span></div></div>
     <div class="card border-0 shadow-sm rounded-4"><div class="card-body p-5 placeholder-glow"><span class="placeholder col-12 rounded mb-3" style="height: 300px;"></span></div></div>
@@ -12,7 +11,7 @@
         <router-link :to="{ name: 'admin-banners' }" class="btn btn-light shadow-sm me-3 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;"><i class="bi bi-arrow-left"></i></router-link>
         <div class="d-flex flex-column">
           <h3 class="fw-bold text-dark mb-0">Cập nhật Banner</h3>
-          <p class="text-muted small mb-0 mt-1">Chỉnh sửa nội dung chiến dịch <span v-if="isFetching" class="spinner-border spinner-border-sm text-brand ms-2" title="Đang đồng bộ ngầm"></span></p>
+          <p class="text-muted small mb-0 mt-1">Chỉnh sửa nội dung chiến dịch <AdminLoadingSpinner v-if="isFetching" class="text-brand ms-2" title="Đang đồng bộ ngầm" size="16" /></p>
         </div>
       </div>
     </div>
@@ -86,7 +85,10 @@
                   <img v-if="previewDesk" :src="previewDesk" @error="handleImageError" class="w-100 h-100 object-fit-contain">
                 </div>
                 <input type="file" class="d-none" id="deskUpload" accept="image/*" @change="(e) => handleUpload(e, 'desk')">
-                <label for="deskUpload" class="btn btn-sm btn-outline-brand rounded-pill w-100 fw-semibold cursor-pointer"><i class="bi bi-upload"></i> Đổi ảnh PC</label>
+                <div class="d-flex gap-2">
+                  <label for="deskUpload" class="btn btn-sm btn-outline-brand rounded-pill flex-fill fw-semibold cursor-pointer mb-0"><i class="bi bi-upload"></i> Đổi ảnh</label>
+                  <button v-if="previewDesk" type="button" class="btn btn-sm btn-outline-danger rounded-pill fw-semibold cursor-pointer" @click="deleteMediaAPI('image_desktop')"><i class="bi bi-trash"></i> Xóa</button>
+                </div>
               </div>
 
               <div class="p-4 bg-light rounded-4 border text-center flex-fill">
@@ -95,7 +97,10 @@
                   <img v-if="previewMob" :src="previewMob" @error="handleImageError" class="w-100 h-100 object-fit-contain">
                 </div>
                 <input type="file" class="d-none" id="mobUpload" accept="image/*" @change="(e) => handleUpload(e, 'mob')">
-                <label for="mobUpload" class="btn btn-sm btn-outline-brand rounded-pill w-100 fw-semibold cursor-pointer"><i class="bi bi-upload"></i> Đổi ảnh Mobile</label>
+                <div class="d-flex gap-2">
+                  <label for="mobUpload" class="btn btn-sm btn-outline-brand rounded-pill flex-fill fw-semibold cursor-pointer mb-0"><i class="bi bi-upload"></i> Đổi ảnh</label>
+                  <button v-if="previewMob" type="button" class="btn btn-sm btn-outline-danger rounded-pill fw-semibold cursor-pointer" @click="deleteMediaAPI('image_mobile')"><i class="bi bi-trash"></i> Xóa</button>
+                </div>
               </div>
 
               <div class="p-4 bg-light rounded-4 border text-center flex-fill">
@@ -108,13 +113,16 @@
                   </div>
                 </div>
                 <input type="file" class="d-none" id="videoUpload" accept="video/mp4,video/webm" @change="(e) => handleUpload(e, 'video')">
-                <label for="videoUpload" class="btn btn-sm btn-outline-brand rounded-pill w-100 fw-semibold cursor-pointer"><i class="bi bi-upload"></i> Đổi Video (Tùy chọn)</label>
+                <div class="d-flex gap-2">
+                  <label for="videoUpload" class="btn btn-sm btn-outline-brand rounded-pill flex-fill fw-semibold cursor-pointer mb-0"><i class="bi bi-upload"></i> Đổi Video</label>
+                  <button v-if="previewVideo" type="button" class="btn btn-sm btn-outline-danger rounded-pill fw-semibold cursor-pointer" @click="deleteMediaAPI('video_url')"><i class="bi bi-trash"></i> Xóa</button>
+                </div>
               </div>
             </div>
             
             <div class="col-12 text-end border-top pt-4">
               <button type="submit" class="btn btn-brand px-5 fw-bold text-white rounded-pill shadow-sm" :disabled="isUpdating || !form.title">
-                <span v-if="isUpdating" class="spinner-border spinner-border-sm me-2"></span> CẬP NHẬT BANNER
+                <AdminLoadingSpinner v-if="isUpdating" class="me-2" size="16" /> CẬP NHẬT BANNER
               </button>
             </div>
           </div>
@@ -123,6 +131,18 @@
     </div>
   </div>
   </div>
+  
+  <!-- CROPPER MODAL -->
+  <ImageCropperModal
+    :show="showCropper"
+    :image-url="cropperUrl"
+    :aspect-ratio="cropperRatio"
+    :allow-ratio-change="true"
+    :max-size-kb="400"
+    title="Cắt ảnh Banner"
+    @crop="handleCrop"
+    @close="closeCropper"
+  />
 </template>
 
 <script setup>
@@ -132,6 +152,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
 import { getFullImage } from '@/composables/useUtilities';
+import ImageCropperModal from '@/components/admin/ImageCropperModal.vue';
 
 const queryClient = useQueryClient();
 const route = useRoute(); const router = useRouter();
@@ -235,9 +256,68 @@ const handleUpload = (e, type) => {
   if(f) { 
     if(type === 'video' && f.size > 50 * 1024 * 1024) return Swal.fire('Lỗi', 'Video tối đa 50MB', 'error');
     if(type !== 'video' && f.size > 15 * 1024 * 1024) return Swal.fire('Lỗi', 'Ảnh tối đa 15MB', 'error');
-    if(type === 'desk') { fileDesk.value = f; previewDesk.value = URL.createObjectURL(f); }
-    else if(type === 'mob') { fileMob.value = f; previewMob.value = URL.createObjectURL(f); }
-    else if(type === 'video') { fileVideo.value = f; previewVideo.value = URL.createObjectURL(f); }
+    
+    if (type === 'video') {
+      fileVideo.value = f; 
+      previewVideo.value = URL.createObjectURL(f);
+    } else {
+      cropperType.value = type;
+      cropperRatio.value = type === 'desk' ? (1920/600) : (800/1200);
+      cropperUrl.value = URL.createObjectURL(f);
+      showCropper.value = true;
+    }
+    e.target.value = '';
+  }
+};
+
+// State cho Cropper Modal
+const showCropper = ref(false);
+const cropperUrl = ref('');
+const cropperRatio = ref(1);
+const cropperType = ref('');
+
+const handleCrop = (data) => {
+  if (cropperType.value === 'desk') {
+    fileDesk.value = data.file;
+    previewDesk.value = data.blobUrl;
+  } else if (cropperType.value === 'mob') {
+    fileMob.value = data.file;
+    previewMob.value = data.blobUrl;
+  }
+  showCropper.value = false;
+};
+
+const closeCropper = () => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+};
+
+const deleteMediaAPI = async (type) => {
+  const result = await Swal.fire({
+    title: 'Xóa file này?',
+    text: "Hành động này sẽ xóa file ngay lập tức khỏi hệ thống!",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#cc1e2e',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Đồng ý xóa',
+    cancelButtonText: 'Hủy'
+  });
+
+  if (result.isConfirmed) {
+    try {
+      const res = await adminApiClient.delete(`/banners/${bannerId}/delete-media`, {
+        data: { type }
+      });
+      if (res.data.success) {
+        Swal.fire('Đã xóa!', res.data.message, 'success');
+        if (type === 'image_desktop') { fileDesk.value = null; previewDesk.value = null; }
+        else if (type === 'image_mobile') { fileMob.value = null; previewMob.value = null; }
+        else if (type === 'video_url') { fileVideo.value = null; previewVideo.value = null; }
+      }
+    } catch (err) {
+      Swal.fire('Lỗi', 'Không thể xóa file', 'error');
+    }
   }
 };
 

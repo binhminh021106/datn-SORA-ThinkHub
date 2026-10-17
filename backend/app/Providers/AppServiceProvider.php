@@ -93,9 +93,7 @@ class AppServiceProvider extends ServiceProvider
         }
     }
 
-    /**
-     * Configure the rate limiters for the application.
-     */
+
     protected function configureRateLimiting(): void
     {
         // Giới hạn Đăng nhập (Client)
@@ -285,12 +283,10 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
-        // Lớp bảo vệ chung (Mạng lưới an toàn) cho toàn bộ API Admin
         RateLimiter::for('admin-api', function (Request $request) {
             return Limit::perMinute(120)->by('admin-api:' . ($request->user()?->id ?: $request->ip()));
         });
 
-        // Lớp bảo vệ chung (Mạng lưới an toàn) cho toàn bộ API Client
         RateLimiter::for('client-api', function (Request $request) {
             return Limit::perMinute(120)->by('client-api:' . ($request->user()?->id ?: $request->ip()));
         });

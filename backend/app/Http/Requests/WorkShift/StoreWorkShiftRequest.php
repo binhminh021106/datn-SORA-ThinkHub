@@ -19,7 +19,6 @@ class StoreWorkShiftRequest extends FormRequest
     {
         $mergeData = [];
         
-        // Ép kiểu boolean chính xác từ FormData (string "true"/"false")
         if ($this->has('is_overnight')) {
             $mergeData['is_overnight'] = filter_var($this->input('is_overnight'), FILTER_VALIDATE_BOOLEAN);
         }
@@ -28,18 +27,15 @@ class StoreWorkShiftRequest extends FormRequest
             $mergeData['is_active'] = filter_var($this->input('is_active'), FILTER_VALIDATE_BOOLEAN);
         }
 
-        // Chuẩn hóa thời gian sang định dạng H:i
         foreach (['start_time', 'end_time'] as $field) {
             if ($this->has($field) && !empty($this->input($field))) {
                 try {
                     $mergeData[$field] = Carbon::parse($this->input($field))->format('H:i');
                 } catch (\Exception $e) {
-                    // Nếu lỗi parse, để nguyên cho Validation Rules bắt lỗi date_format
                 }
             }
         }
 
-        // Giải mã JSON nếu Frontend gửi mảng dưới dạng chuỗi
         if ($this->has('working_days') && is_string($this->input('working_days'))) {
             $decoded = json_decode($this->input('working_days'), true);
             if (json_last_error() === JSON_ERROR_NONE) {
@@ -79,7 +75,6 @@ class StoreWorkShiftRequest extends FormRequest
             'overtime_days.*' => ['boolean']
         ];
 
-        // Ràng buộc thời gian kết thúc phải sau thời gian bắt đầu nếu KHÔNG qua đêm
         if (!$this->input('is_overnight', false)) {
             $rules['end_time'][] = 'after:start_time';
         }
@@ -108,7 +103,6 @@ class StoreWorkShiftRequest extends FormRequest
 
     protected function failedValidation(Validator $validator)
     {
-        // Trả về JSON chuẩn để TanStack Query / Axios dễ dàng catch lỗi
         throw new HttpResponseException(response()->json([
             'success' => false,
             'message' => 'Dữ liệu đầu vào không hợp lệ.',

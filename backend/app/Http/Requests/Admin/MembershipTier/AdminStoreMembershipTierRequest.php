@@ -17,11 +17,11 @@ class AdminStoreMembershipTierRequest extends FormRequest
     {
         return [
             'name' => 'required|string|min:2|max:50|unique:membership_tiers,name',
-            'min_spent' => 'required|numeric|min:0|max:99999999999', // Giới hạn 99 tỷ
-            'min_orders' => 'required|integer|min:0|max:1000000', // Giới hạn 1 triệu đơn
+            'min_spent' => 'required|numeric|min:0|max:99999999999', 
+            'min_orders' => 'required|integer|min:0|max:1000000', 
             'discount_percent' => 'required|numeric|min:0|max:100',
-            'yearly_discount_quota' => 'required|integer|min:0|max:100000', // Giới hạn 100k lượt
-            'yearly_service_quota' => 'required|integer|min:0|max:10000', // Giới hạn 10k lượt
+            'yearly_discount_quota' => 'required|integer|min:0|max:100000', 
+            'yearly_service_quota' => 'required|integer|min:0|max:10000', 
             'icon' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ];
     }

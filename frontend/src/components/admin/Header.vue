@@ -1,10 +1,8 @@
 <template>
-  <!-- Thêm class động để tự động đổi màu nền Header khi bật Dark Mode -->
   <nav class="app-header navbar navbar-expand shadow-sm px-3 py-2 border-bottom transition-all"
     :class="isDarkMode ? 'bg-dark border-secondary' : 'bg-white'">
     <div class="container-fluid admin-header-container">
 
-      <!-- ĐỒNG HỒ DIGITAL (Bên trái) - Đã thay bằng FLIP CLOCK -->
       <div class="header-clock d-none d-xl-flex align-items-center" v-if="isLoggedIn">
         <div class="flip-clock-container d-flex align-items-center px-3 py-1 rounded shadow-sm transition-all"
           :class="isDarkMode ? 'bg-black border border-secondary' : 'bg-dark border'">
@@ -51,7 +49,7 @@
             </div>
           </div>
 
-          <!-- AM/PM Indicator (Đã ép nằm xuống đáy và cách xa thẻ giây một chút) -->
+          <!-- AM/PM Indicator -->
           <span class="ms-2 fw-bold align-self-end"
             style="color: #4ade80; font-size: 0.85rem; font-family: 'Oswald', sans-serif; letter-spacing: 1px; text-shadow: 0 1px 3px rgba(74, 222, 128, 0.4); line-height: 1; margin-bottom: 4px;">
             {{ currentTime.ampm }}
@@ -90,7 +88,7 @@
           <button
             class="btn btn-brand attendance-main-btn rounded-3 btn-sm fw-bold px-3 d-flex align-items-center text-white shadow-sm"
             @click="toggleAttendanceMenu" :disabled="isCheckingStatus">
-            <span v-if="isCheckingStatus" class="spinner-border spinner-border-sm me-2"></span>
+            <AdminLoadingSpinner v-if="isCheckingStatus" class="me-2" size="16" />
             <template v-else>
               <i v-if="attendanceState === 'working'" class="bi bi-box-arrow-right me-2 fs-5"></i>
               <i v-else-if="attendanceState === 'completed'" class="bi bi-check-circle me-2 fs-5"></i>
@@ -111,7 +109,7 @@
             <button class="dropdown-item d-flex align-items-center gap-2 py-2" type="button"
               @click="handleAttendanceOption('face')">
               <i class="bi bi-person-bounding-box text-brand"></i>
-              <span>FACE ID</span>
+              <span>FACE ID(Demo)</span>
             </button>
           </div>
         </li>
@@ -121,13 +119,10 @@
           <button class="btn face-manage-btn rounded-3 btn-sm fw-bold px-3 d-flex align-items-center"
             title="Quản lý khuôn mặt" @click="openFaceRecognitionTest">
             <i class="bi bi-person-bounding-box me-2 fs-6"></i>
-            Quản lý khuôn mặt
+            Quản lý khuôn mặt(Demo)
           </button>
         </li>
 
-        <!-- ========================================== -->
-        <!-- NÚT CHUÔNG THÔNG BÁO REAL-TIME -->
-        <!-- ========================================== -->
         <li class="nav-item dropdown me-3 notification-menu-container" ref="notiMenuContainer" v-if="isLoggedIn">
           <button @click="toggleNotiMenu"
             class="btn rounded-circle shadow-sm d-flex align-items-center justify-content-center p-0 theme-toggle-btn position-relative"
@@ -154,7 +149,7 @@
 
             <div class="custom-scrollbar-y" style="max-height: 400px; overflow-y: auto;">
               <div v-if="isLoadingNoti" class="text-center p-4">
-                <div class="spinner-border spinner-border-sm text-brand" role="status"></div>
+                <AdminLoadingSpinner class="text-brand" size="16" />
               </div>
               <div v-else-if="notifications.length === 0" class="text-center p-5 text-muted small font-sans-vn">
                 <i class="bi bi-bell-slash fs-2 d-block mb-2 opacity-50"></i>
@@ -275,7 +270,6 @@ import adminApiClient from '@/utils/adminApiClient';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import * as bootstrap from 'bootstrap';
 
-// Import component SoraImage phục vụ việc tự động fallback ảnh lỗi
 import SoraImage from '@/components/ui/SoraImage.vue';
 import defaultAvatar from '@/assets/images/defaults/avatar1.png';
 import QrGeneratorModal from './QrGeneratorModal.vue';
@@ -287,7 +281,7 @@ const isUserMenuActive = ref(false);
 const isAttendanceMenuActive = ref(false);
 const userMenuContainer = ref(null);
 const attendanceMenuContainer = ref(null);
-const attendanceState = ref('ready'); // ready, working, completed, hanging
+const attendanceState = ref('ready');
 const hasShiftAssignment = ref(true);
 
 const showAttendanceButton = computed(() => {
@@ -472,9 +466,6 @@ const adminUser = computed(() => {
   };
 });
 
-// ==========================================
-// LOGIC THÔNG BÁO (NOTIFICATIONS)
-// ==========================================
 const notifications = ref([]);
 const unreadCount = ref(0);
 const isLoadingNoti = ref(false);
@@ -618,7 +609,6 @@ const closeUserMenu = (event) => {
   }
 };
 
-// ===== GLOBAL CHAT NOTIFICATION =====
 const unreadChatCount = ref(0);
 let chatEchoChannel = null;
 let adminAlertChannelName = null;
@@ -812,7 +802,6 @@ const handleAttendanceOption = async (method) => {
 @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&display=swap');
 
 
-/* --- FIX CSS DÀNH CHO MINI FLIP CLOCK TỶ LỆ CHUẨN --- */
 .flip-clock-container {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -826,23 +815,19 @@ const handleAttendanceOption = async (method) => {
   box-sizing: border-box;
 }
 
-/* FIX: Mở rộng chiều ngang (width) để chữ không bị lẹm */
 .flip-card-mini {
   position: relative;
   width: 38px;
-  /* Cân đối lại chiều ngang, rộng hơn cũ 6px */
   height: 42px;
   background: #111;
   border-radius: 6px;
   font-size: 32px;
-  /* Giảm cỡ chữ 1 tẹo cho cân đối với width mới */
   font-weight: 700;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
   perspective: 500px;
   color: #4ade80;
 }
 
-/* NỬA TRÊN VÀ DƯỚI */
 :deep(.half) {
   position: absolute;
   left: 0;
@@ -891,7 +876,6 @@ const handleAttendanceOption = async (method) => {
   background: rgba(255, 255, 255, 0.05);
 }
 
-/* FIX: Căn chỉnh chữ bên trong */
 :deep(.num) {
   position: absolute;
   left: 0;
@@ -905,7 +889,6 @@ const handleAttendanceOption = async (method) => {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0px;
   backface-visibility: hidden;
-  /* Thêm padding nhẹ nếu cần, nhưng mở width thường là đủ */
 }
 
 :deep(.half.top .num) {
@@ -953,7 +936,6 @@ const handleAttendanceOption = async (method) => {
   }
 }
 
-/* Dấu : phân cách */
 .separator-mini {
   display: flex;
   flex-direction: column;
@@ -970,7 +952,6 @@ const handleAttendanceOption = async (method) => {
   box-shadow: 0 0 5px rgba(74, 222, 128, 0.6);
 }
 
-/* --- PHẦN CSS GỐC CỦA HEADER --- */
 .app-header {
   min-height: 60px;
   z-index: 1000;
@@ -1219,7 +1200,6 @@ const handleAttendanceOption = async (method) => {
   background-color: rgba(0, 153, 129, 0.08) !important;
 }
 
-/* ===== NÚT CHAT + BADGE ===== */
 .btn-chat-notify {
   color: #1e3a5f;
   border: 1.5px solid #1e3a5f;
@@ -1232,7 +1212,6 @@ const handleAttendanceOption = async (method) => {
   color: #fff;
 }
 
-/* ===== TOAST THÔNG BÁO CHAT ===== */
 :global(.admin-chat-toast) {
   position: fixed;
   bottom: 24px;

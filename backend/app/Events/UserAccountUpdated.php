@@ -25,8 +25,6 @@ class UserAccountUpdated implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         $channels = [new PrivateChannel('admin')];
-
-        // notify the specific user on their private channel
         $channels[] = new PrivateChannel('App.Models.User.' . $this->userId);
 
         return $channels;

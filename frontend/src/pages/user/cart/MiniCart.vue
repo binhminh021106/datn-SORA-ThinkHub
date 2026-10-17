@@ -1,7 +1,6 @@
 <template>
   <Teleport to="body">
     <div class="mini-cart-container">
-      <!-- Overlay xuyên thấu -->
       <transition name="fade">
         <div 
           v-if="isOpen" 
@@ -13,12 +12,9 @@
       <transition name="cart-slide">
         <div v-if="isOpen" class="cart-wrapper d-flex">
         
-        <!-- ========================================== -->
-        <!-- BẢNG GỢI Ý SẢN PHẨM BÊN TRÁI -->
-        <!-- ========================================== -->
         <div class="featured-products-panel bg-transparent d-none d-lg-flex flex-column align-items-center justify-content-center p-4">
           
-          <!-- HỘP TRẮNG CHỨA SẢN PHẨM Ở GIỮA -->
+
           <div class="suggested-products-box bg-white p-4 shadow w-100 position-relative" style="max-width: 950px;" v-show="featuredProducts.length > 0 || isProductsLoading">
             <div class="text-center mb-4 mt-2">
                <h4 class="m-0 tracking-wide fw-medium text-dark font-oswald" style="font-size: 1.5rem;">Bạn có thể quan tâm</h4>
@@ -28,7 +24,7 @@
               
               <SoraProductGridSkeleton v-if="isProductsLoading" :count="3" class="px-2 pb-5" gridClass="sora-minicart-skeleton-grid" colClass="sora-minicart-skeleton-col" />
 
-              <!-- SWIPER SẢN PHẨM THỰC TẾ -->
+
               <div v-else class="position-relative w-100">
                 <Swiper
                   :modules="swiperModules"
@@ -62,10 +58,6 @@
             </div>
           </div>
         </div>
-
-        <!-- ========================================== -->
-        <!-- SLIDE-OUT CART -->
-        <!-- ========================================== -->
         <div class="mini-cart-panel bg-white d-flex flex-column border-start border-light-subtle shadow">
           <div class="p-4 border-bottom border-light-subtle position-relative">
             <div class="d-flex align-items-center justify-content-center position-relative">
@@ -116,9 +108,9 @@
                         </span>
                       </div>
                     </template>
-                    <template v-else-if="item.variant?.attributes">
+                    <template v-else-if="item.variant?.variant_attributes || item.variant?.formatted_attributes || item.variant?.attributes">
                       <p class="text-muted small mb-1 text-truncate font-serif fst-italic" style="font-size: 0.85rem;">
-                        {{ Object.values(item.variant.attributes).join(' / ') }}
+                        {{ Object.values(item.variant.variant_attributes || item.variant.formatted_attributes || item.variant.attributes).join(' / ') }}
                       </p>
                     </template>
                     
@@ -128,29 +120,35 @@
                   </div>
 
                   <div class="d-flex justify-content-between align-items-center mt-2">
-                    <div class="quantity-control d-flex align-items-center border border-light-subtle bg-white rounded-2 overflow-hidden">
-                      <button 
-                        @click="updateQuantity(item, item.quantity - 1)" 
-                        class="btn btn-sm border-0 px-2 py-0 text-muted"
-                        :disabled="item.quantity <= 1"
-                      >-</button>
-                      <input 
-                        type="text" 
-                        class="form-control border-0 text-center px-0 py-0 fw-medium bg-transparent shadow-none" 
-                        style="width: 35px; font-size: 0.85rem;"
-                        :value="item.quantity"
-                        readonly
-                      >
-                      <button 
-                        @click="updateQuantity(item, item.quantity + 1)" 
-                        class="btn btn-sm border-0 px-2 py-0 text-muted"
-                        :disabled="!item.combo_id && (item.variant?.stock_quantity ?? item.variant?.stock ?? 1) <= 0"
-                      >+</button>
+                    <div class="d-flex flex-column gap-1">
+                      <div class="quantity-control d-flex align-items-center border border-light-subtle bg-white rounded-2 overflow-hidden">
+                        <button 
+                          @click="updateQuantity(item, item.quantity - 1)" 
+                          class="btn btn-sm border-0 px-2 py-0 text-muted"
+                          :disabled="item.quantity <= 1"
+                        >-</button>
+                        <input 
+                          type="number" 
+                          class="form-control border-0 text-center px-0 py-0 fw-medium bg-transparent shadow-none hide-arrow" 
+                          style="width: 45px; font-size: 0.85rem;"
+                          :value="item.quantity"
+                          @change="handleQuantityInput(item, $event)"
+                          min="1"
+                        >
+                        <button 
+                          @click="updateQuantity(item, item.quantity + 1)" 
+                          class="btn btn-sm border-0 px-2 py-0 text-muted"
+                          :disabled="!item.combo_id && item.quantity >= (item.variant?.stock_quantity ?? item.variant?.stock ?? 1)"
+                        >+</button>
+                      </div>
+                      <div v-if="!item.combo_id && (item.variant?.stock_quantity ?? item.variant?.stock ?? 0) > 0" class="small text-muted font-oswald" style="font-size: 0.7rem;">
+                        Còn {{ item.variant?.stock_quantity ?? item.variant?.stock ?? 0 }} sản phẩm
+                      </div>
                     </div>
                   </div>
 
                   <div v-if="updatingItemId === item.id" class="position-absolute bottom-0 end-0 mb-1 me-4">
-                     <div class="spinner-border text-secondary" style="width: 1rem; height: 1rem; border-width: 0.15em;" role="status"></div>
+                     <AdminLoadingSpinner class="text-secondary" style="width: 1rem; height: 1rem; border-width: 0.15em;"  />
                   </div>
 
                   <button @click="removeItem(item.id)" class="btn border-0 p-1 position-absolute top-0 end-0 hover-primary transition-color" title="Xóa" style="font-size: 1.1rem; color: #a0a0a0;">
@@ -184,6 +182,7 @@
 </template>
 
 <script setup>
+import { useSettingsStore } from '@/stores/settingsStore';
 import { ref, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import ProductCard from '@/components/ui/ProductCard.vue';
@@ -224,7 +223,19 @@ const getImage = (path) => {
   if (cleaned.startsWith('http') || cleaned.startsWith('data:')) return cleaned;
   return getStorageUrl(cleaned);
 };
-const handleImageError = (e) => { e.target.src = soraPlaceholder; };
+const handleImageError = (e) => { 
+  let fallback = '/Sora-placeholder.png';
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_client_active) {
+          fallback = getStorageUrl(store.settings.placeholder_client_active);
+      }
+  } catch (err) {}
+  
+  if (e.target.src !== fallback) {
+      e.target.src = fallback;
+  }
+};
 
 watch(() => route.fullPath, () => {
   if (isOpen.value) {
@@ -331,8 +342,27 @@ const fetchFeaturedProducts = async () => {
 
 let updateTimeout = null;
 
+const handleQuantityInput = (item, event) => {
+  let val = parseInt(event.target.value);
+  if (isNaN(val) || val < 1) val = 1;
+  const maxStock = item.combo_id ? 9999 : (item.variant?.stock_quantity ?? item.variant?.stock ?? 1);
+  if (val > maxStock) {
+    val = maxStock;
+    Toast.fire({ icon: 'warning', title: `Chỉ còn ${maxStock} sản phẩm` });
+  }
+  event.target.value = val;
+  if (val !== item.quantity) {
+    updateQuantity(item, val);
+  }
+};
+
 const updateQuantity = (item, newQuantity) => {
   if (newQuantity < 1) return;
+  const maxStock = item.combo_id ? 9999 : (item.variant?.stock_quantity ?? item.variant?.stock ?? 1);
+  if (newQuantity > maxStock) {
+    newQuantity = maxStock;
+    Toast.fire({ icon: 'warning', title: `Chỉ còn ${maxStock} sản phẩm` });
+  }
   item.quantity = newQuantity;
   
   if (updateTimeout) clearTimeout(updateTimeout);
@@ -414,7 +444,7 @@ defineExpose({ openCart, fetchCart });
 .text-sora-primary { color: #9f273b !important; }
 .bg-sora-primary { background-color: #9f273b !important; }
 
-/* Nút Thanh toán ngay */
+
 .btn-brand { 
   background-color: #9f273b; 
   border: 1px solid #9f273b; 
@@ -422,23 +452,24 @@ defineExpose({ openCart, fetchCart });
   transition: all 0.3s ease; 
 }
 .btn-brand:hover { 
-  background-color: #cc1e2e; /* Đổi sang màu đỏ hover */
+  background-color: #cc1e2e;
   border-color: #cc1e2e; 
   color: white !important; 
   box-shadow: 0 5px 15px rgba(204, 30, 46, 0.3); 
 }
 
-/* Nút Xem giỏ hàng */
+
 .btn-outline-brand { 
-  border: 1px solid #e7ce7d; /* Viền màu vàng gold (màu phụ) */
-  color: #9f273b; /* Chữ màu đỏ để nổi bật */
+  border: 1px solid #9f273b; 
+  color: #9f273b; 
   background: transparent; 
   transition: all 0.3s ease; 
 }
 .btn-outline-brand:hover { 
-  background-color: #e7ce7d; /* Lấp đầy nền vàng khi hover */
-  border-color: #e7ce7d;
-  color: #9f273b !important; 
+  background-color: #9f273b; 
+  border-color: #9f273b;
+  color: #ffffff !important; 
+  box-shadow: 0 5px 15px rgba(159, 39, 59, 0.2); 
 }
 
 .hover-primary:hover { color: #9f273b !important; }
@@ -452,7 +483,7 @@ defineExpose({ openCart, fetchCart });
   width: 100vw;
   height: 100vh;
   background-color: rgba(0, 0, 0, 0.45);
-  z-index: 999998; /* Tăng Z-index cực cao để đè chat widget */
+  z-index: 999998;
 }
 
 .cart-wrapper {
@@ -460,7 +491,7 @@ defineExpose({ openCart, fetchCart });
   top: 0;
   right: 0;
   height: 100vh;
-  z-index: 999999; /* Tăng Z-index cực cao */
+  z-index: 999999;
   pointer-events: none;
   display: flex;
   justify-content: flex-end;

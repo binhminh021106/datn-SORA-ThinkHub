@@ -52,13 +52,10 @@ class ClientAddressStoreRequest extends FormRequest
         ];
     }
 
-    /**
-     * Configure the validator instance.
-     */
+
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
-            // Có thể thêm validation nâng cao ở đây nếu cần
         });
     }
 

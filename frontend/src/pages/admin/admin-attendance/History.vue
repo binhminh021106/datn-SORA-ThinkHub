@@ -1,18 +1,14 @@
 <template>
   <div class="attendance-history-wrapper">
     
-    <!-- 1. SHIMMER LOGO (Chỉ hiện lần đầu tiên) -->
     <div v-if="isFirstVisit && isLoading" class="d-flex flex-column justify-content-center align-items-center w-100 shimmer-wrapper">
-      <div class="logo-shimmer-container text-center">
-        <h1 class="logo-shimmer mb-2">ThinkHub</h1>
-        <p class="loading-text text-muted fw-bold small text-uppercase tracking-widest mt-2" style="letter-spacing: 3px; font-size: 0.75rem;">ĐANG TẢI DỮ LIỆU...</p>
-      </div>
+      <AdminShimmerLoading text="ĐANG TẢI DỮ LIỆU..." />
     </div>
 
-    <!-- NỘI DUNG CHÍNH (Ẩn đi khi đang hiện Shimmer) -->
+    <!-- Nội Dung -->
     <div class="container-fluid py-4" v-show="!isFirstVisit || !isLoading">
       
-      <!-- HEADER TRANG -->
+
       <div class="row mb-4 align-items-center">
         <div class="col-md-6 d-flex align-items-center">
           <router-link :to="{ name: 'admin-dashboard' }" class="btn btn-light shadow-sm me-3 rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
@@ -25,7 +21,7 @@
         </div>
       </div>
 
-      <!-- THÔNG TIN NGƯỜI DÙNG HIỆN TẠI -->
+      <!-- Thông tin -->
       <div class="row mb-4">
         <div class="col-12">
           <div class="card border-0 shadow-sm rounded-4 bg-light">
@@ -51,7 +47,7 @@
         </div>
       </div>
 
-      <!-- BẢNG ĐIỀU HƯỚNG CHÚ THÍCH & KPI CÁ NHÂN -->
+      <!-- KPI -->
       <div class="row g-3 mb-4">
         <div class="col-xl-3 col-md-6" v-for="kpi in kpiSummaries" :key="kpi.title">
           <div class="card border-0 shadow-sm rounded-4 h-100">
@@ -66,11 +62,11 @@
         </div>
       </div>
 
-      <!-- BẢNG GRID CALENDAR -->
+      <!-- Lịch -->
       <div class="card border-0 shadow-sm rounded-4 bg-white">
         <div class="card-body p-4 p-md-5">
           
-          <!-- Thanh điều hướng Tháng/Năm -->
+
           <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 pb-3 border-bottom gap-3">
             <h4 class="fw-bold mb-0 text-dark d-flex align-items-center">
               <i class="bi bi-calendar2-week text-brand me-2 fs-3"></i>
@@ -92,9 +88,9 @@
             </div>
           </div>
 
-          <!-- 2. SKELETON LƯỚI LỊCH (Hiển thị khi tải dữ liệu cho các lần sau) -->
+          <!-- Skeleton Lịch -->
           <div v-if="isLoading && !isFirstVisit" class="calendar-container shadow-sm">
-            <!-- Header Thứ -->
+
             <div class="calendar-header-row rounded-top-3">
               <div class="calendar-header-col">Thứ 2</div>
               <div class="calendar-header-col">Thứ 3</div>
@@ -105,7 +101,7 @@
               <div class="calendar-header-col text-danger bg-light">Chủ Nhật</div>
             </div>
 
-            <!-- Body Lịch (Skeleton) -->
+
             <div class="calendar-body">
               <div class="calendar-week" v-for="w in 5" :key="'sw-'+w">
                 <div class="calendar-day" v-for="d in 7" :key="'sd-'+d">
@@ -117,9 +113,9 @@
             </div>
           </div>
 
-          <!-- Khu vực Lịch Dữ Liệu Thật -->
+          <!-- Lịch Dữ Liệu -->
           <div class="calendar-container shadow-sm" v-else>
-            <!-- Header Thứ -->
+
             <div class="calendar-header-row rounded-top-3">
               <div class="calendar-header-col">Thứ 2</div>
               <div class="calendar-header-col">Thứ 3</div>
@@ -130,7 +126,7 @@
               <div class="calendar-header-col text-danger bg-light">Chủ Nhật</div>
             </div>
 
-            <!-- Body Lịch -->
+
             <div class="calendar-body">
               <div class="calendar-week" v-for="(week, index) in calendarGrid" :key="index">
                 <div 
@@ -143,13 +139,13 @@
                     'is-weekend': day.isCurrentMonth && !isStaffWorkingDay(day.date, day)
                   }"
                 >
-                  <!-- Ngày (Hiển thị to ở góc) -->
+
                   <div class="day-number" :class="{'text-brand fw-bolder': isToday(day.date)}">
                     <span v-if="isToday(day.date)" class="badge bg-brand text-white rounded-circle p-1 px-2 me-1" style="font-size: 0.7rem;">Hôm nay</span>
                     {{ day.dayNumber }}
                   </div>
 
-                  <!-- Thông tin điểm danh thực tế -->
+
                   <div class="day-data mt-2" v-if="day.data">
                     <div class="time-item text-success bg-success-subtle rounded px-2 py-1 mb-1 border border-success border-opacity-25 shadow-sm">
                       <span><i class="bi bi-box-arrow-in-right me-1"></i>Vào:</span>
@@ -163,7 +159,7 @@
                       <span class="fw-bold">{{ formatTime(day.data.clock_out) }}</span>
                     </div>
 
-                    <!-- Hiển thị đầy đủ Badge trạng thái và giờ phút -->
+
                     <div class="d-flex flex-wrap gap-1 mt-2 justify-content-end">
                       <span :class="getStatusBadgeClass(getRealStatus(day.data))" class="badge">
                         {{ getStatusLabel(getRealStatus(day.data)) }}
@@ -178,12 +174,12 @@
                       <span v-if="getDisplayCheckoutStatus(day) === 'miss_checkout'" class="badge bg-danger shadow-sm">Miss checkout</span>
                       <span v-else-if="getDisplayCheckoutStatus(day) === 'pending'" class="badge bg-info text-white shadow-sm">Đang làm</span>
                       
-                      <!-- Chỉ hiển thị Tăng ca nếu không về sớm -->
+
                       <span v-if="!isStaffWorkingDay(day.date, day) && getRealEarlyLeave(day.data) <= 0" class="badge bg-dark text-white shadow-sm">Tăng ca</span>
                     </div>
                   </div>
 
-                  <!-- Không có dữ liệu điểm danh -->
+
                   <div class="day-data mt-2 text-center" v-else-if="day.isCurrentMonth">
                      <span v-if="getAttendanceCellLabel(day)" :class="getAttendanceCellBadgeClass(day)">
                        {{ getAttendanceCellLabel(day) }}
@@ -195,7 +191,7 @@
             </div>
           </div>
           
-          <!-- Chú thích -->
+
           <div class="d-flex flex-wrap align-items-center justify-content-center gap-4 mt-4 pt-4 border-top">
             <div class="d-flex align-items-center"><span class="badge bg-success text-white shadow-sm me-2 py-2 px-3">Đúng giờ</span></div>
             <div class="d-flex align-items-center"><span class="badge bg-warning text-dark shadow-sm me-2 py-2 px-3">Đi muộn</span></div>
@@ -213,6 +209,7 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, computed, watch } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
@@ -220,7 +217,7 @@ import { getAdminToken } from '@/composables/useUtilities';
 import adminApiClient from '@/utils/adminApiClient';
 
 function getVietnamDateString(date = new Date()) {
-  // FIXED: Dùng cách giống Index.vue - extract từng field trực tiếp theo VN timezone
+  // Convert to VN timezone
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Ho_Chi_Minh',
     year: 'numeric',
@@ -235,7 +232,7 @@ function getVietnamDateString(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
-// Cấu hình Toast 
+
 const Toast = Swal.mixin({
   toast: true,
   position: 'top-end',
@@ -248,17 +245,14 @@ const Toast = Swal.mixin({
   }
 });
 
-// Shimmer State
 const isFirstVisit = ref(sessionStorage.getItem('visited_history_page') !== 'true');
 
-// 1. Quản lý State Ngày tháng
 const currentDate = ref(new Date());
 const currentMonth = computed(() => currentDate.value.getMonth() + 1);
 const currentYear = computed(() => currentDate.value.getFullYear());
 const adminToken = computed(() => getAdminToken());
 const isLoggedIn = computed(() => !!adminToken.value);
 
-// Tính khoảng ngày đầu - cuối tháng để gọi API
 const dateRange = computed(() => {
   const start = new Date(currentYear.value, currentMonth.value - 1, 1);
   const end = new Date(currentYear.value, currentMonth.value, 0);
@@ -272,7 +266,6 @@ const dateRange = computed(() => {
   return { start: formatDate(start), end: formatDate(end) };
 });
 
-// Lấy thông tin cơ bản của user hiện tại
 const { data: currentUserData, isLoading: isCurrentUserLoading } = useQuery({
   queryKey: ['currentUserProfile', adminToken],
   queryFn: async () => {
@@ -284,18 +277,13 @@ const { data: currentUserData, isLoading: isCurrentUserLoading } = useQuery({
     }
   },
   enabled: isLoggedIn,
-  staleTime: 1000 * 60 * 30, // Caching 30 phút
+  staleTime: 1000 * 60 * 30,
 });
 
-// Xóa phần fetch toàn bộ `assignmentsData` không cần thiết.
-// Các assignments cắt qua tháng sẽ được trả về kèm theo trong API điểm danh.
-
-// Lấy thông tin user hiện tại để hiển thị
 const currentUserInfo = computed(() => {
   const user = currentUserData.value;
   if (!user) return { fullname: '', email: '', phone: '' };
   
-  // Xử lý các trường hợp khác nhau của response từ API
   const userData = user.admin || user.data || user;
   
   return {
@@ -305,7 +293,6 @@ const currentUserInfo = computed(() => {
   };
 });
 
-// Lấy cấu hình ngày nghỉ toàn hệ thống của doanh nghiệp (Làm Fallback cuối cùng)
 const currentUserId = computed(() => {
   const user = currentUserData.value?.admin || currentUserData.value?.data || currentUserData.value;
   return user?.id || null;
@@ -325,7 +312,6 @@ const { data: workDaySettings } = useQuery({
   staleTime: 1000 * 60 * 10,
 });
 
-// 2. Fetch API qua TanStack Query điểm danh trong tháng
 const { data: attendanceResponse, isLoading: isAttendanceLoading, refetch } = useQuery({
   queryKey: ['attendanceMonthHistory', adminToken, currentUserId, currentMonth, currentYear],
   queryFn: async () => {
@@ -358,7 +344,6 @@ const { data: attendanceResponse, isLoading: isAttendanceLoading, refetch } = us
 
 const isLoading = computed(() => isCurrentUserLoading.value || isAttendanceLoading.value);
 
-// Lắng nghe khi tải xong lần đầu thì tắt Shimmer và lưu Session
 watch(isLoading, (newVal) => {
   if (!newVal && isFirstVisit.value) {
     sessionStorage.setItem('visited_history_page', 'true');
@@ -366,12 +351,10 @@ watch(isLoading, (newVal) => {
   }
 });
 
-// Lấy mảng assignments cắt qua tháng từ Response
 const historyAssignments = computed(() => {
   return attendanceResponse.value?.assignments || attendanceResponse.value?.data?.assignments || [];
 });
 
-// Map dữ liệu thành dạng Dictionary Key-Value với Key là YYYY-MM-DD
 const attendanceMap = computed(() => {
   const map = {};
   const items = attendanceResponse.value?.data?.data || [];
@@ -395,16 +378,14 @@ const getAttendanceDateKey = (value) => {
   return getVietnamDateString(new Date(raw));
 };
 
-// 5. Helpers logic nhận diện ngày nghỉ/đi làm chính xác 100%
 const getWeekdayIndex = (dateStr) => {
   if (!dateStr) return null;
-  // FIX: Tránh timezone shift bằng cách bóc tách năm, tháng, ngày
+  // Fix timezone shift
   const [year, month, day] = dateStr.split('-');
   const dayOfWeek = new Date(year, month - 1, day).getDay();
-  return dayOfWeek === 0 ? 6 : dayOfWeek - 1; // 0-6 = T2-CN
+  return dayOfWeek === 0 ? 6 : dayOfWeek - 1;
 };
 
-// Chuẩn hóa hàm kiểm tra ngày hiện tại và quá khứ 
 const isToday = (dateStr) => {
   if (!dateStr) return false;
   return getAttendanceDateOnly(dateStr) === getVietnamDateString();
@@ -418,7 +399,6 @@ const isPastOrToday = (dateStr) => {
   return attendanceDateOnly <= todayVN;
 };
 
-// Ưu tiên lấy ca làm việc được lưu trong lịch sử điểm danh của ngày đó (nếu có)
 const getDayWorkShift = (day) => {
   if (!day) return null;
   if (day.data && (day.data.workShift || day.data.work_shift)) {
@@ -430,7 +410,6 @@ const getDayWorkShift = (day) => {
     const dateObj = new Date(dayYear, dayMonth - 1, dayNumber);
     dateObj.setHours(0,0,0,0);
     
-    // Tìm kiếm trong mảng assignments
     const matchingAssignment = historyAssignments.value.find(a => {
       const [fromYear, fromMonth, fromDay] = getAttendanceDateKey(a.valid_from).split('-').map(Number);
       const from = new Date(fromYear, fromMonth - 1, fromDay);
@@ -454,29 +433,21 @@ const getDayWorkShift = (day) => {
   return null;
 };
 
-// Kiểm tra ngày này nhân sự CÓ BẮT BUỘC ĐI LÀM KHÔNG
 const isStaffWorkingDay = (dateStr, day = null) => {
   if (!dateStr) return false;
   const arrayIndex = getWeekdayIndex(dateStr);
   const shift = getDayWorkShift(day);
 
-  // So với ca cá nhân
   if (shift && Array.isArray(shift.working_days)) {
     return !!shift.working_days[arrayIndex];
   }
 
-  // So với ca công ty
   if (workDaySettings.value && Array.isArray(workDaySettings.value.working_days)) {
     return !!workDaySettings.value.working_days[arrayIndex];
   }
 
-  // Fallback mặc định
   return arrayIndex >= 0 && arrayIndex < 5;
 };
-
-// ----------------------------------------------------------------------
-// CÁC HÀM TÍNH TOÁN & ĐỊNH DẠNG TỪ SNAPSHOT FE (PORT TỪ INDEX.VUE)
-// ----------------------------------------------------------------------
 
 const formatDuration = (totalMinutes) => {
   if (!totalMinutes || totalMinutes <= 0) return '';
@@ -529,7 +500,7 @@ const getRealStatus = (att) => {
   return 'present';
 };
 
-// THỐNG KÊ THÁNG CÁ NHÂN (KPI CỦA CÁ NHÂN)
+
 const kpiSummaries = computed(() => {
   let totalWorkDays = 0;
   let presentCount = 0;
@@ -548,21 +519,18 @@ const kpiSummaries = computed(() => {
     
     const isWorkingDay = isStaffWorkingDay(dateStr, mockDay);
     
-    if (isWorkingDay) totalWorkDays++; // Tổng số ngày yêu cầu đi làm trong tháng
+    if (isWorkingDay) totalWorkDays++;
 
     if (dayData) {
-       // Đã check-in có dữ liệu
        if (isWorkingDay) {
-          presentCount++; // Đi làm đúng lịch
+          presentCount++;
        } else {
-          // Nếu làm vào ngày nghỉ nhưng về sớm thì KHÔNG tính là tăng ca
           if (getRealEarlyLeave(dayData) <= 0) {
               overtimeCount++; 
           }
        }
        if (getRealLateMinutes(dayData) > 0) lateCount++;
     } else if (isWorkingDay && isPastOrToday(dateStr)) {
-       // Đã qua hoặc hôm nay mà chưa có data -> Bị đánh dấu vắng mặt
        absentCount++;
     }
   }
@@ -575,7 +543,7 @@ const kpiSummaries = computed(() => {
   ];
 });
 
-// 3. Logic render Lưới lịch 2 chiều (Grid Calendar)
+
 const calendarGrid = computed(() => {
   const year = currentYear.value;
   const month = currentMonth.value - 1;
@@ -583,18 +551,18 @@ const calendarGrid = computed(() => {
   const firstDayOfMonth = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  // Đưa Thứ 2 làm ngày đầu tuần
+
   let startDay = firstDayOfMonth === 0 ? 6 : firstDayOfMonth - 1;
 
   let days = [];
   
-  // Những ngày của tháng trước (in mờ)
+
   const prevMonthDays = new Date(year, month, 0).getDate();
   for (let i = startDay - 1; i >= 0; i--) {
     days.push({ dayNumber: prevMonthDays - i, isCurrentMonth: false, date: null });
   }
 
-  // Những ngày của tháng này
+
   for (let i = 1; i <= daysInMonth; i++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
     const attendanceData = attendanceMap.value[dateStr] || null;
@@ -607,7 +575,7 @@ const calendarGrid = computed(() => {
     });
   }
 
-  // Những ngày của tháng sau để cho vuông lịch
+
   const totalCells = Math.ceil(days.length / 7) * 7;
   let nextMonthDay = 1;
   while (days.length < totalCells) {
@@ -622,26 +590,24 @@ const calendarGrid = computed(() => {
   return weeks;
 });
 
-// 4. Hàm điều khiển
+
 const prevMonth = () => { currentDate.value = new Date(currentYear.value, currentMonth.value - 2, 1); };
 const nextMonth = () => { currentDate.value = new Date(currentYear.value, currentMonth.value, 1); };
 const goToToday = () => { currentDate.value = new Date(); };
 
-// Logic hiển thị Nhãn (Label) cho ô ngày trống (Không có điểm danh)
+
 const getAttendanceCellLabel = (day) => {
   if (!day || !day.date || !day.isCurrentMonth) return '';
   
-  // Trường hợp đã trôi qua hoặc hiện tại
   if (isPastOrToday(day.date)) {
     return isStaffWorkingDay(day.date, day) ? 'Vắng mặt' : 'Ngày nghỉ';
   } 
-  // Trường hợp tương lai (Chưa tới)
   else {
-    return !isStaffWorkingDay(day.date, day) ? 'Ngày nghỉ' : ''; // Trống trơn nếu ngày làm việc tương lai
+    return !isStaffWorkingDay(day.date, day) ? 'Ngày nghỉ' : '';
   }
 };
 
-// Logic hiển thị Badge cho ô ngày trống
+
 const getAttendanceCellBadgeClass = (day) => {
   if (!day || !day.date || !day.isCurrentMonth) return '';
   
@@ -732,11 +698,11 @@ const getStatusBadgeClass = (status) => {
 .btn-brand { background-color: #009981; border: none; transition: 0.2s; }
 .btn-brand:hover { background-color: #007a67; }
 
-/* Thêm Class CSS cho KPI Grid */
+
 .icon-box-small { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 1.1rem; }
 .fw-black { font-weight: 900; }
 
-/* CALENDAR CSS CHUYÊN NGHIỆP */
+
 .calendar-container {
   border: 1px solid #dee2e6;
   border-radius: 12px;
@@ -806,7 +772,7 @@ const getStatusBadgeClass = (status) => {
   opacity: 0.6;
 }
 
-/* Các ngày không làm việc (ngày nghỉ tuần) được tô xám nhạt */
+
 .is-weekend {
   background-color: #f6f8f9 !important;
 }
@@ -825,7 +791,7 @@ const getStatusBadgeClass = (status) => {
   border-style: dashed !important;
 }
 
-/* CSS LOGO SHIMMER LÀM LẠI THEO THIẾT KẾ MỚI CỦA INDEX.VUE */
+
 .shimmer-wrapper { 
   min-height: 80vh; 
   background-color: #ffffff; 
@@ -833,17 +799,6 @@ const getStatusBadgeClass = (status) => {
   align-items: center; 
   justify-content: center;
   z-index: 9999;
-}
-.logo-shimmer { 
-  font-size: 4rem; 
-  font-weight: 900; 
-  letter-spacing: -2px; 
-  background: linear-gradient(90deg, #12d8a0 0%, #009981 100%); 
-  background-size: 200% auto; 
-  color: transparent; 
-  -webkit-background-clip: text; 
-  background-clip: text; 
-  animation: shine-logo 2s linear infinite; 
 }
 .loading-text {
   color: #6c757d;
@@ -857,7 +812,7 @@ const getStatusBadgeClass = (status) => {
   100% { opacity: 0.5; }
 }
 
-/* CSS SKELETON LOADING */
+
 .skeleton {
   background: #eee;
   background: linear-gradient(110deg, #ececec 8%, #f5f5f5 18%, #ececec 33%);

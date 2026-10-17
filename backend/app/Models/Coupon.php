@@ -16,7 +16,7 @@ class Coupon extends Model
         'tier_id',
         'name',
         'code',
-        'min_spend', // chi tieu toi thieu
+        'min_spend',
         'type',
         'value',
         'usage_limit',

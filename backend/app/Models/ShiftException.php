@@ -14,11 +14,11 @@ class ShiftException extends Model
         'date',
         'type',
         'work_shift_id',
-        'note', // Bổ sung trường này
+        'note', 
     ];
 
     protected $casts = [
-        'date' => 'date', // Ép kiểu ngày chuẩn ORM
+        'date' => 'date', 
     ];
 
     public function admin()

@@ -1,7 +1,7 @@
 <template>
   <div class="order-edit-wrapper ">
     
-    <!-- HIỆU ỨNG SKELETON KHI ĐANG LOAD TRANG -->
+
     <div v-if="isPageLoading" class="container-fluid py-4">
        <div class="d-flex align-items-center mb-4">
            <div class="skeleton-box rounded-circle me-3" style="width: 45px; height: 45px;"></div>
@@ -21,7 +21,7 @@
        </div>
     </div>
 
-    <!-- NỘI DUNG CHÍNH (SAU KHI LOAD XONG) -->
+
     <div v-else class="container-fluid py-4 animate-fade-in">
       <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
         <div class="d-flex align-items-center">
@@ -47,7 +47,7 @@
       </div>
 
       <div class="row g-4">
-        <!-- CỘT TRÁI: THÔNG TIN -->
+
         <div class="col-lg-7 col-xl-8">
           
           <div class="card border-0 shadow-sm rounded-4 mb-4 border-start border-brand border-4">
@@ -103,12 +103,22 @@
                                     <div class="fw-bold text-dark text-wrap" style="max-width: 250px;">{{ item.product_name }}</div>
                                     <div class="text-muted" style="font-size: 0.75rem;">SKU: {{ item.variant_sku }}</div>
                                     <div class="mt-1" style="font-size: 0.75rem;">
-                                      <span class="badge bg-light text-brand border border-brand-subtle" v-if="item.combo_id">
-                                          <i class="bi bi-stars"></i> Combo ({{ parseCombo(item.combo_selections).length }} món)
-                                      </span>
-                                      <span v-else-if="item.variant_attributes" class="text-secondary fw-medium">
+                                      <div class="mt-1" style="font-size: 0.75rem;" v-if="item.combo_id">
+                                          <span class="badge bg-light text-brand border border-brand-subtle d-inline-block mb-1">
+                                              <i class="bi bi-stars"></i> Combo ({{ parseCombo(item.combo_selections).length }} món)
+                                          </span>
+                                          <div class="mt-1 ps-2 border-start border-2 border-brand-subtle">
+                                              <div v-for="(selection, idx) in parseCombo(item.combo_selections)" :key="idx" class="mb-1 text-muted" style="font-size: 0.65rem;">
+                                                  <div class="fw-bold text-dark">{{ selection.product_name || `Lựa chọn ${idx + 1}` }}</div>
+                                                  <div v-if="selection.attributes" class="text-secondary">
+                                                      <span v-for="(val, key) in parseAttributes(selection.attributes)" :key="key" class="me-1">[{{ key }}: {{ val }}]</span>
+                                                  </div>
+                                              </div>
+                                          </div>
+                                      </div>
+                                      <div class="mt-1 text-secondary fw-medium" style="font-size: 0.75rem;" v-else-if="item.variant_attributes">
                                           <span v-for="(val, key) in parseAttributes(item.variant_attributes)" :key="key" class="me-2">[{{ key }}: {{ val }}]</span>
-                                      </span>
+                                      </div>
                                     </div>
                                 </div>
                             </div>
@@ -172,14 +182,14 @@
 
         </div>
 
-        <!-- CỘT PHẢI -->
+
         <div class="col-lg-5 col-xl-4 d-flex flex-column gap-4">
           
           <div class="card border-0 shadow-sm rounded-4 border-top border-brand border-4 overflow-hidden">
             <div class="card-body p-4">
               <h6 class="fw-bold text-dark text-uppercase tracking-wide mb-4 d-flex align-items-center"><i class="bi bi-toggles me-2 text-brand fs-4"></i>Xử Lý Đơn Hàng</h6>
               
-              <!-- Cập nhật Thanh toán -->
+
               <div class="mb-4 bg-light p-3 rounded border border-light-subtle shadow-sm text-center">
                 <label class="form-label fw-bold text-dark small text-uppercase mb-3 d-block text-start">Tình trạng Thu tiền</label>
                 <span class="badge px-4 py-2 fs-6 mb-2 w-100" :class="getPaymentSelectClass(order?.payment_status)">
@@ -190,7 +200,7 @@
                 </div>
               </div>
 
-              <!-- Cập nhật Trạng thái -->
+
               <div class="mb-3">
                 <label class="form-label fw-bold text-dark small text-uppercase mb-2">Trạng thái Giao hàng</label>
                 <select v-model="localStatus" @change="handleStatusChange" class="form-select fw-bold mb-3 border-brand-subtle shadow-sm bg-white py-2" :disabled="isUpdatingStatus">
@@ -228,7 +238,7 @@
                 <button class="btn btn-brand w-100 fw-bold py-3 mt-3 shadow text-uppercase tracking-widest d-flex justify-content-center align-items-center" 
                         @click="submitStatusUpdate" 
                         :disabled="localStatus === order?.status || isUpdatingStatus">
-                    <span v-if="isUpdatingStatus" class="spinner-border spinner-border-sm me-2"></span>
+                    <AdminLoadingSpinner v-if="isUpdatingStatus" class="me-2" size="16" />
                     <span v-else class="d-flex align-items-center">
                         <i class="bi bi-send-check-fill me-2 fs-5"></i> XÁC NHẬN
                     </span>
@@ -238,7 +248,7 @@
             </div>
           </div>
 
-          <!-- NÚT GỌI BẢN ĐỒ TRACKING TÁCH RỜI -->
+
           <div class="card border-0 shadow-sm rounded-4 overflow-hidden border border-light-subtle">
             <div class="card-body p-4 text-center">
                 <h6 class="fw-bold mb-3 text-uppercase tracking-wide d-flex align-items-center justify-content-center">
@@ -252,7 +262,7 @@
             </div>
           </div>
 
-          <!-- BẢN ĐỒ TRACKING INLINE CHO ĐƠN HÀNG ĐANG GIAO HOẶC ĐÃ GIAO -->
+
           <div v-if="order?.status === 'shipping' || order?.status === 'delivered'" class="card border-0 shadow-sm rounded-4 overflow-hidden border border-light-subtle">
             <div class="card-header bg-white border-bottom pb-2 pt-4 px-4">
               <h6 class="fw-bold mb-0 text-dark text-uppercase tracking-wide"><i class="bi bi-geo-alt-fill text-warning me-2"></i>Bản đồ lộ trình hiện tại</h6>
@@ -260,7 +270,7 @@
             <div class="card-body p-0 position-relative">
               <div id="order-tracking-map" style="height: 300px; width: 100%; background-color: #f8f9fa;"></div>
               <div v-if="isMapLoading" class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-white bg-opacity-75" style="z-index: 10;">
-                <div class="spinner-border text-brand mb-2" style="width: 3rem; height: 3rem;"></div>
+                <AdminLoadingSpinner class="text-brand mb-2" style="width: 3rem; height: 3rem;" />
                 <div class="fw-bold text-brand text-uppercase tracking-widest small">Đang kết nối vệ tinh Mapbox...</div>
               </div>
             </div>
@@ -269,7 +279,7 @@
         </div>
       </div>
       
-      <!-- Component Tracking Map -->
+
       <TrackingMapModal ref="trackingMapModalRef" />
     </div>
 
@@ -307,7 +317,7 @@ const currentQuickNotes = ref([]);
 
 const trackingMapModalRef = ref(null);
 
-// Biến cho bản đồ inline
+
 const isMapLoading = ref(false);
 const mapData = ref(null);
 let leafletMap = null;
@@ -512,7 +522,7 @@ const printOrder = () => {
     downloadAdminInvoice({ orderId: order.value.id, orderCode: order.value.order_code });
 };
 
-// Hàm cho bản đồ inline
+
 const loadLeafletScript = () => {
   return new Promise((resolve) => {
     if (window.L) return resolve();
@@ -644,7 +654,7 @@ onMounted(() => { fetchOrderData(); });
 .font-oswald { font-family: 'Oswald', sans-serif; }
 .tracking-widest { letter-spacing: 2px; }
 
-/* Skeleton mượt */
+
 .skeleton-box { display: inline-block; position: relative; overflow: hidden; background-color: #e9ecef; }
 .skeleton-box::after { position: absolute; top: 0; right: 0; bottom: 0; left: 0; transform: translateX(-100%); background-image: linear-gradient(90deg, rgba(255, 255, 255, 0) 0, rgba(255, 255, 255, 0.4) 20%, rgba(255, 255, 255, 0.7) 60%, rgba(255, 255, 255, 0)); animation: shimmer 1.8s infinite; content: ''; }
 @keyframes shimmer { 100% { transform: translateX(100%); } }

@@ -58,7 +58,7 @@ const route = useRoute();
 // Tab active: ưu tiên query string ?tab= rồi fallback về 'profile'
 const activeTab = ref(route.query.tab || 'profile');
 
-// Sync tab khi query thay đổi (VD: ProfileSidebar navigate qua router-link)
+// Đồng bộ tab khi query thay đổi
 watch(() => route.query.tab, (newTab) => {
   if (newTab && ['profile', 'password', 'address', 'affiliate'].includes(newTab)) {
     activeTab.value = newTab;
@@ -166,7 +166,7 @@ onMounted(() => {
   }
 });
 
-// ===== TÍNH TOÁN THÔNG TIN HẠNG THÀNH VIÊN =====
+// Tính toán hạng thành viên
 const currentTierInfo = computed(() => {
   if (form.value.tier) {
     return { name: form.value.tier.name };

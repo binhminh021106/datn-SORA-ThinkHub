@@ -46,9 +46,12 @@ class AdminSettingController extends Controller
             'footer_copyright',
             'footer_address',
             'footer_email',
+            'footer_opening_hours',
             'footer_socials',
             'footer_trust_items',
             'home_stats',
+            'placeholder_client_active',
+            'placeholder_admin_active',
         ];
 
         $settings = Setting::query()
@@ -69,9 +72,6 @@ class AdminSettingController extends Controller
         ]);
     }
 
-    /**
-     * Update settings
-     */
     public function update(UpdateSettingRequest $request)
     {
         $settings = $request->validated()['settings'];
@@ -80,23 +80,17 @@ class AdminSettingController extends Controller
             $value = $item['value'];
             $type = $item['type'] ?? 'string';
 
-            // Handle Image - just accept the URL if it's passed
             if ($type === 'image') {
-                // Do not delete old image, keep it in library
-                // The $value is already the path sent by frontend
             } elseif ($type === 'json' && is_array($value)) {
-                // Handle JSON arrays/objects
                 $value = json_encode($value);
             }
 
-            // Update or Create
             Setting::updateOrCreate(
                 ['key' => $item['key']],
                 ['value' => $value, 'type' => $type]
             );
         }
 
-        // Trigger Real-time Event
         event(new SettingUpdated());
 
         return response()->json([
@@ -105,9 +99,6 @@ class AdminSettingController extends Controller
         ]);
     }
 
-    /**
-     * Get list of uploaded logos
-     */
     public function getLogos()
     {
         $directory = 'settings/logos';
@@ -117,7 +108,6 @@ class AdminSettingController extends Controller
 
         $files = Storage::disk('public')->files($directory);
 
-        // Sort by modified time descending (newest first)
         usort($files, function($a, $b) {
             return Storage::disk('public')->lastModified($b) - Storage::disk('public')->lastModified($a);
         });
@@ -132,13 +122,10 @@ class AdminSettingController extends Controller
         ]);
     }
 
-    /**
-     * Upload a new logo to the library
-     */
     public function uploadLogo(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'image' => 'required|string', // Base64 string
+            'image' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -167,9 +154,6 @@ class AdminSettingController extends Controller
         return response()->json(['status' => 'error', 'message' => 'Invalid image data'], 400);
     }
 
-    /**
-     * Get logo as base64 to bypass CORS
-     */
     public function getLogoBase64(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -199,9 +183,6 @@ class AdminSettingController extends Controller
         return response()->json(['status' => 'error', 'message' => 'File not found or invalid URL'], 404);
     }
 
-    /**
-     * Delete a logo from the library
-     */
     public function deleteLogo(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -212,12 +193,10 @@ class AdminSettingController extends Controller
             return response()->json(['status' => 'error', 'message' => $validator->errors()->first()], 422);
         }
 
-        // Extract the path from the URL
         $appUrl = env('APP_URL') . '/storage/';
         if (str_starts_with($request->url, $appUrl)) {
             $path = str_replace($appUrl, '', $request->url);
             
-            // Prevent directory traversal
             if (str_contains($path, '..')) {
                 return response()->json(['status' => 'error', 'message' => 'Invalid path'], 400);
             }
@@ -229,5 +208,96 @@ class AdminSettingController extends Controller
         }
 
         return response()->json(['status' => 'error', 'message' => 'File not found or invalid URL'], 404);
+    }
+
+    public function getPlaceholders()
+    {
+        $directory = 'settings/placeholders';
+        if (!Storage::disk('public')->exists($directory)) {
+            Storage::disk('public')->makeDirectory($directory);
+        }
+
+        $files = Storage::disk('public')->files($directory);
+
+        usort($files, function($a, $b) {
+            return Storage::disk('public')->lastModified($b) - Storage::disk('public')->lastModified($a);
+        });
+
+        $urls = array_map(function($file) {
+            return url('storage/' . $file);
+        }, $files);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $urls
+        ]);
+    }
+
+    public function uploadPlaceholder(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'image' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 'error', 'message' => $validator->errors()->first()], 422);
+        }
+
+        $value = $request->image;
+        if (str_starts_with($value, 'data:image')) {
+            $image_parts = explode(";base64,", $value);
+            if (count($image_parts) == 2) {
+                $image_type_aux = explode("image/", $image_parts[0]);
+                $image_type = $image_type_aux[1] ?? 'png';
+                $image_base64 = base64_decode($image_parts[1]);
+                
+                $fileName = 'settings/placeholders/placeholder_' . time() . '.' . $image_type;
+                Storage::disk('public')->put($fileName, $image_base64);
+                
+                return response()->json([
+                    'status' => 'success',
+                    'url' => env('APP_URL') . '/storage/' . $fileName,
+                    'path' => $fileName
+                ]);
+            }
+        }
+
+        return response()->json(['status' => 'error', 'message' => 'Invalid image data'], 400);
+    }
+
+    public function deletePlaceholders(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'urls' => 'required|array',
+            'urls.*' => 'string'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 'error', 'message' => $validator->errors()->first()], 422);
+        }
+
+        $appUrl = env('APP_URL') . '/storage/';
+        $deletedCount = 0;
+        
+        foreach ($request->urls as $url) {
+            if (str_starts_with($url, $appUrl)) {
+                $path = str_replace($appUrl, '', $url);
+                
+                if (str_contains($path, '..')) {
+                    continue; // Skip invalid paths
+                }
+
+                if (Storage::disk('public')->exists($path)) {
+                    Storage::disk('public')->delete($path);
+                    $deletedCount++;
+                }
+            }
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Đã xoá $deletedCount ảnh thành công",
+            'deleted_count' => $deletedCount
+        ]);
     }
 }

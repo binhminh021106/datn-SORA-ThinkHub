@@ -18,9 +18,6 @@ class Recaptcha implements ValidationRule
         $secret = config('services.recaptcha.secret');
 
         if (empty($secret)) {
-            // Local/test environments may deliberately omit third-party keys.
-            // Every deployed environment must fail closed instead of accepting
-            // automated contact submissions without a CAPTCHA verification.
             if (app()->environment(['local', 'testing'])) {
                 return;
             }

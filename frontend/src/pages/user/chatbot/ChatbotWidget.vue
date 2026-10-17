@@ -111,8 +111,6 @@ const messages = ref([
     sender: 'bot',
     text: 'Kính chào Quý khách! Trợ lý AI SORA có thể giúp gì cho Quý khách hôm nay ạ?',
     options: [
-      { label: 'Vàng SORA', link: '' }, 
-      { label: 'Kim Cương SORA', link: '' }, 
       { label: 'Xem Cửa Hàng', link: '/shop' }
     ], 
     time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })

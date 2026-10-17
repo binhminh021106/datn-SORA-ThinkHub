@@ -11,17 +11,9 @@ class SendOrderConfirmationEmail implements ShouldQueue
 {
     use InteractsWithQueue;
 
-    /**
-     * Create the event listener.
-     */
     public function __construct()
     {
-        //
     }
-
-    /**
-     * Handle the event.
-     */
     public function handle(OrderCreated $event): void
     {
         $order = $event->order;
@@ -29,7 +21,6 @@ class SendOrderConfirmationEmail implements ShouldQueue
         try {
             \Illuminate\Support\Facades\Mail::to($order->customer_email)->send(new \App\Mail\OrderPlacedMail($order));
             
-            // Mask email for logging: a***@gmail.com
             $emailParts = explode('@', $order->customer_email);
             $maskedEmail = isset($emailParts[1]) ? substr($emailParts[0], 0, 1) . '***@' . $emailParts[1] : '***';
             

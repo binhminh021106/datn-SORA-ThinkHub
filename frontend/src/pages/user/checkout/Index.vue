@@ -305,29 +305,32 @@
                                         style="font-size: 0.7rem;">
                                         <span v-if="item.combo_id" class="text-gold fw-bold"><i class="bi bi-stars"></i>
                                             Gói Ưu Đãi</span>
-                                        <span v-else-if="item.variant?.attributes">
-                                            <span v-for="(val, key, idx) in parseAttributes(item.variant.attributes)"
-                                                :key="key">
-                                                {{ val }}<span
-                                                    v-if="idx < Object.keys(parseAttributes(item.variant.attributes)).length - 1">,
-                                                </span>
+                                        <div class="d-flex flex-wrap gap-2 mt-1" v-else-if="item.variant?.variant_attributes || item.variant?.formatted_attributes || item.variant?.attributes">
+                                            <span v-for="(val, key) in parseAttributes(item.variant.variant_attributes || item.variant.formatted_attributes || item.variant.attributes)"
+                                                :key="key" class="badge bg-white text-secondary border fw-normal px-2 py-1 rounded-sm shadow-sm">
+                                                {{ key }}: <span class="text-sora-primary fw-bold">{{ val }}</span>
                                             </span>
-                                        </span>
+                                        </div>
                                     </div>
 
                                     <div class="d-flex justify-content-between align-items-center mt-3">
                                         <div class="fw-bold text-sora-primary font-oswald fs-5">{{
                                             formatPrice(getItemPrice(item)) }}</div>
 
-                                        <div class="input-group input-group-sm" style="width: 85px;">
-                                            <button class="btn qty-btn rounded-0 px-2"
-                                                @click="updateQuantity(item, -1)"
-                                                :disabled="item.quantity <= 1 || item.isUpdating">-</button>
-                                            <input type="text"
-                                                class="form-control text-center rounded-0 border-light-subtle px-1 fw-bold font-oswald text-dark"
-                                                :value="item.quantity" readonly>
-                                            <button class="btn qty-btn rounded-0 px-2"
-                                                @click="updateQuantity(item, 1)" :disabled="item.isUpdating">+</button>
+                                        <div class="d-flex flex-column gap-1 align-items-end">
+                                            <div class="input-group input-group-sm bg-white" style="width: 85px;">
+                                                <button class="btn qty-btn rounded-0 px-2 border border-light-subtle bg-light text-secondary"
+                                                    @click="updateQuantity(item, -1)"
+                                                    :disabled="item.quantity <= 1">-</button>
+                                                <input type="number"
+                                                    class="form-control text-center rounded-0 border-light-subtle px-1 fw-bold font-oswald text-dark hide-arrow shadow-none"
+                                                    :value="item.quantity" @change="handleQuantityInput(item, $event)" min="1">
+                                                <button class="btn qty-btn rounded-0 px-2 border border-light-subtle bg-light text-secondary"
+                                                    @click="updateQuantity(item, 1)" :disabled="!item.combo_id && item.quantity >= (item.variant?.stock_quantity ?? item.variant?.stock ?? 1)">+</button>
+                                            </div>
+                                            <div v-if="!item.combo_id && (item.variant?.stock_quantity ?? item.variant?.stock ?? 0) > 0" class="small text-muted font-oswald text-nowrap" style="font-size: 0.7rem;">
+                                                Còn {{ item.variant?.stock_quantity ?? item.variant?.stock ?? 0 }} sản phẩm
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -437,7 +440,7 @@
                         <div class="p-4 pt-0 bg-white">
                             <button @click="submitOrder" :disabled="isSubmitting || cartItems.length === 0"
                                 class="editorial-btn w-100 py-3 shadow-sm fs-5 d-flex justify-content-center align-items-center">
-                                <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>
+                                <AdminLoadingSpinner v-if="isSubmitting" class="me-2" size="16" />
                                 <i v-if="!isSubmitting" class="bi bi-bag-check-fill me-2"></i>
                                 {{ isSubmitting ? 'ĐANG XỬ LÝ...' : submitButtonText }}
                             </button>
@@ -521,6 +524,7 @@
 </template>
 
 <script setup>
+import { useSettingsStore } from '@/stores/settingsStore';
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Toast from '@/utils/toastConfig';
@@ -615,6 +619,49 @@ const submitButtonText = computed(() => {
     return 'ĐẶT HÀNG NGAY';
 });
 
+const loadTempAddress = () => {
+    const tempStr = getSafeStorage('checkout_temp_address');
+    if (tempStr) {
+        try {
+            const temp = JSON.parse(tempStr);
+            if (temp.customer_name) form.value.customer_name = temp.customer_name;
+            if (temp.customer_phone) form.value.customer_phone = temp.customer_phone;
+            if (temp.customer_email) form.value.customer_email = temp.customer_email;
+            
+            if (temp.specificAddress) specificAddress.value = temp.specificAddress;
+            if (temp.selectedProvinceCode) selectedProvinceCode.value = temp.selectedProvinceCode;
+            if (temp.selectedDistrictCode) selectedDistrictCode.value = temp.selectedDistrictCode;
+            if (temp.selectedWardCode) selectedWardCode.value = temp.selectedWardCode;
+            if (temp.selectedProvinceName) selectedProvinceName.value = temp.selectedProvinceName;
+            if (temp.selectedDistrictName) selectedDistrictName.value = temp.selectedDistrictName;
+            if (temp.selectedWardName) selectedWardName.value = temp.selectedWardName;
+        } catch(e) {
+            console.error('Error parsing temp address', e);
+        }
+    }
+};
+
+watch(
+    () => ({
+        customer_name: form.value.customer_name,
+        customer_phone: form.value.customer_phone,
+        customer_email: form.value.customer_email,
+        specificAddress: specificAddress.value,
+        selectedProvinceCode: selectedProvinceCode.value,
+        selectedDistrictCode: selectedDistrictCode.value,
+        selectedWardCode: selectedWardCode.value,
+        selectedProvinceName: selectedProvinceName.value,
+        selectedDistrictName: selectedDistrictName.value,
+        selectedWardName: selectedWardName.value
+    }),
+    (newVal) => {
+        if (useNewAddress.value) {
+            setSafeStorage('checkout_temp_address', JSON.stringify(newVal));
+        }
+    },
+    { deep: true }
+);
+
 const soraAlert = createSoraAlert({
     customClass: {
         confirmButton: 'px-4 py-2 mx-2 rounded-0 shadow-sm fw-bold font-oswald tracking-widest text-uppercase',
@@ -707,7 +754,19 @@ const getImageUrl = (path) => {
     return getStorageUrl(path, defaultPlaceholder);
 };
 
-const handleImageError = (e) => { e.target.src = defaultPlaceholder; };
+const handleImageError = (e) => { 
+  let fallback = '/Sora-placeholder.png';
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_client_active) {
+          fallback = getStorageUrl(store.settings.placeholder_client_active);
+      }
+  } catch (err) {}
+  
+  if (e.target.src !== fallback) {
+      e.target.src = fallback;
+  }
+};
 
 const totalQuantity = computed(() => cartItems.value.reduce((sum, item) => sum + item.quantity, 0));
 const subTotal = computed(() => cartItems.value.reduce((sum, item) => sum + (item.quantity * getItemPrice(item)), 0));
@@ -783,6 +842,8 @@ const fetchInitData = async () => {
             } else {
                 useNewAddress.value = true;
             }
+            
+            loadTempAddress();
         }
     } catch (error) {
         console.error('Lỗi khởi tạo Checkout:', error);
@@ -838,31 +899,63 @@ const selectNewAddress = () => {
     form.value.customer_address = '';
 };
 
+let updateTimeout = null;
+
+const handleQuantityInput = (item, event) => {
+    let val = parseInt(event.target.value);
+    if (isNaN(val) || val < 1) val = 1;
+    const maxStock = item.combo_id ? 9999 : (item.variant?.stock_quantity ?? item.variant?.stock ?? 1);
+    if (val > maxStock) {
+        val = maxStock;
+        Toast.fire({ icon: 'warning', title: `Chỉ còn ${maxStock} sản phẩm` });
+    }
+    event.target.value = val;
+    if (val !== item.quantity) {
+        const change = val - item.quantity;
+        updateQuantity(item, change);
+    }
+};
+
 const updateQuantity = async (item, delta) => {
     const newQty = item.quantity + delta;
     if (newQty < 1) return;
+    const maxStock = item.combo_id ? 9999 : (item.variant?.stock_quantity ?? item.variant?.stock ?? 1);
+    if (newQty > maxStock) {
+        Toast.fire({ icon: 'warning', title: `Chỉ còn ${maxStock} sản phẩm` });
+        return;
+    }
 
+    const originalQty = item.quantity;
+    item.quantity = newQty; // Optimistic update
     item.isUpdating = true;
     isUpdatingCart.value = true;
-    try {
-        const res = await clientApiClient.put(`/client/cart/${item.id}`, { quantity: newQty }, {
-            ensureCartSession: true,
-            ignoreAuthRedirect: true,
-        });
-        if (res.data.success) {
-            item.quantity = newQty;
-            notifyCartUpdate(null, 'internal');
-            if (selectedCoupon.value && subTotal.value < selectedCoupon.value.min_spend) {
-                selectedCoupon.value = null;
-                Toast.fire({ icon: 'warning', title: 'Đã hủy mã giảm giá vì chưa đạt giá trị tối thiểu', timer: 2000 });
+
+    if (updateTimeout) clearTimeout(updateTimeout);
+
+    updateTimeout = setTimeout(async () => {
+        try {
+            const res = await clientApiClient.put(`/client/cart/${item.id}`, { quantity: item.quantity }, {
+                ensureCartSession: true,
+                ignoreAuthRedirect: true,
+            });
+
+            if (res.data.success) {
+                notifyCartUpdate(null, 'internal');
+                if (selectedCoupon.value && subTotal.value < selectedCoupon.value.min_spend) {
+                    selectedCoupon.value = null;
+                    Toast.fire({ icon: 'warning', title: 'Đã hủy mã giảm giá vì chưa đạt giá trị tối thiểu', timer: 2000 });
+                }
+                await fetchCartSnapshot();
             }
+        } catch (error) {
+            Toast.fire({ icon: 'error', title: 'Lỗi cập nhật', timer: 2000 });
+            item.quantity = originalQty;
+            await fetchCartSnapshot();
+        } finally {
+            if (item) item.isUpdating = false;
+            isUpdatingCart.value = false;
         }
-    } catch (error) {
-        Toast.fire({ icon: 'error', title: 'Lỗi cập nhật', timer: 2000 });
-    } finally {
-        item.isUpdating = false;
-        isUpdatingCart.value = false;
-    }
+    }, 400);
 };
 
 const removeItem = async (itemId) => {
@@ -1023,20 +1116,16 @@ const submitOrder = async () => {
                 return;
             }
 
-            soraAlert.fire({
+            Toast.fire({
                 icon: 'success',
-                title: 'ĐẶT HÀNG THÀNH CÔNG',
-                html: `Cảm ơn bạn đã mua sắm tại SORA.<br>Mã đơn hàng: <b>${res.data.data.order_code}</b>`,
-                confirmButtonText: 'Xong',
-                allowOutsideClick: false
-            }).then(() => {
-                removeSafeStorage('cart_session_id');
-                removeSafeStorage('birthday_coupon_code');
-                removeSafeStorage('sora_affiliate_code');
-                notifyCartUpdate(0, 'internal');// Badge về 0 ngay sau đặt hàng thành công
-                checkoutIdempotencyKey = null;
-                router.push('/checkout/success?order=' + res.data.data.order_code).catch(() => { });
+                title: 'ĐẶT HÀNG THÀNH CÔNG'
             });
+            removeSafeStorage('cart_session_id');
+            removeSafeStorage('birthday_coupon_code');
+            removeSafeStorage('sora_affiliate_code');
+            notifyCartUpdate(0, 'internal');// Badge về 0 ngay sau đặt hàng thành công
+            checkoutIdempotencyKey = null;
+            router.push('/checkout/success?order=' + res.data.data.order_code).catch(() => { });
         }
     } catch (error) {
         let errorMsg = 'Không thể đặt hàng. Vui lòng thử lại sau.';

@@ -1,12 +1,8 @@
 <template>
   <div class="inventory-index-wrapper ">
-    <!-- MÀN HÌNH CHỜ BAN ĐẦU -->
-    <div v-if="isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100"
-      style="min-height: 70vh;">
-      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ
-        liệu kho hàng...</p>
-    </div>
+
+    <AdminShimmerLoading v-if="isFirstLoad" text="Đang tải dữ
+        liệu kho hàng..." />
 
     <div class="container-fluid py-4" v-else>
       <div class="row mb-3 align-items-center">
@@ -16,13 +12,13 @@
         <div class="col-md-6 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end align-items-center gap-3">
 <!-- Đồng bộ bằng cách xóa cache và tải lại -->
           <button class="btn btn-light border shadow-sm fw-bold text-dark px-4 py-2" @click="syncData" :disabled="isSilentLoading">
-            <span v-if="isSilentLoading" class="spinner-border spinner-border-sm me-1"></span>
+            <AdminLoadingSpinner v-if="isSilentLoading" class="me-1" size="16" />
             <i v-else class="bi bi-arrow-clockwise me-1"></i> Đồng bộ kho
           </button>
         </div>
       </div>
 
-      <!-- TABS CHUYỂN PHÂN HỆ -->
+
       <div class="mb-3">
         <ul class="nav nav-underline border-bottom mb-2 pb-1" style="flex-wrap: wrap !important; gap: 8px;">
           <li class="nav-item">
@@ -59,7 +55,7 @@
         </ul>
       </div>
 
-      <!-- BỘ LỌC VÀ CẢNH BÁO -->
+
       <div class="d-flex flex-wrap gap-3 mb-4 align-items-center">
         <div class="d-flex align-items-center bg-white px-3 py-2 rounded-pill border shadow-sm"
           v-if="['all_variants', 'low_stock'].includes(activeTab)">
@@ -87,12 +83,12 @@
         </div>
       </div>
 
-      <!-- BẢNG DỮ LIỆU -->
+
       <div class="card border-0 shadow-sm rounded-4 mb-4">
         <div class="card-header bg-white border-bottom-0 pt-2 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
           <h6 class="fw-bold mb-0 text-dark d-flex align-items-center">
             <i class="bi bi-layers-fill me-2"></i>{{ tableTitle }}
-            <div v-if="isSilentLoading" class="spinner-border spinner-border-sm text-brand ms-2" role="status"></div>
+            <AdminLoadingSpinner v-if="isSilentLoading" class="text-brand ms-2" size="16" />
           </h6>
           <div class="d-flex align-items-center gap-2">
             <select class="form-select rounded-pill bg-light border-0 shadow-sm text-secondary font-size-sm" v-model="sortOrder" style="width: auto; min-width: 170px;">
@@ -111,7 +107,7 @@
         <div class="card-body p-0 mt-2">
           <div class="table-responsive">
             
-            <!-- TABLE 1: BIẾN THỂ SẢN PHẨM -->
+
             <table v-if="['all_variants', 'low_stock'].includes(activeTab)" class="table table-hover align-middle mb-0"
               style="table-layout: fixed; width: 100%; min-width: 1000px;">
               <thead class="bg-light">
@@ -133,7 +129,7 @@
                 <tr v-else v-for="variant in paginatedVariants" :key="variant.id"
                   :class="{ 'bg-danger bg-opacity-10': variant.stock_quantity <= lowStockThreshold }">
                   <td class="px-4 py-3">
-                    <!-- SỬ DỤNG SORA IMAGE XỊN XÒ CÓ SẴN PLACEHOLDER -->
+
                     <SoraImage 
                       :src="variant.image_url || variant.product_thumbnail" 
                       imgClass="rounded border object-fit-cover shadow-sm bg-white" 
@@ -182,8 +178,7 @@
                             :disabled="getVariantInput(variant.id).isUpdating" min="1">
 
                           <div class="position-absolute start-100 ms-2 d-flex align-items-center" style="width: 60px;">
-                            <div v-if="getVariantInput(variant.id).isUpdating" class="spinner-border text-brand"
-                              style="width: 1.25rem; height: 1.25rem; border-width: 0.15em;"></div>
+                            <AdminLoadingSpinner v-if="getVariantInput(variant.id).isUpdating" class="text-brand" style="width: 1.25rem; height: 1.25rem; border-width: 0.15em;" />
 
                             <template v-else-if="getVariantInput(variant.id).isChanged">
                               <button @click="promptSaveVariantStock(variant)"
@@ -214,7 +209,7 @@
               </tbody>
             </table>
 
-            <!-- TABLE 2: KHO COMBO -->
+
             <table v-else class="table table-hover align-middle mb-0"
               style="table-layout: fixed; width: 100%; min-width: 1100px;">
               <thead class="bg-light">
@@ -237,7 +232,7 @@
                 <tr v-else v-for="combo in paginatedCombos" :key="combo.id"
                   :class="{ 'bg-light opacity-75': isComboExpired(combo) }">
                   <td class="px-4 py-3">
-                    <!-- SORA IMAGE THAY THẾ CHO COMBO -->
+
                     <SoraImage 
                       :src="combo.thumbnail_image" 
                       imgClass="rounded border object-fit-cover shadow-sm bg-white" 
@@ -269,8 +264,7 @@
                           :disabled="getComboInput(combo.id, combo.usage_limit).isUpdating" min="0">
 
                         <div class="position-absolute start-100 ms-2 d-flex align-items-center" style="width: 60px;">
-                          <div v-if="getComboInput(combo.id, combo.usage_limit).isUpdating" class="spinner-border text-brand"
-                            style="width: 1.25rem; height: 1.25rem; border-width: 0.15em;"></div>
+                          <AdminLoadingSpinner v-if="getComboInput(combo.id, combo.usage_limit).isUpdating" class="text-brand" style="width: 1.25rem; height: 1.25rem; border-width: 0.15em;" />
 
                           <template v-else-if="getComboInput(combo.id, combo.usage_limit).isChanged">
                             <button @click="saveComboLimit(combo)"
@@ -300,7 +294,7 @@
             </table>
           </div>
 
-          <!-- PHÂN TRANG -->
+
           <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-4" v-if="totalPages > 1">
             <span class="text-muted small">Hiển thị {{ (currentPage - 1) * itemsPerPage + 1 }} đến {{ Math.min(currentPage * itemsPerPage, ['all_variants', 'low_stock'].includes(activeTab) ? filteredVariants.length : filteredCombos.length) }}</span>
             <nav>
@@ -325,8 +319,9 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, computed, watch } from 'vue';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'; // IMPORT TANSTACK QUERY
+import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
@@ -409,10 +404,6 @@ const isComboExpired = (combo) => {
   const end = new Date(combo.end_date).getTime();
   return end < new Date().getTime();
 };
-
-// ============================================================================
-// HÀM HELPER QUẢN LÝ INPUT STATE CỦA TỪNG PHÂN TỬ CỰC KỲ AN TOÀN
-// ============================================================================
 const getVariantInput = (id) => {
   if (!variantChanges.value[id]) {
     variantChanges.value[id] = { stockAdjustment: '', isChanged: false, isUpdating: false };
@@ -455,9 +446,6 @@ const checkComboLimitChange = (combo) => {
   input.isChanged = String(input.localLimit) !== String(currentVal);
 };
 
-// ============================================================================
-// TANSTACK QUERY 1: PHÂN QUYỀN TRANG YÊU CẦU
-// ============================================================================
 const { data: modulesData } = useQuery({
   queryKey: ['admin-modules'],
   queryFn: async () => {
@@ -468,7 +456,7 @@ const { data: modulesData } = useQuery({
       return [];
     }
   },
-  staleTime: 10 * 60 * 1000 // Giữ phân quyền 10 phút
+  staleTime: 10 * 60 * 1000 
 });
 
 const currentPageLevel = computed(() => {
@@ -477,16 +465,12 @@ const currentPageLevel = computed(() => {
   return currentModule ? currentModule.required_level : null;
 });
 
-// ============================================================================
-// TANSTACK QUERY 2: TẢI DANH SÁCH BIẾN THỂ KHO HÀNG
-// ============================================================================
 const { data: allVariantsData, isLoading: isVariantsLoading, isRefetching: isVariantsRefetching } = useQuery({
   queryKey: ['admin-inventory-variants'],
   queryFn: async () => {
     const res = await axios.get(`${apiBase}/admin/inventory/variants`, { headers: getHeaders() });
     const variantsData = res.data?.data || [];
     
-    // Chuẩn hóa và làm sạch cấu trúc ORM để tối ưu tốc độ render
     return variantsData.filter(v => v.product).map(v => ({
       ...v,
       product_id: v.product.id,
@@ -500,12 +484,8 @@ const { data: allVariantsData, isLoading: isVariantsLoading, isRefetching: isVar
       attributes: v.formatted_attributes
     }));
   },
-  staleTime: 5 * 60 * 1000 // Dữ liệu tồn kho lưu cache 5 phút
+  staleTime: 5 * 60 * 1000 
 });
-
-// ============================================================================
-// TANSTACK QUERY 3: TẢI DANH SÁCH COMBO ĐANG BÁN
-// ============================================================================
 const { data: allCombosData, isLoading: isCombosLoading, isRefetching: isCombosRefetching } = useQuery({
   queryKey: ['admin-inventory-combos'],
   queryFn: async () => {
@@ -515,19 +495,13 @@ const { data: allCombosData, isLoading: isCombosLoading, isRefetching: isCombosR
   staleTime: 5 * 60 * 1000
 });
 
-// Trạng thái Loading ban đầu và Silent Loading (Load ngầm đồng bộ)
 const isFirstLoad = computed(() => isVariantsLoading.value || isCombosLoading.value);
 const isSilentLoading = computed(() => isVariantsRefetching.value || isCombosRefetching.value);
 
-// Đồng bộ thủ công kho hàng (Xóa cache để fetch mới)
 const syncData = () => {
   queryClient.invalidateQueries({ queryKey: ['admin-inventory-variants'] });
   queryClient.invalidateQueries({ queryKey: ['admin-inventory-combos'] });
 };
-
-// ============================================================================
-// COMPUTED: ĐẾM SỐ LƯỢNG TAB (Tự động cập nhật không cần watcher)
-// ============================================================================
 const counts = computed(() => {
   const variants = allVariantsData.value || [];
   const combos = allCombosData.value || [];
@@ -563,7 +537,6 @@ const tableTitle = computed(() => {
   return map[activeTab.value] || '';
 });
 
-// Lọc mượt mà danh sách biến thể trong Memory
 const filteredVariants = computed(() => {
   let result = allVariantsData.value || [];
   const threshold = parseInt(lowStockThreshold.value) || 0;
@@ -584,7 +557,6 @@ const filteredVariants = computed(() => {
     );
   }
 
-  // Sort variants
   if (sortOrder.value === 'product_stock_asc') {
     const minStockMap = {};
     result.forEach(v => {
@@ -599,8 +571,6 @@ const filteredVariants = computed(() => {
       if (a.product_id !== b.product_id) return b.product_id - a.product_id;
       return a.stock_quantity - b.stock_quantity;
     });
-
-    // Group tracking removed
 
   } else if (sortOrder.value === 'stock_asc') {
     result.sort((a, b) => a.stock_quantity - b.stock_quantity);
@@ -617,7 +587,6 @@ const paginatedVariants = computed(() => {
   return filteredVariants.value.slice(start, end);
 });
 
-// Lọc mượt mà danh sách Combo trong Memory
 const filteredCombos = computed(() => {
   let result = allCombosData.value || [];
 
@@ -665,12 +634,10 @@ const visiblePages = computed(() => {
   }
 });
 
-// Theo dõi tab và ô tìm kiếm để reset trang phân trang
 watch([activeTab, searchQuery, () => filters.value.product_status, lowStockThreshold], () => {
   currentPage.value = 1;
 });
 
-// Lưu cài đặt cảnh báo mức tồn kho vào bộ nhớ trình duyệt
 watch(lowStockThreshold, (newVal) => {
   if (newVal === null || newVal === undefined || newVal === '') return;
   const val = parseInt(newVal);
@@ -682,10 +649,6 @@ watch(lowStockThreshold, (newVal) => {
     }
   }
 });
-
-// ============================================================================
-// MUTATION 1: XỬ LÝ NHẬP THÊM TỒN KHO BIẾN THỂ
-// ============================================================================
 const updateVariantStockMutation = useMutation({
   mutationFn: async ({ id, quantity, note }) => {
     const payload = { action: 'add', quantity, note };
@@ -695,7 +658,6 @@ const updateVariantStockMutation = useMutation({
     getVariantInput(id).isUpdating = true;
   },
   onSuccess: (data, { id, quantity }) => {
-    // Refresh Cache an toàn
     queryClient.invalidateQueries({ queryKey: ['admin-inventory-variants'] });
     
     cancelVariantStockChange(id);
@@ -742,10 +704,6 @@ const promptSaveVariantStock = async (variant) => {
     updateVariantStockMutation.mutate({ id: variant.id, quantity, note: note.trim() });
   }
 };
-
-// ============================================================================
-// MUTATION 2: XỬ LÝ CẬP NHẬT GIỚI HẠN SỐ LẦN MUA COMBO
-// ============================================================================
 const updateComboLimitMutation = useMutation({
   mutationFn: async ({ id, usage_limit }) => {
     const payload = { usage_limit };
@@ -779,9 +737,6 @@ const saveComboLimit = (combo) => {
   updateComboLimitMutation.mutate({ id: combo.id, usage_limit: val });
 };
 
-// ============================================================================
-// LẮNG NGHE BROADCAST BROADCAST REALTIME LÀM TƯƠI CACHE TỨC THÌ
-// ============================================================================
 useAdminRefreshListener((payload) => {
   if (!payload || !payload.module) return;
   if (['products', 'combos', 'inventory', 'all'].includes(payload.module)) {
@@ -821,24 +776,6 @@ useAdminRefreshListener((payload) => {
   background-color: #e6f5f2 !important;
   color: #009981 !important;
   border-color: #009981 !important;
-}
-
-.logo-shimmer {
-  font-size: 3.5rem;
-  font-weight: 900;
-  letter-spacing: -1.5px;
-  background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%);
-  background-size: 200% auto;
-  color: transparent;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: shine 1.5s linear infinite;
-}
-
-@keyframes shine {
-  to {
-    background-position: 200% center;
-  }
 }
 
 .bg-brand {

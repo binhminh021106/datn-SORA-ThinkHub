@@ -1,11 +1,6 @@
 <template>
   <div class="order-returns-wrapper ">
-    
-    <!-- HIỂU ỨNG LOGO SHIMMER CHO LẦN ĐẦU TẢI TRANG DUY NHẤT -->
-    <div v-if="isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
-      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Tải dữ liệu hoàn trả...</p>
-    </div>
+    <AdminShimmerLoading v-if="isFirstLoad" text="Tải dữ liệu hoàn trả..." />
 
     <div class="container-fluid py-4" v-else>
       <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
@@ -183,7 +178,6 @@
         </nav>
       </div>
       
-      <!-- MODAL CHI TIẾT (QUICK VIEW CHO RETURNS) -->
       <div class="modal fade" id="quickViewOrderModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
         <div class="modal-dialog modal-dialog-centered modal-xl">
           <div class="modal-content rounded-4 border-0 shadow">
@@ -191,7 +185,7 @@
               <h5 class="fw-bold text-dark mb-0 d-flex align-items-center">
                 <i class="bi bi-receipt text-danger me-2"></i>Chi Tiết Yêu Cầu Hoàn Trả 
                 <span class="text-danger font-monospace ms-1" v-if="selectedOrder">{{ selectedOrder.order_code }}</span>
-                <div v-if="isFetchingDetail" class="spinner-border spinner-border-sm text-brand ms-3" role="status"></div>
+                <AdminLoadingSpinner v-if="isFetchingDetail" class="text-brand ms-3" size="16" />
               </h5>
               <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -338,7 +332,7 @@
             </div>
             
             <div class="modal-body p-5 text-center bg-white" v-else-if="isFetchingDetail">
-                <div class="spinner-border text-brand" style="width: 3rem; height: 3rem; border-width: 0.25em;" role="status"></div>
+                <AdminLoadingSpinner class="text-brand" style="width: 3rem; height: 3rem; border-width: 0.25em;"  />
                 <p class="text-muted mt-3 fw-semibold">Đang truy xuất dữ liệu hoàn trả...</p>
             </div>
 
@@ -353,6 +347,7 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
@@ -436,9 +431,9 @@ const getReturnStatusUi = (order) => {
     return { text: 'Chờ Xử Lý', class: 'bg-warning text-dark border-warning', icon: 'bi-inbox-fill', statusCode: 'pending' };
 };
 
-// ==========================================
+
 // TANSTACK QUERY LẤY DANH SÁCH HOÀN TRẢ
-// ==========================================
+
 const { data: queryData, isFetching, refetch } = useQuery({
   queryKey: ['admin-returns', activeTab, currentPage, filters, serverSearch],
   queryFn: async () => {
@@ -490,9 +485,9 @@ const displayedOrders = computed(() => {
     return result;
 });
 
-// ==========================================
+
 // TANSTACK QUERY LẤY CHI TIẾT MODAL
-// ==========================================
+
 const activeOrderId = ref(null);
 const { data: fetchedOrder, isFetching: isFetchingDetail } = useQuery({
     queryKey: ['admin-order-detail-return', activeOrderId],
@@ -514,9 +509,9 @@ const openQuickView = (id) => {
     quickViewModalInstance.show();
 };
 
-// ==========================================
+
 // TANSTACK MUTATION CHO THẨM ĐỊNH HOÀN TIỀN
-// ==========================================
+
 const processRefundMutation = useMutation({
     mutationFn: async ({ id, payload }) => {
         return axios.post(`${API_URL}/admin/orders/${id}/refund-process`, payload, { headers: getHeaders() });
@@ -876,9 +871,9 @@ const processRefund = async (order) => {
   processRefundMutation.mutate({ id: order.id, payload });
 };
 
-// ==========================================
+
 // ĐIỀU KHIỂN & SỰ KIỆN
-// ==========================================
+
 const switchTab = (tabId) => { 
     activeTab.value = tabId; 
     currentPage.value = 1; 
@@ -938,8 +933,6 @@ onMounted(() => {
 .tab-badge { font-size: 0.75rem; font-weight: 600; background-color: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6; transition: all 0.2s ease; }
 .active-badge { background-color: #e6f5f2 !important; color: #009981 !important; border-color: #009981 !important; }
 
-.logo-shimmer { font-size: 3.5rem; font-weight: 900; letter-spacing: -1.5px; background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%); background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text; animation: shine 1.5s linear infinite; }
-@keyframes shine { to { background-position: 200% center; } }
 .bg-brand { background-color: #009981 !important; } .text-brand { color: #009981 !important; } .border-brand { border-color: #009981 !important; }
 
 /* Nút Action Hover Mượt Mà */
@@ -1021,7 +1014,6 @@ onMounted(() => {
 </style>
 
 <style>
-/* Style global (không scoped) cho các thẻ Quick Notes sinh ra động từ SweetAlert */
 .quick-note-chip:hover {
     background-color: #009981 !important;
     color: #fff !important;

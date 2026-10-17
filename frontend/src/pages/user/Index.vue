@@ -36,7 +36,7 @@
               <div
                 class="w-100 h-100 position-absolute top-0 start-0 d-flex flex-column align-items-center justify-content-center z-index-2">
                 <div class="home-hero-copy text-center">
-                  <span class="kicker-base hero-kicker">Trang Sức Cao Cấp SORA</span>
+                  <span class="kicker-base hero-kicker">Trang Sức SORA</span>
                   <h1 class="font-serif" v-html="formatBannerTitle(banner.title)"></h1>
                   <a v-if="safeNavigationUrl(banner.target_url)" :href="safeNavigationUrl(banner.target_url)" class="editorial-btn text-decoration-none">Khám
                     phá ngay</a>
@@ -533,7 +533,7 @@ const galleryDisplayImages = computed(() => {
   return data.products.map((product) => product.thumbnail_image).filter(Boolean).slice(0, 4);
 });
 
-const isHomeReady = computed(() => !isLoading.value && (!heroImage.value || isHeroImageReady.value));
+const isHomeReady = computed(() => !isLoading.value);
 const showHomeLogoLoader = computed(() => shouldShowHomeIntro.value && (!isHomeReady.value || !isLogoLoaderMinTimeDone.value));
 const showHomeSkeleton = computed(() =>
   isLoading.value && (!shouldShowHomeIntro.value || isLogoLoaderMinTimeDone.value)
@@ -731,13 +731,22 @@ const toggleWishlist = async (product) => {
     }
     showWishlistNotification(isAdded);
   } catch (error) {
-    soraAlert.fire({ icon: 'error', title: 'Không thể cập nhật danh sách yêu thích', text: error.message || 'Xin vui lòng thử lại sau.' });
+    Toast.fire({ icon: 'error', title: error.message || 'Không thể cập nhật danh sách yêu thích' });
   }
 };
 
-const handleImageError = (event) => {
-  event.target.onerror = null;
-  event.target.src = soraPlaceholder;
+const handleImageError = (e) => { 
+  let fallback = '/Sora-placeholder.png';
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_client_active) {
+          fallback = getStorageUrl(store.settings.placeholder_client_active);
+      }
+  } catch (err) {}
+  
+  if (e.target.src !== fallback) {
+      e.target.src = fallback;
+  }
 };
 
 const markHeroImageReady = (index = 0) => {
@@ -787,7 +796,7 @@ watch(homeQueryData, (payload) => {
 
 watch(isQueryError, (hasError) => {
   if (hasError) {
-    soraAlert.fire({ icon: 'error', title: 'Không thể tải dữ liệu trang chủ' });
+    Toast.fire({ icon: 'error', title: 'Không thể tải dữ liệu trang chủ' });
   }
 });
 
@@ -795,7 +804,7 @@ onMounted(() => {
   if (shouldShowHomeIntro.value) {
     window.setTimeout(() => {
       isLogoLoaderMinTimeDone.value = true;
-    }, 1000);
+    }, 300);
   }
 
   window.addEventListener('resize', handleResize);
@@ -1279,9 +1288,6 @@ onUnmounted(() => {
 }
 
 
-/* ==========================================
-   CSS CHO COMBO CAROUSEL (VISIBLE-EDGE)
-   ========================================== */
 .combos-editorial {
   background-color: #fffafa;
   overflow: hidden;
@@ -1829,10 +1835,6 @@ onUnmounted(() => {
   }
 }
 
-
-/* ==========================================
-   CÁC PHẦN CÒN LẠI CỦA TRANG CHỦ
-   ========================================== */
 .craft-section {
   background: rgba(var(--sora-secondary-rgb), 0.18);
   padding: clamp(3rem, 5vw, 4rem) 0;

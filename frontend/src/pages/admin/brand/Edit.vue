@@ -50,7 +50,6 @@
                 <div class="p-4 bg-light rounded-4 border text-center h-100">
                   <h6 class="fw-bold mb-3 text-start form-section-title"><i class="bi bi-image me-2"></i>Logo Thương hiệu</h6>
                   <div class="mb-3 position-relative border rounded-4 overflow-hidden bg-white shadow-sm" style="height: 250px; padding: 1rem;">
-                    <!-- SỬ DỤNG SORAIMAGE THAY CHO IMG THƯỜNG TRÁNH LỖI PHÁT SINH 404 VÀ CORS -->
                     <SoraImage 
                       :src="logoPreview" 
                       :placeholder="defaultImage" 
@@ -65,7 +64,7 @@
               
               <div class="col-12 text-end border-top pt-4 mt-2">
                 <button type="submit" class="btn btn-brand px-5 fw-bold text-white rounded-pill shadow-sm py-2" :disabled="isSaving || !form.name">
-                  <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span> CẬP NHẬT THƯƠNG HIỆU
+                  <AdminLoadingSpinner v-if="isSaving" class="me-2" size="16" /> CẬP NHẬT THƯƠNG HIỆU
                 </button>
               </div>
             </div>
@@ -74,20 +73,30 @@
       </div>
     </div>
     
-    <div v-else class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
-      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang nạp dữ liệu...</p>
-    </div>
+    <AdminShimmerLoading v-else text="Đang nạp dữ liệu..." />
   </div>
+  <!-- CROPPER MODAL -->
+  <ImageCropperModal
+    :show="showCropper"
+    :image-url="cropperUrl"
+    :aspect-ratio="NaN"
+    :allow-ratio-change="true"
+    :max-size-kb="100"
+    title="Cắt ảnh Thương hiệu"
+    @crop="handleCrop"
+    @close="closeCropper"
+  />
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, computed, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
+import { useQueryClient, useQuery, useMutation } from '@tanstack/vue-query';
 import { getFullImage } from '@/composables/useUtilities';
+import ImageCropperModal from '@/components/admin/ImageCropperModal.vue';
 
 import SoraImage from '@/components/ui/SoraImage.vue';
 import defaultImage from '@/assets/images/defaults/placeholder.png';
@@ -120,12 +129,30 @@ const generateSlug = () => {
   form.value.slug = s.replace(/\s+/g, '-').replace(/[^a-z0-9\-]/g, '').replace(/\-\-+/g, '-');
 };
 
+// Cropper State
+const showCropper = ref(false);
+const cropperUrl = ref('');
+
+const closeCropper = () => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+};
+
+const handleCrop = (data) => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+  
+  logoFile.value = data.file;
+  logoPreview.value = data.blobUrl;
+};
+
 const handleLogoUpload = (e) => {
   const f = e.target.files[0];
   if(f) { 
       if(f.size > 15 * 1024 * 1024) { Swal.fire('Lỗi', 'Ảnh tối đa 15MB', 'error'); return; }
-      logoFile.value = f; 
-      logoPreview.value = URL.createObjectURL(f); 
+      cropperUrl.value = URL.createObjectURL(f);
+      showCropper.value = true;
+      e.target.value = '';
   }
 };
 
@@ -150,9 +177,6 @@ const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
   }
 };
 
-// ==========================================
-// TANSTACK VUE QUERY - FETCH DATA
-// ==========================================
 const { data: brandResponse, isLoading: isBrandLoading, isError } = useQuery({
   queryKey: ['adminBrand', brandId],
   queryFn: async () => {
@@ -182,9 +206,6 @@ watch(rawBrandData, (b) => {
   }
 }, { immediate: true });
 
-// ==========================================
-// TANSTACK VUE QUERY - MUTATIONS
-// ==========================================
 const updateBrandMutation = useMutation({
   mutationFn: async (formData) => {
     const res = await axios.post(`${API_URL}/admin/brands/${brandId}`, formData, {
@@ -226,6 +247,4 @@ const updateBrand = () => {
 .btn-brand { background-color: #009981; color: white; transition: 0.2s; } .btn-brand:hover { background-color: #007a67; color: white; }
 .btn-outline-brand { color: #009981; border-color: #009981; transition: 0.2s; } .btn-outline-brand:hover { background-color: #009981; color: white; }
 .cursor-pointer { cursor: pointer; }
-.logo-shimmer { font-size: 3.5rem; font-weight: 900; letter-spacing: -1.5px; background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%); background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text; animation: shine 1.5s linear infinite; }
-@keyframes shine { to { background-position: 200% center; } }
 </style>

@@ -127,11 +127,11 @@
                                 <hr class="text-muted opacity-25 my-4">
                                 <div class="text-end">
                                     <button type="button" class="btn btn-light me-2 px-4 shadow-sm fw-bold border" @click="handleRestore" :disabled="isRestoring">
-                                      <span v-if="isRestoring" class="spinner-border spinner-border-sm me-2"></span>Khôi phục gốc
+                                      <AdminLoadingSpinner v-if="isRestoring" class="me-2" size="16" />Khôi phục gốc
                                     </button>
                                     <button type="submit" class="btn btn-brand btn-brand-solid px-5 fw-bold shadow-sm"
                                         :disabled="isSaving">
-                                        <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span> 
+                                        <AdminLoadingSpinner v-if="isSaving" class="me-2" size="16" /> 
                                         {{ isSaving ? 'ĐANG LƯU...' : 'LƯU THAY ĐỔI' }}
                                     </button>
                                 </div>
@@ -141,20 +141,31 @@
                 </div>
             </form>
         </div>
-        <div v-else class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
-          <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-          <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ liệu...</p>
-        </div>
+        <AdminShimmerLoading v-else text="Đang tải dữ liệu..." />
     </div>
+    <!-- CROPPER MODAL -->
+    <ImageCropperModal
+      :show="showCropper"
+      :image-url="cropperUrl"
+      :aspect-ratio="NaN"
+      :allow-ratio-change="true"
+      :max-size-kb="200"
+      title="Cắt ảnh Danh mục"
+      @crop="handleCrop"
+      @close="closeCropper"
+    />
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { ref, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { getFullImage } from '@/composables/useUtilities';
+import ImageCropperModal from '@/components/admin/ImageCropperModal.vue';
 import defaultImage from '../../../assets/images/defaults/placeholder.png';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
@@ -172,6 +183,10 @@ const isRemoveImage = ref(false);
 const errors = ref({});
 const treeCategories = ref([]);
 
+// Cropper State
+const showCropper = ref(false);
+const cropperUrl = ref('');
+
 const form = ref({
     name: '', slug: '', parent_id: null, description: '', status: '', sort_order: 0, attributes_schema: []
 });
@@ -181,7 +196,18 @@ const getHeaders = () => ({
     'Authorization': `Bearer ${localStorage.getItem('admin_token')}` 
 });
 
-const handleImageError = (e) => { e.target.src = defaultImage; };
+const handleImageError = (e) => { 
+  let fallback = defaultImage;
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_admin_active) {
+          fallback = `${import.meta.env.VITE_URL}/storage/${store.settings.placeholder_admin_active}`;
+      }
+  } catch (err) {}
+  if (e.target.src !== fallback) {
+      e.target.src = fallback; 
+  }
+};
 
 // TANSTACK QUERY: Lấy thông tin cây danh mục hoạt động
 const { data: treeData } = useQuery({
@@ -255,6 +281,20 @@ const handleRestore = async () => {
     Swal.fire({ icon: 'success', title: 'Đã khôi phục dữ liệu gốc', timer: 1500, showConfirmButton: false });
 };
 
+const closeCropper = () => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+};
+
+const handleCrop = (data) => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+  
+  selectedFile.value = data.file;
+  previewImage.value = data.blobUrl;
+  isRemoveImage.value = false;
+};
+
 const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -262,9 +302,9 @@ const handleImageChange = (e) => {
             Swal.fire('Lỗi', 'Ảnh tối đa 15MB', 'error'); 
             return; 
         }
-        selectedFile.value = file;
-        previewImage.value = URL.createObjectURL(file);
-        isRemoveImage.value = false;
+        cropperUrl.value = URL.createObjectURL(file);
+        showCropper.value = true;
+        e.target.value = '';
     }
 };
 
@@ -366,8 +406,6 @@ const updateCategory = () => {
 </script>
 
 <style scoped>
-.logo-shimmer { font-size: 3.5rem; font-weight: 900; letter-spacing: -1.5px; background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%); background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text; animation: shine 1.5s linear infinite; }
-@keyframes shine { to { background-position: 200% center; } }
 .bg-brand { background-color: #009981 !important; }
 .text-brand { color: #009981 !important; }
 .btn-brand-solid { background-color: #009981 !important; color: white !important; transition: all 0.2s ease; border: none; }

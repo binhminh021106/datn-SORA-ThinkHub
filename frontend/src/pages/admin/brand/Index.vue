@@ -1,13 +1,7 @@
 <template>
   <div class="brand-index-wrapper">
-
-    <!-- MÀN HÌNH CHỜ ĐỘC LẬP (SHIMMER) CHỈ CHẠY 1 LẦN ĐẦU TIÊN VÀO TRANG -->
-    <div v-if="isPageLoading" class="d-flex flex-column justify-content-center align-items-center w-100"
-      style="min-height: 70vh;">
-      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ
-        liệu thương hiệu...</p>
-    </div>
+    <AdminShimmerLoading v-if="isPageLoading" text="Đang tải dữ
+        liệu thương hiệu..." />
 
     <div class="container-fluid py-4" v-else>
       <div class="row mb-3 align-items-center">
@@ -21,8 +15,6 @@
           </router-link>
         </div>
       </div>
-
-      <!-- TABS LỌC TRẠNG THÁI -->
       <div class="mb-4" :class="{ 'opacity-50 pe-none': isReorderMode }">
         <ul class="nav nav-underline border-bottom mb-2 flex-nowrap overflow-hidden custom-scrollbar-x pb-1">
           <li class="nav-item">
@@ -84,7 +76,7 @@
 
             <button v-if="isReorderMode" class="btn btn-sm btn-success text-white fw-bold px-4 shadow-sm py-2"
               @click="saveReorder" :disabled="isSavingOrder">
-              <span v-if="isSavingOrder" class="spinner-border spinner-border-sm me-2"></span>
+              <AdminLoadingSpinner v-if="isSavingOrder" class="me-2" size="16" />
               <i class="bi bi-floppy-fill me-1" v-else></i> LƯU THỨ TỰ
             </button>
 
@@ -112,9 +104,7 @@
                   </th>
                 </tr>
               </thead>
-              <tbody>
-                <!-- HIỆU ỨNG SKELETON KHI CHUYỂN TABS HOẶC LOADING NHẸ -->
-                <template v-if="isTableLoading">
+              <tbody>                <template v-if="isTableLoading">
                   <tr v-for="i in 5" :key="'skeleton-' + i">
                     <td v-if="isReorderMode" style="width: 50px;"></td>
                     <td class="text-center placeholder-glow"><span class="placeholder col-4 rounded py-2"></span></td>
@@ -135,8 +125,6 @@
                         class="placeholder col-8 rounded py-2"></span></td>
                   </tr>
                 </template>
-
-                <!-- HIỂN THỊ DỮ LIỆU THẬT -->
                 <template v-else>
                   <tr v-if="displayBrands.length === 0">
                     <td :colspan="isReorderMode ? 5 : 6" class="text-center py-5 text-muted">
@@ -160,7 +148,6 @@
 
                     <td class="px-4 py-3">
                       <div class="d-flex align-items-center">
-                        <!-- ÁP DỤNG COMPONENT SORAIMAGE VÀO THƯƠNG HIỆU -->
                         <div
                           class="position-relative d-inline-block me-3 shadow-sm border rounded-3 overflow-hidden bg-white flex-shrink-0"
                           style="width: 55px; height: 55px; padding: 4px;">
@@ -187,7 +174,6 @@
                         class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary"><i
                           class="bi bi-trash3-fill"></i> Đã xóa</span>
                       <div v-else class="w-100">
-                        <!-- SỬA TRẠNG THÁI NHANH BẰNG COMPONENT -->
                         <StatusConfirmSelect
                           v-model="brand.localStatus"
                           :originalValue="brand.status"
@@ -247,8 +233,6 @@
         </nav>
       </div>
     </div>
-
-    <!-- QUICK VIEW MODAL -->
     <div class="modal fade" id="quickViewBrandModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
@@ -296,6 +280,7 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, onMounted, computed, onBeforeUnmount, watch, watchEffect } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
@@ -386,17 +371,13 @@ const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
     Swal.fire('Lỗi', 'Mất kết nối Server', 'error');
   }
 };
-
-// ==========================================
-// TANSTACK VUE QUERY - FETCH DATA
-// ==========================================
 const { data: brandsResponse, isLoading: isBrandsLoading } = useQuery({
   queryKey: ['adminBrands'],
   queryFn: async () => {
     const response = await axios.get(`${API_URL}/admin/brands`, { headers: getHeaders() });
     return response.data;
   },
-  staleTime: 5 * 60 * 1000 // Cache dữ liệu thương hiệu trong 5 phút
+  staleTime: 5 * 60 * 1000
 });
 
 const { data: modulesResponse } = useQuery({
@@ -412,8 +393,6 @@ const isPageLoading = computed(() => isBrandsLoading.value);
 
 const localBrands = ref([]);
 const rawBrandsList = computed(() => brandsResponse.value?.data || []);
-
-// Hàm định nghĩa trước watch để đồng bộ
 const syncLocalBrands = () => {
   localBrands.value = rawBrandsList.value.map(b => {
     const existing = localBrands.value.find(lb => lb.id === b.id);
@@ -430,8 +409,6 @@ watch(rawBrandsList, (newList) => {
     syncLocalBrands();
   }
 }, { immediate: true });
-
-// Thiết lập quyền hạn cấp trang
 watchEffect(() => {
   const modules = modulesResponse.value?.data || [];
   const currentCode = route.meta.moduleCode || 'admin_brands';
@@ -490,8 +467,6 @@ const onDragEnd = (event) => {
   draggedIndex.value = null;
   dragOverIndex.value = null;
 };
-
-// MUTATION SẮP XẾP THỨ TỰ (REORDER)
 const reorderBrandsMutation = useMutation({
   mutationFn: async (payload) => {
     const response = await axios.post(`${API_URL}/admin/brands/reorder`, { items: payload }, { headers: getHeaders() });
@@ -561,8 +536,6 @@ useAdminRefreshListener((payload) => {
 
 const checkStatusChange = (brand) => { brand.isStatusChanged = (brand.localStatus !== brand.status); };
 const cancelStatusChange = (brand) => { brand.localStatus = brand.status; brand.isStatusChanged = false; };
-
-// MUTATION CẬP NHẬT TRẠNG THÁI NHANH (STATUS OPTIMISTIC UPDATE)
 const updateStatusMutation = useMutation({
   mutationFn: async ({ id, formData }) => {
     const response = await axios.post(`${API_URL}/admin/brands/${id}`, formData, { headers: getHeaders() });
@@ -608,8 +581,6 @@ const openQuickView = (brand) => {
   quickViewModalInstance.show();
 };
 const closeQuickView = () => { if (quickViewModalInstance) quickViewModalInstance.hide(); };
-
-// MUTATION XÓA MỀM
 const deleteBrandMutation = useMutation({
   mutationFn: async (id) => {
     const response = await axios.delete(`${API_URL}/admin/brands/${id}`, { headers: getHeaders() });
@@ -635,8 +606,6 @@ const confirmDelete = (id, name) => {
     }
   });
 };
-
-// MUTATION KHÔI PHỤC
 const restoreBrandMutation = useMutation({
   mutationFn: async (id) => {
     const response = await axios.post(`${API_URL}/admin/brands/${id}/restore`, {}, { headers: getHeaders() });
@@ -719,24 +688,6 @@ const forceDeleteBrand = (brand) => {
   background-color: #e6f5f2 !important;
   color: #009981 !important;
   border-color: #009981 !important;
-}
-
-.logo-shimmer {
-  font-size: 3.5rem;
-  font-weight: 900;
-  letter-spacing: -1.5px;
-  background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%);
-  background-size: 200% auto;
-  color: transparent;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: shine 1.5s linear infinite;
-}
-
-@keyframes shine {
-  to {
-    background-position: 200% center;
-  }
 }
 
 .bg-brand {

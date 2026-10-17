@@ -23,9 +23,14 @@
 }
 
 @keyframes admin-spinner-rotate {
-  to {
+  100% {
     transform: rotate(360deg);
   }
+}
+
+[disabled], .disabled {
+  pointer-events: auto !important;
+  cursor: not-allowed !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản lý Gửi Mã Giảm Giá Sinh Nhật</title>
-    <!-- Thêm Bootstrap hoặc CSS cơ bản -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8f9fa; }
@@ -20,7 +19,6 @@
 <div class="container mt-5">
     <h2 class="mb-4">🎂 Lịch Sử Gửi Voucher Sinh Nhật</h2>
 
-    <!-- Các thẻ thống kê -->
     <div class="row">
         <div class="col-md-4">
             <div class="stat-card bg-primary-custom shadow">

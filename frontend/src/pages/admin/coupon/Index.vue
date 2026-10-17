@@ -1,11 +1,7 @@
 <template>
   <div class="coupon-index-wrapper ">
     
-    <!-- 1. SHIMMER CHỈ CHẠY 1 LẦN ĐẦU TIÊN KHI CHƯA CÓ CACHE -->
-    <div v-if="isLoading" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
-      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ liệu...</p>
-    </div>
+    <AdminShimmerLoading v-if="isLoading" text="Đang tải dữ liệu..." />
 
     <div class="container-fluid py-4" v-else>
       <!-- Header -->
@@ -61,7 +57,7 @@
         <div class="card-header bg-white border-bottom-0 pt-2 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
           <h6 class="fw-bold mb-0 text-dark">
             <i class="bi bi-ticket-perforated text-brand me-1"></i> Danh sách hiển thị
-            <span v-if="isFetching && !isLoading" class="spinner-border spinner-border-sm text-brand ms-2" title="Đang đồng bộ dữ liệu..."></span>
+            <AdminLoadingSpinner v-if="isFetching && !isLoading" class="text-brand ms-2" title="Đang đồng bộ dữ liệu..." size="16" />
           </h6>
           
           <div class="d-flex align-items-center gap-2">
@@ -90,7 +86,6 @@
                 </tr>
               </thead>
               <tbody>
-                <!-- 2. SKELETON KHI CHUYỂN TAB / ĐANG FETCH NGẦM -->
                 <template v-if="isFetching && !isLoading && displayCoupons.length === 0">
                   <tr v-for="i in 5" :key="'skel'+i" class="placeholder-glow">
                     <td class="px-4 py-3">
@@ -143,7 +138,6 @@
                     <small v-if="isExpired(coupon.expires_at) && !coupon.deleted_at" class="badge bg-danger bg-opacity-10 text-danger mt-1">Đã hết hạn</small>
                   </td>
 
-                  <!-- Cột Trạng thái sử dụng Optimistic Cache Update thay vì Inline Save -->
                   <td class="px-4 text-center">
                     <span v-if="coupon.deleted_at" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary"><i class="bi bi-trash3-fill"></i> Đã xóa</span>
                     <div v-else class="w-100">
@@ -214,7 +208,6 @@
           <div class="modal-body p-4" v-if="selectedCoupon">
             
             <div class="text-center mb-4">
-              <!-- Cải tiến thẻ xanh ở Quick View: Tự động vừa với độ dài chữ -->
               <div class="bg-brand text-white fw-bold px-4 py-2 rounded-3 d-inline-block fs-4 mb-2 text-break text-uppercase shadow-sm" style="letter-spacing: 2px; max-width: 100%;">
                 {{ selectedCoupon.code }}
               </div>
@@ -259,6 +252,7 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
@@ -540,8 +534,6 @@ useAdminRefreshListener((payload) => {
 </script>
 
 <style scoped>
-.logo-shimmer { font-size: 3.5rem; font-weight: 900; letter-spacing: -1.5px; background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%); background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text; animation: shine 1.5s linear infinite; }
-@keyframes shine { to { background-position: 200% center; } }
 .custom-tab { font-weight: 600 !important; color: #6c757d; border-bottom: 2px solid transparent !important; margin-bottom: -1px; transition: color 0.2s ease; }
 .custom-tab:hover { color: #009981; }
 .custom-tab.active-tab { color: #009981 !important; border-bottom: 2px solid #009981 !important; }

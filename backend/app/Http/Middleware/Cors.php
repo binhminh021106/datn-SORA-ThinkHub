@@ -16,7 +16,6 @@ class Cors
      */
     public function handle(Request $request, Closure $next)
     {
-        // Handle preflight request first
         if ($request->isMethod('options')) {
             return response()->json(['method' => 'OPTIONS'], 200, [
                 'Access-Control-Allow-Origin' => '*',

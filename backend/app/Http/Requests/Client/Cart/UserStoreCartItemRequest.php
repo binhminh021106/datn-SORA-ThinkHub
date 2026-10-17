@@ -16,7 +16,6 @@ class UserStoreCartItemRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Bắt buộc phải có 1 trong 2: hoặc là sản phẩm lẻ, hoặc là combo
             'product_variant_id' => [
                 'required',
                 'integer',
@@ -41,16 +40,11 @@ class UserStoreCartItemRequest extends FormRequest
             ],
         ];
     }
-
-    /**
-     * Sparring Partner: Rào trước đón sau lỗi tồn kho ngay khi Thêm Mới
-     */
     public function withValidator($validator)
     {
         $validator->after(function ($validator) {
             $requestedQuantity = (int) $this->quantity;
 
-            // 1. Kiểm tra tồn kho cho SẢN PHẨM LẺ
             if ($this->filled('product_variant_id')) {
                 $variant = ProductVariant::find($this->product_variant_id);
                 if ($variant && $requestedQuantity > $variant->stock_quantity) {
@@ -58,7 +52,6 @@ class UserStoreCartItemRequest extends FormRequest
                 }
             }
 
-            // 2. Kiểm tra tồn kho cho COMBO (Check từng món bên trong)
             if ($this->filled('combo_id') && is_array($this->combo_selections)) {
                 $variantIds = array_column($this->combo_selections, 'selected_variant_id');
                 $variantsInCombo = ProductVariant::whereIn('id', $variantIds)->get();
@@ -66,7 +59,7 @@ class UserStoreCartItemRequest extends FormRequest
                 foreach ($variantsInCombo as $v) {
                     if ($requestedQuantity > $v->stock_quantity) {
                         $validator->errors()->add('quantity', "Một sản phẩm thuộc combo chỉ còn tối đa {$v->stock_quantity} chiếc. Vui lòng giảm số lượng.");
-                        break; // Dừng check ngay khi phát hiện 1 món hết hàng
+                        break; 
                     }
                 }
             }

@@ -1,4 +1,5 @@
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, onMounted, computed, watch } from 'vue';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 import { useRouter } from 'vue-router';
@@ -9,9 +10,9 @@ import { getFullImage } from '@/composables/useUtilities';
 import defaultImage from '@/assets/images/defaults/placeholder.png';
 import StatusConfirmSelect from '@/components/admin/StatusConfirmSelect.vue';
 
-// ==========================================
+
 // 1. CONFIGURATION & SETUP
-// ==========================================
+
 const apiUrl = import.meta.env.VITE_API_BASE_URL;
 const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || window.location.origin;
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || apiUrl?.replace(/\/api\/?$/, '');
@@ -19,9 +20,9 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || apiUrl?.replace(/\/api\/
 const router = useRouter();
 const queryClient = useQueryClient();
 
-// ==========================================
+
 // 2. AUTHENTICATION & HEADERS
-// ==========================================
+
 const currentUser = ref({});
 
 const getHeaders = () => {
@@ -39,7 +40,7 @@ const hasRole = (allowedRoles) => {
     const userRoleName = roleMap[userRoleId] || '';
 
     if (!userRoleName) return false;
-    if (userRoleName === 'admin') return true; 
+    if (userRoleName === 'admin') return true;
     return allowedRoles.includes(userRoleName);
 };
 
@@ -57,10 +58,10 @@ const checkAuthState = async () => {
     }
 
     if (userData) {
-        currentUser.value = { 
-            ...userData, 
-            role_id: Number(userData.role_id), 
-            name: userData.fullname || userData.full_name || userData.name || 'Admin' 
+        currentUser.value = {
+            ...userData,
+            role_id: Number(userData.role_id),
+            name: userData.fullname || userData.full_name || userData.name || 'Admin'
         };
         return true;
     }
@@ -68,10 +69,10 @@ const checkAuthState = async () => {
     try {
         const response = await adminApiClient.get(`/me`);
         let data = response.data?.data && !response.data?.id ? response.data.data : response.data;
-        currentUser.value = { 
-            ...data, 
-            role_id: Number(data.role_id), 
-            name: data.fullname || data.full_name || data.name || 'Admin' 
+        currentUser.value = {
+            ...data,
+            role_id: Number(data.role_id),
+            name: data.fullname || data.full_name || data.name || 'Admin'
         };
         localStorage.setItem('adminData', JSON.stringify(currentUser.value));
         return true;
@@ -88,9 +89,9 @@ const requireLogin = () => {
     return true;
 };
 
-// ==========================================
+
 // 3. TANSTACK QUERY & MUTATIONS
-// ==========================================
+
 const isFirstLoad = ref(true);
 const searchQuery = ref('');
 const currentTab = ref('all');
@@ -98,18 +99,18 @@ const sortOption = ref('newest');
 const currentPage = ref(1);
 const itemsPerPage = ref(10);
 
-// Fetch danh sách News qua TanStack Query
+
 const { data: newsData, isLoading, isFetching, isError, error, refetch } = useQuery({
     queryKey: ['admin-news-all'],
     queryFn: async () => {
         const response = await adminApiClient.get(`/news`);
         return response.data?.data || response.data || [];
     },
-    staleTime: 5 * 60 * 1000, // Cache dữ liệu trong 5 phút
+    staleTime: 5 * 60 * 1000,
     keepPreviousData: true
 });
 
-// Đồng bộ local state khi cache query được cập nhật
+
 const localNews = ref([]);
 watch(newsData, (newVal) => {
     if (newVal) {
@@ -137,17 +138,17 @@ const newsLoadError = computed(() => (
     || 'Không thể tải danh sách tin tức.'
 ));
 
-// Mutation cập nhật nhanh trạng thái
+
 const toggleStatusMutation = useMutation({
     mutationFn: async ({ id, status }) => {
         return adminApiClient.patch(`/news/${id}`, { status });
     },
     onSuccess: (data, variables) => {
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Cập nhật trạng thái thành công', showConfirmButton: false, timer: 1500 });
-        
+
         const item = localNews.value.find(n => n.id === variables.id);
-        if(item) item.isStatusChanged = false;
-        
+        if (item) item.isStatusChanged = false;
+
         queryClient.setQueryData(['admin-news-all'], (oldData) => {
             if (!oldData) return oldData;
             return oldData.map(i => i.id === variables.id ? { ...i, status: variables.status } : i);
@@ -155,7 +156,7 @@ const toggleStatusMutation = useMutation({
     },
     onError: (err, variables) => {
         const item = localNews.value.find(n => n.id === variables.id);
-        if(item) cancelStatusChange(item);
+        if (item) cancelStatusChange(item);
         Swal.fire('Lỗi', 'Không thể cập nhật trạng thái.', 'error');
     }
 });
@@ -174,7 +175,7 @@ const saveNewsStatus = (item) => {
     });
 };
 
-// Mutation xóa mềm bài viết
+
 const deleteMutation = useMutation({
     mutationFn: async (id) => {
         return adminApiClient.delete(`/news/${id}`);
@@ -188,7 +189,7 @@ const deleteMutation = useMutation({
     }
 });
 
-// Mutation khôi phục bài viết
+
 const restoreMutation = useMutation({
     mutationFn: async (id) => {
         return adminApiClient.post(`/news/${id}/restore`, {});
@@ -202,9 +203,9 @@ const restoreMutation = useMutation({
     }
 });
 
-// ==========================================
+
 // 4. COMPUTED & WATCHERS
-// ==========================================
+
 const statusCounts = computed(() => {
     const list = localNews.value || [];
     return {
@@ -219,7 +220,7 @@ const statusCounts = computed(() => {
 const processedNews = computed(() => {
     let result = [...(localNews.value || [])];
 
-    // Lọc theo Tab Xóa hoặc Tab Thường
+
     if (currentTab.value === 'deleted') {
         result = result.filter(item => item.deleted_at);
     } else {
@@ -229,13 +230,13 @@ const processedNews = computed(() => {
         }
     }
 
-    // Lọc theo từ khóa tìm kiếm
+
     const query = searchQuery.value.toLowerCase().trim();
     if (query) {
         result = result.filter(item => item.title?.toLowerCase().includes(query));
     }
-    
-    // Sắp xếp
+
+
     result.sort((a, b) => {
         if (sortOption.value === 'newest') return new Date(b.created_at) - new Date(a.created_at);
         if (sortOption.value === 'oldest') return new Date(a.created_at) - new Date(b.created_at);
@@ -266,9 +267,9 @@ watch([searchQuery, currentTab, sortOption], () => {
 
 const getFormattedDate = (dateString) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('vi-VN', { 
-        year: 'numeric', month: '2-digit', day: '2-digit', 
-        hour: '2-digit', minute: '2-digit' 
+    return new Date(dateString).toLocaleDateString('vi-VN', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit'
     });
 };
 
@@ -289,14 +290,14 @@ const getStatusInfo = (status) => {
     return map[status] || { text: 'Không rõ', class: 'bg-light text-dark', icon: 'bi-question-circle' };
 };
 
-const switchTab = (tabId) => { 
-    currentTab.value = tabId; 
-    currentPage.value = 1; 
+const switchTab = (tabId) => {
+    currentTab.value = tabId;
+    currentPage.value = 1;
 };
 
-// ==========================================
+
 // 6. NAVIGATION & ACTIONS
-// ==========================================
+
 const goToCreate = () => router.push('/admin/news/create');
 const goToEdit = (id) => router.push(`/admin/news/edit/${id}`);
 const viewOnFrontend = (slug) => {
@@ -304,24 +305,23 @@ const viewOnFrontend = (slug) => {
     else Swal.fire('Lỗi', 'Bài viết chưa có đường dẫn.', 'error');
 };
 
-// handleToggleStatus method removed as it's replaced by StatusConfirmSelect
 
 async function handleDelete(newsItem) {
     if (!requireLogin()) return;
-    
+
     const isAuthor = newsItem.author_name === currentUser.value.name;
     if (!hasRole(['admin']) && !isAuthor) {
         return Swal.fire('Quyền hạn', 'Bạn không có quyền xóa bài viết này.', 'error');
     }
 
-    const result = await Swal.fire({ 
-        title: 'Xóa bài viết?', 
-        text: `Bài viết "${newsItem.title}" sẽ được đưa vào thùng rác. Bạn có thể khôi phục sau.`, 
-        icon: 'warning', 
-        showCancelButton: true, 
-        confirmButtonColor: '#d33', 
-        confirmButtonText: 'Xóa ngay', 
-        cancelButtonText: 'Hủy' 
+    const result = await Swal.fire({
+        title: 'Xóa bài viết?',
+        text: `Bài viết "${newsItem.title}" sẽ được đưa vào thùng rác. Bạn có thể khôi phục sau.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'Xóa ngay',
+        cancelButtonText: 'Hủy'
     });
 
     if (result.isConfirmed) {
@@ -331,19 +331,19 @@ async function handleDelete(newsItem) {
 
 async function handleRestore(newsItem) {
     if (!requireLogin()) return;
-    
+
     if (!hasRole(['admin'])) {
         return Swal.fire('Quyền hạn', 'Bạn không có quyền khôi phục bài viết này.', 'error');
     }
 
-    const result = await Swal.fire({ 
-        title: 'Khôi phục bài viết?', 
-        text: `Khôi phục bài viết "${newsItem.title}" về danh sách hiển thị?`, 
-        icon: 'info', 
-        showCancelButton: true, 
-        confirmButtonColor: '#009981', 
-        confirmButtonText: 'Đồng ý', 
-        cancelButtonText: 'Hủy' 
+    const result = await Swal.fire({
+        title: 'Khôi phục bài viết?',
+        text: `Khôi phục bài viết "${newsItem.title}" về danh sách hiển thị?`,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#009981',
+        confirmButtonText: 'Đồng ý',
+        cancelButtonText: 'Hủy'
     });
 
     if (result.isConfirmed) {
@@ -351,14 +351,14 @@ async function handleRestore(newsItem) {
     }
 }
 
-// ==========================================
+
 // 7. LIFECYCLE HOOKS
-// ==========================================
+
 onMounted(async () => {
     const isAuthenticated = await checkAuthState();
     if (!isAuthenticated) {
         isFirstLoad.value = false;
-        requireLogin(); 
+        requireLogin();
         return;
     }
 });
@@ -373,14 +373,14 @@ useAdminRefreshListener((payload) => {
 
 <template>
     <div class="news-index-wrapper ">
-        
-        <div v-if="isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
-            <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-            <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải tin tức...</p>
-        </div>
+
+        <AdminShimmerLoading v-if="isFirstLoad" text="Đang tải
+                tin tức..." />
 
         <div class="container-fluid py-4" v-else>
-            <div v-if="isError" class="alert alert-danger d-flex justify-content-between align-items-center gap-3 flex-wrap" role="alert">
+            <div v-if="isError"
+                class="alert alert-danger d-flex justify-content-between align-items-center gap-3 flex-wrap"
+                role="alert">
                 <span><i class="bi bi-exclamation-triangle-fill me-2"></i>{{ newsLoadError }}</span>
                 <button class="btn btn-sm btn-outline-danger fw-semibold" type="button" @click="refetch">
                     <i class="bi bi-arrow-clockwise me-1"></i> Thử lại
@@ -392,45 +392,57 @@ useAdminRefreshListener((payload) => {
                     <h3 class="fw-bold text-dark mb-0">Quản lý Tin tức</h3>
                 </div>
                 <div class="col-md-6 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end align-items-center gap-3">
-<button class="btn btn-light border shadow-sm fw-bold text-dark px-4 py-2" @click="refetch">
+                    <button class="btn btn-light border shadow-sm fw-bold text-dark px-4 py-2" @click="refetch">
                         <i class="bi bi-arrow-clockwise me-1"></i> Làm mới
                     </button>
-                    <button @click="goToCreate" class="btn btn-brand px-4 py-2 fw-bold shadow-sm text-white rounded-pill">
+                    <button @click="goToCreate"
+                        class="btn btn-brand px-4 py-2 fw-bold shadow-sm text-white rounded-pill">
                         <i class="bi bi-plus-circle me-1"></i> Viết bài mới
                     </button>
                 </div>
             </div>
 
-            <!-- Tabs Navigation -->
+
             <div class="mb-3">
                 <ul class="nav nav-underline border-bottom mb-2 pb-1" style="flex-wrap: wrap !important; gap: 8px;">
                     <li class="nav-item">
-                        <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#" :class="{ 'active-tab': currentTab === 'all' }" @click.prevent="switchTab('all')">
+                        <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#"
+                            :class="{ 'active-tab': currentTab === 'all' }" @click.prevent="switchTab('all')">
                             <i class="bi bi-grid-fill me-2"></i> Tất cả
-                            <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': currentTab === 'all'}">{{ statusCounts.all }}</span>
+                            <span class="badge ms-2 rounded-pill tab-badge"
+                                :class="{ 'active-badge': currentTab === 'all' }">{{ statusCounts.all }}</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#" :class="{ 'active-tab': currentTab === 'published' }" @click.prevent="switchTab('published')">
+                        <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#"
+                            :class="{ 'active-tab': currentTab === 'published' }"
+                            @click.prevent="switchTab('published')">
                             <i class="bi bi-check-circle-fill me-2 text-success"></i> Đã xuất bản
-                            <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': currentTab === 'published'}">{{ statusCounts.published }}</span>
+                            <span class="badge ms-2 rounded-pill tab-badge"
+                                :class="{ 'active-badge': currentTab === 'published' }">{{ statusCounts.published
+                                }}</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#" :class="{ 'active-tab': currentTab === 'pending' }" @click.prevent="switchTab('pending')">
+                        <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#"
+                            :class="{ 'active-tab': currentTab === 'pending' }" @click.prevent="switchTab('pending')">
                             <i class="bi bi-hourglass-split me-2 text-warning"></i> Đợi duyệt
-                            <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': currentTab === 'pending'}">{{ statusCounts.pending }}</span>
+                            <span class="badge ms-2 rounded-pill tab-badge"
+                                :class="{ 'active-badge': currentTab === 'pending' }">{{ statusCounts.pending }}</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#" :class="{ 'active-tab': currentTab === 'draft' }" @click.prevent="switchTab('draft')">
+                        <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab" href="#"
+                            :class="{ 'active-tab': currentTab === 'draft' }" @click.prevent="switchTab('draft')">
                             <i class="bi bi-eye-slash-fill me-2 text-secondary"></i> Đã ẩn
-                            <span class="badge ms-2 rounded-pill tab-badge" :class="{'active-badge': currentTab === 'draft'}">{{ statusCounts.draft }}</span>
+                            <span class="badge ms-2 rounded-pill tab-badge"
+                                :class="{ 'active-badge': currentTab === 'draft' }">{{ statusCounts.draft }}</span>
                         </a>
                     </li>
-                    
+
                     <li class="nav-item ms-auto">
-                        <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab text-danger" href="#" :class="{ 'active-tab': currentTab === 'deleted' }" @click.prevent="switchTab('deleted')">
+                        <a class="nav-link py-2 px-3 d-flex align-items-center custom-tab text-danger" href="#"
+                            :class="{ 'active-tab': currentTab === 'deleted' }" @click.prevent="switchTab('deleted')">
                             <i class="bi bi-trash3-fill me-2"></i> Đã xóa
                             <span class="badge ms-2 rounded-pill bg-danger text-white">{{ statusCounts.deleted }}</span>
                         </a>
@@ -438,11 +450,13 @@ useAdminRefreshListener((payload) => {
                 </ul>
             </div>
 
-            <!-- Filter (Sắp xếp) -->
+
             <div class="d-flex flex-wrap gap-3 mb-4">
                 <div class="d-flex align-items-center bg-white px-3 py-2 rounded-pill border shadow-sm">
-                    <span class="text-muted small fw-semibold me-2"><i class="bi bi-sort-down text-brand"></i> Sắp xếp:</span>
-                    <select class="form-select form-select-sm border-0 bg-transparent fw-bold p-0 pe-4 cursor-pointer" style="width: auto; box-shadow: none;" v-model="sortOption">
+                    <span class="text-muted small fw-semibold me-2"><i class="bi bi-sort-down text-brand"></i> Sắp
+                        xếp:</span>
+                    <select class="form-select form-select-sm border-0 bg-transparent fw-bold p-0 pe-4 cursor-pointer"
+                        style="width: auto; box-shadow: none;" v-model="sortOption">
                         <option value="newest">Mới nhất</option>
                         <option value="oldest">Cũ nhất</option>
                         <option value="a-z">Tên (A-Z)</option>
@@ -451,62 +465,78 @@ useAdminRefreshListener((payload) => {
                 </div>
             </div>
 
-            <!-- Bảng danh sách -->
+
             <div class="card border-0 shadow-sm rounded-4 mb-4">
-                <div class="card-header bg-white border-bottom-0 pt-2 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div
+                    class="card-header bg-white border-bottom-0 pt-2 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <h6 class="fw-bold mb-0 text-dark d-flex align-items-center">
                         <i class="bi bi-newspaper me-2"></i>Danh sách Bài viết
-                        <div v-if="isFetching && !isLoading" class="spinner-border spinner-border-sm text-brand ms-2" role="status"></div>
+                        <AdminLoadingSpinner v-if="isFetching && !isLoading" class="text-brand ms-2" size="16" />
                     </h6>
                     <div class="search-box position-relative" style="width: 300px; max-width: 100%;">
-                        <input type="text" class="form-control rounded-pill pe-5 shadow-sm bg-light border-0" v-model="searchQuery" @input="currentPage = 1" placeholder="Tìm tên bài viết...">
+                        <input type="text" class="form-control rounded-pill pe-5 shadow-sm bg-light border-0"
+                            v-model="searchQuery" @input="currentPage = 1" placeholder="Tìm tên bài viết...">
                         <i class="bi bi-search position-absolute top-50 end-0 translate-middle-y me-3 text-muted"></i>
                     </div>
                 </div>
-                
+
                 <div class="card-body p-0 mt-2">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0" style="table-layout: fixed; width: 100%; min-width: 1100px;">
+                        <table class="table table-hover align-middle mb-0"
+                            style="table-layout: fixed; width: 100%; min-width: 1100px;">
                             <thead class="bg-light">
                                 <tr>
-                                    <th class="py-3 px-4 text-secondary border-0" style="width: 30%;">Thông tin bài viết</th>
+                                    <th class="py-3 px-4 text-secondary border-0" style="width: 30%;">Thông tin bài viết
+                                    </th>
                                     <th class="py-3 px-4 text-secondary border-0" style="width: 15%;">Tác giả</th>
-                                    <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 10%;">Lượt xem</th>
-                                    <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 15%;">Trạng thái <span class="d-none d-xl-inline">(Sửa nhanh)</span></th>
-                                    <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 12%;">Ngày tạo</th>
-                                    <th class="py-3 px-4 text-secondary text-end border-0" style="width: 18%;">Thao tác</th>
+                                    <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 10%;">Lượt
+                                        xem</th>
+                                    <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 15%;">Trạng
+                                        thái <span class="d-none d-xl-inline">(Sửa nhanh)</span></th>
+                                    <th class="py-3 px-4 text-secondary border-0 text-center" style="width: 12%;">Ngày
+                                        tạo</th>
+                                    <th class="py-3 px-4 text-secondary text-end border-0" style="width: 18%;">Thao tác
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <!-- HIỆU ỨNG SKELETON INLINE TRỰC TIẾP -->
+
                                 <template v-if="isLoading">
                                     <tr v-for="n in 5" :key="'skeleton-row-' + n" class="skeleton-row-item">
                                         <td class="px-4 py-3">
                                             <div class="d-flex align-items-center">
-                                                <div class="skeleton-shimmer me-3" style="width: 80px; height: 50px; border-radius: 8px;"></div>
+                                                <div class="skeleton-shimmer me-3"
+                                                    style="width: 80px; height: 50px; border-radius: 8px;"></div>
                                                 <div class="flex-grow-1 overflow-hidden" style="max-width: 180px;">
-                                                    <div class="skeleton-shimmer mb-2" style="width: 90%; height: 16px;"></div>
-                                                    <div class="skeleton-shimmer" style="width: 50%; height: 12px;"></div>
+                                                    <div class="skeleton-shimmer mb-2"
+                                                        style="width: 90%; height: 16px;"></div>
+                                                    <div class="skeleton-shimmer" style="width: 50%; height: 12px;">
+                                                    </div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td class="px-4">
                                             <div class="d-flex align-items-center">
-                                                <div class="skeleton-shimmer me-2 rounded-circle" style="width: 30px; height: 30px;"></div>
+                                                <div class="skeleton-shimmer me-2 rounded-circle"
+                                                    style="width: 30px; height: 30px;"></div>
                                                 <div class="skeleton-shimmer" style="width: 80px; height: 14px;"></div>
                                             </div>
                                         </td>
                                         <td class="px-4 text-center">
-                                            <div class="skeleton-shimmer mx-auto" style="width: 40px; height: 16px;"></div>
+                                            <div class="skeleton-shimmer mx-auto" style="width: 40px; height: 16px;">
+                                            </div>
                                         </td>
                                         <td class="px-4 text-center">
-                                            <div class="skeleton-shimmer mx-auto" style="width: 90px; height: 26px; border-radius: 20px;"></div>
+                                            <div class="skeleton-shimmer mx-auto"
+                                                style="width: 90px; height: 26px; border-radius: 20px;"></div>
                                         </td>
                                         <td class="px-4 text-center">
-                                            <div class="skeleton-shimmer mx-auto" style="width: 80px; height: 14px;"></div>
+                                            <div class="skeleton-shimmer mx-auto" style="width: 80px; height: 14px;">
+                                            </div>
                                         </td>
                                         <td class="px-4 text-end">
-                                            <div class="skeleton-shimmer ms-auto" style="width: 100px; height: 30px; border-radius: 6px;"></div>
+                                            <div class="skeleton-shimmer ms-auto"
+                                                style="width: 100px; height: 30px; border-radius: 6px;"></div>
                                         </td>
                                     </tr>
                                 </template>
@@ -516,33 +546,41 @@ useAdminRefreshListener((payload) => {
                                         <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>Không có dữ liệu.
                                     </td>
                                 </tr>
-                                
-                                <tr v-else v-for="item in paginatedNews" :key="item.id" 
-                                    :class="{'bg-warning bg-opacity-10': item.status === 'pending' && !item.deleted_at, 'bg-light opacity-75': item.deleted_at}">
-                                    
+
+                                <tr v-else v-for="item in paginatedNews" :key="item.id"
+                                    :class="{ 'bg-warning bg-opacity-10': item.status === 'pending' && !item.deleted_at, 'bg-light opacity-75': item.deleted_at }">
+
                                     <td class="px-4 py-3">
                                         <div class="d-flex align-items-center">
-                                            <div class="position-relative d-inline-block me-3 shadow-sm border rounded-3 overflow-hidden bg-white flex-shrink-0" style="width: 80px; height: 50px;">
-                                                <img :src="getFullImageWithFallback(item.image_url)" @error="handleImageError" class="w-100 h-100 object-fit-cover" :alt="item.title">
+                                            <div class="position-relative d-inline-block me-3 shadow-sm border rounded-3 overflow-hidden bg-white flex-shrink-0"
+                                                style="width: 80px; height: 50px;">
+                                                <img :src="getFullImageWithFallback(item.image_url)"
+                                                    @error="handleImageError" class="w-100 h-100 object-fit-cover"
+                                                    :alt="item.title">
                                             </div>
                                             <div class="overflow-hidden">
                                                 <div class="d-flex align-items-center gap-2 mb-1">
-                                                    <span class="badge bg-light text-secondary border" v-if="item.category">{{ item.category }}</span>
+                                                    <span class="badge bg-light text-secondary border"
+                                                        v-if="item.category">{{ item.category }}</span>
                                                     <span class="text-muted small">#{{ item.id }}</span>
                                                 </div>
-                                                <div class="fw-bold text-dark fs-6 mb-1 text-truncate" :title="item.title">
+                                                <div class="fw-bold text-dark fs-6 mb-1 text-truncate"
+                                                    :title="item.title">
                                                     {{ item.title }}
                                                 </div>
                                             </div>
                                         </div>
                                     </td>
-                                    
+
                                     <td class="px-4">
                                         <div class="d-flex align-items-center">
-                                            <div class="avatar-circle text-white fw-bold me-2 shadow-sm flex-shrink-0" style="background-color: #009981;">
+                                            <div class="avatar-circle text-white fw-bold me-2 shadow-sm flex-shrink-0"
+                                                style="background-color: #009981;">
                                                 {{ getDisplayAuthor(item).charAt(0).toUpperCase() }}
                                             </div>
-                                            <span class="fw-medium text-truncate" style="max-width: 120px;" :title="getDisplayAuthor(item)">{{ getDisplayAuthor(item) }}</span>
+                                            <span class="fw-medium text-truncate" style="max-width: 120px;"
+                                                :title="getDisplayAuthor(item)">{{
+                                                getDisplayAuthor(item) }}</span>
                                         </div>
                                     </td>
 
@@ -551,19 +589,15 @@ useAdminRefreshListener((payload) => {
                                     </td>
 
                                     <td class="px-4 text-center">
-                                        <span v-if="item.deleted_at" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary px-3 py-2 rounded-pill fw-medium">
+                                        <span v-if="item.deleted_at"
+                                            class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary px-3 py-2 rounded-pill fw-medium">
                                             <i class="bi bi-trash3-fill me-1"></i> Đã xóa
                                         </span>
                                         <div v-else class="w-100">
-                                            <StatusConfirmSelect
-                                                v-model="item.localStatus"
-                                                :originalValue="item.status"
+                                            <StatusConfirmSelect v-model="item.localStatus" :originalValue="item.status"
                                                 :selectClass="getStatusInfo(item.localStatus || item.status).class"
-                                                :isUpdating="item.isUpdatingStatus"
-                                                :disabled="!hasRole(['admin'])"
-                                                @confirm="saveNewsStatus(item)"
-                                                @cancel="cancelStatusChange(item)"
-                                            >
+                                                :isUpdating="item.isUpdatingStatus" :disabled="!hasRole(['admin'])"
+                                                @confirm="saveNewsStatus(item)" @cancel="cancelStatusChange(item)">
                                                 <option value="published">Xuất bản</option>
                                                 <option value="pending">Đợi duyệt</option>
                                                 <option value="draft">Đã ẩn</option>
@@ -578,22 +612,29 @@ useAdminRefreshListener((payload) => {
                                     <td class="px-4 text-end">
                                         <div class="d-flex justify-content-end align-items-center gap-2">
                                             <template v-if="!item.deleted_at">
-                                                <button class="btn btn-sm btn-light text-info shadow-sm border" @click="viewOnFrontend(item.slug)" title="Xem bài viết">
+                                                <button class="btn btn-sm btn-light text-info shadow-sm border"
+                                                    @click="viewOnFrontend(item.slug)" title="Xem bài viết">
                                                     <i class="bi bi-eye"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-light text-primary shadow-sm border" @click="goToEdit(item.id)" title="Chỉnh sửa">
+                                                <button class="btn btn-sm btn-light text-primary shadow-sm border"
+                                                    @click="goToEdit(item.id)" title="Chỉnh sửa">
                                                     <i class="bi bi-pencil-square"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-light text-danger shadow-sm border" v-if="hasRole(['admin']) || item.author_name === currentUser.name" @click="handleDelete(item)" title="Xóa bài">
+                                                <button class="btn btn-sm btn-light text-danger shadow-sm border"
+                                                    v-if="hasRole(['admin']) || item.author_name === currentUser.name"
+                                                    @click="handleDelete(item)" title="Xóa bài">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </template>
 
                                             <template v-else>
-                                                <button class="btn btn-sm btn-light text-info shadow-sm border" @click="viewOnFrontend(item.slug)" title="Xem bài viết đã xóa">
+                                                <button class="btn btn-sm btn-light text-info shadow-sm border"
+                                                    @click="viewOnFrontend(item.slug)" title="Xem bài viết đã xóa">
                                                     <i class="bi bi-eye"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-light text-success shadow-sm border" v-if="hasRole(['admin']) || item.author_name === currentUser.name" @click="handleRestore(item)" title="Khôi phục">
+                                                <button class="btn btn-sm btn-light text-success shadow-sm border"
+                                                    v-if="hasRole(['admin']) || item.author_name === currentUser.name"
+                                                    @click="handleRestore(item)" title="Khôi phục">
                                                     <i class="bi bi-arrow-counterclockwise"></i>
                                                 </button>
                                             </template>
@@ -606,86 +647,146 @@ useAdminRefreshListener((payload) => {
                 </div>
             </div>
 
-            <!-- Phân trang -->
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2" v-if="totalPages > 1 && !isLoading">
-                <span class="text-muted small">Hiển thị {{ (currentPage - 1) * itemsPerPage + 1 }} đến {{ Math.min(currentPage * itemsPerPage, processedNews.length) }}</span>
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2"
+                v-if="totalPages > 1 && !isLoading">
+                <span class="text-muted small">Hiển thị {{ (currentPage - 1) * itemsPerPage + 1 }} đến {{
+                    Math.min(currentPage *
+                    itemsPerPage, processedNews.length) }}</span>
                 <nav>
                     <ul class="pagination pagination-sm mb-0 shadow-sm">
                         <li class="page-item" :class="{ disabled: currentPage === 1 }">
-                            <button class="page-link text-brand" @click="currentPage--"><i class="bi bi-chevron-left"></i></button>
+                            <button class="page-link text-brand" @click="currentPage--"><i
+                                    class="bi bi-chevron-left"></i></button>
                         </li>
-                        <li class="page-item" v-for="page in totalPages" :key="page" :class="{ active: currentPage === page }">
-                            <button class="page-link" :class="currentPage === page ? 'bg-brand border-brand text-white' : 'text-dark'" @click="currentPage = page">{{ page }}</button>
+                        <li class="page-item" v-for="page in totalPages" :key="page"
+                            :class="{ active: currentPage === page }">
+                            <button class="page-link"
+                                :class="currentPage === page ? 'bg-brand border-brand text-white' : 'text-dark'"
+                                @click="currentPage = page">{{ page }}</button>
                         </li>
                         <li class="page-item" :class="{ disabled: currentPage === totalPages }">
-                            <button class="page-link text-brand" @click="currentPage++"><i class="bi bi-chevron-right"></i></button>
+                            <button class="page-link text-brand" @click="currentPage++"><i
+                                    class="bi bi-chevron-right"></i></button>
                         </li>
                     </ul>
                 </nav>
             </div>
-            
+
         </div>
     </div>
 </template>
 
 <style scoped>
-.bg-brand { background-color: #009981 !important; } 
-.text-brand { color: #009981 !important; } 
-.border-brand { border-color: #009981 !important; }
-.btn-brand { background-color: #009981; border: none; transition: 0.2s; } 
-.btn-brand:hover { background-color: #007a67; color: white; }
+.bg-brand {
+    background-color: #009981 !important;
+}
 
-.custom-tab { font-weight: 600 !important; color: #6c757d; border-bottom: 2px solid transparent !important; margin-bottom: -1px; transition: color 0.2s ease; }
-.custom-tab:hover { color: #009981; }
-.custom-tab.active-tab { color: #009981 !important; border-bottom: 2px solid #009981 !important; }
+.text-brand {
+    color: #009981 !important;
+}
 
-.tab-badge { font-size: 0.75rem; font-weight: 600; background-color: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6; transition: all 0.2s ease; }
-.active-badge { background-color: #e6f5f2 !important; color: #009981 !important; border-color: #009981 !important; }
+.border-brand {
+    border-color: #009981 !important;
+}
 
-.custom-switch { cursor: pointer; width: 2.5em; height: 1.25em; }
-.custom-switch:checked { background-color: #009981; border-color: #009981; }
+.btn-brand {
+    background-color: #009981;
+    border: none;
+    transition: 0.2s;
+}
+
+.btn-brand:hover {
+    background-color: #007a67;
+    color: white;
+}
+
+.custom-tab {
+    font-weight: 600 !important;
+    color: #6c757d;
+    border-bottom: 2px solid transparent !important;
+    margin-bottom: -1px;
+    transition: color 0.2s ease;
+}
+
+.custom-tab:hover {
+    color: #009981;
+}
+
+.custom-tab.active-tab {
+    color: #009981 !important;
+    border-bottom: 2px solid #009981 !important;
+}
+
+.tab-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    background-color: #f8f9fa;
+    color: #6c757d;
+    border: 1px solid #dee2e6;
+    transition: all 0.2s ease;
+}
+
+.active-badge {
+    background-color: #e6f5f2 !important;
+    color: #009981 !important;
+    border-color: #009981 !important;
+}
+
+.custom-switch {
+    cursor: pointer;
+    width: 2.5em;
+    height: 1.25em;
+}
+
+.custom-switch:checked {
+    background-color: #009981;
+    border-color: #009981;
+}
 
 .avatar-circle {
-    width: 30px; 
-    height: 30px; 
-    border-radius: 50%; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    font-size: 0.8rem; 
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
 }
 
-.logo-shimmer { 
-    font-size: 3.5rem; 
-    font-weight: 900; 
-    letter-spacing: -1.5px; 
-    background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%); 
-    background-size: 200% auto; 
-    color: transparent; 
-    -webkit-background-clip: text; 
-    background-clip: text; 
-    animation: shine 1.5s linear infinite; 
-}
-@keyframes shine { to { background-position: 200% center; } }
-
-/* INLINE SKELETON PLACEHOLDER EFFECT */
 .skeleton-row-item {
-  animation: skeletonPulse 1.5s infinite ease-in-out;
+    animation: skeletonPulse 1.5s infinite ease-in-out;
 }
+
 .skeleton-shimmer {
-  background: #e9ecef;
-  background: linear-gradient(90deg, #f1f3f5 25%, #e9ecef 50%, #f1f3f5 75%);
-  background-size: 200% 100%;
-  animation: shimmerMove 1.5s infinite linear;
-  border-radius: 4px;
+    background: #e9ecef;
+    background: linear-gradient(90deg, #f1f3f5 25%, #e9ecef 50%, #f1f3f5 75%);
+    background-size: 200% 100%;
+    animation: shimmerMove 1.5s infinite linear;
+    border-radius: 4px;
 }
+
 @keyframes skeletonPulse {
-  0% { opacity: 0.6; }
-  50% { opacity: 1; }
-  100% { opacity: 0.6; }
+    0% {
+        opacity: 0.6;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.6;
+    }
 }
+
 @keyframes shimmerMove {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
 }
 </style>

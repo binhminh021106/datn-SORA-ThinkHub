@@ -70,19 +70,17 @@ class AdminProfileController extends Controller
      */
     public function getProfile(\Illuminate\Http\Request $request)
     {
-        // Lấy thông tin admin từ token hiện tại kèm theo chức vụ (role)
         $admin = $request->user()->load('role');
 
         return response()->json([
             'success' => true,
-            'data' => $admin // Header.vue sẽ nhận data này để hiển thị avatar và tên
-        ]);
+            'data' => $admin 
+          ]);
     }
 
     private function safeDeleteAvatar($avatarUrl)
     {
         if ($avatarUrl) {
-            // Không xóa nếu avatar là link HTTP (vd: đăng nhập bằng Google)
             if (!Str::startsWith($avatarUrl, ['http://', 'https://'])) {
                 if (Storage::disk('public')->exists($avatarUrl)) {
                     Storage::disk('public')->delete($avatarUrl);

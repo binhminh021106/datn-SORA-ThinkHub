@@ -154,17 +154,15 @@ class EmailCampaignService
 
             $eventTypeKey = 'holiday_' . $event->id;
 
-            // Tối ưu hiệu suất: Kiểm tra trạng thái sự kiện 1 lần duy nhất cho toàn bộ tập người dùng
             $eventStillSendable = HolidayEvent::whereKey($event->id)
                 ->where('status', 'active')
                 ->where('event_date', $todayStr)
                 ->exists();
 
             if (!$eventStillSendable) {
-                continue; // Bỏ qua sự kiện nếu đã bị tắt
+                continue; 
             }
 
-            // AUTO-EXTEND VOUCHER VALIDITY (Gia hạn mã tự động cho năm nay)
             if ($targetUsers->isNotEmpty() && $event->voucher_code && $event->validity_days && $event->event_date) {
                 try {
                     $eventDateObj = Carbon::createFromFormat('d/m/Y', $event->event_date . '/' . now()->year)->startOfDay();
@@ -204,7 +202,7 @@ class EmailCampaignService
                                 ->first();
 
                             if ($existingLog && in_array($existingLog->status, ['queued', 'sent'])) {
-                                continue; // Đã gửi trong năm nay
+                                continue; 
                             }
 
                             if ($existingLog) {
@@ -260,7 +258,6 @@ class EmailCampaignService
         }, $tiers);
         
         if (!$user->tier_id) {
-            // Lấy cấu hình của Khách thường (tier_id = 0)
             $matchedTierConfig = collect($tiers)->first(function($t) {
                 return isset($t['tier_id']) && (int) $t['tier_id'] === 0;
             });
@@ -292,34 +289,47 @@ class EmailCampaignService
         }
 
         $baseCode = $matchedTierConfig['voucherCode'];
-        // Tạo mã độc nhất cho từng user theo năm
         $couponCode = $baseCode . '-U' . $user->id . '-' . $today->year;
 
         $validityDays = $matchedTierConfig['validity_days'] ?? 7;
         $requiredExpiration = $today->copy()->addDays($validityDays)->endOfDay();
 
         try {
-            return Coupon::firstOrCreate(
-                ['code' => $couponCode],
-                [
-                    'type' => $matchedTierConfig['type'] ?? 'fixed',
-                    'name' => 'Quà tặng sinh nhật hạng: ' . ($matchedTierConfig['name'] ?? 'Cơ bản'),
-                    'min_spend' => $matchedTierConfig['min_spend'] ?? 0,
-                    'value' => $matchedTierConfig['value'] ?? 0,
-                    'usage_limit' => $matchedTierConfig['usage_limit'] ?? null,
-                    'usage_limit_per_user' => $matchedTierConfig['usage_limit_per_user'] ?? 1,
-                    'usage_count' => 0,
-                    'status' => $tierStatus,
-                    'expires_at' => $requiredExpiration, 
-                    'user_id' => $user->id, 
-                    'tier_id' => $user->tier_id,
-                    'is_used' => false
-                ]
-            );
+            $existing = Coupon::withTrashed()->where('code', $couponCode)->first();
+            
+            $couponData = [
+                'type' => $matchedTierConfig['type'] ?? 'fixed',
+                'name' => 'Quà tặng sinh nhật hạng: ' . ($matchedTierConfig['name'] ?? 'Cơ bản'),
+                'min_spend' => $matchedTierConfig['min_spend'] ?? 0,
+                'value' => $matchedTierConfig['value'] ?? 0,
+                'usage_limit' => $matchedTierConfig['usage_limit'] ?? null,
+                'usage_limit_per_user' => $matchedTierConfig['usage_limit_per_user'] ?? 1,
+                'status' => $tierStatus,
+                'expires_at' => $requiredExpiration, 
+                'user_id' => $user->id, 
+                'tier_id' => $user->tier_id,
+            ];
+
+            if ($existing) {
+                if ($existing->trashed()) {
+                    $existing->restore();
+                }
+                $existing->update($couponData);
+                return $existing;
+            }
+
+            $couponData['code'] = $couponCode;
+            $couponData['usage_count'] = 0;
+            $couponData['is_used'] = false;
+            
+            return Coupon::create($couponData);
         } catch (\Illuminate\Database\QueryException $e) {
             if ($e->getCode() == 23000) {
-                $existing = Coupon::where('code', $couponCode)->first();
+                $existing = Coupon::withTrashed()->where('code', $couponCode)->first();
                 if ($existing) {
+                    if ($existing->trashed()) {
+                        $existing->restore();
+                    }
                     return $existing;
                 }
             }

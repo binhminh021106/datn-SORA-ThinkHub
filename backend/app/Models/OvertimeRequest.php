@@ -14,16 +14,16 @@ class OvertimeRequest extends Model
         'date',
         'start_time',
         'end_time',
-        'reason',          // Bổ sung
-        'multiplier_rate', // Bổ sung
+        'reason',          
+        'multiplier_rate', 
         'status',
-        'approved_by',     // Bổ sung
+        'approved_by',    
     ];
 
     protected $casts = [
         'date' => 'date',
-        'start_time' => 'datetime:H:i', // Chuẩn hoá đầu ra
-        'end_time' => 'datetime:H:i',   // Chuẩn hoá đầu ra
+        'start_time' => 'datetime:H:i', 
+        'end_time' => 'datetime:H:i', 
         'multiplier_rate' => 'decimal:2',
     ];
 

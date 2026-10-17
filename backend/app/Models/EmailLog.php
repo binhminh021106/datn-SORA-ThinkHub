@@ -26,7 +26,6 @@ class EmailLog extends Model
         'queued_at' => 'datetime',
     ];
 
-    // Quan hệ với bảng User
     public function user()
     {
         return $this->belongsTo(User::class);

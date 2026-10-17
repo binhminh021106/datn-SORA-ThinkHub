@@ -14,7 +14,6 @@ class ClientSavedCouponController extends Controller
     {
         $user = $request->user();
 
-        // Lấy danh sách voucher đã lưu
         $savedCoupons = UserSavedCoupon::with('coupon')
             ->where('user_id', $user->id)
             ->latest('saved_at')
@@ -22,7 +21,6 @@ class ClientSavedCouponController extends Controller
             ->filter(fn ($item) => $item->coupon)
             ->map(fn ($item) => $this->formatSavedCoupon($item, $user));
 
-        // Lấy thêm voucher sinh nhật theo hạng thành viên (nếu có)
         $birthdayCoupon = null;
         if ($user->tier_id) {
             $birthdayCouponModel = Coupon::where('user_id', $user->id)
@@ -35,11 +33,9 @@ class ClientSavedCouponController extends Controller
                 ->first();
 
             if ($birthdayCouponModel) {
-                // Kiểm tra xem người dùng đã lưu mã này chưa, nếu rồi thì bỏ qua để tránh lặp
                 $alreadySaved = $savedCoupons->contains(fn ($item) => (int) $item['coupon_id'] === (int) $birthdayCouponModel->id);
                 
                 if (!$alreadySaved) {
-                    // Giả lập định dạng giống formatSavedCoupon để FE hiển thị đúng
                     $birthdayCoupon = [
                         'id' => $birthdayCouponModel->id,
                         'name' => $birthdayCouponModel->name,
@@ -51,7 +47,7 @@ class ClientSavedCouponController extends Controller
                         'usage_count' => $birthdayCouponModel->usage_count,
                         'usage_limit_per_user' => $birthdayCouponModel->usage_limit_per_user,
                         'expires_at' => $birthdayCouponModel->expires_at ? $birthdayCouponModel->expires_at->format('Y-m-d H:i:s') : null,
-                        'is_used' => false, // Chưa dùng mới hiện
+                        'is_used' => false, 
                         'status' => $birthdayCouponModel->status,
                         'saved_at' => now()->format('Y-m-d H:i:s'),
                     ];

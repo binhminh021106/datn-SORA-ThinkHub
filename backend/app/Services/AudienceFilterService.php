@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 
-// chức năng: lọc đối tượng người dùng dựa trên các tiêu chí như giới tính, hạng thành viên, hoặc tất cả người dùng.
 class AudienceFilterService
 {
     /**
@@ -18,30 +17,24 @@ class AudienceFilterService
     {
         $query = User::query();
 
-        // 1. Nếu có 'all' (Tất cả) -> Bỏ qua các filter khác, lấy toàn bộ user (có email hợp lệ)
         if (in_array('all', $targets)) {
             return $query->whereNotNull('email')->get();
         }
-
-        // 2. Gom nhóm điều kiện logic (OR)
         $query->where(function (Builder $q) use ($targets) {
             
-            // --- Nhóm Giới tính ---
             if (in_array('male', $targets)) {
                 $q->orWhere('gender', 'male')
-                  ->orWhere('gender', 'nam'); // Hỗ trợ cả tiếng việt nếu DB lưu tiếng việt
+                  ->orWhere('gender', 'nam'); 
             }
             if (in_array('female', $targets)) {
                 $q->orWhere('gender', 'female')
                   ->orWhere('gender', 'nữ'); 
             }
 
-            // --- Nhóm Thành viên (Đã có hạng / tier_id không rỗng) ---
             if (in_array('member', $targets)) {
                 $q->orWhereNotNull('tier_id');
             }
 
-            // --- Nhóm Hạng cụ thể ---
             $selectedTiers = array_intersect($targets, ['silver', 'gold', 'diamond']);
             
             if (!empty($selectedTiers)) {
@@ -66,7 +59,6 @@ class AudienceFilterService
             }
         });
 
-        // Đảm bảo user phải có email để gửi
         $query->whereNotNull('email');
 
         return $query->get();

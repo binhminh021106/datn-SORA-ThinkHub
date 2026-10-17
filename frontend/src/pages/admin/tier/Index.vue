@@ -1,13 +1,9 @@
 <template>
   <div class="tier-index-wrapper ">
 
-    <!-- MÀN HÌNH CHỜ ĐỘC LẬP (SHIMMER) CHỈ CHẠY 1 LẦN ĐẦU -->
-    <div v-if="isPageLoading" class="d-flex flex-column justify-content-center align-items-center w-100"
-      style="min-height: 70vh;">
-      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ
-        liệu hạng...</p>
-    </div>
+
+    <AdminShimmerLoading v-if="isPageLoading" text="Đang tải dữ
+        liệu hạng..." />
 
     <div class="container-fluid py-4" v-else>
       <div class="row mb-3 align-items-center">
@@ -43,7 +39,7 @@
                 </tr>
               </thead>
               <tbody>
-                <!-- HIỆU ỨNG SKELETON KHI REFETCH HOẶC LỌC DỮ LIỆU -->
+
                 <template v-if="isTableLoading">
                   <tr v-for="i in 3" :key="'skeleton-' + i">
                     <td class="px-4 py-3">
@@ -80,7 +76,7 @@
                         <div
                           class="position-relative shadow-sm border rounded-circle bg-white d-flex justify-content-center align-items-center overflow-hidden"
                           style="width: 45px; height: 45px; padding: 0.2rem;">
-                          <!-- Sử dụng SoraImage thay cho img thường -->
+
                           <SoraImage :src="tier.icon" :placeholder="placeholderImg"
                             imgClass="w-100 h-100 object-fit-contain" alt="Tier Icon" />
                         </div>
@@ -146,6 +142,7 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, computed } from 'vue';
 import Swal from 'sweetalert2';
 import axios from 'axios';
@@ -174,9 +171,7 @@ const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
   }
 };
 
-// ==========================================
-// TANSTACK VUE QUERY - FETCH DATA
-// ==========================================
+
 const { data: tiersResponse, isLoading: isUsersLoading } = useQuery({
   queryKey: ['adminTiers'],
   queryFn: async () => {
@@ -189,9 +184,6 @@ const { data: tiersResponse, isLoading: isUsersLoading } = useQuery({
 const isPageLoading = computed(() => isUsersLoading.value);
 const tiers = computed(() => tiersResponse.value?.data || []);
 
-// ==========================================
-// TANSTACK VUE QUERY - MUTATIONS
-// ==========================================
 const deleteTierMutation = useMutation({
   mutationFn: async (id) => {
     const response = await axios.delete(`${API_URL}/admin/tiers/${id}`, { headers: getHeaders() });
@@ -225,24 +217,6 @@ const confirmDelete = (id) => {
 </script>
 
 <style scoped>
-.logo-shimmer {
-  font-size: 3.5rem;
-  font-weight: 900;
-  letter-spacing: -1.5px;
-  background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%);
-  background-size: 200% auto;
-  color: transparent;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: shine 1.5s linear infinite;
-}
-
-@keyframes shine {
-  to {
-    background-position: 200% center;
-  }
-}
-
 .bg-brand {
   background-color: #009981 !important;
 }

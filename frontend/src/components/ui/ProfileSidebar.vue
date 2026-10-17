@@ -40,7 +40,7 @@
         </div>
 
         <div
-          class="avatar-wrapper mx-auto position-relative rounded-circle overflow-hidden bg-light"
+          class="avatar-wrapper mx-auto position-relative rounded-circle overflow-hidden bg-light avatar-hover-container"
           style="width: 110px; height: 110px; border: 4px solid #fff;"
           :style="{ boxShadow: `0 0 0 3px ${tierBorderColor}, 0 8px 16px rgba(0,0,0,0.1)` }"
         >
@@ -49,7 +49,18 @@
             alt="Avatar"
             class="w-100 h-100"
             style="object-fit: cover; object-position: center;"
+            :style="isUploadingAvatar ? 'filter: blur(2px);' : ''"
           >
+          <label class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center m-0 avatar-hover-overlay" 
+                 style="background: rgba(0,0,0,0.5); cursor: pointer; transition: all 0.3s;"
+                 :style="isUploadingAvatar ? 'opacity: 1 !important; pointer-events: none;' : ''">
+            <AdminLoadingSpinner v-if="isUploadingAvatar" class="text-white"  />
+            <template v-else>
+              <i class="bi bi-camera-fill text-white fs-4 mb-1"></i>
+              <span class="text-white fw-medium" style="font-size: 0.65rem;">Thay đổi</span>
+            </template>
+            <input type="file" accept="image/*" class="visually-hidden" @change="uploadAvatar" :disabled="isUploadingAvatar" aria-label="Thay đổi ảnh đại diện">
+          </label>
         </div>
       </div>
 
@@ -156,6 +167,20 @@
         </li>
       </ul>
     </div>
+    
+    <!-- CROPPER MODAL -->
+    <ImageCropperModal
+      :show="showCropper"
+      :image-url="cropperUrl"
+      :aspect-ratio="1"
+      :allow-ratio-change="false"
+      title="Cắt ảnh Đại diện"
+      :max-size-kb="50"
+      :is-avatar="true"
+      :theme-color="'#9f273b'"
+      @crop="handleCrop"
+      @close="closeCropper"
+    />
   </div>
 </template>
 
@@ -167,6 +192,7 @@ import { getStorageUrl } from '@/utils/env';
 import Swal from 'sweetalert2';
 import clientApiClient from '@/utils/clientApiClient';
 import { useAuthSync } from '@/composables/useAuthSync.js';
+import ImageCropperModal from '@/components/admin/ImageCropperModal.vue';
 
 const props = defineProps({
   /** Cho phép truyền thẳng user data từ parent */
@@ -185,7 +211,6 @@ const { clearAuthSession } = useAuthSync();
 
 const isPreviewMode = computed(() => route.path.startsWith('/admin'));
 
-// ===== USER DATA =====
 const userData = ref({
   fullName: '',
   email: '',
@@ -254,7 +279,6 @@ const loadUserFromStorage = () => {
   }
 };
 
-// ===== COMPUTED =====
 const displayName = computed(() => {
   if (props.user) return props.user.fullName || props.user.name || 'Thành viên SORA';
   return userData.value.fullName || 'Thành viên SORA';
@@ -271,12 +295,82 @@ const tierName = computed(() => {
 });
 
 const avatarSrc = computed(() => {
-  const url = props.user?.avatar_url || userData.value.avatar_url;
+  if (previewAvatar.value) return previewAvatar.value;
+  const url = userData.value.avatar_url || props.user?.avatar_url;
   if (!url) return `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName.value || 'User')}&background=9f273b&color=fff`;
   return getStorageUrl(url);
 });
 
-// ===== TIER STYLES =====
+// Upload Avatar Logic
+const isUploadingAvatar = ref(false);
+const previewAvatar = ref(null);
+
+// Cropper State
+const showCropper = ref(false);
+const cropperUrl = ref('');
+
+const uploadAvatar = (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (file.size > 5 * 1024 * 1024) {
+    Swal.fire({ icon: 'error', title: 'Lỗi', text: 'Dung lượng ảnh không được vượt quá 5MB.' });
+    return;
+  }
+
+  cropperUrl.value = URL.createObjectURL(file);
+  showCropper.value = true;
+  event.target.value = '';
+};
+
+const closeCropper = () => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+};
+
+const handleCrop = async (data) => {
+  showCropper.value = false;
+  if (cropperUrl.value) URL.revokeObjectURL(cropperUrl.value);
+  
+  isUploadingAvatar.value = true;
+  previewAvatar.value = data.blobUrl;
+
+  try {
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    const response = await clientApiClient.post('/client/profile/avatar', formData);
+    if (response.data.status) {
+      const updatedUser = response.data.data;
+      
+      let authState = JSON.parse(localStorage.getItem('auth') || '{}');
+      if (authState.user) {
+        authState.user.avatar_url = updatedUser.avatar_url;
+        localStorage.setItem('auth', JSON.stringify(authState));
+      }
+      
+      userData.value.avatar_url = updatedUser.avatar_url;
+
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Thành công!',
+        text: 'Cập nhật ảnh đại diện thành công.',
+        timer: 2000,
+        showConfirmButton: false
+      });
+    }
+  } catch (error) {
+    let msg = 'Lỗi cập nhật ảnh đại diện.';
+    if (error.response && error.response.status === 422) {
+      msg = Object.values(error.response.data.errors)[0][0];
+    }
+    Swal.fire({ icon: 'error', title: 'Lỗi', text: msg });
+  } finally {
+    isUploadingAvatar.value = false;
+  }
+};
+
 const tierBadgeClass = computed(() => {
   const name = tierName.value.toLowerCase();
   if (name.includes('diamond') || name.includes('kim cương')) return 'tier-diamond';
@@ -307,11 +401,9 @@ const tierSvgIcon = computed(() => {
   return svgStar(14, 'psb-grad-default');
 });
 
-// ===== ACTIVE STATE =====
 const isActive = (path, tab = null) => {
   if (route.path !== path) return false;
   if (!tab) {
-    // Nếu không có tab param, active khi route là /profile mà không có tab=tier hay tab=password
     if (path === '/profile') {
       const currentTab = route.query.tab;
       return !currentTab || currentTab === 'profile';
@@ -321,14 +413,12 @@ const isActive = (path, tab = null) => {
   return route.query.tab === tab;
 };
 
-// ===== LOGOUT =====
 const handleLogout = () => {
   emit('logout');
   clearAuthSession(queryClient);
   router.push({ name: 'login' });
 };
 
-// ===== FETCH PROFILE =====
 const fetchProfile = async () => {
   const token = getToken();
   if (!token) return;
@@ -344,7 +434,6 @@ const fetchProfile = async () => {
       userData.value.avatar_url = u.avatar_url || '';
       userData.value.tier = u.tier || null;
 
-      // Cập nhật lại localStorage để đồng bộ với Header nếu cần
       try {
         let authState = JSON.parse(localStorage.getItem('auth') || '{}');
         if (!authState.user) authState.user = {};
@@ -354,11 +443,9 @@ const fetchProfile = async () => {
       } catch(e) {}
     }
   } catch (err) {
-    // Bỏ qua lỗi
   }
 };
 
-// ===== LIFECYCLE =====
 onMounted(() => {
   if (!props.user) {
     loadUserFromStorage();
@@ -446,15 +533,26 @@ onMounted(() => {
   font-size: 0.93rem;
   font-weight: 500;
 }
+.profile-menu .active-menu {
+  background-color: rgba(159, 39, 59, 0.05);
+  color: #9f273b !important;
+  border-left: 3px solid #9f273b;
+}
+
+.avatar-hover-container .avatar-hover-overlay {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.avatar-hover-container:hover .avatar-hover-overlay,
+.avatar-hover-container:focus-within .avatar-hover-overlay {
+  opacity: 1;
+  visibility: visible;
+}
+
 .profile-menu a:hover {
   background-color: #faf9f8;
   color: #9f273b !important;
-}
-.active-menu {
-  color: #9f273b !important;
-  background-color: #f8eaec;
-  font-weight: 600;
-  border-left: 3px solid #9f273b;
 }
 .text-danger-custom {
   color: #cc1e2e !important;

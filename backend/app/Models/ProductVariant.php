@@ -47,8 +47,8 @@ class ProductVariant extends Model
     public function getVariantAttributesAttribute()
     {
         if (!$this->relationLoaded('attributeValues')) {
-            return null; // Return null so frontend doesn't get confused if not loaded
-        }
+            return null; 
+           }
 
         $attrs = [];
         foreach ($this->attributeValues as $av) {

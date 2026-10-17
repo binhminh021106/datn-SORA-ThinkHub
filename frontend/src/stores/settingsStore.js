@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import axios from 'axios';
 import defaultLogoImg from '@/assets/images/logo1.png';
 
@@ -13,13 +13,16 @@ export const useSettingsStore = defineStore('settings', () => {
         footer_copyright: '',
         footer_address: '',
         footer_email: '',
+        footer_opening_hours: '',
         footer_socials: [],
         footer_trust_items: [],
         home_stats: [
             { value: 90, suffix: '%', label: 'Khách hàng hài lòng' },
             { value: 15, suffix: '+', label: 'Bộ sưu tập nổi bật' },
             { value: 3, suffix: 'K+', label: 'Khoảnh khắc SORA' }
-        ]
+        ],
+        placeholder_client_active: '',
+        placeholder_admin_active: '',
     });
 
     const isLoading = ref(false);
@@ -34,10 +37,13 @@ export const useSettingsStore = defineStore('settings', () => {
                 
                 settings.value.site_logo = data.logo_header ? (data.logo_header.startsWith('http') || data.logo_header.startsWith('data:') ? data.logo_header : `${import.meta.env.VITE_URL}/storage/${data.logo_header}`) : defaultLogo;
                 settings.value.logo_footer = data.logo_footer ? (data.logo_footer.startsWith('http') || data.logo_footer.startsWith('data:') ? data.logo_footer : `${import.meta.env.VITE_URL}/storage/${data.logo_footer}`) : '';
+                settings.value.placeholder_client_active = data.placeholder_client_active ? (data.placeholder_client_active.startsWith('http') || data.placeholder_client_active.startsWith('data:') ? data.placeholder_client_active : `${import.meta.env.VITE_URL}/storage/${data.placeholder_client_active}`) : '';
+                settings.value.placeholder_admin_active = data.placeholder_admin_active ? (data.placeholder_admin_active.startsWith('http') || data.placeholder_admin_active.startsWith('data:') ? data.placeholder_admin_active : `${import.meta.env.VITE_URL}/storage/${data.placeholder_admin_active}`) : '';
                 settings.value.footer_brand_desc = data.footer_brand_desc || 'SORA mang đến những thiết kế trang sức tinh tế, tôn vinh vẻ đẹp đích thực và phong cách cá nhân của bạn. Mỗi chế tác là một tác phẩm nghệ thuật.';
                 settings.value.footer_copyright = data.footer_copyright || '© 2026 SORA JEWELRY. ALL RIGHTS RESERVED.';
                 settings.value.footer_address = data.footer_address || '123 Đường Ngọc Hồi, Hà Nội';
                 settings.value.footer_email = data.footer_email || 'SORA@GMAIL.COM';
+                settings.value.footer_opening_hours = data.footer_opening_hours || '09:00 - 21:00 (Từ Thứ 2 đến Chủ Nhật)';
                 let parsedFooterTrustItems = null;
                 if (data.footer_trust_items) {
                     try {
@@ -114,8 +120,22 @@ export const useSettingsStore = defineStore('settings', () => {
         return () => {};
     };
 
+    const hotlinePhone = computed(() => {
+        const items = settings.value.footer_trust_items;
+        if (Array.isArray(items)) {
+            // Find the item that contains a hotline (like "HỖ TRỢ 24/7" or any item with "Hotline:" in subtitle)
+            const hotlineItem = items.find(item => item.subtitle && item.subtitle.toLowerCase().includes('hotline'));
+            if (hotlineItem) {
+                // Extract the phone number part (e.g. "Hotline: 1234.567.8910" -> "1234.567.8910")
+                return hotlineItem.subtitle.replace(/hotline[:\s]*/i, '').trim();
+            }
+        }
+        return '090 123 4567'; // default fallback
+    });
+
     return {
         settings,
+        hotlinePhone,
         isLoading,
         defaultLogo,
         fetchSettings,

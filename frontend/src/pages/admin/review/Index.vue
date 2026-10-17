@@ -1,11 +1,8 @@
 <template>
   <div class="review-index-wrapper ">
     
-    <!-- KHÓA CỨNG: Shimmer Logo chỉ hiện đúng 1 lần duy nhất khi vừa F5 hoặc vừa vào trang -->
-    <div v-if="isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
-      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải hệ thống đánh giá...</p>
-    </div>
+
+    <AdminShimmerLoading v-if="isFirstLoad" text="Đang tải hệ thống đánh giá..." />
 
     <div class="container-fluid py-4" v-else>
       <div class="row mb-3 align-items-center">
@@ -48,7 +45,7 @@
         </ul>
       </div>
 
-      <!-- BỘ LỌC ĐƯỢC THIẾT KẾ LẠI: Đồng bộ chiều ngang, trải dài chuyên nghiệp -->
+
       <div class="row g-3 mb-4">
         <div class="col-md-5 d-flex align-items-center gap-3">
           <label class="fw-bold text-secondary mb-0" style="min-width: 80px;"><i class="bi bi-star-half text-brand me-1"></i> Số sao:</label>
@@ -67,7 +64,7 @@
         <div class="card-header bg-white border-bottom-0 pt-2 pb-2 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
           <h6 class="fw-bold mb-0 text-dark d-flex align-items-center">
             <i class="bi bi-list-ul me-2"></i>Danh sách Đánh giá
-            <div v-if="isFetchingReviews && !isFirstLoad" class="spinner-border spinner-border-sm text-brand ms-2" role="status"></div>
+            <AdminLoadingSpinner v-if="isFetchingReviews && !isFirstLoad" class="text-brand ms-2" size="16" />
           </h6>
           <div class="search-box position-relative" style="width: 300px; max-width: 100%;">
             <input type="text" class="form-control rounded-pill pe-5 shadow-sm bg-light border-0" v-model="searchInput" @keyup.enter="applySearch" placeholder="Tìm kiếm đánh giá...">
@@ -89,7 +86,7 @@
               </thead>
               <tbody>
                 
-                <!-- THUẬT TOÁN SMART LOAD (Nếu count = 0 thì không hiện skeleton) -->
+
                 <template v-if="isFetchingReviews && !localReviews.length && expectedCount !== 0">
                   <tr v-for="n in 5" :key="'skeleton-row-' + n" class="skeleton-row-item">
                     <td class="px-4 py-3">
@@ -119,7 +116,7 @@
                   </tr>
                 </template>
 
-                <!-- KHÔNG CÓ DỮ LIỆU SẼ BẬT LÊN NGAY LẬP TỨC (0 GIÂY) NẾU COUNT = 0 -->
+
                 <tr v-else-if="filteredReviews.length === 0">
                   <td colspan="5" class="text-center py-5 text-muted">
                     <i class="bi bi-inbox fs-1 d-block mb-2 opacity-25"></i>Không có dữ liệu.
@@ -130,7 +127,7 @@
                   
                   <td class="px-4 py-3 overflow-hidden">
                     <div class="d-flex align-items-start gap-3">
-                      <!-- Sử dụng SoraImage cho Avatar -->
+
                       <div v-if="!review.user?.avatar_url" class="bg-secondary bg-opacity-10 text-dark rounded-circle d-flex align-items-center justify-content-center fw-bold border shadow-sm flex-shrink-0" style="width: 45px; height: 45px;">
                         {{ review.user?.fullName?.charAt(0).toUpperCase() || 'U' }}
                       </div>
@@ -202,7 +199,7 @@
         </div>
       </div>
 
-      <!-- Phân trang -->
+
       <div class="d-flex justify-content-between align-items-center flex-wrap gap-2" v-if="pagination.last_page > 1">
         <span class="text-muted small">Hiển thị trang {{ pagination.current_page }} / {{ pagination.last_page }}</span>
         <nav>
@@ -221,7 +218,7 @@
       </div>
     </div>
 
-    <!-- MODAL PHẢN HỒI ĐÁNH GIÁ & THÔNG TIN SẢN PHẨM (QUICK VIEW) -->
+
     <div class="modal fade" id="quickViewReviewModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
       <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
@@ -233,7 +230,7 @@
           <div class="modal-body p-0 bg-light custom-scrollbar-y" style="max-height: 80vh; overflow-y: auto;" v-if="selectedReview">
             
             <div class="row g-0">
-              <!-- Cột Trái: Thông tin Đánh giá & Phản hồi -->
+
               <div class="col-lg-5 bg-white p-4 border-end">
                 <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom border-light-subtle">
                   <div v-if="!selectedReview.user?.avatar_url" class="bg-secondary bg-opacity-10 text-dark rounded-circle d-flex align-items-center justify-content-center fw-bold border shadow-sm fs-4" style="width: 50px; height: 50px;">
@@ -274,10 +271,10 @@
                 </div>
               </div>
 
-              <!-- Cột Phải: Cấu hình chi tiết Sản Phẩm/Combo -->
+
               <div class="col-lg-7 bg-light">
                 <div v-if="isFetchingDetail" class="d-flex flex-column justify-content-center align-items-center h-100 p-5 text-muted">
-                    <div class="spinner-border text-brand mb-3" role="status"></div>
+                    <AdminLoadingSpinner class="text-brand mb-3"  />
                     <span class="small fw-semibold text-uppercase tracking-widest">Đang truy xuất thông tin...</span>
                 </div>
 
@@ -402,7 +399,7 @@
           <div class="modal-footer bg-white border-top py-3 d-flex justify-content-between">
              <button type="button" class="btn btn-outline-brand rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Hủy bỏ</button>
              <button type="button" class="btn btn-brand rounded-pill px-5 fw-bold shadow-sm" @click="saveReviewReply" :disabled="replyMutation.isPending.value">
-                <span v-if="replyMutation.isPending.value" class="spinner-border spinner-border-sm me-2"></span>
+                <AdminLoadingSpinner v-if="replyMutation.isPending.value" class="me-2" size="16" />
                 <i v-else class="bi bi-send-fill me-1"></i> Lưu Thay Đổi
              </button>
           </div>
@@ -414,13 +411,13 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 
-// Tích hợp Component Ảnh với Fallback Mặc định
 import SoraImage from '@/components/ui/SoraImage.vue';
 import StatusConfirmSelect from '@/components/admin/StatusConfirmSelect.vue';
 import defaultPlaceholder from '../../../assets/images/defaults/placeholder.png';
@@ -444,7 +441,6 @@ const selectedReview = ref(null);
 let quickViewModalInstance = null;
 let isUnmounted = false;
 
-// ĐÃ SỬA VÀ TÁCH BIẾN: Quản lý khởi động cứng đúng 1 lần
 const isFirstLoad = ref(true);
 
 const editForm = ref({ admin_reply: '' });
@@ -456,10 +452,7 @@ const selectedItemType = ref('');
 
 const getHeaders = () => ({ 'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('admin_token')}` });
 
-// ==========================================
-// TANSTACK QUERY LẤY DANH SÁCH (CÓ PHÂN TRANG)
-// ==========================================
-// ĐÃ SỬA: Loại bỏ việc gán alias isLoading: isFirstLoad
+
 const { data: reviewsData, isFetching: isFetchingReviews, refetch: refetchReviews } = useQuery({
   queryKey: ['admin-reviews', currentPage, activeTab, filterRating, activeSearchQuery],
   queryFn: async () => {
@@ -473,8 +466,6 @@ const { data: reviewsData, isFetching: isFetchingReviews, refetch: refetchReview
   staleTime: 5 * 60 * 1000 
 });
 
-// Logic dập tắt Logo Shimmer
-// localReviews and pagination must exist before the immediate watcher runs
 const localReviews = ref([]);
 const pagination = ref({ current_page: 1, last_page: 1, total: 0 });
 
@@ -507,7 +498,7 @@ watch(isFetchingReviews, (isFetching) => {
   }
 });
 
-// TANSTACK QUERY LẤY THỐNG KÊ ĐẾM (COUNTS)
+
 const { data: statusCountsData, refetch: refetchCounts } = useQuery({
   queryKey: ['admin-reviews-counts'],
   queryFn: async () => {
@@ -529,7 +520,7 @@ const { data: statusCountsData, refetch: refetchCounts } = useQuery({
   staleTime: 5 * 60 * 1000
 });
 
-// TÍNH TOÁN SMART LOAD DỰA TRÊN SỐ ĐẾM (Nếu đang lọc thì không chắc chắn)
+
 const expectedCount = computed(() => {
     if (activeSearchQuery.value || filterRating.value) return -1;
     if (!statusCountsData.value) return -1;
@@ -538,7 +529,7 @@ const expectedCount = computed(() => {
 
 // localReviews and pagination were declared above for watcher safety
 
-// Lọc Text Frontend với hàm chuẩn hóa Tiếng Việt (Tìm kiếm không dấu)
+
 const removeAccents = (str) => {
     if (!str) return '';
     return str.normalize('NFD')
@@ -588,9 +579,9 @@ const refetchAll = () => {
   refetchCounts();
 };
 
-// ==========================================
-// TANSTACK MUTATIONS (Cập nhật, Trả lời, Xóa)
-// ==========================================
+
+
+
 const statusMutation = useMutation({
   mutationFn: async ({ id, status, admin_reply }) => {
     return axios.put(`${API_URL}/admin/reviews/${id}`, { status, admin_reply }, { headers: getHeaders() });
@@ -665,9 +656,9 @@ const confirmDelete = (id) => {
   });
 };
 
-// ==========================================
-// CÁC HÀM TIỆN ÍCH VÀ LOGIC KHÁC
-// ==========================================
+
+
+
 const allowedTransitions = {
     'pending': ['pending', 'approved', 'hidden'],
     'approved': ['approved', 'hidden'], 
@@ -688,7 +679,6 @@ const openQuickView = async (review) => {
   if(!quickViewModalInstance) quickViewModalInstance = new window.bootstrap.Modal(document.getElementById('quickViewReviewModal'));
   quickViewModalInstance.show();
 
-  // KỸ THUẬT: SỬ DỤNG CACHE TANSTACK ĐỂ LẤY NGAY THÔNG TIN (Zero-loading state)
   const queryCacheKey = review.product ? ['adminProducts'] : ['adminCombos'];
   const cachedItems = queryClient.getQueryData(queryCacheKey);
   if (cachedItems) {
@@ -834,9 +824,6 @@ onBeforeUnmount(() => {
 .tab-badge { font-size: 0.75rem; font-weight: 600; background-color: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6; transition: all 0.2s ease; }
 .active-badge { background-color: #e6f5f2 !important; color: #009981 !important; border-color: #009981 !important; }
 
-.logo-shimmer { font-size: 3.5rem; font-weight: 900; letter-spacing: -1.5px; background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%); background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text; animation: shine 1.5s linear infinite; }
-@keyframes shine { to { background-position: 200% center; } }
-
 .bg-brand { background-color: #009981 !important; } .text-brand { color: #009981 !important; } .border-brand { border-color: #009981 !important; }
 .btn-brand { background-color: #009981; border: none; transition: 0.2s; color: white;} .btn-brand:hover { background-color: #007a67; color: white;}
 .btn-outline-brand { color: #009981; border-color: #009981; transition: 0.2s; } .btn-outline-brand:hover { background-color: #009981; color: white; }
@@ -854,7 +841,7 @@ onBeforeUnmount(() => {
 .custom-scrollbar-y::-webkit-scrollbar-thumb { background: #ced4da; border-radius: 10px; }
 .custom-scrollbar-y::-webkit-scrollbar-thumb:hover { background: #adb5bd; }
 
-/* INLINE SKELETON PLACEHOLDER EFFECT */
+
 .skeleton-row-item {
   animation: skeletonPulse 1.5s infinite ease-in-out;
 }

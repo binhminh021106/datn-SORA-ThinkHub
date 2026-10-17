@@ -1,7 +1,7 @@
 <template>
   <div class="contact-page font-sans bg-white pb-5">
     
-    <!-- Tiêu đề chính (Hero Section) -->
+
     <section class="sora-banner position-relative d-flex align-items-center justify-content-center overflow-hidden">
       <div class="banner-ambient"></div>
       <div class="banner-glow banner-glow-left"></div>
@@ -26,13 +26,13 @@
       </div>
     </section>
 
-    <!-- Nội dung chính -->
+
     <section class="py-5" style="margin-top: -3rem; position: relative; z-index: 2;">
       <div class="container bg-white shadow-lg rounded-4 p-4 p-md-5 border border-light">
         
         <div class="row g-5">
           
-          <!-- Thông tin liên hệ -->
+
           <div class="col-lg-5 order-2 order-lg-1 pe-lg-5">
             <div class="contact-info-wrapper h-100 p-4 p-md-5 rounded-4 d-flex flex-column text-white" style="background: linear-gradient(135deg, #3a0a18, #6d152a); box-shadow: 0 15px 35px rgba(0,0,0,0.15);">
               <h3 class="h4 font-serif text-gold-gradient mb-4">Thông Tin Liên Hệ</h3>
@@ -42,26 +42,37 @@
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="text-champagne me-3 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                   <div>
                     <strong class="d-block text-white fw-medium mb-1">SORA Flagship Store</strong>
-                    Khu đô thị cao cấp, Quận 1, TP. Hồ Chí Minh
+                    {{ settingsStore.settings.footer_address || 'Khu đô thị cao cấp, Quận 1, TP. Hồ Chí Minh' }}
                   </div>
                 </li>
                 <li class="d-flex align-items-start mb-4">
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="text-champagne me-3 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
                   <div>
                     <strong class="d-block text-white fw-medium mb-1">Hotline CSKH (24/7)</strong>
-                    <a href="tel:0901234567" class="text-champagne text-decoration-none custom-link">090 123 4567</a>
+                    <a :href="`tel:${settingsStore.hotlinePhone.replace(/\s+/g, '')}`" class="text-champagne text-decoration-none custom-link">
+                      {{ settingsStore.hotlinePhone }}
+                    </a>
+                  </div>
+                </li>
+                <li class="d-flex align-items-start mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="text-champagne me-3 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                  <div>
+                    <strong class="d-block text-white fw-medium mb-1">Email CSKH</strong>
+                    <a :href="`mailto:${settingsStore.settings.footer_email || 'SORA@GMAIL.COM'}`" class="text-champagne text-decoration-none custom-link">
+                      {{ settingsStore.settings.footer_email || 'SORA@GMAIL.COM' }}
+                    </a>
                   </div>
                 </li>
                 <li class="d-flex align-items-start">
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" class="text-champagne me-3 flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   <div>
                     <strong class="d-block text-white fw-medium mb-1">Giờ mở cửa</strong>
-                    09:00 - 21:00 (Từ Thứ 2 đến Chủ Nhật)
+                    {{ settingsStore.settings.footer_opening_hours || '09:00 - 21:00 (Từ Thứ 2 đến Chủ Nhật)' }}
                   </div>
                 </li>
               </ul>
 
-              <!-- Đoạn cam kết -->
+
               <div class="p-3 rounded-3 mt-auto" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(231,206,125,0.2);">
                 <p class="mb-0 text-champagne font-serif fst-italic text-sm">
                   "Mọi yêu cầu qua Form hệ thống sẽ được Chuyên viên SORA phản hồi tận tâm muộn nhất trong vòng 2 giờ làm việc."
@@ -70,7 +81,7 @@
             </div>
           </div>
 
-          <!-- Form liên hệ (Gọi API lưu Database) -->
+
           <div class="col-lg-7 order-1 order-lg-2">
             <div class="px-md-4 py-3">
               <h3 class="h4 font-serif text-main mb-4">Gửi Lời Nhắn Cho Hệ Thống</h3>
@@ -92,7 +103,7 @@
                     <label class="premium-form-label">Mong muốn hoặc thắc mắc của bạn *</label>
                     <textarea class="premium-form-control w-100" id="message" v-model="form.message" placeholder="Xin vui lòng mô tả chi tiết..." style="height: 140px; resize: none;" required></textarea>
                   </div>
-                  <!-- CAPTCHA -->
+
                   <div class="col-12 mt-3">
                     <div id="contact-recaptcha" v-show="!recaptchaError"></div>
                     <div v-if="recaptchaError" class="recaptcha-error">
@@ -101,9 +112,9 @@
                     </div>
                   </div>
                   <div class="col-12 mt-4 text-end">
-                    <!-- Nút Gửi kèm trạng thái Loading -->
+
                     <button type="submit" class="editorial-btn text-uppercase px-5 py-3 w-100 w-md-auto d-flex align-items-center justify-content-center ms-auto" style="letter-spacing: 0.1em;" :disabled="isSubmitting || !recaptchaToken">
-                      <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                      <AdminLoadingSpinner v-if="isSubmitting" class="me-2" size="16" />
                       GỬI LỜI NHẮN
                     </button>
                   </div>
@@ -115,7 +126,7 @@
       </div>
     </section>
 
-    <!-- Câu kết (Slogan) -->
+
     <section class="text-center">
       <div class="container">
         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" class="text-accent mb-3 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -131,10 +142,15 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
+import Toast from '@/utils/toastConfig';
 import { createSoraAlert } from '@/utils/soraAlertConfig';
 import clientApiClient from '@/utils/clientApiClient';
 
-// 1. Quản lý trạng thái form
+
+import { useSettingsStore } from '@/stores/settingsStore';
+
+const settingsStore = useSettingsStore();
+
 const form = ref({
   fullname: '',
   phone: '',
@@ -167,7 +183,7 @@ const retryRecaptcha = () => {
   initRecaptchaScript();
 };
 
-// Render CAPTCHA
+
 const renderRecaptcha = () => {
   if (!recaptchaSiteKey) {
     setRecaptchaError('CAPTCHA chưa được cấu hình. Vui lòng liên hệ quản trị viên.');
@@ -242,17 +258,17 @@ onUnmounted(() => {
   }
 });
 
-// 3. Cấu hình SweetAlert2 đồng bộ với toàn hệ thống
+
 const soraAlert = createSoraAlert({
   customClass: {
     confirmButton: 'px-4 py-2 mx-2 rounded-0 shadow-sm fw-bold font-oswald tracking-widest text-uppercase'
   }
 });
 
-// 4. Hàm Gửi Form Lưu Database
+
 const submitContactForm = async () => {
   if (!recaptchaToken.value) {
-    soraAlert.fire({ icon: 'warning', title: 'Thiếu xác thực', text: 'Vui lòng xác nhận bạn không phải là robot.' });
+    Toast.fire({ icon: 'warning', title: 'Vui lòng xác nhận bạn không phải là robot.' });
     return;
   }
   isSubmitting.value = true;
@@ -265,38 +281,36 @@ const submitContactForm = async () => {
     });
 
     if (response.data.status) {
-      soraAlert.fire({
+      Toast.fire({
         icon: 'success',
-        title: 'Đã Gửi Thành Công!',
-        text: response.data.message
+        title: response.data.message || 'Đã Gửi Thành Công!'
       });
-      // Reset form cho sạch
+
       form.value = { fullname: '', phone: '', email: '', message: '' };
       recaptchaToken.value = '';
       if (window.grecaptcha) window.grecaptcha.reset();
     }
   } catch (error) {
     if (error.response && error.response.status === 422) {
-      // Lỗi do nhập thiếu dữ liệu
+
       const errors = error.response.data.errors;
       const firstErrorMsg = Object.values(errors)[0][0]; 
-      soraAlert.fire({ icon: 'error', title: 'Kiểm tra lại dữ liệu', text: firstErrorMsg });
+      Toast.fire({ icon: 'error', title: firstErrorMsg });
       if (window.grecaptcha) window.grecaptcha.reset();
       recaptchaToken.value = '';
     } else if (error.response && error.response.status === 429) {
-      // Lỗi do gửi quá nhiều (Rate limit / Chống Spam)
+
       let msg = error.response.data.message || 'Bạn đã thao tác quá nhiều. Vui lòng thử lại sau!';
       if (msg === 'Chậm thôi bạn!') {
         msg = 'Bạn đã vượt quá số lần thử nghiệm (3 lần/giờ). Vui lòng quay lại sau!';
       }
-      soraAlert.fire({ 
+      Toast.fire({ 
         icon: 'warning', 
-        title: 'Thao tác quá nhanh', 
-        text: msg
+        title: msg
       });
     } else {
-      // Lỗi do server sập hoặc lỗi kết nối
-      soraAlert.fire({ icon: 'error', title: 'Lỗi Kết Nối', text: 'Có lỗi máy chủ xảy ra. Vui lòng thử lại sau!' });
+
+      Toast.fire({ icon: 'error', title: 'Có lỗi máy chủ xảy ra. Vui lòng thử lại sau!' });
     }
   } finally {
     isSubmitting.value = false;
@@ -308,7 +322,7 @@ const submitContactForm = async () => {
 @import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&display=swap');
 
 
-/* Màu sắc thương hiệu SORA */
+
 .bg-light-custom { background-color: #faf9f8 !important; }
 .bg-main { background-color: #9f273b !important; }
 .text-main { color: #9f273b !important; }
@@ -317,7 +331,7 @@ const submitContactForm = async () => {
 .text-danger-custom { color: #cc1e2e !important; }
 .border-accent { border-color: #e7ce7d !important; }
 
-/* Nút Zalo & Messenger tĩnh (Trong trang) */
+
 .btn-zalo {
   background-color: #0068FF;
   color: white;
@@ -350,13 +364,13 @@ const submitContactForm = async () => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-/* Font Serif cho tiêu đề */
+
 .font-serif {
   font-family: 'Josefin Sans', sans-serif;
 }
 .max-w-2xl { max-width: 42rem; }
 
-/* Custom Link Hover */
+
 .custom-link {
   transition: color 0.3s ease;
 }
@@ -364,7 +378,7 @@ const submitContactForm = async () => {
   color: #9f273b !important;
 }
 
-/* Custom Input Style (Luxury Minimal) */
+
 .custom-input {
   border: none;
   border-bottom: 1px solid #dee2e6;
@@ -381,7 +395,7 @@ const submitContactForm = async () => {
   background-color: transparent;
 }
 
-/* Floating Label Tweaks for Border Bottom Input */
+
 .custom-floating > label {
   padding-left: 0;
 }
@@ -391,7 +405,7 @@ const submitContactForm = async () => {
   transform: scale(0.85) translateY(-0.75rem) translateX(0);
 }
 
-/* Custom Floating Label Tweaks */
+
 @media (min-width: 768px) {
   .w-md-auto { width: auto !important; }
 }
@@ -441,7 +455,7 @@ const submitContactForm = async () => {
   transform: rotate(45deg) translateY(200%);
 }
 
-/* Banner (Sora Banner Style) */
+
 .text-champagne {
   color: #ead089 !important;
 }
@@ -599,7 +613,7 @@ const submitContactForm = async () => {
   }
 }
 
-/* Image wrapper (Border xoắn) */
+
 .img-wrapper {
   padding: 1rem;
 }
@@ -622,13 +636,13 @@ const submitContactForm = async () => {
   aspect-ratio: 4/5;
 }
 
-/* Đường kẻ ngăn cách (Divider) */
+
 .divider {
   width: 4rem;
   height: 2px;
 }
 
-/* Card Mission & Vision */
+
 .card-hover {
   transition: box-shadow 0.3s ease;
 }
@@ -648,7 +662,7 @@ const submitContactForm = async () => {
   opacity: 0.05;
 }
 
-/* Icon vòng tròn */
+
 .icon-circle {
   width: 64px;
   height: 64px;
@@ -656,11 +670,11 @@ const submitContactForm = async () => {
   border: 1px solid;
 }
 
-/* Khối sản phẩm (Fix ảnh vuông tuyệt đối) */
+
 .square-ratio {
   width: 100%;
   padding-bottom: 100%;
-  /* Tạo tỷ lệ vuông chuẩn 1:1 */
+
   display: block;
   overflow: hidden;
 }
@@ -678,12 +692,12 @@ const submitContactForm = async () => {
   z-index: 2;
 }
 
-/* Link khám phá */
+
 .product-link:hover {
   color: #cc1e2e !important;
 }
 
-/* Combo Carousel Container Overrides */
+
 .combos-editorial {
   background-color: #fffafa;
   overflow: hidden;

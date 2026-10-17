@@ -3,11 +3,7 @@
 
     <div v-if="isFirstVisit && isLoading"
       class="d-flex flex-column justify-content-center align-items-center w-100 shimmer-wrapper">
-      <div class="logo-shimmer-container text-center">
-        <h1 class="logo-shimmer mb-2">ThinkHub</h1>
-        <p class="loading-text text-muted fw-bold small text-uppercase tracking-widest mt-2"
-          style="letter-spacing: 3px; font-size: 0.75rem;">Đang tải dữ liệu...</p>
-      </div>
+      <AdminShimmerLoading text="Đang tải dữ liệu..." />
     </div>
 
     <div class="container-fluid py-4 px-4" v-show="!isFirstVisit || !isLoading">
@@ -570,6 +566,7 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, computed, watch, nextTick, onMounted, onActivated, onUnmounted } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
@@ -610,14 +607,13 @@ function getVietnamDateString(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
-// State chính
 const isFirstVisit = ref(sessionStorage.getItem('visited_attendance_dashboard') !== 'true');
 const selectedMonth = ref(getVietnamDateString().substring(0, 7)); 
 const drillDownDate = ref(getVietnamDateString()); 
 const searchQuery = ref('');
 const statusFilter = ref('all'); 
 const selectedRole = ref('all'); 
-const selectedShift = ref('all'); // State mới cho chức năng Lọc Ca Làm Việc
+const selectedShift = ref('all');
 const currentPage = ref(1);
 const itemsPerPage = 6; 
 
@@ -626,14 +622,13 @@ const adjustmentModalRef = ref(null);
 const drillDownSection = ref(null);
 let attendanceChartInstance = null;
 
-// Reset tất cả các bộ lọc về mặc định ban đầu
 const resetFilters = () => {
   selectedMonth.value = getVietnamDateString().substring(0, 7);
   drillDownDate.value = getVietnamDateString();
   searchQuery.value = '';
   statusFilter.value = 'all';
   selectedRole.value = 'all';
-  selectedShift.value = 'all'; // Reset ca làm việc
+  selectedShift.value = 'all';
   currentPage.value = 1;
   refetchSummary();
   refetchDailyDetail();
@@ -644,7 +639,6 @@ const handleMonthChange = () => {
   currentPage.value = 1;
 };
 
-// 0. QUERY API LẤY DANH SÁCH ROLE
 const { data: rolesList } = useQuery({
   queryKey: ['rolesListForFilter'],
   queryFn: async () => {
@@ -660,7 +654,6 @@ const { data: rolesList } = useQuery({
   initialData: []
 });
 
-// 1. QUERY API LẤY DANH SÁCH WORK SHIFTS
 const { data: workShiftsList } = useQuery({
   queryKey: ['workShiftsForFilter'],
   queryFn: async () => {
@@ -676,7 +669,6 @@ const { data: workShiftsList } = useQuery({
   initialData: []
 });
 
-// 2. QUERY API TỔNG HỢP THEO THÁNG
 const { data: monthlySummaryData, isLoading: isSummaryLoading, refetch: refetchSummary } = useQuery({
   queryKey: ['monthlySummary', selectedMonth, selectedRole, selectedShift], // Theo dõi thêm selectedShift
   queryFn: async () => {
@@ -754,12 +746,10 @@ const extractedShiftsMap = ref(new Map());
 watch(() => dailyData.value?.data, (users) => {
   if (users && Array.isArray(users)) {
     users.forEach(admin => {
-      // Extract Roles
       if (admin.role && !extractedRolesMap.value.has(admin.role.id)) {
         extractedRolesMap.value.set(admin.role.id, admin.role);
       }
       
-      // Extract Shifts
       const shift = getAdminShift(admin);
       if (shift && !extractedShiftsMap.value.has(shift.id)) {
         extractedShiftsMap.value.set(shift.id, shift);
@@ -793,7 +783,6 @@ const refetchAll = () => {
   refetchAdjustments();
 };
 
-// Removed adminHistoryData Query
 
 const formatDuration = (totalMinutes) => {
   if (!totalMinutes || totalMinutes <= 0) return '';
@@ -1388,18 +1377,6 @@ const getCheckoutStatusBadgeClass = (status) => ({
   z-index: 9999;
 }
 
-.logo-shimmer {
-  font-size: 4rem;
-  font-weight: 900;
-  letter-spacing: -2px;
-  background: linear-gradient(90deg, #12d8a0 0%, #009981 100%);
-  background-size: 200% auto;
-  color: transparent;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: shine-logo 2s linear infinite;
-}
-
 .loading-text {
   color: #6c757d;
   opacity: 0.8;
@@ -1728,7 +1705,6 @@ const getCheckoutStatusBadgeClass = (status) => ({
   box-shadow: 0 .4rem .8rem rgba(108, 117, 125, 0.1) !important;
 }
 
-/* FIX Z-INDEX MODAL */
 .modal-backdrop-custom {
   position: fixed;
   top: 0;
@@ -1813,7 +1789,6 @@ const getCheckoutStatusBadgeClass = (status) => ({
   box-shadow: 0 0.5rem 1rem rgba(0, 153, 129, 0.08);
 }
 
-/* DARK MODE OVERRIDES */
 [data-bs-theme="dark"] .bg-white {
   background-color: var(--bs-dark) !important;
 }

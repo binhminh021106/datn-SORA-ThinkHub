@@ -1,4 +1,6 @@
 <script setup>
+import { getStorageUrl } from '@/utils/env';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
@@ -14,10 +16,10 @@ const route = useRoute();
 const router = useRouter();
 const queryClient = useQueryClient();
 
-// --- CONFIG ---
+
 const soraPlaceholder = '/Sora-placeholder.png'; 
 
-// --- HELPER METHODS ---
+
 const toSlug = (str) => {
     if (!str) return '';
     str = str.toLowerCase();
@@ -39,7 +41,19 @@ const getFullImage = (path) => {
     return getStorageUrl(path, soraPlaceholder);
 };
 
-const handleImageError = (e) => { e.target.src = soraPlaceholder; };
+const handleImageError = (e) => { 
+  let fallback = '/Sora-placeholder.png';
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_client_active) {
+          fallback = getStorageUrl(store.settings.placeholder_client_active);
+      }
+  } catch (err) {}
+  
+  if (e.target.src !== fallback) {
+      e.target.src = fallback;
+  }
+};
 
 const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -94,7 +108,7 @@ const copyToClipboard = () => {
     });
 };
 
-// --- DATA FETCHING (TANSTACK QUERY) ---
+
 const currentSlug = computed(() => route.params.slug);
 
 const fetchPostDetail = async ({ queryKey }) => {
@@ -103,17 +117,17 @@ const fetchPostDetail = async ({ queryKey }) => {
     return response.data.data;
 };
 
-// 1. QUERY CHI TIẾT BÀI VIẾT (TÍCH HỢP BẮT CACHE ĐỂ HIỂN THỊ TỨC THÌ)
+
 const { data: rawPost, isLoading: isPostLoading, isFetching: isPostFetching, isError } = useQuery({
     queryKey: ['postDetail', currentSlug],
     queryFn: fetchPostDetail,
     enabled: !!currentSlug.value,
     staleTime: 5 * 60 * 1000, // Cache chi tiết 5 phút
     placeholderData: () => {
-        // MA THUẬT Ở ĐÂY: Tìm kiếm bài viết này trong Cache của trang Danh Sách (đã tải trước đó)
+
         let found = null;
         
-        // Tìm trong cache danh sách NewsList
+
         const queries = queryClient.getQueriesData({ queryKey: ['newsList'] });
         for (const [key, data] of queries) {
             if (data && data.data) {
@@ -122,7 +136,7 @@ const { data: rawPost, isLoading: isPostLoading, isFetching: isPostFetching, isE
             }
         }
         
-        // Nếu không có, thử tìm trong cache Popular News
+
         if (!found) {
             const popular = queryClient.getQueryData(['popularNews']);
             if (popular) {
@@ -131,14 +145,14 @@ const { data: rawPost, isLoading: isPostLoading, isFetching: isPostFetching, isE
         }
 
         if (found) {
-            // Trả về dữ liệu tìm thấy, đính kèm cờ `isPartial: true` báo hiệu thiếu Content
+
             return { ...found, isPartial: true };
         }
         return undefined;
     }
 });
 
-// 2. FETCH CÁC BÀI VIẾT LIÊN QUAN (Lấy 6 bài mới nhất bỏ qua bài hiện tại)
+
 const fetchRelatedPosts = async () => {
     const response = await axios.get(`${API_BASE_URL}/news`, { params: { per_page: 6 }});
     return response.data.data.data || response.data.data || [];
@@ -151,7 +165,7 @@ const { data: relatedPostsRaw, isLoading: isRelatedLoading } = useQuery({
     staleTime: 10 * 60 * 1000,
 });
 
-// --- COMPUTED FORMATTING ---
+
 const post = computed(() => {
     if (!rawPost.value) return null;
     const data = rawPost.value;
@@ -192,7 +206,7 @@ const relatedPosts = computed(() => {
         }));
 });
 
-// --- WATCHERS ---
+
 watch(() => rawPost.value, (newData) => {
     // Chỉ cập nhật SEO khi bài viết đã tải xong Full Content (tránh đè SEO rác)
     if (newData && !newData.isPartial) {
@@ -219,9 +233,9 @@ watch(currentSlug, () => {
             <router-link :to="{ name: 'news' }" class="btn btn-main px-4 py-2 mt-3 font-oswald text-uppercase tracking-widest rounded-pill">Quay lại trang tin tức</router-link>
         </div>
 
-        <!-- HIỂN THỊ DỮ LIỆU TỪ CACHE HOẶC DATA THẬT -->
+
         <div v-else class="fade-in">
-            <!-- Breadcrumb -->
+
             <div class="container fade-in">
                 <nav aria-label="breadcrumb" class="pt-4 pb-0 mb-2">
                     <ol class="breadcrumb mb-0 font-oswald text-uppercase tracking-wide small" style="font-size: 0.75rem;">
@@ -238,11 +252,11 @@ watch(currentSlug, () => {
 
             <div class="container my-3">
                 <div class="row">
-                    <div class="col-lg-8 pe-lg-5">
+                    <div class="col-lg-8 pe-lg-3">
                         <article class="article-container bg-white p-4 p-md-5 rounded-4 shadow-sm border border-light-subtle position-relative">
                             
                             <div v-if="post.isPartial && isPostFetching" class="position-absolute top-0 end-0 m-4 d-flex align-items-center text-muted small">
-                                <div class="spinner-border spinner-border-sm text-main me-2" role="status"></div>
+                                <AdminLoadingSpinner class="text-main me-2" size="16" />
                                 Đang tải nội dung...
                             </div>
 
@@ -272,16 +286,16 @@ watch(currentSlug, () => {
                                 <img :src="post.thumbnail" @error="handleImageError" class="figure-img img-fluid rounded-4 w-100 shadow-sm object-fit-cover" alt="Thumbnail" style="max-height: 500px;">
                             </figure>
 
-                            <!-- NẾU CHỈ MỚI CÓ CACHE (isPartial), HIỆN SKELETON Ở VÙNG CONTENT -->
+
                             <div v-if="post.isPartial" class="article-body-skeleton fade-in py-3">
                                 <SoraSkeleton v-for="i in 8" :key="i" :width="i % 3 === 0 ? '80%' : '100%'" height="16px" class="mb-3" />
                                 <SoraSkeleton width="50%" height="16px" class="mb-5" />
                             </div>
                             
-                            <!-- NẾU ĐÃ LOAD XONG DATA THẬT -->
+
                             <div v-else class="article-body text-dark fade-in" style="line-height: 1.8; font-size: 1.05rem; text-align: justify;" v-html="sanitizeHTML(post.content)"></div>
 
-                            <!-- Thẻ tác giả -->
+
                             <div class="author-box d-flex align-items-center bg-light-custom p-4 rounded-4 mt-5 border border-light-subtle">
                                 <img :src="post.author.avatar" @error="handleImageError" class="rounded-circle me-4 shadow-sm border object-fit-cover flex-shrink-0" width="80" height="80">
                                 <div>
@@ -293,14 +307,14 @@ watch(currentSlug, () => {
                         </article>
                     </div>
 
-                    <!-- Sidebar Bài viết liên quan -->
+
                     <div class="col-lg-4 mt-5 mt-lg-0">
                         <aside class="sidebar-sticky">
                             
                             <div class="bg-white p-4 rounded-4 shadow-sm border border-light-subtle mb-4">
                                 <h4 class="widget-title font-serif">Bài viết mới nhất</h4>
 
-                                <!-- Loading related posts -->
+
                                 <SoraListSkeleton v-if="isRelatedLoading" :rows="4" image-size="90px" class="mt-4" />
 
                                 <div v-else class="related-posts mt-4 fade-in">
@@ -343,7 +357,7 @@ watch(currentSlug, () => {
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Josefin+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=Oswald:wght@400;500;600;700&display=swap');
 
 
-/* MÀU SẮC THƯƠNG HIỆU SORA */
+
 .bg-light-custom { background-color: #faf9f8 !important; }
 .bg-main { background-color: #9f273b !important; }
 .text-main { color: #9f273b !important; }
@@ -352,14 +366,14 @@ watch(currentSlug, () => {
 .text-danger-custom { color: #cc1e2e !important; }
 .border-main { border-color: #9f273b !important; }
 
-/* Các thành phần cơ bản */
+
 .btn-main { background-color: #9f273b; color: white; border: 1px solid #9f273b; transition: all 0.3s ease; }
 .btn-main:hover { background-color: #cc1e2e; color: white; }
 .btn-outline-main { color: #9f273b; border: 1px solid #9f273b; background: transparent; transition: all 0.2s ease; }
 .btn-outline-main:hover { background-color: #9f273b; color: white; }
 .btn-outline-secondary:hover { background-color: #e9ecef; color: #2c2c2c; }
 
-/* Font chữ & Định dạng cơ bản */
+
 .post-detail-page {
     font-family: 'Manrope', sans-serif;
     color: #2c2c2c;
@@ -374,12 +388,12 @@ h1, h2, h3, h4, h5, h6 {
 .tracking-wide { letter-spacing: 0.1em; }
 .tracking-widest { letter-spacing: 1px; }
 
-/* Nút Quay Lại (Breadcrumb) */
+
 .back-link { transition: all 0.3s ease; }
 .back-link:hover { color: #9f273b !important; transform: translateX(-5px); }
 .hover-underline:hover { text-decoration: underline !important; }
 
-/* Cấu trúc chi tiết bài viết */
+
 .article-title {
     font-weight: 800;
     font-size: 2.2rem;
@@ -406,10 +420,11 @@ h1, h2, h3, h4, h5, h6 {
     margin-bottom: 1.2rem;
 }
 
-/* Sidebar & Widget */
+
 .sidebar-sticky {
     position: sticky;
-    top: 100px;
+    top: 24px;
+    transition: top 0.3s ease;
 }
 
 .widget-title {
@@ -420,7 +435,7 @@ h1, h2, h3, h4, h5, h6 {
     margin-bottom: 0;
 }
 
-/* Hiệu ứng Product Card (Áp dụng cho bài liên quan) */
+
 .product-card {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   border-bottom: 2px solid transparent !important;
@@ -431,12 +446,12 @@ h1, h2, h3, h4, h5, h6 {
   border-bottom: 2px solid #e7ce7d !important;
 }
 
-/* Hiệu ứng Image Zoom */
+
 .img-zoom-wrapper { overflow: hidden; display: block; border-radius: 6px; }
 .img-zoom-wrapper img { transition: transform 0.8s ease; }
 .product-card:hover .img-zoom-wrapper img { transform: scale(1.08); }
 
-/* Tiêu đề bài viết liên quan */
+
 .product-title { 
     font-size: 0.95rem; 
     line-height: 1.4; 
@@ -449,7 +464,7 @@ h1, h2, h3, h4, h5, h6 {
 .product-title-link { transition: color 0.3s ease; }
 .product-card:hover .product-title, .product-title-link:hover .product-title { color: #9f273b !important; }
 
-/* HIỆU ỨNG CHUYỂN ĐỘNG */
+
 .fade-in { animation: fadeIn 0.4s ease-in; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 </style>

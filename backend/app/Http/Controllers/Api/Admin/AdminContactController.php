@@ -159,59 +159,57 @@ class AdminContactController extends Controller
             ];
             
             $contactEmail = $contact->email;
+            
+            // Kiểm tra domain email có tồn tại hay không (kiểm tra MX record) để loại bỏ email ảo
+            $domain = substr(strrchr($contactEmail, "@"), 1);
+            if ($domain && !checkdnsrr($domain, "MX")) {
+                $contact->update(['reply_delivery_status' => 'failed']);
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Email của khách hàng là email ảo hoặc không hợp lệ. Không thể gửi phản hồi.',
+                ], 422);
+            }
+
             $subject = $request->subject;
             $contactId = $contact->id;
 
-            // Queue Gửi Email
-            dispatch(function () use ($contactEmail, $subject, $data, $contactId, $replyDeliveryToken) {
-                \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($contactEmail, $subject, $data) {
-                    $message->to($contactEmail)
-                            ->subject($subject)
-                            ->html("
-                                <div style='font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden;'>
-                                    <div style='background-color: #9f273b; padding: 20px; text-align: center;'>
-                                        <h2 style='color: white; margin: 0;'>SORA JEWELRY</h2>
-                                    </div>
-                                    <div style='padding: 20px;'>
-                                        <p>Chào <strong>{$data['customerName']}</strong>,</p>
-                                        <p>SORA xin phản hồi thắc mắc của bạn:</p>
-                                        <div style='background: #f9f9f9; padding: 15px; border-left: 4px solid #e7ce7d; margin: 15px 0;'>
-                                            {$data['replyMessage']}
-                                        </div>
-                                        <p style='font-size: 12px; color: #999;'>Tin nhắn gốc của bạn: \"{$data['originalMessage']}\"</p>
-                                    </div>
+            // Gửi email trực tiếp (Synchronous) thay vì dùng Queue để biết kết quả ngay lập tức
+            \Illuminate\Support\Facades\Mail::send([], [], function ($message) use ($contactEmail, $subject, $data) {
+                $message->to($contactEmail)
+                        ->subject($subject)
+                        ->html("
+                            <div style='font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden;'>
+                                <div style='background-color: #9f273b; padding: 20px; text-align: center;'>
+                                    <h2 style='color: white; margin: 0;'>SORA JEWELRY</h2>
                                 </div>
-                            ");
-                });
-                
-                \App\Models\Contact::whereKey($contactId)
-                    ->where('reply_delivery_status', 'queued')
-                    ->where('reply_delivery_token', $replyDeliveryToken)
-                    ->update([
-                        'status' => 'resolved',
-                        'reply_delivery_status' => 'sent'
-                    ]);
-            })->catch(function (\Throwable $exception) use ($contactId, $replyDeliveryToken) {
-                \App\Models\Contact::whereKey($contactId)
-                    ->where('reply_delivery_status', 'queued')
-                    ->where('reply_delivery_token', $replyDeliveryToken)
-                    ->update(['reply_delivery_status' => 'failed']);
-                \Illuminate\Support\Facades\Log::error('Không thể gửi email phản hồi liên hệ (Queue).', [
-                    'contact_id' => $contactId,
-                    'error' => $exception->getMessage(),
-                ]);
+                                <div style='padding: 20px;'>
+                                    <p>Chào <strong>{$data['customerName']}</strong>,</p>
+                                    <p>SORA xin phản hồi thắc mắc của bạn:</p>
+                                    <div style='background: #f9f9f9; padding: 15px; border-left: 4px solid #e7ce7d; margin: 15px 0;'>
+                                        {$data['replyMessage']}
+                                    </div>
+                                    <p style='font-size: 12px; color: #999;'>Tin nhắn gốc của bạn: \"{$data['originalMessage']}\"</p>
+                                </div>
+                            </div>
+                        ");
             });
+            
+            \App\Models\Contact::whereKey($contactId)
+                ->update([
+                    'status' => 'resolved',
+                    'reply_delivery_status' => 'sent'
+                ]);
 
         } catch (\Throwable $exception) {
             \App\Models\Contact::whereKey($contact->id)->update(['reply_delivery_status' => 'failed']);
-            \Illuminate\Support\Facades\Log::error('Lỗi dispatch queue gửi email liên hệ.', [
+            \Illuminate\Support\Facades\Log::error('Lỗi gửi email liên hệ (Synchronous).', [
                 'contact_id' => $contact->id,
                 'error' => $exception->getMessage(),
             ]);
 
             return response()->json([
                 'status' => false,
-                'message' => 'Lỗi khi đưa email vào hàng đợi gửi.',
+                'message' => 'Gửi email thất bại. Hộp thư có thể không tồn tại hoặc lỗi máy chủ SMTP.',
             ], 500);
         }
 
@@ -219,7 +217,7 @@ class AdminContactController extends Controller
 
         return response()->json([
             'status' => true,
-            'message' => 'Đã đưa email vào hàng đợi!',
+            'message' => 'Đã gửi phản hồi thành công!',
             'data' => $contact
         ]);
     }

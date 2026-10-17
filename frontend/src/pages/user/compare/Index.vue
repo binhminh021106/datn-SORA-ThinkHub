@@ -1,25 +1,21 @@
 <template>
   <div class="compare-page-wrapper">
     <div class="container">
-      <!-- HEADER MỚI: QUAY LẠI VÀ CHỈ BÁO SP GỐC -->
       <div class="compare-header mb-4 pb-3 border-bottom">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
           <div class="header-left">
             <h1 class="page-title font-serif fw-bold text-dark mb-2 fs-3 tracking-wider text-uppercase">So sánh sản phẩm</h1>
-            <!-- Hiển thị tên sản phẩm gốc -->
             <p v-if="baseProductName" class="text-muted mb-0 font-inter" style="font-size: 14px;">
               Bạn đang so sánh với sản phẩm: <strong style="color: rgb(159,39,59);">{{ baseProductName }}</strong>
             </p>
           </div>
           
           <div class="header-right">
-            <!-- Nút Quay lại -->
             <button class="btn-sora-back" @click="goBackToBaseProduct">
               <i class="bi bi-arrow-left me-2"></i>
               Quay lại
             </button>
 
-            <!-- Toggle: Chỉ hiển thị điểm khác biệt -->
             <label class="sora-toggle-switch ms-md-3">
               <input type="checkbox" v-model="showDiffOnly">
               <div class="toggle-slider"></div>
@@ -61,7 +57,6 @@
 
       <div v-else class="table-responsive">
         <table class="compare-table hover-column-table">
-          <!-- HÀNG 1: THÔNG TIN CƠ BẢN VÀ ACTION -->
           <thead>
             <tr>
               <th class="criteria-col empty-th"></th>
@@ -71,7 +66,6 @@
                   <img :src="product.thumbnail_image || 'https://via.placeholder.com/150'" :alt="product.name" class="p-img align-self-center">
                   <h3 class="p-name" @click="goToDetail(product.slug)" :title="product.name">{{ product.name }}</h3>
                   
-                  <!-- Tag Sản phẩm gốc được gán tự động vào cột đầu tiên (hoặc trùng với spGoc id) -->
                   <div class="mb-3" style="min-height: 22px;">
                     <div v-if="product.id == spGoc || (index === 0 && !spGoc && products.length > 1)" class="base-product-badge">
                       Sản phẩm gốc
@@ -81,7 +75,6 @@
                   <button class="editorial-btn w-100 mt-auto" @click="goToDetail(product.slug)">XEM CHI TIẾT</button>
                 </div>
               </th>
-              <!-- Ô thêm sản phẩm (ĐÃ SỬA @CLICK ĐỂ MỞ POPUP) -->
               <th v-if="products.length < 3" class="add-more-col">
                 <div class="add-more-box" @click="openComparePopup">
                   <div class="plus-icon">+</div>
@@ -91,10 +84,8 @@
             </tr>
           </thead>
 
-          <!-- BODY: CÁC TIÊU CHÍ SO SÁNH (Hover cột hoạt động ở đây) -->
           <tbody>
             
-            <!-- 0. TƯ VẤN PHONG CÁCH -->
             <tr>
               <td class="criteria-name" style="vertical-align: top; padding-top: 20px;">✨ Tư vấn phong cách</td>
               <td v-for="product in products" :key="'vibe-'+product.id" class="val-cell" style="vertical-align: top; padding-top: 20px;">
@@ -103,7 +94,6 @@
               <td v-if="products.length < 3"></td>
             </tr>
             
-            <!-- 1. MỨC GIÁ VÀ CHÊNH LỆCH -->
             <tr v-show="!showDiffOnly || hasDifference('price')">
               <td class="criteria-name">Mức giá</td>
               <td v-for="(product, index) in products" :key="'price-'+product.id" class="val-cell" :class="{'highlight-diff': showDiffOnly && hasDifference('price')}">
@@ -111,7 +101,6 @@
                   {{ formatMoney(product.promotional_price || product.base_price) }}
                 </div>
                 
-                <!-- Text giải thích chênh lệch giá (So với sản phẩm cột 1) -->
                 <div v-if="index > 0" class="diff-text mt-1" :class="getPriceDiffColor(product, products[0])">
                   <span v-if="getPriceDiff(product, products[0])">
                     {{ getPriceDiff(product, products[0]) }}
@@ -122,7 +111,6 @@
               <td v-if="products.length < 3"></td>
             </tr>
 
-            <!-- 2. ĐÁNH GIÁ -->
             <tr v-show="!showDiffOnly || hasDifference('rating_avg') || hasDifference('rating')">
               <td class="criteria-name">Đánh giá</td>
               <td v-for="(product, index) in products" :key="'rating-'+product.id" class="val-cell" :class="{'highlight-diff': showDiffOnly && (hasDifference('rating_avg') || hasDifference('rating'))}">
@@ -135,7 +123,6 @@
               <td v-if="products.length < 3"></td>
             </tr>
 
-            <!-- 2.5. LƯỢT BÁN -->
             <tr v-show="!showDiffOnly || hasDifference('sold_count')">
               <td class="criteria-name">Lượt bán</td>
               <td v-for="(product, index) in products" :key="'sold-'+product.id" class="val-cell" :class="{'highlight-diff': showDiffOnly && hasDifference('sold_count')}">
@@ -146,7 +133,6 @@
               <td v-if="products.length < 3"></td>
             </tr>
 
-            <!-- 3. THƯƠNG HIỆU -->
             <tr v-show="!showDiffOnly || hasDifference('brand_name')">
               <td class="criteria-name">Thương hiệu</td>
               <td v-for="product in products" :key="'brand-'+product.id" class="val-cell" :class="{'highlight-diff': showDiffOnly && hasDifference('brand_name')}">
@@ -155,7 +141,6 @@
               <td v-if="products.length < 3"></td>
             </tr>
 
-            <!-- 4. DANH MỤC -->
             <tr v-show="!showDiffOnly || hasDifference('category_name')">
               <td class="criteria-name">Danh mục</td>
               <td v-for="product in products" :key="'cat-'+product.id" class="val-cell" :class="{'highlight-diff': showDiffOnly && hasDifference('category_name')}">
@@ -164,7 +149,6 @@
               <td v-if="products.length < 3"></td>
             </tr>
 
-            <!-- 5. CÁC THÔNG SỐ KỸ THUẬT -->
             <tr v-for="specKey in allSpecificationKeys" :key="specKey" v-show="!showDiffOnly || hasSpecDifference(specKey)">
               <td class="criteria-name text-capitalize">{{ specKey }}</td>
               <td v-for="(product, index) in products" :key="specKey+'-'+product.id" class="val-cell" :class="{'highlight-diff': showDiffOnly && hasSpecDifference(specKey)}">
@@ -179,7 +163,6 @@
               <td v-if="products.length < 3"></td>
             </tr>
 
-            <!-- 6. MÔ TẢ NGẮN -->
             <tr v-show="!showDiffOnly || hasDifference('description')">
               <td class="criteria-name">Mô tả</td>
               <td v-for="product in products" :key="'desc-'+product.id" class="desc-cell val-cell" :class="{'highlight-diff': showDiffOnly && hasDifference('description')}">
@@ -193,7 +176,6 @@
       </div>
     </div>
 
-    <!-- BỔ SUNG: POPUP GỢI Ý CHỌN THÊM SẢN PHẨM SO SÁNH -->
     <transition name="fade">
       <div v-if="showComparePopup" class="compare-modal-overlay" @click.self="closeComparePopup">
         <div class="compare-modal">
@@ -212,7 +194,6 @@
             </div>
           </div>
 
-          <!-- TABS: Gợi ý & Yêu thích -->
           <div class="compare-modal-tabs">
             <button :class="{'active': comparePopupTab === 'suggestions'}" @click="comparePopupTab = 'suggestions'">
               Gợi ý thêm
@@ -224,7 +205,6 @@
 
           <div class="compare-modal-body">
             
-            <!-- TAB 1: GỢI Ý -->
             <div v-if="comparePopupTab === 'suggestions'">
               <p class="compare-modal-subtitle">Các sản phẩm mới nhất cùng danh mục:</p>
               
@@ -261,7 +241,6 @@
               </div>
             </div>
 
-            <!-- TAB 2: YÊU THÍCH -->
             <div v-if="comparePopupTab === 'favourites'">
               <p class="compare-modal-subtitle">Chọn từ danh sách yêu thích của bạn:</p>
               
@@ -332,9 +311,6 @@ const products = ref([]);
 const isLoading = ref(true);
 const showDiffOnly = ref(false);
 
-// ==========================================
-// THÊM: STATE CHO POPUP SO SÁNH
-// ==========================================
 const showComparePopup = ref(false);
 const compareSuggestions = ref([]);
 const isLoadingCompareSuggestions = ref(false);
@@ -345,23 +321,19 @@ const isLoggedIn = computed(() => !!localStorage.getItem('auth_token'));
 const searchQuery = ref('');
 let searchTimeout = null;
 
-// Thay vì dùng ref, dùng computed để theo dõi query param theo thời gian thực an toàn hơn
 const spGoc = computed(() => route.query.spGoc || null);
 
-// Computed lấy tên sản phẩm gốc đang được so sánh
 const baseProductName = computed(() => {
   if (!spGoc.value || products.value.length === 0) return null;
   const baseProd = products.value.find(p => p.id == spGoc.value);
   return baseProd ? baseProd.name : null;
 });
 
-// Hàm quay lại: Trả về chi tiết spGoc hoặc danh sách chung
 const goBackToBaseProduct = () => {
   if (window.history.state && window.history.state.back) {
     router.back();
     return;
   }
-  // Fallback nếu người dùng vào thẳng link không có lịch sử
   if (spGoc.value) {
       const baseProd = products.value.find(p => p.id == spGoc.value);
       if (baseProd && baseProd.slug) {
@@ -404,7 +376,6 @@ const loadCompareData = async (isBackgroundRefresh = false) => {
     if (response.data.success) {
       let fetchedProducts = response.data.data;
       
-      // Sắp xếp đưa Sản phẩm gốc (spGoc) lên đầu tiên (vị trí index 0)
       if (spGoc.value) {
           fetchedProducts.sort((a, b) => {
               if (a.id == spGoc.value) return -1;
@@ -427,9 +398,6 @@ onMounted(() => {
   loadCompareData();
 });
 
-// ==========================================
-// LOGIC: POPUP CHỌN SẢN PHẨM SO SÁNH
-// ==========================================
 const getImageUrl = (path) => {
   return getStorageUrl(path, 'https://via.placeholder.com/150?text=No+Image');
 };
@@ -448,7 +416,6 @@ const closeComparePopup = () => {
   showComparePopup.value = false;
 };
 
-// Computed Lọc tìm kiếm
 const filteredSuggestions = computed(() => {
   if (!searchQuery.value) return compareSuggestions.value;
   const lowerQ = searchQuery.value.toLowerCase();
@@ -461,7 +428,6 @@ const filteredFavourites = computed(() => {
   return favouriteProducts.value.filter(p => p.name.toLowerCase().includes(lowerQ));
 });
 
-// API Gọi danh sách gợi ý
 const fetchCompareSuggestions = async (query = '') => {
   isLoadingCompareSuggestions.value = true;
   try {
@@ -509,7 +475,6 @@ const fetchFavouritesForCompare = async () => {
   }
 };
 
-// Kiểm tra xem sản phẩm đã có trong bảng so sánh chưa
 const isInCompare = (id) => {
   return products.value.some(p => p.id === id);
 };
@@ -518,10 +483,8 @@ const toggleCompare = (item) => {
   const stored = JSON.parse(localStorage.getItem(`compare_list_${shopSlug}`) || '[]');
   
   if (isInCompare(item.id)) {
-    // Đang có => Xóa
     removeProduct(item.id);
   } else {
-    // Chưa có => Thêm
     if (stored.length >= 3) {
       Toast.fire({ icon: 'warning', title: 'Chỉ được so sánh tối đa 3 sản phẩm' });
       return;
@@ -530,24 +493,18 @@ const toggleCompare = (item) => {
     localStorage.setItem(`compare_list_${shopSlug}`, JSON.stringify(stored));
     Toast.fire({ icon: 'success', title: 'Đã thêm vào danh sách so sánh' });
     
-    // Refresh ngầm dữ liệu để update bảng mà không bị chớp màn hình loading
     loadCompareData(true);
   }
 };
 
 const removeProduct = (id) => {
-  // Update UI Local trước cho nhanh
   products.value = products.value.filter(p => p.id !== id);
   
-  // Update LocalStorage
   const stored = JSON.parse(localStorage.getItem(`compare_list_${shopSlug}`) || '[]');
   const updatedList = stored.filter(p => p.id !== id);
   localStorage.setItem(`compare_list_${shopSlug}`, JSON.stringify(updatedList));
 };
 
-// ==========================================
-// LOGIC: TRÍCH XUẤT THÔNG SỐ (SPECIFICATIONS)
-// ==========================================
 const allSpecificationKeys = computed(() => {
   const keys = new Set();
   products.value.forEach(p => {
@@ -563,9 +520,6 @@ const getSpecValue = (product, key) => {
   return product.specifications[key];
 };
 
-// ==========================================
-// LOGIC: KIỂM TRA KHÁC BIỆT ĐỂ ẨN/HIỆN HÀNG
-// ==========================================
 const hasDifference = (key) => {
   if (products.value.length <= 1) return false;
   const firstVal = key === 'price' 
@@ -584,9 +538,6 @@ const hasSpecDifference = (specKey) => {
   return products.value.some(p => getSpecValue(p, specKey) !== firstVal);
 };
 
-// ==========================================
-// LOGIC: TEXT GIẢI THÍCH CHI TIẾT CHÊNH LỆCH
-// ==========================================
 const getPriceDiff = (current, base) => {
   if (!base || current.id === base.id) return null;
   const pCurrent = parseFloat(current.promotional_price || current.base_price);
@@ -647,9 +598,6 @@ const getSpecDiffText = (current, base, specKey) => {
   return null;
 };
 
-// ==========================================
-// UTILITIES CƠ BẢN
-// ==========================================
 const isBestPrice = (price) => {
   if (products.value.length <= 1 || !price) return false;
   const prices = products.value.map(p => parseFloat(p.promotional_price || p.base_price)).filter(p => !isNaN(p));
@@ -687,12 +635,10 @@ const truncateHtml = (html, length) => {
   box-shadow: 0 4px 20px rgba(0,0,0,0.03);
 }
 
-/* Breadcrumb Sync */
 .breadcrumb { font-size: 13px; color: #888; background: transparent; padding: 0;}
 .breadcrumb .breadcrumb-item + .breadcrumb-item::before { color: #ccc; }
 .hover-primary:hover { color: #9f273b !important; }
 
-/* Compare Header Elements */
 .font-serif { font-family: 'Josefin Sans', sans-serif; }
 .font-inter { font-family: "Manrope", sans-serif; }
 .font-oswald { font-family: "Oswald", sans-serif; }
@@ -710,7 +656,6 @@ const truncateHtml = (html, length) => {
 
 .page-title { font-size: 24px; font-weight: 600; color: #333; }
 
-/* Nút quay lại */
 .btn-sora-back {
   background: transparent;
   border: 1px solid #ddd;
@@ -732,7 +677,6 @@ const truncateHtml = (html, length) => {
   color: #9f273b;
 }
 
-/* Custom Toggle Switch */
 .sora-toggle-switch {
   display: flex;
   align-items: center;
@@ -784,9 +728,6 @@ const truncateHtml = (html, length) => {
 
 .table-responsive { overflow-x: auto; padding-bottom: 20px; }
 
-/* ==========================================
-   CSS TRICK: HIỆU ỨNG HOVER CẢ CỘT
-========================================== */
 .hover-column-table {
   width: 100%;
   border-collapse: collapse;
@@ -815,12 +756,10 @@ const truncateHtml = (html, length) => {
   pointer-events: none;
 }
 
-/* Cột Layout */
 .criteria-col { width: 15%; background: #fdfdfd; border-right: 1px solid #eee; }
 .product-col { width: 21.25%; border-right: 1px solid #eee; vertical-align: top;}
 .add-more-col { width: 21.25%; vertical-align: top; padding: 20px;}
 
-/* Header Sản Phẩm */
 .product-card-top {
   position: relative;
   text-align: center;
@@ -845,7 +784,6 @@ const truncateHtml = (html, length) => {
 .add-more-box:hover { border-color: rgb(159,39,59); color: rgb(159,39,59); background: #fffcfc;}
 .plus-icon { font-size: 40px; margin-bottom: 10px; }
 
-/* Table Body Text */
 .criteria-name {
   font-weight: 600; color: #555; background: #fafafa; font-size: 14px;
 }
@@ -853,7 +791,6 @@ const truncateHtml = (html, length) => {
 .price-wrap { font-size: 16px; font-weight: 600; color: #333; }
 .desc-cell { font-size: 13px; color: #666; line-height: 1.6; text-align: left;}
 
-/* Difference Text & Highlights */
 .diff-text { font-size: 12px; font-weight: 600; }
 .attr-diff { color: rgb(159,39,59); font-style: italic;}
 .highlight-diff { 
@@ -864,7 +801,6 @@ const truncateHtml = (html, length) => {
   transition: all 0.3s ease; 
 }
 
-/* Utilities */
 .text-success { color: #28a745 !important; }
 .text-danger { color: #dc3545 !important; }
 .text-muted { color: #888 !important;}
@@ -874,13 +810,11 @@ const truncateHtml = (html, length) => {
 .mt-1 { margin-top: 0.25rem; }
 .mt-3 { margin-top: 1rem; }
 
-/* Loading state */
 .empty-state { text-align: center; padding: 50px 0; color: #666;}
 .compare-table-skeleton {
   padding: 24px 0;
 }
 
-/* Extra button styles to sync with Home */
 .editorial-btn-outline {
   background: transparent !important;
   color: #9f273b !important;
@@ -909,9 +843,6 @@ const truncateHtml = (html, length) => {
   .ms-md-3 { margin-left: 1rem; }
 }
 
-/* ==========================================
-   CSS POPUP CHỌN SẢN PHẨM SO SÁNH
-========================================== */
 .compare-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
 .compare-modal { background: #fff; border-radius: 12px; width: 90%; max-width: 800px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
 

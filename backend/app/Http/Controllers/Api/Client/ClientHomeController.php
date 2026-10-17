@@ -20,8 +20,7 @@ class ClientHomeController extends Controller
     public function index()
     {
         try {
-            // LẤY DỮ LIỆU TỪ CACHE
-            $data = Cache::remember('sora_home_data_v5', 3600, function () {
+            $data = Cache::remember('sora_home_data_v6', 3600, function () {
                 $result = [
                     'banners' => [],
                     'coupons' => [],
@@ -33,9 +32,19 @@ class ClientHomeController extends Controller
                     'news' => []
                 ];
 
-                // Banners query moved outside of cache to ensure real-time scheduling
+                $now = now();
+                $result['banners'] = Banner::query()->where('status', 'active')
+                    ->where(function ($q) use ($now) {
+                        $q->whereNull('start_date')
+                            ->orWhere('start_date', '<=', $now);
+                    })
+                    ->where(function ($q) use ($now) {
+                        $q->whereNull('end_date')
+                            ->orWhere('end_date', '>=', $now);
+                    })
+                    ->orderBy('sort_order', 'asc')
+                    ->get()->toArray();
 
-                // 2. Lấy Coupons
                 $result['coupons'] = Coupon::where('status', 'active')
                     ->whereNull('user_id')
                     ->where(function ($q) {
@@ -52,19 +61,21 @@ class ClientHomeController extends Controller
                         ];
                     })->toArray();
 
-                // 3. Lấy Danh mục
                 $result['categories'] = Category::where('status', 'active')
                     ->select('id', 'name', 'slug', 'thumbnail as image')
                     ->orderBy('sort_order', 'asc')
                     ->take(6)
                     ->get()->toArray();
 
-                // 4. Lấy Sản phẩm
                 $result['products'] = Product::where('status', 'published')
                     ->select('id', 'name', 'slug', 'thumbnail_image', 'base_price', 'promotional_price', 'review_count', 'rating_avg', 'created_at')
                     ->withCount('reviews')
                     ->withAvg('reviews', 'rating')
                     ->withSum('variants', 'stock_quantity')
+                    ->with(['variants' => function($q) {
+                        $q->select('id', 'product_id', 'image_url')->whereNotNull('image_url')->where('image_url', '!=', '');
+                    }])
+                    ->having('variants_sum_stock_quantity', '>', 0)
                     ->orderBy('is_featured', 'desc')
                     ->orderBy('id', 'desc')
                     ->take(8)
@@ -78,7 +89,6 @@ class ClientHomeController extends Controller
                         return $arr;
                     })->toArray();
 
-                // 5. Lấy Combos
                 $yesterday = Carbon::now()->subDay();
                 $combosList = Combo::with([
                     'items.product' => function ($q) {
@@ -134,13 +144,11 @@ class ClientHomeController extends Controller
                     ];
                 })->toArray();
 
-                // 6. Lấy Hạng hội viên
                 $result['tiers'] = MembershipTier::where('min_spent', '>', 0)
                     ->orderBy('min_spent', 'asc')
                     ->take(3)
                     ->get()->toArray();
 
-                // 7. LẤY CHÂN DUNG SORA
                 try {
                     $result['galleries'] = CustomerGallery::where('is_active', 1)
                         ->orderBy('sort_order', 'asc')
@@ -150,7 +158,6 @@ class ClientHomeController extends Controller
                     $result['galleries'] = [];
                 }
 
-                // 8. Lấy tin tức
                 try {
                     $result['news'] = News::where('status', 'published')
                         ->orderBy('created_at', 'desc')
@@ -162,20 +169,6 @@ class ClientHomeController extends Controller
 
                 return $result;
             });
-
-            // 1. Lấy Banners (Tách khỏi cache để kiểm tra start_date/end_date theo thời gian thực)
-            $now = now();
-            $data['banners'] = Banner::query()->where('status', 'active')
-                ->where(function ($q) use ($now) {
-                    $q->whereNull('start_date')
-                        ->orWhere('start_date', '<=', $now);
-                })
-                ->where(function ($q) use ($now) {
-                    $q->whereNull('end_date')
-                        ->orWhere('end_date', '>=', $now);
-                })
-                ->orderBy('sort_order', 'asc')
-                ->get()->toArray();
 
             return response()->json([
                 'success' => true,

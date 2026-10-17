@@ -1,5 +1,5 @@
 <template>
-  <div class="address-book-shell p-4 p-md-5 rounded-4">
+  <div class="bg-white p-4 p-md-5 shadow-sm border border-light rounded-3">
     
     <div class="address-book-header d-flex justify-content-between align-items-end mb-4 pb-3">
       <div>
@@ -11,7 +11,7 @@
       </button>
     </div>
 
-    <!-- DANH SÁCH ĐỊA CHỈ -->
+
     <div v-if="!showAddressForm">
       <AddressBookSkeleton v-if="isLoading" />
 
@@ -26,46 +26,48 @@
 
       <div v-else class="row g-3">
         <div v-for="addr in addresses" :key="addr.id" class="col-12">
-          <div class="address-card p-4 position-relative rounded-4 transition-all hover-shadow" :class="{ 'is-default': addr.is_default }">
-            <div class="row align-items-center">
-              <div class="col-md-8 col-lg-9">
-                <h5 class="font-serif text-dark mb-2 d-flex align-items-center fw-bold">
+          <div class="address-card position-relative rounded-4 transition-all hover-shadow border bg-white" :class="addr.is_default ? 'border-main' : 'border-light'">
+            <div class="p-4 pb-3">
+              <div class="d-flex align-items-center mb-2">
+                <h5 class="font-serif text-dark mb-0 fw-bold">
                   {{ addr.customer_name }} 
                   <span class="text-muted mx-2 fw-light fw-normal">|</span> 
                   <span class="text-secondary fw-normal fs-6">{{ addr.customer_phone }}</span>
                 </h5>
-                <p class="text-secondary mb-1">{{ addr.shipping_address }}</p>
-                <p class="text-secondary mb-0 fw-light">{{ [addr.ward, addr.district, addr.city].filter(Boolean).join(', ') }}</p>
+                <span v-if="addr.is_default" class="badge bg-main text-white ms-3 px-2 py-1 fw-normal" style="font-size: 0.75rem;">Mặc Định</span>
               </div>
-              
-              <div class="address-card-actions col-md-4 col-lg-3 d-flex flex-column justify-content-center align-items-md-end mt-3 mt-md-0 border-md-start ps-md-4">
-                <span v-if="addr.is_default" class="address-default-badge align-self-md-end mb-3 px-3 py-2 fw-medium tracking-wide">Mặc Định</span>
-                <div class="d-flex flex-wrap gap-2 mb-2">
-                  <button type="button" @click="openEditForm(addr)" class="address-text-btn address-text-btn--edit">Cập nhật</button>
-                  <button type="button" @click="confirmDelete(addr.id)" class="address-text-btn address-text-btn--delete">Xóa</button>
-                </div>
-                <button v-if="!addr.is_default" @click="setDefault(addr.id)" class="address-outline-btn mt-2 w-100">Làm mặc định</button>
-              </div>
+              <p class="text-secondary mb-1">{{ addr.shipping_address }}</p>
+              <p class="text-secondary mb-0 fw-light">{{ [addr.ward, addr.district, addr.city].filter(Boolean).join(', ') }}</p>
+            </div>
+            
+            <div class="border-top px-4 py-3 d-flex justify-content-end gap-2 bg-light bg-opacity-25 rounded-bottom-4">
+              <button type="button" @click="openEditForm(addr)" class="address-outline-btn address-card-action-btn">Cập nhật</button>
+              <button type="button" @click="confirmDelete(addr.id)" class="address-outline-btn address-card-action-btn">Xóa</button>
+              <button v-if="!addr.is_default" @click="setDefault(addr.id)" class="address-primary-btn ms-2 address-card-action-btn">Thiết lập mặc định</button>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- FORM THÊM / SỬA ĐỊA CHỈ -->
+
     <div v-if="showAddressForm" class="address-form-panel">
-      <h4 class="font-serif text-main mb-4">{{ isEditing ? 'Cập Nhật Địa Chỉ' : 'Thêm Địa Chỉ Mới' }}</h4>
+      <h4 class="font-serif text-main mb-4"><i class="bi bi-geo-alt-fill me-2"></i>{{ isEditing ? 'Cập Nhật Địa Chỉ' : 'Thêm Địa Chỉ Mới' }}</h4>
       <form @submit.prevent="saveAddress">
         <div class="row g-4 mb-4">
           <div class="col-md-6">
-            <label class="form-label text-secondary small fw-medium">Họ và tên người nhận <span class="text-danger">*</span></label>
-            <input type="text" class="form-control custom-input bg-white" :class="{'is-invalid': errs.customer_name}" v-model="addrForm.customer_name" @blur="validateField('customer_name')" required placeholder="Nhập họ tên">
-            <div v-if="errs.customer_name" class="invalid-feedback">{{ errs.customer_name }}</div>
+            <div class="form-floating position-relative">
+              <input type="text" class="form-control fw-medium profile-floating-input" :class="{'is-invalid': errs.customer_name}" id="addrName" v-model="addrForm.customer_name" @blur="validateField('customer_name')" required placeholder="Họ và tên">
+              <label for="addrName" class="text-secondary"><i class="bi bi-person me-1"></i>Họ và tên người nhận</label>
+            </div>
+            <div v-if="errs.customer_name" class="invalid-feedback d-block ms-1 mt-1">{{ errs.customer_name }}</div>
           </div>
           <div class="col-md-6">
-            <label class="form-label text-secondary small fw-medium">Số điện thoại <span class="text-danger">*</span></label>
-            <input type="tel" class="form-control custom-input bg-white" :class="{'is-invalid': errs.customer_phone}" v-model="addrForm.customer_phone" @input="addrForm.customer_phone = addrForm.customer_phone.replace(/\D/g, '')" @blur="validateField('customer_phone')" required placeholder="Nhập số điện thoại">
-            <div v-if="errs.customer_phone" class="invalid-feedback">{{ errs.customer_phone }}</div>
+            <div class="form-floating position-relative">
+              <input type="tel" class="form-control fw-medium profile-floating-input" :class="{'is-invalid': errs.customer_phone}" id="addrPhone" v-model="addrForm.customer_phone" @input="addrForm.customer_phone = addrForm.customer_phone.replace(/\D/g, '')" @blur="validateField('customer_phone')" required placeholder="Số điện thoại">
+              <label for="addrPhone" class="text-secondary"><i class="bi bi-telephone me-1"></i>Số điện thoại</label>
+            </div>
+            <div v-if="errs.customer_phone" class="invalid-feedback d-block ms-1 mt-1">{{ errs.customer_phone }}</div>
           </div>
         </div>
 
@@ -78,31 +80,33 @@
               v-model:ward="addrForm.ward"
               :address-text="addrForm.shipping_address"
               :required="true"
-              input-class="custom-input bg-white"
-              label-class="text-secondary small fw-medium"
+              input-class="custom-input fw-medium py-3 bg-white"
+              label-class="text-secondary fw-medium mb-2"
               :invalid-province="Boolean(errs.city)"
               :invalid-district="Boolean(errs.district)"
               :invalid-ward="Boolean(errs.ward)"
               @change="handleAddressPickerChange"
             />
-            <div v-if="errs.city || errs.district || errs.ward" class="invalid-feedback d-block mt-2">
+            <div v-if="errs.city || errs.district || errs.ward" class="invalid-feedback d-block mt-2 ms-1">
               {{ errs.city || errs.district || errs.ward }}
             </div>
           </div>
         </div>
 
         <div class="mb-4">
-          <div class="d-flex justify-content-between align-items-end mb-2">
-            <label class="form-label text-secondary small fw-medium mb-0">Địa chỉ cụ thể <span class="text-danger">*</span></label>
-            <button type="button" class="address-secondary-btn d-flex align-items-center gap-2" @click="getCurrentLocation" :disabled="isLocating">
-              <span v-if="isLocating" class="spinner-border spinner-border-sm"></span>
+          <div class="d-flex justify-content-end mb-2">
+            <button type="button" class="btn btn-sm btn-outline-main d-flex align-items-center gap-1 rounded-pill px-3" @click="getCurrentLocation" :disabled="isLocating">
+              <AdminLoadingSpinner v-if="isLocating" size="16" />
               <i v-else class="bi bi-geo-alt"></i> Lấy định vị hiện tại
             </button>
           </div>
-          <input type="text" class="form-control custom-input bg-white" :class="{'is-invalid': errs.shipping_address}" v-model="addrForm.shipping_address" @blur="validateField('shipping_address')" required placeholder="Số nhà, tên tòa nhà, tên đường...">
-          <div v-if="errs.shipping_address" class="invalid-feedback">{{ errs.shipping_address }}</div>
+          <div class="form-floating position-relative">
+            <input type="text" class="form-control fw-medium profile-floating-input" :class="{'is-invalid': errs.shipping_address}" id="addrSpecific" v-model="addrForm.shipping_address" @blur="validateField('shipping_address')" required placeholder="Số nhà, tên tòa nhà, tên đường...">
+            <label for="addrSpecific" class="text-secondary"><i class="bi bi-house me-1"></i>Địa chỉ cụ thể</label>
+          </div>
+          <div v-if="errs.shipping_address" class="invalid-feedback d-block ms-1 mt-1">{{ errs.shipping_address }}</div>
           
-          <div v-if="mapUrl" class="mt-3 rounded overflow-hidden border shadow-sm">
+          <div v-if="mapUrl" class="mt-3 rounded-4 overflow-hidden border border-light shadow-sm">
             <iframe :src="mapUrl" width="100%" height="250" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
           </div>
         </div>
@@ -114,7 +118,7 @@
 
         <div class="address-form-actions d-flex flex-wrap gap-3">
           <button type="submit" class="address-primary-btn" :disabled="isSaving">
-            <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span>Hoàn Thành
+            <AdminLoadingSpinner v-if="isSaving" class="me-2" size="16" />Hoàn Thành
           </button>
           <button type="button" @click="closeForm" class="address-outline-btn">Trở Lại</button>
         </div>
@@ -136,26 +140,20 @@ const props = defineProps({
   userPhone: { type: String, default: '' }
 });
 
+import Toast from '@/utils/toastConfig';
+
 const soraAlert = createSoraAlert({
   customClass: { confirmButton: 'px-4 py-2 mx-2 rounded-0 shadow-sm fw-bold text-uppercase' }
 });
 
 const showToast = (message, type = 'success') => {
-  soraAlert.fire({
+  Toast.fire({
     icon: type,
-    title:
-type === 'success'
-? 'Thành Công!'
-: type === 'warning'
-? 'Lưu Ý'
-: 'Có Lỗi Xảy Ra!',
-    text: message,
-    timer: type === 'success' ? 2500 : undefined,
-    showConfirmButton: type !== 'success'
+    title: message
   });
 };
 
-// === STATE ===
+
 const addresses = ref([]);
 const isLoading = ref(false);
 const showAddressForm = ref(false);
@@ -196,7 +194,7 @@ const fetchAddresses = async () => {
   }
 };
 
-// === FORM OPEN / CLOSE ===
+
 const openAddForm = () => {
   isEditing.value = false;
   addrForm.value = {
@@ -229,7 +227,7 @@ const closeForm = () => {
   showAddressForm.value = false;
 };
 
-// === VALIDATION ===
+
 const validateField = (field) => {
   const v = addrForm.value;
   if (field === 'customer_name') {
@@ -318,7 +316,7 @@ const getCurrentLocation = () => {
 
 
       const provinceName = compound.province || compound.city || '';
-      // Goong có thể trả về district với nhiều key khác nhau
+
       const districtName = compound.district || compound.district_name || '';
       const wardName = compound.commune || compound.ward || compound.commune_name || '';
       const resolvedAddress = await addressPickerRef.value?.resolveAddress({
@@ -330,7 +328,7 @@ const getCurrentLocation = () => {
 
 
       addrForm.value.city = resolvedAddress?.province?.name || provinceName || addrForm.value.city;
-      // Ưu tiên kết quả đã resolve; nếu không match được thì dùng tên raw từ Goong để user thấy và chọn lại
+
       addrForm.value.district = resolvedAddress?.district?.name || districtName || addrForm.value.district;
       addrForm.value.ward = resolvedAddress?.ward?.name || wardName || addrForm.value.ward;
       addressHasDistrictLevel.value = Boolean(resolvedAddress?.hasDistrictLevel);
@@ -359,7 +357,7 @@ const getCurrentLocation = () => {
   }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
 };
 
-// === SAVE ===
+
 const saveAddress = async () => {
   ['customer_name','customer_phone','shipping_address','city','district','ward'].forEach(validateField);
   if (Object.values(errs.value).some(e => e !== '')) return;
@@ -385,7 +383,7 @@ const saveAddress = async () => {
   }
 };
 
-// === DELETE ===
+
 const confirmDelete = async (id) => {
   soraAlert.fire({
     title: 'Xóa Địa Chỉ?',
@@ -409,7 +407,7 @@ const confirmDelete = async (id) => {
   });
 };
 
-// === SET DEFAULT ===
+
 const setDefault = async (id) => {
   try {
     const res = await clientApiClient.put(`/client/profile/addresses/${id}/default`, {});
@@ -448,11 +446,7 @@ onMounted(() => {
 .custom-input:focus { border-color: #9f273b; box-shadow: 0 0 0 0.2rem rgba(159,39,59,0.15); outline: none; }
 select.custom-input { padding-right: 2.5rem; }
 
-.address-book-shell {
-  background: linear-gradient(145deg, #fffdf9 0%, #faf4ed 100%);
-  border: 1px solid rgba(159, 39, 59, 0.16);
-  box-shadow: 0 18px 45px rgba(77, 39, 28, 0.08);
-}
+
 
 .address-book-header {
   border-bottom: 1px solid rgba(159, 39, 59, 0.14);
@@ -543,18 +537,35 @@ select.custom-input { padding-right: 2.5rem; }
   box-shadow: 0 8px 18px rgba(159, 39, 59, 0.16);
 }
 
-.address-secondary-btn {
-  min-height: 36px;
-  padding: 0.55rem 0.9rem;
-  color: #6f5b42;
-  background: #fffaf0;
-  border: 1px solid rgba(231, 206, 125, 0.9);
+.custom-checkbox .form-check-input:checked {
+  background-color: #9f273b;
+  border-color: #9f273b;
 }
 
-.address-secondary-btn:hover:not(:disabled) {
-  color: #7b1d2d;
-  background: #f9efd4;
-  border-color: #d4af37;
+.profile-floating-input:focus {
+  border-color: #9f273b;
+  box-shadow: 0 0 0 0.2rem rgba(159, 39, 59, 0.15);
+}
+
+.form-floating > label {
+  transition: opacity 0.25s ease-in-out, transform 0.25s ease-in-out !important;
+}
+
+.btn-outline-main {
+  color: #9f273b;
+  border-color: #9f273b;
+  background-color: transparent;
+  transition: all 0.2s;
+}
+.btn-outline-main:hover {
+  background-color: rgba(159, 39, 59, 0.05);
+  color: #9f273b;
+}
+
+.address-secondary-btn {
+  padding: 0.4rem 0.8rem;
+  min-height: 32px;
+  font-size: 0.7rem;
 }
 
 .address-primary-btn:disabled,
@@ -567,17 +578,6 @@ select.custom-input { padding-right: 2.5rem; }
 }
 
 .address-text-btn {
-  min-height: 40px;
-  padding: 0.55rem 0.9rem;
-  border: 1px solid;
-  border-radius: 7px;
-  background: #fffaf0;
-  font-family: 'Oswald', sans-serif;
-  font-size: 0.74rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  line-height: 1.2;
-  text-transform: uppercase;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -628,11 +628,15 @@ select.custom-input { padding-right: 2.5rem; }
   padding: 0.7rem 1rem;
 }
 
-@media (max-width: 767.98px) {
-  .address-book-shell {
-    padding: 1.25rem !important;
-  }
+.address-card-action-btn {
+  padding: 0.4rem 1.25rem !important;
+  font-size: 0.75rem !important;
+  min-height: 32px !important;
+  border-radius: 6px !important;
+  font-weight: 500 !important;
+}
 
+@media (max-width: 767.98px) {
   .address-book-header {
     align-items: flex-start !important;
     flex-direction: column;
@@ -654,13 +658,7 @@ select.custom-input { padding-right: 2.5rem; }
     margin-bottom: 0.85rem !important;
   }
 
-  .address-card-actions {
-    align-items: stretch !important;
-    border-top: 1px solid rgba(159, 39, 59, 0.13);
-    border-left: 0 !important;
-    margin-top: 1.25rem !important;
-    padding: 1rem 0 0 !important;
-  }
+
 
   .address-form-actions > button {
     flex: 1 1 100%;

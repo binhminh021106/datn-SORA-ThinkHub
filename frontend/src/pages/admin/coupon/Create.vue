@@ -15,12 +15,12 @@
 
             <form @submit.prevent="saveCoupon" autocomplete="off">
                 <div class="row g-4">
-                    <!-- Cột Trái: Preview Coupon & Trạng thái -->
+
                     <div class="col-md-4 col-lg-3">
                         <div class="card border-0 shadow-sm rounded-4 text-center p-4 h-100 position-sticky" style="top: 20px;">
                             <label class="form-label fw-bold mb-3 text-brand">Demo Hiển Thị</label>
                             
-                            <!-- Thẻ Ticket mô phỏng -->
+
                             <div class="ticket-preview mb-4 bg-light rounded-4 border border-dashed border-2 border-brand p-3 position-relative overflow-hidden">
                                 <div class="bg-brand text-white fw-bold py-1 px-3 position-absolute top-0 start-0 w-100 small" style="letter-spacing: 1px;">VOUCHER</div>
                                 <div class="mt-4">
@@ -39,7 +39,7 @@
                         </div>
                     </div>
 
-                    <!-- Cột Phải: Thông tin chi tiết -->
+
                     <div class="col-md-8 col-lg-9">
                         <div class="card border-0 shadow-sm rounded-4 mb-4">
                             <div class="card-body p-4">
@@ -144,7 +144,7 @@
                                         class="btn btn-light me-2 px-4 shadow-sm fw-bold">Hủy</router-link>
                                     <button type="submit" class="btn btn-brand btn-brand-solid px-5 fw-bold shadow-sm"
                                         :disabled="isSaving">
-                                        <span v-if="isSaving" class="spinner-border spinner-border-sm me-2"></span> 
+                                        <AdminLoadingSpinner v-if="isSaving" class="me-2" size="16" /> 
                                         {{ isSaving ? 'ĐANG LƯU...' : 'XÁC NHẬN THÊM' }}
                                     </button>
                                 </div>
@@ -166,7 +166,7 @@ import { useQueryClient } from '@tanstack/vue-query';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
-// Khai báo Component name bằng multi-word để fix cảnh báo ESLint
+// Component name
 defineOptions({
     name: 'CouponCreate'
 });
@@ -234,7 +234,7 @@ const saveCoupon = async () => {
         router.push({ name: 'admin-coupons' });
         
     } catch (err) { 
-        console.error('Lỗi khi thêm coupon:', err); // FIX: Sử dụng biến err để tránh cảnh báo ESLint
+        console.error('Lỗi khi thêm coupon:', err);
         
         if (err.response && err.response.status === 422) {
             errors.value = err.response.data.errors;
