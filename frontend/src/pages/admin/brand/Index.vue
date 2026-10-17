@@ -1,11 +1,7 @@
 <template>
   <div class="brand-index-wrapper">
-    <div v-if="isPageLoading" class="d-flex flex-column justify-content-center align-items-center w-100"
-      style="min-height: 70vh;">
-      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ
-        liệu thương hiệu...</p>
-    </div>
+    <AdminShimmerLoading v-if="isPageLoading" text="Đang tải dữ
+        liệu thương hiệu..." />
 
     <div class="container-fluid py-4" v-else>
       <div class="row mb-3 align-items-center">
@@ -284,6 +280,7 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, onMounted, computed, onBeforeUnmount, watch, watchEffect } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
@@ -691,24 +688,6 @@ const forceDeleteBrand = (brand) => {
   background-color: #e6f5f2 !important;
   color: #009981 !important;
   border-color: #009981 !important;
-}
-
-.logo-shimmer {
-  font-size: 3.5rem;
-  font-weight: 900;
-  letter-spacing: -1.5px;
-  background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%);
-  background-size: 200% auto;
-  color: transparent;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: shine 1.5s linear infinite;
-}
-
-@keyframes shine {
-  to {
-    background-position: 200% center;
-  }
 }
 
 .bg-brand {

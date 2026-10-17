@@ -3,11 +3,7 @@
 
     <div v-if="isFirstVisit && isLoading"
       class="d-flex flex-column justify-content-center align-items-center w-100 shimmer-wrapper">
-      <div class="logo-shimmer-container text-center">
-        <h1 class="logo-shimmer mb-2">ThinkHub</h1>
-        <p class="loading-text text-muted fw-bold small text-uppercase tracking-widest mt-2"
-          style="letter-spacing: 3px; font-size: 0.75rem;">Đang tải dữ liệu...</p>
-      </div>
+      <AdminShimmerLoading text="Đang tải dữ liệu..." />
     </div>
 
     <div class="container-fluid py-4 px-4" v-show="!isFirstVisit || !isLoading">
@@ -570,6 +566,7 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, computed, watch, nextTick, onMounted, onActivated, onUnmounted } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
@@ -1378,18 +1375,6 @@ const getCheckoutStatusBadgeClass = (status) => ({
   align-items: center;
   justify-content: center;
   z-index: 9999;
-}
-
-.logo-shimmer {
-  font-size: 4rem;
-  font-weight: 900;
-  letter-spacing: -2px;
-  background: linear-gradient(90deg, #12d8a0 0%, #009981 100%);
-  background-size: 200% auto;
-  color: transparent;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: shine-logo 2s linear infinite;
 }
 
 .loading-text {

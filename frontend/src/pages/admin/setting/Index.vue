@@ -1,9 +1,6 @@
 <template>
   <div class="settings-page">
-    <div v-if="(isLoadingGallery || settingsStore.isLoading) && !isInitialized" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
-      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải cấu hình...</p>
-    </div>
+    <AdminShimmerLoading v-if="(isLoadingGallery || settingsStore.isLoading) && !isInitialized" text="Đang tải cấu hình..." />
 
     <div class="settings-wrapper min-vh-100 p-3 p-xl-4" v-else>
       <div class="d-flex justify-content-between align-items-center mb-3">
@@ -395,6 +392,7 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, onMounted, nextTick, computed, watch } from 'vue';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
@@ -805,23 +803,6 @@ const saveHomeStatsSettings = async () => {
 </script>
 
 <style scoped>
-.logo-shimmer {
-  font-size: 3.5rem;
-  font-weight: 900;
-  letter-spacing: -1.5px;
-  background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%);
-  background-size: 200% auto;
-  color: transparent;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: shine 1.5s linear infinite;
-}
-@keyframes shine {
-  to {
-    background-position: 200% center;
-  }
-}
-
 .hover-bg-light:hover { background-color: #f8f9fa !important; }
 .space-y-2 > :not([hidden]) ~ :not([hidden]) { margin-top: 0.5rem; }
 .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 1.5rem; }

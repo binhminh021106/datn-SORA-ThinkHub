@@ -524,6 +524,7 @@
 </template>
 
 <script setup>
+import { useSettingsStore } from '@/stores/settingsStore';
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Toast from '@/utils/toastConfig';
@@ -753,7 +754,19 @@ const getImageUrl = (path) => {
     return getStorageUrl(path, defaultPlaceholder);
 };
 
-const handleImageError = (e) => { e.target.src = defaultPlaceholder; };
+const handleImageError = (e) => { 
+  let fallback = '/Sora-placeholder.png';
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_client_active) {
+          fallback = getStorageUrl(store.settings.placeholder_client_active);
+      }
+  } catch (err) {}
+  
+  if (e.target.src !== fallback) {
+      e.target.src = fallback;
+  }
+};
 
 const totalQuantity = computed(() => cartItems.value.reduce((sum, item) => sum + item.quantity, 0));
 const subTotal = computed(() => cartItems.value.reduce((sum, item) => sum + (item.quantity * getItemPrice(item)), 0));

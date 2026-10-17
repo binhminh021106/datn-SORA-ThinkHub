@@ -423,6 +423,7 @@
 </template>
 
 <script setup>
+import { useSettingsStore } from '@/stores/settingsStore';
 import { ref, shallowRef, onMounted, onUnmounted, reactive, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/vue-query';
@@ -566,7 +567,19 @@ const formatPrice = (price) => {
 
 const getImageUrl = (path) => getStorageUrl(path);
 
-const handleImageError = (e) => { e.target.src = '/Sora-placeholder.png'; };
+const handleImageError = (e) => { 
+  let fallback = '/Sora-placeholder.png';
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_client_active) {
+          fallback = getStorageUrl(store.settings.placeholder_client_active);
+      }
+  } catch (err) {}
+  
+  if (e.target.src !== fallback) {
+      e.target.src = fallback;
+  }
+};
 const handleHoverImageError = (e) => { e.target.style.display = 'none'; };
 const hasHoverImage = (product) => product.hover_image && product.hover_image !== product.thumbnail_image;
 

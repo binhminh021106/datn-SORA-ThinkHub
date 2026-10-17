@@ -285,6 +285,7 @@
 </template>
 
 <script setup>
+import { useSettingsStore } from '@/stores/settingsStore';
 import { ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/vue-query';
@@ -362,7 +363,19 @@ const soraAlert = createSoraAlert({
 const formatPrice = (v) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v || 0);
 const formatDate = (d) => d ? new Date(d).toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'N/A';
 const getImageUrl = (p) => getStorageUrl(p, defaultPlaceholder);
-const handleImageError = (e) => { e.target.src = defaultPlaceholder; };
+const handleImageError = (e) => { 
+  let fallback = '/Sora-placeholder.png';
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_client_active) {
+          fallback = getStorageUrl(store.settings.placeholder_client_active);
+      }
+  } catch (err) {}
+  
+  if (e.target.src !== fallback) {
+      e.target.src = fallback;
+  }
+};
 
 const parseAttributes = (attr) => {
     if (typeof attr === 'object' && attr !== null) return attr;

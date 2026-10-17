@@ -1,10 +1,7 @@
 <template>
   <div class="tier-edit-wrapper ">
 
-    <div v-if="!isLoaded" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
-      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ liệu...</p>
-    </div>
+    <AdminShimmerLoading v-if="!isLoaded" text="Đang tải dữ liệu..." />
 
     <div class="container-fluid py-4" v-else>
       <div class="row mb-4 align-items-center">
@@ -115,6 +112,7 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
@@ -239,8 +237,6 @@ const updateTier = () => {
 </script>
 
 <style scoped>
-.logo-shimmer { font-size: 3.5rem; font-weight: 900; letter-spacing: -1.5px; background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%); background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text; animation: shine 1.5s linear infinite; }
-@keyframes shine { to { background-position: 200% center; } }
 .bg-brand { background-color: #009981 !important; } .text-brand { color: #009981 !important; }
 .btn-brand { background-color: #009981; border: none; color: white; transition: 0.2s; } 
 .btn-brand:hover { background-color: #007a67; color: white; }

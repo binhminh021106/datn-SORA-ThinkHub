@@ -50,6 +50,8 @@ class AdminSettingController extends Controller
             'footer_socials',
             'footer_trust_items',
             'home_stats',
+            'placeholder_client_active',
+            'placeholder_admin_active',
         ];
 
         $settings = Setting::query()
@@ -206,5 +208,96 @@ class AdminSettingController extends Controller
         }
 
         return response()->json(['status' => 'error', 'message' => 'File not found or invalid URL'], 404);
+    }
+
+    public function getPlaceholders()
+    {
+        $directory = 'settings/placeholders';
+        if (!Storage::disk('public')->exists($directory)) {
+            Storage::disk('public')->makeDirectory($directory);
+        }
+
+        $files = Storage::disk('public')->files($directory);
+
+        usort($files, function($a, $b) {
+            return Storage::disk('public')->lastModified($b) - Storage::disk('public')->lastModified($a);
+        });
+
+        $urls = array_map(function($file) {
+            return url('storage/' . $file);
+        }, $files);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $urls
+        ]);
+    }
+
+    public function uploadPlaceholder(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'image' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 'error', 'message' => $validator->errors()->first()], 422);
+        }
+
+        $value = $request->image;
+        if (str_starts_with($value, 'data:image')) {
+            $image_parts = explode(";base64,", $value);
+            if (count($image_parts) == 2) {
+                $image_type_aux = explode("image/", $image_parts[0]);
+                $image_type = $image_type_aux[1] ?? 'png';
+                $image_base64 = base64_decode($image_parts[1]);
+                
+                $fileName = 'settings/placeholders/placeholder_' . time() . '.' . $image_type;
+                Storage::disk('public')->put($fileName, $image_base64);
+                
+                return response()->json([
+                    'status' => 'success',
+                    'url' => env('APP_URL') . '/storage/' . $fileName,
+                    'path' => $fileName
+                ]);
+            }
+        }
+
+        return response()->json(['status' => 'error', 'message' => 'Invalid image data'], 400);
+    }
+
+    public function deletePlaceholders(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'urls' => 'required|array',
+            'urls.*' => 'string'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => 'error', 'message' => $validator->errors()->first()], 422);
+        }
+
+        $appUrl = env('APP_URL') . '/storage/';
+        $deletedCount = 0;
+        
+        foreach ($request->urls as $url) {
+            if (str_starts_with($url, $appUrl)) {
+                $path = str_replace($appUrl, '', $url);
+                
+                if (str_contains($path, '..')) {
+                    continue; // Skip invalid paths
+                }
+
+                if (Storage::disk('public')->exists($path)) {
+                    Storage::disk('public')->delete($path);
+                    $deletedCount++;
+                }
+            }
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Đã xoá $deletedCount ảnh thành công",
+            'deleted_count' => $deletedCount
+        ]);
     }
 }

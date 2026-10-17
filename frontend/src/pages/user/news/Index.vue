@@ -210,6 +210,8 @@
 </template>
 
 <script setup>
+import { getStorageUrl } from '@/utils/env';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 import { useQuery, keepPreviousData } from '@tanstack/vue-query';
@@ -312,7 +314,19 @@ const getFullImage = (path) => {
     return getStorageUrl(path, soraPlaceholder);
 };
 
-const handleImageError = (e) => { e.target.src = soraPlaceholder; };
+const handleImageError = (e) => { 
+  let fallback = '/Sora-placeholder.png';
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_client_active) {
+          fallback = getStorageUrl(store.settings.placeholder_client_active);
+      }
+  } catch (err) {}
+  
+  if (e.target.src !== fallback) {
+      e.target.src = fallback;
+  }
+};
 
 const formatDate = (dateString) => {
     if (!dateString) return '';

@@ -365,17 +365,15 @@
       </form>
     </div>
 
-    <div v-else class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
-      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Chuẩn bị không
-        gian cấu hình...</p>
-    </div>
+    <AdminShimmerLoading v-else text="Chuẩn bị không
+        gian cấu hình..." />
     <ImageCropperModal :show="showCropper" :image-url="cropperUrl" :aspect-ratio="NaN" :allow-ratio-change="true"
       :max-size-kb="200" title="Cắt ảnh Combo" @crop="handleCrop" @close="closeCropper" />
   </div>
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
@@ -996,21 +994,4 @@ watch(isPageLoading, (loading) => {
   background: #e6f5f2;
 }
 
-.logo-shimmer {
-  font-size: 3.5rem;
-  font-weight: 900;
-  letter-spacing: -1.5px;
-  background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%);
-  background-size: 200% auto;
-  color: transparent;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: shine 1.5s linear infinite;
-}
-
-@keyframes shine {
-  to {
-    background-position: 200% center;
-  }
-}
 </style>

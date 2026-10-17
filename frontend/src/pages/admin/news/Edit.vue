@@ -1,10 +1,7 @@
 <template>
     <div class="news-edit-wrapper ">
 
-        <div v-if="isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
-            <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-            <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ liệu bài viết...</p>
-        </div>
+        <AdminShimmerLoading v-if="isFirstLoad" text="Đang tải dữ liệu bài viết..." />
 
         <div class="container-fluid py-4" v-else>
             <form @submit.prevent="handleSave" autocomplete="off">
@@ -157,6 +154,7 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, reactive, onMounted, watch, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
@@ -368,9 +366,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.logo-shimmer { font-size: 3.5rem; font-weight: 900; letter-spacing: -1.5px; background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%); background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text; animation: shine 1.5s linear infinite; }
-@keyframes shine { to { background-position: 200% center; } }
-
 .required::after { content: " *"; color: #dc3545; }
 .border-dashed { border-style: dashed !important; border-width: 2px !important; border-color: #dee2e6 !important; }
 

@@ -20,7 +20,9 @@ export const useSettingsStore = defineStore('settings', () => {
             { value: 90, suffix: '%', label: 'Khách hàng hài lòng' },
             { value: 15, suffix: '+', label: 'Bộ sưu tập nổi bật' },
             { value: 3, suffix: 'K+', label: 'Khoảnh khắc SORA' }
-        ]
+        ],
+        placeholder_client_active: '',
+        placeholder_admin_active: '',
     });
 
     const isLoading = ref(false);
@@ -35,6 +37,8 @@ export const useSettingsStore = defineStore('settings', () => {
                 
                 settings.value.site_logo = data.logo_header ? (data.logo_header.startsWith('http') || data.logo_header.startsWith('data:') ? data.logo_header : `${import.meta.env.VITE_URL}/storage/${data.logo_header}`) : defaultLogo;
                 settings.value.logo_footer = data.logo_footer ? (data.logo_footer.startsWith('http') || data.logo_footer.startsWith('data:') ? data.logo_footer : `${import.meta.env.VITE_URL}/storage/${data.logo_footer}`) : '';
+                settings.value.placeholder_client_active = data.placeholder_client_active ? (data.placeholder_client_active.startsWith('http') || data.placeholder_client_active.startsWith('data:') ? data.placeholder_client_active : `${import.meta.env.VITE_URL}/storage/${data.placeholder_client_active}`) : '';
+                settings.value.placeholder_admin_active = data.placeholder_admin_active ? (data.placeholder_admin_active.startsWith('http') || data.placeholder_admin_active.startsWith('data:') ? data.placeholder_admin_active : `${import.meta.env.VITE_URL}/storage/${data.placeholder_admin_active}`) : '';
                 settings.value.footer_brand_desc = data.footer_brand_desc || 'SORA mang đến những thiết kế trang sức tinh tế, tôn vinh vẻ đẹp đích thực và phong cách cá nhân của bạn. Mỗi chế tác là một tác phẩm nghệ thuật.';
                 settings.value.footer_copyright = data.footer_copyright || '© 2026 SORA JEWELRY. ALL RIGHTS RESERVED.';
                 settings.value.footer_address = data.footer_address || '123 Đường Ngọc Hồi, Hà Nội';

@@ -365,6 +365,8 @@
 </template>
 
 <script setup>
+import { getStorageUrl } from '@/utils/env';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
@@ -442,7 +444,19 @@ const getImageUrl = (path) => {
     return `${import.meta.env.VITE_STORAGE_URL}/${path}`;
 };
 
-const handleImageError = (e) => { e.target.src = defaultPlaceholder; };
+const handleImageError = (e) => { 
+  let fallback = '/Sora-placeholder.png';
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_client_active) {
+          fallback = getStorageUrl(store.settings.placeholder_client_active);
+      }
+  } catch (err) {}
+  
+  if (e.target.src !== fallback) {
+      e.target.src = fallback;
+  }
+};
 
 const goToProduct = (item) => {
     emit('close');

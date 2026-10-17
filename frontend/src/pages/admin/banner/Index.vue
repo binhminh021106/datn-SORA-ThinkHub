@@ -2,10 +2,7 @@
   <div class="banner-index-wrapper">
     
     <!-- Shimmer Loading -->
-    <div v-if="isLoading" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
-      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ liệu banner...</p>
-    </div>
+    <AdminShimmerLoading v-if="isLoading" text="Đang tải dữ liệu banner..." />
 
     <!-- Nội dung -->
     <div class="container-fluid py-4" v-else>
@@ -114,11 +111,11 @@
                     <div class="d-flex gap-2 align-items-center">
                       <!-- Fallback image -->
                       <div class="position-relative shadow-sm border rounded overflow-hidden bg-white cursor-pointer" style="width: 80px; height: 45px;" @click="openPreview(banner.image_desktop, 'image')">
-                        <img :src="getImageUrl(banner.image_desktop)" @error="handleImageError" class="w-100 h-100 object-fit-cover">
+                        <SoraImage :src="banner.image_desktop" class="w-100 h-100 object-fit-cover" />
                         <span class="position-absolute bottom-0 start-0 bg-dark text-white opacity-75 fw-bold" style="font-size: 0.55rem; padding: 1px 4px;">PC</span>
                       </div>
                       <div class="position-relative shadow-sm border rounded overflow-hidden bg-white cursor-pointer" style="width: 30px; height: 45px;" @click="openPreview(banner.image_mobile, 'image')">
-                        <img :src="getImageUrl(banner.image_mobile)" @error="handleImageError" class="w-100 h-100 object-fit-cover">
+                        <SoraImage :src="banner.image_mobile" class="w-100 h-100 object-fit-cover" />
                         <span class="position-absolute bottom-0 start-0 bg-dark text-white opacity-75 fw-bold" style="font-size: 0.55rem; padding: 1px 2px;">MB</span>
                       </div>
                       <div v-if="banner.video_url" class="position-relative shadow-sm border rounded overflow-hidden bg-dark d-flex align-items-center justify-content-center cursor-pointer" style="width: 60px; height: 45px;" title="Video Banner" @click="openPreview(banner.video_url, 'video')">
@@ -199,9 +196,11 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, computed, watch } from 'vue';
 import adminApiClient from '@/utils/adminApiClient.js';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
+import SoraImage from '@/components/ui/SoraImage.vue';
 import Swal from 'sweetalert2';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 import { getFullImage } from '@/composables/useUtilities';
@@ -460,9 +459,6 @@ useAdminRefreshListener((payload) => {
 </script>
 
 <style scoped>
-.logo-shimmer { font-size: 3.5rem; font-weight: 900; background: linear-gradient(120deg, #009981, #4dffdf, #009981); background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text; animation: shine 1.5s linear infinite; }
-@keyframes shine { to { background-position: 200% center; } }
-
 .bg-brand { background-color: #009981 !important; } 
 .text-brand { color: #009981 !important; }
 

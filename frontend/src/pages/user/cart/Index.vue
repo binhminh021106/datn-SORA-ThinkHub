@@ -207,6 +207,8 @@
 </template>
 
 <script setup>
+import { getStorageUrl } from '@/utils/env';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Toast from '@/utils/toastConfig';
@@ -290,8 +292,18 @@ const getImageUrl = (path) => {
   return `${import.meta.env.VITE_STORAGE_URL}/${path}`;
 };
 
-const handleImageError = (e) => {
-  e.target.src = defaultPlaceholder;
+const handleImageError = (e) => { 
+  let fallback = '/Sora-placeholder.png';
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_client_active) {
+          fallback = getStorageUrl(store.settings.placeholder_client_active);
+      }
+  } catch (err) {}
+  
+  if (e.target.src !== fallback) {
+      e.target.src = fallback;
+  }
 };
 
 const fetchCart = async (isBackground = false) => {

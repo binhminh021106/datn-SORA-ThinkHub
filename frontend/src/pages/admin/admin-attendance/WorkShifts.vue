@@ -2,10 +2,7 @@
   <div class="container-fluid py-4  page-container">
     
     <!-- Shimmer -->
-    <div v-if="isFirstVisit && isLoadingShifts" class="d-flex flex-column justify-content-center align-items-center w-100 shimmer-wrapper">
-      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải cài đặt chấm công...</p>
-    </div>
+    <AdminShimmerLoading v-if="isFirstVisit && isLoadingShifts" text="Đang tải cài đặt chấm công..." />
 
     <div v-show="!isFirstVisit || !isLoadingShifts">
 
@@ -684,6 +681,7 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { useQuery, useQueryClient } from '@tanstack/vue-query';
 import Swal from 'sweetalert2';
@@ -1200,11 +1198,9 @@ async function runAutoAssign() {
 .skeleton-line { background: linear-gradient(110deg, #ececec 8%, #f5f5f5 18%, #ececec 33%); background-size: 200% 100%; animation: 1.5s pulse linear infinite; }
 .skeleton-avatar { width: 32px; height: 32px; border-radius: 50%; background: #e2e8f0; animation: pulse 1.5s infinite; }
 .shimmer-wrapper { min-height: 60vh; }
-.logo-shimmer { font-size: 3.5rem; font-weight: 900; letter-spacing: -1.5px; background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%); background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text; animation: pulse 1.5s linear infinite; }
-
 .bg-emerald-light { background-color: #ecfdf5 !important; }
 .text-xs { font-size: 0.75rem !important; }
 .fs-xs { font-size: 0.825rem !important; }
 .shadow-xs { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
-@keyframes pulse { 0% { background-position-x: -200%; } 100% { background-position-x: 200%; } }
+100% { background-position-x: 200%; } }
 </style>

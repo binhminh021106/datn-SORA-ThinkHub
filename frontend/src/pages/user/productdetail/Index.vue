@@ -461,6 +461,8 @@
 </template>
 
 <script setup>
+import { getStorageUrl } from '@/utils/env';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuery } from '@tanstack/vue-query';
@@ -1161,7 +1163,7 @@ const addToCart = async () => {
 
 const goToShopWithBrand = (brandId) => {
   if (!brandId) return;
-  router.push({ path: `/shop/${shopSlug}`, query: { brand: brandId } }).catch(() => window.location.href = `/shop/${shopSlug}?brand=${brandId}`);
+  router.push({ path: `/shop/${shopSlug.value}`, query: { brand: brandId } }).catch(() => window.location.href = `/shop/${shopSlug.value}?brand=${brandId}`);
 };
 
 const changeRecTab = (tab) => {
@@ -1176,10 +1178,18 @@ const setMainImage = (url) => {
   mainImage.value = normalizeProductImage(url) || soraPlaceholder;
 };
 
-const handleImageError = (e) => {
-  const img = e?.target;
-  if (!img || img.src.endsWith(soraPlaceholder)) return;
-  img.src = soraPlaceholder;
+const handleImageError = (e) => { 
+  let fallback = '/Sora-placeholder.png';
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_client_active) {
+          fallback = getStorageUrl(store.settings.placeholder_client_active);
+      }
+  } catch (err) {}
+  
+  if (e.target.src !== fallback) {
+      e.target.src = fallback;
+  }
 };
 
 const handleMainImageError = (e) => {

@@ -86,6 +86,8 @@
 </template>
 
 <script setup>
+import { getStorageUrl } from '@/utils/env';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { ref, watch } from 'vue';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 import SoraListSkeleton from '@/components/ui/SoraListSkeleton.vue';
@@ -123,7 +125,17 @@ const getProductImage = (product) => {
 };
 
 const handleImageError = (e) => { 
-  e.target.src = defaultPlaceholder; 
+  let fallback = '/Sora-placeholder.png';
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_client_active) {
+          fallback = getStorageUrl(store.settings.placeholder_client_active);
+      }
+  } catch (err) {}
+  
+  if (e.target.src !== fallback) {
+      e.target.src = fallback;
+  }
 };
 
 const formatDate = (dateString) => {

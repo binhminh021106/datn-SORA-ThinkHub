@@ -735,9 +735,18 @@ const toggleWishlist = async (product) => {
   }
 };
 
-const handleImageError = (event) => {
-  event.target.onerror = null;
-  event.target.src = soraPlaceholder;
+const handleImageError = (e) => { 
+  let fallback = '/Sora-placeholder.png';
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_client_active) {
+          fallback = getStorageUrl(store.settings.placeholder_client_active);
+      }
+  } catch (err) {}
+  
+  if (e.target.src !== fallback) {
+      e.target.src = fallback;
+  }
 };
 
 const markHeroImageReady = (index = 0) => {

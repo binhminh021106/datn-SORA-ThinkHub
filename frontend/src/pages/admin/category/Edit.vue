@@ -141,10 +141,7 @@
                 </div>
             </form>
         </div>
-        <div v-else class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
-          <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-          <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ liệu...</p>
-        </div>
+        <AdminShimmerLoading v-else text="Đang tải dữ liệu..." />
     </div>
     <!-- CROPPER MODAL -->
     <ImageCropperModal
@@ -160,6 +157,8 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { ref, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
@@ -197,7 +196,18 @@ const getHeaders = () => ({
     'Authorization': `Bearer ${localStorage.getItem('admin_token')}` 
 });
 
-const handleImageError = (e) => { e.target.src = defaultImage; };
+const handleImageError = (e) => { 
+  let fallback = defaultImage;
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_admin_active) {
+          fallback = `${import.meta.env.VITE_URL}/storage/${store.settings.placeholder_admin_active}`;
+      }
+  } catch (err) {}
+  if (e.target.src !== fallback) {
+      e.target.src = fallback; 
+  }
+};
 
 // TANSTACK QUERY: Lấy thông tin cây danh mục hoạt động
 const { data: treeData } = useQuery({
@@ -396,8 +406,6 @@ const updateCategory = () => {
 </script>
 
 <style scoped>
-.logo-shimmer { font-size: 3.5rem; font-weight: 900; letter-spacing: -1.5px; background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%); background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text; animation: shine 1.5s linear infinite; }
-@keyframes shine { to { background-position: 200% center; } }
 .bg-brand { background-color: #009981 !important; }
 .text-brand { color: #009981 !important; }
 .btn-brand-solid { background-color: #009981 !important; color: white !important; transition: all 0.2s ease; border: none; }

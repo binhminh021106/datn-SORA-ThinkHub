@@ -2,10 +2,7 @@
   <div class="review-index-wrapper ">
     
 
-    <div v-if="isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
-      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải hệ thống đánh giá...</p>
-    </div>
+    <AdminShimmerLoading v-if="isFirstLoad" text="Đang tải hệ thống đánh giá..." />
 
     <div class="container-fluid py-4" v-else>
       <div class="row mb-3 align-items-center">
@@ -414,6 +411,7 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
@@ -825,9 +823,6 @@ onBeforeUnmount(() => {
 .custom-tab.active-tab { color: #009981 !important; border-bottom: 2px solid #009981 !important; }
 .tab-badge { font-size: 0.75rem; font-weight: 600; background-color: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6; transition: all 0.2s ease; }
 .active-badge { background-color: #e6f5f2 !important; color: #009981 !important; border-color: #009981 !important; }
-
-.logo-shimmer { font-size: 3.5rem; font-weight: 900; letter-spacing: -1.5px; background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%); background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text; animation: shine 1.5s linear infinite; }
-@keyframes shine { to { background-position: 200% center; } }
 
 .bg-brand { background-color: #009981 !important; } .text-brand { color: #009981 !important; } .border-brand { border-color: #009981 !important; }
 .btn-brand { background-color: #009981; border: none; transition: 0.2s; color: white;} .btn-brand:hover { background-color: #007a67; color: white;}

@@ -1,12 +1,8 @@
 <template>
   <div class="combo-index-wrapper ">
 
-    <div v-if="isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100"
-      style="min-height: 70vh;">
-      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải danh
-        sách Combo...</p>
-    </div>
+    <AdminShimmerLoading v-if="isFirstLoad" text="Đang tải danh
+        sách Combo..." />
 
     <div class="container-fluid py-4" v-else>
       <div class="row mb-3 align-items-center">
@@ -363,6 +359,7 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 import { useRouter } from 'vue-router';
@@ -678,24 +675,6 @@ onMounted(() => fetchData());
   background-color: #e6f5f2 !important;
   color: #009981 !important;
   border-color: #009981 !important;
-}
-
-.logo-shimmer {
-  font-size: 3.5rem;
-  font-weight: 900;
-  letter-spacing: -1.5px;
-  background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%);
-  background-size: 200% auto;
-  color: transparent;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: shine 1.5s linear infinite;
-}
-
-@keyframes shine {
-  to {
-    background-position: 200% center;
-  }
 }
 
 :deep(.combo-desc-content strong),

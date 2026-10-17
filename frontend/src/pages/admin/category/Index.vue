@@ -1,9 +1,6 @@
 <template>
   <div class="category-index-wrapper">
-    <div v-if="isLoading && isFirstLoad" class="d-flex flex-column justify-content-center align-items-center w-100" style="min-height: 70vh;">
-      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải danh mục...</p>
-    </div>
+    <AdminShimmerLoading v-if="isLoading" text="Đang tải danh mục..." />
 
     <div class="container-fluid py-4" v-else>
       <div class="row mb-3 align-items-center">
@@ -154,7 +151,7 @@
 
                   <td class="px-4 py-3">
                     <div class="d-flex align-items-center">
-                      <img :src="getImageUrl(cat.thumbnail)" @error="handleImageError" class="rounded-3 object-fit-cover me-3 border shadow-sm pe-none" style="width: 45px; height: 45px;">
+                      <SoraImage :src="cat.thumbnail" class="rounded-3 object-fit-cover me-3 border shadow-sm pe-none" style="width: 45px; height: 45px;" />
                       <div class="overflow-hidden">
                         <h6 class="mb-0 fw-bold text-dark text-truncate" :title="cat.name">{{ cat.name }}</h6>
                         <small class="text-muted d-block mt-1 text-truncate"><i class="bi bi-link-45deg"></i> {{ cat.slug }}</small>
@@ -237,7 +234,7 @@
           <div class="modal-body p-4" v-if="selectedCategory">
             <div class="row">
               <div class="col-md-5 text-center border-end mb-4 mb-md-0">
-                <img :src="getImageUrl(selectedCategory.thumbnail)" @error="handleImageError" class="rounded-4 shadow-sm border border-2 border-light object-fit-cover mb-3" style="width: 100%; max-height: 250px;">
+                <SoraImage :src="selectedCategory.thumbnail" class="rounded-4 shadow-sm border border-2 border-light object-fit-cover mb-3" style="width: 100%; max-height: 250px;" />
                 <h5 class="fw-bold mb-1">{{ selectedCategory.name }}</h5>
                 <p class="text-muted small mb-3">/{{ selectedCategory.slug }}</p>
                 <span class="badge px-3 py-2 rounded-pill" :class="selectedCategory.status === 'active' ? 'bg-success text-white' : (selectedCategory.status === 'hidden' ? 'bg-warning text-dark' : 'bg-danger text-white')">
@@ -277,11 +274,14 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
+import SoraImage from '@/components/ui/SoraImage.vue';
 import { useAdminRefreshListener } from '@/composables/useAdminRealtime.js';
 import { getFullImage } from '@/composables/useUtilities';
 
@@ -387,7 +387,18 @@ const handleAxiosError = (e, defaultMsg = 'Lỗi hệ thống') => {
 };
 
 const getImageUrl = (path) => path ? getFullImage(path) : defaultImage;
-const handleImageError = (e) => { e.target.src = defaultImage; };
+const handleImageError = (e) => { 
+  let fallback = defaultImage;
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_admin_active) {
+          fallback = `${import.meta.env.VITE_URL}/storage/${store.settings.placeholder_admin_active}`;
+      }
+  } catch (err) {}
+  if (e.target.src !== fallback) {
+      e.target.src = fallback; 
+  }
+};
 
 const getLevelColor = (level) => {
   if(!level) return 'bg-secondary';
@@ -632,8 +643,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.logo-shimmer { font-size: 3.5rem; font-weight: 900; letter-spacing: -1.5px; background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%); background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text; animation: shine 1.5s linear infinite; }
-@keyframes shine { to { background-position: 200% center; } }
 .custom-tab { font-weight: 600 !important; color: #6c757d; border-bottom: 2px solid transparent !important; margin-bottom: -1px; transition: color 0.2s ease; }
 .custom-tab:hover { color: #009981; }
 .custom-tab.active-tab { color: #009981 !important; border-bottom: 2px solid #009981 !important; }

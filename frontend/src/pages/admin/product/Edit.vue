@@ -433,11 +433,7 @@
             </div>
         </div>
 
-        <div v-else class="d-flex flex-column justify-content-center align-items-center w-100"
-            style="min-height: 70vh;">
-            <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-            <p class="text-muted small tracking-widest text-uppercase">Đang tải cấu hình sản phẩm...</p>
-        </div>
+        <AdminShimmerLoading v-else text="Đang tải cấu hình sản phẩm..." />
 
 
         <div class="modal fade" id="createAttrModal" tabindex="-1">
@@ -570,6 +566,7 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, computed, onMounted, nextTick, watch, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import Swal from 'sweetalert2';
@@ -1527,24 +1524,6 @@ onBeforeUnmount(() => {
 
     100% {
         transform: translateX(0);
-    }
-}
-
-.logo-shimmer {
-    font-size: 3.5rem;
-    font-weight: 900;
-    letter-spacing: -1.5px;
-    background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%);
-    background-size: 200% auto;
-    color: transparent;
-    -webkit-background-clip: text;
-    background-clip: text;
-    animation: shine 1.5s linear infinite;
-}
-
-@keyframes shine {
-    to {
-        background-position: 200% center;
     }
 }
 

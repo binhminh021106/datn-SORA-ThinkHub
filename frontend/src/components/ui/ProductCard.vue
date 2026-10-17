@@ -156,6 +156,9 @@ import Toast from '@/utils/toastConfig';
 import soraAlert from '@/utils/soraAlertConfig';
 import { getStorageUrl } from '@/utils/env';
 import { getProtectedRating, formatCompactPrice, getUserToken } from '@/composables/useUtilities';
+import { useSettingsStore } from '@/stores/settingsStore';
+
+const settingsStore = useSettingsStore();
 
 const handlePreload = (prod) => {
   try {
@@ -313,8 +316,17 @@ const handleImageError = (e) => {
   if (fallbackIndex < fallbackImages.length) {
     target.dataset.fallbackIndex = fallbackIndex;
     target.src = getImageUrl(fallbackImages[fallbackIndex]);
-  } else if (!target.src.includes('Sora-placeholder.png')) {
-    target.src = '/Sora-placeholder.png';
+  } else {
+    let fallbackUrl = '/Sora-placeholder.png';
+    if (settingsStore && settingsStore.settings && settingsStore.settings.placeholder_client_active) {
+      fallbackUrl = getImageUrl(settingsStore.settings.placeholder_client_active);
+    }
+    
+    // Prevent infinite loop if the fallback image itself is broken
+    if (!target.dataset.finalFallbackApplied) {
+       target.dataset.finalFallbackApplied = "true";
+       target.src = fallbackUrl;
+    }
   }
 };
 

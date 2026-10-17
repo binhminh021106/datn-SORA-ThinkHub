@@ -182,6 +182,7 @@
 </template>
 
 <script setup>
+import { useSettingsStore } from '@/stores/settingsStore';
 import { ref, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import ProductCard from '@/components/ui/ProductCard.vue';
@@ -222,7 +223,19 @@ const getImage = (path) => {
   if (cleaned.startsWith('http') || cleaned.startsWith('data:')) return cleaned;
   return getStorageUrl(cleaned);
 };
-const handleImageError = (e) => { e.target.src = soraPlaceholder; };
+const handleImageError = (e) => { 
+  let fallback = '/Sora-placeholder.png';
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_client_active) {
+          fallback = getStorageUrl(store.settings.placeholder_client_active);
+      }
+  } catch (err) {}
+  
+  if (e.target.src !== fallback) {
+      e.target.src = fallback;
+  }
+};
 
 watch(() => route.fullPath, () => {
   if (isOpen.value) {

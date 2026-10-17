@@ -242,6 +242,7 @@
 </template>
 
 <script setup>
+import { useSettingsStore } from '@/stores/settingsStore';
 import { ref, onMounted, computed } from 'vue';
 import ComboCarousel from '@/components/ui/ComboCarousel.vue';
 import clientApiClient from '@/utils/clientApiClient';
@@ -275,9 +276,18 @@ const smartImage = computed(() => {
   return selectedImage ? getImageUrl(selectedImage) : 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=800&auto=format&fit=crop';
 });
 
-const handleImageError = (event) => {
-  event.target.onerror = null; // Prevent infinite loop
-  event.target.src = 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?q=80&w=800&auto=format&fit=crop';
+const handleImageError = (e) => { 
+  let fallback = '/Sora-placeholder.png';
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_client_active) {
+          fallback = getStorageUrl(store.settings.placeholder_client_active);
+      }
+  } catch (err) {}
+  
+  if (e.target.src !== fallback) {
+      e.target.src = fallback;
+  }
 };
 
 const fetchCombos = async () => {

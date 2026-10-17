@@ -1,11 +1,7 @@
 <template>
   <div class="email-campaign-page pb-4">
-    <div v-if="isPageLoading" class="d-flex flex-column justify-content-center align-items-center w-100"
-      style="min-height: 70vh;">
-      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">Đang tải dữ
-        liệu chiến dịch...</p>
-    </div>
+    <AdminShimmerLoading v-if="isPageLoading" text="Đang tải dữ
+        liệu chiến dịch..." />
 
     <div v-else-if="pageError" class="d-flex flex-column justify-content-center align-items-center w-100"
       style="min-height: 70vh;">
@@ -504,6 +500,7 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { QuillEditor } from '@vueup/vue-quill';
 import '@vueup/vue-quill/dist/vue-quill.snow.css';
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
@@ -1304,24 +1301,6 @@ function showToast(title, icon = 'success') { Swal.fire({ toast: true, position:
 
   .sora-tp-body {
     padding: 16px;
-  }
-}
-
-.logo-shimmer {
-  font-size: 3.5rem;
-  font-weight: 900;
-  letter-spacing: -1.5px;
-  background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%);
-  background-size: 200% auto;
-  color: transparent;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: shine 1.5s linear infinite;
-}
-
-@keyframes shine {
-  to {
-    background-position: 200% center;
   }
 }
 

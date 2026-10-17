@@ -91,6 +91,8 @@
 </template>
 
 <script setup>
+import { getStorageUrl } from '@/utils/env';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { ref, watch } from 'vue';
 import defaultPlaceholder from '@/assets/images/defaults/placeholder.png';
 import soraAlert from '@/utils/soraAlertConfig';
@@ -149,7 +151,19 @@ const getImageUrl = (path) => {
   if (path.startsWith('http')) return path;
   return `${import.meta.env.VITE_STORAGE_URL}/${path}`;
 };
-const handleImageError = (e) => { e.target.src = defaultPlaceholder; };
+const handleImageError = (e) => { 
+  let fallback = '/Sora-placeholder.png';
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_client_active) {
+          fallback = getStorageUrl(store.settings.placeholder_client_active);
+      }
+  } catch (err) {}
+  
+  if (e.target.src !== fallback) {
+      e.target.src = fallback;
+  }
+};
 
 
 const handleFileUpload = (event, itemIndex) => {

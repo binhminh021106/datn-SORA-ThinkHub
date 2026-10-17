@@ -69,6 +69,11 @@ Route::middleware(['auth:sanctum', 'ability:access', 'admin.user', 'throttle:adm
         Route::post('/settings/logos/upload', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'uploadLogo']);
         Route::post('/settings/logos/base64', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'getLogoBase64']);
         Route::delete('/settings/logos', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'deleteLogo']);
+        
+        Route::get('/settings/placeholders', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'getPlaceholders']);
+        Route::post('/settings/placeholders/upload', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'uploadPlaceholder']);
+        Route::post('/settings/placeholders/delete', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'deletePlaceholders']);
+        
         Route::get('/settings', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'index']);
         Route::post('/settings', [\App\Http\Controllers\Api\Admin\AdminSettingController::class, 'update']);
     });

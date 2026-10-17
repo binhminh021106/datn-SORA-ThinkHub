@@ -72,6 +72,10 @@ class ClientHomeController extends Controller
                     ->withCount('reviews')
                     ->withAvg('reviews', 'rating')
                     ->withSum('variants', 'stock_quantity')
+                    ->with(['variants' => function($q) {
+                        $q->select('id', 'product_id', 'image_url')->whereNotNull('image_url')->where('image_url', '!=', '');
+                    }])
+                    ->having('variants_sum_stock_quantity', '>', 0)
                     ->orderBy('is_featured', 'desc')
                     ->orderBy('id', 'desc')
                     ->take(8)

@@ -1,13 +1,7 @@
 <template>
   <div>
 
-    <div v-if="isLoading && hasAccess" class="d-flex flex-column justify-content-center align-items-center w-100"
-      style="min-height: 70vh;">
-      <h1 class="logo-shimmer mb-3">ThinkHub</h1>
-      <p class="text-muted fw-semibold small text-uppercase tracking-widest" style="letter-spacing: 2px;">
-        Đang tải dữ liệu tổng quan...
-      </p>
-    </div>
+    <AdminShimmerLoading v-if="isLoading" text="Đang tải dữ liệu tổng quan..." />
 
 
     <div v-else-if="!hasAccess" class="d-flex justify-content-center align-items-center w-100"
@@ -1029,6 +1023,7 @@
 </template>
 
 <script setup>
+import AdminShimmerLoading from '@/components/admin/AdminShimmerLoading.vue';
 import { ref, computed, watch, nextTick } from 'vue';
 import { useQuery, keepPreviousData } from '@tanstack/vue-query';
 import Chart from 'chart.js/auto';
@@ -1893,24 +1888,6 @@ const formatCouponDate = (dateStr) => {
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-
-.logo-shimmer {
-  font-size: 3.5rem;
-  font-weight: 900;
-  letter-spacing: -1.5px;
-  background: linear-gradient(120deg, #009981 30%, #4dffdf 50%, #009981 70%);
-  background-size: 200% auto;
-  color: transparent;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: shine 1.5s linear infinite;
-}
-
-@keyframes shine {
-  to {
-    background-position: 200% center;
-  }
-}
 
 .dashboard-wrapper {
   background-color: #f8f9fc;

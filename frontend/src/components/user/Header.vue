@@ -407,7 +407,19 @@ const getImage = (path) => {
   if (cleaned.startsWith('http') || cleaned.startsWith('data:')) return cleaned;
   return getStorageUrl(cleaned);
 };
-const handleImageError = (e) => { e.target.src = soraPlaceholder; };
+const handleImageError = (e) => { 
+  let fallback = '/Sora-placeholder.png';
+  try {
+      const store = useSettingsStore();
+      if (store && store.settings && store.settings.placeholder_client_active) {
+          fallback = getStorageUrl(store.settings.placeholder_client_active);
+      }
+  } catch (err) {}
+  
+  if (e.target.src !== fallback) {
+      e.target.src = fallback;
+  }
+};
 const handleLogoError = (e) => {
   logoLoadFailed.value = true;
 };
